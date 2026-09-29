@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="aui-viewport" content="mode=gui">
+    <link rel="stylesheet" href="/apricityui/theme/ae/1.0.0.css">
+    <link rel="stylesheet" href="alchemy.css">
+    <style>
+        /* 两格辅药 + 一格药引：18x18 一格、间距 4px，沿用旧模板的居中位置 */
+        #machine {
+            left: 63px;
+            top: 26px;
+            width: 62px;
+        }
+
+        #inventory_label {
+            top: 54px;
+        }
+
+        #player_inventory {
+            top: 64px;
+        }
+    </style>
+</head>
+<body>
+<div class="area panel-part" id="panel">
+    <div class="title" id="title"></div>
+    <container class="machine" id="machine" primary="true" size="3"></container>
+    <div class="inventory-label" id="inventory_label"></div>
+    <container class="player-inventory" id="player_inventory" bind="player">
+        <slot slot-index="9" repeat="27"></slot>
+        <slot slot-index="0" repeat="9"></slot>
+    </container>
+</div>
+</body>
+</html>

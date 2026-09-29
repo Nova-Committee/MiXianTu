@@ -2,86 +2,110 @@ package com.iafenvoy.mxt.screen.gui;
 
 import com.iafenvoy.mxt.network.payload.AlchemyActionC2SPayload;
 import com.iafenvoy.mxt.network.payload.AlchemyActionC2SPayload.Action;
-import com.iafenvoy.mxt.screen.AlchemyUiTemplates;
+import com.iafenvoy.mxt.screen.AlchemyUiPages;
 import com.iafenvoy.mxt.screen.menu.AlchemyFurnaceMenu;
 import com.iafenvoy.mxt.screen.menu.AlchemyFurnaceMenu.TemperatureAck;
 import com.iafenvoy.mxt.screen.menu.AlchemyFurnaceView;
-import com.lowdragmc.lowdraglib2.gui.holder.IModularUIHolderMenu;
-import com.lowdragmc.lowdraglib2.gui.ui.ModularUI;
-import com.lowdragmc.lowdraglib2.gui.ui.UI;
-import com.lowdragmc.lowdraglib2.gui.ui.UIElement;
-import com.lowdragmc.lowdraglib2.gui.ui.UITemplate;
-import com.lowdragmc.lowdraglib2.gui.ui.elements.Button;
-import com.lowdragmc.lowdraglib2.gui.ui.elements.ItemSlot;
-import com.lowdragmc.lowdraglib2.gui.ui.elements.Label;
-import com.lowdragmc.lowdraglib2.gui.ui.elements.ProgressBar;
-import com.lowdragmc.lowdraglib2.gui.ui.elements.TextField;
+import com.sighs.apricityui.client.gui.ApricityGuiLayers;
+import com.sighs.apricityui.element.Container;
+import com.sighs.apricityui.element.Input;
+import com.sighs.apricityui.init.Document;
+import com.sighs.apricityui.init.Element;
+import com.sighs.apricityui.layout.Position;
+import com.sighs.apricityui.layout.Size;
+import com.sighs.apricityui.screen.AuiLinkedScreen;
+import com.sighs.apricityui.ui.Tooltip;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.TextColor;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.inventory.Slot;
 import net.neoforged.neoforge.client.network.ClientPacketDistributor;
 import org.jetbrains.annotations.Nullable;
 import org.jspecify.annotations.NonNull;
 
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
 
 /**
- * Binds a freshly loaded native template. A missing required node binds no slots.
+ * Hosts one bundled ApricityUI page over the vanilla furnace menu: the page owns the panel art and the
+ * cell geometry, while slot items, hover, clicks and tooltips stay vanilla.
+ * <p>
+ * The page must not set {@code aui-mouse-events=intercept}: that makes ApricityUI cancel the native
+ * click, and the menu would never see a slot click again.
  */
-public final class AlchemyFurnaceScreen extends AbstractContainerScreen<AlchemyFurnaceMenu> {
-    private static final String[] PLAYER_SLOTS = playerSlots();
+public final class AlchemyFurnaceScreen extends AbstractContainerScreen<AlchemyFurnaceMenu> implements AuiLinkedScreen {
+    private static final int ITEM_INSET = 1;
+    private static final int PANEL_WIDTH = 202;
+    private static final int PANEL_HEIGHT_MONITOR = 225;
+    private static final int PANEL_HEIGHT_PART = 160;
+    /** Off-panel x/y for menu slots that have no page geometry behind them yet. */
+    private static final int PARKED_SLOT = -1000;
+    /** Most sync passes a bind may spend waiting for ApricityUI's first geometry commit. */
+    private static final int LAYOUT_WAIT_LIMIT = 3;
 
     @Nullable
-    private UI ui;
+    private Document document;
     @Nullable
-    private Component templateError;
+    private Component pageError;
     private List<FormattedCharSequence> errorLines = List.of();
     private int errorWidth = -1;
+    private boolean slotsBound;
+    private boolean geometryReady;
+    private int layoutWait;
+    private long boundGeneration = Long.MIN_VALUE;
 
     @Nullable
-    private Label title;
+    private Element panel;
     @Nullable
-    private Label temperature;
+    private Element title;
     @Nullable
-    private Label limit;
+    private Element temperature;
     @Nullable
-    private Label status;
+    private Element limit;
     @Nullable
-    private ProgressBar progress;
+    private Element status;
     @Nullable
-    private TextField target;
+    private Element progress;
     @Nullable
-    private Button start;
+    private Element target;
     @Nullable
-    private Button abort;
+    private Element apply;
     @Nullable
-    private Button apply;
+    private Element start;
+    @Nullable
+    private Element abort;
+    private final Map<Integer, Element> cells = new LinkedHashMap<>();
+    private final List<Tooltip.Binding> tooltips = new ArrayList<>();
+
+    private int panelLeft;
+    private int panelTop;
+    private int panelWidth = PANEL_WIDTH;
+    private int panelHeight = PANEL_HEIGHT_PART;
 
     private boolean draftDirty;
     private boolean writingField;
+    @Nullable
+    private String fieldText;
     private int observedEpoch;
     private int inflight;
     private double submitted = Double.NaN;
     @Nullable
     private Component rejection;
-    private long tooltipTargetBits = Long.MIN_VALUE;
-    private long tooltipMaximumBits = Long.MIN_VALUE;
-    private int tooltipInflight = -1;
-    @Nullable
-    private Component tooltipRejection;
 
-    private boolean startActive;
-    private boolean abortActive;
+    private boolean startDisabled;
+    private boolean abortDisabled;
     private float shownProgress = Float.NaN;
     private long shownTemperatureBits = Long.MIN_VALUE;
-    private long shownHeatTooltip = Long.MIN_VALUE;
     private long shownLimitBits = Long.MIN_VALUE;
-    private long shownLimitTooltip = Long.MIN_VALUE;
     @Nullable
     private Component shownTitle;
     @Nullable
@@ -90,182 +114,321 @@ public final class AlchemyFurnaceScreen extends AbstractContainerScreen<AlchemyF
     private Component shownStatus;
 
     public AlchemyFurnaceScreen(AlchemyFurnaceMenu menu, Inventory inventory, Component title) {
-        super(menu, inventory, title);
-        this.bind(inventory);
+        super(menu, inventory, title, PANEL_WIDTH, panelHeight(menu.view()));
     }
 
-    private void bind(Inventory inventory) {
-        UITemplate template = AlchemyUiTemplates.load(this.menu.view());
-        if (template == null) {
-            this.templateError = Component.translatable("screen.mxt.alchemy.template_missing", AlchemyUiTemplates.name(this.menu.view()));
-            return;
-        }
-        UI loaded = template.createUI();
-        String missing = this.missing(loaded);
-        if (missing != null) {
-            this.templateError = Component.translatable("screen.mxt.alchemy.template_invalid", AlchemyUiTemplates.name(this.menu.view()), missing);
-            return;
-        }
-        IModularUIHolderMenu holder = (IModularUIHolderMenu) (Object) this.menu;
-        this.bindSlots(loaded, holder);
-        holder.setModularUI(new ModularUI(loaded, inventory.player));
-        this.ui = loaded;
-        this.capture(loaded);
-        this.bindControls(loaded);
+    private static int panelHeight(AlchemyFurnaceMenu.View view) {
+        return view == AlchemyFurnaceMenu.View.MONITOR ? PANEL_HEIGHT_MONITOR : PANEL_HEIGHT_PART;
     }
 
-    private void bindSlots(UI loaded, IModularUIHolderMenu holder) {
-        for (String id : this.machineIds()) this.bindSlot(loaded, holder, id);
-        for (String id : PLAYER_SLOTS) this.bindSlot(loaded, holder, id);
-    }
-
-    private void bindSlot(UI loaded, IModularUIHolderMenu holder, String id) {
-        int index = this.menu.menuIndex(id);
-        ItemSlot slot = loaded.selectId(id, ItemSlot.class).findFirst().orElseThrow();
-        slot.bind(this.menu.getSlot(index));
-        if (id.startsWith("inventory_")) slot.slotStyle(style -> style.isPlayerSlot(true));
-        holder.ldlib2$addSlot(slot);
-    }
-
-    private void capture(UI loaded) {
-        this.title = this.label(loaded, "title");
-        if (this.menu.view() != AlchemyFurnaceMenu.View.MONITOR) {
-            this.text(this.title, this.getTitle());
-            return;
-        }
-        this.temperature = this.label(loaded, "temperature");
-        this.limit = this.label(loaded, "limit");
-        this.status = this.label(loaded, "status");
-        this.progress = loaded.selectId("progress", ProgressBar.class).findFirst().orElseThrow();
-        this.target = loaded.selectId("target", TextField.class).findFirst().orElseThrow();
-        this.start = loaded.selectId("start", Button.class).findFirst().orElseThrow();
-        this.abort = loaded.selectId("abort", Button.class).findFirst().orElseThrow();
-        this.apply = loaded.selectId("apply", Button.class).findFirst().orElseThrow();
-    }
-
-    private void bindControls(UI loaded) {
-        this.click(loaded, "start", () -> this.send(Action.START, 0));
-        this.click(loaded, "abort", () -> this.send(Action.ABORT, 0));
-        this.click(loaded, "apply", this::applyTemperature);
-        if (this.target != null) {
-            TextField field = this.target;
-            // Template number mode installs a 0.1 quantizer; string mode keeps the typed characters.
-            field.setAnyString();
-            field.setTextResponder(value -> {
-                if (this.writingField) return;
-                this.draftDirty = true;
-                this.rejection = null;
-            });
-        }
-        if (this.start != null) this.start.setActive(false);
-        if (this.abort != null) this.abort.setActive(false);
-    }
-
+    @Override
     @Nullable
-    private String missing(UI loaded) {
-        String missing = this.missingLabel(loaded, "title");
-        if (missing != null) return missing;
-        missing = this.missingElement(loaded, "player_inventory");
-        if (missing != null) return missing;
-        for (String id : PLAYER_SLOTS) {
-            missing = this.missingSlot(loaded, id);
-            if (missing != null) return missing;
+    public Document getLinkedDocument() {
+        return this.document;
+    }
+
+    @Override
+    protected void init() {
+        super.init();
+        if (this.document == null) {
+            AlchemyUiPages.seedMissing();
+            this.document = Document.create(AlchemyUiPages.path(this.menu.view()));
+            if (this.document == null) {
+                this.pageError = Component.translatable("screen.mxt.alchemy.template_missing", AlchemyUiPages.name(this.menu.view()));
+                return;
+            }
+        } else {
+            this.document.applyViewport(true);
         }
-        for (String id : this.machineIds()) {
-            missing = this.missingSlot(loaded, id);
-            if (missing != null) return missing;
+        this.rebind();
+        this.refresh();
+    }
+
+    /** Resolves the page contract again; a refresh (hot reload or resize) replaces every element. */
+    private void rebind() {
+        this.clearBindings();
+        this.pageError = null;
+        Document current = this.document;
+        if (current == null) return;
+        if (!this.bindDocument(current)) return;
+        this.slotsBound = true;
+        this.boundGeneration = current.getRefreshGeneration();
+    }
+
+    private boolean bindDocument(Document current) {
+        Element panel = current.getElementById("panel");
+        if (panel == null) return this.fail("panel");
+        Element title = current.getElementById("title");
+        if (title == null) return this.fail("title");
+        if (!(current.getElementById("machine") instanceof Container machine)) return this.fail("machine (container)");
+        if (!(current.getElementById("player_inventory") instanceof Container inventory)) return this.fail("player_inventory (container)");
+        List<Element> machineCells = slotsOf(current, machine);
+        if (machineCells.size() != this.menu.view().machineSlots()) return this.fail("machine (" + machineCells.size() + " slots)");
+        List<Element> playerCells = slotsOf(current, inventory);
+        if (playerCells.size() != 36) return this.fail("player_inventory (" + playerCells.size() + " slots)");
+        this.panel = panel;
+        this.title = title;
+        if (!this.bindMachine(machineCells)) return false;
+        if (!this.bindPlayer(playerCells)) return false;
+        if (this.menu.view() == AlchemyFurnaceMenu.View.MONITOR && !this.bindMonitor(current)) return false;
+        this.text(title, this.getTitle());
+        this.text(current.getElementById("inventory_label"), Component.translatable("container.inventory"));
+        return true;
+    }
+
+    private boolean bindMachine(List<Element> machineCells) {
+        for (Element cell : machineCells) {
+            int index = slotIndexOf(cell);
+            if (index < 0 || index >= machineCells.size()) return this.fail("machine (slot-index " + index + ")");
+            this.cells.put(index, cell);
+            String tooltip = machineTooltip(index);
+            if (tooltip != null) this.tooltips.add(Tooltip.bindTranslation(cell, tooltip));
         }
-        if (this.menu.view() != AlchemyFurnaceMenu.View.MONITOR) return null;
-        for (String id : new String[]{"temperature", "limit", "status"}) {
-            missing = this.missingLabel(loaded, id);
-            if (missing != null) return missing;
+        return true;
+    }
+
+    private boolean bindPlayer(List<Element> playerCells) {
+        for (Element cell : playerCells) {
+            int vanilla = slotIndexOf(cell);
+            int index = vanilla < 0 || vanilla > 35 ? -1 : this.menu.menuIndex("inventory_" + vanilla);
+            if (index < 0) return this.fail("player_inventory (slot-index " + vanilla + ")");
+            this.cells.put(index, cell);
         }
-        missing = this.missingElement(loaded, "monitor");
-        if (missing != null) return missing;
-        missing = this.missingType(loaded, "progress", ProgressBar.class, "progress-bar");
-        if (missing != null) return missing;
-        missing = this.missingType(loaded, "target", TextField.class, "text-field");
-        if (missing != null) return missing;
-        for (String id : new String[]{"apply", "start", "abort"}) {
-            missing = this.missingType(loaded, id, Button.class, "button");
-            if (missing != null) return missing;
+        return true;
+    }
+
+    private boolean bindMonitor(Document current) {
+        Element temperature = current.getElementById("temperature");
+        if (temperature == null) return this.fail("temperature");
+        Element limit = current.getElementById("limit");
+        if (limit == null) return this.fail("limit");
+        Element status = current.getElementById("status");
+        if (status == null) return this.fail("status");
+        Element progress = current.getElementById("progress_fill");
+        if (progress == null) return this.fail("progress_fill");
+        if (!(current.getElementById("target") instanceof Input target)) return this.fail("target (input)");
+        Element apply = current.getElementById("apply");
+        if (apply == null) return this.fail("apply");
+        Element start = current.getElementById("start");
+        if (start == null) return this.fail("start");
+        Element abort = current.getElementById("abort");
+        if (abort == null) return this.fail("abort");
+        this.temperature = temperature;
+        this.limit = limit;
+        this.status = status;
+        this.progress = progress;
+        this.target = target;
+        this.apply = apply;
+        this.start = start;
+        this.abort = abort;
+        this.click(apply, this::applyTemperature);
+        this.click(start, () -> this.send(Action.START, 0));
+        this.click(abort, () -> this.send(Action.ABORT, 0));
+        this.tooltips.add(Tooltip.bind(title, () -> this.titleTooltip()));
+        this.tooltips.add(Tooltip.bind(temperature, this::heatTooltip));
+        this.tooltips.add(Tooltip.bind(limit, this::limitTooltip));
+        this.tooltips.add(Tooltip.bind(target, this::fieldTooltip));
+        this.tooltips.add(Tooltip.bind(apply, this::fieldTooltip));
+        return true;
+    }
+
+    private boolean fail(String missing) {
+        Document current = this.document;
+        long generation = current == null ? Long.MIN_VALUE : current.getRefreshGeneration();
+        this.clearBindings();
+        // Keep the failed generation so a broken page is reported once instead of every frame.
+        this.boundGeneration = generation;
+        this.pageError = Component.translatable("screen.mxt.alchemy.template_invalid", AlchemyUiPages.name(this.menu.view()), missing);
+        return false;
+    }
+
+    private void clearBindings() {
+        for (Tooltip.Binding binding : this.tooltips) binding.close();
+        this.tooltips.clear();
+        this.cells.clear();
+        this.slotsBound = false;
+        this.geometryReady = false;
+        this.layoutWait = 0;
+        this.parkSlots();
+        this.boundGeneration = Long.MIN_VALUE;
+        this.panel = null;
+        this.title = null;
+        this.temperature = null;
+        this.limit = null;
+        this.status = null;
+        this.progress = null;
+        this.target = null;
+        this.apply = null;
+        this.start = null;
+        this.abort = null;
+        this.fieldText = null;
+        this.draftDirty = false;
+        this.writingField = false;
+        this.rejection = null;
+        this.resetShownState();
+    }
+
+    private void resetShownState() {
+        this.startDisabled = false;
+        this.abortDisabled = false;
+        this.shownProgress = Float.NaN;
+        this.shownTemperatureBits = Long.MIN_VALUE;
+        this.shownLimitBits = Long.MIN_VALUE;
+        this.shownTitle = null;
+        this.shownQuality = null;
+        this.shownStatus = null;
+    }
+
+    /** The menu builds every slot at (0, 0); parking them keeps that from drawing under the panel. */
+    private void parkSlots() {
+        for (Slot slot : this.menu.slots) {
+            slot.x = PARKED_SLOT;
+            slot.y = PARKED_SLOT;
         }
-        return null;
     }
 
-    @Nullable
-    private String missingSlot(UI loaded, String id) {
-        return this.missingType(loaded, id, ItemSlot.class, "item-slot");
+    private static List<Element> slotsOf(Document document, Container container) {
+        List<Element> cells = new ArrayList<>();
+        for (Element element : document.getElements()) {
+            if (!(element instanceof com.sighs.apricityui.element.Slot slot)) continue;
+            if (slot.findAncestor(Container.class) != container) continue;
+            cells.add(slot);
+        }
+        cells.sort((left, right) -> Integer.compare(slotIndexOf(left), slotIndexOf(right)));
+        return cells;
     }
 
-    @Nullable
-    private String missingLabel(UI loaded, String id) {
-        return this.missingType(loaded, id, Label.class, "label");
+    private static int slotIndexOf(Element element) {
+        return element instanceof com.sighs.apricityui.element.Slot slot ? slot.getSlotIndex() : -1;
     }
 
-    @Nullable
-    private String missingElement(UI loaded, String id) {
-        return this.missingType(loaded, id, UIElement.class, "element");
-    }
-
-    @Nullable
-    private String missingType(UI loaded, String id, Class<? extends UIElement> type, String typeName) {
-        return loaded.selectId(id, type).findFirst().isEmpty() ? id + " (" + typeName + ")" : null;
-    }
-
-    private String[] machineIds() {
+    private String machineTooltip(int index) {
         return switch (this.menu.view()) {
-            case MONITOR -> new String[]{AlchemyFurnaceMenu.FIRE};
-            case MAIN -> AlchemyFurnaceMenu.MAIN_SLOTS;
-            case AUXILIARY -> AlchemyFurnaceMenu.AUXILIARY_SLOTS;
-            case OUTPUT -> AlchemyFurnaceMenu.OUTPUT_SLOTS;
+            case MONITOR -> "tooltip.mxt.alchemy.fire";
+            case MAIN -> "screen.mxt.alchemy.main";
+            case AUXILIARY -> index == 2 ? "screen.mxt.alchemy.catalyst" : "screen.mxt.alchemy.auxiliary";
+            case OUTPUT -> "screen.mxt.alchemy.output";
         };
+    }
+
+    /** Runs before the vanilla pass so slot geometry is current and the page sits under the items. */
+    @Override
+    public void extractRenderState(@NonNull GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
+        this.syncPage();
+        ApricityGuiLayers.submitUi(graphics);
+        super.extractRenderState(graphics, mouseX, mouseY, partialTick);
+    }
+
+    private void syncPage() {
+        Document current = this.document;
+        if (current == null) return;
+        if (current.getRefreshGeneration() != this.boundGeneration) {
+            this.rebind();
+            this.refresh();
+        }
+        if (!this.slotsBound) return;
+        if (!this.geometryReady) {
+            if (this.awaitingLayout()) return;
+            this.geometryReady = true;
+        }
+        this.syncGeometry(current);
+    }
+
+    /**
+     * ApricityUI commits element geometry in the paint pass, which runs after this call on the
+     * frame that first shows the page: a read before it answers from the pre-layout cache and
+     * would draw every item in the screen corner. So the first pass after a bind always waits, a
+     * missing commit stamp keeps the wait going, and {@link #LAYOUT_WAIT_LIMIT} bounds it so a
+     * stamp that never validates cannot hide the items for good.
+     */
+    private boolean awaitingLayout() {
+        if (this.layoutWait == 0) {
+            this.layoutWait = 1;
+            return true;
+        }
+        if (this.layoutWait < LAYOUT_WAIT_LIMIT && !this.geometryCommitted()) {
+            this.layoutWait++;
+            return true;
+        }
+        return false;
+    }
+
+    /** Whether every element this screen reads a frame from has committed geometry. */
+    private boolean geometryCommitted() {
+        if (this.panel == null || this.panel.getRenderer().getCommittedRectIfValid() == null) return false;
+        for (Element cell : this.cells.values()) {
+            if (cell.getRenderer().getCommittedRectIfValid() == null) return false;
+        }
+        return true;
+    }
+
+    /** Items may only be drawn once the slot geometry behind them has actually been read. */
+    private boolean slotsDrawn() {
+        return this.slotsBound && this.geometryReady;
+    }
+
+    private void syncGeometry(Document current) {
+        if (this.panel != null) {
+            Position origin = current.documentToScreenPosition(Position.of(this.panel));
+            Size size = Size.of(this.panel);
+            this.panelLeft = (int) Math.round(origin.x);
+            this.panelTop = (int) Math.round(origin.y);
+            this.panelWidth = Math.max(1, (int) Math.round(size.width() * current.getViewportScaleX()));
+            this.panelHeight = Math.max(1, (int) Math.round(size.height() * current.getViewportScaleY()));
+            this.leftPos = this.panelLeft;
+            this.topPos = this.panelTop;
+        }
+        for (Map.Entry<Integer, Element> entry : this.cells.entrySet()) {
+            int index = entry.getKey();
+            if (index < 0 || index >= this.menu.slots.size()) continue;
+            Position screen = current.documentToScreenPosition(Position.of(entry.getValue()));
+            Slot slot = this.menu.slots.get(index);
+            slot.x = (int) Math.round(screen.x) + ITEM_INSET - this.leftPos;
+            slot.y = (int) Math.round(screen.y) + ITEM_INSET - this.topPos;
+        }
     }
 
     @Override
     protected void containerTick() {
         super.containerTick();
-        if (this.ui == null) {
-            this.hoveredSlot = null;
-            return;
-        }
         this.refresh();
     }
 
     private void refresh() {
-        if (this.menu.view() != AlchemyFurnaceMenu.View.MONITOR) return;
+        if (!this.slotsBound || this.menu.view() != AlchemyFurnaceMenu.View.MONITOR) return;
+        // A rebuilt DOM is stale until syncPage rebinds it.
+        Document current = this.document;
+        if (current != null && current.getRefreshGeneration() != this.boundGeneration) return;
         this.pollTemperature();
         AlchemyFurnaceView view = this.menu.viewSnapshot();
         AlchemyFurnaceView.Numbers numbers = view.numbers();
         this.showTitle(view.status().furnace(), view.status().quality());
-        this.showExact(this.temperature, "screen.mxt.alchemy.temperature", numbers.temperature(), true, numbers);
-        this.showExact(this.limit, "screen.mxt.alchemy.maximum", numbers.maximum(), false, numbers);
+        this.showExact(this.temperature, "screen.mxt.alchemy.temperature", numbers.temperature(), true);
+        this.showExact(this.limit, "screen.mxt.alchemy.maximum", numbers.maximum(), false);
         this.showStatus(view.status().message());
         long total = numbers.total();
         float progress = total > 0 && view.status().locked()
                 ? (float) (total - numbers.remaining()) / total : 0;
         if (this.progress != null && Float.floatToIntBits(progress) != Float.floatToIntBits(this.shownProgress)) {
-            this.progress.setProgress(progress);
+            this.progress.setInlineStyleProperty("width", Math.round(progress * 100) + "%");
             this.shownProgress = progress;
         }
         boolean canStart = view.status().canStart();
-        if (this.start != null && canStart != this.startActive) {
-            this.start.setActive(canStart);
-            this.startActive = canStart;
+        if (this.start != null && !canStart != this.startDisabled) {
+            this.start.setDisabled(!canStart);
+            this.startDisabled = !canStart;
         }
         boolean canAbort = "WARMING".equals(view.status().phase()) || "RUNNING".equals(view.status().phase());
-        if (this.abort != null && canAbort != this.abortActive) {
-            this.abort.setActive(canAbort);
-            this.abortActive = canAbort;
+        if (this.abort != null && !canAbort != this.abortDisabled) {
+            this.abort.setDisabled(!canAbort);
+            this.abortDisabled = !canAbort;
         }
         this.syncDraft(numbers.target());
-        this.showFieldTooltip(numbers);
     }
 
     private void showTitle(Component furnace, Component quality) {
         if (this.title == null || furnace.equals(this.shownTitle) && quality.equals(this.shownQuality)) return;
         this.text(this.title, furnace);
-        this.tooltip(this.title, furnace, quality);
         this.shownTitle = furnace;
         this.shownQuality = quality;
     }
@@ -273,60 +436,57 @@ public final class AlchemyFurnaceScreen extends AbstractContainerScreen<AlchemyF
     private void showStatus(Component message) {
         if (this.status == null || message.equals(this.shownStatus)) return;
         this.text(this.status, message);
-        this.tooltip(this.status, message);
         this.shownStatus = message;
     }
 
-
-    private void showExact(@Nullable Label label, String key, double value, boolean heat, AlchemyFurnaceView.Numbers numbers) {
+    private void showExact(@Nullable Element label, String key, double value, boolean heat) {
         if (label == null) return;
         long bits = Double.doubleToLongBits(value);
-        long tooltipBits = heat
-                ? mix(numbers.temperature(), numbers.target(), numbers.maximum())
-                : mix(numbers.maximum(), numbers.recipeTarget(), numbers.tolerance());
-        long shown = heat ? this.shownTemperatureBits : this.shownLimitBits;
-        long shownTooltip = heat ? this.shownHeatTooltip : this.shownLimitTooltip;
-        if (bits == shown && tooltipBits == shownTooltip) return;
-        if (bits != shown) this.text(label, Component.translatable(key, roundTrip(value)));
-        if (tooltipBits != shownTooltip) {
-            this.tooltip(label, heat
-                    ? Component.translatable("screen.mxt.alchemy.temperature_exact", roundTrip(numbers.temperature()), roundTrip(numbers.target()), roundTrip(numbers.maximum()))
-                    : Component.translatable("screen.mxt.alchemy.limit_exact", roundTrip(numbers.maximum()), roundTrip(numbers.recipeTarget()), roundTrip(numbers.tolerance())));
-        }
-        if (heat) {
-            this.shownTemperatureBits = bits;
-            this.shownHeatTooltip = tooltipBits;
-        } else {
-            this.shownLimitBits = bits;
-            this.shownLimitTooltip = tooltipBits;
-        }
+        if (bits == (heat ? this.shownTemperatureBits : this.shownLimitBits)) return;
+        this.text(label, Component.translatable(key, roundTrip(value)));
+        if (heat) this.shownTemperatureBits = bits;
+        else this.shownLimitBits = bits;
     }
 
-    private static long mix(double first, double second, double third) {
-        return Double.doubleToLongBits(first) ^ Long.rotateLeft(Double.doubleToLongBits(second), 21) ^ Long.rotateLeft(Double.doubleToLongBits(third), 42);
+    private String titleTooltip() {
+        AlchemyFurnaceView.Status status = this.menu.viewSnapshot().status();
+        return status.furnace().getString() + " / " + status.quality().getString();
+    }
+
+    private String heatTooltip() {
+        AlchemyFurnaceView.Numbers numbers = this.menu.viewSnapshot().numbers();
+        return Component.translatable("screen.mxt.alchemy.temperature_exact",
+                roundTrip(numbers.temperature()), roundTrip(numbers.target()), roundTrip(numbers.maximum())).getString();
+    }
+
+    private String limitTooltip() {
+        AlchemyFurnaceView.Numbers numbers = this.menu.viewSnapshot().numbers();
+        return Component.translatable("screen.mxt.alchemy.limit_exact",
+                roundTrip(numbers.maximum()), roundTrip(numbers.recipeTarget()), roundTrip(numbers.tolerance())).getString();
+    }
+
+    private String fieldTooltip() {
+        AlchemyFurnaceView.Numbers numbers = this.menu.viewSnapshot().numbers();
+        Component text = this.rejection != null ? this.rejection
+                : this.inflight > 0 ? Component.translatable("screen.mxt.alchemy.temperature_pending", roundTrip(this.submitted))
+                : Component.translatable("screen.mxt.alchemy.temperature_draft", roundTrip(numbers.target()), roundTrip(numbers.maximum()));
+        return text.getString();
     }
 
     private void syncDraft(double authoritative) {
-        if (this.target == null || this.draftDirty || this.inflight > 0 || this.target.isFocused()) return;
+        if (this.target == null) return;
+        String raw = this.target.getValue();
+        if (!this.writingField && this.fieldText != null && !raw.equals(this.fieldText)) {
+            this.draftDirty = true;
+            this.rejection = null;
+        }
+        if (this.draftDirty || this.inflight > 0 || this.fieldFocused()) return;
         String exact = roundTrip(authoritative);
-        if (!exact.equals(this.target.getRawText())) this.writeField(exact);
+        if (!exact.equals(raw)) this.writeField(exact);
     }
 
-    private void showFieldTooltip(AlchemyFurnaceView.Numbers numbers) {
-        if (this.target == null) return;
-        long targetBits = Double.doubleToLongBits(numbers.target());
-        long maximumBits = Double.doubleToLongBits(numbers.maximum());
-        if (this.rejection == this.tooltipRejection && this.inflight == this.tooltipInflight
-                && targetBits == this.tooltipTargetBits && maximumBits == this.tooltipMaximumBits) return;
-        Component tooltip = this.rejection != null ? this.rejection
-                : this.inflight > 0 ? Component.translatable("screen.mxt.alchemy.temperature_pending", roundTrip(this.submitted))
-                : Component.translatable("screen.mxt.alchemy.temperature_draft", roundTrip(numbers.target()), roundTrip(numbers.maximum()));
-        this.tooltip(this.target, tooltip);
-        if (this.apply != null) this.tooltip(this.apply, tooltip);
-        this.tooltipRejection = this.rejection;
-        this.tooltipInflight = this.inflight;
-        this.tooltipTargetBits = targetBits;
-        this.tooltipMaximumBits = maximumBits;
+    private boolean fieldFocused() {
+        return this.document != null && this.document.getFocusedElement() == this.target;
     }
 
     private void pollTemperature() {
@@ -354,32 +514,32 @@ public final class AlchemyFurnaceScreen extends AbstractContainerScreen<AlchemyF
 
     private boolean draftDiverged() {
         if (this.target == null || Double.isNaN(this.submitted)) return true;
-        Optional<Double> parsed = parseFinite(this.target.getRawText());
+        Optional<Double> parsed = parseFinite(this.target.getValue());
         return parsed.isEmpty() || Double.doubleToLongBits(parsed.get()) != Double.doubleToLongBits(this.submitted);
     }
 
     private void writeField(String text) {
         if (this.target == null) return;
-        if (text.equals(this.target.getRawText())) return;
+        // Remember what Java wrote even when the value already matches, or the next frame reads it as a user edit.
+        this.fieldText = text;
+        if (text.equals(this.target.getValue())) return;
         this.writingField = true;
-        this.target.setText(text, false);
+        this.target.setValue(text);
         this.writingField = false;
     }
 
     private void applyTemperature() {
         if (this.target == null) return;
-        String draft = this.target.getRawText();
+        String draft = this.target.getValue();
         Optional<Double> parsed = parseFinite(draft);
         if (parsed.isEmpty()) {
             this.rejection = Component.translatable("screen.mxt.alchemy.temperature_invalid", draft);
-            this.tooltipRejection = null;
             return;
         }
         this.submitted = parsed.get();
         this.inflight++;
         this.draftDirty = true;
         this.rejection = null;
-        this.tooltipRejection = null;
         this.send(Action.TEMPERATURE, this.submitted);
     }
 
@@ -401,21 +561,20 @@ public final class AlchemyFurnaceScreen extends AbstractContainerScreen<AlchemyF
         return (to - from) & 0xFFFF;
     }
 
-    private void text(@Nullable Label label, Component text) {
-        if (label != null && !text.equals(label.getText())) label.setText(text);
+    private void text(@Nullable Element element, Component text) {
+        if (element == null) return;
+        String value = text.getString();
+        if (!value.equals(element.getTextContent())) element.setTextContent(value);
+        TextColor color = text.getStyle().getColor();
+        if (color == null) return;
+        String hex = String.format(Locale.ROOT, "#%06X", color.getValue());
+        if (!hex.equalsIgnoreCase(element.getInlineStylePropertyValue("color"))) {
+            element.setInlineStyleProperty("color", hex);
+        }
     }
 
-    private void tooltip(UIElement element, Component... lines) {
-        element.style(style -> style.tooltips(lines));
-    }
-
-    private void click(UI loaded, String id, Runnable action) {
-        loaded.selectId(id, Button.class).findFirst().ifPresent(button -> button.setOnClick(event -> action.run()));
-    }
-
-    @Nullable
-    private Label label(UI loaded, String id) {
-        return loaded.selectId(id, Label.class).findFirst().orElse(null);
+    private void click(Element element, Runnable action) {
+        element.addEventListener("click", event -> action.run());
     }
 
     private void send(Action action, double temperature) {
@@ -423,34 +582,12 @@ public final class AlchemyFurnaceScreen extends AbstractContainerScreen<AlchemyF
     }
 
     @Override
-    public boolean mouseClicked(@NonNull MouseButtonEvent event, boolean doubleClick) {
-        if (this.ui == null) return true;
-        return super.mouseClicked(event, doubleClick);
-    }
-
-    @Override
-    public boolean mouseReleased(@NonNull MouseButtonEvent event) {
-        if (this.ui == null) return true;
-        return super.mouseReleased(event);
-    }
-
-    @Override
-    public boolean mouseDragged(@NonNull MouseButtonEvent event, double deltaX, double deltaY) {
-        if (this.ui == null) return true;
-        return super.mouseDragged(event, deltaX, deltaY);
-    }
-
-    @Override
-    public boolean keyPressed(@NonNull KeyEvent event) {
-        if (this.ui == null) return event.isEscape() && super.keyPressed(event);
-        return super.keyPressed(event);
-    }
-
-    @Override
     public void extractBackground(@NonNull GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
-        if (this.ui != null || this.templateError == null) return;
+        // The vanilla pass owns the in-game dim gradient behind the panel; skipping super drops it.
+        super.extractBackground(graphics, mouseX, mouseY, partialTick);
+        if (this.pageError == null) return;
         if (this.errorWidth != this.width) {
-            this.errorLines = this.font.split(this.templateError, Math.max(40, this.width - 40));
+            this.errorLines = this.font.split(this.pageError, Math.max(40, this.width - 40));
             this.errorWidth = this.width;
         }
         int y = this.height / 2 - this.errorLines.size() * 5;
@@ -461,8 +598,8 @@ public final class AlchemyFurnaceScreen extends AbstractContainerScreen<AlchemyF
     }
 
     @Override
-    protected void extractSlot(@NonNull GuiGraphicsExtractor graphics, net.minecraft.world.inventory.Slot slot, int mouseX, int mouseY) {
-        if (this.ui == null) return;
+    protected void extractSlot(@NonNull GuiGraphicsExtractor graphics, Slot slot, int mouseX, int mouseY) {
+        if (!this.slotsDrawn()) return;
         super.extractSlot(graphics, slot, mouseX, mouseY);
     }
 
@@ -470,9 +607,50 @@ public final class AlchemyFurnaceScreen extends AbstractContainerScreen<AlchemyF
     protected void extractLabels(@NonNull GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
     }
 
-    private static String[] playerSlots() {
-        String[] ids = new String[36];
-        for (int index = 0; index < ids.length; index++) ids[index] = "inventory_" + index;
-        return ids;
+    /** Without read geometry the cells are parked: they must not hover, take clicks or find slots. */
+    @Override
+    protected boolean isHovering(int left, int top, int width, int height, double mouseX, double mouseY) {
+        return this.slotsDrawn() && super.isHovering(left, top, width, height, mouseX, mouseY);
+    }
+
+    @Override
+    protected boolean hasClickedOutside(double mouseX, double mouseY, int left, int top) {
+        if (!this.slotsDrawn()) return true;
+        return mouseX < this.panelLeft || mouseY < this.panelTop
+                || mouseX >= this.panelLeft + this.panelWidth || mouseY >= this.panelTop + this.panelHeight;
+    }
+
+    @Override
+    public boolean mouseClicked(@NonNull MouseButtonEvent event, boolean doubleClick) {
+        if (!this.slotsDrawn()) return true;
+        return super.mouseClicked(event, doubleClick);
+    }
+
+    @Override
+    public boolean mouseReleased(@NonNull MouseButtonEvent event) {
+        if (!this.slotsDrawn()) return true;
+        return super.mouseReleased(event);
+    }
+
+    @Override
+    public boolean mouseDragged(@NonNull MouseButtonEvent event, double deltaX, double deltaY) {
+        if (!this.slotsDrawn()) return true;
+        return super.mouseDragged(event, deltaX, deltaY);
+    }
+
+    @Override
+    public boolean keyPressed(@NonNull KeyEvent event) {
+        if (!this.slotsBound) return event.isEscape() && super.keyPressed(event);
+        return super.keyPressed(event);
+    }
+
+    @Override
+    public void removed() {
+        this.clearBindings();
+        if (this.document != null) {
+            this.document.remove();
+            this.document = null;
+        }
+        super.removed();
     }
 }

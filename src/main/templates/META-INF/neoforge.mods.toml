@@ -27,8 +27,8 @@ A data-driven cultivation framework with server-authoritative runtime for cultiv
 [[mixins]]
 config = "${mod_id}.mixins.json"
 
-#[[accessTransformers]]
-#file="META-INF/accesstransformer.cfg"
+[[accessTransformers]]
+file="META-INF/accesstransformer.cfg"
 
 # The coremods config file path is not configurable and is always loaded from META-INF/coremods.json
 
@@ -60,19 +60,12 @@ versionRange = "[${curios_version},)"
 ordering = "NONE"
 side = "BOTH"
 
+# Required on the client: the alchemy screens are ApricityUI pages. A dedicated server never draws them,
+# so it does not need the library.
 [[dependencies.${mod_id}]]
-modId = "ldlib2"
+modId = "apricityui"
 type = "required"
-versionRange = "[${ldlib2_version},)"
-ordering = "AFTER"
-side = "BOTH"
-
-# Optional: only the client can draw a mount from a GeckoLib model, and a pack that asks for one still loads
-# (and flies) without the mod installed.
-[[dependencies.${mod_id}]]
-modId = "geckolib"
-type = "optional"
-versionRange = "[${geckolib_version},)"
+versionRange = "[${apricityui_version},)"
 ordering = "AFTER"
 side = "CLIENT"
 

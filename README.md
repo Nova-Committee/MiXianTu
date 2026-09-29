@@ -124,7 +124,7 @@ recipes. You need a datapack or content pack (including content written with Kub
 
 ### What dependencies are required?
 
-Jupiter and LDLib2 are required dependencies needed manual installation, and every other required dependency is bundled 
+Jupiter and ApricityUI are required dependencies needed manual installation (ApricityUI on the client only), and every other required dependency is bundled 
 inside the mod. KubeJS is only needed if you want to register content from scripts. JEI and Jade are optional compatibility 
 mods, and the game works fine without them.
 

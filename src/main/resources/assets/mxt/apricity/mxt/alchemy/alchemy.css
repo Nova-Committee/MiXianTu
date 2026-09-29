@@ -1,0 +1,148 @@
+/* 丹炉四页共用样式：只放布局与颜色，控件外观来自 apricityui/theme/ae/1.0.0.css。
+ *
+ * 坐标全部相对 .area 的 padding box（ApricityUI 的 absolute 包含块就是它）。
+ * 画布：监控 188x211、三个仓页 188x146（内容盒；主题自带 7px 边框，所以 panel-* 写的是含边框的
+ * 外框尺寸，box-sizing 用 border-box）。槽位是 18x18 的 <slot>，物品 16x16 落在格里，所以 Java
+ * 写 Slot.x/y 时要 +1。每页只在 <style> 里补机器槽与背包两行的 top/left。 */
+
+body {
+    width: 100%;
+    /* 必须是视口单位：ApricityUI 的 <html> 没有显式高度，body 上的百分比高度取不到基准、整条会被忽略，
+       于是 flex 的交叉轴没有剩余空间可分配，面板只水平居中、贴顶边。gui 模式下 100vh 就是整块 GUI 视口。 */
+    height: 100vh;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.area {
+    position: relative;
+    box-sizing: border-box;
+    color: rgb(69 55 102);
+}
+
+.panel-monitor {
+    width: 202px;
+    height: 225px;
+}
+
+.panel-part {
+    width: 202px;
+    height: 160px;
+}
+
+.title {
+    position: absolute;
+    left: 7px;
+    top: 7px;
+    width: 174px;
+    height: 11px;
+    font-size: 10px;
+    color: rgb(69 55 102);
+}
+
+.line {
+    position: absolute;
+    left: 7px;
+    width: 174px;
+    height: 11px;
+    font-size: 9px;
+    color: rgb(69 55 102);
+}
+
+.temperature {
+    top: 20px;
+}
+
+.limit {
+    top: 33px;
+}
+
+.status {
+    top: 46px;
+}
+
+.progress {
+    position: absolute;
+    left: 7px;
+    top: 60px;
+    width: 174px;
+    height: 6px;
+    box-sizing: border-box;
+    border: 1px solid rgb(55 55 55);
+    background-color: rgb(139 139 139);
+}
+
+.progress-fill {
+    height: 100%;
+    width: 0%;
+    background-color: rgb(106 168 79);
+}
+
+.input {
+    position: absolute;
+    left: 29px;
+    top: 70px;
+    width: 104px;
+    height: 18px;
+    box-sizing: border-box;
+    font-size: 9px;
+    line-height: 11px;
+    padding-bottom: 0;
+}
+
+.button {
+    position: absolute;
+    box-sizing: border-box;
+    height: 18px;
+    font-size: 9px;
+    line-height: 10px;
+    text-align: center;
+}
+
+.button[disabled] {
+    background-color: rgb(120 124 140);
+    color: rgb(190 190 190);
+}
+
+.apply {
+    left: 137px;
+    top: 70px;
+    width: 44px;
+}
+
+.start {
+    left: 7px;
+    top: 93px;
+    width: 85px;
+}
+
+.abort {
+    left: 96px;
+    top: 93px;
+    width: 85px;
+}
+
+.machine {
+    position: absolute;
+    gap: 4px;
+}
+
+.inventory-label {
+    position: absolute;
+    left: 13px;
+    width: 162px;
+    height: 10px;
+    font-size: 9px;
+    color: rgb(69 55 102);
+}
+
+.player-inventory {
+    position: absolute;
+    left: 13px;
+    width: 162px;
+    height: 72px;
+    gap: 0px;
+}
