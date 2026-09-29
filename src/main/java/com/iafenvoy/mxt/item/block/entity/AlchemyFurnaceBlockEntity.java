@@ -16,6 +16,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.Container;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
@@ -80,12 +81,13 @@ public final class AlchemyFurnaceBlockEntity extends BlockEntity implements Alch
         super(MxtBlockEntities.ALCHEMY_FURNACE.get(), pos, blockState);
     }
 
-    public static void serverTick(ServerLevel level, BlockPos pos, BlockState blockState, AlchemyFurnaceBlockEntity furnace) {
+    public static void serverTick(Level level, BlockPos pos, BlockState blockState, AlchemyFurnaceBlockEntity furnace) {
+        if (!(level instanceof ServerLevel serverLevel)) return;
         if (++furnace.structureTicker >= 20) {
             furnace.structureTicker = 0;
             furnace.refreshStructure();
         }
-        AlchemyWorkstationService.tick(level, pos, furnace);
+        AlchemyWorkstationService.tick(serverLevel, pos, furnace);
         // A completion block action may already have replaced this block. Do not write lit back over it.
         if (furnace.isRemoved() || !(level.getBlockState(pos).getBlock() instanceof AlchemyFurnaceBlock)) return;
         furnace.syncLit();

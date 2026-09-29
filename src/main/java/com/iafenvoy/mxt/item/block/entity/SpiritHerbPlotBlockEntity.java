@@ -14,6 +14,7 @@ import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.ValueInput;
@@ -46,8 +47,8 @@ public final class SpiritHerbPlotBlockEntity extends BlockEntity {
         super(MxtBlockEntities.SPIRIT_HERB_PLOT.get(), pos, state);
     }
 
-    public static void serverTick(ServerLevel level, BlockPos pos, BlockState state, SpiritHerbPlotBlockEntity plot) {
-        SpiritHerbGrowthService.tick(level, pos, plot);
+    public static void serverTick(Level level, BlockPos pos, BlockState state, SpiritHerbPlotBlockEntity plot) {
+        if (level instanceof ServerLevel serverLevel) SpiritHerbGrowthService.tick(serverLevel, pos, plot);
     }
 
     public boolean occupied() {

@@ -8,7 +8,6 @@ import com.iafenvoy.mxt.screen.menu.AlchemyFurnaceMenus;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.LivingEntity;
@@ -65,10 +64,8 @@ public final class AlchemyFurnaceBlock extends BaseEntityBlock {
     }
 
     @Override
-    public <T extends BlockEntity> @Nullable BlockEntityTicker<T> getTicker(Level level, @NonNull BlockState state, @NonNull BlockEntityType<T> type) {
-        if (level.isClientSide()) return null;
-        return createTickerHelper(type, MxtBlockEntities.ALCHEMY_FURNACE.get(),
-                (tickLevel, pos, blockState, furnace) -> AlchemyFurnaceBlockEntity.serverTick((ServerLevel) tickLevel, pos, blockState, furnace));
+    public <T extends BlockEntity> @Nullable BlockEntityTicker<T> getTicker(@NonNull Level level, @NonNull BlockState state, @NonNull BlockEntityType<T> type) {
+        return createTickerHelper(type, MxtBlockEntities.ALCHEMY_FURNACE.get(), AlchemyFurnaceBlockEntity::serverTick);
     }
 
     @Override

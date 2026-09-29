@@ -48,23 +48,17 @@ public final class SpiritHerbPlotBlock extends BaseEntityBlock {
     }
 
     @Override
-    public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, @NonNull BlockState state,
-                                                                  @NonNull BlockEntityType<T> type) {
-        if (level.isClientSide() || type != MxtBlockEntities.SPIRIT_HERB_PLOT.get()) return null;
-        return (level1, pos, state1, plot) -> {
-            if (level1 instanceof ServerLevel server) SpiritHerbPlotBlockEntity.serverTick(server, pos, state1, plot);
-        };
+    public <T extends BlockEntity> BlockEntityTicker<T> getTicker(@NonNull Level level, @NonNull BlockState state, @NonNull BlockEntityType<T> type) {
+        return createTickerHelper(type, MxtBlockEntities.SPIRIT_HERB_PLOT.get(), SpiritHerbPlotBlockEntity::serverTick);
     }
 
     @Override
-    protected @NonNull VoxelShape getShape(@NonNull BlockState state, @NonNull BlockGetter level, @NonNull BlockPos pos,
-                                           @NonNull CollisionContext context) {
+    protected @NonNull VoxelShape getShape(@NonNull BlockState state, @NonNull BlockGetter level, @NonNull BlockPos pos, @NonNull CollisionContext context) {
         return SHAPE;
     }
 
     @Override
-    protected @NonNull VoxelShape getCollisionShape(@NonNull BlockState state, @NonNull BlockGetter level,
-                                                    @NonNull BlockPos pos, @NonNull CollisionContext context) {
+    protected @NonNull VoxelShape getCollisionShape(@NonNull BlockState state, @NonNull BlockGetter level, @NonNull BlockPos pos, @NonNull CollisionContext context) {
         return SHAPE;
     }
 
@@ -79,9 +73,7 @@ public final class SpiritHerbPlotBlock extends BaseEntityBlock {
     }
 
     @Override
-    protected @NonNull InteractionResult useItemOn(@NonNull ItemStack stack, @NonNull BlockState state, @NonNull Level level,
-                                                   @NonNull BlockPos pos, @NonNull Player player, @NonNull InteractionHand hand,
-                                                   @NonNull BlockHitResult hit) {
+    protected @NonNull InteractionResult useItemOn(@NonNull ItemStack stack, @NonNull BlockState state, @NonNull Level level, @NonNull BlockPos pos, @NonNull Player player, @NonNull InteractionHand hand, @NonNull BlockHitResult hit) {
         if (!(level.getBlockEntity(pos) instanceof SpiritHerbPlotBlockEntity plot)) return InteractionResult.PASS;
         // ServerPlayerGameMode only continues into useWithoutItem for this result. PASS stops the click.
         if (stack.isEmpty()) return InteractionResult.TRY_WITH_EMPTY_HAND;
@@ -94,9 +86,7 @@ public final class SpiritHerbPlotBlock extends BaseEntityBlock {
     }
 
     @Override
-    protected @NonNull InteractionResult useWithoutItem(@NonNull BlockState state, @NonNull Level level,
-                                                        @NonNull BlockPos pos, @NonNull Player player,
-                                                        @NonNull BlockHitResult hit) {
+    protected @NonNull InteractionResult useWithoutItem(@NonNull BlockState state, @NonNull Level level, @NonNull BlockPos pos, @NonNull Player player, @NonNull BlockHitResult hit) {
         if (!(level.getBlockEntity(pos) instanceof SpiritHerbPlotBlockEntity plot) || !plot.occupied())
             return InteractionResult.PASS;
         if (level.isClientSide()) return InteractionResult.SUCCESS;
