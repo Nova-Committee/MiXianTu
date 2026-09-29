@@ -44,11 +44,12 @@ title: 命令
 | `/realm set <realm>`（= `/mxt realm set …`） | 把自己的境界直接设成链上的某一档（需要 gamemaster 权限）；不在当前有效修炼链上的档会被拒绝。 |
 | `/realm chain <realm>`（= `/mxt realm chain …`） | 打印这一档所在的**整条境界链**，不需要权限：链上在它之前的是灰色、它自己是绿色、之后的是白色。抬头是这条链的身份，也就是该链所属的 `mxt:aura` 条目 ID。 |
 | `/contract list [<player>]`（= `/mxt contract list`） | 按**主人索引**列出该玩家名下的灵兽：契约类型、灵兽 UUID，以及它此刻是否已加载；不填 `player` 时看自己，不需要权限。索引是名单不是真值，所以每行都会回查灵兽身上的契约记录，已经对不上的行当场清掉。 |
-| `/contract info <target>`（= `/mxt contract info`） | 读目标身上的契约记录：类型、主人、签订时刻、召回状态与冷却剩余；它没有契约时按"它没有契约"拒绝。不需要权限。 |
+| `/contract info <target>`（= `/mxt contract info`） | 读目标身上的契约记录：类型、主人、签订时刻、召回状态与冷却剩余；目标档案声明了等级链时还会多打两行——它现在在哪一级、下一级是什么，以及熟练度还差多少（`mxt:progression` 条件、`/contract level` 都按这两行办事）。它没有契约时按"它没有契约"拒绝。不需要权限。 |
 | `/contract bind <player> <target> <contract_type> [force]`（= `/mxt contract bind …`） | 让 `<player>` 与目标生物签订契约（需要 gamemaster 权限），走的是与契约卷轴完全相同的那条流程，代价由该玩家支付；目标必须实现 `Contractable`，否则按"它不能被契约"拒绝。`force` 跳过代价与每人上限。 |
 | `/contract break <target> [force]`（= `/mxt contract break …`） | 解除目标身上的契约（需要 gamemaster 权限），灵宠与主人都还活着：执行该契约类型的 `release_action`，清掉记录与主人索引。`force` 跳过"必须是主人"的校验。 |
 | `/contract recall <target> [force]`（= `/mxt contract recall …`） | 让目标响应召回，等同于在御兽铃轮盘上点它的「召回」那一格（需要 gamemaster 权限）：置上召回闩，由它下一个 tick 落地。`force` 跳过召回冷却。 |
 | `/contract behavior <target> <behavior> [force]`（= `/mxt contract behavior …`） | 给目标下一条行为命令（需要 gamemaster 权限），走的是与御兽铃轮盘完全相同的那条流程。`behavior` 是代码里的行为 id（默认 `mxt:follow` / `mxt:wander` / `mxt:stay` / `mxt:recall`，补全给的是框架已知的那一份），目标没提供这条命令时按"它不接受这道命令"拒绝；`mxt:recall` 是**一次性**的，等价于上面的 `recall`。`force` 跳过"必须是主人"的校验（召回时也跳过冷却）。 |
+| `/contract level <target> <level> [force]`（= `/mxt contract level …`） | 把目标的**进度记录**写到某一级（需要 gamemaster 权限）。链的所有者是目标自己的生物档案，所以只点名等级就够：`level` 取 `progression` 注册表里的条目、且必须在**它自己那条链上**（不在链上按"这一级不在它的链上"拒绝，`force` 跳过这一条）；写进去之后重算它授予的东西并发一次 `mxt:progression_level` 信号，与自然晋升走的是同一条路。目标没有档案或档案没声明链时按"它没有拥有任何进度链"拒绝。**不看**这一级自己的 `mastery` 与 `condition`（那是自然晋升的门槛，这是调试入口）。 |
 | `/mxt secret_realm list` | 列出当前所有秘境实例：维度键、序号、定义、在场人数与上限、主人、地形是否已布置、维度当前是否加载。 |
 | `/mxt secret_realm info <dimension>` | 查看某一份实例的同一行信息。 |
 | `/mxt secret_realm enter <definition>` | 以自己为进入者开一份或加入一份秘境实例（需要 gamemaster 权限）。这是无需令牌就能进秘境的管理入口，走的是与令牌完全相同的那条流程（条件、人数、实例上限、生成）。 |
@@ -148,13 +149,17 @@ title: 命令
 
 ### 契约（`/contract`）
 
-**能不能被契约是代码事实**：目标生物必须自己实现 `com.iafenvoy.mxt.api.Contractable`（见[特殊公开接口](../java/interfaces)），任何数据包都造不出这个资格，所以原版生物默认都签不了。数据包能做的是：用契约类型自己的**实体类型标签** `#<命名空间>:contract/<路径>` 收窄"这类生物签不签这份契约"（没写标签或标签为空就是不限制，见 [`contract_type`](../../数据包格式.md#contract_type)）；用 `owner_condition` / `creature_condition` 收窄双方；用 `costs` 收代价。
+**能不能被契约是代码事实**：目标生物必须自己实现 `com.iafenvoy.mxt.api.Contractable`（见[特殊公开接口](../java/interfaces)），任何数据包都造不出这个资格，所以原版生物默认都签不了。数据包能做的是：用契约类型自己的**实体类型标签** `#<命名空间>:contract/<路径>` 收窄"这类生物签不签这份契约"（没写标签或标签为空就是不限制，见 [`contract_type`](../../数据包格式.md#contract_type)）；用 `owner_condition` / `creature_condition` 收窄双方；用 `costs` 收代价；用 `owner_abilities` 在契约存续期间给**主人**能力（解除与死亡收回，主人不在线时三个 `owner_*_action` 不执行）。
 
 签订一步的顺序是固定的，也是这组命令与卷轴共用的那一份：已经签过 → 目标没实现接口 → 接口的 `acceptsContract` → 主人条件 → 灵宠条件 → 每人上限 → `Pre` 事件（可取消）→ **最后才收钱** → 写记录 → 写主人索引 → 生物的 `onContractBound`。**收钱排在事件之后**是因为脚本通道退不了款，取消之后要还钱的地方就不该先收。
 
-解除与死亡是**两条不同的路**：`break` 走 `release_action` 并回调 `onContractReleased`，灵宠还活着；灵宠自己死亡走 `death_action` 并回调 `onContractDeath`。两者都会清掉记录与主人索引，也都会发对应的事件。**捕捉不是实体侧的门槛**：任何生物都可能被捕捉，怎么捕捉由物品决定（灵兽袋自己的规则是"你自己的已契约灵兽、一次一只"）。生物只有在实现 `CaptureListener` 时才会收到"被收走/被放出"的通知——不实现它照样能被收走，只是收不到通知。
+解除与死亡是**两条不同的路**：`break` 走 `release_action` 并回调 `onContractReleased`，灵宠还活着；灵宠自己死亡走 `death_action` 并回调 `onContractDeath`。两者都会清掉记录与主人索引，也都会发对应的事件。**两条路还会清掉这只灵宠的进度记录**（它档案声明的那条链），它退回入口等级、由等级授予的能力同时撤销——"契约买来的成长跟着契约走"没有开关。
 
-失败原因共用一套文案键 `contract.mxt.failure.<小写枚举名>`（卷轴、御兽铃、灵兽袋与这组命令打的是同一张表），取值有 `already_bound`、`not_contractable`、`owner_conditions`、`creature_conditions`、`limit_reached`、`insufficient_cost`、`not_bound`、`not_owner`、`recall_cooldown`、`recall_pending`（闩已经置上、还没落地）、`cancelled`、`unsupported_behavior`、`behavior_refused`。
+**灵宠的成长就挂在这条契约上**：档案声明了等级链的生物，主循环每 20 tick 问一次它持有的链（熟练度是它身上的一个数值，由数据包或脚本去涨），够数且该级 `condition` 成立就晋升、重算它授予的能力并发 `mxt:progression_level`；`/contract info` 报得出它现在在哪一级，`/contract level` 是管理员的调试写入。完整口径见 [`creature_profile`](../../数据包格式.md#creature_profile) 与 [`progression`](../../数据包格式.md#progression)。
+
+**捕捉不是实体侧的门槛**：任何生物都可能被捕捉，怎么捕捉由物品决定（灵兽袋自己的规则是"你自己的已契约灵兽、一次一只"）。生物只有在实现 `CaptureListener` 时才会收到"被收走/被放出"的通知——不实现它照样能被收走，只是收不到通知。
+
+失败原因共用一套文案键 `contract.mxt.failure.<小写枚举名>`（卷轴、御兽铃、灵兽袋与这组命令打的是同一张表），取值有 `already_bound`、`not_contractable`、`owner_conditions`、`creature_conditions`、`limit_reached`、`insufficient_cost`、`not_bound`、`not_owner`、`recall_cooldown`、`recall_pending`（闩已经置上、还没落地）、`cancelled`、`unsupported_behavior`、`behavior_refused`。`/contract level` 的失败文案是另一套 `progression.mxt.failure.<小写枚举名>`：`unknown_owner`、`foreign_level`、`same_level`，另有 `unknown_level` 与 `server_only` 只会从脚本侧出现。
 
 **行为（order）不是数据包字段**：它由生物自己回答（`ContractOperations.behaviors()`），框架只内置跟随 / 游荡 / 驻守 / 召回四条，其余由内容方用 `ContractBehavior` + `ContractBehaviors.register` 添。当前那条写在灵兽的 `mxt:contract` 记录里（读不出来就退回跟随），`follow_action` 只在当前是**跟随**时才跑。玩家的入口是御兽铃右键生物（对准它）再右键空处（开轮盘选），这组命令是管理员入口。
 

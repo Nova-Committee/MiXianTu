@@ -1,10 +1,12 @@
 package com.iafenvoy.mxt.command.server;
 
 import com.iafenvoy.mxt.attachment.ContractAttachment;
+import com.iafenvoy.mxt.attachment.CreatureSpiritAttachment;
 import com.iafenvoy.mxt.command.ServerCommandManager;
 import com.iafenvoy.mxt.data.creature.ContractBehavior;
 import com.iafenvoy.mxt.data.creature.ContractBehaviors;
 import com.iafenvoy.mxt.data.creature.ContractType;
+import com.iafenvoy.mxt.data.progression.Progression;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.creature.BoundBeastService;
@@ -13,7 +15,10 @@ import com.iafenvoy.mxt.runtime.creature.ContractBehaviorService;
 import com.iafenvoy.mxt.runtime.creature.ContractFeedback;
 import com.iafenvoy.mxt.runtime.creature.ContractService;
 import com.iafenvoy.mxt.runtime.creature.Contracts;
+import com.iafenvoy.mxt.runtime.progression.ProgressionAdminService;
+import com.iafenvoy.mxt.runtime.progression.ProgressionService;
 import com.iafenvoy.mxt.util.DefinitionText;
+import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.PlayerNames;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
@@ -27,12 +32,15 @@ import net.minecraft.commands.arguments.ResourceArgument;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 
 import java.util.List;
+import java.util.Locale;
 
 import static net.minecraft.commands.Commands.argument;
 import static net.minecraft.commands.Commands.literal;
@@ -71,7 +79,14 @@ public final class ContractCommand {
                                         .suggests((ctx, builder) -> SharedSuggestionProvider.suggest(ContractBehaviors.known()
                                                 .stream().map(behavior -> behavior.id().toString()).sorted().toList(), builder))
                                         .executes(ctx -> behavior(ctx, false))
-                                        .then(literal("force").executes(ctx -> behavior(ctx, true))))));
+                                        .then(literal("force").executes(ctx -> behavior(ctx, true))))))
+                // One creature holds one chain, so the level alone names what to write; whose chain it is comes
+                // from the creature's own profile.
+                .then(literal("level").requires(ServerCommandManager::mayChange)
+                        .then(argument("target", EntityArgument.entity())
+                                .then(argument("level", ResourceArgument.resource(context, MxtResourceKeys.PROGRESSION))
+                                        .executes(ctx -> level(ctx, false))
+                                        .then(literal("force").executes(ctx -> level(ctx, true))))));
     }
 
     // The list is the index, so an unloaded beast still counts and still shows; whether it is loaded is answered
@@ -117,6 +132,19 @@ public final class ContractCommand {
         source.sendSuccess(() -> Component.translatable("command.mxt.contract.info.recalled", Component.translatable(
                 contract.recalled() ? "command.mxt.contract.info.recalled_on" : "command.mxt.contract.info.recalled_off")), false);
         source.sendSuccess(() -> Component.translatable("command.mxt.contract.info.behavior", contract.behavior().name()), false);
+        // A profile that owns a chain makes this creature a progression owner; a profile that owns none reports
+        // nothing, so a plain stat block reads exactly as it did before.
+        Identifier progressOwner = mob.getExistingData(MxtAttachments.CREATURE_SPIRIT)
+                .flatMap(CreatureSpiritAttachment::profile).map(HolderHelper::id).orElse(null);
+        if (progressOwner != null) ProgressionService.currentLevelOf(mob, progressOwner).ifPresent(current -> {
+            Component next = ProgressionService.nextLevelOf(mob, progressOwner).map(DefinitionText::name)
+                    .orElseGet(() -> Component.translatable("command.mxt.contract.info.level.top"));
+            source.sendSuccess(() -> Component.translatable("command.mxt.contract.info.level",
+                    progressOwner.toString(), DefinitionText.name(current), next), false);
+            ProgressionService.masteryOf(mob, progressOwner).ifPresent(mastery -> source.sendSuccess(
+                    () -> Component.translatable("command.mxt.contract.info.mastery", mastery.have(),
+                            mastery.required(), mastery.resource().toString()), false));
+        });
         int cooldown = type.value().recallCooldown();
         if (cooldown > 0) {
             long remaining = Math.max(0L, contract.recallAt() + cooldown - mob.level().getGameTime());
@@ -199,6 +227,31 @@ public final class ContractCommand {
         }
         source.sendSuccess(() -> Component.translatable("command.mxt.contract.behavior_success",
                 mob.getDisplayName(), behavior.name()), true);
+        return 1;
+    }
+
+    // A creature climbs one chain, so the level alone names what to write; whose chain it is comes from the
+    // creature's own profile, and a profile that owns no chain is refused by the service with UNKNOWN_OWNER.
+    private static int level(CommandContext<CommandSourceStack> ctx, boolean force) throws CommandSyntaxException {
+        CommandSourceStack source = ctx.getSource();
+        Entity target = EntityArgument.getEntity(ctx, "target");
+        Reference<Progression> level = ResourceArgument.getResource(ctx, "level", MxtResourceKeys.PROGRESSION);
+        if (!(target instanceof LivingEntity living)) {
+            source.sendFailure(Component.translatable("progression.mxt.failure.unknown_owner"));
+            return 0;
+        }
+        Identifier owner = living.getExistingData(MxtAttachments.CREATURE_SPIRIT)
+                .flatMap(CreatureSpiritAttachment::profile).map(HolderHelper::id).orElse(null);
+        ProgressionAdminService.Result result = owner == null
+                ? ProgressionAdminService.Result.rejected(ProgressionAdminService.Failure.UNKNOWN_OWNER)
+                : ProgressionAdminService.setLevel(living, owner, level, force);
+        if (!result.changed()) {
+            source.sendFailure(Component.translatable("progression.mxt.failure."
+                    + result.failure().name().toLowerCase(Locale.ROOT)));
+            return 0;
+        }
+        source.sendSuccess(() -> Component.translatable("command.mxt.contract.level.done", living.getDisplayName(),
+                DefinitionText.name(level)), true);
         return 1;
     }
 }

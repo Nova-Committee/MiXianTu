@@ -6,6 +6,7 @@ import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.util.DefinitionText;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import net.minecraft.ChatFormatting;
 import net.minecraft.core.Holder;
 import net.minecraft.core.component.DataComponentGetter;
 import net.minecraft.network.chat.Component;
@@ -41,5 +42,9 @@ public record ContractScrollComponent(Optional<Holder<ContractType>> contractTyp
     @Override
     public void addToTooltip(@NonNull TooltipContext context, Consumer<Component> consumer, @NonNull TooltipFlag flag, @NonNull DataComponentGetter components) {
         consumer.accept(Component.translatable("tooltip.mxt.contract_scroll.type", this.contractType.map(value -> DefinitionText.name(value, "contract_type")).orElse(Component.literal("-"))));
+        // The pack-written description, shown only when it reads as text rather than as a bare key.
+        this.contractType.map(Holder::value).map(ContractType::description)
+                .filter(DefinitionText::resolved).filter(text -> !text.getString().isBlank())
+                .ifPresent(text -> consumer.accept(text.copy().withStyle(ChatFormatting.GRAY)));
     }
 }

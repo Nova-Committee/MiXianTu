@@ -26,7 +26,18 @@ import com.iafenvoy.mxt.data.ability.target.AreaTargetSelector;
 import com.iafenvoy.mxt.data.ability.target.ConeTargetSelector;
 import com.iafenvoy.mxt.data.ability.target.RayTargetSelector;
 import com.iafenvoy.mxt.data.ability.target.TargetOrder;
+import com.iafenvoy.mxt.data.condition.builtin.entity.ProgressionEntityCondition;
+import com.iafenvoy.mxt.data.condition.builtin.entity.RealmEntityCondition;
+import com.iafenvoy.mxt.data.progression.Progression;
+import com.iafenvoy.mxt.data.trigger.Trigger;
 import com.iafenvoy.mxt.network.payload.WheelActionC2SPayload;
+import com.iafenvoy.mxt.runtime.ability.AbilityGrantService;
+import com.iafenvoy.mxt.runtime.ability.PassiveAttributeService;
+import com.iafenvoy.mxt.runtime.progression.ProgressionAdminService;
+import com.iafenvoy.mxt.runtime.progression.ProgressionDamageMultiplier;
+import com.iafenvoy.mxt.runtime.progression.ProgressionDriver;
+import com.iafenvoy.mxt.runtime.progression.ProgressionService;
+import com.iafenvoy.mxt.runtime.trigger.TriggerSubscription;
 import com.iafenvoy.mxt.runtime.wheel.WheelEntryKinds;
 import com.iafenvoy.mxt.runtime.wheel.WheelSourceTypes;
 import com.iafenvoy.mxt.data.ability.Ability;
@@ -59,6 +70,7 @@ import com.iafenvoy.mxt.data.condition.BiEntityCondition;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.data.condition.builtin.entity.AuraElementEntityCondition;
 import com.iafenvoy.mxt.data.condition.builtin.entity.CultivatingEntityCondition;
+import com.iafenvoy.mxt.data.condition.builtin.entity.ContractEntityCondition;
 import com.iafenvoy.mxt.data.condition.builtin.entity.ElementAttachmentEntityCondition;
 import com.iafenvoy.mxt.data.condition.builtin.entity.HasElementEntityCondition;
 import com.iafenvoy.mxt.data.condition.builtin.entity.InSecretRealmEntityCondition;
@@ -133,7 +145,6 @@ import com.iafenvoy.mxt.runtime.artifact.FlyingSwordEntity;
 import com.iafenvoy.mxt.runtime.aura.AuraLookup;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationMethodService;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationMethodService.Result;
-import com.iafenvoy.mxt.runtime.cultivation.CultivationGrantService;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationAffinity;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationIdentityService;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationModeService;
@@ -149,7 +160,6 @@ import com.iafenvoy.mxt.runtime.creature.ContractBehaviorService;
 import com.iafenvoy.mxt.runtime.creature.ContractEventBridge;
 import com.iafenvoy.mxt.runtime.creature.ContractService;
 import com.iafenvoy.mxt.runtime.creature.Contracts;
-import com.iafenvoy.mxt.runtime.cultivation.TechniqueProgression;
 import com.iafenvoy.mxt.runtime.cultivation.TechniqueHold;
 import com.iafenvoy.mxt.runtime.cultivation.TechniqueService;
 import com.iafenvoy.mxt.runtime.damage.DamageCalculationService;
@@ -195,6 +205,7 @@ import com.iafenvoy.mxt.util.PlayerNames;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.FormulaContexts;
 import com.iafenvoy.mxt.util.formula.number.Constant;
+import com.mojang.authlib.GameProfile;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.JsonOps;
@@ -232,6 +243,7 @@ import net.minecraft.world.InteractionResult;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.damagesource.DamageType;
 import net.minecraft.world.damagesource.DamageTypes;
+import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
@@ -239,6 +251,7 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.MoverType;
 import net.minecraft.world.entity.Pose;
+import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.animal.chicken.Chicken;
 import net.minecraft.world.entity.animal.pig.Pig;
 import net.minecraft.world.entity.animal.wolf.Wolf;
@@ -258,6 +271,7 @@ import net.minecraft.world.level.portal.TeleportTransition;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.common.util.FakePlayer;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import net.neoforged.neoforge.event.tick.EntityTickEvent;
 import net.neoforged.neoforge.network.connection.ConnectionType;
@@ -315,6 +329,19 @@ public final class MxtTestCommands {
     private static final Identifier TRIAL_REALM = id("trial_realm");
     private static final Identifier CONTRACT = id("master_servant");
     private static final Identifier OPEN_CONTRACT = id("open_contract");
+    // The owner side of each contract fixture: a body must hold what its contract type declares, and the two
+    // abilities are distinct so losing one type cannot be mistaken for losing the other.
+    private static final Identifier OWNER_BOND = id("owner_bond");
+    private static final Identifier OPEN_BOND = id("open_bond");
+    // The creature profile's own chain: three levels, a growth value the pack feeds, and a third level whose
+    // condition is never true, so a promotion can be blocked after its mastery is already paid.
+    private static final Identifier PROBE_BEAST_PROFILE = id("probe_beast");
+    private static final Identifier BEAST_1 = id("beast_1");
+    private static final Identifier BEAST_2 = id("beast_2");
+    private static final Identifier BEAST_3 = id("beast_3");
+    private static final Identifier BEAST_GROWTH = id("beast_growth");
+    private static final Identifier PROGRESSION_GROWTH = id("progression_growth");
+    private static final Identifier SWORD_ART_1 = id("sword_art_1");
     // A content mod's order, registered by the probe the way a content mod registers one: known to both sides, and
     // deliberately not on the probe beast's own list.
     private static final Identifier PROBE_ONLY = id("probe_only");
@@ -390,6 +417,7 @@ public final class MxtTestCommands {
                 .then(literal("element").executes(context -> probeElement(context.getSource())))
                 .then(literal("identity").executes(context -> probeIdentity(context.getSource())))
                 .then(literal("contract").executes(context -> probeContract(context.getSource())))
+                .then(literal("progression").executes(context -> probeProgression(context.getSource())))
                 .then(literal("alchemy").executes(context -> AlchemyProbes.run(context.getSource())))
                 .then(literal("herb").executes(context -> HerbProbes.run(context.getSource())))
                 .then(literal("pill").executes(context -> PillProbes.run(context.getSource())))
@@ -1498,9 +1526,9 @@ public final class MxtTestCommands {
             Holder<Technique> technique = require(MxtResourceKeys.TECHNIQUE, PROBE_TECHNIQUE);
             Holder<Ability> ability = require(MxtResourceKeys.ABILITY, PROBE_ABILITY);
             spirit.addLearnedTechnique(technique);
-            double entry = TechniqueProgression.damageMultiplier(attacker, HolderHelper.id(ability));
+            double entry = ProgressionDamageMultiplier.of(attacker, HolderHelper.id(ability));
             attacker.getData(MxtAttachments.PROGRESSION).setLevel(HolderHelper.id(technique), require(MxtResourceKeys.PROGRESSION, PROBE_PROGRESSION_LEVEL));
-            double advanced = TechniqueProgression.damageMultiplier(attacker, HolderHelper.id(ability));
+            double advanced = ProgressionDamageMultiplier.of(attacker, HolderHelper.id(ability));
             float masteryBefore = masteryDefender.getHealth();
             DamageCalculationService.deal(attacker, masteryDefender, 4.0D, Optional.empty(),
                     context.with(DamageCalculationService.DAMAGE_MULTIPLIER, advanced));
@@ -1835,6 +1863,8 @@ public final class MxtTestCommands {
     // ticks inside the event bridge, so this leg asserts the state the bridge reads rather than the movement it
     // performs with it.
     private static int probeContract(CommandSourceStack source) {
+        // This leg stays client-only: its price leg pays through a context that reads the payer's own cultivation
+        // state (the qi ceiling is a formula), and the bell/wheel legs need a real session's held item.
         ServerPlayer player = player(source);
         if (player == null) return 0;
         ServerLevel level = source.getLevel();
@@ -1844,6 +1874,7 @@ public final class MxtTestCommands {
         BoundBeastService.clear(server, player.getUUID());
         List<Mob> spawned = new ArrayList<>();
         ResourceHolderAttachment resources = player.getData(MxtAttachments.RESOURCE_HOLDER);
+        AbilityAttachment abilities = player.getData(MxtAttachments.ABILITY_HOLDER);
         Holder<Resource> qi = require(MxtResourceKeys.RESOURCE, QI);
         double previousQi = resources.get(qi);
         try {
@@ -1877,11 +1908,15 @@ public final class MxtTestCommands {
                     && close(resources.get(qi), 3.0D)
                     && BoundBeastService.of(server, player.getUUID()).isEmpty();
             resources.set(qi, 5.0D, 0.0D, 10_000.0D, -1L, "probe");
-            boolean bound = ContractService.bind(tagged, player, beast, false).changed()
-                    && close(resources.get(qi), 0.0D)
-                    && Contracts.ownerOf(beast).filter(player.getUUID()::equals).isPresent()
-                    && beast.getOwner() == player
-                    && BoundBeastService.of(server, player.getUUID()).size() == 1;
+            ContractService.Result secondBind = ContractService.bind(tagged, player, beast, false);
+            // The pieces are printed, not just the aggregate: a headless run fails on the owner lookup (a fake
+            // player is not in the level's entity table) and the failure code is what tells that apart from a
+            // refused payment.
+            boolean ownerRecorded = Contracts.ownerOf(beast).filter(player.getUUID()::equals).isPresent();
+            boolean vanillaOwner = beast.getOwner() == player;
+            int rows = BoundBeastService.of(server, player.getUUID()).size();
+            boolean bound = secondBind.changed() && close(resources.get(qi), 0.0D)
+                    && ownerRecorded && vanillaOwner && rows == 1;
             ItemStack probeCore = beast.getData(MxtAttachments.CREATURE_SPIRIT).innerCore();
             // A profile's spawn action is one action, and the profile is written once, so it runs once: the probe
             // beast is left weightless by its own definition rather than by probe code.
@@ -1905,9 +1940,15 @@ public final class MxtTestCommands {
             boolean synced = beastHolder != null && spirit.checkDirty();
             boolean twice = ContractService.bind(tagged, player, beast, false).failure()
                     == ContractService.Failure.ALREADY_BOUND;
-            boolean record = priceRefused && bound && profiled && synced && twice;
+            // The owner side of the same bind: what the type declares is held by the owner, and the bind action
+            // runs on the owner rather than on the beast that signed.
+            boolean ownerBound = abilities.has(OWNER_BOND) && player.hasEffect(MobEffects.ABSORPTION);
+            boolean record = priceRefused && bound && profiled && synced && twice && ownerBound;
             source.sendSuccess(() -> Component.literal("contract probe: price_refused=" + priceRefused
+                    + " bind_failure=" + secondBind.failure() + " qi=" + resources.get(qi)
+                    + " owner_recorded=" + ownerRecorded + " vanilla_owner=" + vanillaOwner + " rows=" + rows
                     + " bound=" + bound + " profiled=" + profiled + " synced=" + synced + " twice=" + twice
+                    + " owner_bound=" + ownerBound
                     + (record ? " OK" : " MISMATCH")), false);
 
             // The owner's list is what a limit counts, and releasing frees the slot it held.
@@ -1918,15 +1959,22 @@ public final class MxtTestCommands {
             boolean firstBound = ContractService.bind(open, player, first, false).changed();
             boolean limitHit = ContractService.bind(open, player, second, false).failure()
                     == ContractService.Failure.LIMIT_REACHED;
+            // Two contracts, two grants: the second type adds its own ability without disturbing the first.
+            boolean bothHeld = abilities.has(OPEN_BOND) && abilities.has(OWNER_BOND);
             // Ending a contract is not the same act as forgetting who owns the creature, and the owner lives on
             // the creature, so a released probe still answers the player it was signed with.
-            boolean freed = ContractService.release(first, player.getUUID(), false).changed()
+            boolean releasedFirst = ContractService.release(first, player.getUUID(), false).changed()
                     && !first.getData(MxtAttachments.CONTRACT).bound()
-                    && Contracts.ownerOf(first).filter(player.getUUID()::equals).isPresent()
-                    && ContractService.bind(open, player, second, false).changed();
-            boolean limit = firstBound && limitHit && freed;
+                    && Contracts.ownerOf(first).filter(player.getUUID()::equals).isPresent();
+            // The release action runs on the owner, and the grant of the type they no longer hold goes with it
+            // while the one another contract still declares stays.
+            boolean ownerReleased = !abilities.has(OPEN_BOND) && abilities.has(OWNER_BOND)
+                    && player.hasEffect(MobEffects.WEAKNESS);
+            boolean freed = releasedFirst && ContractService.bind(open, player, second, false).changed();
+            boolean limit = firstBound && limitHit && freed && bothHeld && ownerReleased;
             source.sendSuccess(() -> Component.literal("contract probe: first_bound=" + firstBound
-                    + " limit_hit=" + limitHit + " freed=" + freed + (limit ? " OK" : " MISMATCH")), false);
+                    + " limit_hit=" + limitHit + " both_held=" + bothHeld + " owner_released=" + ownerReleased
+                    + " freed=" + freed + (limit ? " OK" : " MISMATCH")), false);
 
             // The latch and its stamp: the bell sets it, the type's cooldown gates the next one from the stamp
             // rather than from a countdown, and force is the operator's bypass of the wait alone.
@@ -2040,8 +2088,13 @@ public final class MxtTestCommands {
                     && BoundBeastService.of(server, player.getUUID()).size() == rowsBefore - 1;
             boolean order = ProbeBeast.calls().equals(List.of("bound", "bound", "released", "bound", "recall",
                     "order:wander", "order:stay", "tick:wander", "captured", "freed", "death"));
-            boolean ending = death && order;
-            source.sendSuccess(() -> Component.literal("contract probe: death=" + death + " calls=" + ProbeBeast.calls()
+            // A death takes the dead beast's contract off the owner the same way a release does, and only that
+            // one: the open contract the probe is still holding keeps its own ability.
+            boolean ownerEnded = !abilities.has(OWNER_BOND) && abilities.has(OPEN_BOND)
+                    && player.hasEffect(MobEffects.GLOWING);
+            boolean ending = death && order && ownerEnded;
+            source.sendSuccess(() -> Component.literal("contract probe: death=" + death + " owner_ended=" + ownerEnded
+                    + " calls=" + ProbeBeast.calls()
                     + (ending ? " OK" : " MISMATCH")), false);
 
             if (eligibility && record && limit && recall && bellLeg && input && orders && bag && ending) {
@@ -2052,8 +2105,184 @@ public final class MxtTestCommands {
             return 0;
         } finally {
             resources.set(qi, previousQi, 0.0D, 10_000.0D, -1L, "probe");
+            // A probe beast that is discarded rather than released keeps its row, and the row is what grants the
+            // owner side, so the leg ends by clearing the owner and rebuilding away what it left.
+            BoundBeastService.clear(server, player.getUUID());
+            AbilityGrantService.recalculate(player);
             for (Mob mob : spawned) mob.discard();
         }
+    }
+
+    // A profile that names a chain makes its creature a progression owner, and the owner side is no longer
+    // technique-specific: mastery is a stored value the pack feeds, a level's condition still gates it, and what a
+    // level grants goes through the one grant entry. The leg drives the same driver the tick loop drives, so every
+    // number below is an assertion rather than a wait.
+    private static int probeProgression(CommandSourceStack source) {
+        ServerLevel level = source.getLevel();
+        // A dedicated server has no player at the console, and this leg needs one to own the contract it signs:
+        // the headless path is a throwaway fake player, the shape AlchemyProbes drives its menus with.
+        ServerPlayer player = source.getPlayer();
+        boolean headless = player == null;
+        if (headless) player = new FakePlayer(level, new GameProfile(UUID.randomUUID(), "progression_probe"));
+        BlockPos origin = headless ? BlockPos.containing(source.getPosition()) : player.blockPosition();
+        Holder<Progression> second = require(MxtResourceKeys.PROGRESSION, BEAST_2);
+        Holder<Progression> third = require(MxtResourceKeys.PROGRESSION, BEAST_3);
+        Holder<Progression> foreign = require(MxtResourceKeys.PROGRESSION, SWORD_ART_1);
+        Holder<Resource> growth = require(MxtResourceKeys.RESOURCE, BEAST_GROWTH);
+        Identifier ability = HolderHelper.id(require(MxtResourceKeys.ABILITY, PROGRESSION_GROWTH));
+        // The id a creature's grants are written under: one category, so ending the bond can revoke exactly them.
+        Identifier grantSource = Identifier.fromNamespaceAndPath("mxt", "grant/creature/"
+                + PROBE_BEAST_PROFILE.getNamespace() + "/" + PROBE_BEAST_PROFILE.getPath());
+        List<ProbeBeast> spawned = new ArrayList<>();
+        List<Long> signals = new ArrayList<>();
+        String identity = "progression_probe";
+        ProbeBeast beast = null;
+        try {
+            beast = spawnProbeBeast(level, origin.offset(4, 0, 0));
+            spawned.add(beast);
+            TriggerDispatcher.register(new TriggerSubscription(beast.getUUID(), "probe", identity,
+                    new Trigger.Builtin(TriggerSignals.PROGRESSION_LEVEL), signal -> true,
+                    signal -> signals.add(signal.gameTime()), false));
+            ResourceHolderAttachment resources = beast.getData(MxtAttachments.RESOURCE_HOLDER);
+            AbilityAttachment abilities = beast.getData(MxtAttachments.ABILITY_HOLDER);
+            double baseHealth = beast.getAttributeValue(Attributes.MAX_HEALTH);
+
+            // The entry level is where a creature stands before any record exists, which is what makes an entry
+            // level's own configuration the "born with it" list.
+            boolean entry = stoodOn(beast, BEAST_1)
+                    && ProgressionService.nextLevelOf(beast, PROBE_BEAST_PROFILE)
+                    .map(held -> HolderHelper.id(held).equals(BEAST_2)).orElse(false)
+                    && beast.getData(MxtAttachments.PROGRESSION).level(PROBE_BEAST_PROFILE) == null
+                    && !abilities.has(ability);
+            // The contract condition answers from the record, so a body nobody took answers bound=false; the
+            // contradictory shape is refused when the definition loads rather than read as a silent false.
+            boolean contractAsk = new ContractEntityCondition(false, List.of(), List.of()).test(beast, FormulaContext.of(beast))
+                    && !new ContractEntityCondition(true, List.of(), List.of()).test(beast, FormulaContext.of(beast))
+                    && ContractEntityCondition.CODEC.codec().parse(JsonOps.INSTANCE, contradictoryContractAsk()).error().isPresent();
+            source.sendSuccess(() -> Component.literal("progression probe: entry=" + entry
+                    + " contract_ask=" + contractAsk), false);
+
+            // Mastery is the pack's business: nothing climbs until the stored value reaches what the level asks.
+            resources.set(growth, 9.0D, 0.0D, 1000.0D, -1L, "probe");
+            boolean belowTarget = !ProgressionDriver.tick(beast) && stoodOn(beast, BEAST_1);
+            resources.set(growth, 10.0D, 0.0D, 1000.0D, -1L, "probe");
+            boolean promoted = ProgressionDriver.tick(beast) && stoodOn(beast, BEAST_2) && signals.size() == 1;
+            AbilityGrantService.recalculate(beast);
+            PassiveAttributeService.tick(beast);
+            boolean granted = abilities.has(ability)
+                    && abilities.sources().entries().stream()
+                    .anyMatch(line -> line.getKey().equals(ability) && line.getValue().equals(grantSource))
+                    && close(beast.getAttributeValue(Attributes.MAX_HEALTH), baseHealth + 3.0D)
+                    // The level's own action ran once on entering it, and it ran before the signal went out.
+                    && close(resources.get(growth), 11.0D);
+            boolean advance = belowTarget && promoted && granted;
+            source.sendSuccess(() -> Component.literal("progression probe: below_target=" + belowTarget
+                    + " promoted=" + promoted + " signals=" + signals.size() + " granted=" + granted
+                    + (advance ? " OK" : " MISMATCH")), false);
+
+            // The condition is asked every time, so paid mastery is still not enough when the level says no; the
+            // read side is the same owner-agnostic condition a data pack writes.
+            resources.set(growth, 25.0D, 0.0D, 1000.0D, -1L, "probe");
+            boolean gated = !ProgressionDriver.tick(beast) && stoodOn(beast, BEAST_2) && signals.size() == 1;
+            boolean reads = new ProgressionEntityCondition(second, RealmEntityCondition.Comparison.AT_LEAST,
+                    List.of(PROBE_BEAST_PROFILE)).test(beast, FormulaContext.of(beast))
+                    && new ProgressionEntityCondition(second, RealmEntityCondition.Comparison.EXACT,
+                    List.of(PROBE_BEAST_PROFILE)).test(beast, FormulaContext.of(beast))
+                    && !new ProgressionEntityCondition(third, RealmEntityCondition.Comparison.AT_LEAST,
+                    List.of(PROBE_BEAST_PROFILE)).test(beast, FormulaContext.of(beast))
+                    && close(ProgressionDamageMultiplier.of(beast, ability), 1.5D);
+            boolean reading = gated && reads;
+            source.sendSuccess(() -> Component.literal("progression probe: gated=" + gated + " reads=" + reads
+                    + (reading ? " OK" : " MISMATCH")), false);
+
+            // The administrative write records a level the way a promotion does - same rebuild, same signal - and
+            // only the chain is checked: a level of another owner's chain is refused, the same one is not a write.
+            boolean foreignRefused = ProgressionAdminService.setLevel(beast, PROBE_BEAST_PROFILE, foreign, false).failure()
+                    == ProgressionAdminService.Failure.FOREIGN_LEVEL;
+            boolean written = ProgressionAdminService.setLevel(beast, PROBE_BEAST_PROFILE, third, false).changed()
+                    && stoodOn(beast, BEAST_3) && signals.size() == 2
+                    && close(ProgressionDamageMultiplier.of(beast, ability), 2.0D);
+            boolean unchanged = ProgressionAdminService.setLevel(beast, PROBE_BEAST_PROFILE, third, false).failure()
+                    == ProgressionAdminService.Failure.SAME_LEVEL;
+            boolean unknown = ProgressionAdminService.setLevel(beast, SWORD_MANUAL, third, false).failure()
+                    == ProgressionAdminService.Failure.UNKNOWN_OWNER;
+            boolean admin = foreignRefused && written && unchanged && unknown;
+            source.sendSuccess(() -> Component.literal("progression probe: foreign_refused=" + foreignRefused
+                    + " written=" + written + " unchanged=" + unchanged + " unknown_owner=" + unknown
+                    + (admin ? " OK" : " MISMATCH")), false);
+
+            // A record that is no longer on its owner's chain is a data-pack symptom, so it is swept rather than
+            // read: the creature falls back to its entry level and what the record granted is rebuilt away.
+            beast.getData(MxtAttachments.PROGRESSION).setLevel(PROBE_BEAST_PROFILE, foreign);
+            int swept = ProgressionService.pruneForeignLevels(beast);
+            AbilityGrantService.recalculate(beast);
+            PassiveAttributeService.tick(beast);
+            boolean prune = swept == 1 && stoodOn(beast, BEAST_1)
+                    && close(ProgressionDamageMultiplier.of(beast, ability), 1.0D)
+                    && !abilities.has(ability)
+                    && close(beast.getAttributeValue(Attributes.MAX_HEALTH), baseHealth);
+            source.sendSuccess(() -> Component.literal("progression probe: swept=" + swept + " prune=" + prune
+                    + (prune ? " OK" : " MISMATCH")), false);
+
+            // The bond paid for the levels, so ending it takes them: a release clears the record and revokes what
+            // it granted, and the same clear runs when the creature dies instead.
+            Holder<ContractType> open = require(MxtResourceKeys.CONTRACT_TYPE, OPEN_CONTRACT);
+            boolean bound = ContractService.bind(open, player, beast, true).changed();
+            // While bound the condition reports the record: the type it names and the order it is under.
+            boolean contractReads = new ContractEntityCondition(true, List.of(), List.of()).test(beast, FormulaContext.of(beast))
+                    && new ContractEntityCondition(true, List.of(Either.left(open)), List.of()).test(beast, FormulaContext.of(beast))
+                    && !new ContractEntityCondition(true, List.of(Either.left(require(MxtResourceKeys.CONTRACT_TYPE, CONTRACT))), List.of())
+                    .test(beast, FormulaContext.of(beast))
+                    && new ContractEntityCondition(true, List.of(), List.of(ContractBehaviors.FOLLOW.id())).test(beast, FormulaContext.of(beast))
+                    && !new ContractEntityCondition(true, List.of(), List.of(ContractBehaviors.WANDER.id())).test(beast, FormulaContext.of(beast));
+            resources.set(growth, 10.0D, 0.0D, 1000.0D, -1L, "probe");
+            boolean regrown = ProgressionDriver.tick(beast) && stoodOn(beast, BEAST_2);
+            AbilityGrantService.recalculate(beast);
+            boolean released = ContractService.release(beast, player.getUUID(), true).changed();
+            PassiveAttributeService.tick(beast);
+            boolean cleared = stoodOn(beast, BEAST_1)
+                    && beast.getData(MxtAttachments.PROGRESSION).level(PROBE_BEAST_PROFILE) == null
+                    && !abilities.has(ability)
+                    && close(beast.getAttributeValue(Attributes.MAX_HEALTH), baseHealth)
+                    && new ContractEntityCondition(false, List.of(), List.of()).test(beast, FormulaContext.of(beast));
+            boolean ending = bound && contractReads && regrown && released && cleared;
+            source.sendSuccess(() -> Component.literal("progression probe: bound=" + bound + " contract_reads=" + contractReads
+                    + " regrown=" + regrown + " released=" + released + " cleared=" + cleared
+                    + (ending ? " OK" : " MISMATCH")), false);
+
+            boolean rebound = ContractService.bind(open, player, beast, true).changed();
+            resources.set(growth, 10.0D, 0.0D, 1000.0D, -1L, "probe");
+            boolean grown = ProgressionDriver.tick(beast) && stoodOn(beast, BEAST_2);
+            beast.hurtServer(level, level.damageSources().genericKill(), Float.MAX_VALUE);
+            boolean death = rebound && grown && !beast.getData(MxtAttachments.CONTRACT).bound()
+                    && beast.getData(MxtAttachments.PROGRESSION).level(PROBE_BEAST_PROFILE) == null;
+            source.sendSuccess(() -> Component.literal("progression probe: rebound=" + rebound + " grown=" + grown
+                    + " death=" + death + (death ? " OK" : " MISMATCH")), false);
+
+            if (entry && contractAsk && advance && reading && admin && prune && ending && death) {
+                source.sendSuccess(() -> Component.literal("progression probe: OK"), false);
+                return 1;
+            }
+            source.sendFailure(Component.literal("progression probe: MISMATCH"));
+            return 0;
+        } finally {
+            if (beast != null) TriggerDispatcher.unregister(beast.getUUID(), "probe", identity);
+            for (ProbeBeast mob : spawned) mob.discard();
+        }
+    }
+
+    // The level the creature answers with for its own profile: the record, or the entry level it never left.
+    private static boolean stoodOn(Mob creature, Identifier level) {
+        return ProgressionService.currentLevelOf(creature, PROBE_BEAST_PROFILE)
+                .map(held -> HolderHelper.id(held).equals(level)).orElse(false);
+    }
+
+    // Asks which contract a body signed while demanding that it signed none, which has no answer.
+    private static JsonObject contradictoryContractAsk() {
+        JsonObject object = new JsonObject();
+        object.addProperty("bound", false);
+        object.addProperty("type", "mxt_test:open_contract");
+        return object;
     }
 
     // Drives the perch facility between throwaway creatures, which is the shape a content mod's pet would use.
@@ -2512,7 +2741,7 @@ public final class MxtTestCommands {
             // A technique is the ordinary way in: learning it grants the skill through the same ledger as any grant.
             SpiritIdentityAttachment spirit = pilot.getData(MxtAttachments.SPIRIT_IDENTITY);
             spirit.addLearnedTechnique(require(MxtResourceKeys.TECHNIQUE, id("sword_control_manual")));
-            CultivationGrantService.recalculate(pilot, spirit, pilot.getData(MxtAttachments.ABILITY_HOLDER));
+            AbilityGrantService.recalculate(pilot);
             boolean granted = pilot.getData(MxtAttachments.ABILITY_HOLDER).has(HolderHelper.id(controlAbility));
             double qiBeforePress = pilotResources.get(qiResource);
             Togglable.Result pressed = AbilityActivationService.activate(pilot, controlAbility, null);
@@ -2588,7 +2817,7 @@ public final class MxtTestCommands {
         ensureResource(player, player.getData(MxtAttachments.RESOURCE_HOLDER), qiResource, 40.0D);
         SpiritIdentityAttachment playerSpirit = player.getData(MxtAttachments.SPIRIT_IDENTITY);
         playerSpirit.addLearnedTechnique(require(MxtResourceKeys.TECHNIQUE, id("sword_control_manual")));
-        CultivationGrantService.recalculate(player, playerSpirit, player.getData(MxtAttachments.ABILITY_HOLDER));
+        AbilityGrantService.recalculate(player);
         int ownedBefore = ownedSwords(player);
         ItemStack playerMount = new ItemStack(Items.IRON_SWORD);
         ArtifactService.refine(playerMount, player);
@@ -2615,7 +2844,7 @@ public final class MxtTestCommands {
             crasher.setItemInHand(InteractionHand.MAIN_HAND, crashMount);
             SpiritIdentityAttachment crashSpirit = crasher.getData(MxtAttachments.SPIRIT_IDENTITY);
             crashSpirit.addLearnedTechnique(require(MxtResourceKeys.TECHNIQUE, id("sword_control_manual")));
-            CultivationGrantService.recalculate(crasher, crashSpirit, crasher.getData(MxtAttachments.ABILITY_HOLDER));
+            AbilityGrantService.recalculate(crasher);
             FlyingSwordEntity crashSword = AbilityActivationService.activate(crasher, controlAbility, null).failure() == null
                     && crasher.getVehicle() instanceof FlyingSwordEntity value ? value : null;
             if (crashSword != null) {
@@ -3763,7 +3992,7 @@ public final class MxtTestCommands {
             rebornSpirit.setCultivationProgress(requireProfile(QI), 80.0D);
             rebornIdentity.raiseMinorStageRecord(qiRefining, 2);
             rebornIdentity.addLearnedTechnique(require(MxtResourceKeys.TECHNIQUE, TECHNIQUE));
-            CultivationGrantService.recalculate(reborn, rebornIdentity, rebornAbilities);
+            AbilityGrantService.recalculate(reborn);
             boolean realmAbility = rebornAbilities.has(id("awaken_divine_sense"));
             LifeSpanService.set(reborn, 5L);
             boolean rebornSettled = LifeSpanService.settle(reborn);
@@ -3850,7 +4079,7 @@ public final class MxtTestCommands {
             AbilityAttachment restartAbilities = restart.getData(MxtAttachments.ABILITY_HOLDER);
             restartSpirit.setRealmStage(qiRefining);
             restartIdentity.raiseMinorStageRecord(qiRefining, 2);
-            CultivationGrantService.recalculate(restart, restartIdentity, restartAbilities);
+            AbilityGrantService.recalculate(restart);
             boolean restartAbility = restartAbilities.has(id("awaken_divine_sense"));
             LifeSpanService.set(restart, 5L);
             boolean[] ended = {false};
@@ -3894,7 +4123,7 @@ public final class MxtTestCommands {
             // 13. The data pack entry: mxt:reincarnate decodes by its own type name and runs that same reset, which
             //     is what a pack's own reincarnation pill needs instead of waiting for a life to run out.
             restartSpirit.setRealmStage(qiRefining);
-            CultivationGrantService.recalculate(restart, restartIdentity, restartAbilities);
+            AbilityGrantService.recalculate(restart);
             EntityAction action = EntityAction.SINGLE_CODEC.parse(JsonOps.INSTANCE,
                     JsonParser.parseString("{\"type\": \"mxt:reincarnate\"}")).getOrThrow();
             action.execute(restart, FormulaContext.of(restart));
@@ -4276,7 +4505,7 @@ public final class MxtTestCommands {
         CultivationIdentityService.grantPhysique(player, PHYSIQUE, physique.value(), context);
         TechniqueService.learn(player, spirit, technique.holder(), context);
         spirit.addLearnedTechnique(technique.holder());
-        CultivationGrantService.recalculate(player, spirit, player.getData(MxtAttachments.ABILITY_HOLDER));
+        AbilityGrantService.recalculate(player);
         TEST_ACTIVE_ABILITIES.forEach(id -> player.getData(MxtAttachments.ABILITY_HOLDER).grant(id, TEST_ABILITY_SOURCE));
         // Granting an ability does not register its triggers by itself; the runtime index is only rebuilt where
         // the ability sources actually change.

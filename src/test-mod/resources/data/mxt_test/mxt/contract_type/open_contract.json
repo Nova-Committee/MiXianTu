@@ -1,3 +1,5 @@
 {
-  "max_owned": 1
+  "max_owned": 1,
+  "owner_release_action": { "type": "mxt:apply_effect", "effect": "minecraft:weakness", "duration_ticks": 200 },
+  "owner_abilities": ["mxt_test:open_bond"]
 }

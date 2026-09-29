@@ -19,6 +19,7 @@ import com.iafenvoy.mxt.data.cultivation.Technique;
 import com.iafenvoy.mxt.data.curse.Curse;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.data.quality.QualityLadders;
+import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.data.trigger.TriggerContext;
 import com.iafenvoy.mxt.event.CurseRemoveEvent.Reason;
 import com.iafenvoy.mxt.registry.MxtAttachments;
@@ -42,6 +43,9 @@ import com.iafenvoy.mxt.runtime.curse.CurseService.ApplyResult;
 import com.iafenvoy.mxt.runtime.element.ElementReactionService;
 import com.iafenvoy.mxt.runtime.item.ItemQualityService;
 import com.iafenvoy.mxt.runtime.item.QualityUpgradeService;
+import com.iafenvoy.mxt.runtime.progression.ProgressionAdminService;
+import com.iafenvoy.mxt.runtime.progression.ProgressionMastery;
+import com.iafenvoy.mxt.runtime.progression.ProgressionService;
 import com.iafenvoy.mxt.runtime.resource.ResourceTransactions.Result;
 import com.iafenvoy.mxt.runtime.trigger.TriggerDispatcher;
 import com.iafenvoy.mxt.runtime.world.AuraResult;
@@ -434,6 +438,43 @@ public final class MxtKubeJsApi {
         Holder<Progression> level = entity.getExistingData(MxtAttachments.PROGRESSION)
                 .map(progress -> progress.level(owner)).orElse(null);
         return level == null ? null : HolderHelper.id(level);
+    }
+
+    /**
+     * The level that owner answers with for the entity: the record, or the owner's entry level while it never
+     * advanced. Null when the entity does not hold that owner at all.
+     */
+    public static @Nullable Identifier progressionCurrent(@NotNull Entity entity, Identifier owner) {
+        return ProgressionService.currentLevelOf(entity, owner).map(HolderHelper::id).orElse(null);
+    }
+
+    /**
+     * The level after the current one on the same chain, or {@code null} at the top of the chain.
+     */
+    public static @Nullable Identifier progressionNext(@NotNull Entity entity, Identifier owner) {
+        return ProgressionService.nextLevelOf(entity, owner).map(HolderHelper::id).orElse(null);
+    }
+
+    /**
+     * What the next level asks for and what the body has of the named resource; null when the chain ends here or
+     * the owner measures no mastery at all. A mastery formula that cannot be evaluated answers null rather than 0.
+     */
+    public static @Nullable ProgressionMastery progressionMastery(@NotNull Entity entity, Identifier owner) {
+        return ProgressionService.masteryOf(entity, owner).orElse(null);
+    }
+
+    /**
+     * Stores a level through the service the operator command uses, so a promotion and a script write the same
+     * way. An id the current pack does not provide is refused rather than stored by name.
+     */
+    public static ProgressionAdminService.Result setProgressionLevel(@NotNull LivingEntity entity, Identifier owner,
+                                                                    Identifier level, boolean force) {
+        if (entity.level().isClientSide())
+            return ProgressionAdminService.Result.rejected(ProgressionAdminService.Failure.SERVER_ONLY);
+        Holder<Progression> resolved = MxtDatapackRegistries.holder(MxtResourceKeys.PROGRESSION, level).orElse(null);
+        return resolved == null
+                ? ProgressionAdminService.Result.rejected(ProgressionAdminService.Failure.UNKNOWN_LEVEL)
+                : ProgressionAdminService.setLevel(entity, owner, resolved, force);
     }
 
     /**

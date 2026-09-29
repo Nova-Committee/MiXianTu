@@ -6,6 +6,7 @@ import com.iafenvoy.mxt.data.cultivation.Technique;
 import com.iafenvoy.mxt.event.TechniqueLearnEvent.Post;
 import com.iafenvoy.mxt.event.TechniqueLearnEvent.Pre;
 import com.iafenvoy.mxt.registry.MxtAttachments;
+import com.iafenvoy.mxt.runtime.ability.AbilityGrantService;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.Holder;
@@ -47,7 +48,7 @@ public final class TechniqueService {
         if (!allowed) return Result.rejected(Failure.CONDITIONS);
         Result result = learn(spirit, technique);
         if (result.changed()) {
-            CultivationGrantService.recalculate(entity, spirit, entity.getData(MxtAttachments.ABILITY_HOLDER));
+            AbilityGrantService.recalculate(entity);
         }
         return result;
     }
@@ -62,7 +63,7 @@ public final class TechniqueService {
         boolean cleared = progress.clearLevel(id);
         if (!forgotten && !cleared) return Result.rejected(Failure.ABSENT);
         spirit.setLearnedTechniques(techniques);
-        CultivationGrantService.recalculate(entity, spirit, entity.getData(MxtAttachments.ABILITY_HOLDER));
+        AbilityGrantService.recalculate(entity);
         return Result.changedResult();
     }
 

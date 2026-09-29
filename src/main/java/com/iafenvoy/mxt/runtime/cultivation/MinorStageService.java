@@ -8,6 +8,7 @@ import com.iafenvoy.mxt.data.cultivation.RealmStage;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.runtime.ability.AbilityGrantService;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.Holder;
@@ -29,7 +30,7 @@ public final class MinorStageService {
         CultivationAttachment cultivation = entity.getData(MxtAttachments.CULTIVATION);
         SpiritIdentityAttachment identity = entity.getData(MxtAttachments.SPIRIT_IDENTITY);
         if (!record(cultivation, identity, aura, context)) return false;
-        CultivationGrantService.recalculate(entity, identity, entity.getData(MxtAttachments.ABILITY_HOLDER));
+        AbilityGrantService.recalculate(entity);
         return true;
     }
 

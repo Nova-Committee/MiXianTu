@@ -4,6 +4,7 @@ import com.iafenvoy.mxt.attachment.SpiritIdentityAttachment;
 import com.iafenvoy.mxt.data.cultivation.Physique;
 import com.iafenvoy.mxt.data.cultivation.SpiritRoot;
 import com.iafenvoy.mxt.registry.MxtAttachments;
+import com.iafenvoy.mxt.runtime.ability.AbilityGrantService;
 import net.minecraft.core.Holder;
 import net.minecraft.world.entity.LivingEntity;
 import org.jetbrains.annotations.Nullable;
@@ -28,7 +29,7 @@ public final class CultivationToggleService {
         SpiritIdentityAttachment spirit = entity.getData(MxtAttachments.SPIRIT_IDENTITY);
         if (!spirit.spiritRoots().contains(root)) return Result.rejected(Failure.NOT_HELD);
         if (!spirit.setSpiritRootEnabled(root, enabled)) return Result.unchangedToggle();
-        CultivationGrantService.recalculate(entity, spirit, entity.getData(MxtAttachments.ABILITY_HOLDER));
+        AbilityGrantService.recalculate(entity);
         return Result.changedToggle();
     }
 
@@ -36,7 +37,7 @@ public final class CultivationToggleService {
         SpiritIdentityAttachment spirit = entity.getData(MxtAttachments.SPIRIT_IDENTITY);
         if (!spirit.physiques().contains(physique)) return Result.rejected(Failure.NOT_HELD);
         if (!spirit.setPhysiqueEnabled(physique, enabled)) return Result.unchangedToggle();
-        CultivationGrantService.recalculate(entity, spirit, entity.getData(MxtAttachments.ABILITY_HOLDER));
+        AbilityGrantService.recalculate(entity);
         return Result.changedToggle();
     }
 
@@ -57,7 +58,7 @@ public final class CultivationToggleService {
         for (Holder<Physique> physique : List.copyOf(spirit.physiques()))
             if (spirit.setPhysiqueEnabled(physique, enabled)) changed++;
         if (changed == 0) return Result.unchangedToggle();
-        CultivationGrantService.recalculate(entity, spirit, entity.getData(MxtAttachments.ABILITY_HOLDER));
+        AbilityGrantService.recalculate(entity);
         return Result.changedToggle();
     }
 

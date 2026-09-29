@@ -31,6 +31,7 @@ repositories {
     maven { url = "https://cursemaven.com" }
     maven { url = "https://jitpack.io" }
     maven { url = "https://maven.firstdark.dev/snapshots" }
+    maven { url = "https://maven.sighs.cc/repository/maven-public/" }
     maven { url = "https://maven.theillusivec4.top/" }
     maven { url = "https://maven.latvian.dev/releases" }
     maven { url = "https://maven.blamejared.com/" }
@@ -137,6 +138,7 @@ dependencies {
     implementation("com.lowdragmc.ldlib2:ldlib2-neoforge-26.1:${ldlib2_version}") {
         exclude group: "net.neoforged", module: "neoforge"
     }
+    implementation "com.sighs:ApricityUI-neoforge-26.1:1.2.5"
 
     implementation jarJar("net.objecthunter:exp4j:0.4.8")
     implementation jarJar("top.theillusivec4.curios:curios-neoforge:$curios_version")

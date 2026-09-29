@@ -8,7 +8,7 @@ import com.iafenvoy.mxt.data.item.TechniqueBinding;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.runtime.cultivation.CultivationGrantService;
+import com.iafenvoy.mxt.runtime.ability.AbilityGrantService;
 import com.iafenvoy.mxt.runtime.cultivation.TechniqueHold;
 import com.iafenvoy.mxt.runtime.cultivation.TechniqueItemService;
 import com.iafenvoy.mxt.runtime.cultivation.TechniqueService;
@@ -159,7 +159,7 @@ public final class TechniqueCommand {
 
     // Granted abilities, passive attributes and resource ceilings all derive from the definitions just dropped.
     private static void rebuild(ServerPlayer player, SpiritIdentityAttachment identity) {
-        CultivationGrantService.recalculate(player, identity, player.getData(MxtAttachments.ABILITY_HOLDER));
+        AbilityGrantService.recalculate(player);
     }
 
     // Package-visible so the server audit can exercise the sweep directly.

@@ -6,6 +6,9 @@
   },
   "release_action": { "type": "mxt:apply_effect", "effect": "minecraft:weakness", "duration_ticks": 200 },
   "death_action": { "type": "mxt:set_on_fire", "ticks": 100 },
+  "owner_bind_action": { "type": "mxt:apply_effect", "effect": "minecraft:absorption", "duration_ticks": 200 },
+  "owner_death_action": { "type": "mxt:apply_effect", "effect": "minecraft:glowing", "duration_ticks": 200 },
+  "owner_abilities": ["mxt_test:owner_bond"],
   "costs": [{ "id": "mxt_test:qi", "amount": 5 }],
   "recall_cooldown": 100
 }

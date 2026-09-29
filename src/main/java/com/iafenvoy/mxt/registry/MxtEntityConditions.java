@@ -33,6 +33,7 @@ public final class MxtEntityConditions {
     public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<HasRealmEntityCondition>> HAS_REALM = REGISTRY.register("has_realm", () -> HasRealmEntityCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<HasTechniqueEntityCondition>> TECHNIQUE = REGISTRY.register("technique", () -> HasTechniqueEntityCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<CultivatingEntityCondition>> CULTIVATING = REGISTRY.register("cultivating", () -> CultivatingEntityCondition.CODEC);
+    public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<ContractEntityCondition>> CONTRACT = REGISTRY.register("contract", () -> ContractEntityCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<PartnerEntityCondition>> PARTNER = REGISTRY.register("partner", () -> PartnerEntityCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<ProgressionEntityCondition>> PROGRESSION = REGISTRY.register("progression", () -> ProgressionEntityCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<AuraRangeEntityCondition>> AURA_RANGE = REGISTRY.register("aura_range", () -> AuraRangeEntityCondition.CODEC);

@@ -22,8 +22,8 @@ import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.ability.AbilityService.UseResult;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactService;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationMethodService;
-import com.iafenvoy.mxt.runtime.cultivation.TechniqueMasteryService;
 import com.iafenvoy.mxt.runtime.item.ItemQualityService;
+import com.iafenvoy.mxt.runtime.progression.ProgressionDriver;
 import com.iafenvoy.mxt.runtime.resource.ResourceService;
 import com.iafenvoy.mxt.runtime.trigger.*;
 import com.iafenvoy.mxt.util.HolderHelper;
@@ -112,8 +112,9 @@ public final class AbilityEventBridge {
             // Curios is reconciled on a slow cadence, so the index has to follow it here: it is no longer
             // rebuilt as a side effect of the next publication.
             if (syncCuriosAbilities(entity, abilities)) rebuildTriggerSubscriptions(entity);
-            // Mastery is measured by a stored value, so it is re-read on the same slow cadence.
-            TechniqueMasteryService.tick(entity);
+            // Mastery is measured by a stored value, so it is re-read on the same slow cadence; whatever advanced
+            // decides for itself what a level grants, and that rebuild is one call for every system.
+            if (ProgressionDriver.tick(entity)) AbilityGrantService.recalculate(entity);
         }
         tickAbilities(entity, abilities, resourceHolder, entity.level().getGameTime());
         finishDueCasts(entity, abilities, resourceHolder, entity.level().getGameTime());

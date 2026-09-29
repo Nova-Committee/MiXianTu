@@ -27,8 +27,8 @@ import com.iafenvoy.mxt.event.ResourceConsumeEvent.Pre;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtCriteriaTriggers;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationAffinity;
-import com.iafenvoy.mxt.runtime.cultivation.TechniqueProgression;
 import com.iafenvoy.mxt.runtime.damage.DamageCalculationService;
+import com.iafenvoy.mxt.runtime.progression.ProgressionDamageMultiplier;
 import com.iafenvoy.mxt.runtime.resource.ResourceTransactions;
 import com.iafenvoy.mxt.runtime.resource.ResourceTransactions.Evaluation;
 import com.iafenvoy.mxt.runtime.resource.ResourceTransactions.Result;
@@ -456,7 +456,7 @@ public final class AbilityService {
                     definition.elementAffinity(), context, definition.elementAffinityMode());
             scaled = scaled.with(DamageCalculationService.ELEMENT_MODIFIER, modifier);
         }
-        return scaled.with(DamageCalculationService.DAMAGE_MULTIPLIER, TechniqueProgression.damageMultiplier(actor, HolderHelper.id(ability)));
+        return scaled.with(DamageCalculationService.DAMAGE_MULTIPLIER, ProgressionDamageMultiplier.of(actor, HolderHelper.id(ability)));
     }
 
     private record CompositeStep(Holder<Ability> ability, PreparedUse use, FormulaContext context) {

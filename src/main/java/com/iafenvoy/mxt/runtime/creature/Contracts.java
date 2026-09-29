@@ -6,6 +6,7 @@ import com.iafenvoy.mxt.api.ContractOperations;
 import com.iafenvoy.mxt.data.creature.ContractContext;
 import com.iafenvoy.mxt.data.creature.ContractType;
 import net.minecraft.core.Holder;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityReference;
@@ -54,6 +55,15 @@ public final class Contracts {
     public static @Nullable ServerPlayer owner(Entity entity) {
         return entity instanceof Contractable contractable && contractable.getOwner() instanceof ServerPlayer player
                 ? player : null;
+    }
+
+    // The owner as a player who is online anywhere, which is what running an action on them needs; an owner who is
+    // offline is skipped rather than reached through their stored data. The owner's own body is the only thing
+    // asked, so the creature's level never decides.
+    public static @Nullable ServerPlayer onlineOwner(Entity entity) {
+        MinecraftServer server = entity.level().getServer();
+        UUID owner = ownerOf(entity).orElse(null);
+        return server == null || owner == null ? null : server.getPlayerList().getPlayer(owner);
     }
 
     // Built for an entity that is already bound; the owner is asked of the entity, never of the record.

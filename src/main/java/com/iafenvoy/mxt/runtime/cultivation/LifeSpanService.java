@@ -8,6 +8,7 @@ import com.iafenvoy.mxt.event.LifeSpanEndEvent.Post;
 import com.iafenvoy.mxt.event.LifeSpanEndEvent.Pre;
 import com.iafenvoy.mxt.event.LifeSpanRebirthEvent;
 import com.iafenvoy.mxt.registry.MxtAttachments;
+import com.iafenvoy.mxt.runtime.ability.AbilityGrantService;
 import com.iafenvoy.mxt.runtime.ability.PassiveAttributeService;
 import com.iafenvoy.mxt.runtime.damage.DamageCalculationService;
 import com.iafenvoy.mxt.runtime.tribulation.TribulationService;
@@ -240,8 +241,7 @@ public final class LifeSpanService {
             entity.getData(MxtAttachments.PROGRESSION).clear();
         }
         if (!settings.keepSoul.getValue()) stats.resetSoul();
-        CultivationGrantService.recalculate(entity, entity.getData(MxtAttachments.SPIRIT_IDENTITY),
-                entity.getData(MxtAttachments.ABILITY_HOLDER));
+        AbilityGrantService.recalculate(entity);
         PassiveAttributeService.reconcile(entity);
         long base = MxtServerConfig.INSTANCE.lifespan.baseLifespan.getValue();
         if (base > 0L) stats.setLifespan(base, base);

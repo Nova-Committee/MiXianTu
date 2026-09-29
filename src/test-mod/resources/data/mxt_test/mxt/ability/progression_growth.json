@@ -1,0 +1,11 @@
+{
+  "type": "mxt:modifier",
+  "modifiers": [
+    {
+      "attribute": "minecraft:max_health",
+      "id": "mxt_test:ability/progression_growth",
+      "amount": 3,
+      "operation": "add_value"
+    }
+  ]
+}

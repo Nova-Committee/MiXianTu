@@ -11,6 +11,7 @@ import com.iafenvoy.mxt.event.SpiritContractEvent.Action;
 import com.iafenvoy.mxt.event.SpiritContractEvent.Post;
 import com.iafenvoy.mxt.event.SpiritContractEvent.Pre;
 import com.iafenvoy.mxt.registry.MxtAttachments;
+import com.iafenvoy.mxt.runtime.ability.AbilityGrantService;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.FormulaContexts;
 import net.minecraft.core.Holder;
@@ -65,6 +66,10 @@ public final class ContractService {
         creature.setPersistenceRequired();
         BoundBeastService.add(server, owner, creature, type);
         contractable.onContractBound(context);
+        // The owner side is set up before the event: the index now holds the row the grants are read from, so the
+        // bind action already sees the abilities the contract gives it.
+        AbilityGrantService.recalculate(owner);
+        definition.ownerBindAction().execute(owner, FormulaContexts.forEntities(owner, creature, Map.of()));
         NeoForge.EVENT_BUS.post(new Post(data, Optional.of(type), owner.getUUID(), Action.BIND));
         return Result.bound();
     }
@@ -79,11 +84,23 @@ public final class ContractService {
         if (!force && (owner == null || !owner.equals(requester))) return Result.rejected(Failure.NOT_OWNER);
         if (NeoForge.EVENT_BUS.post(new Pre(data, Optional.of(type), requester, Action.RELEASE)).isCanceled())
             return Result.rejected(Failure.CANCELLED);
+        // Resolved before the creature's own hook, which is free to forget who owned it. An owner who is offline
+        // is skipped: there is nobody to run their action on, and the grants are reconciled when they are back.
+        ServerPlayer ownerPlayer = Contracts.onlineOwner(creature);
         ContractContext context = Contracts.context(creature, type);
         Contracts.of(creature).ifPresent(value -> value.onContractReleased(context));
         type.value().releaseAction().execute(creature, FormulaContext.of(creature));
         data.clear();
+        // The bond paid for the creature's levels, so it takes them with it; this runs after the action, which
+        // still reads the level it was released at.
+        CreatureProgressionService.clear(creature);
         BoundBeastService.remove(server(creature), creature.getUUID());
+        // The row is gone first, so the rebuild cannot hand back what this moment takes away; the action runs
+        // while the owner still holds it.
+        if (ownerPlayer != null) {
+            type.value().ownerReleaseAction().execute(ownerPlayer, FormulaContexts.forEntities(ownerPlayer, creature, Map.of()));
+            AbilityGrantService.recalculate(ownerPlayer);
+        }
         NeoForge.EVENT_BUS.post(new Post(data, Optional.of(type), requester, Action.RELEASE));
         return Result.released();
     }
@@ -124,11 +141,20 @@ public final class ContractService {
         if (!data.bound()) return;
         Holder<ContractType> type = data.contractType().orElseThrow();
         UUID owner = Contracts.ownerOf(creature).orElse(null);
+        // Asked while the creature still answers with its owner, and skipped when there is nobody to run it on.
+        ServerPlayer ownerPlayer = Contracts.onlineOwner(creature);
         ContractContext context = Contracts.context(creature, type);
         type.value().deathAction().execute(creature, FormulaContext.of(creature));
         Contracts.of(creature).ifPresent(value -> value.onContractDeath(context));
         data.clear();
+        // A death ends the bond the same way a release does, so the levels go with it even though the body is
+        // about to be gone: an action that brought the creature back must not bring the growth back with it.
+        CreatureProgressionService.clear(creature);
         BoundBeastService.remove(server(creature), creature.getUUID());
+        if (ownerPlayer != null) {
+            type.value().ownerDeathAction().execute(ownerPlayer, FormulaContexts.forEntities(ownerPlayer, creature, Map.of()));
+            AbilityGrantService.recalculate(ownerPlayer);
+        }
         // The event names a requester, so a death with nobody left to name still ends the record without one.
         if (owner != null) NeoForge.EVENT_BUS.post(new Post(data, Optional.of(type), owner, Action.DEATH));
     }

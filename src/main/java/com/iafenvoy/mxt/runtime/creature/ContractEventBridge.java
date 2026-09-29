@@ -7,13 +7,16 @@ import com.iafenvoy.mxt.data.creature.ContractBehaviors;
 import com.iafenvoy.mxt.data.creature.ContractContext;
 import com.iafenvoy.mxt.data.creature.ContractType;
 import com.iafenvoy.mxt.registry.MxtAttachments;
+import com.iafenvoy.mxt.runtime.ability.AbilityGrantService;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.Holder;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Mob;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.living.LivingDamageEvent.Post;
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerLoggedInEvent;
 import net.neoforged.neoforge.event.tick.EntityTickEvent;
 
 import java.util.Map;
@@ -50,6 +53,14 @@ public final class ContractEventBridge {
         // the owner has told it to do something else.
         if (behavior == ContractBehaviors.FOLLOW)
             type.value().followAction().execute(pet, FormulaContext.of(pet));
+    }
+
+    // A release and a death with the owner offline have nobody to take the contract's grant away from, so the
+    // answer is rebuilt when they are back: the index is what says what they still hold, and it is read on login
+    // through the same single entry every other rebuild uses.
+    @SubscribeEvent
+    public static void onPlayerLogin(PlayerLoggedInEvent event) {
+        if (event.getEntity() instanceof ServerPlayer player) AbilityGrantService.recalculate(player);
     }
 
     // Contract combat callbacks run after vanilla damage is resolved and never mutate the original hit.

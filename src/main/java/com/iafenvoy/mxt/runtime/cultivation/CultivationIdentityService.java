@@ -6,6 +6,7 @@ import com.iafenvoy.mxt.data.cultivation.SpiritRoot;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.runtime.ability.AbilityGrantService;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.Holder;
@@ -37,7 +38,7 @@ public final class CultivationIdentityService {
         List<Holder<SpiritRoot>> roots = new LinkedList<>(spirit.spiritRoots());
         roots.add(root);
         spirit.setSpiritRoots(roots);
-        CultivationGrantService.recalculate(entity, spirit, entity.getData(MxtAttachments.ABILITY_HOLDER));
+        AbilityGrantService.recalculate(entity);
         return Result.changedResult();
     }
 
@@ -56,7 +57,7 @@ public final class CultivationIdentityService {
         List<Holder<Physique>> physiques = new LinkedList<>(spirit.physiques());
         physiques.add(physique);
         spirit.setPhysiques(physiques);
-        CultivationGrantService.recalculate(entity, spirit, entity.getData(MxtAttachments.ABILITY_HOLDER));
+        AbilityGrantService.recalculate(entity);
         return Result.changedResult();
     }
 
@@ -68,7 +69,7 @@ public final class CultivationIdentityService {
         List<Holder<SpiritRoot>> roots = new LinkedList<>(spirit.spiritRoots());
         if (!roots.removeIf(held -> HolderHelper.id(held).equals(id))) return false;
         spirit.setSpiritRoots(roots);
-        CultivationGrantService.recalculate(entity, spirit, entity.getData(MxtAttachments.ABILITY_HOLDER));
+        AbilityGrantService.recalculate(entity);
         return true;
     }
 
@@ -77,7 +78,7 @@ public final class CultivationIdentityService {
         List<Holder<Physique>> physiques = new LinkedList<>(spirit.physiques());
         if (!physiques.removeIf(held -> HolderHelper.id(held).equals(id))) return false;
         spirit.setPhysiques(physiques);
-        CultivationGrantService.recalculate(entity, spirit, entity.getData(MxtAttachments.ABILITY_HOLDER));
+        AbilityGrantService.recalculate(entity);
         return true;
     }
 

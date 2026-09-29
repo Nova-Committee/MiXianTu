@@ -8,11 +8,11 @@ title: 功法、进度链与熟练度
 
 ## 晋升的条件与时机
 
-服务端**每 20 tick** 对每个 `LivingEntity` 跑一次检查（`AbilityEventBridge` 的慢拍 → `TechniqueMasteryService.tick`），对身上每一门已学功法逐级往上走：下一级的 `mastery` 要求被 `mastery_resource` 指名的那个数值满足、且该级的 `condition` 成立就晋升，一次检查最多连升 64 级，**不会跳级**。两个门槛都要过——`mastery` 是数值，`condition` 是其它一切（境界、状态、场地），只想要数值就写 `mxt:always`。
+服务端**每 20 tick** 对每个 `LivingEntity` 跑一次检查（`AbilityEventBridge` 的慢拍 → `ProgressionDriver.tick`），对身上**持有的每一个所有者**（功法、以及声明了等级链的生物档案）逐级往上走：下一级的 `mastery` 要求被 `mastery_resource` 指名的那个数值满足、且该级的 `condition` 成立就晋升，一次检查最多连升 64 级，**不会跳级**。两个门槛都要过——`mastery` 是数值，`condition` 是其它一切（境界、状态、场地），只想要数值就写 `mxt:always`。
 
 两个解析期硬约束：`mastery_resource` 与 `configuration` 都**要求 `default_level`**（没有入口就没有可爬的链）；链重建时还会拒绝"后一级的 `mastery` 比前一级低"的链条（`lowers its mastery requirement at level <id>`），因为晋升只拿"下一级"做比较。`condition` 不要求入口级——**不存在"晋升进入口级"这件事**，入口级写了 `condition` 也只被解析。
 
-晋升是**先提交、后发信号**：`ProgressionAttachment` 里写上新等级，然后按新等级重算能力授予（`granted_abilities` 加上已经到达过的每一级的 `ability`，因为 `ability` 是最低要求），最后发布一次 `mxt:progression_level`（公式变量 `level` 是刚到达的链内序号，扩展值 `owner` 是持有者定义的 id，今天就是功法 id）。等级只升不降：**没有任何路径会降低已经拿到的等级**，花掉熟练度数值只会推迟下一级。
+晋升是**先提交、后发信号**：`ProgressionAttachment` 里写上新等级，然后跑该级自己的 `action`（只这一次），再按新等级重算能力授予（`granted_abilities` 加上已经到达过的每一级的 `ability`，因为 `ability` 是最低要求），最后发布一次 `mxt:progression_level`（公式变量 `level` 是刚到达的链内序号，扩展值 `owner` 是所有者定义的 id——功法 id，或生物那份 `creature_profile` 的 id）。等级只升不降：**没有任何路径会降低已经拿到的等级**（契约结束时的清零除外，见 `contract_type`），花掉熟练度数值只会推迟下一级。
 
 ## 熟练度只是一个数值
 
@@ -29,10 +29,10 @@ title: 功法、进度链与熟练度
 
 ## 读状态与运维
 
-- 条件侧：`mxt:technique` 问"学过哪些"（读的是**学过**，功法没有启用开关），`mxt:progression` 问"爬到了哪一级"（`comparison` 取 `exact` / `at_least` / `at_most`，比较走缓存索引出来的链内序号；可选用 `owner` 限定到某些持有者定义）。KubeJS 侧用 `MxtTechniques.level(entity, technique)`。
+- 条件侧：`mxt:technique` 问"学过哪些"（读的是**学过**，功法没有启用开关），`mxt:progression` 问"爬到了哪一级"（`comparison` 取 `exact` / `at_least` / `at_most`，比较走缓存索引出来的链内序号；可选用 `owner` 限定到某些所有者定义）。KubeJS 侧按所有者问：`MxtProgression.level(entity, owner)` / `current` / `next` / `mastery` 是读、`setLevel` 是写（功法 id 与档案 id 都是合法的 owner），功法自己的 `MxtTechniques.level(entity, technique)` 仍然可用。
 - 显示：功法面板（`Z` 进人物信息面板里的按钮，或那条未绑定按键）画出每门功法的等级与熟练度进度条，进度条的染色取该数值的 `particle_color`。
 - 命令：`/mxt registries validate` 一次报出链的问题（`next_level <id> is not a progression`、`follows both <A> and <B>`、`chain is cyclic, or joins another chain, at level <id>`、`lowers its mastery requirement at level <id>`、`enters the unknown progression level <id>`、`does not configure the progression level <id>`、`configures progression level <id>, which it can never reach from <entry>`）；`/mxt trigger rules <signal>` 看某个信号挂了几条规则；`/mxt trigger publish <signal> [entity]` 手动发一次信号，是验熟练度来源最快的办法；`/mxt resource <id>` 读数值，`/mxt resource <id> set <value>` 直接改。
 
-**纪录清理**：包改了某门持有者的入口等级之后，身体里那条走不到的等级记录会在**玩家登录**与**数据包重载**时被清掉（`ProgressionService.pruneForeignLevels`，只在两个低频繁入口跑，不在每次读取时跑），该持有者退回自己的入口级；每清一条打一条带持有者 id 与等级 id 的 `WARN`。这条检查只覆盖**当前仍持有的持有者**，且数据包重载那次只扫在线玩家。
+**纪录清理**：包改了某个所有者的入口等级之后，身体里那条走不到的等级记录会在**实体加入服务端世界**、**玩家登录**与**数据包重载**时被清掉（`ProgressionService.pruneForeignLevels`，只在低频繁入口跑，不在每次读取时跑），该所有者退回自己的入口级；每清一条打一条带所有者 id 与等级 id 的 `WARN`。这条检查只覆盖**当前仍持有的所有者**；数据包重载那次扫的是全部已加载实体（生物没有"登录"这回事）。
 
-`progression` 与 `ProgressionAttachment` 是通用层（`{持有者定义 id → 等级}`），今天只有功法接上去；灵宠等其它系统接进来时复用同一份服务与同一条链，不需要新的链注册表。
+`progression` 与 `ProgressionAttachment` 是通用层（`{所有者定义 id → 等级}`），今天接上去的有两类：功法，以及**声明了等级链的生物档案**（见 [`creature_profile`](../../数据包格式.md#creature_profile) 的 `default_level` / `mastery_resource` / `configuration`）。再加一类所有者＝那个定义实现同一套所有者接口、并在来源表里加一条，不需要新的链注册表。

@@ -2,5 +2,16 @@
   "entities": ["mxt_test:probe_beast"],
   "spawn_action": { "type": "mxt:set_no_gravity" },
   "intelligence": 20,
-  "inner_core": { "id": "minecraft:amethyst_shard", "count": 2 }
+  "inner_core": { "id": "minecraft:amethyst_shard", "count": 2 },
+  "default_level": "mxt_test:beast_1",
+  "mastery_resource": "mxt_test:beast_growth",
+  "configuration": {
+    "mxt_test:beast_1": { "condition": { "type": "mxt:always" } },
+    "mxt_test:beast_2": {
+      "condition": { "type": "mxt:always" },
+      "ability": ["mxt_test:progression_growth"],
+      "action": { "type": "mxt:add_resource", "resource": "mxt_test:beast_growth", "amount": 1 }
+    },
+    "mxt_test:beast_3": { "condition": { "type": "mxt:never" } }
+  }
 }

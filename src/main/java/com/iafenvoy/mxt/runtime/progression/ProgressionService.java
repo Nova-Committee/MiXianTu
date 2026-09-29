@@ -8,10 +8,14 @@ import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.data.progression.Progression;
 import com.iafenvoy.mxt.data.progression.ProgressionConfig;
 import com.iafenvoy.mxt.data.progression.ProgressionOwner;
+import com.iafenvoy.mxt.data.resource.Resource;
+import com.iafenvoy.mxt.data.trigger.TriggerContext;
+import com.iafenvoy.mxt.data.trigger.TriggerSignals;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.ServerCache;
+import com.iafenvoy.mxt.runtime.trigger.TriggerDispatcher;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
@@ -47,6 +51,37 @@ public final class ProgressionService {
         return current == null ? Optional.empty() : current.value().nextLevel();
     }
 
+    // Where a body stands on one owner it holds: the record, or that owner's entry level. Empty when the body
+    // does not hold the owner at all, which is also what an administrative write answers with.
+    public static Optional<Holder<Progression>> currentLevelOf(Entity entity, Identifier owner) {
+        return ProgressionSources.held(entity, owner).flatMap(held ->
+                currentLevel(entity.getExistingData(MxtAttachments.PROGRESSION).orElse(null), owner, held.definition()));
+    }
+
+    public static Optional<Holder<Progression>> nextLevelOf(Entity entity, Identifier owner) {
+        return currentLevelOf(entity, owner).flatMap(ProgressionService::nextLevel);
+    }
+
+    // What the next level asks for and what the body already has of the resource that measures it. A mastery
+    // formula that cannot be evaluated answers empty rather than zero, so a caller never reads a false "done".
+    public static Optional<ProgressionMastery> masteryOf(Entity entity, Identifier owner) {
+        ProgressionSources.Owner held = ProgressionSources.held(entity, owner).orElse(null);
+        if (held == null) return Optional.empty();
+        Holder<Resource> mastery = held.definition().masteryResource().orElse(null);
+        if (mastery == null) return Optional.empty();
+        Holder<Progression> target = nextLevelOf(entity, owner).orElse(null);
+        if (target == null) return Optional.empty();
+        final double required;
+        try {
+            required = target.value().mastery().evaluate(FormulaContext.of(entity));
+        } catch (RuntimeException exception) {
+            return Optional.empty();
+        }
+        double have = entity.getExistingData(MxtAttachments.RESOURCE_HOLDER)
+                .map(holder -> holder.get(mastery)).orElse(0.0D);
+        return Optional.of(new ProgressionMastery(have, required, HolderHelper.id(mastery)));
+    }
+
     // An unconfigured level requires nothing; the cache rejects a chain with unconfigured steps, so that is only
     // the entry level, which none advances into.
     public static EntityCondition advanceCondition(ProgressionOwner owner, Holder<Progression> target) {
@@ -76,6 +111,21 @@ public final class ProgressionService {
         entity.getData(MxtAttachments.PROGRESSION).setLevel(owner, level);
     }
 
+    // What marks a level as entered: the level's own action runs first, so whoever reacts sees a body that has
+    // already changed, and the signal is published last. Every path that writes a level ends here, so an
+    // administrative write and a natural promotion look the same to a data pack.
+    public static void enterLevel(LivingEntity entity, Identifier owner, ProgressionOwner definition,
+                                  Holder<Progression> reached) {
+        FormulaContext formula = FormulaContext.of(entity);
+        definition.config(reached).ifPresent(config -> config.action().execute(entity, formula));
+        int rank = ServerCache.get().flatMap(cache -> cache.rankForLevel(HolderHelper.id(reached))).orElse(0);
+        TriggerContext triggerContext = new TriggerContext().actor(entity).level(entity.level())
+                .formula(formula.with("level", rank));
+        triggerContext.set("owner", owner.toString());
+        triggerContext.set("level", (double) rank);
+        TriggerDispatcher.publish(TriggerSignals.PROGRESSION_LEVEL, triggerContext, entity.level().getGameTime());
+    }
+
     /**
      * Drops every recorded level its holder no longer reaches from that owner's own entry level, and answers how
      * many records went. Meant for login and datapack load, never for a read - the walk is only affordable there.
@@ -95,8 +145,9 @@ public final class ProgressionService {
         return cleared;
     }
 
-    // The entry level itself, or anything the links reach from it.
-    private static boolean follows(ProgressionOwner owner, Holder<Progression> level) {
+    // The entry level itself, or anything the links reach from it. Also the answer an administrative write asks
+    // before it stores a level, so the rule lives in one place.
+    public static boolean follows(ProgressionOwner owner, Holder<Progression> level) {
         Identifier wanted = HolderHelper.id(level);
         Holder<Progression> current = owner.entryLevel().orElse(null);
         for (int step = 0; current != null && step < MAX_CHAIN_LENGTH; step++) {

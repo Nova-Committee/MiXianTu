@@ -4,6 +4,7 @@ import com.iafenvoy.mxt.data.creature.CreatureProfile;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.runtime.ability.AbilityGrantService;
 import com.iafenvoy.mxt.runtime.world.AuraResult;
 import com.iafenvoy.mxt.runtime.world.AuraService;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
@@ -55,6 +56,9 @@ public final class CreatureProfileService {
                 .ifPresent(profile -> {
                     creature.getData(MxtAttachments.CREATURE_SPIRIT)
                             .apply(profile, intelligence, definition.innerCore().map(ItemStackTemplate::create).orElse(ItemStack.EMPTY));
+                    // A profile that owns a chain hands this creature that chain, so the level it stands on is
+                    // granted together with the write.
+                    AbilityGrantService.recalculate(creature);
                     // The profile is written once per creature, so its spawn action runs once: after the write, so
                     // the action can already read the profile it belongs to.
                     definition.spawnAction().execute(creature, context);
