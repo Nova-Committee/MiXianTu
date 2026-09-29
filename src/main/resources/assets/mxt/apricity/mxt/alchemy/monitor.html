@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta name="aui-viewport" content="mode=gui">
-    <link rel="stylesheet" href="/apricityui/theme/ae/1.0.0.css">
+    <link rel="stylesheet" href="/apricityui/theme/ore/ore.css">
     <link rel="stylesheet" href="alchemy.css">
     <style>
         /* 一格异火槽：沿用旧模板的 (7,70) */
@@ -21,20 +21,20 @@
         }
     </style>
 </head>
-<body>
-<div class="area panel-monitor" id="panel">
+<body class="ore-theme">
+<div class="panel panel-monitor" id="panel">
     <div class="title" id="title"></div>
     <div class="line temperature" id="temperature"></div>
     <div class="line limit" id="limit"></div>
     <div class="line status" id="status"></div>
     <div class="progress" id="progress">
-        <div class="progress-fill" id="progress_fill"></div>
+        <div class="progress-bar" id="progress_fill"></div>
     </div>
     <container class="machine" id="machine" primary="true" size="1"></container>
     <input class="input" id="target" type="text">
-    <div class="button apply" id="apply"></div>
+    <div class="button button-secondary apply" id="apply"></div>
     <div class="button start" id="start"></div>
-    <div class="button abort" id="abort"></div>
+    <div class="button button-danger abort" id="abort"></div>
     <div class="inventory-label" id="inventory_label"></div>
     <container class="player-inventory" id="player_inventory" bind="player">
         <slot slot-index="9" repeat="27"></slot>

@@ -1,5 +1,6 @@
 package com.iafenvoy.mxt.screen.gui;
 
+import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.network.payload.AlchemyActionC2SPayload;
 import com.iafenvoy.mxt.network.payload.AlchemyActionC2SPayload.Action;
 import com.iafenvoy.mxt.screen.AlchemyUiPages;
@@ -13,6 +14,8 @@ import com.sighs.apricityui.init.Document;
 import com.sighs.apricityui.init.Element;
 import com.sighs.apricityui.layout.Position;
 import com.sighs.apricityui.layout.Size;
+import com.sighs.apricityui.render.AABB;
+import com.sighs.apricityui.render.Rect;
 import com.sighs.apricityui.screen.AuiLinkedScreen;
 import com.sighs.apricityui.ui.Tooltip;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -49,8 +52,26 @@ public final class AlchemyFurnaceScreen extends AbstractContainerScreen<AlchemyF
     private static final int PANEL_HEIGHT_PART = 160;
     /** Off-panel x/y for menu slots that have no page geometry behind them yet. */
     private static final int PARKED_SLOT = -1000;
-    /** Most sync passes a bind may spend waiting for ApricityUI's first geometry commit. */
-    private static final int LAYOUT_WAIT_LIMIT = 3;
+    /**
+     * Rounding slack, in document pixels, for "this slot lies inside the painted panel".
+     */
+    private static final double SLOT_SLACK = 2.0D;
+    /**
+     * Failing sync passes, before the page has ever yielded a usable layout, after which the screen
+     * reports once that it cannot read the page.
+     */
+    private static final int GEOMETRY_WARN_FRAMES = 20;
+    /**
+     * ApricityUI's own tooltip mounts an 11px web-scale style of its own; {@code Options.style()} is
+     * appended after it inside the same inline block, so these declarations win without depending on the
+     * stylesheet cascade (a stylesheet {@code !important} rule is the other way round and did not stick).
+     */
+    private static final Tooltip.Options TOOLTIP_OPTIONS = new Tooltip.Options(
+            null,
+            "font-family:initial;font-size:9px;line-height:9px;font-weight:400;min-width:0;"
+                    + "padding:4px 6px;border:1px solid #1a1a1a;border-left:2px solid #8b5cf6;"
+                    + "box-shadow:2px 2px 0 rgba(139,92,246,0.25);",
+            12, 16, 200);
 
     @Nullable
     private Document document;
@@ -64,32 +85,12 @@ public final class AlchemyFurnaceScreen extends AbstractContainerScreen<AlchemyF
     private long boundGeneration = Long.MIN_VALUE;
 
     @Nullable
-    private Element panel;
-    @Nullable
-    private Element title;
-    @Nullable
-    private Element temperature;
-    @Nullable
-    private Element limit;
-    @Nullable
-    private Element status;
-    @Nullable
-    private Element progress;
-    @Nullable
-    private Element target;
-    @Nullable
-    private Element apply;
-    @Nullable
-    private Element start;
-    @Nullable
-    private Element abort;
+    private Element panel, title, temperature, limit, status, progress, target,apply,start,abort;
     private final Map<Integer, Element> cells = new LinkedHashMap<>();
     private final List<Tooltip.Binding> tooltips = new ArrayList<>();
 
-    private int panelLeft;
-    private int panelTop;
-    private int panelWidth = PANEL_WIDTH;
-    private int panelHeight = PANEL_HEIGHT_PART;
+    private int panelLeft, panelTop;
+    private int panelWidth = PANEL_WIDTH, panelHeight = PANEL_HEIGHT_PART;
 
     private boolean draftDirty;
     private boolean writingField;
@@ -101,17 +102,12 @@ public final class AlchemyFurnaceScreen extends AbstractContainerScreen<AlchemyF
     @Nullable
     private Component rejection;
 
-    private boolean startDisabled;
-    private boolean abortDisabled;
+    private boolean startDisabled,abortDisabled;
     private float shownProgress = Float.NaN;
     private long shownTemperatureBits = Long.MIN_VALUE;
     private long shownLimitBits = Long.MIN_VALUE;
     @Nullable
-    private Component shownTitle;
-    @Nullable
-    private Component shownQuality;
-    @Nullable
-    private Component shownStatus;
+    private Component shownTitle, shownQuality,shownStatus;
 
     public AlchemyFurnaceScreen(AlchemyFurnaceMenu menu, Inventory inventory, Component title) {
         super(menu, inventory, title, PANEL_WIDTH, panelHeight(menu.view()));
@@ -181,8 +177,7 @@ public final class AlchemyFurnaceScreen extends AbstractContainerScreen<AlchemyF
             int index = slotIndexOf(cell);
             if (index < 0 || index >= machineCells.size()) return this.fail("machine (slot-index " + index + ")");
             this.cells.put(index, cell);
-            String tooltip = machineTooltip(index);
-            if (tooltip != null) this.tooltips.add(Tooltip.bindTranslation(cell, tooltip));
+            this.tooltips.add(Tooltip.bindTranslation(cell, this.machineTooltip(index), TOOLTIP_OPTIONS));
         }
         return true;
     }
@@ -224,11 +219,11 @@ public final class AlchemyFurnaceScreen extends AbstractContainerScreen<AlchemyF
         this.click(apply, this::applyTemperature);
         this.click(start, () -> this.send(Action.START, 0));
         this.click(abort, () -> this.send(Action.ABORT, 0));
-        this.tooltips.add(Tooltip.bind(title, () -> this.titleTooltip()));
-        this.tooltips.add(Tooltip.bind(temperature, this::heatTooltip));
-        this.tooltips.add(Tooltip.bind(limit, this::limitTooltip));
-        this.tooltips.add(Tooltip.bind(target, this::fieldTooltip));
-        this.tooltips.add(Tooltip.bind(apply, this::fieldTooltip));
+        this.tooltips.add(Tooltip.bind(title, () -> this.titleTooltip(), TOOLTIP_OPTIONS));
+        this.tooltips.add(Tooltip.bind(temperature, this::heatTooltip, TOOLTIP_OPTIONS));
+        this.tooltips.add(Tooltip.bind(limit, this::limitTooltip, TOOLTIP_OPTIONS));
+        this.tooltips.add(Tooltip.bind(target, this::fieldTooltip, TOOLTIP_OPTIONS));
+        this.tooltips.add(Tooltip.bind(apply, this::fieldTooltip, TOOLTIP_OPTIONS));
         return true;
     }
 
@@ -327,57 +322,52 @@ public final class AlchemyFurnaceScreen extends AbstractContainerScreen<AlchemyF
             this.refresh();
         }
         if (!this.slotsBound) return;
-        if (!this.geometryReady) {
-            if (this.awaitingLayout()) return;
+        // A failed read keeps the geometry that was already validated instead of parking the slots:
+        // ApricityUI invalidates the committed rects of a whole route whenever anything on it is marked
+        // for relayout, and its tooltip does that on every mouse move, so parking here blinks the items
+        // (and drops hover/clicks) for as long as the pointer keeps moving.
+        if (this.syncGeometry(current)) {
             this.geometryReady = true;
+            this.layoutWait = 0;
+        } else if (!this.geometryReady) {
+            this.waitForGeometry(current);
         }
-        this.syncGeometry(current);
     }
 
     /**
-     * ApricityUI commits element geometry in the paint pass, which runs after this call on the
-     * frame that first shows the page: a read before it answers from the pre-layout cache and
-     * would draw every item in the screen corner. So the first pass after a bind always waits, a
-     * missing commit stamp keeps the wait going, and {@link #LAYOUT_WAIT_LIMIT} bounds it so a
-     * stamp that never validates cannot hide the items for good.
+     * Writes the menu slots from the page and answers whether the page could be read at all.
+     * <p>
+     * ApricityUI memoises each element's offset and only clears it on a style or layout change, and the
+     * geometry this method runs against is committed in the paint pass — which happens <em>after</em> the
+     * frame that first shows the page. A read taken before that commit therefore mixes a stale slot
+     * offset with the panel's real position, and writing it parks every item in the screen corner. The
+     * panel's committed rect is the layout ApricityUI actually paints, so a slot that reads outside it is
+     * a read from before that layout: nothing is written, the caller keeps the geometry it validated
+     * earlier (or, before the first good read, parks the slots), and the next frame tries again.
+     * {@link #GEOMETRY_WARN_FRAMES} only decides when to report that a usable layout never arrived, it
+     * never forces a write.
      */
-    private boolean awaitingLayout() {
-        if (this.layoutWait == 0) {
-            this.layoutWait = 1;
-            return true;
-        }
-        if (this.layoutWait < LAYOUT_WAIT_LIMIT && !this.geometryCommitted()) {
-            this.layoutWait++;
-            return true;
-        }
-        return false;
-    }
-
-    /** Whether every element this screen reads a frame from has committed geometry. */
-    private boolean geometryCommitted() {
-        if (this.panel == null || this.panel.getRenderer().getCommittedRectIfValid() == null) return false;
+    private boolean syncGeometry(Document current) {
+        if (this.panel == null || this.cells.isEmpty()) return false;
+        Rect panelRect = this.panel.getRenderer().getCommittedRectIfValid();
+        if (panelRect == null) return false;
+        AABB painted = panelRect.getVisualBounds();
+        if (!painted.isValid()) return false;
         for (Element cell : this.cells.values()) {
-            if (cell.getRenderer().getCommittedRectIfValid() == null) return false;
+            Position at = Position.of(cell);
+            if (at.x < painted.x() - SLOT_SLACK || at.x > painted.maxX() + SLOT_SLACK
+                    || at.y < painted.y() - SLOT_SLACK || at.y > painted.maxY() + SLOT_SLACK) {
+                return false;
+            }
         }
-        return true;
-    }
-
-    /** Items may only be drawn once the slot geometry behind them has actually been read. */
-    private boolean slotsDrawn() {
-        return this.slotsBound && this.geometryReady;
-    }
-
-    private void syncGeometry(Document current) {
-        if (this.panel != null) {
-            Position origin = current.documentToScreenPosition(Position.of(this.panel));
-            Size size = Size.of(this.panel);
-            this.panelLeft = (int) Math.round(origin.x);
-            this.panelTop = (int) Math.round(origin.y);
-            this.panelWidth = Math.max(1, (int) Math.round(size.width() * current.getViewportScaleX()));
-            this.panelHeight = Math.max(1, (int) Math.round(size.height() * current.getViewportScaleY()));
-            this.leftPos = this.panelLeft;
-            this.topPos = this.panelTop;
-        }
+        Position origin = current.documentToScreenPosition(Position.of(this.panel));
+        Size size = Size.of(this.panel);
+        this.panelLeft = (int) Math.round(origin.x);
+        this.panelTop = (int) Math.round(origin.y);
+        this.panelWidth = Math.max(1, (int) Math.round(size.width() * current.getViewportScaleX()));
+        this.panelHeight = Math.max(1, (int) Math.round(size.height() * current.getViewportScaleY()));
+        this.leftPos = this.panelLeft;
+        this.topPos = this.panelTop;
         for (Map.Entry<Integer, Element> entry : this.cells.entrySet()) {
             int index = entry.getKey();
             if (index < 0 || index >= this.menu.slots.size()) continue;
@@ -386,6 +376,29 @@ public final class AlchemyFurnaceScreen extends AbstractContainerScreen<AlchemyF
             slot.x = (int) Math.round(screen.x) + ITEM_INSET - this.leftPos;
             slot.y = (int) Math.round(screen.y) + ITEM_INSET - this.topPos;
         }
+        return true;
+    }
+
+    /**
+     * Keeps the slots parked until the page yields a usable layout for the first time, and says so once.
+     */
+    private void waitForGeometry(Document current) {
+        this.layoutWait++;
+        this.parkSlots();
+        if (this.layoutWait != GEOMETRY_WARN_FRAMES) return;
+        MiXianTu.LOGGER.warn(
+                "[MXT] alchemy page geometry is unusable after {} passes: path={} panelCommitted={} panel={} slots={}",
+                this.layoutWait,
+                current.getPath(),
+                this.panel != null && this.panel.getRenderer().getCommittedRectIfValid() != null,
+                this.panel == null ? "none" : Position.of(this.panel).toString(),
+                this.cells.size()
+        );
+    }
+
+    /** Items may only be drawn once the slot geometry behind them has actually been read. */
+    private boolean slotsDrawn() {
+        return this.slotsBound && this.geometryReady;
     }
 
     @Override
