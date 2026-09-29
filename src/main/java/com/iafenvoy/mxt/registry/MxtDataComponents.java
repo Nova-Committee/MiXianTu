@@ -9,6 +9,7 @@ import com.iafenvoy.mxt.data.artifact.ItemAbilitiesComponent;
 import com.iafenvoy.mxt.data.aura.ItemAuraComponent;
 import com.iafenvoy.mxt.data.aura.SpiritStorageComponent;
 import com.iafenvoy.mxt.data.cultivation.Element;
+import com.iafenvoy.mxt.data.cultivation.SpiritRoot;
 import com.iafenvoy.mxt.data.cultivation.Technique;
 import com.iafenvoy.mxt.data.curse.CurseContainerComponent;
 import com.iafenvoy.mxt.data.economy.ChequeComponent;
@@ -60,6 +61,7 @@ public final class MxtDataComponents {
     public static final DeferredHolder<DataComponentType<?>, DataComponentType<TalismanComponent>> TALISMAN = register("talisman", TalismanComponent.CODEC);
     public static final DeferredHolder<DataComponentType<?>, DataComponentType<RiftComponent>> RIFT = register("rift", RiftComponent.CODEC);
     public static final DeferredHolder<DataComponentType<?>, DataComponentType<Holder<Technique>>> TECHNIQUE = register("technique", Technique.CODEC);
+    public static final DeferredHolder<DataComponentType<?>, DataComponentType<Holder<SpiritRoot>>> SPIRIT_ROOT = register("spirit_root", SpiritRoot.CODEC);
     public static final DeferredHolder<DataComponentType<?>, DataComponentType<Integer>> HERB_AGE = register("herb_age", Codec.intRange(0, Integer.MAX_VALUE));
     public static final DeferredHolder<DataComponentType<?>, DataComponentType<Holder<AlchemyFurnaceDefinition>>> ALCHEMY_FURNACE = register("alchemy_furnace", AlchemyFurnaceDefinition.CODEC);
     public static final DeferredHolder<DataComponentType<?>, DataComponentType<Holder<AlchemyWallMaterial>>> ALCHEMY_WALL_MATERIAL = register("alchemy_wall_material", AlchemyWallMaterial.CODEC);

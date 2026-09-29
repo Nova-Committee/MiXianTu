@@ -6,7 +6,7 @@ title: 修炼、境界与灵根
 
 子境界（`minor_stages`）是**显示、公式与解锁门槛**：它把本境界的 `breakthrough_exp` 均匀切成若干段，信息面板在境界名后写出当前这一重的名字，公式里多一个从 `0` 起的 `minor_stage`，`minor_stage_abilities` 则按同一个下标解锁能力（累计，且解锁过就永久保留）。名字可以写成数组（字符串当翻译键、对象当完整组件），也可以直接写一个整数表示"这么多重"——那样名字按 id 自动生成为 `realm_stage.mxt.<命名空间>.<路径>.minor_stage.<下标>`（下标从 0 起）。它本身不参与突破判定、不改变任何阈值，进度超过 `breakthrough_exp`（上限是 `max_experience`）后停在最后一重；没有 `minor_stages`、或玩家还没有任何境界时该变量读出 `NaN`。
 
-`spirit_root` 和 `physique` 是附件中的可叠加来源，授予方式由 action 决定；本框架不规定具体灵根名称和数值。灵根和体质的持有状态是数据包原语：条件侧提供 `mxt:has_spirit_root`、`mxt:has_physique`，行为侧提供 `mxt:grant_spirit_root`、`mxt:remove_spirit_root`、`mxt:grant_physique`、`mxt:remove_physique`。体质可用 `holder_condition` 要求持有指定灵根或另一体质：
+`spirit_root` 和 `physique` 是附件中的可叠加来源，授予方式由 action 决定；本框架不规定具体灵根名称和数值。灵根和体质的持有状态是数据包原语：条件侧提供 `mxt:has_spirit_root`、`mxt:has_physique`，行为侧提供 `mxt:grant_spirit_root`、`mxt:remove_spirit_root`、`mxt:grant_physique`、`mxt:remove_physique`。本体另有一件 `mxt:spirit_root` 物品：堆上的组件 `mxt:spirit_root` 指名一条灵根，右键即授予（与那些行为同一道判定，互斥与重复照旧被拒），成功消耗 1 个、创造模式不消耗；字段与取用见[数据包格式](../../数据包格式.md)的 `spirit_root`。体质可用 `holder_condition` 要求持有指定灵根或另一体质：
 
 ```json
 {

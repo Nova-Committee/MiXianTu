@@ -89,6 +89,8 @@ public final class ItemPickerManager {
         // Auras have no item of their own, so one stand-in item carries whatever the definition is called.
         registerSingle(MxtResourceKeys.AURA, holder -> described(MxtItems.SPIRIT_STONE.toStack(), holder));
         registerSingle(MxtResourceKeys.BLOCK_AURA, holder -> described(MxtItems.SPIRIT_STONE.toStack(), holder));
+        // A spirit root has an item of its own: the row carries the component, so the stack taken out grants that root.
+        registerSingle(MxtResourceKeys.SPIRIT_ROOT, holder -> described(componentStack(MxtItems.SPIRIT_ROOT.toStack(), MxtDataComponents.SPIRIT_ROOT, holder), holder));
 
         // A quality carries its name in the data pack rather than in a language file, so that name wins - and the
         // row is drawn in the tier's own colour, which is the one place the ladder is visible side by side.
