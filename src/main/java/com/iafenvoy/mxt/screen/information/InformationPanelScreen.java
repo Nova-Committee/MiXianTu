@@ -30,7 +30,6 @@ import com.sighs.apricityui.layout.Position;
 import com.sighs.apricityui.screen.AuiLinkedScreen;
 import com.sighs.apricityui.ui.Tooltip;
 import net.minecraft.ChatFormatting;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
@@ -38,7 +37,9 @@ import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.core.Holder;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.network.chat.TextColor;
 import net.minecraft.resources.Identifier;
+import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.fml.loading.FMLEnvironment;
@@ -142,7 +143,7 @@ public final class InformationPanelScreen extends Screen implements AuiLinkedScr
     @Nullable
     private Component pageError;
     private final AuiPages.StyleHold styleHold = new AuiPages.StyleHold();
-    private List<net.minecraft.util.FormattedCharSequence> errorLines = List.of();
+    private List<FormattedCharSequence> errorLines = List.of();
     private int errorWidth = -1;
     private long boundGeneration = Long.MIN_VALUE;
 
@@ -160,7 +161,7 @@ public final class InformationPanelScreen extends Screen implements AuiLinkedScr
     private String selectedKey;
     private Page page;
 
-    private int panelLeft, panelTop, panelWidth = PANEL_WIDTH, panelHeight = PANEL_HEIGHT;
+    private int panelLeft, panelTop;
     private int previewLeft, previewWidth;
     private int refreshTicks;
     /**
@@ -197,10 +198,14 @@ public final class InformationPanelScreen extends Screen implements AuiLinkedScr
                 return;
             }
             this.styleHold.restart(stylesPrepared);
-        } else {
-            this.document.applyViewport(true);
+            this.rebind();
+            return;
         }
-        this.rebind();
+        // A window resize re-enters init() with the same DOM, and ApricityUI appends listeners without ever
+        // deduping them: rebinding would stack a second click on both tabs and on every row of both lists. The
+        // panel geometry is recomputed every frame, and a document that was really rebuilt is caught by the
+        // generation check in extractRenderState.
+        this.document.applyViewport(true);
     }
 
     private void rebind() {
@@ -339,7 +344,7 @@ public final class InformationPanelScreen extends Screen implements AuiLinkedScr
     }
 
     private void refreshInformation() {
-        if (this.minecraft == null || this.minecraft.player == null) return;
+        if (this.minecraft.player == null) return;
         if (this.cultivation != null) {
             this.cultivation.rebuild(this.font,
                     InformationManager.collectEntries(this.minecraft.player, Side.CULTIVATION));
@@ -352,7 +357,7 @@ public final class InformationPanelScreen extends Screen implements AuiLinkedScr
 
     private void refreshTechniques() {
         ScrollList<TechniqueRow> list = this.techniques;
-        if (list == null || this.minecraft == null || this.minecraft.player == null) return;
+        if (list == null || this.minecraft.player == null) return;
         SpiritIdentityAttachment spirit = this.minecraft.player.getData(MxtAttachments.SPIRIT_IDENTITY);
         ResourceHolderAttachment resources = this.minecraft.player.getData(MxtAttachments.RESOURCE_HOLDER);
         Mode mode = MxtClientConfig.INSTANCE.techniques.progressMode.getValue();
@@ -402,8 +407,6 @@ public final class InformationPanelScreen extends Screen implements AuiLinkedScr
         long signature = ((long) width << 40) ^ ((long) height << 20) ^ (renderWidth * 31L);
         this.panelLeft = left;
         this.panelTop = top;
-        this.panelWidth = width;
-        this.panelHeight = height;
         this.previewLeft = previewLeft;
         this.previewWidth = renderWidth;
         if (signature != this.shownGeometry) {
@@ -492,7 +495,7 @@ public final class InformationPanelScreen extends Screen implements AuiLinkedScr
     }
 
     private void showEquipment() {
-        if (this.minecraft == null || this.minecraft.player == null) return;
+        if (this.minecraft.player == null) return;
         for (int index = 0; index < this.equipment.size(); index++) {
             ItemStack stack = this.minecraft.player.getItemBySlot(EQUIPMENT_SLOTS[index]);
             Item item = this.equipment.get(index);
@@ -504,7 +507,7 @@ public final class InformationPanelScreen extends Screen implements AuiLinkedScr
     // The entity render is the one thing AUI cannot draw, so it stays on top of the page at the rectangle
     // the page's preview frame occupies.
     private void extractPlayer(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
-        if (this.minecraft == null || this.minecraft.player == null) return;
+        if (this.minecraft.player == null) return;
         int x1 = this.panelLeft + this.previewLeft;
         int y1 = this.panelTop + CONTENT_TOP;
         int x2 = x1 + this.previewWidth;
@@ -522,7 +525,7 @@ public final class InformationPanelScreen extends Screen implements AuiLinkedScr
             this.errorWidth = this.width;
         }
         int y = this.height / 2 - this.errorLines.size() * 5;
-        for (net.minecraft.util.FormattedCharSequence line : this.errorLines) {
+        for (FormattedCharSequence line : this.errorLines) {
             graphics.text(this.font, line, (this.width - this.font.width(line)) / 2, y, 0xFFFF5555, false);
             y += 10;
         }
@@ -880,7 +883,7 @@ public final class InformationPanelScreen extends Screen implements AuiLinkedScr
     /**
      * The technique rows: icon, name in its tier's colour, level, mastery and the mastery bar.
      */
-    private final class TechniqueBinding implements ScrollList.Binding<TechniqueRow> {
+    private static final class TechniqueBinding implements ScrollList.Binding<TechniqueRow> {
         private final List<Tooltip.Binding> tooltips = new ArrayList<>();
 
         @Override
@@ -1057,7 +1060,7 @@ public final class InformationPanelScreen extends Screen implements AuiLinkedScr
     }
 
     private static String styleColor(Component component, int fallback) {
-        var style = component.getStyle().getColor();
+        TextColor style = component.getStyle().getColor();
         return color(style == null ? fallback : style.getValue());
     }
 }

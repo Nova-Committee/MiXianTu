@@ -100,7 +100,7 @@ public final class AlchemyFurnaceBlock extends BaseEntityBlock {
     }
 
     @Override
-    protected @NonNull ItemStack getCloneItemStack(@NonNull LevelReader level, @NonNull BlockPos pos, @NonNull BlockState state, boolean includeData) {
+    public @NonNull ItemStack getCloneItemStack(LevelReader level, BlockPos pos, BlockState state, boolean includeData, Player player) {
         if (level.getBlockEntity(pos) instanceof AlchemyFurnaceBlockEntity furnace && !furnace.furnaceItem().isEmpty())
             return furnace.furnaceItem().copy();
         return new ItemStack(this);

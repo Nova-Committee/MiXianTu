@@ -161,7 +161,7 @@ public final class ExchangeStationScreen extends AuiContainerScreen<ExchangeStat
      */
     private void choose(int index) {
         if (index < 0 || index >= this.menu.getNumberOfVisibleOffers()) return;
-        if (this.minecraft == null || this.minecraft.player == null || this.minecraft.gameMode == null) return;
+        if (this.minecraft.player == null || this.minecraft.gameMode == null) return;
         if (!this.menu.clickMenuButton(this.minecraft.player, index)) return;
         this.minecraft.getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.UI_STONECUTTER_SELECT_RECIPE, 1.0F));
         this.minecraft.gameMode.handleInventoryButtonClick(this.menu.containerId, index);

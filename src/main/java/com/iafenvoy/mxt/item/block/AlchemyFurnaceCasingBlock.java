@@ -92,7 +92,7 @@ public final class AlchemyFurnaceCasingBlock extends BaseEntityBlock {
     }
 
     @Override
-    protected @NonNull ItemStack getCloneItemStack(@NonNull LevelReader level, @NonNull BlockPos pos, @NonNull BlockState state, boolean includeData) {
+    public @NonNull ItemStack getCloneItemStack(@NonNull LevelReader level, @NonNull BlockPos pos, @NonNull BlockState state, boolean includeData, Player player) {
         if (level.getBlockEntity(pos) instanceof AlchemyFurnaceCasingBlockEntity casing && !casing.wallItem().isEmpty())
             return casing.wallItem().copy();
         return new ItemStack(this);

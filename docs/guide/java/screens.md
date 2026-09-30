@@ -6,7 +6,7 @@ title: 客户端界面
 
 ## ApricityUI 页面
 
-**已经交给页面的界面**（都在 `assets/mxt/apricity/` 下，**一屏一个目录、同族的放一起**）：丹炉四页（`mxt/alchemy/`）、轮盘与它的配置页（`mxt/wheel/`：`wheel.html` + `wheel_config.html`）、锻造台（`mxt/forging/`）、灵气工作台（`mxt/spirit_crafting/`）、人物信息（`mxt/information/`）、**经济组**（`mxt/economy/`：交易站两页 `station_customer` / `station_owner`、兑换站 `exchange`、支票台 `cheque`、玩家交易 `trade`）；除轮盘（浮层、自成一套）外都链共用的 `mxt/base.css`。播种只有一处（`screen/AuiPages`，启动时种到 `<gameDir>/apricity/`，**缺了才写、永不覆盖**），新增一页只要往 `AuiPages` 的清单里加一行。
+**已经交给页面的界面**（都在 `assets/mxt/apricity/` 下，**一屏一个目录、同族的放一起**）：丹炉四页（`mxt/alchemy/`）、轮盘与它的配置页（`mxt/wheel/`：`wheel.html` + `wheel_config.html`）、锻造台（`mxt/forging/`）、灵气工作台（`mxt/spirit_crafting/`）、人物信息（`mxt/information/`）、结构预览（`mxt/multiblock/`：`structure.html`，整幅窗口都是页面）、**经济组**（`mxt/economy/`：交易站两页 `station_customer` / `station_owner`、兑换站 `exchange`、支票台 `cheque`、玩家交易 `trade`）；除轮盘（浮层、自成一套）外都链共用的 `mxt/base.css`。播种只有一处（`screen/AuiPages`，启动时种到 `<gameDir>/apricity/`，**缺了才写、永不覆盖**），新增一页只要往 `AuiPages` 的清单里加一行。
 
 **容器界面共用一个宿主 `screen/AuiContainerScreen`**（`extends AbstractContainerScreen` + `AuiLinkedScreen`）：文档生命周期、按稳定 ID 绑定、槽位几何对账、页面缺失时的红字兜底、输入闸门都在基类里，子类只写"这一屏有哪些节点、每拍要写什么状态"。要点：
 
@@ -22,6 +22,11 @@ title: 客户端界面
 - 共用的 `.inv`（3 行主背包 + 4px 空轨道 + 快捷栏）**只写排布、不带 `left` / `top`**，坐标由各页自己给：绝对定位的容器一旦拿不到 `left`，会退回静态位置（贴面板左沿），和它旁边的标签错开十几像素——丹炉四页就踩过这条。
 - 人物信息没有菜单、面板随窗口缩，所以它的几何仍由 Java 现算后写成行内样式，两个列表是 DOM 行，人物预览与装备格里的物品仍是原版/AUI 的物品渲染。**列表的列宽（`ScrollList.Binding.prepare`）必须在拿到真实宽度之后再算一次**：面板几何是每帧才写进页面的，第一次 rebuild 时宽度还是 0，算出来的列会把名字和值都缩成 `...`，要等一个刷新周期（默认 1 秒）才恢复——`ScrollList.layout` 因此按"宽度变了就重跑 prepare"来做。它现在是**两页**（`Page.INFO` / `Page.TECHNIQUES`，左上角两个页签「人物信息」/「习得功法」切换，整块面板共用，面板不再有单独那行标题）：第二页就是原来的功法界面，所以 `TechniquePanelScreen` 已删除、功法页只由面板左上角的「习得功法」页签进入（原先那个"打开功法面板"的专属按键已删除）；两页的行都是同一套 `ScrollList`（像素滚动、按可见行数隐藏），只有行的内容由各自的 `Binding` 写。**"没有条目的格子"也必须写 `display: none`**：行元素从页面加载起就在 DOM 里，功法行自己带图标框、进度槽与分隔线，只把文字清空的话这些盒子照旧画出来（实机表现为列表下方一片残留的空框），所以 `clear` 不看"这一格之前显没显过"、一律隐藏；选中高亮同理，**按格子里的条目 id 在每次 layout 之后重贴**，否则滚动一行高亮就落在别人身上。
 - **人物信息面板的开关是同一把键**：`key.mxt.information_panel`（默认 `Z`）在没有别的界面打开时打开它，面板开着时再按一次关掉它（`Esc` 照旧能关）。它和轮盘那几把键一样**裸轮询物理按键**（`MxtKeyMappings.KeyMappingHolder.isPhysicallyDown()`）：`setScreen` 对屏幕上的那次按下会 `releaseAll`，而 `grabMouse` 又 `setAll()` 把还按着的键重新按一次——走 `KeyMapping` 的状态就会把这次"重新按下"当成新的一次，面板刚关就又弹开。
+- **要绑页面监听的界面，别在窗口缩放时重绑**：`init()` 在缩放时会再进来一次，而 ApricityUI 的 `addEventListener` 只往列表里追加、从不去重（`applyViewport` 也不重建 DOM），所以缩放之后一次点击会跑两遍监听——上一版每一处绑监听的界面都有这个问题（容器页的键、人物信息的两个页签与每一行；读 ApricityUI 的 `EventRegistry` 发现的，缩放一次就会暴露）。缩放路径因此只 `applyViewport(true)`，元素没换就不重绑；真正被重建的文档由 `refreshGeneration` 抓（`syncPage` / `extractRenderState` 里那道检查会重绑），**热重载才是唯一需要重绑的时机**。容器页的槽位本来就是每帧回读的，人物信息的面板几何也是每帧重算的，所以缩放不需要别的工作。
+
+## 结构预览 `screen.multiblock`
+
+阵法 `/formation show` 打开的（`MultiblockStructureScreen`，由 `FormationStructureS2CPayload` 触发）是另一类页面：**整幅窗口都是页面**（`assets/mxt/apricity/mxt/multiblock/structure.html`，同样链 `mxt/base.css`），上下两条压边、标题、层号、提示、五个按键与时间轴都由它画，**只有三维场景仍归 Java**——场景是一份 picture-in-picture 渲染状态，提交在页面留出的 `#scene` 那块矩形里（**通栏**：两条压边之间全是它，所以整幅窗口没有一处透出世界），它下面那层暗底也在 Java 侧、紧挨着 PIP 画（所以 `#scene` **必须保持透明**：谁给它底色就把场景盖掉）。页面里**一个坐标都不写**：几何的唯一来源是 `MultiblockStructureView`，窗口尺寸一变 `MultiblockStructureScreen#writeLayout` 就把这些盒子重写一遍，之后每帧只写真的会变的东西（三行字、四个按键的字、时间轴已播放的长度与滑块位置），而且都先比较再写。**按键的悬停与按下交给 CSS**（`.button:hover` / `:active`），Java 不再逐帧算 hover。**只有两件输入仍由 Java 命中判定**（页面别写 `aui-mouse-events=intercept`）：时间轴的点击跳层要用指针的 x 坐标，场景里的拖动转视角要用指针位移；五个按键是普通的 DOM `click`。
 
 ## 可拖动 HUD 框架 `screen.hud`
 

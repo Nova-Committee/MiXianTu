@@ -83,6 +83,11 @@ public final class AuiPages {
      */
     public static final String INFORMATION = "mxt/information";
     public static final List<String> INFORMATION_FILES = List.of("information.css", "information.html");
+    /**
+     * The formation structure preview: a page over the whole window, with the scene drawn by Java.
+     */
+    public static final String MULTIBLOCK = "mxt/multiblock";
+    public static final List<String> MULTIBLOCK_FILES = List.of("structure.css", "structure.html");
 
     private static final String HTML_SUFFIX = ".html";
 
@@ -99,7 +104,8 @@ public final class AuiPages {
             new Folder(FORGING, FORGING_FILES),
             new Folder(SPIRIT_CRAFTING, SPIRIT_CRAFTING_FILES),
             new Folder(ECONOMY, ECONOMY_FILES),
-            new Folder(INFORMATION, INFORMATION_FILES));
+            new Folder(INFORMATION, INFORMATION_FILES),
+            new Folder(MULTIBLOCK, MULTIBLOCK_FILES));
 
     /**
      * Every bundled page, derived from the folder table so a page added to a file list is prepared as well.
@@ -123,6 +129,10 @@ public final class AuiPages {
 
     public static String economyPage(String name) {
         return page(ECONOMY, name);
+    }
+
+    public static String multiblockPage() {
+        return page(MULTIBLOCK, "structure");
     }
 
     public static String page(String folder, String name) {

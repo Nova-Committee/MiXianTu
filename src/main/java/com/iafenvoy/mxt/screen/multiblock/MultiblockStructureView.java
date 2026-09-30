@@ -14,19 +14,33 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Layout, the layer-by-layer reveal and the input hit tests. The scene itself is a picture-in-picture state, so this
- * class only decides what goes where and from which angle. Every rectangle here is relative to the given frame, which
- * is what lets the owning screen hand it the whole window.
+ * The layer-by-layer reveal, the camera, the boxes the page draws the chrome in and the input hit tests. The scene
+ * itself is a picture-in-picture state, so this class decides what goes where and from which angle, and the screen
+ * writes those rectangles into the page.
+ * <p>
+ * The page covers the whole window, so every rectangle here is in window coordinates.
  */
 final class MultiblockStructureView {
     private static final int EDGE_PADDING = 20;
     private static final int TOP_OVERLAY_HEIGHT = 58;
     private static final int BOTTOM_OVERLAY_HEIGHT = 64;
-    private static final int CONTROL_COUNT = 4;
+    static final int CONTROL_COUNT = 4;
     private static final int CONTROL_HEIGHT = 20;
     private static final int CONTROL_PADDING = 10;
     private static final int CONTROL_MIN_WIDTH = 30;
     private static final int CONTROL_GAP = 8;
+    /**
+     * Where the four controls sit, measured from the bottom bar's top edge.
+     */
+    private static final int CONTROL_TOP = 14;
+    /**
+     * A text box is one vanilla line tall, which is what puts the bitmap font back where the old screen drew it.
+     */
+    private static final int TEXT_HEIGHT = 9;
+    private static final int TITLE_TOP = 8;
+    private static final int LAYER_TOP = 24;
+    private static final int HINT_TOP = 40;
+    private static final int BACK_TOP = 13;
     private static final int TIMELINE_HEIGHT = 4;
     private static final int TIMELINE_MARGIN = 16;
     private static final int TIMELINE_HIT_SLACK = 4;
@@ -41,18 +55,12 @@ final class MultiblockStructureView {
     private static final float DRAG_PITCH_SPEED = 0.45F;
     private static final float MIN_SCENE_SCALE = 8.0F;
     private static final float MAX_SCENE_SCALE = 42.0F;
-    private static final int SCENE_BACKDROP = 0x60000000;
-    private static final int OVERLAY_BACKGROUND = 0xB00C1014;
-    private static final int BUTTON_FILL = 0x80202836;
-    private static final int BUTTON_FILL_HOVERED = 0x60FFD24A;
-    private static final int BUTTON_OUTLINE = 0xFF5A6B7A;
-    private static final int BUTTON_OUTLINE_HOVERED = 0xFFFFD24A;
-    private static final int BUTTON_TEXT = 0xFFE6EAF0;
-    private static final int TITLE_TEXT = 0xFFFFFFFF;
-    private static final int MUTED_TEXT = 0xFF9AA4B2;
-    private static final int TIMELINE_TRACK = 0x772E3742;
-    private static final int TIMELINE_ACTIVE = 0xFFFFD24A;
-    private static final int TIMELINE_KNOB = 0xFFFFF3C4;
+    /**
+     * The dark plate under the scene. It stays on this side on purpose: it has to be painted immediately before the
+     * scene's picture-in-picture state, and the page cannot order itself against that. The alpha matches the page's
+     * two overlay bars, so the whole window reads as one plate.
+     */
+    private static final int SCENE_BACKDROP = 0xB0000000;
 
     private boolean paused;
     private int manualStep = 1;
@@ -72,39 +80,158 @@ final class MultiblockStructureView {
         this.hovered = null;
     }
 
-    void render(GuiGraphicsExtractor graphics, Font font, int mouseX, int mouseY,
-                int x, int y, int width, int height, MultiblockStructure structure) {
-        int maxStep = layerCount(structure);
-        int currentStep = this.currentStep(maxStep);
-        this.extractScene(graphics, structure, mouseX, mouseY, x, y, width, height, currentStep);
-        this.extractTopOverlay(graphics, font, structure, mouseX, mouseY, x, y, width, currentStep, maxStep);
-        this.extractBottomOverlay(graphics, font, mouseX, mouseY, x, y, width, height, currentStep, maxStep);
-        this.extractTooltip(graphics, font, mouseX, mouseY);
+    // ------------------------------------------------------------------ the boxes the page is written with
+
+    /** One box of the page, in window coordinates. */
+    record Rect(int x, int y, int width, int height) {
     }
 
-    ClickResult mouseClicked(Font font, MultiblockStructure structure, double mouseX, double mouseY,
-                             int x, int y, int width, int height) {
-        if (isInside(mouseX, mouseY, x + EDGE_PADDING, y + 13, this.backButtonWidth(font), CONTROL_HEIGHT))
-            return ClickResult.BACK;
+    /** One of the four bottom controls; the label is rebuilt every frame because play and pause share one key. */
+    record StructureControl(Rect box, Component label) {
+    }
 
-        StructureControlAction control = this.selectControlAt(font, mouseX, mouseY, x, y, width, height);
-        if (control != null) {
-            this.applyControl(control, layerCount(structure));
-            return ClickResult.HANDLED;
-        }
+    Rect topBar(int width) {
+        return new Rect(0, 0, width, TOP_OVERLAY_HEIGHT);
+    }
 
-        Integer timelineStep = this.selectTimelineAt(mouseX, mouseY, x, y, width, height, layerCount(structure));
-        if (timelineStep != null) {
-            this.paused = true;
-            this.manualStep = timelineStep;
-            return ClickResult.HANDLED;
-        }
+    Rect bottomBar(int width, int height) {
+        return new Rect(0, height - BOTTOM_OVERLAY_HEIGHT, width, BOTTOM_OVERLAY_HEIGHT);
+    }
 
-        if (isInside(mouseX, mouseY, this.sceneX(x), this.sceneY(y), this.sceneWidth(width), this.sceneHeight(height))) {
-            this.dragging = true;
-            return ClickResult.HANDLED;
+    /**
+     * The scene spans the whole width: the two bars and this box are the only things on the screen, so nothing of
+     * the world shows through next to it. Its own dark plate is painted by {@link #extractScene}.
+     */
+    Rect scene(int width, int height) {
+        return new Rect(0, TOP_OVERLAY_HEIGHT, Math.max(1, width),
+                Math.max(1, height - TOP_OVERLAY_HEIGHT - BOTTOM_OVERLAY_HEIGHT));
+    }
+
+    /** The title box: the whole width, centred by the page's {@code .t-center}. */
+    Rect title(int width) {
+        return new Rect(0, TITLE_TOP, width, TEXT_HEIGHT);
+    }
+
+    Rect layer(int width) {
+        return new Rect(0, LAYER_TOP, width, TEXT_HEIGHT);
+    }
+
+    Rect hint(int width) {
+        return new Rect(0, HINT_TOP, width, TEXT_HEIGHT);
+    }
+
+    Rect back(Font font) {
+        return new Rect(EDGE_PADDING, BACK_TOP, this.backButtonWidth(font), CONTROL_HEIGHT);
+    }
+
+    Rect timeline(int width, int height) {
+        return new Rect(this.timelineX(width), this.timelineBarY(height), this.timelineWidth(width), TIMELINE_HEIGHT);
+    }
+
+    /** The played part of the timeline, relative to the track box ({@link #timeline}). */
+    Rect timelineFill(int width, int maxStep) {
+        return new Rect(0, 0, this.timelineActiveWidth(width, maxStep), TIMELINE_HEIGHT);
+    }
+
+    Rect timelineKnob(int width, int height, int maxStep) {
+        int knobX = this.timelineX(width) + this.timelineActiveWidth(width, maxStep);
+        int knobY = this.timelineBarY(height);
+        return new Rect(knobX - KNOB_HALF_WIDTH, knobY - KNOB_HALF_HEIGHT,
+                KNOB_HALF_WIDTH * 2, TIMELINE_HEIGHT + KNOB_HALF_HEIGHT * 2);
+    }
+
+    /**
+     * The four controls, laid out left to right and centred on the window: the page sizes a key to its own text,
+     * which keeps a translated label from being clipped.
+     */
+    List<StructureControl> controls(Font font, int width, int height) {
+        Component previous = Component.translatable("screen.mxt.multiblock.previous");
+        Component restart = Component.translatable("screen.mxt.multiblock.restart");
+        Component next = Component.translatable("screen.mxt.multiblock.next");
+        // The play label swaps with the pause label, so the button is sized for the wider of the two: a button that
+        // jumps sideways on every toggle is worse than one that is a little too wide.
+        int toggleWidth = Math.max(buttonWidth(font, Component.translatable("screen.mxt.multiblock.play")),
+                buttonWidth(font, Component.translatable("screen.mxt.multiblock.pause")));
+
+        List<Component> labels = List.of(previous, restart,
+                Component.translatable(this.paused ? "screen.mxt.multiblock.play" : "screen.mxt.multiblock.pause"), next);
+        List<Integer> widths = List.of(buttonWidth(font, previous), buttonWidth(font, restart), toggleWidth,
+                buttonWidth(font, next));
+        int totalWidth = CONTROL_GAP * (labels.size() - 1);
+        for (int controlWidth : widths) totalWidth += controlWidth;
+        int cursor = (width - totalWidth) / 2;
+        int controlY = height - BOTTOM_OVERLAY_HEIGHT + CONTROL_TOP;
+        List<StructureControl> placed = new ArrayList<>(labels.size());
+        for (int index = 0; index < labels.size(); index++) {
+            int controlWidth = widths.get(index);
+            placed.add(new StructureControl(new Rect(cursor, controlY, controlWidth, CONTROL_HEIGHT), labels.get(index)));
+            cursor += controlWidth + CONTROL_GAP;
         }
-        return ClickResult.NONE;
+        return placed;
+    }
+
+    int maxStep(MultiblockStructure structure) {
+        return layerCount(structure);
+    }
+
+    int currentStep(MultiblockStructure structure) {
+        return this.currentStep(layerCount(structure));
+    }
+
+    // ------------------------------------------------------------------ the scene itself
+
+    void extractScene(GuiGraphicsExtractor graphics, MultiblockStructure structure, int mouseX, int mouseY,
+                      int width, int height) {
+        Rect scene = this.scene(width, height);
+        graphics.fill(scene.x(), scene.y(), scene.x() + scene.width(), scene.y() + scene.height(), SCENE_BACKDROP);
+        StructureBounds bounds = StructureBounds.from(structure);
+        MultiblockSceneRenderState.SceneBounds sceneBounds = bounds.sceneBounds();
+        MultiblockSceneCamera camera = MultiblockSceneCamera.of(this.viewYaw, this.viewPitch,
+                sceneScale(bounds, scene.width(), scene.height()), sceneBounds);
+        List<MultiblockSceneRenderState.SceneBlock> blocks = this.visibleBlocks(structure, this.currentStep(layerCount(structure)), bounds);
+        this.hovered = isInside(mouseX, mouseY, scene.x(), scene.y(), scene.width(), scene.height())
+                ? camera.pick(blocks, mouseX, mouseY, scene.x(), scene.y(), scene.x() + scene.width(), scene.y() + scene.height())
+                : null;
+        graphics.submitPictureInPictureRenderState(new MultiblockSceneRenderState(blocks, camera,
+                scene.x(), scene.y(), scene.x() + scene.width(), scene.y() + scene.height(),
+                this.hovered == null ? -1 : this.hovered.index(), graphics.peekScissorStack()));
+    }
+
+    // The hovered cell's own item tooltip, so what is written is whatever that stack would say anywhere else.
+    void extractTooltip(GuiGraphicsExtractor graphics, Font font, int mouseX, int mouseY) {
+        if (this.hovered == null) return;
+        Minecraft minecraft = Minecraft.getInstance();
+        List<Component> lines = this.hovered.stack().getTooltipLines(Item.TooltipContext.of(minecraft.level),
+                minecraft.player, minecraft.options.advancedItemTooltips ? TooltipFlag.Default.ADVANCED : TooltipFlag.Default.NORMAL);
+        if (!lines.isEmpty()) graphics.setComponentTooltipForNextFrame(font, lines, mouseX, mouseY);
+    }
+
+    // ------------------------------------------------------------------ input
+
+    /** A click inside the timeline's hit band pauses the replay and jumps to the layer under the pointer. */
+    boolean seekTimeline(double mouseX, double mouseY, int width, int height, MultiblockStructure structure) {
+        int maxStep = layerCount(structure);
+        if (maxStep <= 0) return false;
+        int timelineX = this.timelineX(width);
+        int timelineWidth = this.timelineWidth(width);
+        int hitY = this.timelineBarY(height) - TIMELINE_HIT_SLACK;
+        if (!isInside(mouseX, mouseY, timelineX, hitY, timelineWidth, TIMELINE_HIT_HEIGHT)) return false;
+        this.paused = true;
+        if (maxStep == 1) {
+            this.manualStep = 1;
+            return true;
+        }
+        float progress = (float) ((mouseX - timelineX) / Math.max(1.0D, timelineWidth));
+        this.manualStep = Math.round(clamp(progress, 0.0F, 1.0F) * (maxStep - 1)) + 1;
+        return true;
+    }
+
+    /** A press anywhere in the scene starts an orbit drag; the buttons below are the page's own, not this. */
+    boolean beginDrag(double mouseX, double mouseY, int width, int height) {
+        Rect scene = this.scene(width, height);
+        if (!isInside(mouseX, mouseY, scene.x(), scene.y(), scene.width(), scene.height())) return false;
+        this.dragging = true;
+        return true;
     }
 
     boolean mouseReleased(int button) {
@@ -121,95 +248,40 @@ final class MultiblockStructureView {
         return true;
     }
 
-    boolean mouseScrolled(double mouseX, double mouseY, int x, int y, int width, int height) {
-        return isInside(mouseX, mouseY, this.sceneX(x), this.sceneY(y), this.sceneWidth(width), this.sceneHeight(height));
+    // The scene has no zoom of its own: a scroll over it is consumed rather than handed to whatever is behind.
+    boolean scrollOverScene(double mouseX, double mouseY, int width, int height) {
+        Rect scene = this.scene(width, height);
+        return isInside(mouseX, mouseY, scene.x(), scene.y(), scene.width(), scene.height());
     }
 
-    boolean step(int delta, MultiblockStructure structure) {
-        this.applyControl(delta < 0 ? StructureControlAction.PREVIOUS : StructureControlAction.NEXT, layerCount(structure));
-        return true;
+    // The step is read before the pause is written: pausing first would read the stored step instead of the one on
+    // screen, which is the step the player meant to walk away from.
+    void previous(MultiblockStructure structure) {
+        int step = this.currentStep(layerCount(structure));
+        this.paused = true;
+        this.manualStep = Math.max(1, step - 1);
     }
 
-    boolean toggle(MultiblockStructure structure) {
-        this.applyControl(StructureControlAction.TOGGLE, layerCount(structure));
-        return true;
+    void next(MultiblockStructure structure) {
+        int maxStep = layerCount(structure);
+        int step = this.currentStep(maxStep);
+        this.paused = true;
+        this.manualStep = Math.min(maxStep, step + 1);
     }
 
-    private void extractScene(GuiGraphicsExtractor graphics, MultiblockStructure structure,
-                              int mouseX, int mouseY, int x, int y, int width, int height, int visibleStep) {
-        int sceneX = this.sceneX(x);
-        int sceneY = this.sceneY(y);
-        int sceneWidth = this.sceneWidth(width);
-        int sceneHeight = this.sceneHeight(height);
-        graphics.fill(sceneX, sceneY, sceneX + sceneWidth, sceneY + sceneHeight, SCENE_BACKDROP);
-        StructureBounds bounds = StructureBounds.from(structure);
-        MultiblockSceneRenderState.SceneBounds scene = bounds.sceneBounds();
-        MultiblockSceneCamera camera = MultiblockSceneCamera.of(this.viewYaw, this.viewPitch,
-                sceneScale(bounds, sceneWidth, sceneHeight), scene);
-        List<MultiblockSceneRenderState.SceneBlock> blocks = this.visibleBlocks(structure, visibleStep, bounds);
-        this.hovered = isInside(mouseX, mouseY, sceneX, sceneY, sceneWidth, sceneHeight)
-                ? camera.pick(blocks, mouseX, mouseY, sceneX, sceneY, sceneX + sceneWidth, sceneY + sceneHeight)
-                : null;
-        graphics.submitPictureInPictureRenderState(new MultiblockSceneRenderState(blocks, camera,
-                sceneX, sceneY, sceneX + sceneWidth, sceneY + sceneHeight,
-                this.hovered == null ? -1 : this.hovered.index(), graphics.peekScissorStack()));
-    }
-
-    // The hovered cell's own item tooltip, so what is written is whatever that stack would say anywhere else.
-    private void extractTooltip(GuiGraphicsExtractor graphics, Font font, int mouseX, int mouseY) {
-        if (this.hovered == null) return;
-        Minecraft minecraft = Minecraft.getInstance();
-        List<Component> lines = this.hovered.stack().getTooltipLines(Item.TooltipContext.of(minecraft.level),
-                minecraft.player, minecraft.options.advancedItemTooltips ? TooltipFlag.Default.ADVANCED : TooltipFlag.Default.NORMAL);
-        if (!lines.isEmpty()) graphics.setComponentTooltipForNextFrame(font, lines, mouseX, mouseY);
-    }
-
-    private void extractTopOverlay(GuiGraphicsExtractor graphics, Font font, MultiblockStructure structure,
-                                   int mouseX, int mouseY, int x, int y, int width,
-                                   int currentStep, int maxStep) {
-        graphics.fill(x, y, x + width, y + TOP_OVERLAY_HEIGHT, OVERLAY_BACKGROUND);
-        int buttonX = x + EDGE_PADDING;
-        int buttonY = y + 13;
-        int backWidth = this.backButtonWidth(font);
-        this.extractButton(graphics, font, buttonX, buttonY, backWidth, CONTROL_HEIGHT,
-                Component.translatable("screen.mxt.multiblock.back"),
-                isInside(mouseX, mouseY, buttonX, buttonY, backWidth, CONTROL_HEIGHT));
-        graphics.centeredText(font, structure.title(), x + width / 2, y + 8, TITLE_TEXT);
-        if (maxStep > 0) {
-            graphics.centeredText(font, Component.translatable("screen.mxt.multiblock.layer", currentStep, maxStep),
-                    x + width / 2, y + 24, TITLE_TEXT);
+    void toggle(MultiblockStructure structure) {
+        int step = this.currentStep(layerCount(structure));
+        if (this.paused) {
+            // Resuming rewinds the clock to where the paused step was, so play continues from there.
+            this.paused = false;
+            this.startedAtMillis = System.currentTimeMillis() - (long) Math.max(0, step - 1) * STEP_MILLIS;
+        } else {
+            this.paused = true;
+            this.manualStep = step;
         }
-        graphics.centeredText(font, Component.translatable("screen.mxt.multiblock.hint"), x + width / 2, y + 40, MUTED_TEXT);
     }
 
-    private void extractBottomOverlay(GuiGraphicsExtractor graphics, Font font, int mouseX, int mouseY,
-                                      int x, int y, int width, int height, int currentStep, int maxStep) {
-        int overlayY = y + height - BOTTOM_OVERLAY_HEIGHT;
-        graphics.fill(x, overlayY, x + width, y + height, OVERLAY_BACKGROUND);
-        for (StructureControl control : this.controls(font, x, y, width, height)) {
-            this.extractButton(graphics, font, control.x(), control.y(), control.width(), control.height(), control.label(),
-                    isInside(mouseX, mouseY, control.x(), control.y(), control.width(), control.height()));
-        }
-
-        int timelineX = this.timelineX(x, width);
-        int timelineWidth = this.timelineWidth(x, width);
-        int timelineY = this.timelineBarY(y, height);
-        graphics.fill(timelineX, timelineY, timelineX + timelineWidth, timelineY + TIMELINE_HEIGHT, TIMELINE_TRACK);
-        int activeWidth = maxStep <= 0 ? 0
-                : maxStep == 1 ? timelineWidth
-                : Math.round((currentStep - 1) / (float) (maxStep - 1) * timelineWidth);
-        graphics.fill(timelineX, timelineY, timelineX + activeWidth, timelineY + TIMELINE_HEIGHT, TIMELINE_ACTIVE);
-        int knobX = timelineX + activeWidth;
-        graphics.fill(knobX - KNOB_HALF_WIDTH, timelineY - KNOB_HALF_HEIGHT,
-                knobX + KNOB_HALF_WIDTH, timelineY + TIMELINE_HEIGHT + KNOB_HALF_HEIGHT, TIMELINE_KNOB);
-    }
-
-    private void extractButton(GuiGraphicsExtractor graphics, Font font, int x, int y, int width, int height,
-                               Component label, boolean hovered) {
-        graphics.fill(x, y, x + width, y + height, hovered ? BUTTON_FILL_HOVERED : BUTTON_FILL);
-        graphics.outline(x, y, width, height, hovered ? BUTTON_OUTLINE_HOVERED : BUTTON_OUTLINE);
-        graphics.centeredText(font, label, x + width / 2, y + (height - font.lineHeight) / 2, BUTTON_TEXT);
-    }
+    // ------------------------------------------------------------------ the scene's contents
 
     private List<MultiblockSceneRenderState.SceneBlock> visibleBlocks(MultiblockStructure structure, int visibleStep,
                                                                       StructureBounds bounds) {
@@ -254,83 +326,11 @@ final class MultiblockStructureView {
         return (int) (elapsed / STEP_MILLIS % maxStep) + 1;
     }
 
-    private @Nullable StructureControlAction selectControlAt(Font font, double mouseX, double mouseY,
-                                                             int x, int y, int width, int height) {
-        for (StructureControl control : this.controls(font, x, y, width, height)) {
-            if (isInside(mouseX, mouseY, control.x(), control.y(), control.width(), control.height()))
-                return control.action();
-        }
-        return null;
-    }
-
-    private @Nullable Integer selectTimelineAt(double mouseX, double mouseY,
-                                               int x, int y, int width, int height, int maxStep) {
-        if (maxStep <= 0) return null;
-        int timelineX = this.timelineX(x, width);
-        int timelineWidth = this.timelineWidth(x, width);
-        int timelineY = this.timelineBarY(y, height) - TIMELINE_HIT_SLACK;
-        if (!isInside(mouseX, mouseY, timelineX, timelineY, timelineWidth, TIMELINE_HIT_HEIGHT)) return null;
-        if (maxStep == 1) return 1;
-        float progress = (float) ((mouseX - timelineX) / Math.max(1.0D, timelineWidth));
-        return Math.round(clamp(progress, 0.0F, 1.0F) * (maxStep - 1)) + 1;
-    }
-
-    private void applyControl(StructureControlAction action, int maxStep) {
-        switch (action) {
-            // The step is read before the pause is written: pausing first would read the stored step instead of the
-            // one on screen, which is the step the player meant to walk away from.
-            case PREVIOUS -> {
-                int step = this.currentStep(maxStep);
-                this.paused = true;
-                this.manualStep = Math.max(1, step - 1);
-            }
-            case RESTART -> this.open();
-            case TOGGLE -> {
-                int step = this.currentStep(maxStep);
-                if (this.paused) {
-                    // Resuming rewinds the clock to where the paused step was, so play continues from there.
-                    this.paused = false;
-                    this.startedAtMillis = System.currentTimeMillis() - (long) Math.max(0, step - 1) * STEP_MILLIS;
-                } else {
-                    this.paused = true;
-                    this.manualStep = step;
-                }
-            }
-            case NEXT -> {
-                int step = this.currentStep(maxStep);
-                this.paused = true;
-                this.manualStep = Math.min(maxStep, step + 1);
-            }
-        }
-    }
-
-    private List<StructureControl> controls(Font font, int x, int y, int width, int height) {
-        Component previous = Component.translatable("screen.mxt.multiblock.previous");
-        Component restart = Component.translatable("screen.mxt.multiblock.restart");
-        Component next = Component.translatable("screen.mxt.multiblock.next");
-        // The play label swaps with the pause label, so the button is sized for the wider of the two: a button that
-        // jumps sideways on every toggle is worse than one that is a little too wide.
-        int toggleWidth = Math.max(buttonWidth(font, Component.translatable("screen.mxt.multiblock.play")),
-                buttonWidth(font, Component.translatable("screen.mxt.multiblock.pause")));
-
-        List<StructureControl> controls = new ArrayList<>(CONTROL_COUNT);
-        controls.add(new StructureControl(0, 0, buttonWidth(font, previous), CONTROL_HEIGHT, previous, StructureControlAction.PREVIOUS));
-        controls.add(new StructureControl(0, 0, buttonWidth(font, restart), CONTROL_HEIGHT, restart, StructureControlAction.RESTART));
-        controls.add(new StructureControl(0, 0, toggleWidth, CONTROL_HEIGHT,
-                Component.translatable(this.paused ? "screen.mxt.multiblock.play" : "screen.mxt.multiblock.pause"),
-                StructureControlAction.TOGGLE));
-        controls.add(new StructureControl(0, 0, buttonWidth(font, next), CONTROL_HEIGHT, next, StructureControlAction.NEXT));
-
-        int totalWidth = CONTROL_GAP * (controls.size() - 1);
-        for (StructureControl control : controls) totalWidth += control.width();
-        int cursor = x + (width - totalWidth) / 2;
-        int controlY = y + height - BOTTOM_OVERLAY_HEIGHT + 14;
-        List<StructureControl> placed = new ArrayList<>(controls.size());
-        for (StructureControl control : controls) {
-            placed.add(new StructureControl(cursor, controlY, control.width(), CONTROL_HEIGHT, control.label(), control.action()));
-            cursor += control.width() + CONTROL_GAP;
-        }
-        return placed;
+    private int timelineActiveWidth(int width, int maxStep) {
+        int timelineWidth = this.timelineWidth(width);
+        if (maxStep <= 0) return 0;
+        if (maxStep == 1) return timelineWidth;
+        return Math.round((this.currentStep(maxStep) - 1) / (float) (maxStep - 1) * timelineWidth);
     }
 
     private int backButtonWidth(Font font) {
@@ -341,32 +341,16 @@ final class MultiblockStructureView {
         return Math.max(CONTROL_MIN_WIDTH, font.width(label) + CONTROL_PADDING * 2);
     }
 
-    private int sceneX(int x) {
-        return x + EDGE_PADDING;
+    private int timelineX(int width) {
+        return Math.max(EDGE_PADDING, width / 5);
     }
 
-    private int sceneY(int y) {
-        return y + TOP_OVERLAY_HEIGHT;
+    private int timelineWidth(int width) {
+        return width - this.timelineX(width) * 2;
     }
 
-    private int sceneWidth(int width) {
-        return Math.max(1, width - EDGE_PADDING * 2);
-    }
-
-    private int sceneHeight(int height) {
-        return Math.max(1, height - TOP_OVERLAY_HEIGHT - BOTTOM_OVERLAY_HEIGHT);
-    }
-
-    private int timelineX(int x, int width) {
-        return x + Math.max(EDGE_PADDING, width / 5);
-    }
-
-    private int timelineWidth(int x, int width) {
-        return width - (this.timelineX(x, width) - x) * 2;
-    }
-
-    private int timelineBarY(int y, int height) {
-        return y + height - TIMELINE_MARGIN;
+    private int timelineBarY(int height) {
+        return height - TIMELINE_MARGIN;
     }
 
     private static boolean isInside(double mouseX, double mouseY, int x, int y, int width, int height) {
@@ -375,23 +359,6 @@ final class MultiblockStructureView {
 
     private static float clamp(float value, float min, float max) {
         return Math.max(min, Math.min(max, value));
-    }
-
-    enum ClickResult {
-        NONE,
-        HANDLED,
-        BACK
-    }
-
-    private enum StructureControlAction {
-        PREVIOUS,
-        RESTART,
-        TOGGLE,
-        NEXT
-    }
-
-    private record StructureControl(int x, int y, int width, int height, Component label,
-                                    StructureControlAction action) {
     }
 
     private record StructureBounds(int minX, int minY, int minZ, int maxX, int maxY, int maxZ) {

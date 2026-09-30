@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="aui-viewport" content="mode=gui">
+    <link rel="stylesheet" href="../base.css">
+    <link rel="stylesheet" href="structure.css">
+</head>
+<body>
+<!-- 结构预览（阵法 `/formation show`，由 FormationStructureS2CPayload 打开）：整幅窗口交给页面，三维场景仍是 Java。
+     坐标一个都不写在这里——`MultiblockStructureScreen.writeLayout` 在窗口尺寸变化时把下面这些盒子的
+     left / top / width / height 全部重写一遍（几何的唯一来源是 MultiblockStructureView）：
+       #top / #bottom            上下两条压边（旧版是两条 0xB00C1014 的实画面）
+       #scene                    场景矩形（**通栏**，上下两条压边之间全是它），**必须保持透明**：场景与它下面那层暗底都是 Java 的 PIP
+       #title / #layer / #hint   压边上的三行字，盒子是整幅宽、靠 .t-center 居中
+       #back                     左上角的返回键；#previous / #restart / #toggle / #next 底部居中的四个控制键
+                                 （宽度随文字，由 Java 按字体算好写进来，所以不会随播放/暂停来回跳）
+       #timeline                 4px 的时间轴轨道，里面 #timeline_fill 是已播放的一段、#timeline_knob 是滑块
+     键上的字与那三行字都由 Java 写；键的悬停与按下交给 CSS 的 :hover / :active，Java 不再逐帧算 hover。
+     页面**不要**写 aui-mouse-events=intercept：时间轴的点击与场景的拖动仍由 Java 做命中判定。 -->
+<div class="overlay" id="top"></div>
+<div class="overlay" id="bottom"></div>
+<div id="scene"></div>
+
+<div class="t title t-center" id="title"></div>
+<div class="t t-center" id="layer"></div>
+<div class="t dim t-center" id="hint"></div>
+
+<div class="button" id="back"></div>
+<div class="button" id="previous"></div>
+<div class="button" id="restart"></div>
+<div class="button" id="toggle"></div>
+<div class="button" id="next"></div>
+
+<div id="timeline">
+    <div id="timeline_fill"></div>
+    <div id="timeline_knob"></div>
+</div>
+</body>
+</html>

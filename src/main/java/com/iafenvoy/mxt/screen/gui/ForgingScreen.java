@@ -32,8 +32,8 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.ItemStackTemplate;
 import net.minecraft.world.item.Items;
 import net.neoforged.neoforge.client.network.ClientPacketDistributor;
-import org.jspecify.annotations.Nullable;
 import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -464,7 +464,7 @@ public final class ForgingScreen extends AuiContainerScreen<ForgingMenu> {
 
     // Every offered id yields an entry even with no resolvable icon: dropping one would shift every later position.
     private List<Entry> blueprintEntries() {
-        if (this.minecraft == null || this.minecraft.level == null) return List.of();
+        if (this.minecraft.level == null) return List.of();
         List<Entry> entries = new ArrayList<>();
         for (Identifier id : this.menu.blueprints()) {
             IconReference icon = MxtDatapackRegistries.get(this.minecraft.level.registryAccess(),
@@ -479,12 +479,11 @@ public final class ForgingScreen extends AuiContainerScreen<ForgingMenu> {
     // The blueprint pick is re-resolved first: a manual taken out of its slot removes its blueprint from the
     // list, and a pick no longer offered must restrict nothing.
     private List<Entry> methodEntries() {
-        if (this.minecraft == null || this.minecraft.level == null) return List.of();
+        if (this.minecraft.level == null) return List.of();
         Identifier blueprint = this.picked(this.blueprintEntries(), this.selectedBlueprint);
         List<Entry> entries = new ArrayList<>();
         for (Identifier id : this.menu.methods(blueprint)) {
-            IconReference icon = MxtDatapackRegistries.get(this.minecraft.level.registryAccess(),
-                            MxtResourceKeys.FORGING_METHOD, id)
+            IconReference icon = MxtDatapackRegistries.get(this.minecraft.level.registryAccess(), MxtResourceKeys.FORGING_METHOD, id)
                     .flatMap(ForgingMethod::icon).orElse(null);
             entries.add(new Entry(id, icon));
         }
@@ -493,7 +492,7 @@ public final class ForgingScreen extends AuiContainerScreen<ForgingMenu> {
 
     private List<IconReference> stepIcons(boolean target) {
         List<IconReference> icons = new ArrayList<>(STEPS);
-        boolean usable = this.menu.active() && this.minecraft != null && this.minecraft.level != null;
+        boolean usable = this.menu.active() && this.minecraft.level != null;
         Registry<ForgingMethod> registry = usable
                 ? this.minecraft.level.registryAccess().lookupOrThrow(MxtResourceKeys.FORGING_METHOD) : null;
         for (int position = 0; position < STEPS; position++) {
@@ -511,7 +510,7 @@ public final class ForgingScreen extends AuiContainerScreen<ForgingMenu> {
     // The method's own value_delta rather than a session table: the yellow line is drawn before the strike.
     @Nullable
     private Integer deltaOf(@Nullable Identifier method) {
-        if (method == null || this.minecraft == null || this.minecraft.level == null) return null;
+        if (method == null || this.minecraft.level == null) return null;
         return MxtDatapackRegistries.get(this.minecraft.level.registryAccess(), MxtResourceKeys.FORGING_METHOD, method)
                 .map(ForgingMethod::valueDelta).orElse(null);
     }
@@ -519,7 +518,7 @@ public final class ForgingScreen extends AuiContainerScreen<ForgingMenu> {
     // ------------------------------------------------------------------ tooltips
 
     private String blueprintTooltip(int cell) {
-        if (this.minecraft == null || this.minecraft.level == null) return "";
+        if (this.minecraft.level == null) return "";
         Entry entry = this.cellEntry(this.blueprintCells, cell, this.blueprintEntries(), this.blueprintOffs);
         if (entry == null) return "";
         ForgingBlueprint blueprint = this.menu.blueprint(entry.id());
@@ -555,7 +554,7 @@ public final class ForgingScreen extends AuiContainerScreen<ForgingMenu> {
     }
 
     private String methodTooltip(int cell) {
-        if (this.minecraft == null || this.minecraft.level == null) return "";
+        if (this.minecraft.level == null) return "";
         Entry entry = this.cellEntry(this.methodCells, cell, this.methodEntries(), this.methodOffs);
         if (entry == null) return "";
         ForgingMethod method = MxtDatapackRegistries.get(this.minecraft.level.registryAccess(),
@@ -569,7 +568,7 @@ public final class ForgingScreen extends AuiContainerScreen<ForgingMenu> {
     }
 
     private String stepTooltip(int position, boolean target) {
-        if (this.minecraft == null || this.minecraft.level == null || this.minecraft.player == null) return "";
+        if (this.minecraft.level == null || this.minecraft.player == null) return "";
         int registryId = target ? this.menu.targetStep(position) : this.menu.historyStep(position);
         if (ForgingMenu.isNone(registryId)) return "";
         Identifier methodId = ForgingMenu.methodId(this.minecraft.player, registryId);

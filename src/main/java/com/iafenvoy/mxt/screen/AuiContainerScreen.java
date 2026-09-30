@@ -7,8 +7,6 @@ import com.sighs.apricityui.init.Document;
 import com.sighs.apricityui.init.Element;
 import com.sighs.apricityui.layout.Position;
 import com.sighs.apricityui.layout.Size;
-import com.sighs.apricityui.render.AABB;
-import com.sighs.apricityui.render.Rect;
 import com.sighs.apricityui.screen.AuiLinkedScreen;
 import com.sighs.apricityui.ui.Tooltip;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -31,6 +29,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.function.IntUnaryOperator;
+import java.util.function.Supplier;
 
 /**
  * Hosts one bundled ApricityUI page over a vanilla menu: the page owns the panel and the cell geometry,
@@ -158,14 +157,19 @@ public abstract class AuiContainerScreen<T extends AbstractContainerMenu> extend
                 return;
             }
             this.styleHold.restart(stylesPrepared);
-        } else {
-            this.document.applyViewport(true);
+            this.rebind();
+            return;
         }
-        this.rebind();
+        // A window resize re-enters init() with the same DOM, and ApricityUI appends listeners without ever
+        // deduping them: rebinding here would stack a second click handler - and a second tooltip - on every
+        // element the page has, so one click would act twice. Only the viewport changed, and a document that was
+        // really rebuilt is caught by the generation check in syncPage.
+        this.document.applyViewport(true);
     }
 
     /**
-     * Resolves the page contract again; a refresh (hot reload or resize) replaces every element.
+     * Resolves the page contract again; a refresh (hot reload) replaces every element, which is when the page's
+     * listeners have to be bound again.
      */
     private void rebind() {
         this.clearBindings();
@@ -276,7 +280,7 @@ public abstract class AuiContainerScreen<T extends AbstractContainerMenu> extend
      * The menu slot holding one player inventory stack; -1 when the menu has no such slot.
      */
     protected int inventoryMenuIndex(int inventoryIndex) {
-        Inventory inventory = this.minecraft == null || this.minecraft.player == null
+        Inventory inventory = this.minecraft.player == null
                 ? null : this.minecraft.player.getInventory();
         for (int index = 0; index < this.menu.slots.size(); index++) {
             Slot slot = this.menu.slots.get(index);
@@ -323,7 +327,7 @@ public abstract class AuiContainerScreen<T extends AbstractContainerMenu> extend
         element.addEventListener("click", event -> action.run());
     }
 
-    protected void tooltip(Element element, Tooltip.Options options, java.util.function.Supplier<String> text) {
+    protected void tooltip(Element element, Tooltip.Options options, Supplier<String> text) {
         this.tooltips.add(Tooltip.bind(element, text, options));
     }
 
