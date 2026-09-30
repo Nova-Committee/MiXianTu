@@ -30,7 +30,7 @@ title: 功法、进度链与熟练度
 ## 读状态与运维
 
 - 条件侧：`mxt:technique` 问"学过哪些"（读的是**学过**，功法没有启用开关），`mxt:progression` 问"爬到了哪一级"（`comparison` 取 `exact` / `at_least` / `at_most`，比较走缓存索引出来的链内序号；可选用 `owner` 限定到某些所有者定义）。KubeJS 侧按所有者问：`MxtProgression.level(entity, owner)` / `current` / `next` / `mastery` 是读、`setLevel` 是写（功法 id 与档案 id 都是合法的 owner），功法自己的 `MxtTechniques.level(entity, technique)` 仍然可用。
-- 显示：功法面板（`Z` 进人物信息面板里的按钮，或那条未绑定按键）画出每门功法的等级与熟练度进度条，进度条的染色取该数值的 `particle_color`。
+- 显示：功法页（`Z` 打开人物信息面板后点左上角「习得功法」页签）画出每门功法的等级与熟练度进度条，进度条的染色取该数值的 `particle_color`。
 - 命令：`/mxt registries validate` 一次报出链的问题（`next_level <id> is not a progression`、`follows both <A> and <B>`、`chain is cyclic, or joins another chain, at level <id>`、`lowers its mastery requirement at level <id>`、`enters the unknown progression level <id>`、`does not configure the progression level <id>`、`configures progression level <id>, which it can never reach from <entry>`）；`/mxt trigger rules <signal>` 看某个信号挂了几条规则；`/mxt trigger publish <signal> [entity]` 手动发一次信号，是验熟练度来源最快的办法；`/mxt resource <id>` 读数值，`/mxt resource <id> set <value>` 直接改。
 
 **纪录清理**：包改了某个所有者的入口等级之后，身体里那条走不到的等级记录会在**实体加入服务端世界**、**玩家登录**与**数据包重载**时被清掉（`ProgressionService.pruneForeignLevels`，只在低频繁入口跑，不在每次读取时跑），该所有者退回自己的入口级；每清一条打一条带所有者 id 与等级 id 的 `WARN`。这条检查只覆盖**当前仍持有的所有者**；数据包重载那次扫的是全部已加载实体（生物没有"登录"这回事）。

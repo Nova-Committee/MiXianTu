@@ -1,0 +1,66 @@
+/* 灵气工作台：只有这一页自己的尺寸与坐标，底子见 ../base.css。
+ * 旧屏幕 = 176x166 的原版工作台 + 右侧 (176,8) 处 132x122 的灵气面板，这里逐像素照抄。 */
+
+#panel {
+    width: 308px;
+    height: 166px;
+}
+
+/* 合成格 (30,17)、结果格 (124,35)、背包 (8,84)：坐标来自 SpiritCraftingMenu，
+ * 但槽位壳要放在**菜单坐标 − 1**——18x18 的凹面里，物品 16x16 画在 +1 处。 */
+#crafting {
+    left: 29px;
+    top: 16px;
+}
+
+#result {
+    left: 123px;
+    top: 34px;
+}
+
+.inv {
+    left: 7px;
+    top: 83px;
+}
+
+#inventory_label {
+    left: 8px;
+    top: 72px;
+}
+
+/* ── 灵气面板：(176,8) 132x122，行顶 = 面板顶 + 10 + 26n（旧版 PANEL_PADDING + row*26） ── */
+.subpanel.aura {
+    position: absolute;
+    left: 176px;
+    top: 8px;
+    width: 132px;
+    height: 122px;
+    box-sizing: border-box;
+}
+
+.row {
+    position: absolute;
+    left: 10px;
+    width: 112px;
+    height: 20px;
+}
+
+.name {
+    left: 0;
+    top: 0;
+    width: 76px;
+}
+
+.amount {
+    left: 0;
+    top: 0;
+    width: 112px;
+    justify-content: flex-end;
+}
+
+.bar {
+    left: 0;
+    top: 11px;
+    width: 112px;
+    height: 7px;
+}

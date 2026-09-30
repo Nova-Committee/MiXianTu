@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="aui-viewport" content="mode=gui">
+    <link rel="stylesheet" href="../base.css">
+    <link rel="stylesheet" href="cheque.css">
+</head>
+<body>
+<!-- 支票台：旧屏幕是 176x166 的贴图（15 个货币格 + 两个支票格）+ 两个原版 Button，坐标来自
+     ChequeTableMenu。槽位壳放在**菜单坐标 − 1**（物品 16x16 画在 18x18 格子的 +1 处）。
+     两颗方向键的字面量由 Java 写（`<` / `>`），HTML 里不写裸的尖括号。 -->
+<div class="panel" id="panel" style="width:176px;height:166px">
+    <div class="t title" id="title" style="left:8px;top:6px"></div>
+
+    <!-- 15 个货币格：菜单 (8,18) 起，5 列 x 3 行 -->
+    <container class="grid" id="currency" primary="true"
+               style="left:7px;top:17px;grid-template-columns:5;grid-template-rows:18px 18px 18px">
+        <slot slot-index="0" repeat="15"></slot>
+    </container>
+
+    <!-- 支票进格 (134,18) / 出格 (134,54) -->
+    <container class="grid" id="cheque_in" primary="true" style="left:133px;top:17px;grid-template-columns:1">
+        <slot slot-index="0"></slot>
+    </container>
+    <container class="grid" id="cheque_out" primary="true" style="left:133px;top:53px;grid-template-columns:1">
+        <slot slot-index="0"></slot>
+    </container>
+
+    <!-- 两颗 16x16 的方向键：旧版是原版 Button，位置 (104,18) / (104,54)，文字由 Java 写 -->
+    <div class="button" id="check_out" style="left:104px;top:18px;width:16px;height:16px"></div>
+    <div class="button" id="check_in" style="left:104px;top:54px;width:16px;height:16px"></div>
+
+    <div class="t label" id="inventory_label" style="left:8px;top:73px"></div>
+    <container class="grid inv" id="inventory" primary="true">
+        <slot slot-index="9" repeat="27"></slot>
+        <slot slot-index="0" repeat="9"></slot>
+    </container>
+</div>
+</body>
+</html>

@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="aui-viewport" content="mode=gui">
+    <link rel="stylesheet" href="../base.css">
+    <link rel="stylesheet" href="exchange.css">
+</head>
+<body>
+<!-- 兑换站：原版切石机那套 176x166 的布局，坐标与旧屏幕逐像素对齐（见 exchange.css 的文件头）。
+     槽位壳放在**菜单坐标 − 1**：18x18 的格子里，物品 16x16 画在 +1 处，Java 写 Slot.x/y 时再 +1。
+     12 个条目格**不是菜单槽位**：它们只是画布，条目由 Java 按可见窗口推栈（<item>），点击也由
+     页面处理器转成一次菜单按钮点击——所以格子不需要 slot-index，也不进 bindCells。 -->
+<div class="panel" id="panel" style="width:176px;height:166px">
+    <div class="t title" id="title" style="left:8px;top:6px"></div>
+
+    <!-- 投入格（菜单 (20,33)）与产物格（菜单 (143,33)） -->
+    <container class="grid" id="input" primary="true" style="left:19px;top:32px;grid-template-columns:1">
+        <slot slot-index="0"></slot>
+    </container>
+    <container class="grid" id="result" primary="true" style="left:142px;top:32px;grid-template-columns:1">
+        <slot slot-index="0"></slot>
+    </container>
+
+    <!-- 条目列表：4 列 x 3 行，格 16x18（切石机 recipe 精灵的尺寸），行距 18、列距 16 -->
+    <div class="recess" id="offers" style="left:51px;top:13px;width:66px;height:56px"></div>
+    <div class="cell" id="offer-0" style="left:52px;top:14px"><item class="icon" id="offer_item-0"></item></div>
+    <div class="cell" id="offer-1" style="left:68px;top:14px"><item class="icon" id="offer_item-1"></item></div>
+    <div class="cell" id="offer-2" style="left:84px;top:14px"><item class="icon" id="offer_item-2"></item></div>
+    <div class="cell" id="offer-3" style="left:100px;top:14px"><item class="icon" id="offer_item-3"></item></div>
+    <div class="cell" id="offer-4" style="left:52px;top:32px"><item class="icon" id="offer_item-4"></item></div>
+    <div class="cell" id="offer-5" style="left:68px;top:32px"><item class="icon" id="offer_item-5"></item></div>
+    <div class="cell" id="offer-6" style="left:84px;top:32px"><item class="icon" id="offer_item-6"></item></div>
+    <div class="cell" id="offer-7" style="left:100px;top:32px"><item class="icon" id="offer_item-7"></item></div>
+    <div class="cell" id="offer-8" style="left:52px;top:50px"><item class="icon" id="offer_item-8"></item></div>
+    <div class="cell" id="offer-9" style="left:68px;top:50px"><item class="icon" id="offer_item-9"></item></div>
+    <div class="cell" id="offer-10" style="left:84px;top:50px"><item class="icon" id="offer_item-10"></item></div>
+    <div class="cell" id="offer-11" style="left:100px;top:50px"><item class="icon" id="offer_item-11"></item></div>
+
+    <!-- 滚动条：轨道 (119,15) 12x54，滑块 12x15、top 由 Java 写（旧版行程 41px） -->
+    <div class="track" id="scroll_track"><div class="scroller" id="scroller"></div></div>
+
+    <div class="t label" id="inventory_label" style="left:8px;top:73px"></div>
+    <container class="grid inv" id="inventory" primary="true">
+        <slot slot-index="9" repeat="27"></slot>
+        <slot slot-index="0" repeat="9"></slot>
+    </container>
+</div>
+</body>
+</html>

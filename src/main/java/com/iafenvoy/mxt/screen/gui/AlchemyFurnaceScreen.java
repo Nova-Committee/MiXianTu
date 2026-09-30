@@ -1,93 +1,36 @@
 package com.iafenvoy.mxt.screen.gui;
 
-import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.network.payload.AlchemyActionC2SPayload;
 import com.iafenvoy.mxt.network.payload.AlchemyActionC2SPayload.Action;
-import com.iafenvoy.mxt.screen.AlchemyUiPages;
+import com.iafenvoy.mxt.screen.AuiContainerScreen;
+import com.iafenvoy.mxt.screen.AuiPages;
 import com.iafenvoy.mxt.screen.menu.AlchemyFurnaceMenu;
 import com.iafenvoy.mxt.screen.menu.AlchemyFurnaceMenu.TemperatureAck;
 import com.iafenvoy.mxt.screen.menu.AlchemyFurnaceView;
-import com.sighs.apricityui.client.gui.ApricityGuiLayers;
 import com.sighs.apricityui.element.Container;
 import com.sighs.apricityui.element.Input;
 import com.sighs.apricityui.init.Document;
 import com.sighs.apricityui.init.Element;
-import com.sighs.apricityui.layout.Position;
-import com.sighs.apricityui.layout.Size;
-import com.sighs.apricityui.render.AABB;
-import com.sighs.apricityui.render.Rect;
-import com.sighs.apricityui.screen.AuiLinkedScreen;
-import com.sighs.apricityui.ui.Tooltip;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
-import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
-import net.minecraft.client.input.KeyEvent;
-import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.TextColor;
-import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.entity.player.Inventory;
-import net.minecraft.world.inventory.Slot;
 import net.neoforged.neoforge.client.network.ClientPacketDistributor;
-import org.jetbrains.annotations.Nullable;
-import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
-import java.util.*;
+import java.util.List;
+import java.util.Optional;
 
 /**
- * Hosts one bundled ApricityUI page over the vanilla furnace menu: the page owns the panel art and the
- * cell geometry, while slot items, hover, clicks and tooltips stay vanilla.
- * <p>
- * The page must not set {@code aui-mouse-events=intercept}: that makes ApricityUI cancel the native
- * click, and the menu would never see a slot click again.
+ * The four furnace views, one page each; see {@link AuiContainerScreen} for the page contract.
  */
-public final class AlchemyFurnaceScreen extends AbstractContainerScreen<AlchemyFurnaceMenu> implements AuiLinkedScreen {
-    private static final int ITEM_INSET = 1;
+public final class AlchemyFurnaceScreen extends AuiContainerScreen<AlchemyFurnaceMenu> {
     private static final int PANEL_WIDTH = 202;
     private static final int PANEL_HEIGHT_MONITOR = 225;
     private static final int PANEL_HEIGHT_PART = 160;
-    /**
-     * Off-panel x/y for menu slots that have no page geometry behind them yet.
-     */
-    private static final int PARKED_SLOT = -1000;
-    /**
-     * Rounding slack, in document pixels, for "this slot lies inside the painted panel".
-     */
-    private static final double SLOT_SLACK = 2.0D;
-    /**
-     * Failing sync passes, before the page has ever yielded a usable layout, after which the screen
-     * reports once that it cannot read the page.
-     */
-    private static final int GEOMETRY_WARN_FRAMES = 20;
-    /**
-     * ApricityUI's own tooltip mounts an 11px web-scale style of its own; {@code Options.style()} is
-     * appended after it inside the same inline block, so these declarations win without depending on the
-     * stylesheet cascade (a stylesheet {@code !important} rule is the other way round and did not stick).
-     */
-    private static final Tooltip.Options TOOLTIP_OPTIONS = new Tooltip.Options(
-            null,
-            "font-family:initial;font-size:9px;line-height:9px;font-weight:400;min-width:0;"
-                    + "padding:4px 6px;border:1px solid #1a1a1a;border-left:2px solid #8b5cf6;"
-                    + "box-shadow:2px 2px 0 rgba(139,92,246,0.25);",
-            12, 16, 200);
 
     @Nullable
-    private Document document;
+    private Element title, temperature, limit, status, progress, apply, start, abort;
     @Nullable
-    private Component pageError;
-    private List<FormattedCharSequence> errorLines = List.of();
-    private int errorWidth = -1;
-    private boolean slotsBound;
-    private boolean geometryReady;
-    private int layoutWait;
-    private long boundGeneration = Long.MIN_VALUE;
-
-    @Nullable
-    private Element panel, title, temperature, limit, status, progress, target, apply, start, abort;
-    private final Map<Integer, Element> cells = new LinkedHashMap<>();
-    private final List<Tooltip.Binding> tooltips = new ArrayList<>();
-
-    private int panelLeft, panelTop;
-    private int panelWidth = PANEL_WIDTH, panelHeight = PANEL_HEIGHT_PART;
+    private Input target;
 
     private boolean draftDirty;
     private boolean writingField;
@@ -115,99 +58,70 @@ public final class AlchemyFurnaceScreen extends AbstractContainerScreen<AlchemyF
     }
 
     @Override
-    @Nullable
-    public Document getLinkedDocument() {
-        return this.document;
+    protected String pagePath() {
+        return AuiPages.alchemyPage(this.menu.view().getSlug());
     }
 
     @Override
-    protected void init() {
-        super.init();
-        if (this.document == null) {
-            AlchemyUiPages.seedMissing();
-            this.document = Document.create(AlchemyUiPages.path(this.menu.view()));
-            if (this.document == null) {
-                this.pageError = Component.translatable("screen.mxt.alchemy.template_missing", AlchemyUiPages.name(this.menu.view()));
-                return;
-            }
-        } else {
-            this.document.applyViewport(true);
-        }
-        this.rebind();
-        this.refresh();
+    protected String pageName() {
+        return this.menu.view().getSlug();
     }
 
-    /**
-     * Resolves the page contract again; a refresh (hot reload or resize) replaces every element.
-     */
-    private void rebind() {
-        this.clearBindings();
-        this.pageError = null;
-        Document current = this.document;
-        if (current == null) return;
-        if (!this.bindDocument(current)) return;
-        this.slotsBound = true;
-        this.boundGeneration = current.getRefreshGeneration();
-    }
-
-    private boolean bindDocument(Document current) {
-        Element panel = current.getElementById("panel");
+    @Override
+    protected boolean bindPage(Document document) {
+        Element panel = document.getElementById("panel");
         if (panel == null) return this.fail("panel");
-        Element title = current.getElementById("title");
+        Element title = document.getElementById("title");
         if (title == null) return this.fail("title");
-        if (!(current.getElementById("machine") instanceof Container machine)) return this.fail("machine (container)");
-        if (!(current.getElementById("player_inventory") instanceof Container inventory))
+        if (!(document.getElementById("machine") instanceof Container)) return this.fail("machine (container)");
+        if (!(document.getElementById("player_inventory") instanceof Container)) {
             return this.fail("player_inventory (container)");
-        List<Element> machineCells = slotsOf(current, machine);
-        if (machineCells.size() != this.menu.view().machineSlots())
-            return this.fail("machine (" + machineCells.size() + " slots)");
-        List<Element> playerCells = slotsOf(current, inventory);
-        if (playerCells.size() != 36) return this.fail("player_inventory (" + playerCells.size() + " slots)");
+        }
+        List<Element> machineCells = this.cellsOf(document, "machine");
+        if (machineCells == null || machineCells.size() != this.menu.view().getMachineSlots()) {
+            return this.fail("machine (" + (machineCells == null ? 0 : machineCells.size()) + " slots)");
+        }
+        List<Element> playerCells = this.cellsOf(document, "player_inventory");
+        if (playerCells == null || playerCells.size() != 36) {
+            return this.fail("player_inventory (" + (playerCells == null ? 0 : playerCells.size()) + " slots)");
+        }
         this.panel = panel;
         this.title = title;
         if (!this.bindMachine(machineCells)) return false;
-        if (!this.bindPlayer(playerCells)) return false;
-        if (this.menu.view() == AlchemyFurnaceMenu.View.MONITOR && !this.bindMonitor(current)) return false;
+        if (!this.bindCells(document, "player_inventory", this::inventoryMenuIndex)) return false;
+        if (this.menu.view() == AlchemyFurnaceMenu.View.MONITOR && !this.bindMonitor(document)) return false;
         this.text(title, this.getTitle());
-        this.text(current.getElementById("inventory_label"), Component.translatable("container.inventory"));
+        this.text(document.getElementById("inventory_label"), Component.translatable("container.inventory"));
         return true;
     }
 
     private boolean bindMachine(List<Element> machineCells) {
         for (Element cell : machineCells) {
             int index = slotIndexOf(cell);
-            if (index < 0 || index >= machineCells.size()) return this.fail("machine (slot-index " + index + ")");
+            if (index < 0 || index >= this.menu.view().getMachineSlots()) {
+                return this.fail("machine (slot-index " + index + ")");
+            }
             this.cells.put(index, cell);
-            this.tooltips.add(Tooltip.bindTranslation(cell, this.machineTooltip(index), TOOLTIP_OPTIONS));
+            this.tooltipTranslation(cell, this.machineTooltip(index), TOOLTIP_OPTIONS);
         }
         return true;
     }
 
-    private boolean bindPlayer(List<Element> playerCells) {
-        for (Element cell : playerCells) {
-            int vanilla = slotIndexOf(cell);
-            int index = vanilla < 0 || vanilla > 35 ? -1 : this.menu.menuIndex("inventory_" + vanilla);
-            if (index < 0) return this.fail("player_inventory (slot-index " + vanilla + ")");
-            this.cells.put(index, cell);
-        }
-        return true;
-    }
-
-    private boolean bindMonitor(Document current) {
-        Element temperature = current.getElementById("temperature");
+    private boolean bindMonitor(Document document) {
+        Element temperature = document.getElementById("temperature");
         if (temperature == null) return this.fail("temperature");
-        Element limit = current.getElementById("limit");
+        Element limit = document.getElementById("limit");
         if (limit == null) return this.fail("limit");
-        Element status = current.getElementById("status");
+        Element status = document.getElementById("status");
         if (status == null) return this.fail("status");
-        Element progress = current.getElementById("progress_fill");
+        Element progress = document.getElementById("progress_fill");
         if (progress == null) return this.fail("progress_fill");
-        if (!(current.getElementById("target") instanceof Input target)) return this.fail("target (input)");
-        Element apply = current.getElementById("apply");
+        if (!(document.getElementById("target") instanceof Input target)) return this.fail("target (input)");
+        Element apply = document.getElementById("apply");
         if (apply == null) return this.fail("apply");
-        Element start = current.getElementById("start");
+        Element start = document.getElementById("start");
         if (start == null) return this.fail("start");
-        Element abort = current.getElementById("abort");
+        Element abort = document.getElementById("abort");
         if (abort == null) return this.fail("abort");
         this.temperature = temperature;
         this.limit = limit;
@@ -220,34 +134,16 @@ public final class AlchemyFurnaceScreen extends AbstractContainerScreen<AlchemyF
         this.click(apply, this::applyTemperature);
         this.click(start, () -> this.send(Action.START, 0));
         this.click(abort, () -> this.send(Action.ABORT, 0));
-        this.tooltips.add(Tooltip.bind(this.title, this::titleTooltip, TOOLTIP_OPTIONS));
-        this.tooltips.add(Tooltip.bind(temperature, this::heatTooltip, TOOLTIP_OPTIONS));
-        this.tooltips.add(Tooltip.bind(limit, this::limitTooltip, TOOLTIP_OPTIONS));
-        this.tooltips.add(Tooltip.bind(target, this::fieldTooltip, TOOLTIP_OPTIONS));
-        this.tooltips.add(Tooltip.bind(apply, this::fieldTooltip, TOOLTIP_OPTIONS));
+        this.tooltip(this.title, TOOLTIP_OPTIONS, this::titleTooltip);
+        this.tooltip(temperature, TOOLTIP_OPTIONS, this::heatTooltip);
+        this.tooltip(limit, TOOLTIP_OPTIONS, this::limitTooltip);
+        this.tooltip(target, TOOLTIP_OPTIONS, this::fieldTooltip);
+        this.tooltip(apply, TOOLTIP_OPTIONS, this::fieldTooltip);
         return true;
     }
 
-    private boolean fail(String missing) {
-        Document current = this.document;
-        long generation = current == null ? Long.MIN_VALUE : current.getRefreshGeneration();
-        this.clearBindings();
-        // Keep the failed generation so a broken page is reported once instead of every frame.
-        this.boundGeneration = generation;
-        this.pageError = Component.translatable("screen.mxt.alchemy.template_invalid", AlchemyUiPages.name(this.menu.view()), missing);
-        return false;
-    }
-
-    private void clearBindings() {
-        for (Tooltip.Binding binding : this.tooltips) binding.close();
-        this.tooltips.clear();
-        this.cells.clear();
-        this.slotsBound = false;
-        this.geometryReady = false;
-        this.layoutWait = 0;
-        this.parkSlots();
-        this.boundGeneration = Long.MIN_VALUE;
-        this.panel = null;
+    @Override
+    protected void onBindingsCleared() {
         this.title = null;
         this.temperature = null;
         this.limit = null;
@@ -261,10 +157,6 @@ public final class AlchemyFurnaceScreen extends AbstractContainerScreen<AlchemyF
         this.draftDirty = false;
         this.writingField = false;
         this.rejection = null;
-        this.resetShownState();
-    }
-
-    private void resetShownState() {
         this.startDisabled = false;
         this.abortDisabled = false;
         this.shownProgress = Float.NaN;
@@ -275,150 +167,17 @@ public final class AlchemyFurnaceScreen extends AbstractContainerScreen<AlchemyF
         this.shownStatus = null;
     }
 
-    /**
-     * The menu builds every slot at (0, 0); parking them keeps that from drawing under the panel.
-     */
-    private void parkSlots() {
-        for (Slot slot : this.menu.slots) {
-            slot.x = PARKED_SLOT;
-            slot.y = PARKED_SLOT;
-        }
-    }
-
-    private static List<Element> slotsOf(Document document, Container container) {
-        List<Element> cells = new ArrayList<>();
-        for (Element element : document.getElements()) {
-            if (!(element instanceof com.sighs.apricityui.element.Slot slot)) continue;
-            if (slot.findAncestor(Container.class) != container) continue;
-            cells.add(slot);
-        }
-        cells.sort(Comparator.comparingInt(AlchemyFurnaceScreen::slotIndexOf));
-        return cells;
-    }
-
-    private static int slotIndexOf(Element element) {
-        return element instanceof com.sighs.apricityui.element.Slot slot ? slot.getSlotIndex() : -1;
-    }
-
-    private String machineTooltip(int index) {
-        return switch (this.menu.view()) {
-            case MONITOR -> "tooltip.mxt.alchemy.fire";
-            case MAIN -> "screen.mxt.alchemy.main";
-            case AUXILIARY -> index == 2 ? "screen.mxt.alchemy.catalyst" : "screen.mxt.alchemy.auxiliary";
-            case OUTPUT -> "screen.mxt.alchemy.output";
-        };
-    }
-
-    /**
-     * Runs before the vanilla pass so slot geometry is current and the page sits under the items.
-     */
     @Override
-    public void extractRenderState(@NonNull GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
-        this.syncPage();
-        ApricityGuiLayers.submitUi(graphics);
-        super.extractRenderState(graphics, mouseX, mouseY, partialTick);
-    }
-
-    private void syncPage() {
-        Document current = this.document;
-        if (current == null) return;
-        if (current.getRefreshGeneration() != this.boundGeneration) {
-            this.rebind();
-            this.refresh();
-        }
-        if (!this.slotsBound) return;
-        // A failed read keeps the geometry that was already validated instead of parking the slots:
-        // ApricityUI invalidates the committed rects of a whole route whenever anything on it is marked
-        // for relayout, and its tooltip does that on every mouse move, so parking here blinks the items
-        // (and drops hover/clicks) for as long as the pointer keeps moving.
-        if (this.syncGeometry(current)) {
-            this.geometryReady = true;
-            this.layoutWait = 0;
-        } else if (!this.geometryReady) {
-            this.waitForGeometry(current);
-        }
-    }
-
-    /**
-     * Writes the menu slots from the page and answers whether the page could be read at all.
-     * <p>
-     * ApricityUI memoises each element's offset and only clears it on a style or layout change, and the
-     * geometry this method runs against is committed in the paint pass — which happens <em>after</em> the
-     * frame that first shows the page. A read taken before that commit therefore mixes a stale slot
-     * offset with the panel's real position, and writing it parks every item in the screen corner. The
-     * panel's committed rect is the layout ApricityUI actually paints, so a slot that reads outside it is
-     * a read from before that layout: nothing is written, the caller keeps the geometry it validated
-     * earlier (or, before the first good read, parks the slots), and the next frame tries again.
-     * {@link #GEOMETRY_WARN_FRAMES} only decides when to report that a usable layout never arrived, it
-     * never forces a write.
-     */
-    private boolean syncGeometry(Document current) {
-        if (this.panel == null || this.cells.isEmpty()) return false;
-        Rect panelRect = this.panel.getRenderer().getCommittedRectIfValid();
-        if (panelRect == null) return false;
-        AABB painted = panelRect.getVisualBounds();
-        if (!painted.isValid()) return false;
-        for (Element cell : this.cells.values()) {
-            Position at = Position.of(cell);
-            if (at.x < painted.x() - SLOT_SLACK || at.x > painted.maxX() + SLOT_SLACK
-                    || at.y < painted.y() - SLOT_SLACK || at.y > painted.maxY() + SLOT_SLACK) {
-                return false;
-            }
-        }
-        Position origin = current.documentToScreenPosition(Position.of(this.panel));
-        Size size = Size.of(this.panel);
-        this.panelLeft = (int) Math.round(origin.x);
-        this.panelTop = (int) Math.round(origin.y);
-        this.panelWidth = Math.max(1, (int) Math.round(size.width() * current.getViewportScaleX()));
-        this.panelHeight = Math.max(1, (int) Math.round(size.height() * current.getViewportScaleY()));
-        this.leftPos = this.panelLeft;
-        this.topPos = this.panelTop;
-        for (Map.Entry<Integer, Element> entry : this.cells.entrySet()) {
-            int index = entry.getKey();
-            if (index < 0 || index >= this.menu.slots.size()) continue;
-            Position screen = current.documentToScreenPosition(Position.of(entry.getValue()));
-            Slot slot = this.menu.slots.get(index);
-            slot.x = (int) Math.round(screen.x) + ITEM_INSET - this.leftPos;
-            slot.y = (int) Math.round(screen.y) + ITEM_INSET - this.topPos;
-        }
-        return true;
-    }
-
-    /**
-     * Keeps the slots parked until the page yields a usable layout for the first time, and says so once.
-     */
-    private void waitForGeometry(Document current) {
-        this.layoutWait++;
-        this.parkSlots();
-        if (this.layoutWait != GEOMETRY_WARN_FRAMES) return;
-        MiXianTu.LOGGER.warn(
-                "[MXT] alchemy page geometry is unusable after {} passes: path={} panelCommitted={} panel={} slots={}",
-                this.layoutWait,
-                current.getPath(),
-                this.panel != null && this.panel.getRenderer().getCommittedRectIfValid() != null,
-                this.panel == null ? "none" : Position.of(this.panel).toString(),
-                this.cells.size()
-        );
-    }
-
-    /**
-     * Items may only be drawn once the slot geometry behind them has actually been read.
-     */
-    private boolean slotsDrawn() {
-        return this.slotsBound && this.geometryReady;
-    }
-
-    @Override
-    protected void containerTick() {
-        super.containerTick();
+    protected void onPageBound() {
         this.refresh();
     }
 
-    private void refresh() {
-        if (!this.slotsBound || this.menu.view() != AlchemyFurnaceMenu.View.MONITOR) return;
+    @Override
+    protected void refresh() {
+        if (this.menu.view() != AlchemyFurnaceMenu.View.MONITOR) return;
         // A rebuilt DOM is stale until syncPage rebinds it.
-        Document current = this.document;
-        if (current != null && current.getRefreshGeneration() != this.boundGeneration) return;
+        Document current = this.getLinkedDocument();
+        if (current != null && current.getRefreshGeneration() != this.boundGeneration()) return;
         this.pollTemperature();
         AlchemyFurnaceView view = this.menu.viewSnapshot();
         AlchemyFurnaceView.Numbers numbers = view.numbers();
@@ -430,7 +189,7 @@ public final class AlchemyFurnaceScreen extends AbstractContainerScreen<AlchemyF
         float progress = total > 0 && view.status().locked()
                 ? (float) (total - numbers.remaining()) / total : 0;
         if (this.progress != null && Float.floatToIntBits(progress) != Float.floatToIntBits(this.shownProgress)) {
-            this.progress.setInlineStyleProperty("width", Math.round(progress * 100) + "%");
+            style(this.progress, "width", Math.round(progress * 100) + "%");
             this.shownProgress = progress;
         }
         boolean canStart = view.status().canStart();
@@ -506,7 +265,8 @@ public final class AlchemyFurnaceScreen extends AbstractContainerScreen<AlchemyF
     }
 
     private boolean fieldFocused() {
-        return this.document != null && this.document.getFocusedElement() == this.target;
+        Document current = this.getLinkedDocument();
+        return current != null && current.getFocusedElement() == this.target;
     }
 
     private void pollTemperature() {
@@ -581,98 +341,16 @@ public final class AlchemyFurnaceScreen extends AbstractContainerScreen<AlchemyF
         return (to - from) & 0xFFFF;
     }
 
-    private void text(@Nullable Element element, Component text) {
-        if (element == null) return;
-        String value = text.getString();
-        if (!value.equals(element.getTextContent())) element.setTextContent(value);
-        TextColor color = text.getStyle().getColor();
-        if (color == null) return;
-        String hex = String.format(Locale.ROOT, "#%06X", color.getValue());
-        if (!hex.equalsIgnoreCase(element.getInlineStylePropertyValue("color"))) {
-            element.setInlineStyleProperty("color", hex);
-        }
-    }
-
-    private void click(Element element, Runnable action) {
-        element.addEventListener("click", event -> action.run());
+    private String machineTooltip(int index) {
+        return switch (this.menu.view()) {
+            case MONITOR -> "tooltip.mxt.alchemy.fire";
+            case MAIN -> "screen.mxt.alchemy.main";
+            case AUXILIARY -> index == 2 ? "screen.mxt.alchemy.catalyst" : "screen.mxt.alchemy.auxiliary";
+            case OUTPUT -> "screen.mxt.alchemy.output";
+        };
     }
 
     private void send(Action action, double temperature) {
         ClientPacketDistributor.sendToServer(new AlchemyActionC2SPayload(this.menu.containerId, action, temperature));
-    }
-
-    @Override
-    public void extractBackground(@NonNull GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
-        // The vanilla pass owns the in-game dim gradient behind the panel; skipping super drops it.
-        super.extractBackground(graphics, mouseX, mouseY, partialTick);
-        if (this.pageError == null) return;
-        if (this.errorWidth != this.width) {
-            this.errorLines = this.font.split(this.pageError, Math.max(40, this.width - 40));
-            this.errorWidth = this.width;
-        }
-        int y = this.height / 2 - this.errorLines.size() * 5;
-        for (FormattedCharSequence line : this.errorLines) {
-            graphics.text(this.font, line, (this.width - this.font.width(line)) / 2, y, 0xFFFF5555, false);
-            y += 10;
-        }
-    }
-
-    @Override
-    protected void extractSlot(@NonNull GuiGraphicsExtractor graphics, @NonNull Slot slot, int mouseX, int mouseY) {
-        if (!this.slotsDrawn()) return;
-        super.extractSlot(graphics, slot, mouseX, mouseY);
-    }
-
-    @Override
-    protected void extractLabels(@NonNull GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
-    }
-
-    /**
-     * Without read geometry the cells are parked: they must not hover, take clicks or find slots.
-     */
-    @Override
-    protected boolean isHovering(int left, int top, int width, int height, double mouseX, double mouseY) {
-        return this.slotsDrawn() && super.isHovering(left, top, width, height, mouseX, mouseY);
-    }
-
-    @Override
-    protected boolean hasClickedOutside(double mouseX, double mouseY, int left, int top) {
-        if (!this.slotsDrawn()) return true;
-        return mouseX < this.panelLeft || mouseY < this.panelTop
-                || mouseX >= this.panelLeft + this.panelWidth || mouseY >= this.panelTop + this.panelHeight;
-    }
-
-    @Override
-    public boolean mouseClicked(@NonNull MouseButtonEvent event, boolean doubleClick) {
-        if (!this.slotsDrawn()) return true;
-        return super.mouseClicked(event, doubleClick);
-    }
-
-    @Override
-    public boolean mouseReleased(@NonNull MouseButtonEvent event) {
-        if (!this.slotsDrawn()) return true;
-        return super.mouseReleased(event);
-    }
-
-    @Override
-    public boolean mouseDragged(@NonNull MouseButtonEvent event, double deltaX, double deltaY) {
-        if (!this.slotsDrawn()) return true;
-        return super.mouseDragged(event, deltaX, deltaY);
-    }
-
-    @Override
-    public boolean keyPressed(@NonNull KeyEvent event) {
-        if (!this.slotsBound) return event.isEscape() && super.keyPressed(event);
-        return super.keyPressed(event);
-    }
-
-    @Override
-    public void removed() {
-        this.clearBindings();
-        if (this.document != null) {
-            this.document.remove();
-            this.document = null;
-        }
-        super.removed();
     }
 }

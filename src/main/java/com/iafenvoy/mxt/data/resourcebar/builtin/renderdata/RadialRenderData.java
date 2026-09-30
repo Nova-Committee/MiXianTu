@@ -1,10 +1,10 @@
 package com.iafenvoy.mxt.data.resourcebar.builtin.renderdata;
 
 import com.iafenvoy.mxt.data.resourcebar.ResourceBarRenderData;
+import com.iafenvoy.mxt.util.codec.MiscCodecs;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import net.minecraft.util.ExtraCodecs;
 
 public record RadialRenderData(int radius, int thickness, double startAngle, double endAngle, int fillColor)
         implements ResourceBarRenderData {
@@ -13,7 +13,7 @@ public record RadialRenderData(int radius, int thickness, double startAngle, dou
             Codec.intRange(1, 128).fieldOf("thickness").forGetter(RadialRenderData::thickness),
             Codec.DOUBLE.optionalFieldOf("start_angle", 0.0D).forGetter(RadialRenderData::startAngle),
             Codec.DOUBLE.optionalFieldOf("end_angle", 360.0D).forGetter(RadialRenderData::endAngle),
-            ExtraCodecs.STRING_RGB_COLOR.optionalFieldOf("fill_color", 0xFFFFFF).forGetter(RadialRenderData::fillColor)
+            MiscCodecs.RGB_COLOR.optionalFieldOf("fill_color", 0xFFFFFF).forGetter(RadialRenderData::fillColor)
     ).apply(i, RadialRenderData::new));
 
     @Override

@@ -7,7 +7,6 @@ import com.iafenvoy.mxt.network.payload.CultivationToggleC2SPayload;
 import com.iafenvoy.mxt.network.payload.FlightDescendC2SPayload;
 import com.iafenvoy.mxt.screen.hud.HudManager;
 import com.iafenvoy.mxt.screen.information.InformationPanelScreen;
-import com.iafenvoy.mxt.screen.information.TechniquePanelScreen;
 import com.iafenvoy.mxt.screen.wheel.WheelGeometry;
 import com.iafenvoy.mxt.screen.wheel.content.WheelConfigurationScreen;
 import com.mojang.blaze3d.platform.InputConstants;
@@ -23,6 +22,7 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ClientTickEvent.Post;
 import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
 import net.neoforged.neoforge.client.network.ClientPacketDistributor;
+import org.lwjgl.glfw.GLFW;
 
 import java.util.ArrayList;
 import java.util.LinkedList;
@@ -37,7 +37,6 @@ public final class MxtKeyMappings {
     public static final KeyMappingHolder SWAP_BACK = new KeyMappingHolder("key.mxt.swap_back", Type.KEYSYM, InputConstants.UNKNOWN.getValue(), CATEGORY);
     public static final KeyMappingHolder CULTIVATE = new KeyMappingHolder("key.mxt.cultivate", Type.KEYSYM, InputConstants.KEY_C, CATEGORY);
     public static final KeyMappingHolder INFORMATION_PANEL = new KeyMappingHolder("key.mxt.information_panel", Type.KEYSYM, InputConstants.KEY_Z, CATEGORY);
-    public static final KeyMappingHolder TECHNIQUE_PANEL = new KeyMappingHolder("key.mxt.technique_panel", Type.KEYSYM, InputConstants.UNKNOWN.getValue(), CATEGORY);
     public static final KeyMappingHolder HUD_LAYOUT = new KeyMappingHolder("key.mxt.hud_layout", Type.KEYSYM, InputConstants.KEY_RSHIFT, CATEGORY);
     public static final KeyMappingHolder WHEEL = new KeyMappingHolder("key.mxt.wheel", Type.KEYSYM, InputConstants.KEY_R, CATEGORY);
     public static final KeyMappingHolder WHEEL_USE = new KeyMappingHolder("key.mxt.wheel_use", Type.KEYSYM, InputConstants.KEY_V, CATEGORY);
@@ -49,6 +48,7 @@ public final class MxtKeyMappings {
 
     public static final List<KeyMappingHolder> WHEEL_SLOTS = new ArrayList<>(WheelGeometry.SECTORS);
     private static boolean wasRiding;
+    private static boolean informationPanelDown;
 
     static {
         SWAP_BACK.onStateChange(pressed -> {
@@ -56,14 +56,6 @@ public final class MxtKeyMappings {
         });
         CULTIVATE.onStateChange(pressed -> {
             if (pressed) ClientPacketDistributor.sendToServer(CultivationToggleC2SPayload.INSTANCE);
-        });
-        INFORMATION_PANEL.onStateChange(pressed -> {
-            if (pressed && Minecraft.getInstance().screen == null)
-                Minecraft.getInstance().setScreen(new InformationPanelScreen());
-        });
-        TECHNIQUE_PANEL.onStateChange(pressed -> {
-            if (pressed && Minecraft.getInstance().screen == null)
-                Minecraft.getInstance().setScreen(new TechniquePanelScreen());
         });
         HUD_LAYOUT.onStateChange(pressed -> {
             if (pressed && Minecraft.getInstance().screen == null) HudManager.openEditor();
@@ -90,12 +82,26 @@ public final class MxtKeyMappings {
     @SubscribeEvent
     public static void tick(Post event) {
         KeyMappingHolder.HOLDERS.forEach(KeyMappingHolder::tick);
+        tickInformationPanel();
         // A key already held when the flight starts never changes, so boarding has to report it once by itself.
         Player player = Minecraft.getInstance().player;
         boolean riding = player != null && player.getVehicle() instanceof MountVehicle;
         if (riding && !wasRiding)
             ClientPacketDistributor.sendToServer(new FlightDescendC2SPayload(FLIGHT_DESCEND.isDown()));
         wasRiding = riding;
+    }
+
+    // The panel's key is its own close key: with nothing open it opens the panel, over the panel it takes it back
+    // down. Polled from the device like the wheel's keys - a press made while a screen is up never reaches the
+    // mapping, and the release a screen change re-presses would read as a fresh press.
+    private static void tickInformationPanel() {
+        boolean down = INFORMATION_PANEL.isPhysicallyDown();
+        if (down == informationPanelDown) return;
+        informationPanelDown = down;
+        if (!down) return;
+        Minecraft minecraft = Minecraft.getInstance();
+        if (minecraft.screen == null) minecraft.setScreen(new InformationPanelScreen());
+        else if (minecraft.screen instanceof InformationPanelScreen) minecraft.setScreen(null);
     }
 
     public static final class KeyMappingHolder {
@@ -133,6 +139,18 @@ public final class MxtKeyMappings {
 
         public boolean isDown() {
             return this.keyBinding.isDown();
+        }
+
+        // Straight from the input device: setScreen releases every mapping, and grabMouse's setAll() then
+        // re-presses the ones still held, so the mapping's own state lies while a screen is up.
+        public boolean isPhysicallyDown() {
+            InputConstants.Key bound = this.keyBinding.getKey();
+            int value = bound.getValue();
+            if (value == InputConstants.UNKNOWN.getValue()) return false;
+            Minecraft minecraft = Minecraft.getInstance();
+            if (bound.getType() == InputConstants.Type.MOUSE)
+                return GLFW.glfwGetMouseButton(minecraft.getWindow().handle(), value) == GLFW.GLFW_PRESS;
+            return InputConstants.isKeyDown(minecraft.getWindow(), value);
         }
 
         public boolean consumeClick() {

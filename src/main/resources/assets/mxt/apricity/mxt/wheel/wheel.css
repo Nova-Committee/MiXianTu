@@ -1,0 +1,315 @@
+/* 轮盘页：12 扇环 + 中心文字 + 页码行。皮肤与所有页面同一套——**扁平半透明深色**（见
+ * ../base.css）：扇只有一层 `rgba(0,0,0,0.45)` 的底、状态靠底色深浅与冷却白幕区分、文字纯白；没有渐变、
+ * 没有浮雕、没有外发光。扇与扇之间那道 0.6° 的缝直接透出游戏画面，就是这套皮肤里的分隔线。
+ *
+ * 分工（页面契约见 docs/guide/java/wheel.md）：Java 写 12 条 clip-path 与 12 个 .content 锚点（绑定时一次）、
+ * #ring 的适配缩放与冷却白幕的盒子（sheet-N），之后每帧只在变化时写 class 与文本；像素、渐变、动画、
+ * 槽位号（.index）全在这里。几何常量：画布 208x208、圆心 (104,104)、内半径 56、外半径 96（与 WheelGeometry 同一份）。
+ *
+ * 八个 AUI 口径（沿丹炉四页的结论，后五条是轮盘实机踩出来的）：
+ * 1. 文字用游戏自带的位图字体：`font-family` 是继承属性，重置必须写 `initial`（写 `unset` 会继承父级）；
+ *    这个后端下 `font-size` 是**缩放**不是像素，基准 9px = 原版 1×，所以一律 9px。
+ * 2. 视口高度必须写 `100vh`：AUI 的 <html> 没有显式高度，body 上的百分比高度取不到基底、整条会被忽略。
+ * 3. `radial-gradient` / `conic-gradient` 在 AUI 里没有（只在 <canvas> 的绘制 API 里），所以光环用整圆
+ *    加 `box-shadow` 画；扇之间的分隔线靠扇环之间那 0.6° 的缝，不写描边。
+ * 4. **不要给扇环垫一层整块圆底盘**：第一版有一层 208px 的圆当底，实机它盖在扇环上面（绝对定位的兄弟
+ *    之间别指望 DOM 顺序），整圈只剩一个灰圆——去掉，缝里直接透出游戏画面。
+ * 5. **指向态直接换扇自己的底色，不要另做一层叠层**：叠层要用 `display` 藏，而第一版用 `opacity: 0` 藏
+ *    时实机十二扇全是高亮色（`opacity != 1` 与 `filter` 走同一条 FBO 通道，一并别用）。
+ * 6. **别给扇里的内容盒加 `overflow: hidden`**：第一版 `.content` 上写了它，实机每个有名字的扇都多出
+ *    一个与内容盒等大的暗块（遮蔽机制的痕迹）；名字本来就由 Java 按那一扇的弧长截断，不需要裁。
+ * 7. **压层用 `z-index`，别指望 DOM 顺序**：底色 0 → 槽位号 1 → 图标/名字 2 → 冷却白幕 3 就是这么排的。
+ *    只写 `position: absolute` 而不写 z-index 时，谁压谁由实现的分组顺序决定——第一版那层 208px 的"底盘"
+ *    盖在扇环上面就是这么来的。
+ * 8. **扇的底色画在扇里那层 `.fill` 上，`.sector` 自己不写 `background-color`**：实机上只有一号槽位
+ *    （正上方那一扇）被涂出一块 40x40 的深色方块，位置与大小正好等于槽位号 `.index` 的盒子，颜色又正好
+ *    等于扇自己的底色（0.45 黑叠第二遍 = 0.7 黑）；AUI 会在若干条路径上把**祖先的背景色**带到子盒子上
+ *    （`Text.resolveRasterBackgroundColor` 就是沿祖先链找第一个非 transparent 的背景色），所以把底色挪出
+ *    祖先链是唯一稳的做法。`.content` / `.index` 另外显式写一个 `rgba(0,0,0,0)`（不是字面量 `transparent`，
+ *    那条链只认字面量）把查找就地截断，双保险。 */
+
+body {
+    width: 100%;
+    height: 100vh;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    font-family: initial;
+    font-size: 9px;
+    line-height: 9px;
+    user-select: none;
+}
+
+/* ── 竖排：上面一行页码，下面整块轮盘 ── */
+#stage {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    /* 开合动画：每次打开都是一份新 Document，这条动画因此自然重放（旧的 Java growth() 已删）。 */
+    animation: wheel-in 160ms ease-out both;
+}
+
+#page {
+    padding: 3px 6px;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 2px;
+    background-color: rgba(0, 0, 0, 0.82);
+    background-image: none;
+    box-shadow: none;
+    color: #ffffff;
+    white-space: nowrap;
+}
+
+#ring {
+    position: relative;
+    width: 208px;
+    height: 208px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* transform 由 Java 写：窗口太小时 scale(fit)，与旧 WheelGeometry.ring 的适配同一个算式。 */
+}
+
+/* 呼吸光环：整圆 + box-shadow（radial-gradient 不可用），画在扇环外面一圈，不出现在环内。 */
+#glow {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 208px;
+    height: 208px;
+    border-radius: 50%;
+    animation: wheel-pulse 3.2s ease-in-out infinite;
+}
+
+#sectors {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 208px;
+    height: 208px;
+}
+
+/* ── 扇环 ──
+ * 12 个扇都是整块 208x208 的盒子，各自被 Java 写的 clip-path 裁成扇环，所以同一层底色在每一扇上都是
+ * 同一块布，拼起来就是"整圈一个颜色"——状态因此只改底色的深浅，不再有按角度的光照。
+ * 盒子以圆心为原点（transform-origin 默认 50% 50%）缩放，指向那一扇就自然向外顶出。
+ * 底色不写在 `.sector` 上（见文件头第 8 条），而是它里面的 `.fill` 那层。 */
+.sector {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 208px;
+    height: 208px;
+    background-image: none;
+    transition: transform 120ms ease-out;
+}
+
+/* 扇的底色。每个状态都同时写背景色，免得某条声明没解析出来时整圈消失。 */
+.sector .fill {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 208px;
+    height: 208px;
+    z-index: 0;
+    background-color: rgba(0, 0, 0, 0.45);
+    background-image: none;
+}
+
+.sector.empty .fill {
+    background-color: rgba(0, 0, 0, 0.28);
+}
+
+/* 指向：整扇加白一层，是这套皮肤里唯一的"悬停/选中"表达（和页签、格子一致）。
+   不叠 `filter` 外发光（见文件头第 5 条），也不用叠层。 */
+.sector.selected .fill {
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
+.sector.selected {
+    transform: scale(1.035);
+}
+
+/* ── 冷却白幕：盖在图标位置上、按剩余比例向下退，和 HUD 的轮盘格（WheelSelectionEntry）以及原版物品
+   冷却同一种画法（白色 50%）。**底色不再为冷却变深**：那一层曾经和"空格子"的深浅混淆，实机被当成
+   没有来由的深色块。盒子（left/top/width/height）由 Java 写——有图标就盖住那 16x16，只画名字的扇
+   盖满整个内容盒（40x20，免得在字中间留一小块）；只在"还剩几像素"变了时才写，最多十来次，所以幕布
+   按像素步进（原版也是按像素），整页不必每帧重排。答不出冷却全长的条目给整块满幕。下面这组默认值
+   就是"有图标"那一档的盒子。 */
+.sector .sheet {
+    position: absolute;
+    left: 12px;
+    top: 2px;
+    width: 16px;
+    height: 16px;
+    z-index: 3;
+    display: none;
+    background-color: rgba(255, 255, 255, 0.5);
+}
+
+.sector.cooling .sheet {
+    display: block;
+}
+
+/* ── 槽位号：每个扇背景上一个撑满格子的深色数字（1 在正上方、顺时针，与配置界面和 12 把槽位键同号）。
+   盒子 40x40 居中在 .content 的 40x20 上（top: -10px），数字在盒子里 flex 居中；扇自己的 clip-path
+   会把超出扇形的边角裁掉，所以它看起来正好"填满这一格"。两位数（10/11/12）窄一档，否则横向会被裁。
+   那个 `rgba(0, 0, 0, 0)` 是给 AUI 的背景色查找用的（见文件头第 8 条）：零透明度，画出来什么都看不见，
+   但它不是字面量 `transparent`，于是"沿祖先链找第一个背景色"的查找到这里就停。 */
+.sector .index {
+    position: absolute;
+    left: 0;
+    top: -10px;
+    width: 40px;
+    height: 40px;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: rgba(0, 0, 0, 0);
+    font-family: initial;
+    font-size: 36px;
+    line-height: 36px;
+    color: rgba(0, 0, 0, 0.25);
+}
+
+#sector-9 .index,
+#sector-10 .index,
+#sector-11 .index {
+    font-size: 27px;
+    line-height: 27px;
+}
+
+/* ── 图标与名字：锚点由 Java 写（中半径 76px 处），图标与名字二选一 ──
+   两者都在槽位号之上（正 z 一定晚于 0/1 那一组），所以号只当底纹。
+   这里不写 `overflow: hidden`（见文件头第 6 条）。 */
+.sector .content {
+    position: absolute;
+    width: 40px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: rgba(0, 0, 0, 0);
+}
+
+/* 两个图标元素默认都不画：物品图标走 <item>（Java 推栈），贴图图标走 <texture>（Java 写 src），
+   都没有就画名字。三者由扇上的 icon-item / icon-texture 类决定，Java 每帧只在变化时改。 */
+.sector .icon,
+.sector .texture {
+    display: none;
+    position: relative;
+    z-index: 2;
+    width: 16px;
+    height: 16px;
+}
+
+.sector.icon-item .icon {
+    display: block;
+}
+
+.sector.icon-texture .texture {
+    display: block;
+}
+
+.sector .name {
+    position: relative;
+    z-index: 2;
+    color: rgba(255, 255, 255, 0.78);
+    white-space: nowrap;
+}
+
+/* 指向那一扇底色变亮，名字跟着变成纯白。 */
+.sector.selected .name {
+    color: #ffffff;
+}
+
+.sector.icon-item .name,
+.sector.icon-texture .name {
+    display: none;
+}
+
+/* ── 中心：指向项的名字与一行提示；指向空格时不画（Java 加 empty） ── */
+#centre {
+    min-width: 84px;
+    max-width: 132px;
+    padding: 4px 6px;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 3px;
+    background-color: rgba(0, 0, 0, 0.82);
+    background-image: none;
+    box-shadow: none;
+    text-align: center;
+}
+
+#centre.empty {
+    display: none;
+}
+
+#title {
+    color: #ffffff;
+    white-space: nowrap;
+}
+
+#note {
+    color: rgba(255, 255, 255, 0.66);
+    white-space: nowrap;
+}
+
+/* ── 换页回摆：同一份 animation 连续重放不会重启动画，所以两个类轮换（Java 交替加） ── */
+#sectors.turn-a {
+    animation: wheel-turn-a 140ms ease-out;
+}
+
+#sectors.turn-b {
+    animation: wheel-turn-b 140ms ease-out;
+}
+
+@keyframes wheel-in {
+    from {
+        opacity: 0;
+        transform: scale(0.72);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+@keyframes wheel-pulse {
+    0%, 100% {
+        box-shadow: 0 0 14px rgba(255, 255, 255, 0.05);
+    }
+    50% {
+        box-shadow: 0 0 24px rgba(255, 255, 255, 0.14);
+    }
+}
+
+@keyframes wheel-turn-a {
+    from {
+        transform: rotate(-8deg);
+    }
+    to {
+        transform: rotate(0deg);
+    }
+}
+
+@keyframes wheel-turn-b {
+    from {
+        transform: rotate(8deg);
+    }
+    to {
+        transform: rotate(0deg);
+    }
+}
+
+/* 整页不滚动：页面内容永远该待在视口里，能滚会把面板连同槽位一起挪走。
+   ApricityUI 的 viewport 滚动器取根元素的 overflow（兜底到 body），hidden 就不显示滚动条也不吃滚轮。 */
+html,
+body {
+    overflow: hidden;
+}

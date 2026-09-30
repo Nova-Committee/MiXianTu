@@ -4,6 +4,7 @@ import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.context.action.EntityActionContext;
 import com.iafenvoy.mxt.registry.MxtEntityTypes;
 import com.iafenvoy.mxt.runtime.lightning.ColoredLightningBolt;
+import com.iafenvoy.mxt.util.codec.MiscCodecs;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.iafenvoy.mxt.util.formula.number.Constant;
@@ -13,7 +14,6 @@ import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.util.ExtraCodecs;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntitySpawnReason;
 import org.jspecify.annotations.NonNull;
@@ -32,13 +32,13 @@ public record SpawnLightningAction(NumberProvider offsetX, NumberProvider offset
             NumberProvider.CODEC.optionalFieldOf("offset_x", new Constant(0.0D)).forGetter(SpawnLightningAction::offsetX),
             NumberProvider.CODEC.optionalFieldOf("offset_y", new Constant(0.0D)).forGetter(SpawnLightningAction::offsetY),
             NumberProvider.CODEC.optionalFieldOf("offset_z", new Constant(0.0D)).forGetter(SpawnLightningAction::offsetZ),
-            ExtraCodecs.STRING_RGB_COLOR.optionalFieldOf("color", ColoredLightningBolt.DEFAULT_COLOR).forGetter(SpawnLightningAction::color),
+            MiscCodecs.RGB_COLOR.optionalFieldOf("color", ColoredLightningBolt.DEFAULT_COLOR).forGetter(SpawnLightningAction::color),
             Codec.floatRange(0.0F, 1.0F).optionalFieldOf("alpha", ColoredLightningBolt.DEFAULT_ALPHA).forGetter(SpawnLightningAction::alpha),
             Codec.floatRange(ColoredLightningBolt.MIN_THICKNESS, ColoredLightningBolt.MAX_THICKNESS)
                     .optionalFieldOf("thickness", ColoredLightningBolt.DEFAULT_THICKNESS).forGetter(SpawnLightningAction::thickness),
             // Strict rather than tolerant: a mistyped colour in a gradient is a typo the pack author wants to
             // see, and the synched data channel cannot carry more entries than the bolt accepts anyway.
-            Codec.list(ExtraCodecs.STRING_RGB_COLOR).validate(SpawnLightningAction::validatePalette)
+            Codec.list(MiscCodecs.RGB_COLOR).validate(SpawnLightningAction::validatePalette)
                     .optionalFieldOf("palette", List.of()).forGetter(SpawnLightningAction::palette),
             NumberProvider.CODEC.optionalFieldOf("damage", new Constant(5.0D)).forGetter(SpawnLightningAction::damage),
             Codec.BOOL.optionalFieldOf("visual_only", false).forGetter(SpawnLightningAction::visualOnly),

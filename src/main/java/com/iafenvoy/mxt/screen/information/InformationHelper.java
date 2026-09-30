@@ -23,12 +23,13 @@ public final class InformationHelper {
     }
 
     // The value is data and the label can be abbreviated and tooltipped, so a long value narrows the label
-    // instead of being cut off; preferredNameWidth wins whenever nothing has to give, keeping values aligned.
-    public static Columns columns(int availableWidth, int preferredNameWidth, int valueWidth) {
+    // instead of being cut off. Call it once per block with the block's widest name and widest value: rows that
+    // measure themselves line up only while every row has a name of the same width.
+    public static Columns columns(int availableWidth, int widestNameWidth, int widestValueWidth) {
         int width = Math.max(1, availableWidth);
-        int wanted = Math.max(0, Math.min(valueWidth, width));
+        int wanted = Math.max(0, Math.min(widestValueWidth, width));
         int roomForName = Math.max(width / 4, width - wanted - COLUMN_GAP);
-        int name = Math.max(0, Math.min(preferredNameWidth, roomForName));
+        int name = Math.max(0, Math.min(widestNameWidth, roomForName));
         return new Columns(name, Math.max(1, width - name - COLUMN_GAP));
     }
 }

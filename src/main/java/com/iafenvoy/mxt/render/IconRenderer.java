@@ -97,7 +97,7 @@ public final class IconRenderer {
     }
 
     // Counted in code points, so a character is never cut in half.
-    private static String fit(Font font, String text, int maxWidth) {
+    public static String fit(Font font, String text, int maxWidth) {
         if (maxWidth <= 0) return "";
         String best = "";
         int characters = text.codePointCount(0, text.length());

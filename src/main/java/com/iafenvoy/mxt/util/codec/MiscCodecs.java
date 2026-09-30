@@ -8,6 +8,8 @@ import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.ComponentSerialization;
+import net.minecraft.util.ARGB;
+import net.minecraft.util.ExtraCodecs;
 import net.minecraft.world.phys.Vec2;
 
 import java.util.List;
@@ -15,6 +17,10 @@ import java.util.function.Function;
 
 public final class MiscCodecs {
     public static final Codec<Double> NON_NEGATIVE = Codec.doubleRange(0.0D, Double.MAX_VALUE);
+
+    // The one colour codec every definition field uses. The vanilla string branch returns an opaque ARGB value
+    // (its integer branch accepts any int at all), while the whole codebase reads colours as plain RGB.
+    public static final Codec<Integer> RGB_COLOR = ExtraCodecs.STRING_RGB_COLOR.xmap(ARGB::transparent, ARGB::transparent);
 
     // Two element [x, z]; secret realm borders use it for their center.
     public static final Codec<Vec2> HORIZONTAL_PAIR = Codec.DOUBLE.listOf().comapFlatMap(

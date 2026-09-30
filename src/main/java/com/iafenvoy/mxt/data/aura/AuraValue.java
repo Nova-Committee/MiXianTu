@@ -2,11 +2,11 @@ package com.iafenvoy.mxt.data.aura;
 
 import com.iafenvoy.mxt.data.aura.AuraMaximum.InitialMultiplier;
 import com.iafenvoy.mxt.util.codec.CollectionCodecs;
+import com.iafenvoy.mxt.util.codec.MiscCodecs;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
-import net.minecraft.util.ExtraCodecs;
 
 import java.util.Map;
 
@@ -20,7 +20,7 @@ public record AuraValue(double amount, AuraMaximum max, double regenPerTick, int
             Codec.DOUBLE.optionalFieldOf("amount", 0.0D).forGetter(AuraValue::amount),
             AuraMaximum.CODEC.optionalFieldOf("max", InitialMultiplier.ONE).forGetter(AuraValue::max),
             Codec.DOUBLE.optionalFieldOf("regen_per_tick", 0.0D).forGetter(AuraValue::regenPerTick),
-            ExtraCodecs.STRING_RGB_COLOR.optionalFieldOf("color", 0xFFFFFF).forGetter(AuraValue::color)
+            MiscCodecs.RGB_COLOR.optionalFieldOf("color", 0xFFFFFF).forGetter(AuraValue::color)
     ).apply(i, AuraValue::new)).validate(AuraValue::validate);
     public static final Codec<Map<Holder<Aura>, AuraValue>> MAP_CODEC = CollectionCodecs.map(Aura.CODEC, CODEC);
 

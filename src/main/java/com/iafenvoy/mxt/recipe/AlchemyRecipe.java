@@ -89,6 +89,13 @@ public record AlchemyRecipe(Component name, Component description,
         return false;
     }
 
+    // Made in the furnace rather than laid out in a grid, so it is never listed by a recipe book. Without this the
+    // recipe manager warns on every load that a non-special recipe with impossible placement info was ignored.
+    @Override
+    public boolean isSpecial() {
+        return true;
+    }
+
     @Override
     public @NonNull String group() {
         return "mxt.alchemy";

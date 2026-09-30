@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="aui-viewport" content="mode=gui">
+    <link rel="stylesheet" href="../base.css">
+    <link rel="stylesheet" href="station.css">
+</head>
+<body>
+<!-- 交易站（顾客视图，176x167）：StationMenu.SYSTEM_CUSTOMER / TRADE_CUSTOMER 两个菜单共用。
+     槽位 slot-index 是"格内下标"：模板格 0..11（4x3 行优先），背包 0..35 是原版背包下标。
+     菜单里模板格是两个一组交错的（costs[i] = 2i、rewards[i] = 2i+1），映射写在 StationScreen 里。 -->
+<div class="panel" id="panel" style="width:176px;height:167px">
+    <div class="t title" id="title" style="left:8px;top:6px"></div>
+    <container class="grid" id="costs" primary="true" style="left:7px;top:17px;grid-template-rows:18px 18px 18px;grid-template-columns:4">
+        <slot slot-index="0"></slot><slot slot-index="1"></slot><slot slot-index="2"></slot><slot slot-index="3"></slot>
+        <slot slot-index="4"></slot><slot slot-index="5"></slot><slot slot-index="6"></slot><slot slot-index="7"></slot>
+        <slot slot-index="8"></slot><slot slot-index="9"></slot><slot slot-index="10"></slot><slot slot-index="11"></slot>
+    </container>
+    <container class="grid" id="rewards" primary="true" style="left:97px;top:17px;grid-template-rows:18px 18px 18px;grid-template-columns:4">
+        <slot slot-index="0"></slot><slot slot-index="1"></slot><slot slot-index="2"></slot><slot slot-index="3"></slot>
+        <slot slot-index="4"></slot><slot slot-index="5"></slot><slot slot-index="6"></slot><slot slot-index="7"></slot>
+        <slot slot-index="8"></slot><slot slot-index="9"></slot><slot slot-index="10"></slot><slot slot-index="11"></slot>
+    </container>
+    <div class="button" id="trade">→</div>
+    <div class="t label" id="inventory_label" style="left:8px;top:73px"></div>
+    <container class="inv inv-customer" id="inventory" primary="true">
+        <slot slot-index="9" repeat="27"></slot>
+        <slot slot-index="0" repeat="9"></slot>
+    </container>
+</div>
+</body>
+</html>

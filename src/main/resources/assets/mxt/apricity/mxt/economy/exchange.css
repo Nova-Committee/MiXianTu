@@ -1,0 +1,80 @@
+/* 兑换站：只有这一页自己的尺寸与坐标，质感全在 ../base.css（扁平半透明深色）。
+ *
+ * 旧屏幕是原版切石机那张 176x166 的贴图 + Java 现画的条目格、滚动条，坐标来自 ExchangeStationMenu：
+ *   投入格 (20,33)、产物格 (143,33)、条目格 4 列 x 3 行（(52,14) 起，格 16x18、列距 16、行距 18）、
+ *   滚动条轨道 (119,15) 12x54、玩家背包 (8,84)。
+ * 页面里的槽位壳是**菜单坐标 − 1**（物品 16x16 画在 18x18 格子的 +1 处，Java 写 Slot.x/y 时再 +1）；
+ * 条目格不是菜单槽位，尺寸照旧按切石机的 16x18 来，物品画在格内 +2 处（旧版就是那个偏移）。
+ * 背包的 left/top 必须在这里给：共用的 `.inv` 只写排布，不带坐标。 */
+
+.inv {
+    left: 7px;
+    top: 83px;
+}
+
+/* ── 条目格：可点，悬停加白、选中更亮（旧版是 recipe / recipe_highlighted / recipe_selected 三张精灵） ── */
+.cell {
+    position: absolute;
+    box-sizing: border-box;
+    width: 16px;
+    height: 18px;
+    border: 1px solid rgba(255, 255, 255, 0.13);
+    background-color: rgba(255, 255, 255, 0.09);
+    cursor: pointer;
+}
+
+.cell:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+.cell.selected {
+    background-color: rgba(255, 255, 255, 0.28);
+    border-color: rgba(255, 255, 255, 0.42);
+}
+
+/* 没有条目的那一格整块收掉（旧版也不会画） */
+.cell.empty {
+    display: none;
+}
+
+/* 格里的物品：16x16 落在 (0,2)（旧版 items 画在格顶 +2 处）。
+   这里不写 `interactive`——AUI 自己会给它弹物品提示框，正是旧版 extractTooltip 那件事。 */
+.cell .icon {
+    position: absolute;
+    left: 0;
+    top: 2px;
+    width: 16px;
+    height: 16px;
+    display: none;
+}
+
+.cell.filled .icon {
+    display: block;
+}
+
+/* ── 滚动条：暗轨道 + 浅色滑块（滑块 top 由 Java 写，只有条目多于 12 条时才可用） ── */
+.track {
+    position: absolute;
+    left: 119px;
+    top: 15px;
+    width: 12px;
+    height: 54px;
+    background-color: rgba(0, 0, 0, 0.28);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+    cursor: pointer;
+}
+
+.scroller {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 12px;
+    height: 15px;
+    border-radius: 2px;
+    background-color: rgba(255, 255, 255, 0.42);
+}
+
+.scroller.disabled {
+    background-color: rgba(255, 255, 255, 0.16);
+}

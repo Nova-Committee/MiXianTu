@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="aui-viewport" content="mode=gui">
+    <link rel="stylesheet" href="../base.css">
+    <link rel="stylesheet" href="trade.css">
+</head>
+<body>
+<!-- 玩家交易（176x221）：旧屏幕是一张同尺寸的贴图加两个原版 Button，坐标来自 PlayerTradeMenu。
+     两片 4x5 的出价格各是一个容器：左边是**自己**的 20 格（可放可拿），右边是**对方**的 20 格
+     （EconomySlots.Display，只看不拿）。菜单把两片交错着加进槽位表——自己那格 i 是菜单槽位 2i、
+     对方那格 i 是 2i + 1——所以这里的 slot-index 是**格内下标 0..19**（4 列、行优先），
+     两处映射写在 PlayerTradeScreen 的 OFFER_STRIDE / PARTNER_OFFSET。
+     槽位壳放在**菜单坐标 − 1**（物品 16x16 画在 18x18 格子的 +1 处，Java 写 Slot.x/y 时再 +1）。
+     两颗 72x16 的按钮不是槽位，坐标照旧 (7,110) / (97,110)：左边那颗是"确认"，文字与状态由 Java 每刻写；
+     右边那颗只显示**对方的**确认状态（旧版是一颗 disabled 的原版 Button），页面不给它绑点击。 -->
+<div class="panel" id="panel" style="width:176px;height:221px">
+    <div class="t title" id="title" style="left:8px;top:6px"></div>
+    <div class="t" id="partner_name" style="left:98px;top:6px"></div>
+
+    <!-- 自己的出价 (8,18) 起、对方的出价 (98,18) 起，各 4 列 x 5 行 -->
+    <container class="grid" id="offer" primary="true" style="left:7px;top:17px">
+        <slot slot-index="0" repeat="20"></slot>
+    </container>
+    <container class="grid" id="partner" primary="true" style="left:97px;top:17px">
+        <slot slot-index="0" repeat="20"></slot>
+    </container>
+
+    <div class="button" id="accept" style="left:7px;top:110px;width:72px;height:16px"></div>
+    <div class="button" id="partner_state" style="left:97px;top:110px;width:72px;height:16px"></div>
+
+    <div class="t label" id="inventory_label" style="left:8px;top:127px"></div>
+    <container class="inv" id="inventory" primary="true">
+        <slot slot-index="9" repeat="27"></slot>
+        <slot slot-index="0" repeat="9"></slot>
+    </container>
+</div>
+</body>
+</html>

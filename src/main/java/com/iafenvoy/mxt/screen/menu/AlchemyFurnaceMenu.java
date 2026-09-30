@@ -1,5 +1,6 @@
 package com.iafenvoy.mxt.screen.menu;
 
+import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.api.AlchemyWorkstation;
 import com.iafenvoy.mxt.data.alchemy.AlchemyFurnaceDefinition;
 import com.iafenvoy.mxt.item.block.entity.AlchemyFurnaceBlockEntity;
@@ -18,6 +19,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Container;
 import net.minecraft.world.SimpleContainer;
@@ -42,15 +44,28 @@ import java.util.Locale;
  */
 public final class AlchemyFurnaceMenu extends AbstractContainerMenu {
     public enum View {
-        MONITOR(1), MAIN(2), AUXILIARY(3), OUTPUT(4);
-
+        MONITOR("monitor", 1),
+        MAIN("main_input", 2),
+        AUXILIARY("auxiliary_input", 3),
+        OUTPUT("output", 4);
+        private static final Identifier ID = Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "alchemy");
+        private final String slug;
         private final int machineSlots;
 
-        View(int machineSlots) {
+        View(String slug, int machineSlots) {
+            this.slug = slug;
             this.machineSlots = machineSlots;
         }
 
-        public int machineSlots() {
+        public String getSlug() {
+            return this.slug;
+        }
+
+        public String getTranslation() {
+            return ID.toLanguageKey("screen", this.slug);
+        }
+
+        public int getMachineSlots() {
             return this.machineSlots;
         }
 
@@ -95,11 +110,11 @@ public final class AlchemyFurnaceMenu extends AbstractContainerMenu {
         this.addDataSlot(this.temperatureEpoch);
         // Client slots are a vanilla sync mirror. The server binds only the captured owner's container.
         Container machine;
-        if (this.level.isClientSide()) machine = new SimpleContainer(view.machineSlots());
+        if (this.level.isClientSide()) machine = new SimpleContainer(view.getMachineSlots());
         else if (found == null)
             throw new IllegalStateException("Alchemy furnace menu has no physical owner at " + accessPos + " for " + view);
         else machine = storage(found);
-        for (int index = 0; index < view.machineSlots(); index++) this.addSlot(new PartSlot(machine, index));
+        for (int index = 0; index < view.getMachineSlots(); index++) this.addSlot(new PartSlot(machine, index));
         for (int index = 9; index < 36; index++) this.addSlot(new Slot(inventory, index, 0, 0));
         for (int index = 0; index < 9; index++) this.addSlot(new Slot(inventory, index, 0, 0));
     }
@@ -159,7 +174,7 @@ public final class AlchemyFurnaceMenu extends AbstractContainerMenu {
         if (id.startsWith("inventory_")) {
             int vanilla = Integer.parseInt(id.substring("inventory_".length()));
             if (vanilla < 0 || vanilla > 35) return -1;
-            return this.view.machineSlots() + (vanilla >= 9 ? vanilla - 9 : 27 + vanilla);
+            return this.view.getMachineSlots() + (vanilla >= 9 ? vanilla - 9 : 27 + vanilla);
         }
         String[] ids = switch (this.view) {
             case MONITOR -> new String[]{FIRE};
@@ -201,7 +216,7 @@ public final class AlchemyFurnaceMenu extends AbstractContainerMenu {
         Slot slot = this.slots.get(index);
         if (!slot.hasItem() || !slot.mayPickup(player)) return ItemStack.EMPTY;
         ItemStack original = slot.getItem().copy();
-        int machine = this.view.machineSlots();
+        int machine = this.view.getMachineSlots();
         int inventoryStart = machine + 27;
         boolean moved = index < machine
                 ? this.moveItemStackTo(slot.getItem(), machine, this.slots.size(), true)
@@ -251,7 +266,7 @@ public final class AlchemyFurnaceMenu extends AbstractContainerMenu {
      * Machine destinations must not use the vanilla merge loop: it writes occupied stacks before mayPlace.
      */
     private boolean moveIntoMachine(ItemStack stack) {
-        int end = this.view.machineSlots();
+        int end = this.view.getMachineSlots();
         boolean moved = false;
         if (stack.isStackable()) {
             for (int index = 0; index < end && !stack.isEmpty(); index++) {
@@ -291,7 +306,7 @@ public final class AlchemyFurnaceMenu extends AbstractContainerMenu {
 
     private static boolean owns(BlockEntity entity, View view) {
         if (view == View.MONITOR) {
-            return entity instanceof AlchemyFurnaceBlockEntity furnace && furnace.fireContainer().getContainerSize() == view.machineSlots();
+            return entity instanceof AlchemyFurnaceBlockEntity furnace && furnace.fireContainer().getContainerSize() == view.getMachineSlots();
         }
         if (!(entity instanceof AlchemyFurnaceInventoryBlockEntity part)) return false;
         AlchemyInventoryKind expected = switch (view) {
@@ -300,8 +315,8 @@ public final class AlchemyFurnaceMenu extends AbstractContainerMenu {
             case OUTPUT -> AlchemyInventoryKind.OUTPUT;
             case MONITOR -> null;
         };
-        return part.kind() == expected && part.getContainerSize() == view.machineSlots()
-                && part.inventory().getContainerSize() == view.machineSlots();
+        return part.kind() == expected && part.getContainerSize() == view.getMachineSlots()
+                && part.inventory().getContainerSize() == view.getMachineSlots();
     }
 
     private static boolean roleMatches(BlockState state, View view) {

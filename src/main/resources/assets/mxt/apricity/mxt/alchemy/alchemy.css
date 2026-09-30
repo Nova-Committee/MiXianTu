@@ -1,55 +1,14 @@
-/* 丹炉四页共用样式：布局与尺寸沿用旧模板，皮肤来自 ApricityUI 自带的 ore 主题
- * （四个页面 <link> ore.css，并且 <body class="ore-theme">）。
+/* 丹炉四页共用样式：底子见 ../base.css（扁平半透明深色，与锻造台 / 交易站 / 人物信息同一套皮肤）。
+ * 四个页面 <link> base.css 再链这一份；不再使用 ApricityUI 自带的 ore 主题
+ * （它的网页尺度：按钮 42px、槽位 44px、字号 16px、自带像素字体，压回来比直接写还长）。
  *
  * 坐标全部相对 #panel 的 padding box（ApricityUI 的 absolute 包含块就是它）。
- * 画布：监控 188x211、三个仓页 188x146 是旧皮（7px 九宫格边框）下的内容盒；ore 的面板边框是
- * 3px，内容盒因此大一圈，但四页都是绝对定位，多出来的余量无害，坐标照旧。槽位是 18x18 的
+ * 画布：监控 188x211、三个仓页 188x146 是旧皮（7px 九宫格边框）下的内容盒；槽位是 18x18 的
  * <slot>，物品 16x16 落在格心，所以 Java 写 Slot.x/y 时要 +1。
  *
- * 改 ore 时记住四件事：
- * 1. ore 的规则都带 `.ore-theme` 前缀（特异性 0,2,0，带状态更高），要覆盖它一律写
- *    `body.ore-theme X`；只写 `.input` 这种会被它压住。
- * 2. ore 是网页尺度：按钮 42px、槽位 44px、字号 16px、根上 `line-height: 1.5`、body
- *    `min-width: 320px`。容器尺度要逐条压回来（高度、内边距、边框宽度、字号、行高、阴影厚度）。
- * 3. 机器槽由 `size=N` 自动生成、拿不到 class，所以槽位按 `slot` 元素改，不用 ore 的 `.slot`。
- * 4. **字体不用 ore 的**（OreRegular / OreDisplay 是它自带的像素字体），改用原版位图字体，见「文本」一节。
- *
- * 颜色都走 ore 的 token 并带兜底值：ore.css 没解析到时退回它自己的默认色，面板不会变透明。 */
-
-body {
-    width: 100%;
-    /* 必须是视口单位：ApricityUI 的 <html> 没有显式高度，body 上的百分比高度取不到基准、整条会被忽略，
-       于是 flex 的交叉轴没有剩余空间可分配，面板只水平居中、贴顶边。gui 模式下 100vh 就是整块 GUI 视口。 */
-    height: 100vh;
-    margin: 0;
-    padding: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-/* ore 给 .ore-theme 写了 min-width: 320px：GUI 缩放 5 以上时视口比它窄，面板会被推得偏右。 */
-body.ore-theme {
-    min-width: 0;
-    background: none;
-    /* 全局换回原版字体：font-family 是继承属性，而 AUI 对继承属性上的 `unset` 关键字取的是
-       "继承父级"（ComputedStyleResolver 对 inherit 与 unset 走同一条路），只有 `initial` 才回到
-       引擎自己的默认值 `unset`——而 `unset` 正是"用 Minecraft 自带字体绘制"的开关
-       （FontDrawer 见 fontFamily 为 unset 就转 Client.drawDefaultFont → Minecraft.getInstance().font）。
-       所以重置一律写 `initial`，写 `unset` 只会把 ore 的像素字体继承下来。 */
-    font-family: initial;
-    /* 界面文字不可选中：AUI 的 Interaction.getUserSelect 是"从自己往上找，取第一个不是 unset 的值"
-       （user-select 不在 INHERITED_PROPERTIES 里，靠这条祖先链生效），所以写在 body 上就覆盖整页
-       ——面板、标题、炉温那些 div 自己都没声明过它，拖框选中、Ctrl+A 都由它有可选文本决定。
-       输入框例外，见下面 .input 那条（Input 的光标与拖选要先过 canSelectText）。 */
-    user-select: none;
-}
-
-/* ── 面板：外观由 ore 的 .panel 提供（3px 描边 + 石面 + 内嵌高光），这里只放定位与尺寸 ── */
-.panel {
-    position: relative;
-    box-sizing: border-box;
-}
+ * 文字沿用 base.css 的说法：`font-family: initial` 才是"用游戏自带位图字体画"（写 unset 只会继承），
+ * 这个后端下 font-size 是缩放、基准 9px = 原版 1×；位图字形从行框顶画，所以文本盒要靠
+ * `display: flex; align-items: center` 让 9px 的行框在 11px 的内容盒里居中。 */
 
 .panel-monitor {
     width: 202px;
@@ -61,13 +20,7 @@ body.ore-theme {
     height: 160px;
 }
 
-/* ── 文本：原版位图字体（AUI 的"默认字体后端"） ──
- * 这个后端下 `font-size` 是**缩放**而不是像素：基准 9px = 原版 1×（就是原版聊天里的字号），
- * 只有 9 的整数倍才是整数倍缩放（18px = 2×）；别的值会把位图非整数缩放，笔画会掉，所以统一 9px。
- * 它也不同于光栅路径把墨迹在行框里居中：原版字形是**从行框顶**画的（上升部 7px、行高 9px），
- * 于是文本盒统一 `display: flex; align-items: center`，让 9px 的行框在 11px 内容盒里居中
- * （flex 的直接文本节点由 Flex/Participant 参与居中，横轴仍由 justify-content 决定，默认左对齐）。
- * 原版字体不带阴影（drawInBatch 的 dropShadow 传的是 false），ore 写的 text-shadow 在 AUI 里本来也不生效。 */
+/* ── 文本 ── */
 .title,
 .line,
 .inventory-label {
@@ -84,8 +37,7 @@ body.ore-theme {
     top: 7px;
     width: 174px;
     height: 11px;
-    color: var(--ink, #f4f5f7);
-    /* 原版没有显示字体可用，标题只靠加粗保持层级：原版粗体是字形重绘一次，仍是 1× 位图。 */
+    color: #ffffff;
     font-weight: bold;
 }
 
@@ -94,7 +46,7 @@ body.ore-theme {
     left: 7px;
     width: 174px;
     height: 11px;
-    color: var(--ink, #f4f5f7);
+    color: #ffffff;
 }
 
 .temperature {
@@ -107,148 +59,89 @@ body.ore-theme {
 
 .status {
     top: 46px;
-    color: var(--ink-muted, #b6bac1);
+    color: rgba(255, 255, 255, 0.66);
 }
 
-/* ── 进度条：ore 的 .progress / .progress-bar，从 24px 压到 6px ── */
-body.ore-theme .progress {
+/* ── 炉温进度：暗槽 + 浅色填充 ── */
+.progress {
     position: absolute;
     left: 7px;
     top: 60px;
     width: 174px;
     height: 6px;
-    padding: 0;
-    border: 1px solid var(--edge, #1e1e1f);
-    background: #252628;
-    box-shadow: inset 0 1px #151516;
     box-sizing: border-box;
+    background-color: rgba(0, 0, 0, 0.34);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
 }
 
-body.ore-theme .progress-bar {
+.progress-bar {
     height: 100%;
-    background: var(--green, #3c8527);
-    box-shadow: inset 0 -1px var(--green-shadow, #1d4d13), inset 1px 1px rgba(255, 255, 255, 0.2);
+    background-color: rgba(255, 255, 255, 0.55);
 }
 
-/* ── 目标炉温输入框：ore 的输入配色，容器尺度 ── */
-body.ore-theme .input {
+/* ── 目标炉温输入框 ── */
+.input {
     position: absolute;
     left: 29px;
     top: 70px;
     width: 104px;
     height: 18px;
-    min-height: 0;
     box-sizing: border-box;
     padding: 0 3px;
-    border: 2px solid var(--edge, #1e1e1f);
-    background: var(--surface-deep, #313233);
-    color: var(--ink, #f4f5f7);
-    box-shadow: inset 0 2px #242425;
-    /* 输入框的文本由 Input 自己做垂直居中（(内容高 - lineHeight)/2），光标与选区高度也取 lineHeight，
-       所以这里的 line-height 就是"文字与光标有多高"，给 9px 才和原版字形同高（原来 14px 是给像素字体留的）。 */
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    background-color: rgba(0, 0, 0, 0.3);
+    color: #ffffff;
     font-family: initial;
     font-size: 9px;
     line-height: 9px;
+    /* 输入框的文本由 Input 自己做垂直居中（(内容高 - lineHeight)/2），光标与选区高度也取 lineHeight，
+       所以这里的 line-height 就是"文字与光标有多高"，给 9px 才和原版字形同高。 */
     /* body 上的 user-select: none 会顺着祖先链盖到这里，而 Input 的拖选与 Ctrl+A 要先过
        canSelectText（= AbstractText 里的 Interaction.isUserSelectable），所以在输入框上写回 text。 */
     user-select: text;
     overflow: hidden;
 }
 
-body.ore-theme .input:hover {
-    border-color: #85878b;
+.input:hover {
+    border-color: rgba(255, 255, 255, 0.3);
 }
 
-body.ore-theme .input:focus {
-    border-color: var(--focus, #ffffff);
-    outline: 1px solid var(--green, #3c8527);
+.input:focus {
+    border-color: rgba(255, 255, 255, 0.45);
+    outline: 1px solid rgba(255, 255, 255, 0.2);
     outline-offset: 0;
 }
 
-/* ── 按钮：配色与禁用态用 ore 的，只把 42px 的网页按钮压回 18px、字体换回原版 ──
-   ore 的 .button 是 inline-flex + 居中，这里跟着用 flex 居中（它本来就要求这样压），
-   18px 高、1px 边框、上下不留内边距时内容盒 16px，9px 行框正好居中。 */
-body.ore-theme .button {
-    position: absolute;
-    box-sizing: border-box;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    height: 18px;
-    min-height: 0;
-    padding: 0 2px;
-    border-width: 1px;
-    font-family: initial;
-    font-size: 9px;
-    line-height: 9px;
-    box-shadow:
-        inset 0 -3px var(--green-shadow, #1d4d13),
-        inset 1px 1px rgba(255, 255, 255, 0.22),
-        inset -1px -4px rgba(0, 0, 0, 0.12);
-}
-
-body.ore-theme .button-secondary {
-    box-shadow: inset 0 -3px var(--purple-shadow, #4a1cac), inset 1px 1px rgba(255, 255, 255, 0.25), inset -1px -4px rgba(0, 0, 0, 0.12);
-}
-
-body.ore-theme .button-danger {
-    box-shadow: inset 0 -3px var(--red-shadow, #662019), inset 1px 1px rgba(255, 255, 255, 0.2), inset -1px -4px rgba(0, 0, 0, 0.12);
-}
-
-/* 按下时原版按钮会把文字压低 1px：内边距整体下移 2px，flex 居中的行框随之落 1px
-   （内容盒 16px → 14px，(14-9)/2 + 2 = 5.5，比常态的 1 + (16-9)/2 = 4.5 低 1px）。 */
-body.ore-theme .button:active {
-    padding: 2px 2px 0;
-    box-shadow: inset 1px 1px rgba(255, 255, 255, 0.18), inset -1px -1px rgba(0, 0, 0, 0.18);
-}
-
-/* 两个按钮的禁用读的是 disabled 属性（Java 走 Element.setDisabled）。
-   这几条要连 :hover/:active 一起列，否则上面的按下态会盖过禁用态；内边距与常态一致，文字不跳。 */
-body.ore-theme .button[disabled],
-body.ore-theme .button[disabled]:hover,
-body.ore-theme .button[disabled]:active {
-    padding: 0 2px;
-    border-color: #313233;
-    color: #8b8d91;
-    background: #55575a;
-    box-shadow: inset 0 -3px #3b3c3e, inset 1px 1px #696b6e;
-}
-
+/* ── 按钮：外观与状态全在 base.css 的 .button 里，这里只补位置、尺寸与高度（base 的 .button 不写高度，
+   高度属于页面：这三颗都是原版 18px）。两个"危险/次要"按钮加一层很淡的语义底色，悬停与禁用仍由
+   base.css 的更具体规则接管。 ── */
 .apply {
     left: 137px;
     top: 70px;
     width: 44px;
+    height: 18px;
 }
 
 .start {
     left: 7px;
     top: 93px;
     width: 85px;
+    height: 18px;
 }
 
 .abort {
     left: 96px;
     top: 93px;
     width: 85px;
-}
-
-/* ── 槽位：ore 的凹面格压回 18px（1px 描边 + 1px 内阴影正好给 16px 物品留出格心） ── */
-body.ore-theme slot {
-    width: 18px;
     height: 18px;
-    border: 1px solid var(--edge, #1e1e1f);
-    border-top-color: #303133;
-    border-left-color: #303133;
-    background-color: var(--surface-deep, #313233);
-    background-image: none;
-    box-shadow: inset 1px 1px #4d4e50, inset -1px -1px #b2b3b5;
 }
 
-body.ore-theme slot:hover {
-    border-color: var(--focus, #ffffff);
+.button-danger {
+    border-color: rgba(224, 84, 79, 0.4);
+    background-color: rgba(224, 84, 79, 0.18);
 }
 
-/* ── 容器与背包：位置仍由各页的 <style> 给 top/left，这里只放共用部分 ── */
+/* ── 容器与背包：位置仍由各页的 <style> 给 top/left ── */
 .machine {
     position: absolute;
     gap: 4px;
@@ -259,54 +152,13 @@ body.ore-theme slot:hover {
     left: 13px;
     width: 162px;
     height: 10px;
-    color: var(--ink-muted, #b6bac1);
+    color: rgba(255, 255, 255, 0.66);
 }
 
-.player-inventory {
-    position: absolute;
+/* 玩家背包：top 由各页的行内样式给（监控 127、三个仓页 64），**left 必须在这里给**——
+ * 共用的 `.inv` 只管排布（9 列 3 行 + 4px 空轨道 + 快捷栏），刻意不带 left；别的页面都在自己那份样式里
+ * 写它。少了这条，绝对定位的容器会退回静态位置（面板左沿 0），背包比标签"物品栏"左移 13px。 */
+#player_inventory {
     left: 13px;
-    width: 162px;
-    /* 3 行背包 + 快捷栏，再加中间那条 4px 空轨道 */
     height: 76px;
-    gap: 0px;
-    /* AUI 的 `container` 默认就是 grid（global.css：`container { display: grid; gap: 2px }`），
-       36 个槽位按 9 列自动流。这里在第 4 行塞一条 4px 的空轨道当"缝"：主背包与快捷栏之间那道缝
-       要和原版背包、旧 `.ui.nbt` 模板（背包行顶 10/28/46、快捷栏 68）以及 `.machine` 的 4px 一致。
-       空的 FIXED 轨道不吃内容、也不会被撑开。不用 `row-gap` 是因为它会把列一起张开；也不能靠
-       槽位自己的 `margin`——AUI 的 Grid 只在算轨道大小时读 margin，定位仍然贴着轨道顶。 */
-    grid-template-rows: 18px 18px 18px 4px 18px;
-}
-
-/* 快捷栏那 9 格（slot-index 0..8）跳过空轨道、落在第 5 行；背包格（9..35）留给自动流排前三行。
-   按 slot-index 点名是 AUI 自己那份 player 预设的写法（global.css 的 `container[layout="preset:player"]`），
-   比按子元素序号（`:nth-child`）去数 36 个展开出来的槽位稳。 */
-.player-inventory slot[slot-index="0"],
-.player-inventory slot[slot-index="1"],
-.player-inventory slot[slot-index="2"],
-.player-inventory slot[slot-index="3"],
-.player-inventory slot[slot-index="4"],
-.player-inventory slot[slot-index="5"],
-.player-inventory slot[slot-index="6"],
-.player-inventory slot[slot-index="7"],
-.player-inventory slot[slot-index="8"] {
-    grid-row: 5;
-}
-
-/* ── 提示框：AUI 的 .aui-tooltip（页面上 bind 的那些 tooltip 都是它） ──
- * 它由 AUI 现挂在 document.body 上，并带一条内联 style（`Tooltip.BASE_STYLE`：雅黑 11px、行高 15px、
- * 字重 600、8px/10px 内边距、2px+3px 边框、4px 阴影）。**首选做法在 Java 侧**：`Tooltip.Options.style()`
- * 那段样式被拼在同一条内联声明的最后，按"同一内联块里后写的普通声明覆盖先写的"直接取胜，不依赖样式表
- * （见 `AlchemyFurnaceScreen.TOOLTIP_OPTIONS`）。这里这条只是兜底：AUI 自己挂的 tooltip（devtools、
- * SelectPopup 之类）不走我们的 Options，只能靠样式表；数字与那边保持一致。字号必须落在 9 的整数倍上
- * （11px 是 1.22×，非整数缩放位图会掉笔画）。 */
-body.ore-theme .aui-tooltip {
-    font-family: initial !important;
-    font-size: 9px !important;
-    line-height: 9px !important;
-    font-weight: 400 !important;
-    min-width: 0 !important;
-    padding: 4px 6px !important;
-    border: 1px solid #1a1a1a !important;
-    border-left: 2px solid #8b5cf6 !important;
-    box-shadow: 2px 2px 0 rgba(139, 92, 246, 0.25) !important;
 }

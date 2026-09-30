@@ -17,17 +17,24 @@ import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.fml.loading.FMLEnvironment;
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerLoggedOutEvent;
 import net.neoforged.neoforge.event.tick.LevelTickEvent.Post;
 import org.jspecify.annotations.NonNull;
 
 import java.util.*;
+import java.util.function.Consumer;
 
 /**
  * Server-owned request and settlement state for direct player-to-player trades. Session state is append-only
  * while a trade is live, and every terminal transition is one-shot through {@link Session#closed}, so a stale
  * action holding an old session reference cannot move items twice.
+ * <p>
+ * A development build also accepts a request that names the requester as its own target (see
+ * {@link #allowsSelfTrade()}): the one player then sits on both sides of a single menu, which is how the
+ * screen and the settlement are exercised without a second account. Production keeps refusing it with
+ * {@link RequestResult#SELF}.
  */
 @EventBusSubscriber
 public final class PlayerTradeService {
@@ -48,9 +55,21 @@ public final class PlayerTradeService {
         BUSY
     }
 
+    // A self-trade exists so the screen can be driven without a second account; only this entry point can build
+    // one, and a production client never does.
+    private static boolean allowsSelfTrade() {
+        return !FMLEnvironment.isProduction();
+    }
+
     public static RequestResult request(ServerPlayer requester, ServerPlayer target) {
-        if (requester == target) return RequestResult.SELF;
         if (requester.distanceToSqr(target) > 25.0D) return RequestResult.TOO_FAR;
+        if (requester == target) {
+            if (!allowsSelfTrade()) return RequestResult.SELF;
+            if (SESSIONS.containsKey(requester.getUUID())) return RequestResult.BUSY;
+            // No request, no reciprocal confirm: the one player is both sides of the session from here on.
+            new Session(requester, target).open();
+            return RequestResult.STARTED;
+        }
         if (SESSIONS.containsKey(requester.getUUID()) || SESSIONS.containsKey(target.getUUID()))
             return RequestResult.BUSY;
         long now = requester.level().getGameTime();
@@ -138,7 +157,10 @@ public final class PlayerTradeService {
 
         private void open() {
             this.open(this.first, this.second);
-            this.open(this.second, this.first);
+            // One player on both sides: the single menu answers for the partner's side too, so the accept this
+            // side sends has somewhere to land - there is no second menu and no second button to press.
+            if (this.isSelf()) this.second.menu = this.first.menu;
+            else this.open(this.second, this.first);
         }
 
         private void open(Side current, Side partner) {
@@ -160,6 +182,8 @@ public final class PlayerTradeService {
             if (this.closed) return;
             side.accepted = accepted;
             Side partner = this.partner(side);
+            // The one player of a self-trade confirms for both sides in a single press.
+            if (this.isSelf()) partner.accepted = accepted;
             // A side that already closed its menu no longer has a slot to notify; the pending
             // acceptance is kept so the trade still resolves once its own menu is gone.
             if (partner.menu != null) partner.menu.setPartnerAccepted(accepted);
@@ -170,8 +194,7 @@ public final class PlayerTradeService {
             if (this.closed) return;
             this.swap(this.first, this.second);
             this.swap(this.second, this.first);
-            this.first.player.sendSystemMessage(Component.translatable("command.mxt.trade.success"));
-            this.second.player.sendSystemMessage(Component.translatable("command.mxt.trade.success"));
+            this.eachSide(player -> player.sendSystemMessage(Component.translatable("command.mxt.trade.success")));
             this.close();
         }
 
@@ -202,8 +225,8 @@ public final class PlayerTradeService {
             if (this.closed) return;
             InventoryUtil.insertItems(this.first.player.getInventory(), this.first.offer);
             InventoryUtil.insertItems(this.second.player.getInventory(), this.second.offer);
-            this.first.player.sendSystemMessage(Component.translatable("command.mxt.trade.cancel", canceller));
-            this.second.player.sendSystemMessage(Component.translatable("command.mxt.trade.cancel", canceller));
+            this.eachSide(player ->
+                    player.sendSystemMessage(Component.translatable("command.mxt.trade.cancel", canceller)));
             this.close();
         }
 
@@ -215,8 +238,8 @@ public final class PlayerTradeService {
             InventoryUtil.insertItems(this.second.player.getInventory(), this.second.offer);
             Side partner = leaving == null ? null : this.partner(leaving);
             // Only notify a player who is still connected: the stale pass can discard a session
-            // whose remaining side has also gone offline.
-            if (partner != null && this.isOnline(partner.player))
+            // whose remaining side has also gone offline. A self-trade has nobody to tell.
+            if (partner != null && !this.isSelf() && this.isOnline(partner.player))
                 partner.player.sendSystemMessage(Component.translatable("command.mxt.trade.partner_left"));
             this.close();
         }
@@ -228,8 +251,17 @@ public final class PlayerTradeService {
             this.settleOverflow(this.second);
             forgetSession(this.first.player.getUUID(), this);
             forgetSession(this.second.player.getUUID(), this);
-            this.first.player.closeContainer();
-            this.second.player.closeContainer();
+            this.eachSide(ServerPlayer::closeContainer);
+        }
+
+        // One player on both sides of a development self-trade; every two-sided step above then happens once.
+        private boolean isSelf() {
+            return this.first.player == this.second.player;
+        }
+
+        private void eachSide(Consumer<ServerPlayer> action) {
+            action.accept(this.first.player);
+            if (!this.isSelf()) action.accept(this.second.player);
         }
 
         private Side side(ServerPlayer player) {

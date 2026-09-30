@@ -1,0 +1,237 @@
+/* 人物信息：底子见 ../base.css。
+ * 这一页的面板与内容都由 Java 现算（旧 layoutWidgets 会随窗口缩），所以这里只有静态质感与
+ * 行内元素的默认排布，位置/尺寸一律由 Java 写内联样式。
+ * 两页共用一块面板：`.page` 是**静态**定位的开关容器（不能写 position，否则它就成了绝对定位的
+ * 包含块，页面里那些坐标会整体位移），Java 在 #panel 上切 `page-technique` 类。 */
+
+/* 面板绝对定位在 Java 算出的左上角，所以 body 不能再用 base.css 的 flex 居中 */
+body {
+    display: block;
+    background: none;
+}
+
+/* 外观沿用 base.css 的 .panel（扁平半透明），这里只补绝对定位 */
+#panel {
+    position: absolute;
+}
+
+/* 标题与小标题：深色面板上改成白色，靠加粗分主次 */
+.title-dark {
+    color: #ffffff;
+    font-weight: bold;
+}
+
+/* ── 分页：左上角两个页签（旧版这里是一行标题，已去掉），选中那一个底色更亮 ──
+ * 字号保持页面基准 9px：按钮"变大"靠高度与内边距，不靠字号。宽度由 Java 按同一套数字算好写内联样式
+ * （TAB_PADDING = 左右各 12px）；top = 10 与 Java 的 TAB_TOP 是同一个数（Java 也写它，免得两处对不上）。 */
+.tab {
+    position: absolute;
+    top: 10px;
+    height: 15px;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    background-color: rgba(255, 255, 255, 0.06);
+    color: rgba(255, 255, 255, 0.7);
+    font-family: initial;
+    font-size: 9px;
+    line-height: 9px;
+    white-space: nowrap;
+    user-select: none;
+}
+
+.tab:hover {
+    background-color: rgba(255, 255, 255, 0.14);
+    color: #ffffff;
+}
+
+.tab.selected {
+    background-color: rgba(255, 255, 255, 0.22);
+    border-color: rgba(255, 255, 255, 0.34);
+    color: #ffffff;
+    font-weight: bold;
+}
+
+/* ── 页开关：只有它自己被 display 控制，子树跟着走 ── */
+#page_technique {
+    display: none;
+}
+
+#panel.page-technique #page_info {
+    display: none;
+}
+
+#panel.page-technique #page_technique {
+    display: block;
+}
+
+/* 人物预览框：旧贴图 classic/player_preview.png 的 120x96 区域，用凹槽代替（人物由 Java 画在上面） */
+#preview {
+    width: 120px;
+    height: 96px;
+}
+
+/* ── 装备格：4 个 24x24，间距 24（旧版 slot_24.png 的格子） ── */
+#equipment {
+    position: absolute;
+    width: 24px;
+    height: 96px;
+}
+
+.equip {
+    position: absolute;
+    left: 0;
+    width: 24px;
+    height: 24px;
+    box-sizing: border-box;
+    border: 1px solid rgba(255, 255, 255, 0.13);
+    background-color: rgba(255, 255, 255, 0.09);
+}
+
+.equip-icon {
+    position: absolute;
+    left: 3px;
+    top: 3px;
+    width: 16px;
+    height: 16px;
+}
+
+/* ── 列表：行高 18；行与行里的文字都从列表左沿起，和列表上方的分组标题左对齐 ──
+ * （旧版 ObjectSelectionList 把 rowWidth = 宽 - 8 的行居中，读数会整体右移 12px，与标题错开。） */
+.list {
+    position: absolute;
+}
+
+.row {
+    position: absolute;
+    left: 0;
+    height: 18px;
+    background-color: transparent;
+}
+
+/* 悬停/选中的高亮：深色面板上改成加白，选中比悬停更亮 */
+.row:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.row.selected {
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
+/* 名字列从行左沿起（行左沿就是列表左沿，即标题那一列） */
+.rname {
+    left: 0;
+    top: 4px;
+}
+
+/* 数值列：默认值对应 510x315 下的中文标签（名字列 36 + 列距 8）；Java 每帧按实际列宽重写它 */
+.rvalue {
+    left: 44px;
+    top: 4px;
+}
+
+/* ── 功法行：34px 一行，图标框 + 名字/等级/数值 + 进度条 + 行底分隔线 ── */
+.trow {
+    position: absolute;
+    left: 0;
+    height: 34px;
+    background-color: transparent;
+}
+
+.trow:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* 24x24 的图标框（16x16 的图标居中） */
+.tframe {
+    position: absolute;
+    left: 1px;
+    top: 5px;
+    width: 24px;
+    height: 24px;
+    box-sizing: border-box;
+    border: 1px solid rgba(255, 255, 255, 0.13);
+    background-color: rgba(255, 255, 255, 0.09);
+}
+
+.ticon,
+.ttex {
+    position: absolute;
+    left: 3px;
+    top: 3px;
+    width: 16px;
+    height: 16px;
+    display: none;
+}
+
+.trow.icon-item .ticon {
+    display: block;
+}
+
+.trow.icon-texture .ttex {
+    display: block;
+}
+
+.tname,
+.tlevel,
+.tvalue {
+    top: 4px;
+    height: 9px;
+    color: #ffffff;
+}
+
+/* 名字是主信息，等级与数值是次要信息 */
+.tlevel,
+.tvalue {
+    color: rgba(255, 255, 255, 0.66);
+}
+
+.tname {
+    left: 33px;
+}
+
+.tlevel {
+    left: 33px;
+}
+
+.tvalue {
+    left: 33px;
+}
+
+/* 进度条：暗槽 + 填充（填充色由 Java 按灵气粒子色写内联样式，兜底是 base.css 的浅色） */
+.tbar {
+    position: absolute;
+    left: 33px;
+    top: 19px;
+    width: 40px;
+    height: 7px;
+    box-sizing: border-box;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background-color: rgba(0, 0, 0, 0.34);
+}
+
+.tfill {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 0;
+    height: 5px;
+    background-color: rgba(255, 255, 255, 0.55);
+}
+
+/* 分隔线：行底 1px 的加白线（旧版是 #555555 上 + #ffffff 下两条 1px 的浮雕线） */
+.tsep {
+    position: absolute;
+    left: 0;
+    top: 31px;
+    width: 40px;
+    height: 2px;
+    background-image: linear-gradient(rgba(255, 255, 255, 0.14) 50%, transparent 50%);
+}
+
+/* 没有功法时的提示（旧版画在面板内 6px 处） */
+#techniques_empty {
+    color: rgba(255, 255, 255, 0.5);
+}

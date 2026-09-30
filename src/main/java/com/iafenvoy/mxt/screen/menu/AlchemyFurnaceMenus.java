@@ -39,12 +39,7 @@ public final class AlchemyFurnaceMenus {
     private record Opener(BlockPos accessPos, View view) implements MenuProvider {
         @Override
         public @NonNull Component getDisplayName() {
-            return Component.translatable(switch (this.view) {
-                case MONITOR -> "screen.mxt.alchemy.monitor";
-                case MAIN -> "screen.mxt.alchemy.main_input";
-                case AUXILIARY -> "screen.mxt.alchemy.auxiliary_input";
-                case OUTPUT -> "screen.mxt.alchemy.output";
-            });
+            return Component.translatable(this.view.getTranslation());
         }
 
         @Override

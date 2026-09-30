@@ -1,0 +1,144 @@
+/* 锻造台：只有这一页自己的尺寸与坐标，底子见 ../base.css。
+ * 旧屏幕是一张贴图 (322x234，取 512x256 的左上角) + Java 现画的格、尺、步骤行，这里全部改成 DOM。
+ * 皮肤按 base.css 的扁平半透明：格子是一层很淡的加白，状态只改底色深浅。 */
+
+#panel {
+    width: 322px;
+    height: 234px;
+}
+
+/* ── 选择格 ──
+ * 旧版用原版 stonecutter 的三张精灵（recipe / recipe_selected / recipe_highlighted）画格，
+ * 这里换成三种底色；空格不画（露出下面的凹底）。 */
+.cell {
+    position: absolute;
+    box-sizing: border-box;
+    width: 18px;
+    height: 18px;
+    border: 1px solid rgba(255, 255, 255, 0.13);
+    background-color: rgba(255, 255, 255, 0.09);
+}
+
+.cell.hover {
+    background-color: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+.cell.selected {
+    background-color: rgba(255, 255, 255, 0.28);
+    border-color: rgba(255, 255, 255, 0.42);
+}
+
+.cell.empty {
+    border-color: transparent;
+    background-color: transparent;
+}
+
+/* 步骤格：旧贴图里它们就是 18x18 的槽位凹面（(134,97) 与 (134,119) 各 6 个） */
+.cell.step {
+    border-color: rgba(255, 255, 255, 0.13);
+    background-color: rgba(255, 255, 255, 0.09);
+}
+
+.cell.step.empty {
+    border-color: rgba(255, 255, 255, 0.13);
+    background-color: rgba(255, 255, 255, 0.09);
+}
+
+/* 格里的两个图标：物品走 <item>、贴图走 <texture>，由格上的类决定画哪一个 */
+.cell .icon,
+.cell .tex {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 16px;
+    height: 16px;
+    display: none;
+}
+
+.cell.icon-item .icon {
+    display: block;
+}
+
+.cell.icon-texture .tex {
+    display: block;
+}
+
+/* ── 选择格的凹底与滚动条 ──
+ * 旧贴图的凹底是褐色（51493A）带一圈深色描边；轨道是右侧那条 12x76 的凹槽。 */
+.grid-recess {
+    background-color: rgba(0, 0, 0, 0.28);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+}
+
+.track {
+    width: 12px;
+    height: 76px;
+    background-color: rgba(0, 0, 0, 0.28);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+}
+
+/* 滚动块：旧版是原版 stonecutter 的 scroller 精灵（12x15），top 由 Java 写；
+   参照界面里滚动条就是一条没有轨道的浅色圆头块，这里照那个来。 */
+.scroller {
+    position: absolute;
+    left: 59px;
+    top: 18px;
+    width: 12px;
+    height: 15px;
+    box-sizing: border-box;
+    border: 0;
+    border-radius: 2px;
+    background-color: rgba(255, 255, 255, 0.42);
+}
+
+#mt_bar {
+    left: 302px;
+}
+
+.scroller.disabled {
+    background-color: rgba(255, 255, 255, 0.16);
+}
+
+/* ── 数值尺：黑框 (80,75) 162x6，内区 160x4；刻度条 top 74、高 8 ── */
+.meter {
+    position: absolute;
+    width: 162px;
+    height: 6px;
+    box-sizing: border-box;
+    background-color: rgba(0, 0, 0, 0.34);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14);
+}
+
+/* 刻度条相对凹槽内区左端（81px）定位，Java 写 left/width/display */
+.meter-mark {
+    position: absolute;
+    top: 74px;
+    height: 8px;
+    display: none;
+}
+
+.meter-mark.band {
+    top: 76px;
+    left: 0;
+    height: 4px;
+    background-color: #4caf50;
+}
+
+.meter-mark.zero {
+    left: 0;
+    width: 1px;
+    background-color: rgba(255, 255, 255, 0.35);
+}
+
+.meter-mark.value {
+    left: 0;
+    width: 1px;
+    background-color: #e0544f;
+}
+
+.meter-mark.predicted {
+    left: 0;
+    width: 1px;
+    background-color: #e8d44d;
+}

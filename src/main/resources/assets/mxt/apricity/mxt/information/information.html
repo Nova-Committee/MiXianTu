@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="aui-viewport" content="mode=gui">
+    <link rel="stylesheet" href="../base.css">
+    <link rel="stylesheet" href="information.css">
+</head>
+<body>
+<!-- 人物信息：两页共用一块面板，左上角两个页签切换（Java 在面板上切 `page-technique` 类）。
+     唯一一页几何由 Java 现算的界面（旧 InformationPanelScreen.layoutWidgets 会随窗口缩面板），
+     所以面板与内容的位置/尺寸全部由 Java 写内联样式，这里只给 510x315 下的默认值。
+     三处约定：
+     1. 面板绝对定位在 (panelLeft, panelTop)（body 因此不能居中，见 information.css）。
+     2. 页容器 .page 是**静态**定位：它只负责 display 开关，不成为包含块，里面的绝对坐标照旧相对 #panel。
+     3. 列表行是纯 DOM：row 里的文本、颜色、top 与可见性都由 Java 按可见窗口写；
+        行数超出可见范围时置 display:none（AUI 里 `overflow: hidden` 会画出暗块，不能用来裁）。
+     这里没有标题节点：面板名字就是第一个页签（旧版左上角那行标题已去掉）。
+     页签带占 y=10..25：第一页的内容一律从 y=36（Java 的 CONTENT_TOP）起、标题下面一格才是列表；
+     第二页没有标题行，列表直接从 31 起（见下面那段）。 -->
+<div class="panel" id="panel" style="left:0px;top:0px;width:510px;height:315px">
+    <div class="tab" id="tab_info"></div>
+    <div class="tab" id="tab_technique"></div>
+
+    <!-- ── 第一页：修炼 + 人物预览/装备 + 基础 ── -->
+    <div class="page" id="page_info">
+        <div class="t title-dark" id="cultivation_caption" style="left:184px;top:36px"></div>
+        <div class="recess" id="preview" style="left:52px;top:36px;width:120px;height:96px"></div>
+        <div id="equipment" style="left:20px;top:36px">
+            <div class="equip" style="top:0px"><item class="equip-icon" id="equip-0"></item></div>
+            <div class="equip" style="top:24px"><item class="equip-icon" id="equip-1"></item></div>
+            <div class="equip" style="top:48px"><item class="equip-icon" id="equip-2"></item></div>
+            <div class="equip" style="top:72px"><item class="equip-icon" id="equip-3"></item></div>
+        </div>
+        <div class="list" id="cultivation" style="left:184px;top:52px;width:306px;height:251px">
+            <div class="row" id="cult_row-0"><div class="t rname" id="cult_name-0"></div><div class="t rvalue" id="cult_value-0"></div></div>
+            <div class="row" id="cult_row-1"><div class="t rname" id="cult_name-1"></div><div class="t rvalue" id="cult_value-1"></div></div>
+            <div class="row" id="cult_row-2"><div class="t rname" id="cult_name-2"></div><div class="t rvalue" id="cult_value-2"></div></div>
+            <div class="row" id="cult_row-3"><div class="t rname" id="cult_name-3"></div><div class="t rvalue" id="cult_value-3"></div></div>
+            <div class="row" id="cult_row-4"><div class="t rname" id="cult_name-4"></div><div class="t rvalue" id="cult_value-4"></div></div>
+            <div class="row" id="cult_row-5"><div class="t rname" id="cult_name-5"></div><div class="t rvalue" id="cult_value-5"></div></div>
+            <div class="row" id="cult_row-6"><div class="t rname" id="cult_name-6"></div><div class="t rvalue" id="cult_value-6"></div></div>
+            <div class="row" id="cult_row-7"><div class="t rname" id="cult_name-7"></div><div class="t rvalue" id="cult_value-7"></div></div>
+            <div class="row" id="cult_row-8"><div class="t rname" id="cult_name-8"></div><div class="t rvalue" id="cult_value-8"></div></div>
+            <div class="row" id="cult_row-9"><div class="t rname" id="cult_name-9"></div><div class="t rvalue" id="cult_value-9"></div></div>
+            <div class="row" id="cult_row-10"><div class="t rname" id="cult_name-10"></div><div class="t rvalue" id="cult_value-10"></div></div>
+            <div class="row" id="cult_row-11"><div class="t rname" id="cult_name-11"></div><div class="t rvalue" id="cult_value-11"></div></div>
+            <div class="row" id="cult_row-12"><div class="t rname" id="cult_name-12"></div><div class="t rvalue" id="cult_value-12"></div></div>
+            <div class="row" id="cult_row-13"><div class="t rname" id="cult_name-13"></div><div class="t rvalue" id="cult_value-13"></div></div>
+        </div>
+        <div class="t title-dark" id="basic_caption" style="left:20px;top:146px"></div>
+        <div class="list" id="basic" style="left:20px;top:162px;width:152px;height:141px">
+            <div class="row" id="basic_row-0"><div class="t rname" id="basic_name-0"></div><div class="t rvalue" id="basic_value-0"></div></div>
+            <div class="row" id="basic_row-1"><div class="t rname" id="basic_name-1"></div><div class="t rvalue" id="basic_value-1"></div></div>
+            <div class="row" id="basic_row-2"><div class="t rname" id="basic_name-2"></div><div class="t rvalue" id="basic_value-2"></div></div>
+            <div class="row" id="basic_row-3"><div class="t rname" id="basic_name-3"></div><div class="t rvalue" id="basic_value-3"></div></div>
+            <div class="row" id="basic_row-4"><div class="t rname" id="basic_name-4"></div><div class="t rvalue" id="basic_value-4"></div></div>
+            <div class="row" id="basic_row-5"><div class="t rname" id="basic_name-5"></div><div class="t rvalue" id="basic_value-5"></div></div>
+            <div class="row" id="basic_row-6"><div class="t rname" id="basic_name-6"></div><div class="t rvalue" id="basic_value-6"></div></div>
+            <div class="row" id="basic_row-7"><div class="t rname" id="basic_name-7"></div><div class="t rvalue" id="basic_value-7"></div></div>
+        </div>
+    </div>
+
+    <!-- ── 第二页：功法（旧 TechniquePanelScreen 的那张表） ──
+         一行 34px：24x24 图标框（图标 16x16 居中，走 <item> 或 <texture>）、名字（档位色）、
+         等级、右对齐的熟练度、进度条（凹槽 1px 黑边 + #373737 内底，填充色取灵气粒子色）、
+         行底两条 1px 分隔线（#555555 上、#ffffff 下）。
+         这一页没有标题行，所以列表贴着页签带下沿起（y=31 = 10+15+6，Java 的 TECHNIQUE_TOP），
+         不是第一页那种"标题下面一格"的 52：面板同样高，列表因此多出一行（272 = 8 行）。 -->
+    <div class="page" id="page_technique">
+        <div class="t" id="techniques_empty" style="left:26px;top:37px"></div>
+        <div class="list" id="techniques" style="left:20px;top:31px;width:470px;height:272px">
+            <div class="trow" id="tech-0"><div class="tframe"><item class="ticon" id="tech_item-0"></item><texture class="ttex" id="tech_tex-0"></div><div class="t tname" id="tech_name-0"></div><div class="t tlevel" id="tech_level-0"></div><div class="t tvalue" id="tech_value-0"></div><div class="tbar" id="tech_bar-0"><div class="tfill" id="tech_fill-0"></div></div><div class="tsep" id="tech_sep-0"></div></div>
+            <div class="trow" id="tech-1"><div class="tframe"><item class="ticon" id="tech_item-1"></item><texture class="ttex" id="tech_tex-1"></div><div class="t tname" id="tech_name-1"></div><div class="t tlevel" id="tech_level-1"></div><div class="t tvalue" id="tech_value-1"></div><div class="tbar" id="tech_bar-1"><div class="tfill" id="tech_fill-1"></div></div><div class="tsep" id="tech_sep-1"></div></div>
+            <div class="trow" id="tech-2"><div class="tframe"><item class="ticon" id="tech_item-2"></item><texture class="ttex" id="tech_tex-2"></div><div class="t tname" id="tech_name-2"></div><div class="t tlevel" id="tech_level-2"></div><div class="t tvalue" id="tech_value-2"></div><div class="tbar" id="tech_bar-2"><div class="tfill" id="tech_fill-2"></div></div><div class="tsep" id="tech_sep-2"></div></div>
+            <div class="trow" id="tech-3"><div class="tframe"><item class="ticon" id="tech_item-3"></item><texture class="ttex" id="tech_tex-3"></div><div class="t tname" id="tech_name-3"></div><div class="t tlevel" id="tech_level-3"></div><div class="t tvalue" id="tech_value-3"></div><div class="tbar" id="tech_bar-3"><div class="tfill" id="tech_fill-3"></div></div><div class="tsep" id="tech_sep-3"></div></div>
+            <div class="trow" id="tech-4"><div class="tframe"><item class="ticon" id="tech_item-4"></item><texture class="ttex" id="tech_tex-4"></div><div class="t tname" id="tech_name-4"></div><div class="t tlevel" id="tech_level-4"></div><div class="t tvalue" id="tech_value-4"></div><div class="tbar" id="tech_bar-4"><div class="tfill" id="tech_fill-4"></div></div><div class="tsep" id="tech_sep-4"></div></div>
+            <div class="trow" id="tech-5"><div class="tframe"><item class="ticon" id="tech_item-5"></item><texture class="ttex" id="tech_tex-5"></div><div class="t tname" id="tech_name-5"></div><div class="t tlevel" id="tech_level-5"></div><div class="t tvalue" id="tech_value-5"></div><div class="tbar" id="tech_bar-5"><div class="tfill" id="tech_fill-5"></div></div><div class="tsep" id="tech_sep-5"></div></div>
+            <div class="trow" id="tech-6"><div class="tframe"><item class="ticon" id="tech_item-6"></item><texture class="ttex" id="tech_tex-6"></div><div class="t tname" id="tech_name-6"></div><div class="t tlevel" id="tech_level-6"></div><div class="t tvalue" id="tech_value-6"></div><div class="tbar" id="tech_bar-6"><div class="tfill" id="tech_fill-6"></div></div><div class="tsep" id="tech_sep-6"></div></div>
+            <div class="trow" id="tech-7"><div class="tframe"><item class="ticon" id="tech_item-7"></item><texture class="ttex" id="tech_tex-7"></div><div class="t tname" id="tech_name-7"></div><div class="t tlevel" id="tech_level-7"></div><div class="t tvalue" id="tech_value-7"></div><div class="tbar" id="tech_bar-7"><div class="tfill" id="tech_fill-7"></div></div><div class="tsep" id="tech_sep-7"></div></div>
+            <div class="trow" id="tech-8"><div class="tframe"><item class="ticon" id="tech_item-8"></item><texture class="ttex" id="tech_tex-8"></div><div class="t tname" id="tech_name-8"></div><div class="t tlevel" id="tech_level-8"></div><div class="t tvalue" id="tech_value-8"></div><div class="tbar" id="tech_bar-8"><div class="tfill" id="tech_fill-8"></div></div><div class="tsep" id="tech_sep-8"></div></div>
+            <div class="trow" id="tech-9"><div class="tframe"><item class="ticon" id="tech_item-9"></item><texture class="ttex" id="tech_tex-9"></div><div class="t tname" id="tech_name-9"></div><div class="t tlevel" id="tech_level-9"></div><div class="t tvalue" id="tech_value-9"></div><div class="tbar" id="tech_bar-9"><div class="tfill" id="tech_fill-9"></div></div><div class="tsep" id="tech_sep-9"></div></div>
+            <div class="trow" id="tech-10"><div class="tframe"><item class="ticon" id="tech_item-10"></item><texture class="ttex" id="tech_tex-10"></div><div class="t tname" id="tech_name-10"></div><div class="t tlevel" id="tech_level-10"></div><div class="t tvalue" id="tech_value-10"></div><div class="tbar" id="tech_bar-10"><div class="tfill" id="tech_fill-10"></div></div><div class="tsep" id="tech_sep-10"></div></div>
+            <div class="trow" id="tech-11"><div class="tframe"><item class="ticon" id="tech_item-11"></item><texture class="ttex" id="tech_tex-11"></div><div class="t tname" id="tech_name-11"></div><div class="t tlevel" id="tech_level-11"></div><div class="t tvalue" id="tech_value-11"></div><div class="tbar" id="tech_bar-11"><div class="tfill" id="tech_fill-11"></div></div><div class="tsep" id="tech_sep-11"></div></div>
+            <div class="trow" id="tech-12"><div class="tframe"><item class="ticon" id="tech_item-12"></item><texture class="ttex" id="tech_tex-12"></div><div class="t tname" id="tech_name-12"></div><div class="t tlevel" id="tech_level-12"></div><div class="t tvalue" id="tech_value-12"></div><div class="tbar" id="tech_bar-12"><div class="tfill" id="tech_fill-12"></div></div><div class="tsep" id="tech_sep-12"></div></div>
+            <div class="trow" id="tech-13"><div class="tframe"><item class="ticon" id="tech_item-13"></item><texture class="ttex" id="tech_tex-13"></div><div class="t tname" id="tech_name-13"></div><div class="t tlevel" id="tech_level-13"></div><div class="t tvalue" id="tech_value-13"></div><div class="tbar" id="tech_bar-13"><div class="tfill" id="tech_fill-13"></div></div><div class="tsep" id="tech_sep-13"></div></div>
+            <div class="trow" id="tech-14"><div class="tframe"><item class="ticon" id="tech_item-14"></item><texture class="ttex" id="tech_tex-14"></div><div class="t tname" id="tech_name-14"></div><div class="t tlevel" id="tech_level-14"></div><div class="t tvalue" id="tech_value-14"></div><div class="tbar" id="tech_bar-14"><div class="tfill" id="tech_fill-14"></div></div><div class="tsep" id="tech_sep-14"></div></div>
+            <div class="trow" id="tech-15"><div class="tframe"><item class="ticon" id="tech_item-15"></item><texture class="ttex" id="tech_tex-15"></div><div class="t tname" id="tech_name-15"></div><div class="t tlevel" id="tech_level-15"></div><div class="t tvalue" id="tech_value-15"></div><div class="tbar" id="tech_bar-15"><div class="tfill" id="tech_fill-15"></div></div><div class="tsep" id="tech_sep-15"></div></div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

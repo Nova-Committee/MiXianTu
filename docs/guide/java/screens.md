@@ -4,6 +4,25 @@ title: 客户端界面
 
 客户端界面统一放在 `com.iafenvoy.mxt.screen` 下：容器**菜单**在 `screen.menu`、它们的**界面**在 `screen.gui`，纯客户端信息界面在 `screen.information`，物品选择器在 `screen.picker`，方向性选择（12 扇轮盘）在 `screen.wheel`，HUD 元素在 `screen.hud`（框架）、`screen.resourcebar`（资源条）与 `screen.wheel`（轮盘格）。新增界面优先复用现成的 `Screen` 基类和原版组件，不要自己造滚动和文本输入。
 
+## ApricityUI 页面
+
+**已经交给页面的界面**（都在 `assets/mxt/apricity/` 下，**一屏一个目录、同族的放一起**）：丹炉四页（`mxt/alchemy/`）、轮盘与它的配置页（`mxt/wheel/`：`wheel.html` + `wheel_config.html`）、锻造台（`mxt/forging/`）、灵气工作台（`mxt/spirit_crafting/`）、人物信息（`mxt/information/`）、**经济组**（`mxt/economy/`：交易站两页 `station_customer` / `station_owner`、兑换站 `exchange`、支票台 `cheque`、玩家交易 `trade`）；除轮盘（浮层、自成一套）外都链共用的 `mxt/base.css`。播种只有一处（`screen/AuiPages`，启动时种到 `<gameDir>/apricity/`，**缺了才写、永不覆盖**），新增一页只要往 `AuiPages` 的清单里加一行。
+
+**容器界面共用一个宿主 `screen/AuiContainerScreen`**（`extends AbstractContainerScreen` + `AuiLinkedScreen`）：文档生命周期、按稳定 ID 绑定、槽位几何对账、页面缺失时的红字兜底、输入闸门都在基类里，子类只写"这一屏有哪些节点、每拍要写什么状态"。要点：
+
+- **槽位坐标由页面决定**：每帧读 `<slot>` 在页面里的位置写回 `Slot.x/y`，物品、悬停、拖拽与提示框仍是原版的；读到的几何必须整份落在**已经画出来的**面板矩形里，否则一个字节都不写（ApricityUI 的元素偏移是记忆化的，早期读到的是混合快照）。
+- **页面文件在每次资源重载后一次性预热**：`AuiPages` 在客户端资源重载（启动、F3+T、换资源包）**结束后的第一个 tick** 上 `seedAll()` + `warmUpAll()`——把全部 13 个页面读成模板、把它们的样式表读进来并按视口编译好，所以"第一次打开某一页"只剩建文档这一件事，而不是当场读文件 + 解析 + 编译 + 因为样式表还在路上白等两拍。排这一趟的是 `AddClientReloadListenersEvent`，但**预热本身不写在监听器里**：ApricityUI 在同一趟重载里会清掉已编译样式表、并跑它自己那轮预热，写进监听器就可能被排在它后面的监听器清掉，晚一个 tick 跑就不会（这个标志初值为真，所以启动后第一个 tick 必定预热一次，事件没送到也不影响）。
+- **建文档前先预热样式表，并且头两拍不画**：页面用 `<link>` 引的样式表由 ApricityUI 的工作线程读取、**下一个客户端 tick** 才生效，而 `Document.create` 当帧的样式重算只带用户代理层的 `global.css`——早画的帧用的是没有样式的 DOM（格子全堆在文档原点，容器页据此读回的槽位几何也全在左上角）。宿主照 `AuiPages` 接三步：`Document.create` **之前** `boolean prepared = AuiPages.warmUpStyles(path)`（预热过的样式在 `attach` 里走同步分支，首帧就是有样式的），把返回值交给 `styleHold.restart(prepared)`，自己的 tick 钩子（`containerTick()` / `tick()`）里 `styleHold.tick()`，`extractRenderState` 里 `held()` 时整帧直接 `return`（预热没成功就白等两拍；页面缺失的红字兜底照常画）。这一步现在只兜底两种情况：那次页面级预热跑了之后才加的页面，和预热失败——上面那条跑过之后，这里是一次纯缓存命中（因此 `prepared` 为真、不再白等两拍）。
+- 页面里 `<slot>` 的位置 = **菜单坐标 − 1**（物品 16×16 画在 18×18 凹面的 +1 处，Java 写 `Slot.x/y` 时再 +1）；容器要写 `primary="true"` 才会被 ApricityUI 展开，否则 `repeat` 不生效。Java 每帧写回去的 `left/top` 一律是**页面坐标**（相对面板的 padding box）：别按某个子元素（轨道、格子）的局部坐标去算——锻造台两个滚动条滑块就这么画到了面板顶边、跑到标题旁边（`SCROLL_TOP - RECESS_Y + 1` 恒等于 1）。
+- 页面**不能**写 `aui-mouse-events=intercept`；面板**不要写 `border`**（绝对定位的包含块是 padding box，边框会把页面里每个坐标整体推进去，边框用 `box-shadow: inset` 画）；别用 `overflow: hidden` 裁内容（实机会画出暗块）。
+- **皮肤只有一套**，在 `mxt/base.css`（页面树根目录，各页写 `<link rel="stylesheet" href="../base.css">`）：扁平半透明深色（面板 `rgba(0,0,0,0.45)` + 1px 内嵌亮边、格子底是很淡的加白、没有浮雕与渐变、文字纯白），各页只写尺寸与坐标。**不再引 ApricityUI 自带的 `ae` / `ore` 主题**；`slot` 要写 `background-image: none`（用户代理层给它挂了一张 `img/gui/area.png` 的原版凹面）。宿主屏幕**不画原版那层整屏暗化**（`extractBackground` 不调 `super` / `extractTransparentBackground`）：暗化由面板自己承担，面板外的世界保持原亮度。
+- **页面侧的已知限制**（都在实机上见过）：`setTextContent` 只写字符串，**富文本会被压平**（锻造台"品质：<档位名>"那一行因此整行涂成档位色）；列表**不裁剪**，可见行数按 `列表高 / 行高` 取整，旧版被裁掉的那半行不画；人物信息两条列表**没有滚动条**（旧版是原版 `ObjectSelectionList` 的 6px 条），滚轮照旧。
+- **`<texture>` 是分词器里的 void 元素**（与 `img` / `input` 同类）：只写开标签，别写 `</texture>`——分词器把开标签当自闭合、再遇到结束标签就判成 unmatched closing tag，每次建/刷新文档都为每个标签刷一条 warn（DOM 不变，纯噪音）。
+- **未做 / 未专门验过**：锻造台两个选择格与数值尺仍然**重抄了菜单常量**（Java 读常量校验留待下一轮；改菜单必须同步改页面），交易站两页的**槽位下标映射写死在页面注释里**（同样要同步改）；`<texture>` 分支（锻造台方法图标若是贴图）与 `<item>` 的悬停提示框一直没专门看过。
+- 共用的 `.inv`（3 行主背包 + 4px 空轨道 + 快捷栏）**只写排布、不带 `left` / `top`**，坐标由各页自己给：绝对定位的容器一旦拿不到 `left`，会退回静态位置（贴面板左沿），和它旁边的标签错开十几像素——丹炉四页就踩过这条。
+- 人物信息没有菜单、面板随窗口缩，所以它的几何仍由 Java 现算后写成行内样式，两个列表是 DOM 行，人物预览与装备格里的物品仍是原版/AUI 的物品渲染。**列表的列宽（`ScrollList.Binding.prepare`）必须在拿到真实宽度之后再算一次**：面板几何是每帧才写进页面的，第一次 rebuild 时宽度还是 0，算出来的列会把名字和值都缩成 `...`，要等一个刷新周期（默认 1 秒）才恢复——`ScrollList.layout` 因此按"宽度变了就重跑 prepare"来做。它现在是**两页**（`Page.INFO` / `Page.TECHNIQUES`，左上角两个页签「人物信息」/「习得功法」切换，整块面板共用，面板不再有单独那行标题）：第二页就是原来的功法界面，所以 `TechniquePanelScreen` 已删除、功法页只由面板左上角的「习得功法」页签进入（原先那个"打开功法面板"的专属按键已删除）；两页的行都是同一套 `ScrollList`（像素滚动、按可见行数隐藏），只有行的内容由各自的 `Binding` 写。**"没有条目的格子"也必须写 `display: none`**：行元素从页面加载起就在 DOM 里，功法行自己带图标框、进度槽与分隔线，只把文字清空的话这些盒子照旧画出来（实机表现为列表下方一片残留的空框），所以 `clear` 不看"这一格之前显没显过"、一律隐藏；选中高亮同理，**按格子里的条目 id 在每次 layout 之后重贴**，否则滚动一行高亮就落在别人身上。
+- **人物信息面板的开关是同一把键**：`key.mxt.information_panel`（默认 `Z`）在没有别的界面打开时打开它，面板开着时再按一次关掉它（`Esc` 照旧能关）。它和轮盘那几把键一样**裸轮询物理按键**（`MxtKeyMappings.KeyMappingHolder.isPhysicallyDown()`）：`setScreen` 对屏幕上的那次按下会 `releaseAll`，而 `grabMouse` 又 `setAll()` 把还按着的键重新按一次——走 `KeyMapping` 的状态就会把这次"重新按下"当成新的一次，面板刚关就又弹开。
+
 ## 可拖动 HUD 框架 `screen.hud`
 
 模块自己画的 HUD 元素（快捷栏、资源条……）要让玩家能拖动并存档，就接上这套框架。框架只做四件事：**登记元素**、**每帧画它们**、**给编辑器提供命中与占位框**、**把位置写进 HUD 布局文件**。
@@ -59,13 +78,13 @@ MyBar bar = HudManager.register(new MyBar());
 
 ## 轮盘选择系统 `screen.wheel`
 
-按键（`key.mxt.wheel`，**默认 R**）按住，屏幕上出现一个 **12 扇**的轮盘：指针**朝哪个方向**就选中哪一扇，选中的扇区变金色并向外扩一点，**这一扇的名字写在轮盘正中间**。它现在是技能（法器技能已并入其中）与灵气**唯一的触发入口**：原来"技能与灵气各有一条快捷栏、各有一个配置界面"的两套东西已经删除，`LAlt` 那个按键也一并取消（`V` 虽然重新被占用，但含义换成了"用掉轮盘当前选中的那一扇"，见下）。
+按键（`key.mxt.wheel`，**默认 R**）按住，屏幕上出现一个 **12 扇**的轮盘：指针**朝哪个方向**就选中哪一扇，选中的扇区**底色变深**（灰阶高亮）并向外扩一点，**这一扇的名字写在轮盘正中间**。它现在是技能（法器技能已并入其中）与灵气**唯一的触发入口**：原来"技能与灵气各有一条快捷栏、各有一个配置界面"的两套东西已经删除，`LAlt` 那个按键也一并取消（`V` 虽然重新被占用，但含义换成了"用掉轮盘当前选中的那一扇"，见下）。
 
 **轮盘由"主盘 + 从盘"组成，用一套连续编号串起来**（2026-09-22 新增并按玩家口径重做，见 `research/31_多轮盘与轮盘来源设计.md` §10）：主盘是玩家自己摆的 12 格（编号 `0..11`），从盘（主手物品 / 副手物品 / 法器 / 契约灵兽）按随身装备与手里的御兽铃自动生成、**不存储**（内容是这些装备此刻授予的主动技能，加上它们作为法器声明的**技能**：储物这类；**御器之术不在从盘里**——它是功法这类授予来源给的一条普通技能，见 `research/48_飞行法器与御器术重设计.md`，法器开关的接线见 `research/32_法器开关与轮盘接线设计.md`；契约灵兽那一页是**手里御兽铃对准的灵宠认的行为**，2026-09-25 新增），格子从 `12` 起接着排；**一页 12 格**，一个来源占 `ceil(条目数 / 12)` 页（一条都没有就一页都不占），内容多了就**再开一页**而不是丢掉。切换是两把键（`key.mxt.wheel_previous` / `key.mxt.wheel_next`，默认键盘左右方向键，两头环绕），`R` **打开始终回到主盘（第一页）**。**页只是视图，编号才是选择**：轮盘画当前页、HUD 轮盘格画整张轮盘、槽位键作用于当前页，关着轮盘时的 `V` 用编号此刻代表的那一格（**编号越界时自动落到最后一个有东西的格子，且编号本身不改写**，所以物品拿回来就恢复原选择）。
 
 **选择与使用分成两个键**：`R` 只负责选（松开或再按一次**只关闭、不触发**），`key.mxt.wheel_use`（默认 `V`）负责用——轮盘开着时用掉指针那一格且**不关轮盘**，关着时用掉**编号此刻代表的那一格**（客户端 `WheelSelectionState` 里是 `page` + `number` 两个值，`LoggingIn` 清空后由服务端记住的 `armed`（一个数字）填回来，见 [`wheel.md`](./wheel.md)），鼠标左键等同于它。这把键与两把切页键都由 `WheelMenuController` **裸轮询**（`InputConstants`/GLFW），因为任何 `Screen` 一打开原版就 `KeyMapping.releaseAll()`，而且"按着 `V` 松开 `R`"会让 `grabMouse()` 里的 `KeyMapping.setAll()` 补出一次假按下、多触发一次。可拖动的 HUD 元素「轮盘格」（`wheel.selection`）画的正是整张轮盘的格子：**金色边框那一格就是"现在按 `V` 会放什么"**（轮盘开着时它跟着指针走）。
 
-框架（几何、扇环渲染、开合状态机、选择语义）在 `screen.wheel`，内容（技能与灵气怎样变成条目、每个来源贡献什么）在 `screen.wheel/content`，编辑界面是 `WheelConfigurationScreen`；接法与数据流见 [客户端轮盘](wheel)。三条界面语义值得记住：`isPauseScreen()` 返回 `false`（单人游戏里不暂停）；`extractBackground(...)` **留空**（默认背景会把这之前提取的整层 HUD 糊掉，`HudEditScreen` 当初也是为同一个模糊问题覆写 `isInGameUi()`）；**按住轮盘时角色会停下**（原版对任何 `Screen` 都 `KeyMapping.releaseAll()`，松开时 `grabMouse()` 会把物理按键状态同步回来，不用重新按）。
+框架（几何、开合状态机、选择语义）在 `screen.wheel`，环与动画自 2026-09-30 起由 ApricityUI 页面 `assets/mxt/apricity/mxt/wheel/` 画（见 [客户端轮盘](wheel)），内容（技能与灵气怎样变成条目、每个来源贡献什么）在 `screen.wheel/content`，编辑界面是 `WheelConfigurationScreen`；接法与数据流见 [客户端轮盘](wheel)。三条界面语义值得记住：`isPauseScreen()` 返回 `false`（单人游戏里不暂停）；`extractBackground(...)` **留空**（默认背景会把这之前提取的整层 HUD 糊掉，`HudEditScreen` 当初也是为同一个模糊问题覆写 `isInGameUi()`）；**按住轮盘时角色会停下**（原版对任何 `Screen` 都 `KeyMapping.releaseAll()`，松开时 `grabMouse()` 会把物理按键状态同步回来，不用重新按）。
 
 框架里两条不肯让步的约定：**判扇区只看方向、不看距离**（指针还在内圈里也算数，所以中间那块空地能一直显示"当前指着的扇区叫什么"），以及**指针方向 → 扇区号的换算只有 `WheelGeometry` 一处**（`sectorStart` / `sectorCentre` / `sectorAt` 由同一组常量推出，`sectorAt(sectorCentre(k)) == k` 恒成立；MineMenu 把这段抄了三处、其中一处约定还和另外两处不同）。
 
@@ -141,7 +160,7 @@ if (screen != null) Minecraft.getInstance().setScreen(screen);
 
 用列表而不是单个名字，是因为一行可以有好几种叫法。界面不再需要从「注册表 key + 条目 id」去反推任何东西；只有 `over(...)` 那条路没有目录可问，界面自己补上「展示名 + item id」。
 
-翻译键的拼法统一由 `com.iafenvoy.mxt.util.DefinitionText` 决定：类别就是注册表自己的 path，没有例外表。手里已经有 `Holder` / `ResourceKey` 时直接 `DefinitionText.name(holder)`，只有拿到的是一根光秃秃的 `Identifier` 时才需要把类别当参数传进去（`DefinitionText.name(id, "resource")`）。自带 `name` / `description` 字段的定义（24 张注册表，含药性、炉型、炉壁材料、灵植、丹药、丹药绑定与 `quality`；`quality_chain` 已删除）不走这条路：文本由数据包给，或由 `ContextNameCodec` 按 id 生成**同一个键**（`quality.mxt.<命名空间>.<路径>` 这类），所以两套名字键不再是两套。`mxt:alchemy` 配方不是数据包注册表，省略名字时用 `recipe.mxt.<命名空间>.<路径>`，路径里的 `/` 改成 `.`。丹炉四个页面走的是 ApricityUI 的 HTML，不是原版 `Screen` 的控件树：页面在 `assets/mxt/apricity/mxt/alchemy/`（种到游戏目录 `apricity/mxt/alchemy/`），Java 只按稳定节点绑状态、事件与真实槽位——契约见 `docs/数据包格式.md` 的丹炉一节，页面里的坑（`aui-mouse-events` 不能写 `intercept`、`Slot.x/y` 要靠访问转换器才可写）见 `research/63_炼丹界面改用ApricityUI设计.md`。
+翻译键的拼法统一由 `com.iafenvoy.mxt.util.DefinitionText` 决定：类别就是注册表自己的 path，没有例外表。手里已经有 `Holder` / `ResourceKey` 时直接 `DefinitionText.name(holder)`，只有拿到的是一根光秃秃的 `Identifier` 时才需要把类别当参数传进去（`DefinitionText.name(id, "resource")`）。自带 `name` / `description` 字段的定义（24 张注册表，含药性、炉型、炉壁材料、灵植、丹药、丹药绑定与 `quality`；`quality_chain` 已删除）不走这条路：文本由数据包给，或由 `ContextNameCodec` 按 id 生成**同一个键**（`quality.mxt.<命名空间>.<路径>` 这类），所以两套名字键不再是两套。`mxt:alchemy` 配方不是数据包注册表，省略名字时用 `recipe.mxt.<命名空间>.<路径>`，路径里的 `/` 改成 `.`。丹炉四个页面走的是 ApricityUI 的 HTML，不是原版 `Screen` 的控件树：页面在 `assets/mxt/apricity/mxt/alchemy/`（种到游戏目录 `apricity/mxt/alchemy/`），Java 只按稳定节点绑状态、事件与真实槽位——契约见 `docs/数据包格式.md` 的丹炉一节，页面里的坑（`aui-mouse-events` 不能写 `intercept`、`Slot.x/y` 要靠访问转换器才可写）见 `AGENTS.md` §4 的 AUI 条款与本文前面那份宿主要点。
 
 分类就是注册表本身，`/picker <分类 id>` 可以只列出某一个（如 `/picker mxt:aura`、`/picker mxt:artifact`、`/picker mxt:item_binding`），不写则给出全部已注册分类。
 

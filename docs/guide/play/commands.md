@@ -77,7 +77,7 @@ title: 命令
 | `/technique forget <id>`（= `/mxt technique forget <id>`） | 遗忘一项功法：连同**这门功法自己的层数记录**一起删掉（重新学会从入口级开始），并重建它带来的属性与能力；境界、修为、资源与正在跑的法门都是别的状态，不受影响。与 `drop` 是同一件手术，只是说法对着"我要放弃这门功法"。 |
 | `/technique diagnose`（= `/mxt technique diagnose`） | 逐条检查手持功法物品为何无法使用。 |
 | `/display [player] [slot]`（= `/mxt display`） | 展示槽位物品。 |
-| `/trade <player>`（= `/mxt trade <player>`） | 向玩家发起交易请求。 |
+| `/trade <player>`（= `/mxt trade <player>`） | 向玩家发起交易请求。**开发环境**下 `player` 可以写自己：立刻开一场自己对自己的交易（一个人占两侧、按一次「确认」就算双方都确认），用来单独调这个界面与结算；生产环境仍然拒绝（「不能与自己交易。」）。 |
 | `/friend`（= `/mxt friend`） | 输出好友指令帮助，每一行可点击把指令填入聊天栏（不发送）。 |
 | `/friend list`（= `/mxt friend list`） | 列出永久与临时好友名单，名单中的名字可点击填入移除指令。 |
 | `/friend add <player>`（= `/mxt friend add`） | 添加**临时**好友，重登后失效。 |

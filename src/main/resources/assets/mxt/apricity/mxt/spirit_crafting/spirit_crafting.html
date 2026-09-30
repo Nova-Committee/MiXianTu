@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="aui-viewport" content="mode=gui">
+    <link rel="stylesheet" href="../base.css">
+    <link rel="stylesheet" href="spirit_crafting.css">
+</head>
+<body>
+<!-- 灵气工作台：原版工作台 176x166 + 右侧 132x122 的灵气面板，坐标与旧屏幕逐像素对齐。
+     槽位 slot-index 是"组内下标"：#crafting / #result 按菜单声明顺序，#inventory 是原版背包下标 0..35。
+     容器必须带 primary="true"：ApricityUI 只展开可绑定容器，否则 repeat 不生效。 -->
+<div id="panel">
+    <div class="t title" id="title" style="left:8px;top:6px"></div>
+    <container class="grid" id="crafting" primary="true" style="left:29px;top:16px;grid-template-columns:3;grid-template-rows:18px 18px 18px">
+        <slot slot-index="0"></slot><slot slot-index="1"></slot><slot slot-index="2"></slot>
+        <slot slot-index="3"></slot><slot slot-index="4"></slot><slot slot-index="5"></slot>
+        <slot slot-index="6"></slot><slot slot-index="7"></slot><slot slot-index="8"></slot>
+    </container>
+    <container class="grid" id="result" primary="true" style="left:123px;top:34px;grid-template-columns:1">
+        <slot slot-index="0"></slot>
+    </container>
+    <div class="t label" id="inventory_label" style="left:8px;top:72px"></div>
+    <container class="grid inv" id="inventory" primary="true">
+        <slot slot-index="9" repeat="27"></slot>
+        <slot slot-index="0" repeat="9"></slot>
+    </container>
+    <div class="subpanel aura" id="aura_panel">
+        <div class="row" id="aura_row-0" style="top:10px">
+            <div class="t name" id="aura_name-0"></div>
+            <div class="t amount" id="aura_amount-0"></div>
+            <div class="bar"><div class="fill" id="aura_fill-0"></div></div>
+        </div>
+        <div class="row" id="aura_row-1" style="top:36px">
+            <div class="t name" id="aura_name-1"></div>
+            <div class="t amount" id="aura_amount-1"></div>
+            <div class="bar"><div class="fill" id="aura_fill-1"></div></div>
+        </div>
+        <div class="row" id="aura_row-2" style="top:62px">
+            <div class="t name" id="aura_name-2"></div>
+            <div class="t amount" id="aura_amount-2"></div>
+            <div class="bar"><div class="fill" id="aura_fill-2"></div></div>
+        </div>
+        <div class="row" id="aura_row-3" style="top:88px">
+            <div class="t name" id="aura_name-3"></div>
+            <div class="t amount" id="aura_amount-3"></div>
+            <div class="bar"><div class="fill" id="aura_fill-3"></div></div>
+        </div>
+        <div class="row" id="aura_row-4" style="top:114px">
+            <div class="t name" id="aura_name-4"></div>
+            <div class="t amount" id="aura_amount-4"></div>
+            <div class="bar"><div class="fill" id="aura_fill-4"></div></div>
+        </div>
+        <div class="row" id="aura_row-5" style="top:140px">
+            <div class="t name" id="aura_name-5"></div>
+            <div class="t amount" id="aura_amount-5"></div>
+            <div class="bar"><div class="fill" id="aura_fill-5"></div></div>
+        </div>
+        <div class="row" id="aura_row-6" style="top:166px">
+            <div class="t name" id="aura_name-6"></div>
+            <div class="t amount" id="aura_amount-6"></div>
+            <div class="bar"><div class="fill" id="aura_fill-6"></div></div>
+        </div>
+        <div class="row" id="aura_row-7" style="top:192px">
+            <div class="t name" id="aura_name-7"></div>
+            <div class="t amount" id="aura_amount-7"></div>
+            <div class="bar"><div class="fill" id="aura_fill-7"></div></div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

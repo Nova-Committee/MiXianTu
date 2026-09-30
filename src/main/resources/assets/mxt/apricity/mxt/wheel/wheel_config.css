@@ -1,0 +1,161 @@
+/* 轮盘配置（/wheel）：只有静态质感与格子内部的排布，面板/候选池/扇区行/滚动条/分隔线的坐标与尺寸
+ * 全部由 WheelConfigurationScreen 现算后写成行内样式（面板随窗口缩，与旧屏幕一致）。
+ * 皮肤与其他页面同一套：扁平半透明深色（见 ../base.css）。 */
+
+/* 这个页面里的名字、编号、按键名都是 span，不是 .t，所以字体在这里给一次。
+   `display: block` 也是必需的：面板绝对定位在 Java 算出的左上角，base.css 的 flex 居中会把它挪偏。 */
+body {
+    display: block;
+    background: none;
+    font-family: initial;
+    font-size: 9px;
+    line-height: 9px;
+}
+
+#panel {
+    position: absolute;
+}
+
+.title {
+    color: #ffffff;
+}
+
+.heading,
+.hint {
+    color: rgba(255, 255, 255, 0.66);
+}
+
+.hidden {
+    display: none;
+}
+
+/* ── 候选池：一块画布，格子绝对定位在里面；滚动靠 Java 写整块池子的 top ── */
+.pool {
+    position: absolute;
+}
+
+/* ── 格子：22x22，图标 16x16 居中；悬停是更亮的边框、选中是更亮的底色（旧版是两张 22px 精灵） ── */
+.cell {
+    position: absolute;
+    box-sizing: border-box;
+    width: 22px;
+    height: 22px;
+    border: 1px solid rgba(255, 255, 255, 0.13);
+    background-color: rgba(255, 255, 255, 0.09);
+    cursor: pointer;
+}
+
+.cell:hover {
+    border-color: rgba(255, 255, 255, 0.4);
+}
+
+.cell.selected {
+    border-color: rgba(255, 255, 255, 0.42);
+    background-color: rgba(255, 255, 255, 0.28);
+}
+
+/* 两个图标元素默认都不画：物品走 <item>（Java 推栈），贴图走 <texture>（Java 写 src），
+   都没有就画名字。三者由格子上的 icon-item / icon-texture / plain 类决定，Java 只在变化时改。 */
+.cell .icon,
+.cell .tex {
+    position: absolute;
+    left: 2px;
+    top: 2px;
+    width: 16px;
+    height: 16px;
+    display: none;
+}
+
+.cell.icon-item .icon,
+.cell.icon-texture .tex {
+    display: block;
+}
+
+.cell .name {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 20px;
+    height: 20px;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    color: rgba(255, 255, 255, 0.9);
+    white-space: nowrap;
+}
+
+.cell.plain .name {
+    display: flex;
+}
+
+/* 条目色：旧屏幕在格内底边画一条 (x+1,y+19)-(x+21,y+21) 的横条，颜色由 Java 写 */
+.cell .accent {
+    position: absolute;
+    left: 0;
+    top: 18px;
+    width: 20px;
+    height: 2px;
+    background-color: transparent;
+}
+
+/* 失效扇区：id 已经解析不出来了，画一个红问号（旧屏幕画的是红 "?"） */
+.cell .stale {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 20px;
+    height: 20px;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    color: #e0544f;
+}
+
+.cell.stale .stale {
+    display: flex;
+}
+
+/* ── 12 个扇区：编号在格子上方、按键名在下方，都居中在 22px 的格宽上（相对格子的偏移写在这里） ── */
+.sector-row {
+    position: absolute;
+}
+
+.sector .number,
+.sector .key {
+    position: absolute;
+    left: 0;
+    width: 20px;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.sector .number {
+    top: -12px;
+    color: rgba(255, 255, 255, 0.66);
+}
+
+.sector .key {
+    top: 24px;
+    color: #ffffff;
+}
+
+/* ── 滚动条：3px 的暗轨道 + 浅色滑块（位置与高度由 Java 写） ── */
+.track {
+    position: absolute;
+    width: 3px;
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.thumb {
+    position: absolute;
+    left: 0;
+    width: 3px;
+    background-color: rgba(255, 255, 255, 0.42);
+}
+
+/* ── 分隔线：候选池与扇区行之间的一条 1px 加白线（旧版是两条 1px 的浮雕线） ── */
+.divider {
+    position: absolute;
+    height: 1px;
+    background-color: rgba(255, 255, 255, 0.14);
+}

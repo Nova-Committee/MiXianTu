@@ -1,0 +1,46 @@
+/* 交易站两页共用（顾客 176x167 / 店主 176x221）：底子见 ../base.css。
+ * 坐标来自 StationMenu：模板格都是"付出 4x3 + 得到 4x3"，店主多一个展示格与 21 格库存。 */
+
+#panel {
+    position: relative;
+}
+
+/* ── 模板格：顾客从 y=18 起、店主从 y=16 起（menu 的 templateY）；
+ *    两页的 left 由各自的行内样式给，坐标同样是"菜单坐标 − 1"（见 base.css 的槽位约定）。 ── */
+#costs,
+#rewards {
+    width: 72px;
+    grid-template-columns: 4;
+}
+
+/* ── 店主：展示格 (152,72)、库存 7x3 (8,72) ── */
+#display {
+    left: 151px;
+    top: 71px;
+}
+
+#stock {
+    left: 7px;
+    top: 71px;
+    width: 126px;
+    grid-template-columns: 7;
+}
+
+/* ── 玩家背包：顾客 84、店主 140（同样 −1） ── */
+.inv-customer {
+    left: 7px;
+    top: 83px;
+}
+
+.inv-owner {
+    left: 7px;
+    top: 139px;
+}
+
+/* ── 换货按钮：(80,35) 16x18（旧版是原版 Button，字面量就是 →） ── */
+#trade {
+    left: 80px;
+    top: 35px;
+    width: 16px;
+    height: 18px;
+}

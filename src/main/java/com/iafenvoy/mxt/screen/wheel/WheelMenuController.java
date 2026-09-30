@@ -5,7 +5,6 @@ import com.iafenvoy.mxt.api.WheelSource;
 import com.iafenvoy.mxt.config.MxtClientConfig;
 import com.iafenvoy.mxt.registry.MxtKeyMappings;
 import com.iafenvoy.mxt.runtime.wheel.WheelSourceTypes;
-import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 import net.neoforged.api.distmarker.Dist;
@@ -13,7 +12,6 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import org.jspecify.annotations.Nullable;
-import org.lwjgl.glfw.GLFW;
 
 import java.util.List;
 
@@ -113,14 +111,14 @@ public final class WheelMenuController {
         usePageKeys(minecraft);
 
         // The use key next, so a tick that presses one key and releases the other spends what was aimed at.
-        boolean useDown = keyDown(minecraft, MxtKeyMappings.WHEEL_USE);
+        boolean useDown = MxtKeyMappings.WHEEL_USE.isPhysicallyDown();
         if (useDown != lastUseDown) {
             lastUseDown = useDown;
             if (useDown) use(minecraft);
         }
         // After it: a tick that presses both spends the cell that was armed, then the slot key's own one.
         useSlotKeys(minecraft);
-        boolean down = keyDown(minecraft, MxtKeyMappings.WHEEL);
+        boolean down = MxtKeyMappings.WHEEL.isPhysicallyDown();
         if (down == lastDown) return;
         lastDown = down;
         if (down) {
@@ -138,8 +136,8 @@ public final class WheelMenuController {
         // Sampled even while another screen owns the keys, so a key held through a screen change cannot turn
         // into a press the moment it closes; only acting is gated, exactly as for the slot keys below.
         boolean live = minecraft.player != null && (minecraft.screen == null || open != null);
-        boolean previous = keyDown(minecraft, MxtKeyMappings.WHEEL_PREVIOUS);
-        boolean next = keyDown(minecraft, MxtKeyMappings.WHEEL_NEXT);
+        boolean previous = MxtKeyMappings.WHEEL_PREVIOUS.isPhysicallyDown();
+        boolean next = MxtKeyMappings.WHEEL_NEXT.isPhysicallyDown();
         boolean back = previous && !lastPreviousDown;
         boolean forward = next && !lastNextDown;
         lastPreviousDown = previous;
@@ -174,7 +172,7 @@ public final class WheelMenuController {
         // what keeps a slot key from double-firing on the false press grabMouse's setAll() invents.
         boolean live = minecraft.player != null && (minecraft.screen == null || open != null);
         for (int sector = 0; sector < slots.size(); sector++) {
-            boolean down = keyDown(minecraft, slots.get(sector));
+            boolean down = slots.get(sector).isPhysicallyDown();
             boolean pressed = down && !slotDown[sector];
             slotDown[sector] = down;
             if (pressed && live) useSlotKey(minecraft, sector);
@@ -224,16 +222,6 @@ public final class WheelMenuController {
         if (entry == null) return null;
         return new WheelSelection(WheelSelectionState.selectedSource(), WheelSelectionState.effective(),
                 entry, WheelSelection.Method.KEY);
-    }
-
-    // A bound key's state straight from the input device; an unbound key is never down.
-    private static boolean keyDown(Minecraft minecraft, MxtKeyMappings.KeyMappingHolder holder) {
-        InputConstants.Key bound = holder.get().getKey();
-        int value = bound.getValue();
-        if (value == InputConstants.UNKNOWN.getValue()) return false;
-        if (bound.getType() == InputConstants.Type.MOUSE)
-            return GLFW.glfwGetMouseButton(minecraft.getWindow().handle(), value) == GLFW.GLFW_PRESS;
-        return InputConstants.isKeyDown(minecraft.getWindow(), value);
     }
 
     private static boolean hold() {

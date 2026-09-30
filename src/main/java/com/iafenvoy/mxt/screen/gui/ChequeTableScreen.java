@@ -1,40 +1,66 @@
 package com.iafenvoy.mxt.screen.gui;
 
-import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.network.payload.ChequeActionC2SPayload;
+import com.iafenvoy.mxt.screen.AuiContainerScreen;
+import com.iafenvoy.mxt.screen.AuiPages;
 import com.iafenvoy.mxt.screen.menu.ChequeTableMenu;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
-import net.minecraft.client.gui.components.Button;
-import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
-import net.minecraft.client.renderer.RenderPipelines;
+import com.sighs.apricityui.init.Document;
+import com.sighs.apricityui.init.Element;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Inventory;
 import net.neoforged.neoforge.client.network.ClientPacketDistributor;
-import org.jspecify.annotations.NonNull;
 
 /**
- * Client menu shell. The menu owns all currency and cheque state on the server.
+ * The cheque table: the fifteen currency cells, the two cheque cells and the two direction keys belong to the
+ * bundled page, while the slots, their items and their tooltips stay vanilla. The two keys are the old
+ * screen's {@code <} and {@code >} buttons, which only ever sent one packet each.
  */
-public final class ChequeTableScreen extends AbstractContainerScreen<ChequeTableMenu> {
-    private static final Identifier BACKGROUND = Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "textures/gui/cheque_table.png");
+public final class ChequeTableScreen extends AuiContainerScreen<ChequeTableMenu> {
+    private static final int PANEL_WIDTH = 176;
+    private static final int PANEL_HEIGHT = 166;
+    private static final int CURRENCY_SLOTS = 15;
+    private static final int CHEQUE_INPUT = CURRENCY_SLOTS;
+    private static final int CHEQUE_OUTPUT = CHEQUE_INPUT + 1;
 
     public ChequeTableScreen(ChequeTableMenu menu, Inventory inventory, Component title) {
-        super(menu, inventory, title, 176, 166);
+        super(menu, inventory, title, PANEL_WIDTH, PANEL_HEIGHT);
     }
 
     @Override
-    protected void init() {
-        super.init();
-        this.addRenderableWidget(Button.builder(Component.literal("<"), button -> ClientPacketDistributor.sendToServer(new ChequeActionC2SPayload(false)))
-                .pos(this.leftPos + 104, this.topPos + 18).size(16, 16).build());
-        this.addRenderableWidget(Button.builder(Component.literal(">"), button -> ClientPacketDistributor.sendToServer(new ChequeActionC2SPayload(true)))
-                .pos(this.leftPos + 104, this.topPos + 54).size(16, 16).build());
+    protected String pagePath() {
+        return AuiPages.economyPage("cheque");
     }
 
     @Override
-    public void extractBackground(@NonNull GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
-        super.extractBackground(graphics, mouseX, mouseY, partialTick);
-        graphics.blit(RenderPipelines.GUI_TEXTURED, BACKGROUND, this.leftPos, this.topPos, 0, 0, this.imageWidth, this.imageHeight, 256, 256);
+    protected String pageName() {
+        return "cheque";
+    }
+
+    @Override
+    protected boolean bindPage(Document document) {
+        Element panel = document.getElementById("panel");
+        if (panel == null) return this.fail("panel");
+        Element title = document.getElementById("title");
+        if (title == null) return this.fail("title");
+        Element inventoryLabel = document.getElementById("inventory_label");
+        if (inventoryLabel == null) return this.fail("inventory_label");
+        Element checkOut = document.getElementById("check_out");
+        if (checkOut == null) return this.fail("check_out");
+        Element checkIn = document.getElementById("check_in");
+        if (checkIn == null) return this.fail("check_in");
+        this.panel = panel;
+        if (!this.bindCells(document, "currency", 0)) return false;
+        if (!this.bindCells(document, "cheque_in", CHEQUE_INPUT)) return false;
+        if (!this.bindCells(document, "cheque_out", CHEQUE_OUTPUT)) return false;
+        if (!this.bindInventoryCells(document, "inventory")) return false;
+        // The two keys kept their old literals and their old meanings: the top one cashes a cheque out, the
+        // bottom one checks currency in.
+        this.click(checkOut, () -> ClientPacketDistributor.sendToServer(new ChequeActionC2SPayload(false)));
+        this.click(checkIn, () -> ClientPacketDistributor.sendToServer(new ChequeActionC2SPayload(true)));
+        this.text(title, this.getTitle());
+        this.text(inventoryLabel, Component.translatable("container.inventory"));
+        this.text(checkOut, Component.literal("<"));
+        this.text(checkIn, Component.literal(">"));
+        return true;
     }
 }

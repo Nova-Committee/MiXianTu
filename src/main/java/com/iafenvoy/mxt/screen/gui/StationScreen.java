@@ -1,45 +1,73 @@
 package com.iafenvoy.mxt.screen.gui;
 
-import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.network.payload.StationTradeC2SPayload;
+import com.iafenvoy.mxt.screen.AuiContainerScreen;
+import com.iafenvoy.mxt.screen.AuiPages;
 import com.iafenvoy.mxt.screen.menu.StationMenu;
 import com.iafenvoy.mxt.screen.menu.StationMenu.Mode;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
-import net.minecraft.client.gui.components.Button;
-import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
-import net.minecraft.client.renderer.RenderPipelines;
+import com.sighs.apricityui.init.Document;
+import com.sighs.apricityui.init.Element;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Inventory;
 import net.neoforged.neoforge.client.network.ClientPacketDistributor;
-import org.jspecify.annotations.NonNull;
 
 /**
- * Shared client view for the four station menus.
+ * One client view for the four station menus: the two page layouts differ by the owner-only display and
+ * stock cells and by the player inventory offset, everything else is shared.
  */
-public final class StationScreen extends AbstractContainerScreen<StationMenu> {
-    private static final Identifier CUSTOMER_BACKGROUND = Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "textures/gui/trade_station_customer.png");
-    private static final Identifier OWNER_BACKGROUND = Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "textures/gui/trade_station_owner.png");
+public final class StationScreen extends AuiContainerScreen<StationMenu> {
+    private static final int PANEL_WIDTH = 176;
+    private static final int CUSTOMER_HEIGHT = 167;
+    private static final int OWNER_HEIGHT = 221;
+    /**
+     * The 4x3 cost and reward templates; {@link StationMenu} interleaves them, cost first.
+     */
+    private static final int TEMPLATE_CELLS = 12;
+    private static final int TEMPLATES_END = TEMPLATE_CELLS * 2;
+    private static final int OWNER_DISPLAY = TEMPLATES_END;
+    private static final int OWNER_STOCK = TEMPLATES_END + 1;
 
     public StationScreen(StationMenu menu, Inventory inventory, Component title) {
-        super(menu, inventory, title, 176, menu.mode() == Mode.TRADE_OWNER ? 221 : 167);
+        super(menu, inventory, title, PANEL_WIDTH, isOwner(menu) ? OWNER_HEIGHT : CUSTOMER_HEIGHT);
+    }
+
+    private static boolean isOwner(StationMenu menu) {
+        return menu.mode() == Mode.TRADE_OWNER;
     }
 
     @Override
-    protected void init() {
-        super.init();
-        if (this.menu.isCustomer()) {
-            this.addRenderableWidget(Button.builder(Component.literal("→"), button ->
-                            ClientPacketDistributor.sendToServer(StationTradeC2SPayload.INSTANCE))
-                    .pos(this.leftPos + 80, this.topPos + 35).size(16, 18).build());
+    protected String pagePath() {
+        return AuiPages.economyPage(this.pageName());
+    }
+
+    @Override
+    protected String pageName() {
+        return isOwner(this.menu) ? "station_owner" : "station_customer";
+    }
+
+    @Override
+    protected boolean bindPage(Document document) {
+        Element panel = document.getElementById("panel");
+        if (panel == null) return this.fail("panel");
+        Element title = document.getElementById("title");
+        if (title == null) return this.fail("title");
+        Element inventoryLabel = document.getElementById("inventory_label");
+        if (inventoryLabel == null) return this.fail("inventory_label");
+        this.panel = panel;
+        // Both grids carry the same 0..11 local indices; the menu stores cost then reward per cell.
+        if (!this.bindCells(document, "costs", index -> index * 2)) return false;
+        if (!this.bindCells(document, "rewards", index -> index * 2 + 1)) return false;
+        if (isOwner(this.menu)) {
+            if (!this.bindCells(document, "display", OWNER_DISPLAY)) return false;
+            if (!this.bindCells(document, "stock", OWNER_STOCK)) return false;
+        } else {
+            Element trade = document.getElementById("trade");
+            if (trade == null) return this.fail("trade");
+            this.click(trade, () -> ClientPacketDistributor.sendToServer(StationTradeC2SPayload.INSTANCE));
         }
-    }
-
-    @Override
-    public void extractBackground(@NonNull GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
-        super.extractBackground(graphics, mouseX, mouseY, partialTick);
-        graphics.blit(RenderPipelines.GUI_TEXTURED,
-                this.menu.mode() == Mode.TRADE_OWNER ? OWNER_BACKGROUND : CUSTOMER_BACKGROUND,
-                this.leftPos, this.topPos, 0.0F, 0.0F, this.imageWidth, this.imageHeight, 256, 256);
+        if (!this.bindInventoryCells(document, "inventory")) return false;
+        this.text(title, this.getTitle());
+        this.text(inventoryLabel, Component.translatable("container.inventory"));
+        return true;
     }
 }

@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="aui-viewport" content="mode=gui">
+    <link rel="stylesheet" href="../base.css">
+    <link rel="stylesheet" href="forging.css">
+</head>
+<body>
+<!-- 锻造台 322x234。坐标全部照抄旧 ForgingScreen / ForgingMenu，Java 侧读的是同一批常量。
+     三处约定：
+     1. 槽位（<slot>）的位置是"菜单坐标 - 1"：物品 16x16 画在 18x18 凹面的 +1 处，Java 写 Slot.x/y 时
+        也 +1（AuiContainerScreen.ITEM_INSET），两边相抵才落在旧屏幕的位置上。
+     2. 两个选择格与两行步骤格没有菜单槽位，是纯 DOM：NN-N 是格，格里的 item / texture 是它的两个图标，
+        由格上的 icon-item / icon-texture 类决定画哪一个（Java 只在变化时改）。
+     3. 数值尺的刻度（0 点 / 当前 / 预测 / 目标区间）位置由 Java 每拍写 left/width/display。 -->
+<div class="panel" id="panel" style="width:322px;height:234px">
+    <div class="t title" id="title" style="left:7px;top:5px"></div>
+    <div class="t label" id="inventory_label" style="left:81px;top:141px"></div>
+
+    <!-- 蓝图槽 x=81、工具槽 x=225（各 3 格，行顶 18/36/54）；输入 4x3 从 (108,18)；产物 (198,36) -->
+    <container class="grid" id="blueprints" primary="true" style="left:80px;top:17px;grid-template-columns:1;grid-template-rows:18px 18px 18px">
+        <slot slot-index="0"></slot><slot slot-index="1"></slot><slot slot-index="2"></slot>
+    </container>
+    <container class="grid" id="tools" primary="true" style="left:224px;top:17px;grid-template-columns:1;grid-template-rows:18px 18px 18px">
+        <slot slot-index="0"></slot><slot slot-index="1"></slot><slot slot-index="2"></slot>
+    </container>
+    <container class="grid" id="inputs" primary="true" style="left:107px;top:17px;grid-template-columns:4;grid-template-rows:18px 18px 18px">
+        <slot slot-index="0"></slot><slot slot-index="1"></slot><slot slot-index="2"></slot><slot slot-index="3"></slot>
+        <slot slot-index="4"></slot><slot slot-index="5"></slot><slot slot-index="6"></slot><slot slot-index="7"></slot>
+        <slot slot-index="8"></slot><slot slot-index="9"></slot><slot slot-index="10"></slot><slot slot-index="11"></slot>
+    </container>
+    <container class="grid" id="output" primary="true" style="left:197px;top:35px;grid-template-columns:1">
+        <slot slot-index="0"></slot>
+    </container>
+
+    <!-- 背包：(81,152) 起三行，快捷栏 210 -->
+    <container class="inv" id="inventory" primary="true" style="left:80px;top:151px">
+        <slot slot-index="9" repeat="27"></slot>
+        <slot slot-index="0" repeat="9"></slot>
+    </container>
+
+    <!-- 选择格凹底：(7,17) 与 (250,17) 各 52x76；右边那条 12x76 就是滚动条轨道 -->
+    <div class="recess grid-recess" style="left:7px;top:17px;width:52px;height:76px"></div>
+    <div class="recess grid-recess" style="left:250px;top:17px;width:52px;height:76px"></div>
+    <div class="recess track" style="left:59px;top:17px"></div>
+    <div class="recess track" style="left:302px;top:17px"></div>
+    <div class="scroller" id="bp_bar"></div>
+    <div class="scroller" id="mt_bar"></div>
+
+    <!-- 蓝图选择格：3x3、格 18、距 19，从 (7,17) 起 -->
+    <div class="cell" id="bp-0" style="left:7px;top:17px"><item class="icon" id="bp_item-0" interactive="none"></item><texture class="tex" id="bp_tex-0"></div>
+    <div class="cell" id="bp-1" style="left:26px;top:17px"><item class="icon" id="bp_item-1" interactive="none"></item><texture class="tex" id="bp_tex-1"></div>
+    <div class="cell" id="bp-2" style="left:45px;top:17px"><item class="icon" id="bp_item-2" interactive="none"></item><texture class="tex" id="bp_tex-2"></div>
+    <div class="cell" id="bp-3" style="left:7px;top:36px"><item class="icon" id="bp_item-3" interactive="none"></item><texture class="tex" id="bp_tex-3"></div>
+    <div class="cell" id="bp-4" style="left:26px;top:36px"><item class="icon" id="bp_item-4" interactive="none"></item><texture class="tex" id="bp_tex-4"></div>
+    <div class="cell" id="bp-5" style="left:45px;top:36px"><item class="icon" id="bp_item-5" interactive="none"></item><texture class="tex" id="bp_tex-5"></div>
+    <div class="cell" id="bp-6" style="left:7px;top:55px"><item class="icon" id="bp_item-6" interactive="none"></item><texture class="tex" id="bp_tex-6"></div>
+    <div class="cell" id="bp-7" style="left:26px;top:55px"><item class="icon" id="bp_item-7" interactive="none"></item><texture class="tex" id="bp_tex-7"></div>
+    <div class="cell" id="bp-8" style="left:45px;top:55px"><item class="icon" id="bp_item-8" interactive="none"></item><texture class="tex" id="bp_tex-8"></div>
+
+    <!-- 方法选择格：(250,17) 起，同样的 3x3 -->
+    <div class="cell" id="mt-0" style="left:250px;top:17px"><item class="icon" id="mt_item-0" interactive="none"></item><texture class="tex" id="mt_tex-0"></div>
+    <div class="cell" id="mt-1" style="left:269px;top:17px"><item class="icon" id="mt_item-1" interactive="none"></item><texture class="tex" id="mt_tex-1"></div>
+    <div class="cell" id="mt-2" style="left:288px;top:17px"><item class="icon" id="mt_item-2" interactive="none"></item><texture class="tex" id="mt_tex-2"></div>
+    <div class="cell" id="mt-3" style="left:250px;top:36px"><item class="icon" id="mt_item-3" interactive="none"></item><texture class="tex" id="mt_tex-3"></div>
+    <div class="cell" id="mt-4" style="left:269px;top:36px"><item class="icon" id="mt_item-4" interactive="none"></item><texture class="tex" id="mt_tex-4"></div>
+    <div class="cell" id="mt-5" style="left:288px;top:36px"><item class="icon" id="mt_item-5" interactive="none"></item><texture class="tex" id="mt_tex-5"></div>
+    <div class="cell" id="mt-6" style="left:250px;top:55px"><item class="icon" id="mt_item-6" interactive="none"></item><texture class="tex" id="mt_tex-6"></div>
+    <div class="cell" id="mt-7" style="left:269px;top:55px"><item class="icon" id="mt_item-7" interactive="none"></item><texture class="tex" id="mt_tex-7"></div>
+    <div class="cell" id="mt-8" style="left:288px;top:55px"><item class="icon" id="mt_item-8" interactive="none"></item><texture class="tex" id="mt_tex-8"></div>
+
+    <!-- 数值尺：外框黑边 (80,75) 162x6，内区 160x4；刻度条伸出上下各 2px（top 74、高 8） -->
+    <div class="meter" style="left:80px;top:75px"></div>
+    <div class="meter-mark band" id="meter_band"></div>
+    <div class="meter-mark zero" id="meter_zero"></div>
+    <div class="meter-mark predicted" id="meter_predicted"></div>
+    <div class="meter-mark value" id="meter_value_mark"></div>
+    <div class="t" id="meter_value" style="left:81px;top:85px"></div>
+
+    <!-- 要求 / 当前两行：标签在 (81,103)/(81,125)，步骤格 6 个从 (134,97)/(134,119) 起、格距 18 -->
+    <div class="t" id="target_caption" style="left:81px;top:103px"></div>
+    <div class="t" id="current_caption" style="left:81px;top:125px"></div>
+    <div class="cell" id="target-0" style="left:134px;top:97px"><item class="icon" id="target_item-0" interactive="none"></item><texture class="tex" id="target_tex-0"></div>
+    <div class="cell" id="target-1" style="left:152px;top:97px"><item class="icon" id="target_item-1" interactive="none"></item><texture class="tex" id="target_tex-1"></div>
+    <div class="cell" id="target-2" style="left:170px;top:97px"><item class="icon" id="target_item-2" interactive="none"></item><texture class="tex" id="target_tex-2"></div>
+    <div class="cell" id="target-3" style="left:188px;top:97px"><item class="icon" id="target_item-3" interactive="none"></item><texture class="tex" id="target_tex-3"></div>
+    <div class="cell" id="target-4" style="left:206px;top:97px"><item class="icon" id="target_item-4" interactive="none"></item><texture class="tex" id="target_tex-4"></div>
+    <div class="cell" id="target-5" style="left:224px;top:97px"><item class="icon" id="target_item-5" interactive="none"></item><texture class="tex" id="target_tex-5"></div>
+    <div class="cell" id="current-0" style="left:134px;top:119px"><item class="icon" id="current_item-0" interactive="none"></item><texture class="tex" id="current_tex-0"></div>
+    <div class="cell" id="current-1" style="left:152px;top:119px"><item class="icon" id="current_item-1" interactive="none"></item><texture class="tex" id="current_tex-1"></div>
+    <div class="cell" id="current-2" style="left:170px;top:119px"><item class="icon" id="current_item-2" interactive="none"></item><texture class="tex" id="current_tex-2"></div>
+    <div class="cell" id="current-3" style="left:188px;top:119px"><item class="icon" id="current_item-3" interactive="none"></item><texture class="tex" id="current_tex-3"></div>
+    <div class="cell" id="current-4" style="left:206px;top:119px"><item class="icon" id="current_item-4" interactive="none"></item><texture class="tex" id="current_tex-4"></div>
+    <div class="cell" id="current-5" style="left:224px;top:119px"><item class="icon" id="current_item-5" interactive="none"></item><texture class="tex" id="current_tex-5"></div>
+
+    <!-- 三个动作按钮：(7,100)、(250,100)、(7,120) 各 65x16；右列下两行是步数与该件成品品质 -->
+    <div class="button" id="use_blueprint" style="left:7px;top:100px;width:65px;height:16px"></div>
+    <div class="button" id="use_method" style="left:250px;top:100px;width:65px;height:16px"></div>
+    <div class="button" id="cancel" style="left:7px;top:120px;width:65px;height:16px"></div>
+    <div class="t t-center" id="steps" style="left:250px;top:124px;width:65px"></div>
+    <div class="t t-center" id="quality" style="left:250px;top:137px;width:65px"></div>
+</div>
+</body>
+</html>
