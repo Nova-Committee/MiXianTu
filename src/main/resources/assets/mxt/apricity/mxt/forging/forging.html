@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta name="aui-viewport" content="mode=gui">
-    <link rel="stylesheet" href="../base.css">
+    <link rel="stylesheet" href="../common/theme.css">
     <link rel="stylesheet" href="forging.css">
 </head>
 <body>
@@ -40,8 +40,8 @@
     </container>
 
     <!-- 选择格凹底：(7,17) 与 (250,17) 各 52x76；右边那条 12x76 就是滚动条轨道 -->
-    <div class="recess grid-recess" style="left:7px;top:17px;width:52px;height:76px"></div>
-    <div class="recess grid-recess" style="left:250px;top:17px;width:52px;height:76px"></div>
+    <div class="recess" style="left:7px;top:17px;width:52px;height:76px"></div>
+    <div class="recess" style="left:250px;top:17px;width:52px;height:76px"></div>
     <div class="recess track" style="left:59px;top:17px"></div>
     <div class="recess track" style="left:302px;top:17px"></div>
     <div class="scroller" id="bp_bar"></div>
@@ -70,7 +70,7 @@
     <div class="cell" id="mt-8" style="left:288px;top:55px"><item class="icon" id="mt_item-8" interactive="none"></item><texture class="tex" id="mt_tex-8"></div>
 
     <!-- 数值尺：外框黑边 (80,75) 162x6，内区 160x4；刻度条伸出上下各 2px（top 74、高 8） -->
-    <div class="meter" style="left:80px;top:75px"></div>
+    <div class="bar meter" style="left:80px;top:75px"></div>
     <div class="meter-mark band" id="meter_band"></div>
     <div class="meter-mark zero" id="meter_zero"></div>
     <div class="meter-mark predicted" id="meter_predicted"></div>
@@ -80,18 +80,18 @@
     <!-- 要求 / 当前两行：标签在 (81,103)/(81,125)，步骤格 6 个从 (134,97)/(134,119) 起、格距 18 -->
     <div class="t" id="target_caption" style="left:81px;top:103px"></div>
     <div class="t" id="current_caption" style="left:81px;top:125px"></div>
-    <div class="cell" id="target-0" style="left:134px;top:97px"><item class="icon" id="target_item-0" interactive="none"></item><texture class="tex" id="target_tex-0"></div>
-    <div class="cell" id="target-1" style="left:152px;top:97px"><item class="icon" id="target_item-1" interactive="none"></item><texture class="tex" id="target_tex-1"></div>
-    <div class="cell" id="target-2" style="left:170px;top:97px"><item class="icon" id="target_item-2" interactive="none"></item><texture class="tex" id="target_tex-2"></div>
-    <div class="cell" id="target-3" style="left:188px;top:97px"><item class="icon" id="target_item-3" interactive="none"></item><texture class="tex" id="target_tex-3"></div>
-    <div class="cell" id="target-4" style="left:206px;top:97px"><item class="icon" id="target_item-4" interactive="none"></item><texture class="tex" id="target_tex-4"></div>
-    <div class="cell" id="target-5" style="left:224px;top:97px"><item class="icon" id="target_item-5" interactive="none"></item><texture class="tex" id="target_tex-5"></div>
-    <div class="cell" id="current-0" style="left:134px;top:119px"><item class="icon" id="current_item-0" interactive="none"></item><texture class="tex" id="current_tex-0"></div>
-    <div class="cell" id="current-1" style="left:152px;top:119px"><item class="icon" id="current_item-1" interactive="none"></item><texture class="tex" id="current_tex-1"></div>
-    <div class="cell" id="current-2" style="left:170px;top:119px"><item class="icon" id="current_item-2" interactive="none"></item><texture class="tex" id="current_tex-2"></div>
-    <div class="cell" id="current-3" style="left:188px;top:119px"><item class="icon" id="current_item-3" interactive="none"></item><texture class="tex" id="current_tex-3"></div>
-    <div class="cell" id="current-4" style="left:206px;top:119px"><item class="icon" id="current_item-4" interactive="none"></item><texture class="tex" id="current_tex-4"></div>
-    <div class="cell" id="current-5" style="left:224px;top:119px"><item class="icon" id="current_item-5" interactive="none"></item><texture class="tex" id="current_tex-5"></div>
+    <div class="cell step" id="target-0" style="left:134px;top:97px"><item class="icon" id="target_item-0" interactive="none"></item><texture class="tex" id="target_tex-0"></div>
+    <div class="cell step" id="target-1" style="left:152px;top:97px"><item class="icon" id="target_item-1" interactive="none"></item><texture class="tex" id="target_tex-1"></div>
+    <div class="cell step" id="target-2" style="left:170px;top:97px"><item class="icon" id="target_item-2" interactive="none"></item><texture class="tex" id="target_tex-2"></div>
+    <div class="cell step" id="target-3" style="left:188px;top:97px"><item class="icon" id="target_item-3" interactive="none"></item><texture class="tex" id="target_tex-3"></div>
+    <div class="cell step" id="target-4" style="left:206px;top:97px"><item class="icon" id="target_item-4" interactive="none"></item><texture class="tex" id="target_tex-4"></div>
+    <div class="cell step" id="target-5" style="left:224px;top:97px"><item class="icon" id="target_item-5" interactive="none"></item><texture class="tex" id="target_tex-5"></div>
+    <div class="cell step" id="current-0" style="left:134px;top:119px"><item class="icon" id="current_item-0" interactive="none"></item><texture class="tex" id="current_tex-0"></div>
+    <div class="cell step" id="current-1" style="left:152px;top:119px"><item class="icon" id="current_item-1" interactive="none"></item><texture class="tex" id="current_tex-1"></div>
+    <div class="cell step" id="current-2" style="left:170px;top:119px"><item class="icon" id="current_item-2" interactive="none"></item><texture class="tex" id="current_tex-2"></div>
+    <div class="cell step" id="current-3" style="left:188px;top:119px"><item class="icon" id="current_item-3" interactive="none"></item><texture class="tex" id="current_tex-3"></div>
+    <div class="cell step" id="current-4" style="left:206px;top:119px"><item class="icon" id="current_item-4" interactive="none"></item><texture class="tex" id="current_tex-4"></div>
+    <div class="cell step" id="current-5" style="left:224px;top:119px"><item class="icon" id="current_item-5" interactive="none"></item><texture class="tex" id="current_tex-5"></div>
 
     <!-- 三个动作按钮：(7,100)、(250,100)、(7,120) 各 65x16；右列下两行是步数与该件成品品质 -->
     <div class="button" id="use_blueprint" style="left:7px;top:100px;width:65px;height:16px"></div>

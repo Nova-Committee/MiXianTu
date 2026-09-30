@@ -2,14 +2,14 @@
 <html>
 <head>
     <meta name="aui-viewport" content="mode=gui">
-    <link rel="stylesheet" href="../base.css">
+    <link rel="stylesheet" href="../common/theme.css">
     <link rel="stylesheet" href="spirit_crafting.css">
 </head>
 <body>
 <!-- 灵气工作台：原版工作台 176x166 + 右侧 132x122 的灵气面板，坐标与旧屏幕逐像素对齐。
      槽位 slot-index 是"组内下标"：#crafting / #result 按菜单声明顺序，#inventory 是原版背包下标 0..35。
      容器必须带 primary="true"：ApricityUI 只展开可绑定容器，否则 repeat 不生效。 -->
-<div id="panel">
+<div class="panel" id="panel">
     <div class="t title" id="title" style="left:8px;top:6px"></div>
     <container class="grid" id="crafting" primary="true" style="left:29px;top:16px;grid-template-columns:3;grid-template-rows:18px 18px 18px">
         <slot slot-index="0"></slot><slot slot-index="1"></slot><slot slot-index="2"></slot>

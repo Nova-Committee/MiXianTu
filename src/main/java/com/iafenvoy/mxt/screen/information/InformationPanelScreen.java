@@ -28,7 +28,6 @@ import com.sighs.apricityui.init.Document;
 import com.sighs.apricityui.init.Element;
 import com.sighs.apricityui.layout.Position;
 import com.sighs.apricityui.screen.AuiLinkedScreen;
-import com.sighs.apricityui.ui.Tooltip;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -286,7 +285,6 @@ public final class InformationPanelScreen extends Screen implements AuiLinkedScr
     }
 
     private void clearBindings() {
-        if (this.techniqueBinding != null) this.techniqueBinding.close();
         this.techniqueBinding = null;
         this.panel = null;
         this.cultivationCaption = null;
@@ -492,6 +490,51 @@ public final class InformationPanelScreen extends Screen implements AuiLinkedScr
         ApricityGuiLayers.submitUi(graphics);
         if (this.page == Page.INFO) this.extractPlayer(graphics, mouseX, mouseY);
         super.extractRenderState(graphics, mouseX, mouseY, partialTick);
+        this.extractTooltip(graphics, mouseX, mouseY);
+    }
+
+    /**
+     * The page's own tooltips, through the vanilla renderer instead of ApricityUI's: the lines are components with
+     * their own colours, which a page element's flattened text cannot carry. Submitted after {@code super}, like
+     * the multi-block page's cell tooltips, so they land over the page.
+     */
+    private void extractTooltip(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
+        if (this.page == Page.INFO) this.extractEquipmentTooltip(graphics, mouseX, mouseY);
+        else this.extractTechniqueTooltip(graphics, mouseX, mouseY);
+    }
+
+    // The four cells carry the player's real stacks, so what is drawn is what that stack would say anywhere else.
+    private void extractEquipmentTooltip(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
+        int index = this.equipmentSlotAt(mouseX, mouseY);
+        if (index < 0 || this.minecraft.player == null) return;
+        ItemStack stack = this.minecraft.player.getItemBySlot(EQUIPMENT_SLOTS[index]);
+        if (!stack.isEmpty()) graphics.setTooltipForNextFrame(this.font, stack, mouseX, mouseY);
+    }
+
+    /**
+     * The equipment cell under the pointer, or -1. The column is fixed geometry - four cells of
+     * {@link #EQUIPMENT_SLOT_SIZE} down from the content's top-left corner, the same numbers the page carries -
+     * so the hit test needs no geometry read back from it.
+     */
+    private int equipmentSlotAt(double mouseX, double mouseY) {
+        Position pointer = this.document == null ? new Position(mouseX, mouseY)
+                : this.document.screenToDocumentPosition(new Position(mouseX, mouseY));
+        int left = this.panelLeft + CONTENT_LEFT;
+        int top = this.panelTop + CONTENT_TOP;
+        if (pointer.x < left || pointer.x >= left + EQUIPMENT_SLOT_SIZE) return -1;
+        int offset = (int) (pointer.y - top);
+        if (offset < 0 || offset >= EQUIPMENT_SLOT_SIZE * EQUIPMENT_SLOT_COUNT) return -1;
+        return offset / EQUIPMENT_SLOT_SIZE;
+    }
+
+    // A hovered technique row's tooltip; the row spells out the level id and the tier no row has room for.
+    private void extractTechniqueTooltip(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
+        if (this.techniqueBinding == null) return;
+        ScrollList<TechniqueRow> list = this.techniques;
+        Cell cell = list == null ? null : list.hoveredCell(mouseX, mouseY);
+        if (cell == null || !(cell.entry instanceof TechniqueRow entry)) return;
+        List<Component> lines = this.techniqueBinding.tooltipLines(entry);
+        if (!lines.isEmpty()) graphics.setComponentTooltipForNextFrame(this.font, lines, mouseX, mouseY);
     }
 
     private void showEquipment() {
@@ -584,6 +627,19 @@ public final class InformationPanelScreen extends Screen implements AuiLinkedScr
         element.setTextContent(text);
     }
 
+    /**
+     * Puts a row cell at its rectangle and remembers that rectangle: the hover hit test reads the remembered one,
+     * so it can only ever agree with what the page is really drawing.
+     */
+    private static void place(Cell cell, int left, int top, int width) {
+        cell.left = left;
+        cell.top = top;
+        cell.width = width;
+        put(cell.root, "left", left + "px");
+        put(cell.root, "top", top + "px");
+        put(cell.root, "width", width + "px");
+    }
+
     private static void flag(Element element, String token, boolean present) {
         if (element.getClassList().contains(token) == present) return;
         element.getClassList().toggle(token, present);
@@ -632,6 +688,13 @@ public final class InformationPanelScreen extends Screen implements AuiLinkedScr
         @Nullable
         private String iconKey;
         private boolean visible;
+        /**
+         * The rectangle the last layout wrote into the page, in the list's own coordinates: the hit test reads
+         * these instead of re-deriving the grid, so a hover can only land on a row that is really drawn.
+         */
+        private int left;
+        private int top;
+        private int width;
 
         private Cell(Element root, Element[] parts) {
             this.root = root;
@@ -764,6 +827,29 @@ public final class InformationPanelScreen extends Screen implements AuiLinkedScr
         }
 
         /**
+         * The row cell under the pointer, or null. The pointer is converted the same way {@link #contains} does,
+         * then measured against the rectangles the last layout wrote, so only a drawn row can be hit.
+         */
+        @Nullable
+        private Cell hoveredCell(double mouseX, double mouseY) {
+            Document document = this.root.document;
+            if (document == null) return null;
+            Position pointer = document.screenToDocumentPosition(new Position(mouseX, mouseY));
+            Position position = Position.of(this.root);
+            double localX = pointer.x - position.x;
+            double localY = pointer.y - position.y;
+            if (localX < 0 || localY < 0 || localX >= this.width || localY >= this.height) return null;
+            for (Cell cell : this.cells) {
+                if (!cell.visible || cell.entry == null) continue;
+                if (localX >= cell.left && localX < cell.left + cell.width
+                        && localY >= cell.top && localY < cell.top + this.rowHeight()) {
+                    return cell;
+                }
+            }
+            return null;
+        }
+
+        /**
          * What one kind of row shows: {@code bind} collects the elements it needs, {@code prepare} runs once
          * per rebuild (column widths, diagnostics) and {@code show} writes the visible window.
          */
@@ -863,9 +949,7 @@ public final class InformationPanelScreen extends Screen implements AuiLinkedScr
             String fullValue = entry.value().getString();
             cell.key = fullName + "=" + fullValue;
             cell.entry = entry;
-            put(cell.root, "left", left + "px");
-            put(cell.root, "top", top + "px");
-            put(cell.root, "width", width + "px");
+            place(cell, left, top, width);
             if (!cell.visible) {
                 cell.visible = true;
                 put(cell.root, "display", "block");
@@ -884,8 +968,6 @@ public final class InformationPanelScreen extends Screen implements AuiLinkedScr
      * The technique rows: icon, name in its tier's colour, level, mastery and the mastery bar.
      */
     private static final class TechniqueBinding implements ScrollList.Binding<TechniqueRow> {
-        private final List<Tooltip.Binding> tooltips = new ArrayList<>();
-
         @Override
         @Nullable
         public List<Cell> bind(Document document, String prefix, int count) {
@@ -904,16 +986,9 @@ public final class InformationPanelScreen extends Screen implements AuiLinkedScr
                         || level == null || value == null || bar == null || fill == null || separator == null) {
                     return null;
                 }
-                Cell cell = new Cell(row, new Element[]{item, texture, name, level, value, bar, fill, separator});
-                cells.add(cell);
-                this.tooltips.add(Tooltip.bind(row, () -> this.tooltip(cell), AuiStyles.TOOLTIP));
+                cells.add(new Cell(row, new Element[]{item, texture, name, level, value, bar, fill, separator}));
             }
             return cells;
-        }
-
-        private void close() {
-            for (Tooltip.Binding binding : this.tooltips) binding.close();
-            this.tooltips.clear();
         }
 
         @Override
@@ -941,9 +1016,7 @@ public final class InformationPanelScreen extends Screen implements AuiLinkedScr
             Entry row = entry.row();
             cell.key = HolderHelper.id(row.technique()).toString();
             cell.entry = entry;
-            put(cell.root, "left", left + "px");
-            put(cell.root, "top", top + "px");
-            put(cell.root, "width", width + "px");
+            place(cell, left, top, width);
             if (!cell.visible) {
                 cell.visible = true;
                 put(cell.root, "display", "block");
@@ -1037,17 +1110,16 @@ public final class InformationPanelScreen extends Screen implements AuiLinkedScr
             return mastery == null ? BAR_FALLBACK_COLOR : 0xFF000000 | AuiStyles.readableOnDark(mastery.value().particleColor());
         }
 
-        // A row has no room for the level id or the tier, so both are spelled out here.
-        private String tooltip(Cell cell) {
-            if (!(cell.entry instanceof TechniqueRow entry)) return "";
+        // A row has no room for the level id or the tier, so the tooltip spells both out. Its lines keep their own
+        // colours here: the vanilla renderer draws the components, unlike a page element's flattened text.
+        private List<Component> tooltipLines(TechniqueRow entry) {
             Entry row = entry.row();
             MutableComponent line = this.nameText(row).copy();
             if (row.hasLevel() && row.level() != null)
                 line.append(" ").append(Component.literal(HolderHelper.id(row.level()).toString())
                         .withStyle(ChatFormatting.DARK_GRAY));
-            Component grade = Component.translatable("screen.mxt.technique_panel.grade", this.gradeText(row))
-                    .withStyle(ChatFormatting.GRAY);
-            return line.getString() + "\n" + grade.getString();
+            return List.of(line, Component.translatable("screen.mxt.technique_panel.grade", this.gradeText(row))
+                    .withStyle(ChatFormatting.GRAY));
         }
 
         // The tier's own name and colour. A technique that declares no tier says so, instead of printing a

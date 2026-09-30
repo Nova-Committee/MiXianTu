@@ -1,12 +1,9 @@
-/* 交易站两页共用（顾客 176x167 / 店主 176x221）：底子见 ../base.css。
- * 坐标来自 StationMenu：模板格都是"付出 4x3 + 得到 4x3"，店主多一个展示格与 21 格库存。 */
-
-#panel {
-    position: relative;
-}
+/* 交易站两页共用（顾客 176x167 / 店主 176x221）：底子见 ../common/theme.css。
+ * 坐标来自 StationMenu：模板格都是"付出 4x3 + 得到 4x3"，店主多一个展示格与 21 格库存。
+ * 面板的外观（连同 position: relative，即绝对定位子元素的包含块）全在主题的 .panel 里。 */
 
 /* ── 模板格：顾客从 y=18 起、店主从 y=16 起（menu 的 templateY）；
- *    两页的 left 由各自的行内样式给，坐标同样是"菜单坐标 − 1"（见 base.css 的槽位约定）。 ── */
+ *    两页的 left 由各自的行内样式给，坐标同样是"菜单坐标 − 1"（见 theme.css 的槽位约定）。 ── */
 #costs,
 #rewards {
     width: 72px;

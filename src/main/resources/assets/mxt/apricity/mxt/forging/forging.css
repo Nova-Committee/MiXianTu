@@ -1,6 +1,6 @@
-/* 锻造台：只有这一页自己的尺寸与坐标，底子见 ../base.css。
+/* 锻造台：只有这一页自己的尺寸与坐标，底子见 ../common/theme.css。
  * 旧屏幕是一张贴图 (322x234，取 512x256 的左上角) + Java 现画的格、尺、步骤行，这里全部改成 DOM。
- * 皮肤按 base.css 的扁平半透明：格子是一层很淡的加白，状态只改底色深浅。 */
+ * 皮肤按主题的扁平半透明：格子是一层很淡的加白，状态只改底色深浅。 */
 
 #panel {
     width: 322px;
@@ -9,105 +9,50 @@
 
 /* ── 选择格 ──
  * 旧版用原版 stonecutter 的三张精灵（recipe / recipe_selected / recipe_highlighted）画格，
- * 这里换成三种底色；空格不画（露出下面的凹底）。 */
+ * 这里换成三种底色；空格不画（露出下面的凹底）。皮与 hover / selected 两态在主题的 .cell
+ * （Java 写 hover / selected / icon-item / icon-texture）。 */
 .cell {
-    position: absolute;
-    box-sizing: border-box;
     width: 18px;
     height: 18px;
-    border: 1px solid rgba(255, 255, 255, 0.13);
-    background-color: rgba(255, 255, 255, 0.09);
 }
 
-.cell.hover {
-    background-color: rgba(255, 255, 255, 0.2);
-    border-color: rgba(255, 255, 255, 0.3);
-}
-
-.cell.selected {
-    background-color: rgba(255, 255, 255, 0.28);
-    border-color: rgba(255, 255, 255, 0.42);
-}
-
-.cell.empty {
-    border-color: transparent;
-    background-color: transparent;
-}
-
-/* 步骤格：旧贴图里它们就是 18x18 的槽位凹面（(134,97) 与 (134,119) 各 6 个） */
-.cell.step {
-    border-color: rgba(255, 255, 255, 0.13);
-    background-color: rgba(255, 255, 255, 0.09);
-}
-
+/* 步骤格：旧贴图里它们就是 18x18 的槽位凹面（(134,97) 与 (134,119) 各 6 个），**空格也要画**，
+ * 所以把主题那条 `.cell.empty`（空格不画）按同一组值盖回来。 */
 .cell.step.empty {
-    border-color: rgba(255, 255, 255, 0.13);
-    background-color: rgba(255, 255, 255, 0.09);
+    border-color: rgba(255, 255, 255, 0.21);
+    background-color: rgba(255, 255, 255, 0.14);
 }
 
-/* 格里的两个图标：物品走 <item>、贴图走 <texture>，由格上的类决定画哪一个 */
+/* 格里的两个图标：物品走 <item class="icon">、贴图走 <texture class="tex">，画哪一个由格上的
+ * icon-item / icon-texture 类决定，尺寸与开关都在主题的 .icon / .tex 里（这里不写 display）。 */
 .cell .icon,
 .cell .tex {
-    position: absolute;
     left: 0;
     top: 0;
-    width: 16px;
-    height: 16px;
-    display: none;
 }
 
-.cell.icon-item .icon {
-    display: block;
-}
-
-.cell.icon-texture .tex {
-    display: block;
-}
-
-/* ── 选择格的凹底与滚动条 ──
- * 旧贴图的凹底是褐色（51493A）带一圈深色描边；轨道是右侧那条 12x76 的凹槽。 */
-.grid-recess {
-    background-color: rgba(0, 0, 0, 0.28);
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
-}
-
+/* ── 滚动条：凹底 (7,17) / (250,17) 各 52x76，右边那条 12x76 的轨道在 x=59 / x=302。
+ * 凹底用主题的 .recess、轨道用主题的 .track，这里只给盒子；滑块 top 由 Java 写（页面坐标，见 Java 注释）。 ── */
 .track {
     width: 12px;
     height: 76px;
-    background-color: rgba(0, 0, 0, 0.28);
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
 }
 
-/* 滚动块：旧版是原版 stonecutter 的 scroller 精灵（12x15），top 由 Java 写；
-   参照界面里滚动条就是一条没有轨道的浅色圆头块，这里照那个来。 */
 .scroller {
-    position: absolute;
     left: 59px;
     top: 18px;
     width: 12px;
     height: 15px;
-    box-sizing: border-box;
-    border: 0;
-    border-radius: 2px;
-    background-color: rgba(255, 255, 255, 0.42);
 }
 
 #mt_bar {
     left: 302px;
 }
 
-.scroller.disabled {
-    background-color: rgba(255, 255, 255, 0.16);
-}
-
-/* ── 数值尺：黑框 (80,75) 162x6，内区 160x4；刻度条 top 74、高 8 ── */
+/* ── 数值尺：黑框 (80,75) 162x6，内区 160x4；刻度条 top 74、高 8。槽的外观在主题的 .bar。 ── */
 .meter {
-    position: absolute;
     width: 162px;
     height: 6px;
-    box-sizing: border-box;
-    background-color: rgba(0, 0, 0, 0.34);
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14);
 }
 
 /* 刻度条相对凹槽内区左端（81px）定位，Java 写 left/width/display */

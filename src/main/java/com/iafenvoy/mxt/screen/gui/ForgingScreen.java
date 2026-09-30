@@ -184,13 +184,13 @@ public final class ForgingScreen extends AuiContainerScreen<ForgingMenu> {
         // A cell draws an icon and nothing else, so its tooltip is the only place a method's name appears.
         for (int index = 0; index < GRID_CELLS; index++) {
             int cell = index;
-            this.tooltip(this.blueprintCells.get(index).root, TOOLTIP_OPTIONS, () -> this.blueprintTooltip(cell));
-            this.tooltip(this.methodCells.get(index).root, TOOLTIP_OPTIONS, () -> this.methodTooltip(cell));
+            this.tooltip(this.blueprintCells.get(index).root, () -> this.blueprintTooltip(cell));
+            this.tooltip(this.methodCells.get(index).root, () -> this.methodTooltip(cell));
         }
         for (int index = 0; index < STEPS; index++) {
             int position = index;
-            this.tooltip(this.targetCells.get(index).root, TOOLTIP_OPTIONS, () -> this.stepTooltip(position, true));
-            this.tooltip(this.historyCells.get(index).root, TOOLTIP_OPTIONS, () -> this.stepTooltip(position, false));
+            this.tooltip(this.targetCells.get(index).root, () -> this.stepTooltip(position, true));
+            this.tooltip(this.historyCells.get(index).root, () -> this.stepTooltip(position, false));
         }
         this.text(title, this.getTitle());
         this.text(inventoryLabel, Component.translatable("container.inventory"));
@@ -517,12 +517,12 @@ public final class ForgingScreen extends AuiContainerScreen<ForgingMenu> {
 
     // ------------------------------------------------------------------ tooltips
 
-    private String blueprintTooltip(int cell) {
-        if (this.minecraft.level == null) return "";
+    private List<Component> blueprintTooltip(int cell) {
+        if (this.minecraft.level == null) return List.of();
         Entry entry = this.cellEntry(this.blueprintCells, cell, this.blueprintEntries(), this.blueprintOffs);
-        if (entry == null) return "";
+        if (entry == null) return List.of();
         ForgingBlueprint blueprint = this.menu.blueprint(entry.id());
-        if (blueprint == null) return "";
+        if (blueprint == null) return List.of();
         List<Component> lines = new ArrayList<>();
         lines.add(Component.translatable("tooltip.mxt.forging.materials").withStyle(ChatFormatting.GOLD));
         boolean covered = true;
@@ -550,37 +550,37 @@ public final class ForgingScreen extends AuiContainerScreen<ForgingMenu> {
                     ? Component.translatable("tooltip.mxt.forging.quality_tier.unbounded", name)
                     : Component.translatable("tooltip.mxt.forging.quality_tier", name, tier.maxExtraSteps()));
         }
-        return join(lines);
+        return lines;
     }
 
-    private String methodTooltip(int cell) {
-        if (this.minecraft.level == null) return "";
+    private List<Component> methodTooltip(int cell) {
+        if (this.minecraft.level == null) return List.of();
         Entry entry = this.cellEntry(this.methodCells, cell, this.methodEntries(), this.methodOffs);
-        if (entry == null) return "";
+        if (entry == null) return List.of();
         ForgingMethod method = MxtDatapackRegistries.get(this.minecraft.level.registryAccess(),
                 MxtResourceKeys.FORGING_METHOD, entry.id()).orElse(null);
-        if (method == null) return "";
+        if (method == null) return List.of();
         List<Component> lines = new ArrayList<>();
         lines.add(method.displayName(entry.id()).withStyle(ChatFormatting.GOLD));
         lines.add(Component.translatable("tooltip.mxt.forging.method.delta", TooltipText.signed(method.valueDelta()))
                 .withStyle(ChatFormatting.BLUE));
-        return join(lines);
+        return lines;
     }
 
-    private String stepTooltip(int position, boolean target) {
-        if (this.minecraft.level == null || this.minecraft.player == null) return "";
+    private List<Component> stepTooltip(int position, boolean target) {
+        if (this.minecraft.level == null || this.minecraft.player == null) return List.of();
         int registryId = target ? this.menu.targetStep(position) : this.menu.historyStep(position);
-        if (ForgingMenu.isNone(registryId)) return "";
+        if (ForgingMenu.isNone(registryId)) return List.of();
         Identifier methodId = ForgingMenu.methodId(this.minecraft.player, registryId);
         ForgingMethod method = methodId == null ? null
                 : MxtDatapackRegistries.get(this.minecraft.level.registryAccess(), MxtResourceKeys.FORGING_METHOD, methodId).orElse(null);
-        if (method == null) return "";
+        if (method == null) return List.of();
         List<Component> lines = new ArrayList<>();
         lines.add(method.displayName(methodId).withStyle(ChatFormatting.GOLD));
         // The id, exactly as the item tooltips show it: for a datapack author, and only when they asked.
         if (this.minecraft.options.advancedItemTooltips)
             lines.add(Component.literal(methodId.toString()).withStyle(ChatFormatting.DARK_GRAY));
-        return join(lines);
+        return lines;
     }
 
     @Nullable
@@ -588,15 +588,6 @@ public final class ForgingScreen extends AuiContainerScreen<ForgingMenu> {
         if (cell < 0 || cell >= cells.size()) return null;
         int index = this.startIndex(offs, entries.size()) + cell;
         return index < entries.size() ? entries.get(index) : null;
-    }
-
-    private static String join(List<Component> lines) {
-        StringBuilder builder = new StringBuilder();
-        for (Component line : lines) {
-            if (!builder.isEmpty()) builder.append('\n');
-            builder.append(line.getString());
-        }
-        return builder.toString();
     }
 
     // ------------------------------------------------------------------ geometry

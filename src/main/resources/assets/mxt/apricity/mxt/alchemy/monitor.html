@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta name="aui-viewport" content="mode=gui">
-    <link rel="stylesheet" href="../base.css">
+    <link rel="stylesheet" href="../common/theme.css">
     <link rel="stylesheet" href="alchemy.css">
     <style>
         /* 一格异火槽：沿用旧模板的 (7,70) */
@@ -23,19 +23,19 @@
 </head>
 <body>
 <div class="panel panel-monitor" id="panel">
-    <div class="title" id="title"></div>
-    <div class="line temperature" id="temperature"></div>
-    <div class="line limit" id="limit"></div>
-    <div class="line status" id="status"></div>
-    <div class="progress" id="progress">
-        <div class="progress-bar" id="progress_fill"></div>
+    <div class="t title" id="title"></div>
+    <div class="t line temperature" id="temperature"></div>
+    <div class="t line limit" id="limit"></div>
+    <div class="t line status dim" id="status"></div>
+    <div class="bar progress" id="progress">
+        <div class="fill progress-bar" id="progress_fill"></div>
     </div>
     <container class="machine" id="machine" primary="true" size="1"></container>
     <input class="input" id="target" type="text">
     <div class="button button-secondary apply" id="apply"></div>
     <div class="button start" id="start"></div>
     <div class="button button-danger abort" id="abort"></div>
-    <div class="inventory-label" id="inventory_label"></div>
+    <div class="t label inventory-label" id="inventory_label"></div>
     <container class="inv" id="player_inventory" bind="player">
         <slot slot-index="9" repeat="27"></slot>
         <slot slot-index="0" repeat="9"></slot>

@@ -2,11 +2,11 @@
 <html>
 <head>
     <meta name="aui-viewport" content="mode=gui">
-    <link rel="stylesheet" href="../base.css">
+    <link rel="stylesheet" href="../common/theme.css">
     <link rel="stylesheet" href="wheel_config.css">
 </head>
 <body>
-<!-- 轮盘配置（/wheel）：底子见 ../base.css，坐标与尺寸全部由 WheelConfigurationScreen 现算后写成
+<!-- 轮盘配置（/wheel）：底子见 ../common/theme.css，坐标与尺寸全部由 WheelConfigurationScreen 现算后写成
      行内样式（面板随窗口缩，与旧屏幕一致），这里只有静态结构：两块 6 列的候选池、12 个扇区格、两条滚动条、
      一条分隔线。格子是**画布**不是槽位：图标走 <item>/<texture>，没有图标时画名字；点击与滚轮仍由 Java 命中测试。
      池子每块 42 格 = 6 列 x 7 行（268 高的面板里可见的就是 7 行），滚动靠 Java 平移整块池子、超出可见带的格子加 hidden。 -->

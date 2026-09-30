@@ -1,13 +1,14 @@
 /* 结构预览（阵法 `/formation show`）：这一页只有场景框、上下两条压边和一条时间轴，几何全由 Java 写
- * （见 structure.html 的文件头）。质感沿用 ../base.css：压边 = 面板那块半透明黑、按键 = .button、文字 = .t。
+ * （见 structure.html 的文件头）。质感沿用 ../common/theme.css：压边 = 面板那块半透明黑、按键 = .button、文字 = .t。
  * 唯一的强调色是时间轴已播放的那一段与滑块（沿用锻造台那支黄 #e8d44d），其余一律纯白 / 半透明白。 */
 
-/* ── 上下两条压边：旧版是 0xB00C1014 的实画面，这里取同一个不透明度（0.69）的纯黑。
- *    场景那层暗底（Java 侧 SCENE_BACKDROP）用的是同一个值，所以整幅界面是同一个深度。 ── */
+/* ── 上下两条压边：旧版是 0xB00C1014 的实画面（0.69），这里换成面板那块深灰板（#202020 的 0.85、
+ *    与主题的 .panel 同色同深度）。场景那层暗底（Java 侧 SCENE_BACKDROP = 0xD9202020）用的是同一个值，
+ *    所以整幅界面是一块板。 ── */
 .overlay {
     position: absolute;
     box-sizing: border-box;
-    background-color: rgba(0, 0, 0, 0.69);
+    background-color: rgba(32, 32, 32, 0.85);
 }
 
 /* ── 场景框：通栏一条（上下两条压边之间全是它），**必须保持透明**。
@@ -18,12 +19,12 @@
     background-color: rgba(0, 0, 0, 0);
 }
 
-/* ── 时间轴：4px 的轨道，比 base.css 的 .bar 矮，所以不套 .bar / .fill 那一对（它们按 7px 高设计） ── */
+/* ── 时间轴：4px 的轨道，比主题的 .bar 矮，所以不套 .bar / .fill 那一对（它们按 7px 高设计） ── */
 #timeline {
     position: absolute;
     box-sizing: border-box;
-    background-color: rgba(0, 0, 0, 0.4);
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+    background-color: rgba(0, 0, 0, 0.60);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.19);
 }
 
 #timeline_fill {

@@ -209,7 +209,8 @@ public final class ExchangeStationScreen extends AuiContainerScreen<ExchangeStat
                 this.shownStack = stack;
             }
             if (filled != this.shownFilled) {
-                flag(this.root, "filled", filled);
+                // "Holds an item" is the theme's icon toggle for the cell: `icon-item` is what `cell .icon` shows on.
+                flag(this.root, "icon-item", filled);
                 flag(this.root, "empty", !filled);
                 this.shownFilled = filled;
             }

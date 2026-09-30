@@ -57,10 +57,10 @@ final class MultiblockStructureView {
     private static final float MAX_SCENE_SCALE = 42.0F;
     /**
      * The dark plate under the scene. It stays on this side on purpose: it has to be painted immediately before the
-     * scene's picture-in-picture state, and the page cannot order itself against that. The alpha matches the page's
-     * two overlay bars, so the whole window reads as one plate.
+     * scene's picture-in-picture state, and the page cannot order itself against that. It is the shared panel colour
+     * (grey #202020 at 0.85) so the window reads as one plate.
      */
-    private static final int SCENE_BACKDROP = 0xB0000000;
+    private static final int SCENE_BACKDROP = 0xD9202020;
 
     private boolean paused;
     private int manualStep = 1;

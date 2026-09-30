@@ -1,4 +1,4 @@
-/* 玩家交易：只有这一页自己的尺寸与坐标，质感全在 ../base.css（扁平半透明深色）。
+/* 玩家交易：只有这一页自己的尺寸与坐标，质感全在 ../common/theme.css（扁平半透明深色）。
  *
  * 旧屏幕是一张 176x221 的贴图加两个原版 Button，坐标来自 PlayerTradeMenu：
  *   自己的出价 4x5 (8,18) 起、对方的出价 4x5 (98,18) 起、两颗 72x16 的按钮在 (7,110) / (97,110)、
@@ -26,16 +26,17 @@
     color: rgba(255, 255, 255, 0.66);
 }
 
+/* 悬停时按回主题 `.button` 的**静态**值（两者同值＝这颗没有悬停反馈） */
 #partner_state:hover {
-    background-color: rgba(255, 255, 255, 0.12);
-    border-color: rgba(255, 255, 255, 0.22);
+    background-color: rgba(255, 255, 255, 0.19);
+    border-color: rgba(255, 255, 255, 0.34);
 }
 
 /* ── 确认之后底色更亮（与 `.button:active` 同一套"按下"语汇）：自己的那颗与对方那颗共用一条规则，
  *    所以两边都确认时两个方块长得一样——文字仍是纯白，这是本页唯一的"状态"表达。 ── */
 #accept.accepted,
 #partner_state.accepted {
-    background-color: rgba(255, 255, 255, 0.28);
-    border-color: rgba(255, 255, 255, 0.4);
+    background-color: rgba(255, 255, 255, 0.43);
+    border-color: rgba(255, 255, 255, 0.60);
     color: #ffffff;
 }

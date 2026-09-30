@@ -102,7 +102,7 @@ public final class AlchemyFurnaceScreen extends AuiContainerScreen<AlchemyFurnac
                 return this.fail("machine (slot-index " + index + ")");
             }
             this.cells.put(index, cell);
-            this.tooltipTranslation(cell, this.machineTooltip(index), TOOLTIP_OPTIONS);
+            this.tooltip(cell, () -> this.machineHint(index));
         }
         return true;
     }
@@ -134,11 +134,11 @@ public final class AlchemyFurnaceScreen extends AuiContainerScreen<AlchemyFurnac
         this.click(apply, this::applyTemperature);
         this.click(start, () -> this.send(Action.START, 0));
         this.click(abort, () -> this.send(Action.ABORT, 0));
-        this.tooltip(this.title, TOOLTIP_OPTIONS, this::titleTooltip);
-        this.tooltip(temperature, TOOLTIP_OPTIONS, this::heatTooltip);
-        this.tooltip(limit, TOOLTIP_OPTIONS, this::limitTooltip);
-        this.tooltip(target, TOOLTIP_OPTIONS, this::fieldTooltip);
-        this.tooltip(apply, TOOLTIP_OPTIONS, this::fieldTooltip);
+        this.tooltip(this.title, this::titleTooltip);
+        this.tooltip(temperature, this::heatTooltip);
+        this.tooltip(limit, this::limitTooltip);
+        this.tooltip(target, this::fieldTooltip);
+        this.tooltip(apply, this::fieldTooltip);
         return true;
     }
 
@@ -227,29 +227,29 @@ public final class AlchemyFurnaceScreen extends AuiContainerScreen<AlchemyFurnac
         else this.shownLimitBits = bits;
     }
 
-    private String titleTooltip() {
+    private List<Component> titleTooltip() {
         AlchemyFurnaceView.Status status = this.menu.viewSnapshot().status();
-        return status.furnace().getString() + " / " + status.quality().getString();
+        return List.of(status.furnace().copy().append(" / ").append(status.quality()));
     }
 
-    private String heatTooltip() {
+    private List<Component> heatTooltip() {
         AlchemyFurnaceView.Numbers numbers = this.menu.viewSnapshot().numbers();
-        return Component.translatable("screen.mxt.alchemy.temperature_exact",
-                roundTrip(numbers.temperature()), roundTrip(numbers.target()), roundTrip(numbers.maximum())).getString();
+        return List.of(Component.translatable("screen.mxt.alchemy.temperature_exact",
+                roundTrip(numbers.temperature()), roundTrip(numbers.target()), roundTrip(numbers.maximum())));
     }
 
-    private String limitTooltip() {
+    private List<Component> limitTooltip() {
         AlchemyFurnaceView.Numbers numbers = this.menu.viewSnapshot().numbers();
-        return Component.translatable("screen.mxt.alchemy.limit_exact",
-                roundTrip(numbers.maximum()), roundTrip(numbers.recipeTarget()), roundTrip(numbers.tolerance())).getString();
+        return List.of(Component.translatable("screen.mxt.alchemy.limit_exact",
+                roundTrip(numbers.maximum()), roundTrip(numbers.recipeTarget()), roundTrip(numbers.tolerance())));
     }
 
-    private String fieldTooltip() {
+    private List<Component> fieldTooltip() {
         AlchemyFurnaceView.Numbers numbers = this.menu.viewSnapshot().numbers();
         Component text = this.rejection != null ? this.rejection
                 : this.inflight > 0 ? Component.translatable("screen.mxt.alchemy.temperature_pending", roundTrip(this.submitted))
                 : Component.translatable("screen.mxt.alchemy.temperature_draft", roundTrip(numbers.target()), roundTrip(numbers.maximum()));
-        return text.getString();
+        return List.of(text);
     }
 
     private void syncDraft(double authoritative) {
@@ -341,13 +341,19 @@ public final class AlchemyFurnaceScreen extends AuiContainerScreen<AlchemyFurnac
         return (to - from) & 0xFFFF;
     }
 
-    private String machineTooltip(int index) {
-        return switch (this.menu.view()) {
+    /**
+     * The hint for a machine cell: what goes in it. An occupied cell answers nothing, so the item's own tooltip -
+     * which the vanilla pass has already queued for this frame - is the one that shows.
+     */
+    private List<Component> machineHint(int index) {
+        if (this.menu.getSlot(index).hasItem()) return List.of();
+        String key = switch (this.menu.view()) {
             case MONITOR -> "tooltip.mxt.alchemy.fire";
             case MAIN -> "screen.mxt.alchemy.main";
             case AUXILIARY -> index == 2 ? "screen.mxt.alchemy.catalyst" : "screen.mxt.alchemy.auxiliary";
             case OUTPUT -> "screen.mxt.alchemy.output";
         };
+        return List.of(Component.translatable(key));
     }
 
     private void send(Action action, double temperature) {

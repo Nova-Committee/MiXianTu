@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta name="aui-viewport" content="mode=gui">
-    <link rel="stylesheet" href="../base.css">
+    <link rel="stylesheet" href="../common/theme.css">
     <link rel="stylesheet" href="alchemy.css">
     <style>
         /* 四格产物：18x18 一格、间距 4px，沿用旧模板的居中位置 */
@@ -23,9 +23,9 @@
 </head>
 <body>
 <div class="panel panel-part" id="panel">
-    <div class="title" id="title"></div>
+    <div class="t title" id="title"></div>
     <container class="machine" id="machine" primary="true" size="4"></container>
-    <div class="inventory-label" id="inventory_label"></div>
+    <div class="t label inventory-label" id="inventory_label"></div>
     <container class="inv" id="player_inventory" bind="player">
         <slot slot-index="9" repeat="27"></slot>
         <slot slot-index="0" repeat="9"></slot>

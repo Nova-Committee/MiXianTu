@@ -1,0 +1,374 @@
+/* 唯一的主题文件 —— **dark**：深灰半透明底（面板 #202020）、纯白位图字、没有浮雕与渐变。
+ * 每个页面链的都是这一个名字，页面自己的那份样式只写**几何**（left/top/width/height、字号）与页面特有的
+ * 东西（布局、动画、按状态改的类），颜色 / 描边 / 不透明度 / 字体一律在这里：
+ *
+ *     <link rel="stylesheet" href="../common/theme.css">   <!-- 页面都在 mxt/<页名>/ 下 -->
+ *     <link rel="stylesheet" href="<页名>.css">
+ *
+ * 顺序是"主题在前、页面在后"，同权重下页面赢，所以页面要改某个主题值时不用抄一遍整条规则——但**别抄**：
+ * 真要不一样的观感就在页面里写明"这一条与主题不同、为什么"。
+ * 轮盘（mxt/wheel/）也链这一份（拿画布与 .icon / .tex / .track 这些工具类），它自己的扇与光环自成一套。
+ *
+ * ── 调色板（每一档都比参照的界面高约 1.5 倍，按"所有界面统一调高不透明度"整体抬过一次；
+ *    **面板底色随后又单独动过两次**：0.68 → 0.85（0.68 时身后的世界透出来太多，同一块面板在草地与雪原下
+ *    看着是两个深度），颜色从纯黑改成深灰 `#202020`（用户要求"灰一点"，透明度不变）。叠在面板上的那些层
+ *    **没有跟着动**：加白层（槽底 / 按钮 / 格子）在更暗的底上对比反而更强，压黑层（凹槽）的差值会小一点；
+ *    要一起再抬一档时说一声。）──
+ *   面板 .panel            深灰 #202020 的 0.85 + inset 1px 加白 0.31
+ *   子面板 .subpanel       加白 0.10 + inset 0.16
+ *   凹槽 .recess / .track  纯黑 0.43 + inset 0.16
+ *   格子 .cell / .frame / slot   底 加白 0.14、描边 0.21；悬停 0.31 / 0.46；选中 0.43 / 0.62
+ *   按钮 .button           底 加白 0.19、描边 0.34；悬停 0.31 / 0.49；按下 0.11 / 0.28；停用 0.07 / 0.16
+ *   页签 .tab              底 0.10 / 描边 0.34 / 字 0.70；悬停 0.22；选中 0.34 / 0.52
+ *   条 .bar 纯黑 0.52 + inset 0.19；填充 .fill 加白 0.76
+ *   输入框 .input          纯黑 0.46 + 描边 0.28；悬停 0.46；聚焦 0.68
+ *   文字 纯白；次要 .dim / .label 0.66；标题 .title 加粗
+ * 抬的时候**深浅层次要一起抬**（凹槽 / 槽底 / 按钮是一组），只抬面板会把格子与按钮的对比压掉——面板这一档
+ * 是唯一单独抬过的例外（见上）；
+ * **文字色的 alpha 不在这套里**（`color: rgba(255, 255, 255, 0.66)` 那类是次要文字的亮度，不是界面底）。
+ * 主题之外还有两处**同款底色**要跟着改：`MultiblockStructureView.SCENE_BACKDROP`（Java，`0xD9202020`，与
+ * 结构预览的 `.overlay` 同色同深度）、轮盘页的 `.sector .fill`（与面板同色同档）。
+ *
+ * ── 几条硬约定（踩过的坑，别在页面里改回去）──
+ * 1. 面板 **不描边**：ApricityUI 的 absolute 包含块是元素的 padding box，给面板加 `border` 会把里面的每一个
+ *    坐标整体推进去，页面坐标就没法和旧屏幕逐像素对齐。边框一律用 `box-shadow: inset` 画——它不参与盒模型。
+ * 2. 文字：`font-family: initial` 是"用 Minecraft 自带位图字体绘制"的开关（写 `unset` 只会继承），
+ *    `font-size: 9px` = 原版 1×。位图字形从行框顶画，所以文本盒 `top` 就是旧版 graphics.text 的 y。
+ *    `white-space: nowrap` 让超长文字溢出而不是折行（原版也从不截断）。
+ * 3. 槽位壳只管那一层格子底：18x18、border-box、1px 描边；物品 16x16 由原版画在 +1 处。
+ *    `background-image: none` 是必需的——ApricityUI 的用户代理层给 `slot` 挂了一张
+ *    `apricityui/img/gui/area.png`（原版凹面），只写 `background-color` 是盖不掉它的。
+ * 4. 容器必须带 `primary="true"` 才会被 ApricityUI 展开，否则 `repeat` 不生效、`slot-index` 也不归一化。
+ * 5. 别用 `overflow: hidden` 裁内容盒：实机上它会画出一个盒大小的暗块。要裁就裁在 Java 侧（截断文字）。
+ *    例外只有两处：**根元素**（`html, body` 上的 `overflow: hidden` 是"关掉整页滚动"的开关——ApricityUI 的
+ *    viewport 滚动器取根元素的 overflow、兜底到 body，见 `ScrollModel.resolveViewportOverflow`，
+ *    `allowsViewportUserScroll` 见 hidden/clip 就拒，于是既没有滚动条也不吃滚轮）与 `.input`（输入框自己）。
+ * 6. `.icon` / `.tex` 的 `display` **只归这里**：页面规则可以给它们写 left/top 这类偏移，但不许写 `display`
+ *    —— 同权重下后写的页面规则会把下面那条开关压掉，图标就再也不出现了。
+ * 7. 皮肤只有这一套，**别再用 ApricityUI 自带的 `ae` / `ore` 主题**：那套是网页尺度（按钮 42px、槽位 44px、
+ *    字号 16px），压回来比直接写还长。 */
+
+/* 整页不滚动：页面内容永远该待在视口里，能滚会把面板连同槽位一起挪走。 */
+html,
+body {
+    overflow: hidden;
+}
+
+/* 画布：居中（面板绝对定位的页面自己在 body 上写 `display: block` 盖掉它）、不选中、不画底。
+ * 界面文字不可选中：user-select 不在 AUI 的继承属性表里，它走的是 Interaction.getUserSelect
+ * （从自己往上找第一个不是 unset 的值），所以写在 body 上就覆盖整页。输入框要自己写回 text（见 .input）。 */
+body {
+    width: 100vw;
+    height: 100vh;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    user-select: none;
+}
+
+/* ── 面板：扁平半透明深灰板 + 1px 内嵌亮边（深灰而不是纯黑：纯黑在暗处读起来像一块洞，灰一档才像"板"）── */
+.panel {
+    position: relative;
+    box-sizing: border-box;
+    background-color: rgba(32, 32, 32, 0.85);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.31);
+}
+
+/* ── 面板里再挖一层（灵气面板、列表区这类子面板）── */
+.subpanel {
+    position: absolute;
+    box-sizing: border-box;
+    background-color: rgba(255, 255, 255, 0.10);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16);
+}
+
+/* ── 凹槽：比面板更暗（选择格的底、数值尺、进度条底都是它） ── */
+.recess {
+    position: absolute;
+    box-sizing: border-box;
+    background-color: rgba(0, 0, 0, 0.43);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16);
+}
+
+/* ── 文字：一行 9px 的盒子，盒子顶就是字顶 ── */
+.t {
+    position: absolute;
+    display: flex;
+    align-items: center;
+    font-family: initial;
+    font-size: 9px;
+    line-height: 9px;
+    height: 9px;
+    color: #ffffff;
+    white-space: nowrap;
+}
+
+/* 次要文字（标签、说明、数值单位） */
+.t.dim,
+.dim,
+.label {
+    color: rgba(255, 255, 255, 0.66);
+}
+
+/* 右对齐的一格：flex 的末端对齐（AUI 的 text-align 在 flex 里不保证生效） */
+.t-end {
+    justify-content: flex-end;
+}
+
+.t-center {
+    justify-content: center;
+}
+
+.title {
+    font-weight: bold;
+}
+
+/* ── 槽位：一层很淡的格子底，物品由原版画在它上面 ── */
+slot {
+    position: relative;
+    box-sizing: border-box;
+    width: 18px;
+    height: 18px;
+    border: 1px solid rgba(255, 255, 255, 0.21);
+    background-color: rgba(255, 255, 255, 0.14);
+    background-image: none;
+}
+
+slot:hover {
+    background-color: rgba(255, 255, 255, 0.31);
+    border-color: rgba(255, 255, 255, 0.46);
+}
+
+/* ── 容器：grid 排布，格距 0（格子本身就是 18px，即原版间距） ── */
+.grid {
+    position: absolute;
+    display: grid;
+    gap: 0;
+}
+
+/* 玩家背包：3 行主区 + 一条 4px 空轨道 + 1 行快捷栏（原版行顶 p/p+18/p+36、快捷栏 p+58）。
+ * **只写排布、不带 left / top**：坐标由各页自己给，绝对定位的容器一旦拿不到 left 会退回静态位置（贴面板左沿），
+ * 和旁边的标签错开十几像素。 */
+.inv {
+    position: absolute;
+    display: grid;
+    gap: 0;
+    width: 162px;
+    grid-template-columns: 9;
+    grid-template-rows: 18px 18px 18px 4px 18px;
+}
+
+/* 快捷栏那 9 格（slot-index 0..8）跳过空轨道落在第 5 行 */
+.inv slot[slot-index="0"],
+.inv slot[slot-index="1"],
+.inv slot[slot-index="2"],
+.inv slot[slot-index="3"],
+.inv slot[slot-index="4"],
+.inv slot[slot-index="5"],
+.inv slot[slot-index="6"],
+.inv slot[slot-index="7"],
+.inv slot[slot-index="8"] {
+    grid-row: 5;
+}
+
+/* ── 按钮：扁平一块，只有底色深浅分状态（没有渐变、没有浮雕） ── */
+.button {
+    position: absolute;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(255, 255, 255, 0.34);
+    background-color: rgba(255, 255, 255, 0.19);
+    color: #ffffff;
+    font-family: initial;
+    font-size: 9px;
+    line-height: 9px;
+    white-space: nowrap;
+    user-select: none;
+}
+
+.button:hover {
+    background-color: rgba(255, 255, 255, 0.31);
+    border-color: rgba(255, 255, 255, 0.49);
+}
+
+.button:active {
+    background-color: rgba(255, 255, 255, 0.11);
+    border-color: rgba(255, 255, 255, 0.28);
+}
+
+.button[disabled],
+.button[disabled]:hover,
+.button[disabled]:active {
+    background-color: rgba(255, 255, 255, 0.07);
+    border-color: rgba(255, 255, 255, 0.16);
+    color: rgba(255, 255, 255, 0.35);
+}
+
+/* 危险动作的语义底色（丹炉的中止）：悬停与按下仍由上面那两条更具体的规则接管。 */
+.button-danger {
+    border-color: rgba(224, 84, 79, 0.60);
+    background-color: rgba(224, 84, 79, 0.28);
+}
+
+/* ── 页签：与按钮同一套语汇，三档底色；宽度 / 高度 / 位置属于页面 ── */
+.tab {
+    position: absolute;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(255, 255, 255, 0.34);
+    background-color: rgba(255, 255, 255, 0.10);
+    color: rgba(255, 255, 255, 0.7);
+    font-family: initial;
+    font-size: 9px;
+    line-height: 9px;
+    white-space: nowrap;
+    user-select: none;
+}
+
+.tab:hover {
+    background-color: rgba(255, 255, 255, 0.22);
+    color: #ffffff;
+}
+
+.tab.selected {
+    background-color: rgba(255, 255, 255, 0.34);
+    border-color: rgba(255, 255, 255, 0.52);
+    color: #ffffff;
+    font-weight: bold;
+}
+
+/* ── 列表行：整行的高亮块（人物信息的数值行与功法行都用它），行高与坐标属于页面 ──
+ * 深色面板上的高亮一律是"加白"：悬停一档、选中更亮一档（与 .cell 同一套语汇）。 */
+.row {
+    background-color: transparent;
+}
+
+.row:hover {
+    background-color: rgba(255, 255, 255, 0.16);
+}
+
+.row.selected {
+    background-color: rgba(255, 255, 255, 0.31);
+}
+
+/* ── 格子：`.cell` 是**有状态的**格子（可点、可选中），`.frame` 只是**静态的**格子底 ──
+ * 两者的皮一样（很淡的加白 + 1px 描边），尺寸与位置属于页面。
+ * `.cell` 的三种状态都用类名表达：`:hover` 兜指针、`.hover` / `.selected` / `.empty` 由 Java 写
+ * （Java 表达"指针在它上面"时也不必修第二条规则，`:hover` 一条管两支）。 */
+.cell,
+.frame {
+    position: absolute;
+    box-sizing: border-box;
+    border: 1px solid rgba(255, 255, 255, 0.21);
+    background-color: rgba(255, 255, 255, 0.14);
+}
+
+.cell:hover,
+.cell.hover {
+    background-color: rgba(255, 255, 255, 0.31);
+    border-color: rgba(255, 255, 255, 0.46);
+}
+
+.cell.selected {
+    background-color: rgba(255, 255, 255, 0.43);
+    border-color: rgba(255, 255, 255, 0.62);
+}
+
+/* 空格不画（露出下面的凹底）；"空格也要画"的格子（锻造台的步骤格）在页面里按 `.cell.<自己的类>.empty` 盖回来。 */
+.cell.empty {
+    border-color: transparent;
+    background-color: transparent;
+}
+
+/* ── 图标位：物品走 `<item class="icon">`、贴图走 `<texture class="tex">` ──
+ * 画哪一个由**父元素**上的 `icon-item` / `icon-texture` 类决定（Java 只在变化时写一个类）。
+ * 开关只在这里，页面只写偏移（见文件头第 6 条）。 */
+.icon,
+.tex {
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    display: none;
+}
+
+.icon-item .icon,
+.icon-texture .tex {
+    display: block;
+}
+
+/* ── 滚动条：暗凹槽轨道 + 一条浅色圆头滑块（尺寸、位置与滑块长度由页面 / Java 写） ── */
+.track {
+    position: absolute;
+    box-sizing: border-box;
+    background-color: rgba(0, 0, 0, 0.43);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16);
+}
+
+.scroller,
+.thumb {
+    position: absolute;
+    box-sizing: border-box;
+    border: 0;
+    border-radius: 2px;
+    background-color: rgba(255, 255, 255, 0.62);
+}
+
+.scroller.disabled,
+.thumb.disabled {
+    background-color: rgba(255, 255, 255, 0.25);
+}
+
+/* ── 文本输入框：文字由 Input 自己垂直居中（(内容高 − lineHeight)/2），光标与选区高度也取 lineHeight，
+ *    所以 line-height 就是"文字与光标有多高"，给 9px 才和原版字形同高；`overflow: hidden` 是输入框自己的
+ *    裁剪（唯一的例外之一，见文件头第 5 条）；`user-select: text` 见 body 那条注释。 ── */
+.input {
+    position: absolute;
+    box-sizing: border-box;
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    background-color: rgba(0, 0, 0, 0.46);
+    color: #ffffff;
+    font-family: initial;
+    font-size: 9px;
+    line-height: 9px;
+    user-select: text;
+    overflow: hidden;
+}
+
+.input:hover {
+    border-color: rgba(255, 255, 255, 0.46);
+}
+
+.input:focus {
+    border-color: rgba(255, 255, 255, 0.68);
+    outline: 1px solid rgba(255, 255, 255, 0.31);
+    outline-offset: 0;
+}
+
+/* ── 进度条 / 数值条（灵气面板那种：暗槽 + 一条填充；填充色由 Java 按灵气粒子色改内联样式） ── */
+.bar {
+    position: absolute;
+    box-sizing: border-box;
+    background-color: rgba(0, 0, 0, 0.52);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.19);
+}
+
+.fill {
+    position: absolute;
+    left: 2px;
+    top: 2px;
+    width: 0;
+    height: 3px;
+    background-color: rgba(255, 255, 255, 0.76);
+}
+
+/* 提示框**不在这一份里**：所有界面（含容器页与整页交给 ApricityUI 的那几个）都用原版渲染器画提示框，
+ * 页面元素上的 `Tooltip.bind` / `.aui-tooltip` 一律不用——AUI 那套是网页尺度的白底深字盒（11px 雅黑、
+ * 固定宽度），和这里的位图字体对不上，所以 Java 侧只登记"哪个元素、哪些行"，画由 `GuiGraphicsExtractor`
+ * 负责（`AuiContainerScreen.extractTooltip`，以及人物信息 / 结构预览 / 轮盘各自那一份）。 */

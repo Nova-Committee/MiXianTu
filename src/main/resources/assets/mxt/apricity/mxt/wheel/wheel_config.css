@@ -1,23 +1,19 @@
 /* 轮盘配置（/wheel）：只有静态质感与格子内部的排布，面板/候选池/扇区行/滚动条/分隔线的坐标与尺寸
  * 全部由 WheelConfigurationScreen 现算后写成行内样式（面板随窗口缩，与旧屏幕一致）。
- * 皮肤与其他页面同一套：扁平半透明深色（见 ../base.css）。 */
+ * 皮肤的底子与其他页面同一套（../common/theme.css）；这一页自己的名字、编号、按键名都是 span，
+ * 不是主题的 `.t`，所以字体在根上给一次。 */
 
-/* 这个页面里的名字、编号、按键名都是 span，不是 .t，所以字体在这里给一次。
-   `display: block` 也是必需的：面板绝对定位在 Java 算出的左上角，base.css 的 flex 居中会把它挪偏。 */
+/* `display: block` 是必需的：面板绝对定位在 Java 算出的左上角，主题的 flex 居中会把它挪偏。 */
 body {
     display: block;
-    background: none;
     font-family: initial;
     font-size: 9px;
     line-height: 9px;
 }
 
+/* 主题的 .panel 是 position: relative，这里换成绝对定位 */
 #panel {
     position: absolute;
-}
-
-.title {
-    color: #ffffff;
 }
 
 .heading,
@@ -34,41 +30,21 @@ body {
     position: absolute;
 }
 
-/* ── 格子：22x22，图标 16x16 居中；悬停是更亮的边框、选中是更亮的底色（旧版是两张 22px 精灵） ── */
+/* ── 格子：22x22，图标 16x16 居中（皮与悬停、选中两态在主题的 .cell，Java 写 selected / icon-item /
+ * icon-texture / plain / stale 这些类），这里只给尺寸。 ── */
 .cell {
-    position: absolute;
-    box-sizing: border-box;
     width: 22px;
     height: 22px;
-    border: 1px solid rgba(255, 255, 255, 0.13);
-    background-color: rgba(255, 255, 255, 0.09);
     cursor: pointer;
 }
 
-.cell:hover {
-    border-color: rgba(255, 255, 255, 0.4);
-}
-
-.cell.selected {
-    border-color: rgba(255, 255, 255, 0.42);
-    background-color: rgba(255, 255, 255, 0.28);
-}
-
-/* 两个图标元素默认都不画：物品走 <item>（Java 推栈），贴图走 <texture>（Java 写 src），
-   都没有就画名字。三者由格子上的 icon-item / icon-texture / plain 类决定，Java 只在变化时改。 */
+/* 两个图标元素：物品走 <item>（Java 推栈），贴图走 <texture>（Java 写 src），
+   都没有就画名字。三者由格子上的 icon-item / icon-texture / plain 类决定，Java 只在变化时改；
+   尺寸与开关在主题的 .icon / .tex，这里只给居中的偏移。 */
 .cell .icon,
 .cell .tex {
-    position: absolute;
     left: 2px;
     top: 2px;
-    width: 16px;
-    height: 16px;
-    display: none;
-}
-
-.cell.icon-item .icon,
-.cell.icon-texture .tex {
-    display: block;
 }
 
 .cell .name {
@@ -139,23 +115,22 @@ body {
     color: #ffffff;
 }
 
-/* ── 滚动条：3px 的暗轨道 + 浅色滑块（位置与高度由 Java 写） ── */
+/* ── 滚动条：3px 的细轨道 + 浅色滑块（位置与高度由 Java 写）。
+ * 细轨道是主题 .track 的变体：3px 宽画不下那 1px 的 inset 描边，所以显式按掉它、底色也反过来用加白。 ── */
 .track {
-    position: absolute;
     width: 3px;
-    background-color: rgba(255, 255, 255, 0.1);
+    box-shadow: none;
+    background-color: rgba(255, 255, 255, 0.16);
 }
 
 .thumb {
-    position: absolute;
     left: 0;
     width: 3px;
-    background-color: rgba(255, 255, 255, 0.42);
 }
 
 /* ── 分隔线：候选池与扇区行之间的一条 1px 加白线（旧版是两条 1px 的浮雕线） ── */
 .divider {
     position: absolute;
     height: 1px;
-    background-color: rgba(255, 255, 255, 0.14);
+    background-color: rgba(255, 255, 255, 0.22);
 }

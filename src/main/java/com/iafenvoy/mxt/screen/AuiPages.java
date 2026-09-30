@@ -52,11 +52,11 @@ public final class AuiPages {
     public static final List<String> WHEEL_FILES =
             List.of("wheel.css", "wheel.html", "wheel_config.css", "wheel_config.html");
     /**
-     * The stylesheet the vanilla-skinned pages share; it sits beside the page folders, so a page links
-     * {@code ../base.css}.
+     * The one theme every page links; it sits in its own folder beside the page folders, so a page links
+     * {@code ../common/theme.css}.
      */
-    public static final String ROOT = "mxt";
-    public static final List<String> ROOT_FILES = List.of("base.css");
+    public static final String COMMON = "mxt/common";
+    public static final List<String> COMMON_FILES = List.of("theme.css");
     /**
      * The forge table.
      */
@@ -98,7 +98,7 @@ public final class AuiPages {
     }
 
     private static final List<Folder> FOLDERS = List.of(
-            new Folder(ROOT, ROOT_FILES),
+            new Folder(COMMON, COMMON_FILES),
             new Folder(ALCHEMY, ALCHEMY_FILES),
             new Folder(WHEEL, WHEEL_FILES),
             new Folder(FORGING, FORGING_FILES),

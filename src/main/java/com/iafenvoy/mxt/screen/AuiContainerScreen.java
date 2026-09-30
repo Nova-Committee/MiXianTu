@@ -8,7 +8,6 @@ import com.sighs.apricityui.init.Element;
 import com.sighs.apricityui.layout.Position;
 import com.sighs.apricityui.layout.Size;
 import com.sighs.apricityui.screen.AuiLinkedScreen;
-import com.sighs.apricityui.ui.Tooltip;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.input.KeyEvent;
@@ -64,12 +63,6 @@ public abstract class AuiContainerScreen<T extends AbstractContainerMenu> extend
      * reports once that it cannot read the page.
      */
     private static final int GEOMETRY_WARN_FRAMES = 20;
-    /**
-     * ApricityUI's own tooltip mounts an 11px web-scale style of its own; {@link AuiStyles#TOOLTIP} is
-     * appended after it inside the same inline block, so it wins without depending on the stylesheet cascade.
-     */
-    protected static final Tooltip.Options TOOLTIP_OPTIONS = AuiStyles.TOOLTIP;
-
     @Nullable
     private Document document;
     @Nullable
@@ -88,7 +81,7 @@ public abstract class AuiContainerScreen<T extends AbstractContainerMenu> extend
      * Menu slot index to the page cell that draws behind it.
      */
     protected final Map<Integer, Element> cells = new LinkedHashMap<>();
-    private final List<Tooltip.Binding> tooltips = new ArrayList<>();
+    private final List<TooltipAnchor> tooltipAnchors = new ArrayList<>();
     private final AuiPages.StyleHold styleHold = new AuiPages.StyleHold();
 
     protected int panelLeft, panelTop;
@@ -195,8 +188,7 @@ public abstract class AuiContainerScreen<T extends AbstractContainerMenu> extend
     }
 
     private void clearBindings() {
-        for (Tooltip.Binding binding : this.tooltips) binding.close();
-        this.tooltips.clear();
+        this.tooltipAnchors.clear();
         this.cells.clear();
         this.pageBound = false;
         this.geometryReady = false;
@@ -327,12 +319,12 @@ public abstract class AuiContainerScreen<T extends AbstractContainerMenu> extend
         element.addEventListener("click", event -> action.run());
     }
 
-    protected void tooltip(Element element, Tooltip.Options options, Supplier<String> text) {
-        this.tooltips.add(Tooltip.bind(element, text, options));
-    }
-
-    protected void tooltipTranslation(Element element, String key, Tooltip.Options options) {
-        this.tooltips.add(Tooltip.bindTranslation(element, key, options));
+    /**
+     * Registers a hover tooltip for one page element. The lines go through the vanilla renderer like every other
+     * tooltip in the mod, so the page's own web-scale box never appears.
+     */
+    protected void tooltip(Element element, Supplier<List<Component>> lines) {
+        this.tooltipAnchors.add(new TooltipAnchor(element, lines));
     }
 
     /**
@@ -514,6 +506,38 @@ public abstract class AuiContainerScreen<T extends AbstractContainerMenu> extend
         super.extractSlot(graphics, slot, mouseX, mouseY);
     }
 
+    /**
+     * The registered page tooltips, in the vanilla renderer. {@code super} answers the hovered slot first, and a
+     * tooltip already queued for this frame wins over a later one, so an item under the pointer keeps its own box
+     * (which is why a cell's own hint has to check whether the slot is occupied).
+     */
+    @Override
+    protected void extractTooltip(@NonNull GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
+        super.extractTooltip(graphics, mouseX, mouseY);
+        Document current = this.document;
+        if (current == null || !this.geometryReady || this.tooltipAnchors.isEmpty()) return;
+        Position pointer = current.screenToDocumentPosition(new Position(mouseX, mouseY));
+        for (TooltipAnchor anchor : this.tooltipAnchors) {
+            if (!inside(anchor.anchor(), pointer)) continue;
+            List<Component> lines = anchor.lines().get();
+            if (lines == null || lines.isEmpty()) return;
+            graphics.setComponentTooltipForNextFrame(this.font, lines, mouseX, mouseY);
+            return;
+        }
+    }
+
+    /**
+     * Whether a pointer in the page's own coordinates is inside an element's live rectangle. The committed rect is
+     * deliberately not used: ApricityUI re-commits one only when that element's own dependencies change.
+     */
+    private static boolean inside(Element element, Position pointer) {
+        Size size = Size.of(element);
+        if (size.width() <= 0 || size.height() <= 0) return false;
+        Position at = Position.of(element);
+        return pointer.x >= at.x && pointer.x < at.x + size.width()
+                && pointer.y >= at.y && pointer.y < at.y + size.height();
+    }
+
     @Override
     protected void extractLabels(@NonNull GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
     }
@@ -565,5 +589,11 @@ public abstract class AuiContainerScreen<T extends AbstractContainerMenu> extend
             this.document = null;
         }
         super.removed();
+    }
+
+    /**
+     * One page element that answers tooltip lines while the pointer is inside it.
+     */
+    private record TooltipAnchor(Element anchor, Supplier<List<Component>> lines) {
     }
 }

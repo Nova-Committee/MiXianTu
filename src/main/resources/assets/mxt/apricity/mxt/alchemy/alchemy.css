@@ -1,14 +1,14 @@
-/* 丹炉四页共用样式：底子见 ../base.css（扁平半透明深色，与锻造台 / 交易站 / 人物信息同一套皮肤）。
- * 四个页面 <link> base.css 再链这一份；不再使用 ApricityUI 自带的 ore 主题
- * （它的网页尺度：按钮 42px、槽位 44px、字号 16px、自带像素字体，压回来比直接写还长）。
+/* 丹炉四页共用样式：底子见 ../common/theme.css（全部页面共用的那一份 dark 主题）。
+ * 四个页面都链 theme.css，再链这一份；**这里只剩尺寸与坐标**——颜色、字体、按钮与进度条的外观全在主题里。
+ * 不再使用 ApricityUI 自带的 ore 主题（它的网页尺度：按钮 42px、槽位 44px、字号 16px、自带像素字体，
+ * 压回来比直接写还长）。
  *
  * 坐标全部相对 #panel 的 padding box（ApricityUI 的 absolute 包含块就是它）。
  * 画布：监控 188x211、三个仓页 188x146 是旧皮（7px 九宫格边框）下的内容盒；槽位是 18x18 的
  * <slot>，物品 16x16 落在格心，所以 Java 写 Slot.x/y 时要 +1。
  *
- * 文字沿用 base.css 的说法：`font-family: initial` 才是"用游戏自带位图字体画"（写 unset 只会继承），
- * 这个后端下 font-size 是缩放、基准 9px = 原版 1×；位图字形从行框顶画，所以文本盒要靠
- * `display: flex; align-items: center` 让 9px 的行框在 11px 的内容盒里居中。 */
+ * 文字用主题的 `.t`（位图 9px、盒子顶就是字顶）；位图字形从行框顶画，11px 的内容盒因此靠
+ * `display: flex; align-items: center`（.t 自带）把 9px 的行框居中。次要文字挂 `.dim` / `.label`。 */
 
 .panel-monitor {
     width: 202px;
@@ -20,33 +20,18 @@
     height: 160px;
 }
 
-/* ── 文本 ── */
-.title,
-.line,
-.inventory-label {
-    display: flex;
-    align-items: center;
-    font-family: initial;
-    font-size: 9px;
-    line-height: 9px;
-}
-
+/* ── 文本：外观在 .t 里，这里只给位置与高度（旧模板的行高是 11px，比 9px 的字高一档） ── */
 .title {
-    position: absolute;
     left: 7px;
     top: 7px;
     width: 174px;
     height: 11px;
-    color: #ffffff;
-    font-weight: bold;
 }
 
 .line {
-    position: absolute;
     left: 7px;
     width: 174px;
     height: 11px;
-    color: #ffffff;
 }
 
 .temperature {
@@ -59,62 +44,33 @@
 
 .status {
     top: 46px;
-    color: rgba(255, 255, 255, 0.66);
 }
 
-/* ── 炉温进度：暗槽 + 浅色填充 ── */
+/* ── 炉温进度：暗槽 + 浅色填充（外观在主题的 .bar / .fill，这里只给盒子与被 Java 写的宽度 100% 换算） ── */
 .progress {
-    position: absolute;
     left: 7px;
     top: 60px;
     width: 174px;
     height: 6px;
-    box-sizing: border-box;
-    background-color: rgba(0, 0, 0, 0.34);
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
 }
 
 .progress-bar {
+    left: 0;
+    top: 0;
     height: 100%;
-    background-color: rgba(255, 255, 255, 0.55);
 }
 
-/* ── 目标炉温输入框 ── */
+/* ── 目标炉温输入框：外观在主题的 .input，这里只给位置与内边距 ── */
 .input {
-    position: absolute;
     left: 29px;
     top: 70px;
     width: 104px;
     height: 18px;
-    box-sizing: border-box;
     padding: 0 3px;
-    border: 1px solid rgba(255, 255, 255, 0.18);
-    background-color: rgba(0, 0, 0, 0.3);
-    color: #ffffff;
-    font-family: initial;
-    font-size: 9px;
-    line-height: 9px;
-    /* 输入框的文本由 Input 自己做垂直居中（(内容高 - lineHeight)/2），光标与选区高度也取 lineHeight，
-       所以这里的 line-height 就是"文字与光标有多高"，给 9px 才和原版字形同高。 */
-    /* body 上的 user-select: none 会顺着祖先链盖到这里，而 Input 的拖选与 Ctrl+A 要先过
-       canSelectText（= AbstractText 里的 Interaction.isUserSelectable），所以在输入框上写回 text。 */
-    user-select: text;
-    overflow: hidden;
 }
 
-.input:hover {
-    border-color: rgba(255, 255, 255, 0.3);
-}
-
-.input:focus {
-    border-color: rgba(255, 255, 255, 0.45);
-    outline: 1px solid rgba(255, 255, 255, 0.2);
-    outline-offset: 0;
-}
-
-/* ── 按钮：外观与状态全在 base.css 的 .button 里，这里只补位置、尺寸与高度（base 的 .button 不写高度，
-   高度属于页面：这三颗都是原版 18px）。两个"危险/次要"按钮加一层很淡的语义底色，悬停与禁用仍由
-   base.css 的更具体规则接管。 ── */
+/* ── 三颗按钮：外观与状态全在主题的 .button 里，这里只补位置、尺寸与高度（主题的 .button 不写高度，
+ * 高度属于页面：这三颗都是原版 18px）。中止那颗的语义底色是主题的 .button-danger。 ── */
 .apply {
     left: 137px;
     top: 70px;
@@ -136,11 +92,6 @@
     height: 18px;
 }
 
-.button-danger {
-    border-color: rgba(224, 84, 79, 0.4);
-    background-color: rgba(224, 84, 79, 0.18);
-}
-
 /* ── 容器与背包：位置仍由各页的 <style> 给 top/left ── */
 .machine {
     position: absolute;
@@ -148,11 +99,9 @@
 }
 
 .inventory-label {
-    position: absolute;
     left: 13px;
     width: 162px;
     height: 10px;
-    color: rgba(255, 255, 255, 0.66);
 }
 
 /* 玩家背包：top 由各页的行内样式给（监控 127、三个仓页 64），**left 必须在这里给**——
