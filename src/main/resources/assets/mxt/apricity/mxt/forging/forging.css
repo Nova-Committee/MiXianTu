@@ -7,46 +7,41 @@
     height: 234px;
 }
 
-/* ── 选择格 ──
- * 旧版用原版 stonecutter 的三张精灵（recipe / recipe_selected / recipe_highlighted）画格，
- * 这里换成三种底色；空格不画（露出下面的凹底）。皮与 hover / selected 两态在主题的 .cell
- * （Java 写 hover / selected / icon-item / icon-texture）。 */
-.cell {
+/* ── 选择格与步骤格：同一个皮（主题的 `.cell` / `.frame`）。
+ * 选择格用 `.cell`（有状态：空格不画）；步骤格用 `.frame`（没有 `.empty` 那一档，空格也照画，见主题里的说明）。 ── */
+.cell,
+.frame {
     width: 18px;
     height: 18px;
-}
-
-/* 步骤格：旧贴图里它们就是 18x18 的槽位凹面（(134,97) 与 (134,119) 各 6 个），**空格也要画**，
- * 所以把主题那条 `.cell.empty`（空格不画）按同一组值盖回来。 */
-.cell.step.empty {
-    border-color: rgba(255, 255, 255, 0.21);
-    background-color: rgba(255, 255, 255, 0.14);
 }
 
 /* 格里的两个图标：物品走 <item class="icon">、贴图走 <texture class="tex">，画哪一个由格上的
  * icon-item / icon-texture 类决定，尺寸与开关都在主题的 .icon / .tex 里（这里不写 display）。 */
 .cell .icon,
-.cell .tex {
+.cell .tex,
+.frame .icon,
+.frame .tex {
     left: 0;
     top: 0;
 }
 
-/* ── 滚动条：凹底 (7,17) / (250,17) 各 52x76，右边那条 12x76 的轨道在 x=59 / x=302。
- * 凹底用主题的 .recess、轨道用主题的 .track，这里只给盒子；滑块 top 由 Java 写（页面坐标，见 Java 注释）。 ── */
+/* ── 滚动条：凹底 (7,17) / (250,17) 各 56x76，右边那条 12x76 的轨道在 x=64 / x=307（凹底外的排水沟，
+ * 不压第三列格子）。凹底用主题的 .recess、轨道用主题的 .track，这里只给盒子；滑块 top 由 Java 写
+ * （页面坐标，见 Java 注释）。 ── */
 .track {
     width: 12px;
     height: 76px;
 }
 
 .scroller {
-    left: 59px;
+    left: 64px;
     top: 18px;
     width: 12px;
     height: 15px;
 }
 
 #mt_bar {
-    left: 302px;
+    left: 307px;
 }
 
 /* ── 数值尺：黑框 (80,75) 162x6，内区 160x4；刻度条 top 74、高 8。槽的外观在主题的 .bar。 ── */

@@ -82,11 +82,15 @@ final class MultiblockStructureView {
 
     // ------------------------------------------------------------------ the boxes the page is written with
 
-    /** One box of the page, in window coordinates. */
+    /**
+     * One box of the page, in window coordinates.
+     */
     record Rect(int x, int y, int width, int height) {
     }
 
-    /** One of the four bottom controls; the label is rebuilt every frame because play and pause share one key. */
+    /**
+     * One of the four bottom controls; the label is rebuilt every frame because play and pause share one key.
+     */
     record StructureControl(Rect box, Component label) {
     }
 
@@ -107,7 +111,9 @@ final class MultiblockStructureView {
                 Math.max(1, height - TOP_OVERLAY_HEIGHT - BOTTOM_OVERLAY_HEIGHT));
     }
 
-    /** The title box: the whole width, centred by the page's {@code .t-center}. */
+    /**
+     * The title box: the whole width, centred by the page's {@code .t-center}.
+     */
     Rect title(int width) {
         return new Rect(0, TITLE_TOP, width, TEXT_HEIGHT);
     }
@@ -128,7 +134,9 @@ final class MultiblockStructureView {
         return new Rect(this.timelineX(width), this.timelineBarY(height), this.timelineWidth(width), TIMELINE_HEIGHT);
     }
 
-    /** The played part of the timeline, relative to the track box ({@link #timeline}). */
+    /**
+     * The played part of the timeline, relative to the track box ({@link #timeline}).
+     */
     Rect timelineFill(int width, int maxStep) {
         return new Rect(0, 0, this.timelineActiveWidth(width, maxStep), TIMELINE_HEIGHT);
     }
@@ -208,7 +216,9 @@ final class MultiblockStructureView {
 
     // ------------------------------------------------------------------ input
 
-    /** A click inside the timeline's hit band pauses the replay and jumps to the layer under the pointer. */
+    /**
+     * A click inside the timeline's hit band pauses the replay and jumps to the layer under the pointer.
+     */
     boolean seekTimeline(double mouseX, double mouseY, int width, int height, MultiblockStructure structure) {
         int maxStep = layerCount(structure);
         if (maxStep <= 0) return false;
@@ -226,7 +236,9 @@ final class MultiblockStructureView {
         return true;
     }
 
-    /** A press anywhere in the scene starts an orbit drag; the buttons below are the page's own, not this. */
+    /**
+     * A press anywhere in the scene starts an orbit drag; the buttons below are the page's own, not this.
+     */
     boolean beginDrag(double mouseX, double mouseY, int width, int height) {
         Rect scene = this.scene(width, height);
         if (!isInside(mouseX, mouseY, scene.x(), scene.y(), scene.width(), scene.height())) return false;

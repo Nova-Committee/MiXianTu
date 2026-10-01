@@ -378,7 +378,9 @@ public final class MultiblockStructureScreen extends Screen implements AuiLinked
         style(element, "height", rect.height() + "px");
     }
 
-    /** Writes an inline property only when it differs; every write re-runs the page's style pass. */
+    /**
+     * Writes an inline property only when it differs; every write re-runs the page's style pass.
+     */
     private static void style(@Nullable Element element, String property, String value) {
         if (element == null) return;
         if (value.equals(element.getInlineStylePropertyValue(property))) return;
@@ -403,7 +405,9 @@ public final class MultiblockStructureScreen extends Screen implements AuiLinked
             this.element.setTextContent(value);
         }
 
-        /** The line's own box: the page centres the text inside it with {@code .t-center}. */
+        /**
+         * The line's own box: the page centres the text inside it with {@code .t-center}.
+         */
         private void box(MultiblockStructureView.Rect rect) {
             MultiblockStructureScreen.box(this.element, rect);
         }

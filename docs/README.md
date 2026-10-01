@@ -19,6 +19,7 @@
 - [`getting-started.md`](getting-started.md)、`guide/**`：安装、游玩、数据包、KubeJS、Java 的分篇指南。
 - [`ai/SKILL.md`](ai/SKILL.md)、[`ai/FORMAT.md`](ai/FORMAT.md)：给 AI 协作与本目录写作用的速查和格式规范；根目录的 [`SKILL.md`](SKILL.md)、[`FORMAT.md`](FORMAT.md) 是它们的短入口。
 - [`kubejs物品示例.md`](kubejs物品示例.md)、[`物品灵气数据包.md`](物品灵气数据包.md)：被 `数据包格式.md` 引用的两个专题页。
+- [`符箓完成度判定.md`](符箓完成度判定.md)：画符时**完成度怎么算出来的**（算法七步、参数与两个代码常量、实测数字、作者怎么调、服务端对账与排错），面向内容作者与开发者。
 
 每个模块做到哪一步、还缺什么**不在这个目录里**：看仓库根两份 README 的「模块完成情况 / Module Status」表（**完成度以代码为准**）。
 

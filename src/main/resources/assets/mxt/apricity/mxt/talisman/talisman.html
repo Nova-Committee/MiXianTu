@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="aui-viewport" content="mode=gui">
+    <link rel="stylesheet" href="../common/theme.css">
+    <link rel="stylesheet" href="talisman.css">
+</head>
+<body>
+<!-- 画符工作站 178x306。左栏 4 格宽（72）、右栏 5 格宽（90，纸面 90x210）。
+     约定：槽位（<slot>）位置 = 菜单坐标 - 1（物品 16x16 画在 18x18 凹面的 +1 处，Java 写 Slot.x/y 时也 +1），
+     与 forging.html 同一条；站内两格（符纸 + 颜料）并排居中在左栏，所以是 left:23px 与 left:43px。
+     符方列表八行、行高 12，文字与是否可选全由 Java 写；点击由 Java 绑在行上。 -->
+<div class="panel" id="panel" style="width:178px;height:306px">
+    <div class="frame" id="list_frame" style="left:6px;top:6px;width:72px;height:96px"></div>
+    <div class="t row" id="row-0" style="left:7px;top:7px;width:70px"></div>
+    <div class="t row" id="row-1" style="left:7px;top:19px;width:70px"></div>
+    <div class="t row" id="row-2" style="left:7px;top:31px;width:70px"></div>
+    <div class="t row" id="row-3" style="left:7px;top:43px;width:70px"></div>
+    <div class="t row" id="row-4" style="left:7px;top:55px;width:70px"></div>
+    <div class="t row" id="row-5" style="left:7px;top:67px;width:70px"></div>
+    <div class="t row" id="row-6" style="left:7px;top:79px;width:70px"></div>
+    <div class="t row" id="row-7" style="left:7px;top:91px;width:70px"></div>
+
+    <container class="grid" id="station" primary="true" style="left:23px;top:108px;width:18px;height:18px;grid-template-columns:1;grid-template-rows:18px">
+        <slot slot-index="0"></slot>
+    </container>
+
+    <container class="grid" id="pigment" primary="true" style="left:43px;top:108px;width:18px;height:18px;grid-template-columns:1;grid-template-rows:18px">
+        <slot slot-index="0"></slot>
+    </container>
+
+    <div class="frame" id="result_frame" style="left:6px;top:132px;width:72px;height:46px"></div>
+    <div class="t" id="result" style="left:8px;top:135px;width:68px"></div>
+    <div class="t dim" id="preview" style="left:8px;top:147px;width:68px"></div>
+
+    <div class="button t t-center" id="submit" style="left:6px;top:184px;width:72px;height:14px"></div>
+    <div class="button t t-center" id="cancel" style="left:6px;top:202px;width:72px;height:14px"></div>
+
+    <div class="paper" id="paper_frame" style="left:82px;top:6px;width:90px;height:210px">
+        <canvas id="guide" width="90" height="210" style="left:0;top:0;width:90px;height:210px;z-index:1"></canvas>
+        <canvas id="paper" width="90" height="210" style="left:0;top:0;width:90px;height:210px;z-index:2"></canvas>
+    </div>
+
+    <container class="inv" id="inventory" primary="true" style="left:7px;top:219px">
+        <slot slot-index="9" repeat="27"></slot>
+        <slot slot-index="0" repeat="9"></slot>
+    </container>
+</div>
+</body>
+</html>

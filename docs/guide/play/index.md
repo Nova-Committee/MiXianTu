@@ -8,5 +8,6 @@ sidebar_position: 1
 - [内置物品与组件](items)
 - [交互与界面](interaction)
 - [命令](commands)
+- [服务端配置](config)
 - [好友与敌我识别](friends)
 - [轮盘、资源条与灵气 HUD](wheel)

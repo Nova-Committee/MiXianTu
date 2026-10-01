@@ -163,14 +163,54 @@ public final class MxtServerConfig extends AutoInitConfigContainer {
     }
 
     /**
-     * How a carrier behaves when it is used by hand rather than poured into. The pour has a price of its own, so
-     * the only thing left to state here is how often the click may be spent.
+     * How a carrier behaves when it is used by hand rather than poured into, and what one drawing session costs.
+     * The pour has a price of its own, so the only thing left to state here is how often the click may be spent.
      */
     public static final class Talisman extends AutoInitConfigCategoryBase {
         public final IntegerEntry useCooldown = IntegerEntry.builder("config.mxt.server.talisman.use_cooldown", 20)
                 .key("use_cooldown")
                 .tooltip("config.mxt.server.talisman.use_cooldown.tooltip")
                 .range(0, 72_000).build();
+        public final IntegerEntry minStrokeInterval = IntegerEntry.builder("config.mxt.server.talisman.min_stroke_interval", 300)
+                .key("min_stroke_interval")
+                .tooltip("config.mxt.server.talisman.min_stroke_interval.tooltip")
+                .range(0, 72_000).build();
+        public final IntegerEntry maxRejectedStrokes = IntegerEntry.builder("config.mxt.server.talisman.max_rejected_strokes", 3)
+                .key("max_rejected_strokes")
+                .tooltip("config.mxt.server.talisman.max_rejected_strokes.tooltip")
+                .range(0, 1_000).build();
+        public final IntegerEntry maxStrokePoints = IntegerEntry.builder("config.mxt.server.talisman.max_stroke_points", 512)
+                .key("max_stroke_points")
+                .tooltip("config.mxt.server.talisman.max_stroke_points.tooltip")
+                .range(2, 4_096).build();
+        public final IntegerEntry maxSessionPoints = IntegerEntry.builder("config.mxt.server.talisman.max_session_points", 4_096)
+                .key("max_session_points")
+                .tooltip("config.mxt.server.talisman.max_session_points.tooltip")
+                .range(2, 65_536).build();
+        public final IntegerEntry maxSessionStrokes = IntegerEntry.builder("config.mxt.server.talisman.max_session_strokes", 64)
+                .key("max_session_strokes")
+                .tooltip("config.mxt.server.talisman.max_session_strokes.tooltip")
+                .range(1, 1_024).build();
+        public final IntegerEntry brushCapacity = IntegerEntry.builder("config.mxt.server.talisman.brush_capacity", 4_000)
+                .key("brush_capacity")
+                .tooltip("config.mxt.server.talisman.brush_capacity.tooltip")
+                .range(1, 1_000_000).build();
+        public final IntegerEntry pigmentPerItem = IntegerEntry.builder("config.mxt.server.talisman.pigment_per_item", 1_000)
+                .key("pigment_per_item")
+                .tooltip("config.mxt.server.talisman.pigment_per_item.tooltip")
+                .range(1, 1_000_000).build();
+        public final DoubleEntry pigmentRate = DoubleEntry.builder("config.mxt.server.talisman.pigment_rate", 1.0D)
+                .key("pigment_rate")
+                .tooltip("config.mxt.server.talisman.pigment_rate.tooltip")
+                .range(0.0D, 100.0D).build();
+        public final IntegerEntry pigmentFloor = IntegerEntry.builder("config.mxt.server.talisman.pigment_floor", 1)
+                .key("pigment_floor")
+                .tooltip("config.mxt.server.talisman.pigment_floor.tooltip")
+                .range(0, 10_000).build();
+        public final IntegerEntry pigmentCap = IntegerEntry.builder("config.mxt.server.talisman.pigment_cap", 0)
+                .key("pigment_cap")
+                .tooltip("config.mxt.server.talisman.pigment_cap.tooltip")
+                .range(0, 1_000_000).build();
 
         private Talisman() {
             super("talisman", "config.mxt.server.talisman");

@@ -12,10 +12,7 @@ import com.iafenvoy.mxt.runtime.forging.ForgingWorkstationService;
 import com.iafenvoy.mxt.runtime.wheel.WheelEntryKinds;
 import com.iafenvoy.mxt.runtime.wheel.WheelService;
 import com.iafenvoy.mxt.runtime.wheel.WheelSourceTypes;
-import com.iafenvoy.mxt.screen.menu.AlchemyFurnaceMenu;
-import com.iafenvoy.mxt.screen.menu.ChequeTableMenu;
-import com.iafenvoy.mxt.screen.menu.ForgingMenu;
-import com.iafenvoy.mxt.screen.menu.StationMenu;
+import com.iafenvoy.mxt.screen.menu.*;
 import com.iafenvoy.mxt.util.PlayerNames;
 import com.mojang.logging.LogUtils;
 import net.minecraft.resources.Identifier;
@@ -25,6 +22,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import top.theillusivec4.curios.api.CuriosApi;
 import top.theillusivec4.curios.api.SlotContext;
@@ -94,6 +92,37 @@ public final class ServerNetworkHandler {
         if (!(player.containerMenu instanceof AlchemyFurnaceMenu menu)
                 || menu.containerId != payload.containerId() || !menu.stillValid(player)) return;
         menu.handleAction(player, payload);
+    }
+
+    // Every drawing request is routed through the menu the player has open, so nothing here trusts a position, a
+    // session or a recipe the client named: the menu either has that session or it refuses.
+    static void onTalismanSelect(TalismanSelectC2SPayload payload, IPayloadContext context) {
+        TalismanWorkstationMenu menu = talismanMenu(context, payload.containerId());
+        if (menu != null) menu.select((ServerPlayer) context.player(), payload.recipeId());
+    }
+
+    static void onTalismanStroke(TalismanStrokeC2SPayload payload, IPayloadContext context) {
+        TalismanWorkstationMenu menu = talismanMenu(context, payload.containerId());
+        if (menu != null) menu.stroke((ServerPlayer) context.player(), payload.recipeId(), payload.stroke());
+    }
+
+    static void onTalismanSubmit(TalismanSubmitC2SPayload payload, IPayloadContext context) {
+        TalismanWorkstationMenu menu = talismanMenu(context, payload.containerId());
+        if (menu != null) menu.submit((ServerPlayer) context.player(), payload.recipeId(), payload.strokes());
+    }
+
+    static void onTalismanCancel(TalismanCancelC2SPayload payload, IPayloadContext context) {
+        TalismanWorkstationMenu menu = talismanMenu(context, payload.containerId());
+        if (menu != null) menu.cancel((ServerPlayer) context.player());
+    }
+
+    // The menu is resolved from the open container and checked against the id the client sent, so a stale or
+    // forged id can only ever be ignored.
+    private static @Nullable TalismanWorkstationMenu talismanMenu(IPayloadContext context, int containerId) {
+        if (!(context.player() instanceof ServerPlayer player)) return null;
+        if (!(player.containerMenu instanceof TalismanWorkstationMenu menu)) return null;
+        if (menu.containerId != containerId || !menu.stillValid(player)) return null;
+        return menu;
     }
 
     static void onChequeAction(ChequeActionC2SPayload payload, IPayloadContext context) {

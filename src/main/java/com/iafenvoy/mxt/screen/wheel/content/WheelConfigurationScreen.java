@@ -301,7 +301,8 @@ public final class WheelConfigurationScreen extends Screen implements AuiLinkedS
         Element texture = document.getElementById(prefix + "_tex-" + index);
         Element name = document.getElementById(prefix + "_name-" + index);
         Element accent = document.getElementById(prefix + "_accent-" + index);
-        if (root == null || !(icon instanceof Item item) || texture == null || name == null || accent == null) return null;
+        if (root == null || !(icon instanceof Item item) || texture == null || name == null || accent == null)
+            return null;
         return new Cell(root, item, texture, name, accent, font,
                 document.getElementById(prefix + "_stale-" + index),
                 document.getElementById(prefix + "_number-" + index),

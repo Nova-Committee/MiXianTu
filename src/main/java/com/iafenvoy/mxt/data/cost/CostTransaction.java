@@ -180,12 +180,15 @@ public final class CostTransaction {
         // until every channel that can still refuse has been paid.
         ItemCostDraft itemDraft = null;
         if (!planning.items().isEmpty()) {
-            Player player = context.player();
-            if (player == null) {
-                rollback(rollbacks);
-                return PayResult.denied(CostFailure.NO_CHANNEL, -1);
+            if (context.itemTarget() != null) itemDraft = new ItemCostDraft(context.itemTarget());
+            else {
+                Player player = context.player();
+                if (player == null) {
+                    rollback(rollbacks);
+                    return PayResult.denied(CostFailure.NO_CHANNEL, -1);
+                }
+                itemDraft = new ItemCostDraft(player);
             }
-            itemDraft = new ItemCostDraft(player);
             for (Charge.Items item : planning.items()) {
                 if (itemDraft.reserve(item)) continue;
                 rollback(rollbacks);
@@ -218,11 +221,17 @@ public final class CostTransaction {
             if (failure != null) return failure;
         }
         if (!planning.items().isEmpty()) {
-            Player player = context.player();
-            if (player == null) return CostFailure.NO_CHANNEL;
             // A caller previewing several payments keeps one draft and passes it back in, so the second payment
             // is checked against what the first one already took.
-            ItemCostDraft draft = itemView != null ? itemView : new ItemCostDraft(player);
+            ItemCostDraft draft = itemView;
+            if (draft == null) {
+                if (context.itemTarget() != null) draft = new ItemCostDraft(context.itemTarget());
+                else {
+                    Player player = context.player();
+                    if (player == null) return CostFailure.NO_CHANNEL;
+                    draft = new ItemCostDraft(player);
+                }
+            }
             for (Charge.Items item : planning.items()) if (!draft.reserve(item)) return CostFailure.MISSING_ITEM;
         }
         return null;

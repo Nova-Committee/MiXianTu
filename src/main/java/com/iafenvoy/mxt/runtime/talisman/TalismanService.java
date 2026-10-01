@@ -429,6 +429,12 @@ public final class TalismanService {
         return component(stack).talismans();
     }
 
+    // Read by the tooltip, which cannot reach the component itself: the default a missing one decodes as is this
+    // class's own business.
+    public static TriggerMode mode(ItemStack stack) {
+        return component(stack).mode();
+    }
+
     // Defaults a missing component means: nothing inscribed, and the firing mode - which is also what every
     // carrier written before the mode existed decodes as.
     private static TalismanComponent component(ItemStack stack) {

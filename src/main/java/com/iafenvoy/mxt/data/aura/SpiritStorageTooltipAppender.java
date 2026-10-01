@@ -1,5 +1,6 @@
 package com.iafenvoy.mxt.data.aura;
 
+import com.iafenvoy.mxt.item.TalismanItem;
 import com.iafenvoy.mxt.runtime.spirit.SpiritChargeService;
 import com.iafenvoy.mxt.runtime.spirit.SpiritChargeService.Charge;
 import com.iafenvoy.mxt.util.TooltipText;
@@ -34,12 +35,20 @@ public final class SpiritStorageTooltipAppender {
     private static void appendCharge(ItemStack stack, TooltipContext context, TooltipDisplay display, Player player, TooltipFlag flag, Consumer<Component> builder) {
         Provider registries = context.registries();
         if (registries == null) return;
+        // A carrier writes this line among its own, so that it can sit under the inscriptions it belongs to.
+        // Appenders at this location run in registration order, so the line cannot be left here and ordered.
+        if (stack.getItem() instanceof TalismanItem) return;
 
-        Optional<Charge> charge = resolveCharge(registries, stack, FormulaContext.EMPTY);
-        if (charge.isEmpty()) return;
-        int percentage = charge.get().percentage();
-        Component percent = Component.literal(percentage + "%").withColor(colorValue(percentage));
-        builder.accept(Component.translatable("tooltip.mxt.spirit_storage", TooltipText.number(charge.get().stored()), TooltipText.number(charge.get().capacity()), percent));
+        chargeLine(registries, stack).ifPresent(builder);
+    }
+
+    // The one spelling of the line, shared with the carrier that prints it in its own place.
+    public static Optional<Component> chargeLine(Provider registries, ItemStack stack) {
+        return resolveCharge(registries, stack, FormulaContext.EMPTY).map(charge -> {
+            int percentage = charge.percentage();
+            Component percent = Component.literal(percentage + "%").withColor(colorValue(percentage));
+            return Component.translatable("tooltip.mxt.spirit_storage", TooltipText.number(charge.stored()), TooltipText.number(charge.capacity()), percent);
+        });
     }
 
     public static Optional<Charge> resolveCharge(Provider registries, ItemStack stack, FormulaContext context) {

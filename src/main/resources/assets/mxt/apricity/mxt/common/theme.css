@@ -54,9 +54,16 @@ body {
     overflow: hidden;
 }
 
-/* 画布：居中（面板绝对定位的页面自己在 body 上写 `display: block` 盖掉它）、不选中、不画底。
- * 界面文字不可选中：user-select 不在 AUI 的继承属性表里，它走的是 Interaction.getUserSelect
- * （从自己往上找第一个不是 unset 的值），所以写在 body 上就覆盖整页。输入框要自己写回 text（见 .input）。 */
+/* 整页文字默认不可选中。**不能写在 body 上**：`user-select` 不在 AUI 的继承属性表里，元素没写过它时
+ * computed 会被定型成初值 `auto`（`ComputedStyleResolver.initialValue`，不是 `unset`），
+ * `Interaction.getUserSelect` 的自下而上查找于是在元素自己身上就停住、根本走不到 body。
+ * 所以只能逐元素写：`*` 进 `Selector` 的 always 桶，每个元素都匹配得上。
+ * 输入控件是唯一例外，自己写回 `user-select: text`（见下面的 `input` / `textarea` / `.input`，权重都高于 `*`）。 */
+* {
+    user-select: none;
+}
+
+/* 画布：居中（面板绝对定位的页面自己在 body 上写 `display: block` 盖掉它）、不画底。 */
 body {
     width: 100vw;
     height: 100vh;
@@ -66,7 +73,6 @@ body {
     align-items: center;
     justify-content: center;
     background: none;
-    user-select: none;
 }
 
 /* ── 面板：扁平半透明深灰板 + 1px 内嵌亮边（深灰而不是纯黑：纯黑在暗处读起来像一块洞，灰一档才像"板"）── */
@@ -281,7 +287,10 @@ slot:hover {
     border-color: rgba(255, 255, 255, 0.62);
 }
 
-/* 空格不画（露出下面的凹底）；"空格也要画"的格子（锻造台的步骤格）在页面里按 `.cell.<自己的类>.empty` 盖回来。 */
+/* 空格不画（露出下面的凹底）；**空格也要画的格子用 `.frame`**（它没有 `.empty` 这一档）。
+ * 别反过来在页面里写 `.cell.<自己的类>.empty` 把描边盖回来：实机上只有底色生效、描边还是透明的（AUI 里
+ * `border` 简写展开成 `border-top/right/bottom/left`、`border-color` 展开成 `border-*-color`，两者不是
+ * 同一个键），画出来是"有底没有框"的格子——锻造台两行步骤格就踩过。 */
 .cell.empty {
     border-color: transparent;
     background-color: transparent;
@@ -325,9 +334,16 @@ slot:hover {
     background-color: rgba(255, 255, 255, 0.25);
 }
 
+/* 输入控件是整页禁选的唯一例外：`input` / `textarea` 兜底，页面用 `.input` 时也写回 `text`。
+ * 少了它 `AbstractText.canSelectText` 会连拖选与 Ctrl+A 一起拒掉。 */
+input,
+textarea {
+    user-select: text;
+}
+
 /* ── 文本输入框：文字由 Input 自己垂直居中（(内容高 − lineHeight)/2），光标与选区高度也取 lineHeight，
  *    所以 line-height 就是"文字与光标有多高"，给 9px 才和原版字形同高；`overflow: hidden` 是输入框自己的
- *    裁剪（唯一的例外之一，见文件头第 5 条）；`user-select: text` 见 body 那条注释。 ── */
+ *    裁剪（唯一的例外之一，见文件头第 5 条）。 ── */
 .input {
     position: absolute;
     box-sizing: border-box;
@@ -372,3 +388,14 @@ slot:hover {
  * 页面元素上的 `Tooltip.bind` / `.aui-tooltip` 一律不用——AUI 那套是网页尺度的白底深字盒（11px 雅黑、
  * 固定宽度），和这里的位图字体对不上，所以 Java 侧只登记"哪个元素、哪些行"，画由 `GuiGraphicsExtractor`
  * 负责（`AuiContainerScreen.extractTooltip`，以及人物信息 / 结构预览 / 轮盘各自那一份）。 */
+
+/* ── 符纸：黄纸底 + 纸框描边（画符工作站的纸面，唯一不是深灰的一套底） ──
+ * 黄纸是"纸"这件东西本身的颜色，不是面板的皮，所以只有这一处破例；两层 canvas 的内容（淡褐参考层、
+ * 朱砂红墨迹）由 Java 画，色值写在工作站的屏幕类里并与这里的黄底配成一对。 */
+.paper {
+    position: absolute;
+    box-sizing: border-box;
+    background-color: #e9d8a6;
+    box-shadow: inset 0 0 0 1px #b9a878;
+}
+

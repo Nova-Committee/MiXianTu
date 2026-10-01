@@ -60,10 +60,13 @@ public final class ForgingMenu extends AbstractContainerMenu {
     public static final int CELL = 18, CELL_PITCH = 19;
     public static final int BLUEPRINT_GRID_X = 7, METHOD_GRID_X = 250;
     public static final int GRID_Y = 17;
-    public static final int RECESS_Y = 17, RECESS_W = 49, RECESS_H = 76;
-    // Where the scrollbar sprite's top-left corner goes: the texture draws the bar in the gutter right of
-    // the recess, so these are not derived from it.
-    public static final int SCROLLBAR_X = 58, SCROLLBAR_X_RIGHT = 301;
+    // The recess the page draws behind a selector grid: 56 wide, which is the grid's own 3x18 plus two pixels of
+    // slack, so the third column stays inside it.
+    public static final int RECESS_Y = 17, RECESS_W = 55, RECESS_H = 76;
+    // Where the scrollbar sprite's top-left corner goes: the page draws the track in the gutter right of the
+    // recess, far enough out that neither it nor its scroller touches the third cell column (which ends at 61 /
+    // 304). The hit tests read these, so the drawn track and the clickable one stay the same rectangle.
+    public static final int SCROLLBAR_X = 63, SCROLLBAR_X_RIGHT = 306;
     public static final int MACHINE_PITCH = 18;
     public static final int SLOT_TOP = 18;
     public static final int INPUT_X = 81;

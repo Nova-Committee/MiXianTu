@@ -64,6 +64,7 @@ public final class MxtRenderers {
         event.register(MxtMenus.SPIRIT_CRAFTING_TABLE.get(), SpiritCraftingScreen::new);
         event.register(MxtMenus.FORGING_TABLE.get(), ForgingScreen::new);
         event.register(MxtMenus.ALCHEMY_FURNACE.get(), AlchemyFurnaceScreen::new);
+        event.register(MxtMenus.TALISMAN_WORKSTATION.get(), TalismanWorkstationScreen::new);
         event.register(MxtMenus.ARTIFACT_STORAGE.get(), ContainerScreen::new);
     }
 

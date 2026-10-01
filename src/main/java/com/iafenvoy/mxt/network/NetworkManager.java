@@ -34,14 +34,22 @@ public final class NetworkManager {
                 .playToServer(WheelLayoutC2SPayload.TYPE, WheelLayoutC2SPayload.STREAM_CODEC, new MainThreadPayloadHandler<>(ServerNetworkHandler::onWheelLayout))
                 .playToServer(WheelSelectionC2SPayload.TYPE, WheelSelectionC2SPayload.STREAM_CODEC, new MainThreadPayloadHandler<>(ServerNetworkHandler::onWheelSelection))
                 .playToServer(OwnerNameC2SPayload.TYPE, OwnerNameC2SPayload.STREAM_CODEC, new MainThreadPayloadHandler<>(ServerNetworkHandler::onOwnerNameRequest))
-                .playToServer(FlightDescendC2SPayload.TYPE, FlightDescendC2SPayload.STREAM_CODEC, new MainThreadPayloadHandler<>(ServerNetworkHandler::onFlightDescend));
+                .playToServer(FlightDescendC2SPayload.TYPE, FlightDescendC2SPayload.STREAM_CODEC, new MainThreadPayloadHandler<>(ServerNetworkHandler::onFlightDescend))
+                .playToServer(TalismanSelectC2SPayload.TYPE, TalismanSelectC2SPayload.STREAM_CODEC, new MainThreadPayloadHandler<>(ServerNetworkHandler::onTalismanSelect))
+                .playToServer(TalismanStrokeC2SPayload.TYPE, TalismanStrokeC2SPayload.STREAM_CODEC, new MainThreadPayloadHandler<>(ServerNetworkHandler::onTalismanStroke))
+                .playToServer(TalismanSubmitC2SPayload.TYPE, TalismanSubmitC2SPayload.STREAM_CODEC, new MainThreadPayloadHandler<>(ServerNetworkHandler::onTalismanSubmit))
+                .playToServer(TalismanCancelC2SPayload.TYPE, TalismanCancelC2SPayload.STREAM_CODEC, new MainThreadPayloadHandler<>(ServerNetworkHandler::onTalismanCancel));
         // A dedicated server never runs one of these, so it registers the codec and nothing else.
         if (FMLEnvironment.getDist() != Dist.CLIENT) {
             registrar.playToClient(AuraStateS2CPayload.TYPE, AuraStateS2CPayload.STREAM_CODEC)
                     .playToClient(ItemPickerS2CPayload.TYPE, ItemPickerS2CPayload.STREAM_CODEC)
                     .playToClient(AlchemyStateS2CPayload.TYPE, AlchemyStateS2CPayload.STREAM_CODEC)
                     .playToClient(FormationStructureS2CPayload.TYPE, FormationStructureS2CPayload.STREAM_CODEC)
-                    .playToClient(OwnerNameS2CPayload.TYPE, OwnerNameS2CPayload.STREAM_CODEC);
+                    .playToClient(OwnerNameS2CPayload.TYPE, OwnerNameS2CPayload.STREAM_CODEC)
+                    .playToClient(TalismanDrawingListS2CPayload.TYPE, TalismanDrawingListS2CPayload.STREAM_CODEC)
+                    .playToClient(TalismanDrawingStartS2CPayload.TYPE, TalismanDrawingStartS2CPayload.STREAM_CODEC)
+                    .playToClient(TalismanStrokeAckS2CPayload.TYPE, TalismanStrokeAckS2CPayload.STREAM_CODEC)
+                    .playToClient(TalismanResultS2CPayload.TYPE, TalismanResultS2CPayload.STREAM_CODEC);
             return;
         }
         registrar.playToClient(AuraStateS2CPayload.TYPE, AuraStateS2CPayload.STREAM_CODEC,
@@ -53,6 +61,14 @@ public final class NetworkManager {
                 .playToClient(FormationStructureS2CPayload.TYPE, FormationStructureS2CPayload.STREAM_CODEC,
                         new MainThreadPayloadHandler<>(ClientNetworkHandler::onFormationStructure))
                 .playToClient(OwnerNameS2CPayload.TYPE, OwnerNameS2CPayload.STREAM_CODEC,
-                        new MainThreadPayloadHandler<>(ClientNetworkHandler::onOwnerName));
+                        new MainThreadPayloadHandler<>(ClientNetworkHandler::onOwnerName))
+                .playToClient(TalismanDrawingListS2CPayload.TYPE, TalismanDrawingListS2CPayload.STREAM_CODEC,
+                        new MainThreadPayloadHandler<>(ClientNetworkHandler::onTalismanList))
+                .playToClient(TalismanDrawingStartS2CPayload.TYPE, TalismanDrawingStartS2CPayload.STREAM_CODEC,
+                        new MainThreadPayloadHandler<>(ClientNetworkHandler::onTalismanStart))
+                .playToClient(TalismanStrokeAckS2CPayload.TYPE, TalismanStrokeAckS2CPayload.STREAM_CODEC,
+                        new MainThreadPayloadHandler<>(ClientNetworkHandler::onTalismanStrokeAck))
+                .playToClient(TalismanResultS2CPayload.TYPE, TalismanResultS2CPayload.STREAM_CODEC,
+                        new MainThreadPayloadHandler<>(ClientNetworkHandler::onTalismanResult));
     }
 }

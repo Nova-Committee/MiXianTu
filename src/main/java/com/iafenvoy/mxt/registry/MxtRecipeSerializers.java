@@ -4,6 +4,7 @@ import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.recipe.AlchemyRecipe;
 import com.iafenvoy.mxt.recipe.SpiritShapedRecipe;
 import com.iafenvoy.mxt.recipe.SpiritShapelessRecipe;
+import com.iafenvoy.mxt.recipe.TalismanDrawingRecipe;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.item.crafting.RecipeSerializer;
 import net.neoforged.neoforge.registries.DeferredHolder;
@@ -15,4 +16,5 @@ public final class MxtRecipeSerializers {
     public static final DeferredHolder<RecipeSerializer<?>, RecipeSerializer<AlchemyRecipe>> ALCHEMY = REGISTRY.register("alchemy", () -> new RecipeSerializer<>(AlchemyRecipe.CODEC, AlchemyRecipe.PACKET_CODEC));
     public static final DeferredHolder<RecipeSerializer<?>, RecipeSerializer<SpiritShapedRecipe>> SPIRIT_SHAPED = REGISTRY.register("spirit_shaped", () -> new RecipeSerializer<>(SpiritShapedRecipe.CODEC, SpiritShapedRecipe.PACKET_CODEC));
     public static final DeferredHolder<RecipeSerializer<?>, RecipeSerializer<SpiritShapelessRecipe>> SPIRIT_SHAPELESS = REGISTRY.register("spirit_shapeless", () -> new RecipeSerializer<>(SpiritShapelessRecipe.CODEC, SpiritShapelessRecipe.PACKET_CODEC));
+    public static final DeferredHolder<RecipeSerializer<?>, RecipeSerializer<TalismanDrawingRecipe>> TALISMAN_DRAWING = REGISTRY.register("talisman_drawing", () -> new RecipeSerializer<>(TalismanDrawingRecipe.CODEC, TalismanDrawingRecipe.PACKET_CODEC));
 }

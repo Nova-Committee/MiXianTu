@@ -4,6 +4,7 @@ import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.recipe.AlchemyRecipe;
 import com.iafenvoy.mxt.recipe.SpiritShapedRecipe;
 import com.iafenvoy.mxt.recipe.SpiritShapelessRecipe;
+import com.iafenvoy.mxt.recipe.TalismanDrawingRecipe;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.crafting.Recipe;
@@ -17,6 +18,7 @@ public final class MxtRecipeTypes {
     public static final DeferredHolder<RecipeType<?>, RecipeType<AlchemyRecipe>> ALCHEMY = register("alchemy");
     public static final DeferredHolder<RecipeType<?>, RecipeType<SpiritShapedRecipe>> SPIRIT_SHAPED = register("spirit_shaped");
     public static final DeferredHolder<RecipeType<?>, RecipeType<SpiritShapelessRecipe>> SPIRIT_SHAPELESS = register("spirit_shapeless");
+    public static final DeferredHolder<RecipeType<?>, RecipeType<TalismanDrawingRecipe>> TALISMAN_DRAWING = register("talisman_drawing");
 
     private static <T extends Recipe<?>> DeferredHolder<RecipeType<?>, RecipeType<T>> register(String id) {
         return REGISTRY.register(id, () -> RecipeType.simple(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, id)));

@@ -44,7 +44,7 @@ the changelog.**
   the right, output on top, 22 material walls, and the centre stays air. A spirit herb plot holds one plant.
 - **Items**: materials such as Lesser to Supreme Spirit Stones, Spirit Iron, Spirit Wood and Cinnabar; generic items
   such as Spirit Ring, Spirit Stone Bag, Spirit Vessel, Identification Mirror, Cultivation Jade Slip, Blank Talisman
-  Paper with Talisman Brush and Ink, Talisman (written with a sigil, poured full of aura, and spent the moment it
+  Paper, Talisman Brush and Talisman (written with a sigil, poured full of aura, and spent the moment it
   fires), Contract Scroll, Beast Taming Bell, Spirit Beast Bag, Formation Plate, Wooden and Stone Tokens, Secret Realm
   Token and Recall Talisman.
 - **Talismans**: a Talisman Brush writes ability definitions onto a carrier, and pouring aura in loads it; the
@@ -52,7 +52,8 @@ the changelog.**
   or one billed nothing at all - fires from a right-click instead, and a definition may declare durability for its
   carrier (`durability` / `consume`), which spends wear instead of whole carriers until the carrier breaks and
   hands back whatever it never burned; `costs` is what the invocation takes from the holder and `quality` grades
-  the paper it is written on.
+  the paper it is written on. A **drawing workstation** shows a formula's shape, the player traces it with a brush
+  that carries its own pigment, and how well it was traced decides success and tier.
 - **Display Stand**: any item can be put on one to be shown; a talisman there fires the moment a spirit burst
   fills it, **from the stand's own position** - the formulas' `block_x`/`block_y`/`block_z`, the centre of an area
   selector and where a projectile is launched from all use the stand, not whoever filled it.
@@ -108,7 +109,7 @@ datapacks or content packs; installing the mod alone does not give you a complet
 | Alchemy                       |   🚧   | Hand-build a 3×3×3 furnace from a core, role bins and walls. When the player starts, it resolves the output from the actual properties and heats with an exotic fire. Pills keep use limits, cooldowns and toxicity.                                                                       |
 | Spirit Herbs                  |   🚧   | One spirit-herb plot grows one plant. Harvest returns an aged crop plus the original seed; age is stored on the item and read as potency.                                                                                                                                                  |
 | Item Binding                  |   🚧   | Brings existing items into gameplay: attach passive behavior and vanilla attribute modifiers to any item, or bind abilities that fire on right-click use and on attack.                                                                                                                    |
-| Talismans                     |   🚧   | A Talisman Brush inscribes ability definitions onto a carrier (one carrier can hold several); holding right-click until it is full fires them, spends a carrier or the wear a definition declares, and starts the item cooldown. A definition may also declare a price and a tier.         |
+| Talismans                     |   🚧   | A Talisman Brush inscribes ability definitions onto a carrier (one carrier can hold several); holding right-click until it is full fires them, spending a carrier or the wear a definition declares. A drawing workstation shows a formula's shape, the player traces it, and how well it was traced decides success and tier.         |
 | Quality                       |   ✅    | Items show quality in tooltips; `quality` names a ladder and `next` links its upgrade tiers. Definitions set the default; `mxt:quality` overrides it.                                                                                                                                      |
 | Artifacts                     |   🚧   | Items become artifacts via `artifact`: `items` claims them, `spirit_capacity` sets a per-aura ceiling, and `abilities` names what carrying it grants. An artifact declares itself a flying mount (speed, seats, fuel, looks) that a technique-granted flying skill takes from either hand. |
 | Economy                       |   ✅    | Items can be defined as currency with a value, supporting exchange and change; players can trade directly with each other, or use trade stations and cheques to settle transactions.                                                                                                       |

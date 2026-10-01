@@ -21,12 +21,7 @@ import net.minecraft.world.inventory.Slot;
 import org.jetbrains.annotations.Nullable;
 import org.jspecify.annotations.NonNull;
 
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
+import java.util.*;
 import java.util.function.IntUnaryOperator;
 import java.util.function.Supplier;
 

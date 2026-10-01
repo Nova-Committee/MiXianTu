@@ -20,7 +20,7 @@ MiXianTu 是 Minecraft `26.1.2` / NeoForge `26.1.2.99` 的服务端权威修仙�
 - 数据包对象和 Codec 集合视为不可变；不做无意义的 Mutable 转换或 `copyOf`。
 - 跨表引用优先 Holder；可选引用用 optional Codec，列表/Map 用容错集合 Codec。
 - 行为叫 `action`，判断叫 `condition`，消耗叫 `Cost`。
-- 术语固定：载体与定义一律写「符箓」（`talisman`），配「符纸」「符笔」「符墨」；「符篆」是误用，不要出现在任何文案或文档里。
+- 术语固定：载体与定义一律写「符箓」（`talisman`），配「符纸」「符笔」，笔上的颜料存量就叫「颜料」（`mxt:brush_pigment`）；「符篆」是误用，「符墨」（`talisman_ink`）已删除，两者都不要出现在任何文案或文档里。
 - 术语固定：**寿元（`lifespan`）是每个生物自己的生命周期**（剩余 / 上限两个刻数，存在 `spirit_stats` 附件上），**不是 `resource`**——resource 是可回复的数值、会出现在资源条上，寿元只会耗尽；面板上它单独一行。它的数值归数据包（`realm_stage.lifespan`、`mxt:modify_lifespan`），节奏与耗尽后果归服务端配置（「寿元」页与「转世」页）。
 - 所有资源/灵气按类型独立存储；除非语义明确，不要把 Map 求和成单值。
 - 服务端负责 Cost、资源扣除、修炼、境界、交易和实体行为；客户端只渲染和发请求。

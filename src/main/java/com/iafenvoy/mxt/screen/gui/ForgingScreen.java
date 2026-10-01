@@ -181,6 +181,11 @@ public final class ForgingScreen extends AuiContainerScreen<ForgingMenu> {
         this.click(useBlueprint, this::useBlueprint);
         this.click(useMethod, this::useMethod);
         this.click(cancel, this::cancel);
+        // The labels are Java's: the page's three buttons are empty boxes, and the theme's `.button` already
+        // centres whatever text they carry.
+        this.text(useBlueprint, Component.translatable("screen.mxt.forging.use_blueprint"));
+        this.text(useMethod, Component.translatable("screen.mxt.forging.use_method"));
+        this.text(cancel, Component.translatable("screen.mxt.forging.cancel"));
         // A cell draws an icon and nothing else, so its tooltip is the only place a method's name appears.
         for (int index = 0; index < GRID_CELLS; index++) {
             int cell = index;
@@ -659,7 +664,8 @@ public final class ForgingScreen extends AuiContainerScreen<ForgingMenu> {
 
     private int hoveredCell(double mouseX, double mouseY, int gridX) {
         for (int slot = 0; slot < GRID_CELLS; slot++) {
-            int x = gridX + slot % CELLS * CELL_PITCH;
+            // Columns sit one CELL apart, rows one CELL_PITCH apart, as the page and the old texture both have it.
+            int x = gridX + slot % CELLS * CELL;
             int y = GRID_Y + slot / CELLS * CELL_PITCH;
             if (this.inRect(mouseX, mouseY, x, y, CELL, CELL)) return slot;
         }
@@ -786,7 +792,10 @@ public final class ForgingScreen extends AuiContainerScreen<ForgingMenu> {
         private final Element texture;
         private ItemStack shownStack = ItemStack.EMPTY;
         private String shownTexture = "";
-        private boolean shownEmpty = true;
+        // The page's cell carries no `empty` class to begin with, so it starts out drawn - and this flag has to
+        // agree, because clear() early-returns while it is set. Starting it at true meant the first clear() of a
+        // cell that had never held an entry wrote nothing, so an emptied grid kept showing boxes it did not have.
+        private boolean shownEmpty = false;
 
         private IconBox(Element root, Item item, Element texture) {
             this.root = root;

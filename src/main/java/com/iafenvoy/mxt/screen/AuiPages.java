@@ -88,6 +88,11 @@ public final class AuiPages {
      */
     public static final String MULTIBLOCK = "mxt/multiblock";
     public static final List<String> MULTIBLOCK_FILES = List.of("structure.css", "structure.html");
+    /**
+     * The talisman drawing workstation: the formula list, the station slot and the paper the player traces on.
+     */
+    public static final String TALISMAN = "mxt/talisman";
+    public static final List<String> TALISMAN_FILES = List.of("talisman.css", "talisman.html");
 
     private static final String HTML_SUFFIX = ".html";
 
@@ -105,7 +110,8 @@ public final class AuiPages {
             new Folder(SPIRIT_CRAFTING, SPIRIT_CRAFTING_FILES),
             new Folder(ECONOMY, ECONOMY_FILES),
             new Folder(INFORMATION, INFORMATION_FILES),
-            new Folder(MULTIBLOCK, MULTIBLOCK_FILES));
+            new Folder(MULTIBLOCK, MULTIBLOCK_FILES),
+            new Folder(TALISMAN, TALISMAN_FILES));
 
     /**
      * Every bundled page, derived from the folder table so a page added to a file list is prepared as well.
@@ -133,6 +139,10 @@ public final class AuiPages {
 
     public static String multiblockPage() {
         return page(MULTIBLOCK, "structure");
+    }
+
+    public static String talismanPage() {
+        return page(TALISMAN, "talisman");
     }
 
     public static String page(String folder, String name) {

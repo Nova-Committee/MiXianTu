@@ -5,6 +5,7 @@ import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.Container;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
@@ -13,15 +14,17 @@ import org.jetbrains.annotations.Nullable;
 /**
  * Who is paying, where, and which channels this payment may use. The payer is a {@link LivingEntity} and not a
  * player: the resource attachment is an entity attachment, so any living entity can pay one. The inventory and
- * script channels are only offered when the payer happens to be a {@link Player}, which is what a cost entry that
- * needs them is checked against - a missing channel is a plain "cannot pay", not an error.
+ * script channels are only offered when the payer happens to be a {@link Player} - or, for items, when the
+ * caller names a container to take them from instead - which is what a cost entry that needs them is checked
+ * against: a missing channel is a plain "cannot pay", not an error.
  * <p>
  * A resource account can also be named without a payer at all, which is how a formation pays its upkeep while its
  * owner is offline: there is an account to charge and nobody to ask.
  */
 public record CostContext(@Nullable LivingEntity payer, FormulaContext formula, CostOrigin origin,
                           @Nullable Level level, @Nullable BlockPos pos, @Nullable AuraAccess bank,
-                          @Nullable ResourceHolderAttachment account, AuraTarget auraTarget) {
+                          @Nullable ResourceHolderAttachment account, AuraTarget auraTarget,
+                          @Nullable Container itemTarget) {
     /**
      * Where an {@code mxt:aura} entry takes its aura from.
      */
@@ -44,7 +47,7 @@ public record CostContext(@Nullable LivingEntity payer, FormulaContext formula, 
      * A payer and nothing else: aura costs become the resource that aura is counted in.
      */
     public static CostContext of(@Nullable LivingEntity payer, FormulaContext formula, CostOrigin origin) {
-        return new CostContext(payer, formula, origin, null, null, null, null, AuraTarget.VALUE);
+        return new CostContext(payer, formula, origin, null, null, null, null, AuraTarget.VALUE, null);
     }
 
     public static CostContext of(@Nullable LivingEntity payer, CostOrigin origin) {
@@ -56,7 +59,7 @@ public record CostContext(@Nullable LivingEntity payer, FormulaContext formula, 
      */
     public static CostContext account(ResourceHolderAttachment account, @Nullable LivingEntity payer,
                                       FormulaContext formula, CostOrigin origin) {
-        return new CostContext(payer, formula, origin, null, null, null, account, AuraTarget.VALUE);
+        return new CostContext(payer, formula, origin, null, null, null, account, AuraTarget.VALUE, null);
     }
 
     /**
@@ -64,7 +67,7 @@ public record CostContext(@Nullable LivingEntity payer, FormulaContext formula, 
      */
     public static CostContext pool(@Nullable LivingEntity payer, Level level, BlockPos pos, FormulaContext formula,
                                    CostOrigin origin) {
-        return new CostContext(payer, formula, origin, level, pos.immutable(), null, null, AuraTarget.POOL);
+        return new CostContext(payer, formula, origin, level, pos.immutable(), null, null, AuraTarget.POOL, null);
     }
 
     /**
@@ -72,22 +75,31 @@ public record CostContext(@Nullable LivingEntity payer, FormulaContext formula, 
      */
     public static CostContext bank(AuraAccess bank, @Nullable LivingEntity payer, FormulaContext formula,
                                    CostOrigin origin) {
-        return new CostContext(payer, formula, origin, null, null, bank, null, AuraTarget.BANK);
+        return new CostContext(payer, formula, origin, null, null, bank, null, AuraTarget.BANK, null);
     }
 
     public CostContext withPayer(@Nullable LivingEntity payer) {
         return new CostContext(payer, this.formula, this.origin, this.level, this.pos, this.bank, this.account,
-                this.auraTarget);
+                this.auraTarget, this.itemTarget);
     }
 
     public CostContext withFormula(FormulaContext formula) {
         return new CostContext(this.payer, formula, this.origin, this.level, this.pos, this.bank, this.account,
-                this.auraTarget);
+                this.auraTarget, this.itemTarget);
     }
 
     public CostContext withAuraTarget(AuraTarget auraTarget) {
         return new CostContext(this.payer, this.formula, this.origin, this.level, this.pos, this.bank, this.account,
-                auraTarget);
+                auraTarget, this.itemTarget);
+    }
+
+    /**
+     * Item entries come out of this container instead of the payer's inventory (the talisman workstation's own
+     * paper slot). Everything else still comes from the payer.
+     */
+    public CostContext withItemTarget(Container itemTarget) {
+        return new CostContext(this.payer, this.formula, this.origin, this.level, this.pos, this.bank, this.account,
+                this.auraTarget, itemTarget);
     }
 
     public @Nullable Player player() {
@@ -105,7 +117,7 @@ public record CostContext(@Nullable LivingEntity payer, FormulaContext formula, 
     public boolean hasChannel(CostChannel channel) {
         return switch (channel) {
             case RESOURCE_ACCOUNT -> this.resourceTarget() != null;
-            case PLAYER_INVENTORY, SCRIPT -> this.player() != null;
+            case PLAYER_INVENTORY, SCRIPT -> this.itemTarget != null || this.player() != null;
             case WORLD_AURA -> this.level != null && this.pos != null;
             case AURA_BANK -> this.bank != null;
         };

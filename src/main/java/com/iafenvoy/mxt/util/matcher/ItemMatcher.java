@@ -67,8 +67,13 @@ public interface ItemMatcher {
     }
 
     // Any one entry matching is a match, which is the only thing every caller of this interface has in common.
-    private static boolean matches(ItemMatcher matcher, ItemStack stack) {
-        return matcher.entries().stream().anyMatch(entry -> entry.matches(stack));
+    // Recipes that read their own input call the list form, so the rule stays in one place.
+    static boolean matches(ItemMatcher matcher, ItemStack stack) {
+        return matches(matcher.entries(), stack);
+    }
+
+    static boolean matches(List<Entry> entries, ItemStack stack) {
+        return entries.stream().anyMatch(entry -> entry.matches(stack));
     }
 
     interface Entry {
