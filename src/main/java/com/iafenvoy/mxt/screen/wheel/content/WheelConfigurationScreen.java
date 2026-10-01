@@ -7,6 +7,7 @@ import com.iafenvoy.mxt.render.IconRenderer;
 import com.iafenvoy.mxt.runtime.wheel.WheelEntryKinds;
 import com.iafenvoy.mxt.runtime.wheel.WheelLayout;
 import com.iafenvoy.mxt.runtime.wheel.WheelSlot;
+import com.iafenvoy.mxt.screen.AuiBackdrop;
 import com.iafenvoy.mxt.screen.AuiPages;
 import com.sighs.apricityui.client.gui.ApricityGuiLayers;
 import com.sighs.apricityui.element.Item;
@@ -164,11 +165,10 @@ public final class WheelConfigurationScreen extends Screen implements AuiLinkedS
         this.clampScroll();
     }
 
-    /**
-     * No vanilla dim gradient: as on every other page, the panel is the only thing that darkens the world.
-     */
+    // The vanilla grey plate, not the blurred one super would pick for a plain Screen host.
     @Override
     public void extractBackground(@NonNull GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
+        AuiBackdrop.extract(this, graphics);
     }
 
     /**

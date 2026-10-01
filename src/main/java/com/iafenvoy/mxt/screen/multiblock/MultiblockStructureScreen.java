@@ -1,5 +1,6 @@
 package com.iafenvoy.mxt.screen.multiblock;
 
+import com.iafenvoy.mxt.screen.AuiBackdrop;
 import com.iafenvoy.mxt.screen.AuiPages;
 import com.mojang.blaze3d.platform.InputConstants;
 import com.sighs.apricityui.client.gui.ApricityGuiLayers;
@@ -326,9 +327,11 @@ public final class MultiblockStructureScreen extends Screen implements AuiLinked
 
     // ------------------------------------------------------------------ the vanilla pass
 
-    // No background of its own: the view fills the frame it was given, and the default layer would blur behind it.
+    // The page fills the frame it was given; the vanilla grey plate still goes behind it, but not through super,
+    // whose branch would blur the world (and the HUD) instead.
     @Override
     public void extractBackground(@NonNull GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
+        AuiBackdrop.extract(this, graphics);
     }
 
     @Override

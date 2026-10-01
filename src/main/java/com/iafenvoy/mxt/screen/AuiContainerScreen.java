@@ -481,8 +481,8 @@ public abstract class AuiContainerScreen<T extends AbstractContainerMenu> extend
 
     @Override
     public void extractBackground(@NonNull GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
-        // Deliberately no super: the panel dims itself and a translucent plate over a dimmed world reads as an
-        // almost opaque one, which is not the look these pages were matched to.
+        // The vanilla plate first, so the page is submitted over a grey the player already reads as a GUI.
+        AuiBackdrop.extract(this, graphics);
         if (this.pageError == null) return;
         if (this.errorWidth != this.width) {
             this.errorLines = this.font.split(this.pageError, Math.max(40, this.width - 40));

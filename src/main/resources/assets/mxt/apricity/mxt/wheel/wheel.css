@@ -6,7 +6,7 @@
  * #ring 的适配缩放与冷却白幕的盒子（sheet-N），之后每帧只在变化时写 class 与文本；像素、渐变、动画、
  * 槽位号（.index）全在这里。几何常量：画布 208x208、圆心 (104,104)、内半径 56、外半径 96（与 WheelGeometry 同一份）。
  *
- * 八个 AUI 口径（沿丹炉四页的结论，后五条是轮盘实机踩出来的）：
+ * 十个 AUI 口径（沿丹炉四页的结论，后七条是轮盘实机踩出来的）：
  * 1. 文字用游戏自带的位图字体：`font-family` 是继承属性，重置必须写 `initial`（写 `unset` 会继承父级）；
  *    这个后端下 `font-size` 是**缩放**不是像素，基准 9px = 原版 1×，所以一律 9px。
  * 2. 视口高度必须写 `100vh`：AUI 的 <html> 没有显式高度，body 上的百分比高度取不到基底、整条会被忽略。
@@ -26,7 +26,14 @@
  *    等于扇自己的底色（底色叠第二遍）；AUI 会在若干条路径上把**祖先的背景色**带到子盒子上
  *    （`Text.resolveRasterBackgroundColor` 就是沿祖先链找第一个非 transparent 的背景色），所以把底色挪出
  *    祖先链是唯一稳的做法。`.content` / `.index` 另外显式写一个 `rgba(0,0,0,0)`（不是字面量 `transparent`，
- *    那条链只认字面量）把查找就地截断，双保险。 */
+ *    那条链只认字面量）把查找就地截断，双保险。
+ * 9. **开合动画只动 `transform`，绝不动 `opacity`**：`#stage` 那条 160ms 的淡入实测会把首帧烘出来的文字栅格留在
+ *    ~10% 白（页码行开头几个字、以及首帧写下的扇名一直发暗；像素量过：暗字 17~25、白字 255），文字栅格的缓存
+ *    键里没有祖先的不透明度，烘进去就再也不会变亮。与第 5 条同源：`opacity` / `filter` 走同一条 FBO 通道。
+ * 10. **两条浮条（`#page` / `#centre`）用主题的 `.panel` 皮**（2026-10-01 起）：它们原来自写"纯黑 0.90 + 真
+ *    `border` + 圆角"，是全仓仅有的两处与主题面板长得不一样的盒子；换成主题那层内嵌亮边之后高度少 2px
+ *    （没有边框了），`#stage` 的 `padding-bottom` 也跟着从 23 改成 21（算式见下面那段）。
+ */
 
 /* 画布由主题给（100vw/100vh、flex 居中、不选中、不滚动）；这一页自己的名字与编号是 span、不是主题的
  * `.t`，所以字体在根上再给一次。 */
@@ -37,27 +44,25 @@ body {
 }
 
 /* ── 竖排：上面一行页码，下面整块轮盘 ──
+ * 两条浮条（`#page` / `#centre`）的皮由主题的 `.panel` 给（见文件头第 10 条），这里只写它们自己的几何与文字。
  * `padding-bottom` 与上面那行占的高度等量：body 的 flex 居中是按 #stage 的**整个盒子**算的，给下面补回同样
- * 一块，轮盘的圆心才落在准星（窗口正中）上。不补的话整圈会被页码行顶下去 (行高 9 + 上下 padding 3 + 上下
- * 边框 1 = 17) + gap 6 = 23 的一半 ≈ 11.5px（实机截图量到 ≈10px）。改 #page 的字号 / padding / 边框，或改
- * 这里的 gap，都要把这 23 一起改。顺带：开合动画也因此在轮盘圆心缩放，而不是在它下面十几个像素处。 */
+ * 一块，轮盘的圆心才落在准星（窗口正中）上。不补的话整圈会被页码行顶下去 (行高 9 + 上下 padding 3 = 15)
+ * + gap 6 = 21 的一半 ≈ 10.5px。改 #page 的字号 / padding，或改这里的 gap，都要把这 21 一起改。
+ * 顺带：开合动画也因此在轮盘圆心缩放，而不是在它下面十几个像素处。 */
 #stage {
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 6px;
-    padding-bottom: 23px;
-    /* 开合动画：每次打开都是一份新 Document，这条动画因此自然重放（旧的 Java growth() 已删）。 */
+    padding-bottom: 21px;
+    /* 开合动画：每次打开都是一份新 Document，这条动画因此自然重放（旧的 Java growth() 已删）。
+     * **只动 transform，不动 opacity**（见文件头第 9 条）。 */
     animation: wheel-in 160ms ease-out both;
 }
 
 #page {
     padding: 3px 6px;
-    border: 1px solid rgba(255, 255, 255, 0.28);
-    border-radius: 2px;
-    background-color: rgba(0, 0, 0, 0.90);
     background-image: none;
-    box-shadow: none;
     color: #ffffff;
     white-space: nowrap;
 }
@@ -227,11 +232,7 @@ body {
     min-width: 84px;
     max-width: 132px;
     padding: 4px 6px;
-    border: 1px solid rgba(255, 255, 255, 0.28);
-    border-radius: 3px;
-    background-color: rgba(0, 0, 0, 0.90);
     background-image: none;
-    box-shadow: none;
     text-align: center;
 }
 
@@ -260,11 +261,9 @@ body {
 
 @keyframes wheel-in {
     from {
-        opacity: 0;
         transform: scale(0.72);
     }
     to {
-        opacity: 1;
         transform: scale(1);
     }
 }

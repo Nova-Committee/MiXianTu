@@ -14,6 +14,7 @@ import com.iafenvoy.mxt.runtime.cultivation.TechniqueProgress.Entry;
 import com.iafenvoy.mxt.runtime.cultivation.TechniqueProgress.Mode;
 import com.iafenvoy.mxt.runtime.cultivation.TechniqueProgress.Progress;
 import com.iafenvoy.mxt.runtime.item.ItemQualityService;
+import com.iafenvoy.mxt.screen.AuiBackdrop;
 import com.iafenvoy.mxt.screen.AuiPages;
 import com.iafenvoy.mxt.screen.AuiStyles;
 import com.iafenvoy.mxt.screen.information.InformationCollector.InformationEntry;
@@ -557,7 +558,7 @@ public final class InformationPanelScreen extends Screen implements AuiLinkedScr
 
     @Override
     public void extractBackground(@NonNull GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
-        // No vanilla dim gradient, for the same reason as AuiContainerScreen: only the panel dims the world.
+        AuiBackdrop.extract(this, graphics);
         if (this.pageError == null) return;
         if (this.errorWidth != this.width) {
             this.errorLines = this.font.split(this.pageError, Math.max(40, this.width - 40));

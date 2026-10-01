@@ -402,7 +402,9 @@ public final class WheelMenuScreen extends Screen implements AuiLinkedScreen {
         return false;
     }
 
-    // No background: the default one would blur the HUD extracted before this screen.
+    // The one page host that draws no backdrop at all: the wheel is read while the world is still running and the
+    // HUD is still on screen, and the choice is made against what is behind it - the vanilla plate would flatten
+    // that, and super's own branch would blur it. Every other host draws AuiBackdrop.
     @Override
     public void extractBackground(@NotNull GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
     }
