@@ -85,18 +85,12 @@ public final class ForgingScreen extends AuiContainerScreen<ForgingMenu> {
     // never sent on its own; only the buttons turn one into a request.
     @Nullable
     private Identifier selectedBlueprint, selectedMethod;
-    // The last state written into the page; every write re-runs its style pass.
+    // The cell the pointer is over; the page is told only when that changes.
     private int hoveredBlueprint = -1, hoveredMethod = -1;
-    // The scrollbar flags start "already applied" as disabled: a list short enough to need no scrolling is the
-    // common case, and starting at false meant the first refresh saw no change and never dimmed the thumb.
-    private boolean shownBlueprintScrollbar = true, shownMethodScrollbar = true;
-    private int shownBlueprintScroller = Integer.MIN_VALUE, shownMethodScroller = Integer.MIN_VALUE;
-    private int shownMeterValue = Integer.MIN_VALUE;
-    private int shownSteps = Integer.MIN_VALUE;
-    @Nullable
-    private String shownQuality;
+    // Whether a press would name something the server accepts, shown as the button's disabled attribute. Nothing
+    // else is remembered about the page: AuiElements compares every write with the element it writes, so a second
+    // copy of "what the page was last told" is only a chance to disagree with it.
     private boolean blueprintReady, methodReady, cancelReady;
-    private boolean shownBlueprintReady, shownMethodReady, shownCancelReady;
 
     public ForgingScreen(ForgingMenu menu, Inventory inventory, Component title) {
         super(menu, inventory, title, PANEL_WIDTH, PANEL_HEIGHT);
@@ -105,11 +99,6 @@ public final class ForgingScreen extends AuiContainerScreen<ForgingMenu> {
     @Override
     protected String pagePath() {
         return AuiPages.page(AuiPages.FORGING, "forging");
-    }
-
-    @Override
-    protected String pageName() {
-        return "forging";
     }
 
     @Override
@@ -195,16 +184,9 @@ public final class ForgingScreen extends AuiContainerScreen<ForgingMenu> {
         this.cancel = null;
         this.hoveredBlueprint = -1;
         this.hoveredMethod = -1;
-        this.shownBlueprintScrollbar = false;
-        this.shownMethodScrollbar = false;
-        this.shownBlueprintScroller = Integer.MIN_VALUE;
-        this.shownMethodScroller = Integer.MIN_VALUE;
-        this.shownMeterValue = Integer.MIN_VALUE;
-        this.shownSteps = Integer.MIN_VALUE;
-        this.shownQuality = null;
-        this.shownBlueprintReady = false;
-        this.shownMethodReady = false;
-        this.shownCancelReady = false;
+        this.blueprintReady = false;
+        this.methodReady = false;
+        this.cancelReady = false;
     }
 
     @Override
@@ -223,11 +205,12 @@ public final class ForgingScreen extends AuiContainerScreen<ForgingMenu> {
         Identifier pickedMethod = this.picked(methods, this.selectedMethod);
         this.showGrid(this.blueprintCells, blueprints, this.blueprintOffs, pickedBlueprint);
         this.showGrid(this.methodCells, methods, this.methodOffs, pickedMethod);
-        this.showScrollbar(true, this.blueprintBar, this.blueprintOffs, blueprints.size());
-        this.showScrollbar(false, this.methodBar, this.methodOffs, methods.size());
+        this.showScrollbar(this.blueprintBar, this.blueprintOffs, blueprints.size());
+        this.showScrollbar(this.methodBar, this.methodOffs, methods.size());
         this.showSteps(this.targetCells, true);
         this.showSteps(this.historyCells, false);
         this.showMeter(pickedBlueprint, this.deltaOf(pickedMethod));
+        this.showButtons(pickedBlueprint, pickedMethod);
         this.showReadouts();
     }
 
@@ -247,29 +230,29 @@ public final class ForgingScreen extends AuiContainerScreen<ForgingMenu> {
         }
     }
 
-    private void showScrollbar(boolean blueprint, @Nullable Element bar, float offs, int entries) {
+    private void showScrollbar(@Nullable Element bar, float offs, int entries) {
         if (bar == null) return;
-        boolean active = this.isScrollBarActive(entries);
+        AuiElements.setClass(bar, "disabled", !this.isScrollBarActive(entries));
         // Page coordinates: the thumb is a child of the panel, not of the track, so this is the same space as
         // the CSS default (top: 18px) and as the drag maths below. Writing it track-relative put both thumbs on
         // the panel's top edge, beside the title, instead of on the track beside their grid.
-        int top = SCROLL_TOP + 1 + Math.round(SCROLL_TRAVEL * offs);
-        if (blueprint) {
-            if (active != this.shownBlueprintScrollbar) {
-                AuiElements.setClass(bar, "disabled", !active);
-                this.shownBlueprintScrollbar = active;
-            }
-            if (top == this.shownBlueprintScroller) return;
-            this.shownBlueprintScroller = top;
-        } else {
-            if (active != this.shownMethodScrollbar) {
-                AuiElements.setClass(bar, "disabled", !active);
-                this.shownMethodScrollbar = active;
-            }
-            if (top == this.shownMethodScroller) return;
-            this.shownMethodScroller = top;
-        }
-        AuiElements.style(bar, "top", top + "px");
+        AuiElements.style(bar, "top", SCROLL_TOP + 1 + Math.round(SCROLL_TRAVEL * offs) + "px");
+    }
+
+    /**
+     * A press is accepted exactly when its request would name something the server takes: a blueprint needs a live
+     * pick, no running session and its materials; a method needs a live pick while a session runs; cancel needs a
+     * session at all. The attribute also makes ApricityUI drop the click, so the guards in the three presses only
+     * cover a press that lands before the next refresh.
+     */
+    private void showButtons(@Nullable Identifier pickedBlueprint, @Nullable Identifier pickedMethod) {
+        this.blueprintReady = !this.menu.active() && pickedBlueprint != null && this.menu.materialsCovered(pickedBlueprint);
+        this.methodReady = this.menu.active() && pickedMethod != null;
+        // With no session nothing is locked, so there is nothing to cancel.
+        this.cancelReady = this.menu.active();
+        AuiElements.setDisabled(this.useBlueprint, !this.blueprintReady);
+        AuiElements.setDisabled(this.useMethod, !this.methodReady);
+        AuiElements.setDisabled(this.cancel, !this.cancelReady);
     }
 
     private void showSteps(List<IconBox> cells, boolean target) {
@@ -312,26 +295,20 @@ public final class ForgingScreen extends AuiContainerScreen<ForgingMenu> {
     }
 
     private void showMark(@Nullable Element mark, boolean visible, int left) {
-        if (mark == null) return;
         AuiElements.style(mark, "display", visible ? "block" : "none");
         if (visible) AuiElements.style(mark, "left", left + "px");
     }
 
     private void hideMeter() {
-        for (Element mark : new Element[]{this.meterBand, this.meterZero, this.meterValueMark, this.meterPredicted}) {
-            AuiElements.style(mark, "display", "none");
-        }
+        this.showMark(this.meterBand, false, 0);
+        this.showMark(this.meterZero, false, 0);
+        this.showMark(this.meterValueMark, false, 0);
+        this.showMark(this.meterPredicted, false, 0);
     }
 
     private void showReadouts() {
-        if (this.meterValue != null && this.menu.meterValue() != this.shownMeterValue) {
-            this.shownMeterValue = this.menu.meterValue();
-            this.text(this.meterValue, Component.translatable("screen.mxt.forging.meter.value", this.shownMeterValue));
-        }
-        if (this.stepsText != null && this.menu.steps() != this.shownSteps) {
-            this.shownSteps = this.menu.steps();
-            this.text(this.stepsText, Component.translatable("screen.mxt.forging.steps", this.shownSteps));
-        }
+        this.text(this.meterValue, Component.translatable("screen.mxt.forging.meter.value", this.menu.meterValue()));
+        this.text(this.stepsText, Component.translatable("screen.mxt.forging.steps", this.menu.steps()));
         // What the piece came out as is the server's own answer and only exists once the result is in the
         // output slot, so nothing here predicts it: the line appears with the finished piece and goes with it.
         ForgingResultComponent result =
@@ -351,9 +328,6 @@ public final class ForgingScreen extends AuiContainerScreen<ForgingMenu> {
      * old screen painted is flattened, and the tier colour is the part worth keeping.
      */
     private void showQuality(String text, String color) {
-        if (text.equals(this.shownQuality)) return;
-        this.shownQuality = text;
-        if (this.qualityText == null) return;
         AuiElements.setText(this.qualityText, text);
         AuiElements.style(this.qualityText, "color", color);
     }
@@ -361,8 +335,6 @@ public final class ForgingScreen extends AuiContainerScreen<ForgingMenu> {
     // ------------------------------------------------------------------ buttons
 
     private void useBlueprint() {
-        // A disabled div still receives its click listener, so the same rule the old button's active flag held
-        // is checked here before anything is sent.
         if (!this.blueprintReady) return;
         Identifier id = this.picked(this.blueprintEntries(), this.selectedBlueprint);
         if (id == null) return;

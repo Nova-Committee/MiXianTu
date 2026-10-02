@@ -30,7 +30,6 @@ import com.iafenvoy.mxt.data.condition.builtin.entity.ProgressionEntityCondition
 import com.iafenvoy.mxt.data.condition.builtin.entity.RealmEntityCondition;
 import com.iafenvoy.mxt.data.progression.Progression;
 import com.iafenvoy.mxt.data.trigger.Trigger;
-import com.iafenvoy.mxt.item.block.entity.TalismanWorkstationBlockEntity;
 import com.iafenvoy.mxt.network.payload.WheelActionC2SPayload;
 import com.iafenvoy.mxt.runtime.ability.AbilityGrantService;
 import com.iafenvoy.mxt.runtime.ability.PassiveAttributeService;
@@ -206,6 +205,7 @@ import com.iafenvoy.mxt.runtime.world.SecretRealmStructurePlacer;
 import com.iafenvoy.mxt.screen.information.InformationCollector.InformationEntry;
 import com.iafenvoy.mxt.screen.information.InformationManager;
 import com.iafenvoy.mxt.screen.information.InformationManager.Side;
+import com.iafenvoy.mxt.screen.menu.TalismanWorkstationMenu;
 import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.PlayerNames;
@@ -247,6 +247,7 @@ import net.minecraft.tags.TagKey;
 import net.minecraft.util.TriState;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.MenuProvider;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.damagesource.DamageType;
 import net.minecraft.world.damagesource.DamageTypes;
@@ -263,6 +264,10 @@ import net.minecraft.world.entity.animal.chicken.Chicken;
 import net.minecraft.world.entity.animal.pig.Pig;
 import net.minecraft.world.entity.animal.wolf.Wolf;
 import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.ItemUseAnimation;
@@ -286,6 +291,7 @@ import org.jetbrains.annotations.Nullable;
 
 import static net.minecraft.commands.Commands.literal;
 
+import org.jspecify.annotations.NonNull;
 import top.theillusivec4.curios.api.CuriosApi;
 import top.theillusivec4.curios.api.CuriosSlotTypes;
 import top.theillusivec4.curios.api.SlotContext;
@@ -456,23 +462,30 @@ public final class MxtTestCommands {
         ServerLevel level = player.level();
         BlockPos pos = player.blockPosition().relative(player.getDirection().getOpposite());
         level.setBlockAndUpdate(pos, MxtBlocks.TALISMAN_WORKSTATION.get().defaultBlockState());
-        if (!(level.getBlockEntity(pos) instanceof TalismanWorkstationBlockEntity station)) {
-            source.sendFailure(Component.literal("drawing_station: the workstation placed no block entity"));
-            return 0;
-        }
-        station.paper().setItem(0, new ItemStack(MxtItems.BLANK_TALISMAN.get()));
-        station.pigment().setItem(0, new ItemStack(MxtItems.CINNABAR.get(), 4));
         ItemStack brush = new ItemStack(MxtItems.TALISMAN_BRUSH.get());
         brush.set(MxtDataComponents.BRUSH_PIGMENT, 1_000);
-        player.openMenu(station);
+        player.openMenu(new MenuProvider() {
+            @Override
+            public @NonNull Component getDisplayName() {
+                return Component.translatable("block.mxt.talisman_workstation");
+            }
+
+            @Override
+            public AbstractContainerMenu createMenu(int containerId, @NonNull Inventory inventory, @NonNull Player openedBy) {
+                return new TalismanWorkstationMenu(containerId, inventory, ContainerLevelAccess.create(level, pos));
+            }
+        });
         // The cursor is the menu's carried stack, so it can only be filled once the menu exists; the list follows
         // on its own from the next tick (the menu re-pushes whenever the cursor or the station slot changed).
         player.containerMenu.setCarried(brush);
+        // The station stores nothing: the paper goes into the slot the menu owns, and closing hands it back.
+        if (player.containerMenu instanceof TalismanWorkstationMenu opened)
+            opened.paper().setItem(0, new ItemStack(MxtItems.BLANK_TALISMAN.get()));
         source.sendSuccess(() -> Component.literal("drawing_station: opened at " + pos.toShortString()
-                + " with one blank talisman, four cinnabar and a brush holding 1000 pigment"), false);
+                + " with one blank talisman and a brush holding 1000 pigment"), false);
         source.sendSuccess(() -> Component.literal("drawing_station: carried="
-                + player.containerMenu.getCarried() + " slot=" + station.paper().getItem(0) + " pigment slot="
-                + station.pigment().getItem(0) + " brush="
+                + player.containerMenu.getCarried() + " slot=" + (player.containerMenu instanceof TalismanWorkstationMenu opened
+                ? opened.paper().getItem(0) : ItemStack.EMPTY) + " brush="
                 + BrushPigmentService.pigment(brush)), false);
         return 1;
     }

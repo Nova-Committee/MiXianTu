@@ -31,12 +31,7 @@ public final class StationScreen extends AuiContainerScreen<StationMenu> {
 
     @Override
     protected String pagePath() {
-        return AuiPages.economyPage(this.pageName());
-    }
-
-    @Override
-    protected String pageName() {
-        return isOwner(this.menu) ? "station_owner" : "station_customer";
+        return AuiPages.economyPage(isOwner(this.menu) ? "station_owner" : "station_customer");
     }
 
     @Override

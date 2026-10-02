@@ -41,11 +41,6 @@ public final class PlayerTradeScreen extends AuiContainerScreen<PlayerTradeMenu>
     }
 
     @Override
-    protected String pageName() {
-        return "trade";
-    }
-
-    @Override
     public void bindPage() {
         this.panel = this.getOrThrow("panel");
         this.accept = this.getOrThrow("accept");

@@ -58,11 +58,6 @@ public final class SpiritCraftingScreen extends AuiContainerScreen<SpiritCraftin
     }
 
     @Override
-    protected String pageName() {
-        return "spirit_crafting";
-    }
-
-    @Override
     public void bindPage() {
         this.panel = this.getOrThrow("panel");
         this.auraPanel = this.getOrThrow("aura_panel");

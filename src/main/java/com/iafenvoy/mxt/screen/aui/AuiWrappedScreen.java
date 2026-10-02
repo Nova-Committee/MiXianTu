@@ -44,16 +44,23 @@ public interface AuiWrappedScreen extends AuiLinkedScreen {
     void bindPage() throws NoSuchElementException;
 
     /**
-     * Seeds the bundled pages, builds the document and binds the contract; the host passes the path and the name
-     * of the page it wants, once, from its {@code init}.
+     * The page's name, as the fallback line prints it; it follows from the path the host opened.
+     */
+    default String pageName() {
+        return this.auiState().pageName;
+    }
+
+    /**
+     * Seeds the bundled pages, builds the document and binds the contract; the host passes the path of the page it
+     * wants, once, from its {@code init}.
      * <p>
      * A window resize re-enters {@code init} with the same DOM, and ApricityUI appends listeners without ever
      * deduping them: a resize therefore only applies the viewport. A document that really was rebuilt is caught by
      * the generation check in {@link #auiPageWritable()}, which is the one thing that has to happen per frame.
      */
-    default void auiInit(String pagePath, String pageName) {
+    default void auiInit(String pagePath) {
         State state = this.auiState();
-        state.pageName = pageName;
+        state.pageName = AuiPages.pageName(pagePath);
         Document current = this.getLinkedDocument();
         if (current != null) {
             current.applyViewport(true);
@@ -307,7 +314,7 @@ public interface AuiWrappedScreen extends AuiLinkedScreen {
      */
     final class State {
         /**
-         * The page's name for the fallback line, as the host named it when it opened the page.
+         * The page's name for the fallback line, read off the path the host opened.
          */
         String pageName = "";
         @Nullable

@@ -61,11 +61,6 @@ public final class AlchemyFurnaceScreen extends AuiContainerScreen<AlchemyFurnac
     }
 
     @Override
-    protected String pageName() {
-        return this.menu.view().getSlug();
-    }
-
-    @Override
     public void bindPage() {
         this.panel = this.getOrThrow("panel");
         this.title = this.getOrThrow("title");

@@ -78,18 +78,13 @@ public final class WheelMenuScreen extends AuiScreen {
         return AuiPages.wheelPage();
     }
 
-    @Override
-    protected String pageName() {
-        return AuiPages.WHEEL;
-    }
-
     /**
      * The wheel's page is named as the bundled folder rather than as a screen, so its two faults read as the
      * store they come from.
      */
     @Override
     public Component pageMissing() {
-        return Component.translatable("screen.mxt.wheel.template_missing", this.pageName());
+        return Component.translatable("screen.mxt.wheel.template_missing", AuiPages.WHEEL);
     }
 
     @Override

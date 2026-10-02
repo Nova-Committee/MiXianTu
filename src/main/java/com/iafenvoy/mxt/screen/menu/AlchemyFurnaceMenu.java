@@ -313,7 +313,7 @@ public final class AlchemyFurnaceMenu extends AbstractContainerMenu {
             case MAIN -> AlchemyInventoryKind.MAIN;
             case AUXILIARY -> AlchemyInventoryKind.AUXILIARY;
             case OUTPUT -> AlchemyInventoryKind.OUTPUT;
-            case MONITOR -> null;
+            default -> throw new IllegalStateException("Unexpected value: " + view);
         };
         return part.kind() == expected && part.getContainerSize() == view.getMachineSlots()
                 && part.inventory().getContainerSize() == view.getMachineSlots();

@@ -28,11 +28,6 @@ public final class ChequeTableScreen extends AuiContainerScreen<ChequeTableMenu>
     }
 
     @Override
-    protected String pageName() {
-        return "cheque";
-    }
-
-    @Override
     public void bindPage() {
         this.panel = this.getOrThrow("panel");
 

@@ -15,10 +15,8 @@ public abstract class AbstractHudEntry implements HudEntry {
     // The placement in force, in pixels: the anchor point is the window anchor plus this offset. The anchor is state
     // rather than a class constant because the editor rebinds it while dragging.
     private HudAnchor anchor = HudAnchor.LEFT_TOP;
-    private int offsetX;
-    private int offsetY;
-    private int width;
-    private int height;
+    private int offsetX, offsetY;
+    private int width, height;
     private boolean visible = true;
     private boolean dragging;
 

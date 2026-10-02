@@ -100,11 +100,6 @@ public final class WheelConfigurationScreen extends AuiScreen {
     }
 
     @Override
-    protected String pageName() {
-        return "wheel_config";
-    }
-
-    @Override
     public void onPageBound() {
         // The panel's geometry is computed from the window, so it is written before the page is told about it.
         this.layout();

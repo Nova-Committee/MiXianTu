@@ -145,11 +145,6 @@ public final class InformationPanelScreen extends AuiScreen {
     }
 
     @Override
-    protected String pageName() {
-        return "information";
-    }
-
-    @Override
     public void onPageBound() {
         this.refreshInformation();
     }

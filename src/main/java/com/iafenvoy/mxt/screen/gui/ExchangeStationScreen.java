@@ -56,11 +56,6 @@ public final class ExchangeStationScreen extends AuiContainerScreen<ExchangeStat
     }
 
     @Override
-    protected String pageName() {
-        return "exchange";
-    }
-
-    @Override
     public void bindPage() {
         this.panel = this.getOrThrow("panel");
         this.scroller = this.getOrThrow("scroller");

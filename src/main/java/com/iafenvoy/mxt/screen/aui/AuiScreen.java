@@ -29,14 +29,10 @@ public abstract class AuiScreen extends Screen implements AuiWrappedScreen {
     }
 
     /**
-     * Document path of the page, e.g. {@code AuiPages.page(AuiPages.INFORMATION, "information")}.
+     * Document path of the page, e.g. {@code AuiPages.page(AuiPages.INFORMATION, "information")}; its name for the
+     * fallback line follows from it.
      */
     protected abstract String pagePath();
-
-    /**
-     * Page name as the fallback error line prints it.
-     */
-    protected abstract String pageName();
 
     @Override
     public AuiWrappedScreen.State auiState() {
@@ -57,7 +53,7 @@ public abstract class AuiScreen extends Screen implements AuiWrappedScreen {
     @Override
     protected void init() {
         super.init();
-        this.auiInit(this.pagePath(), this.pageName());
+        this.auiInit(this.pagePath());
     }
 
     @Override

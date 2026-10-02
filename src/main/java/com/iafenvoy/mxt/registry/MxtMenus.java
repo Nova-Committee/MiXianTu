@@ -24,8 +24,8 @@ public final class MxtMenus {
     public static final DeferredHolder<MenuType<?>, MenuType<PlayerTradeMenu>> PLAYER_TRADE = REGISTRY.register("player_trade", () -> IMenuTypeExtension.create(PlayerTradeMenu::new));
     public static final DeferredHolder<MenuType<?>, MenuType<SpiritCraftingMenu>> SPIRIT_CRAFTING_TABLE = REGISTRY.register("spirit_crafting_table", () -> new MenuType<>(SpiritCraftingMenu::new, FeatureFlags.VANILLA_SET));
     public static final DeferredHolder<MenuType<?>, MenuType<ForgingMenu>> FORGING_TABLE = REGISTRY.register("forging_table", () -> new MenuType<>(ForgingMenu::new, FeatureFlags.VANILLA_SET));
-    // The client half cannot reach a block entity, so it rebuilds the screen from the player inventory alone; the
-    // server half is handed the station directly (TalismanWorkstationBlockEntity#createMenu).
+    // Both halves build the same menu: the station stores nothing, so the server half is handed the block's position
+    // and the client half builds the same shape from the player inventory alone.
     public static final DeferredHolder<MenuType<?>, MenuType<TalismanWorkstationMenu>> TALISMAN_WORKSTATION = REGISTRY.register("talisman_workstation",
             () -> IMenuTypeExtension.create((containerId, inventory, buffer) -> new TalismanWorkstationMenu(containerId, inventory)));
     public static final DeferredHolder<MenuType<?>, MenuType<AlchemyFurnaceMenu>> ALCHEMY_FURNACE = REGISTRY.register("alchemy_furnace",

@@ -85,14 +85,10 @@ public abstract class AuiContainerScreen<T extends AbstractContainerMenu> extend
     // ------------------------------------------------------------------ page contract
 
     /**
-     * Document path of the page, e.g. {@code AuiPages.page(AuiPages.FORGING, "forging")}.
+     * Document path of the page, e.g. {@code AuiPages.page(AuiPages.FORGING, "forging")}; its name for the fallback
+     * line follows from it.
      */
     protected abstract String pagePath();
-
-    /**
-     * Page name as it appears in the fallback error line.
-     */
-    protected abstract String pageName();
 
     @Override
     public AuiWrappedScreen.State auiState() {
@@ -128,7 +124,7 @@ public abstract class AuiContainerScreen<T extends AbstractContainerMenu> extend
     @Override
     protected void init() {
         super.init();
-        this.auiInit(this.pagePath(), this.pageName());
+        this.auiInit(this.pagePath());
     }
 
     /**

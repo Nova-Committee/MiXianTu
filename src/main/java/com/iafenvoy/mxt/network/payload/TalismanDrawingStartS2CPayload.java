@@ -14,14 +14,15 @@ import org.jspecify.annotations.NonNull;
 import java.util.List;
 
 /**
- * Opens one drawing for one player: the shape to trace, how the reference layer is shown and everything the local
- * preview needs. The scoring parameters travel only when the formula allows a preview; the recipe itself, the
- * result block and the canvas size never do.
+ * Opens one drawing for one player: the shape to trace, how the reference layer is shown, the formula's two colours
+ * and everything the local preview needs. The scoring parameters travel only when the formula allows a preview; the
+ * recipe itself, the result block and the canvas size never do.
  *
  * <p>The two preprocessing constants are code constants on both sides and are deliberately not sent.
  */
-public record TalismanDrawingStartS2CPayload(int containerId, Identifier recipeId, List<Stroke> strokes,
-                                             String guide, boolean showOrder, double tolerance,
+public record TalismanDrawingStartS2CPayload(int containerId, Identifier recipeId, int backgroundColor,
+                                             int foregroundColor, List<Stroke> strokes, String guide,
+                                             boolean showOrder, double tolerance,
                                              TalismanDrawingScorer.Judgement judgement,
                                              int minStrokeInterval) implements CustomPacketPayload {
     public static final Type<TalismanDrawingStartS2CPayload> TYPE =
@@ -29,6 +30,8 @@ public record TalismanDrawingStartS2CPayload(int containerId, Identifier recipeI
     public static final StreamCodec<RegistryFriendlyByteBuf, TalismanDrawingStartS2CPayload> STREAM_CODEC = StreamCodec.composite(
             ByteBufCodecs.VAR_INT, TalismanDrawingStartS2CPayload::containerId,
             Identifier.STREAM_CODEC, TalismanDrawingStartS2CPayload::recipeId,
+            ByteBufCodecs.VAR_INT, TalismanDrawingStartS2CPayload::backgroundColor,
+            ByteBufCodecs.VAR_INT, TalismanDrawingStartS2CPayload::foregroundColor,
             ByteBufCodecs.fromCodecWithRegistries(TalismanDrawingRecipe.STROKE_CODEC).apply(ByteBufCodecs.list(64)),
             TalismanDrawingStartS2CPayload::strokes,
             ByteBufCodecs.STRING_UTF8, TalismanDrawingStartS2CPayload::guide,

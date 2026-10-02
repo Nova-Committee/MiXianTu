@@ -1,7 +1,6 @@
 package com.iafenvoy.mxt.screen.menu;
 
 import com.iafenvoy.mxt.config.MxtServerConfig;
-import com.iafenvoy.mxt.item.block.entity.TalismanWorkstationBlockEntity;
 import com.iafenvoy.mxt.network.payload.TalismanDrawingListS2CPayload;
 import com.iafenvoy.mxt.network.payload.TalismanDrawingStartS2CPayload;
 import com.iafenvoy.mxt.network.payload.TalismanResultS2CPayload;
@@ -9,7 +8,6 @@ import com.iafenvoy.mxt.network.payload.TalismanStrokeAckS2CPayload;
 import com.iafenvoy.mxt.recipe.TalismanDrawingRecipe;
 import com.iafenvoy.mxt.registry.MxtBlocks;
 import com.iafenvoy.mxt.registry.MxtMenus;
-import com.iafenvoy.mxt.runtime.talisman.BrushPigmentService;
 import com.iafenvoy.mxt.runtime.talisman.TalismanDrawingScorer.Stroke;
 import com.iafenvoy.mxt.runtime.talisman.TalismanDrawingSession;
 import com.iafenvoy.mxt.runtime.talisman.TalismanWorkstationService;
@@ -32,24 +30,28 @@ import java.util.List;
 
 /**
  * The workstation's menu, and the only place a drawing session lives: two players at the same station keep two
- * sessions, and {@link #removed(Player)} is where an abandoned one settles. The two station slots are the block
- * entity's, so the paper and the pigment are shared and saved; everything else travels to this side as payloads.
+ * sessions of their own, and {@link #removed(Player)} is where an abandoned one ends. Nothing here is stored in the
+ * world - the one slot is this menu's own, the way a crafting table's grid is, so closing the screen hands whatever
+ * it still holds back to the player. The pigment has no slot: it is the brush's own store, and dipping works in any
+ * container.
  *
- * <p>The client builds this menu with placeholder containers, the way the vanilla furnace does: slot contents
- * arrive through the vanilla slot packets, not through the block entity.
+ * <p>The client builds this menu with its own placeholder slot, the way the vanilla furnace does: slot contents
+ * arrive through the vanilla slot packets.
  */
 public final class TalismanWorkstationMenu extends AbstractContainerMenu {
     public static final int PAPER_SLOT = 0;
-    public static final int PIGMENT_SLOT = 1;
-    private static final int PLAYER_INVENTORY_START = 2;
+    private static final int PLAYER_INVENTORY_START = 1;
     private static final int PLAYER_HOTBAR_END = PLAYER_INVENTORY_START + 36;
     /**
      * Ticks between two unconditional list pushes, for what the inputs below cannot see.
      */
     private static final int LIST_REFRESH_TICKS = 20;
 
-    private final Container paper;
-    private final Container pigment;
+    /**
+     * The transient paper slot. It exists only for as long as the screen does, which is exactly the crafting table's
+     * contract: {@link #removed(Player)} returns it, so nothing a player puts here can be stranded in the world.
+     */
+    private final Container paper = new SimpleContainer(1);
     private final ContainerLevelAccess access;
     private final boolean hasStation;
     private @Nullable TalismanDrawingSession session;
@@ -67,28 +69,27 @@ public final class TalismanWorkstationMenu extends AbstractContainerMenu {
     private @Nullable TalismanStrokeAckS2CPayload lastAck;
     private @Nullable TalismanResultS2CPayload result;
 
-    public TalismanWorkstationMenu(int containerId, Inventory inventory, TalismanWorkstationBlockEntity station) {
-        this(containerId, inventory, station.paper(), station.pigment(),
-                ContainerLevelAccess.create(station.getLevel(), station.getBlockPos()), true);
+    /**
+     * The server half: the block hands its own position in, which is what {@link #stillValid} checks.
+     */
+    public TalismanWorkstationMenu(int containerId, Inventory inventory, ContainerLevelAccess access) {
+        this(containerId, inventory, access, true);
         this.opener = inventory.player instanceof ServerPlayer player ? player : null;
     }
 
+    /**
+     * The client half: the same shape, with no world to check and a slot the packets fill.
+     */
     public TalismanWorkstationMenu(int containerId, Inventory inventory) {
-        this(containerId, inventory, new SimpleContainer(1), new SimpleContainer(1), ContainerLevelAccess.NULL, false);
+        this(containerId, inventory, ContainerLevelAccess.NULL, false);
     }
 
-    private TalismanWorkstationMenu(int containerId, Inventory inventory, Container paper, Container pigment,
-                                    ContainerLevelAccess access, boolean hasStation) {
+    private TalismanWorkstationMenu(int containerId, Inventory inventory, ContainerLevelAccess access, boolean hasStation) {
         super(MxtMenus.TALISMAN_WORKSTATION.get(), containerId);
-        checkContainerSize(paper, 1);
-        checkContainerSize(pigment, 1);
-        this.paper = paper;
-        this.pigment = pigment;
         this.access = access;
         this.hasStation = hasStation;
-        // The geometry here is a placeholder: the page's cells rewrite every slot's x/y each frame.
-        this.addSlot(new FilteredSlot(paper, 0, 24, 108, stack -> stack.is(TalismanDrawingRecipe.paper())));
-        this.addSlot(new FilteredSlot(pigment, 0, 44, 108, BrushPigmentService::isPigment));
+        // The geometry here is a placeholder: the page's cell rewrites the slot's x/y each frame.
+        this.addSlot(new FilteredSlot(this.paper, 0, 24, 108, stack -> stack.is(TalismanDrawingRecipe.paper())));
         for (int row = 0; row < 3; row++)
             for (int column = 0; column < 9; column++)
                 this.addSlot(new Slot(inventory, column + row * 9 + 9,
@@ -99,10 +100,6 @@ public final class TalismanWorkstationMenu extends AbstractContainerMenu {
 
     public Container paper() {
         return this.paper;
-    }
-
-    public Container pigment() {
-        return this.pigment;
     }
 
     public @Nullable TalismanDrawingSession session() {
@@ -195,13 +192,14 @@ public final class TalismanWorkstationMenu extends AbstractContainerMenu {
         boolean replacing = this.session != null;
         if (replacing) {
             if (this.session.recipeId().equals(recipeId) || this.session.drewAnything()) return;
-            TalismanWorkstationService.settle(player, this.session);
+            TalismanWorkstationService.abandon(player, this.session);
             this.session = null;
         }
         TalismanWorkstationService.start(player, this.paper, recipeId).ifPresent(started -> {
             this.session = started;
             TalismanDrawingRecipe.Pattern pattern = started.recipe().pattern();
             PacketDistributor.sendToPlayer(player, new TalismanDrawingStartS2CPayload(this.containerId, recipeId,
+                    started.recipe().backgroundColor(), started.recipe().foregroundColor(),
                     pattern.strokes(), pattern.guide().getSerializedName(), pattern.showOrder(), pattern.tolerance(),
                     started.recipe().judgement(), MxtServerConfig.INSTANCE.talisman.minStrokeInterval.getValue()));
         });
@@ -242,15 +240,19 @@ public final class TalismanWorkstationMenu extends AbstractContainerMenu {
     }
 
     /**
-     * Ending the drawing by hand; with no strokes drawn the server hands everything back.
+     * Ending the drawing by hand. A session that drew nothing is handed everything back and answers {@code
+     * CANCELLED}; one that drew is the same failure {@link #removed(Player)} reaches, so the screen is told
+     * {@code ABANDONED} rather than pretending the attempt never happened.
      */
     public void cancel(ServerPlayer player) {
         if (this.session == null) return;
-        TalismanWorkstationService.settle(player, this.session);
+        TalismanDrawingSession ended = this.session;
         this.session = null;
+        boolean failed = ended.drewAnything();
+        TalismanWorkstationService.abandon(player, ended);
         PacketDistributor.sendToPlayer(player, new TalismanResultS2CPayload(this.containerId,
-                TalismanResultS2CPayload.CANCELLED, 0.0D, false,
-                Component.empty(), ItemStack.EMPTY, 0));
+                failed ? TalismanResultS2CPayload.ABANDONED : TalismanResultS2CPayload.CANCELLED, 0.0D, false,
+                Component.empty(), ItemStack.EMPTY, ended.pigmentSpent()));
         this.sendList(player);
     }
 
@@ -265,12 +267,20 @@ public final class TalismanWorkstationMenu extends AbstractContainerMenu {
         this.sendList(player);
     }
 
+    /**
+     * The crafting table's exit, in the crafting table's order: the abandoned drawing gets its verdict first, and
+     * then the transient slot goes back to the player - including what a refund just wrote into it. The access wraps
+     * the sweep the way {@code CraftingMenu.removed} does: the client's menu holds {@code ContainerLevelAccess.NULL},
+     * whose {@code evaluate} is always empty, so the slot is only swept on the server.
+     */
     @Override
     public void removed(@NonNull Player player) {
         super.removed(player);
-        if (this.session != null && player instanceof ServerPlayer serverPlayer)
-            TalismanWorkstationService.settle(serverPlayer, this.session);
-        this.session = null;
+        if (this.session != null) {
+            if (player instanceof ServerPlayer serverPlayer) TalismanWorkstationService.abandon(serverPlayer, this.session);
+            this.session = null;
+        }
+        this.access.execute((level, pos) -> this.clearContainer(player, this.paper));
     }
 
     @Override
@@ -278,9 +288,9 @@ public final class TalismanWorkstationMenu extends AbstractContainerMenu {
         Slot slot = this.slots.get(index);
         if (!slot.hasItem()) return ItemStack.EMPTY;
         ItemStack original = slot.getItem().copy();
-        boolean moved = index == PAPER_SLOT || index == PIGMENT_SLOT
+        boolean moved = index == PAPER_SLOT
                 ? this.moveItemStackTo(slot.getItem(), PLAYER_INVENTORY_START, PLAYER_HOTBAR_END, true)
-                : this.moveItemStackTo(slot.getItem(), PAPER_SLOT, PIGMENT_SLOT + 1, false);
+                : this.moveItemStackTo(slot.getItem(), PAPER_SLOT, PAPER_SLOT + 1, false);
         if (moved) {
             if (slot.getItem().isEmpty()) slot.setByPlayer(ItemStack.EMPTY);
             else slot.setChanged();

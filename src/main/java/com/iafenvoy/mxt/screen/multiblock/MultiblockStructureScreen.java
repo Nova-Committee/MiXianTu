@@ -56,11 +56,6 @@ public final class MultiblockStructureScreen extends AuiScreen {
         return AuiPages.multiblockPage();
     }
 
-    @Override
-    protected String pageName() {
-        return "structure";
-    }
-
     /**
      * Runs before the vanilla pass, so the page is extracted under the scene's picture-in-picture state and both
      * are under the hovered cell's tooltip.

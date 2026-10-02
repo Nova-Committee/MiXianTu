@@ -391,13 +391,12 @@ textarea {
  * 固定宽度），和这里的位图字体对不上，所以 Java 侧只登记"哪个元素、哪些行"，画由 `GuiGraphicsExtractor`
  * 负责（`AuiContainerScreen.extractTooltip`，以及人物信息 / 结构预览 / 轮盘各自那一份）。 */
 
-/* ── 符纸：黄纸底 + 纸框描边（画符工作站的纸面，唯一不是深灰的一套底） ──
- * 黄纸是"纸"这件东西本身的颜色，不是面板的皮，所以只有这一处破例；两层 canvas 的内容（淡褐参考层、
- * 朱砂红墨迹）由 Java 画，色值写在工作站的屏幕类里并与这里的黄底配成一对。 */
+/* ── 符纸：纸框描边（画符工作站的纸面，唯一不是深灰的一套底） ──
+ * 纸底的**颜色不在这里**：它由配方给（`background_color`，默认浅黄），屏幕在绑定时写成内联样式——两处各写
+ * 一套就会走散；这里只留纸框的描边。两层 canvas 的内容（淡褐参考层、前景色墨迹）同样由 Java 画。 */
 .paper {
     position: absolute;
     box-sizing: border-box;
-    background-color: #e9d8a6;
     box-shadow: inset 0 0 0 1px #b9a878;
 }
 

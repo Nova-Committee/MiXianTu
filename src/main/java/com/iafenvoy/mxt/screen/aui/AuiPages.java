@@ -149,6 +149,16 @@ public final class AuiPages {
         return folder + "/" + name + HTML_SUFFIX;
     }
 
+    /**
+     * The name of a page path - its last segment without the suffix - which is what the fallback line prints; the
+     * path is the only thing a host names, the name follows from it.
+     */
+    public static String pageName(String path) {
+        int slash = path.lastIndexOf('/');
+        String name = slash < 0 ? path : path.substring(slash + 1);
+        return name.endsWith(HTML_SUFFIX) ? name.substring(0, name.length() - HTML_SUFFIX.length()) : name;
+    }
+
     public static Path directory(String folder) {
         return FMLPaths.GAMEDIR.get().resolve("apricity").resolve(folder).toAbsolutePath().normalize();
     }

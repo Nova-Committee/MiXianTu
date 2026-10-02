@@ -47,12 +47,15 @@ import java.util.*;
 
 /**
  * Everything a drawing does on the server: which formulas may be picked, opening a session (which takes the paper
- * and the extras out of the station slot), charging one stroke to the brush, the final reconciliation and
+ * and the extras out of the menu's own slot), charging one stroke to the brush, the final reconciliation and
  * settlement.
  *
  * <p>Nothing here trusts the client: the amounts charged are measured from the point lists the server received,
  * the completion is recomputed from the reconciled points, and only the server clock decides whether two strokes
  * came too close together.
+ *
+ * <p>The container every one of these takes is the menu's transient slot, not anything the world holds: it is
+ * thrown away with the screen, which is what returns its contents to the player.
  */
 public final class TalismanWorkstationService {
     /**
@@ -79,7 +82,7 @@ public final class TalismanWorkstationService {
     }
 
     /**
-     * The formulas this player could start right now: unlocked, and affordable out of the station slot and the
+     * The formulas this player could start right now: unlocked, and affordable out of the menu's slot and the
      * payer's own accounts. The brush is deliberately not part of the answer - it is charged per stroke, so it is
      * checked when a stroke arrives rather than when a formula is picked.
      */
@@ -107,7 +110,7 @@ public final class TalismanWorkstationService {
     }
 
     /**
-     * A one-slot stand-in for the station slot; only ever read, and only by {@code CostTransaction.plan}.
+     * A one-slot stand-in for the menu's slot; only ever read, and only by {@code CostTransaction.plan}.
      */
     private static Container slotOf(ItemStack stack) {
         SimpleContainer container = new SimpleContainer(1);
@@ -116,7 +119,7 @@ public final class TalismanWorkstationService {
     }
 
     /**
-     * Opens a session and takes what it costs out of the station slot and the payer. What the item channel takes
+     * Opens a session and takes what it costs out of the menu's slot and the payer. What the item channel takes
      * is measured, not assumed: an empty session hands back exactly that much, whatever else the store holds.
      */
     public static Optional<TalismanDrawingSession> start(ServerPlayer player, Container paperSlot, Identifier id) {
@@ -186,14 +189,19 @@ public final class TalismanWorkstationService {
     }
 
     /**
-     * Ends a session that was not submitted. It consumes what it took if anything was drawn; a session with no
-     * strokes at all is a no-op that hands everything back.
+     * Ends a session that was not submitted. A session that drew nothing is a no-op that hands everything back; one
+     * that drew is judged failed exactly like a refusal, which is the point: ink on paper cannot be un-drawn, so
+     * closing the screen, switching to another formula or pressing cancel after a stroke all reach the same verdict
+     * and the recipe's failure action runs. Nothing is produced either way - a failure output belongs to a submit
+     * that reached the settlement, not to an abandoned attempt.
      */
-    public static void settle(ServerPlayer player, TalismanDrawingSession session) {
+    public static void abandon(ServerPlayer player, TalismanDrawingSession session) {
+        if (session.drewAnything()) {
+            fail(player, session);
+            return;
+        }
         if (!session.markSettled()) return;
-        if (!session.drewAnything()) refund(player, session);
-        // Drawn but not submitted: the materials are spent and nothing is produced, not even a failure output -
-        // the drawing never reached a settlement.
+        refund(player, session);
     }
 
     /**
@@ -269,7 +277,8 @@ public final class TalismanWorkstationService {
         return stacks;
     }
 
-    // Into the station slot the paper vacated, and into the player's inventory when that one is taken.
+    // Into the slot the paper vacated - which is the menu's own, and so reaches the player when the screen closes -
+    // and into the player's inventory when that one is taken.
     private static void give(Container paperSlot, ServerPlayer player, ItemStack stack) {
         if (stack.isEmpty()) return;
         for (int slot = 0; slot < paperSlot.getContainerSize(); slot++) {
@@ -305,7 +314,7 @@ public final class TalismanWorkstationService {
     }
 
     /**
-     * The formula's own costs plus the one paper this recipe type always takes out of the station slot.
+     * The formula's own costs plus the one paper this recipe type always takes out of the menu's slot.
      */
     private static List<Cost> costs(TalismanDrawingRecipe recipe) {
         List<Cost> costs = new ArrayList<>(recipe.costs().size() + 1);

@@ -1,12 +1,14 @@
 package com.iafenvoy.mxt.screen.gui;
 
 import com.iafenvoy.mxt.network.payload.*;
+import com.iafenvoy.mxt.recipe.TalismanDrawingRecipe;
 import com.iafenvoy.mxt.runtime.talisman.BrushPigmentService;
 import com.iafenvoy.mxt.runtime.talisman.TalismanDrawingScorer;
 import com.iafenvoy.mxt.runtime.talisman.TalismanDrawingScorer.Point;
 import com.iafenvoy.mxt.screen.aui.AuiContainerScreen;
 import com.iafenvoy.mxt.screen.aui.AuiElements;
 import com.iafenvoy.mxt.screen.aui.AuiPages;
+import com.iafenvoy.mxt.screen.aui.AuiStyles;
 import com.iafenvoy.mxt.screen.menu.TalismanWorkstationMenu;
 import com.sighs.apricityui.element.Canvas;
 import com.sighs.apricityui.init.Document;
@@ -33,8 +35,8 @@ import java.util.function.Consumer;
  * The drawing screen: the page owns the layout, the two paper canvases and the formula list, while the strokes
  * are collected here and never leave this side until a whole one is sent.
  *
- * <p>The paper is painted by Java (a yellow ground comes from the theme, the reference layer and the ink are drawn
- * into their own canvases) because the two layers must not share one surface: the reference is drawn once per
+ * <p>The paper is painted by Java (the ground and the ink are the open formula's two colours, the reference layer is
+ * a faded shadow of its own) because the two layers must not share one surface: the reference is drawn once per
  * session, the ink once per stroke.
  *
  * <p>Slot clicks still belong to vanilla: a press is only taken as a stroke while a drawing is open, the pointer
@@ -45,11 +47,8 @@ public final class TalismanWorkstationScreen extends AuiContainerScreen<Talisman
     private static final int ROWS = 8;
     private static final int CANVAS_WIDTH = (int) TalismanDrawingScorer.CANVAS_WIDTH, CANVAS_HEIGHT = (int) TalismanDrawingScorer.CANVAS_HEIGHT;
     /**
-     * Cinnabar red, the ink of the strokes.
-     */
-    private static final Color INK = new Color(0xB3, 0x23, 0x1F);
-    /**
-     * Faded brown, the reference a player traces over - deliberately not red, or it reads as ink.
+     * Faded brown, the reference a player traces over - deliberately neither the ground nor the ink, or it would
+     * read as one of them.
      */
     private static final Color GUIDE = new Color(93, 64, 28, 89);
     private static final int GUIDE_ALPHA_IDLE = 89, GUIDE_ALPHA_TRACING = 38;
@@ -80,12 +79,17 @@ public final class TalismanWorkstationScreen extends AuiContainerScreen<Talisman
     private Identifier drawingRecipe;
     private int handledAck = -1;
     private boolean settlementShown;
-    private boolean submitDisabled = true, cancelDisabled = true;
     private boolean referenceVisible = true;
     private boolean emptyListHintShown;
     private long lastStrokeAt;
     private long lastPreviewAt;
     private String shownPreview = "";
+    /**
+     * The ground the paper is painted on and the ink the strokes are drawn in: the open formula's two colours, and
+     * the recipe's defaults until one is open.
+     */
+    private int paperColor = TalismanDrawingRecipe.DEFAULT_BACKGROUND_COLOR;
+    private int inkColor = TalismanDrawingRecipe.DEFAULT_FOREGROUND_COLOR;
 
     public TalismanWorkstationScreen(TalismanWorkstationMenu menu, Inventory inventory, Component title) {
         super(menu, inventory, title, PANEL_WIDTH, PANEL_HEIGHT);
@@ -94,11 +98,6 @@ public final class TalismanWorkstationScreen extends AuiContainerScreen<Talisman
     @Override
     protected String pagePath() {
         return AuiPages.talismanPage();
-    }
-
-    @Override
-    protected String pageName() {
-        return "talisman";
     }
 
     @Override
@@ -113,7 +112,6 @@ public final class TalismanWorkstationScreen extends AuiContainerScreen<Talisman
         this.cancelButton = this.getOrThrow("cancel");
 
         this.bindCells("station", TalismanWorkstationMenu.PAPER_SLOT);
-        this.bindCells("pigment", TalismanWorkstationMenu.PIGMENT_SLOT);
         this.bindInventoryCells("inventory");
 
         this.rows.clear();
@@ -154,11 +152,10 @@ public final class TalismanWorkstationScreen extends AuiContainerScreen<Talisman
     @Override
     public void onPageBound() {
         this.handledAck = Math.max(0, this.handledAck);
+        this.showPaperColor();
         this.redrawGuide(GUIDE_ALPHA_IDLE);
         this.redrawInk();
         this.shownPreview = "";
-        this.submitDisabled = true;
-        this.cancelDisabled = true;
         this.applyButtons();
     }
 
@@ -214,6 +211,8 @@ public final class TalismanWorkstationScreen extends AuiContainerScreen<Talisman
                 this.drawingRecipe = null;
                 this.referenceStrokes.clear();
                 this.strokes.clear();
+                this.showColors(TalismanDrawingRecipe.DEFAULT_BACKGROUND_COLOR,
+                        TalismanDrawingRecipe.DEFAULT_FOREGROUND_COLOR);
                 this.redrawGuide(GUIDE_ALPHA_IDLE);
                 this.redrawInk();
             }
@@ -223,6 +222,7 @@ public final class TalismanWorkstationScreen extends AuiContainerScreen<Talisman
         this.drawingRecipe = drawing.recipeId();
         this.referenceStrokes.clear();
         this.referenceStrokes.addAll(drawing.strokes());
+        this.showColors(drawing.backgroundColor(), drawing.foregroundColor());
         this.strokes.clear();
         this.currentStroke = null;
         this.handledAck = -1;
@@ -261,6 +261,8 @@ public final class TalismanWorkstationScreen extends AuiContainerScreen<Talisman
         Component text;
         if (result.kind() == TalismanResultS2CPayload.CANCELLED)
             text = Component.translatable("screen.mxt.talisman.result.cancelled");
+        else if (result.kind() == TalismanResultS2CPayload.ABANDONED)
+            text = Component.translatable("screen.mxt.talisman.result.abandoned");
         else if (result.success())
             text = Component.translatable("screen.mxt.talisman.result.success", percent(result.completion()));
         else if (result.kind() == TalismanResultS2CPayload.FAILED)
@@ -299,13 +301,10 @@ public final class TalismanWorkstationScreen extends AuiContainerScreen<Talisman
     }
 
     private void applyButtons() {
-        boolean submitEnabled = this.drawingRecipe != null && !this.strokes.isEmpty();
-        boolean cancelEnabled = !this.strokes.isEmpty();
-        if (submitEnabled == !this.submitDisabled && cancelEnabled == !this.cancelDisabled) return;
-        this.submitDisabled = !submitEnabled;
-        this.cancelDisabled = !cancelEnabled;
-        if (this.submitButton != null) this.disabled(this.submitButton, this.submitDisabled);
-        if (this.cancelButton != null) this.disabled(this.cancelButton, this.cancelDisabled);
+        // What each button does, not what it was last told: AuiElements.setDisabled compares with the element, and
+        // the presses check the same state themselves, so no copy of it is kept here.
+        AuiElements.setDisabled(this.submitButton, this.drawingRecipe == null || this.strokes.isEmpty());
+        AuiElements.setDisabled(this.cancelButton, this.strokes.isEmpty());
     }
 
     // ------------------------------------------------------------------ actions
@@ -415,7 +414,7 @@ public final class TalismanWorkstationScreen extends AuiContainerScreen<Talisman
         if (Math.hypot(point.x() - last.x(), point.y() - last.y()) < MIN_POINT_DISTANCE) return true;
         stroke.add(point);
         // Incremental: only the new segment is drawn, so a long stroke does not repaint the layer per point.
-        this.drawSegment(this.inkCanvas, last, point, INK, INK_WIDTH);
+        this.drawInkSegment(last, point);
         return true;
     }
 
@@ -485,12 +484,31 @@ public final class TalismanWorkstationScreen extends AuiContainerScreen<Talisman
         if (canvas == null) return;
         List<List<Point>> committed = List.copyOf(this.strokes);
         List<Point> active = this.currentStroke == null ? List.of() : List.copyOf(this.currentStroke);
+        Color ink = color(this.inkColor, 255);
         this.repaint(canvas, graphics -> {
-            graphics.setColor(INK);
+            graphics.setColor(ink);
             graphics.setStroke(new BasicStroke(INK_WIDTH, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
             for (List<Point> stroke : committed) drawStroke(graphics, stroke);
             drawStroke(graphics, active);
         });
+    }
+
+    /**
+     * Takes the open formula's two colours. The ground is written here; the layers are repainted by the caller that
+     * also changed the strokes.
+     */
+    private void showColors(int paper, int ink) {
+        this.paperColor = paper;
+        this.inkColor = ink;
+        this.showPaperColor();
+    }
+
+    /**
+     * The paper's ground as the formula named it. The page's stylesheet deliberately leaves this one colour out, so
+     * there is a single source for it.
+     */
+    private void showPaperColor() {
+        AuiElements.style(this.paperFrame, "background-color", AuiStyles.hex(this.paperColor));
     }
 
     /**
@@ -502,17 +520,26 @@ public final class TalismanWorkstationScreen extends AuiContainerScreen<Talisman
     }
 
     /**
-     * Adds one segment to a layer and leaves the rest of it alone. Clearing the layer here would erase the very
-     * stroke being drawn, and marking the whole surface dirty would re-upload 90x210 pixels per pointer move:
+     * Adds one segment of ink to the ink layer and leaves the rest of it alone. Clearing the layer here would erase
+     * the very stroke being drawn, and marking the whole surface dirty would re-upload 90x210 pixels per pointer move:
      * the bounds say which rectangle the texture upload actually has to cover.
      */
-    private void drawSegment(@Nullable Canvas canvas, Point from, Point to, Color color, float width) {
+    private void drawInkSegment(Point from, Point to) {
+        Canvas canvas = this.inkCanvas;
         if (canvas == null) return;
+        Color ink = color(this.inkColor, 255);
         canvas.renderOperation(graphics -> {
-            graphics.setColor(color);
-            graphics.setStroke(new BasicStroke(width, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+            graphics.setColor(ink);
+            graphics.setStroke(new BasicStroke(INK_WIDTH, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
             graphics.draw(new Line2D.Double(from.x(), from.y(), to.x(), to.y()));
-        }, segmentBounds(from, to, width));
+        }, segmentBounds(from, to, INK_WIDTH));
+    }
+
+    /**
+     * A formula colour, as the page and the canvas API want it: plain RGB plus the alpha the layer draws at.
+     */
+    private static Color color(int rgb, int alpha) {
+        return new Color((rgb >> 16) & 0xFF, (rgb >> 8) & 0xFF, rgb & 0xFF, Math.clamp(alpha, 0, 255));
     }
 
     /**
@@ -528,11 +555,6 @@ public final class TalismanWorkstationScreen extends AuiContainerScreen<Talisman
         for (int index = 1; index < stroke.size(); index++)
             graphics.draw(new Line2D.Double(stroke.get(index - 1).x(), stroke.get(index - 1).y(),
                     stroke.get(index).x(), stroke.get(index).y()));
-    }
-
-    private void disabled(Element element, boolean disabled) {
-        if (disabled) element.setAttribute("disabled", "");
-        else element.removeAttribute("disabled");
     }
 
     private static String percent(double completion) {

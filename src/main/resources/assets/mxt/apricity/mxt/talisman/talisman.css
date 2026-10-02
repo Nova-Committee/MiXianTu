@@ -1,17 +1,20 @@
 /* Geometry only: every colour, border and font comes from ../common/theme.css. */
 
-/* 站内两个单槽容器：槽位是 18x18，容器就是它自己那么大，读回来的矩形即槽的矩形。
-   符纸槽（#station）与颜料槽（#pigment）并排，蘸料是「光标提着符笔右键颜料槽」。 */
-#station,
-#pigment {
+/* 站内一个单槽容器：槽位是 18x18，容器就是它自己那么大，读回来的矩形即槽的矩形。
+   只有符纸槽——蘸料是「光标提着符笔点颜料物品」，与槽位无关。 */
+#station {
     overflow: visible;
 }
 
-#station slot,
-#pigment slot {
+#station slot {
     width: 18px;
     height: 18px;
     background-image: none;
+}
+
+/* 空槽里那张符纸的轮廓：几何（left / top / 尺寸）写在页面里，这里只定它的定位方式。 */
+#paper_ghost {
+    position: absolute;
 }
 
 /* 符方列表的一行：文字由 Java 写，锁住的那一行由 theme 的 .dim 调暗。 */

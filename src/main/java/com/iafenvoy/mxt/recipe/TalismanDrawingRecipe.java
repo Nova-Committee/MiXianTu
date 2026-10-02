@@ -11,6 +11,7 @@ import com.iafenvoy.mxt.registry.MxtRecipeTypes;
 import com.iafenvoy.mxt.runtime.talisman.TalismanDrawingScorer;
 import com.iafenvoy.mxt.runtime.talisman.TalismanDrawingScorer.Point;
 import com.iafenvoy.mxt.runtime.talisman.TalismanDrawingScorer.Stroke;
+import com.iafenvoy.mxt.util.codec.MiscCodecs;
 import com.iafenvoy.mxt.util.formula.FormulaVariables;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.iafenvoy.mxt.util.formula.number.*;
@@ -35,15 +36,17 @@ import org.slf4j.Logger;
 import java.util.*;
 
 /**
- * A talisman formula: what is drawn ({@code pattern}), how strictly it is scored ({@code judgement}) and what the
- * result is ({@code result}). The formula's name and description are the referenced {@code mxt:talisman}
+ * A talisman formula: what is drawn ({@code pattern}), the colours the paper is drawn on and drawn with
+ * ({@code background_color} / {@code foreground_color}), how strictly it is scored ({@code judgement}) and what
+ * the result is ({@code result}). The formula's name and description are the referenced {@code mxt:talisman}
  * definition's, never a field here.
  *
  * <p>The default cost is this type's own: one {@code mxt:blank_talisman} out of the workstation slot, which
  * {@code costs} can only add to. It never matches a crafting grid, so {@link #matches} answers false.
  */
 public record TalismanDrawingRecipe(EntityCondition unlockCondition, Holder<Talisman> talisman, List<Cost> costs,
-                                    Pattern pattern, TalismanDrawingScorer.Judgement judgement, Settlement result)
+                                    Pattern pattern, int backgroundColor, int foregroundColor,
+                                    TalismanDrawingScorer.Judgement judgement, Settlement result)
         implements Recipe<RecipeInput> {
     private static final Logger LOGGER = LogUtils.getLogger();
     /**
@@ -54,6 +57,12 @@ public record TalismanDrawingRecipe(EntityCondition unlockCondition, Holder<Tali
      * The paper the station slot holds and the default cost takes; the slot's mayPlace reads the same item.
      */
     public static final int DEFAULT_PAPER_COUNT = 1;
+    /**
+     * The paper a formula is drawn on and the ink its strokes are drawn with, until the formula names its own: a pale
+     * yellow and a pure red. The reference layer is neither - it keeps its own faded colour, or it would read as ink.
+     */
+    public static final int DEFAULT_BACKGROUND_COLOR = 0xFFFE85;
+    public static final int DEFAULT_FOREGROUND_COLOR = 0xFF0000;
 
     public static final Codec<Point> POINT_CODEC = Codec.DOUBLE.listOf(2, 2)
             .xmap(values -> new Point(values.getFirst(), values.getLast()), point -> List.of(point.x(), point.y()));
@@ -85,6 +94,10 @@ public record TalismanDrawingRecipe(EntityCondition unlockCondition, Holder<Tali
             Talisman.CODEC.fieldOf("talisman").forGetter(TalismanDrawingRecipe::talisman),
             Cost.LIST_CODEC.optionalFieldOf("costs", List.of()).forGetter(TalismanDrawingRecipe::costs),
             Pattern.CODEC.fieldOf("pattern").forGetter(TalismanDrawingRecipe::pattern),
+            MiscCodecs.RGB_COLOR.optionalFieldOf("background_color", DEFAULT_BACKGROUND_COLOR)
+                    .forGetter(TalismanDrawingRecipe::backgroundColor),
+            MiscCodecs.RGB_COLOR.optionalFieldOf("foreground_color", DEFAULT_FOREGROUND_COLOR)
+                    .forGetter(TalismanDrawingRecipe::foregroundColor),
             JUDGEMENT_CODEC.optionalFieldOf("judgement", TalismanDrawingScorer.Judgement.DEFAULT)
                     .forGetter(TalismanDrawingRecipe::judgement),
             Settlement.CODEC.fieldOf("result").forGetter(TalismanDrawingRecipe::result)

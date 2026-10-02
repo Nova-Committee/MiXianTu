@@ -4,10 +4,10 @@ import com.iafenvoy.mxt.data.Talisman;
 import com.iafenvoy.mxt.data.aura.SpiritStorageComponent;
 import com.iafenvoy.mxt.data.item.TalismanComponent;
 import com.iafenvoy.mxt.item.block.TalismanWorkstationBlock;
-import com.iafenvoy.mxt.item.block.entity.TalismanWorkstationBlockEntity;
 import com.iafenvoy.mxt.registry.MxtBlocks;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.registry.MxtItems;
+import com.iafenvoy.mxt.recipe.TalismanDrawingRecipe;
 import com.iafenvoy.mxt.runtime.talisman.BrushPigmentService;
 import com.iafenvoy.mxt.runtime.talisman.TalismanDrawingScorer;
 import com.iafenvoy.mxt.runtime.talisman.TalismanDrawingScorer.Point;
@@ -29,9 +29,11 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.Container;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ContainerInput;
+import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
@@ -45,7 +47,7 @@ import java.util.UUID;
 
 /**
  * The drawing workstation's session and settlement path, driven from a dedicated server with no client: the formula
- * list and what makes a formula affordable, opening a session (which takes the paper out of the station slot),
+ * list and what makes a formula affordable, opening a session (which takes the paper out of the menu's own slot),
  * charging strokes to the brush, the refusals, the settlement (both the carrier it pours and the reconciliation
  * that rejects a doctored drawing), and the two ways a session ends without being submitted.
  *
@@ -53,7 +55,8 @@ import java.util.UUID;
  * console invocation has no player, so the leg builds a {@link FakePlayer} of its own; nothing on this path needs a
  * real one, because the carrier's pour is metered from the carrier's own store rather than from a holder's account.
  * The scratch station is a real block of this mod, placed {@code (4, 4, 4)} from the source, and the state that was
- * there before is put back when the leg ends.
+ * there before is put back when the leg ends. The station stores nothing, so every fixture goes into the slot of a
+ * menu this leg opened itself.
  */
 public final class DrawingProbes {
     private static final Identifier SIGIL = Identifier.fromNamespaceAndPath(MxtTestMod.MOD_ID, "talisman/drawing_sigil");
@@ -105,7 +108,6 @@ public final class DrawingProbes {
         private final ServerPlayer player;
         private final BlockPos at;
         private final BlockState previousState;
-        private final TalismanWorkstationBlockEntity station;
         private final AbstractContainerMenu previousMenu;
         private final long previousGameTime;
         private final List<Stroke> reference = List.of(
@@ -124,9 +126,6 @@ public final class DrawingProbes {
             if (!level.setBlockAndUpdate(this.at, MxtBlocks.TALISMAN_WORKSTATION.get().defaultBlockState()
                     .setValue(TalismanWorkstationBlock.FACING, Direction.NORTH)))
                 throw new IllegalStateException("The drawing probe could not place its workstation");
-            if (!(level.getBlockEntity(this.at) instanceof TalismanWorkstationBlockEntity placed))
-                throw new IllegalStateException("The placed workstation has no block entity");
-            this.station = placed;
             this.previousMenu = player.containerMenu;
             this.previousGameTime = this.clock().getGameTime();
         }
@@ -141,85 +140,95 @@ public final class DrawingProbes {
             this.open();
             ItemStack carried = this.carried();
             this.check("setup-station-and-brush",
-                    this.station.paper().getContainerSize() == 1 && this.station.paper().getItem(0).isEmpty()
+                    this.paper().getContainerSize() == 1 && this.paper().getItem(0).isEmpty()
                             && BrushPigmentService.isBrush(carried) && BrushPigmentService.pigment(carried) == PIGMENT,
-                    "slots " + this.station.paper().getContainerSize() + ", slot "
-                            + read(this.station.paper().getItem(0)) + ", carried " + read(carried) + ", pigment "
+                    "slots " + this.paper().getContainerSize() + ", slot "
+                            + read(this.paper().getItem(0)) + ", carried " + read(carried) + ", pigment "
                             + BrushPigmentService.pigment(carried));
         }
 
         // Dipping, in the vanilla bundle's shape: a click on a pigment stack feeds the brush one portion, whichever
         // mouse button it is. The click goes through the menu, which is the same path a client's click takes, and
-        // only the server half of it changes anything.
+        // only the server half of it changes anything. The station has no pigment slot, so the stack sits in the
+        // player's own inventory: the hook is on the brush, not on a station cell, and that is the whole point of it.
         private void dip() {
             TalismanWorkstationMenu menu = this.menu();
             int per = BrushPigmentService.perPortion();
             int capacity = BrushPigmentService.capacity();
-            Slot slot = menu.slots.get(TalismanWorkstationMenu.PIGMENT_SLOT);
-            this.check("pigment-slot-takes-only-pigment",
-                    slot.mayPlace(MxtItems.CINNABAR.toStack()) && !slot.mayPlace(MxtItems.BLANK_TALISMAN.toStack()),
-                    "cinnabar " + slot.mayPlace(MxtItems.CINNABAR.toStack()) + ", paper "
-                            + slot.mayPlace(MxtItems.BLANK_TALISMAN.toStack()));
+            Slot paper = menu.slots.get(TalismanWorkstationMenu.PAPER_SLOT);
+            this.check("paper-slot-takes-only-paper",
+                    paper.mayPlace(MxtItems.BLANK_TALISMAN.toStack()) && !paper.mayPlace(MxtItems.CINNABAR.toStack()),
+                    "paper " + paper.mayPlace(MxtItems.BLANK_TALISMAN.toStack()) + ", cinnabar "
+                            + paper.mayPlace(MxtItems.CINNABAR.toStack()));
 
-            // A brush on the cursor, clicked onto the slot: one portion, one item, whatever the button.
-            this.station.pigment().setItem(0, MxtItems.CINNABAR.toStack(4));
+            Slot bag = this.inventorySlot(menu, 0);
+            if (bag == null) {
+                this.mismatch("dip-takes-one-portion", "the player's first inventory slot is not in the menu");
+                return;
+            }
+            ItemStack previous = bag.getItem().copy();
+
+            // A brush on the cursor, clicked onto a pigment stack: one portion, one item, whatever the button.
+            bag.set(MxtItems.CINNABAR.toStack(4));
             menu.setCarried(brush(0));
-            menu.clicked(TalismanWorkstationMenu.PIGMENT_SLOT, 1, ContainerInput.PICKUP, this.player);
+            menu.clicked(bag.index, 1, ContainerInput.PICKUP, this.player);
             this.check("dip-takes-one-portion",
-                    this.station.pigment().getItem(0).getCount() == 3
+                    bag.getItem().getCount() == 3
                             && BrushPigmentService.pigment(this.carried()) == per
-                            && this.station.paper().getItem(0).isEmpty(),
-                    "slot " + read(this.station.pigment().getItem(0)) + ", pigment "
+                            && this.paper().getItem(0).isEmpty(),
+                    "bag " + read(bag.getItem()) + ", pigment "
                             + BrushPigmentService.pigment(this.carried()) + " of " + capacity);
 
-            menu.clicked(TalismanWorkstationMenu.PIGMENT_SLOT, 0, ContainerInput.PICKUP, this.player);
+            menu.clicked(bag.index, 0, ContainerInput.PICKUP, this.player);
             this.check("dip-one-portion-per-click-either-button",
-                    this.station.pigment().getItem(0).getCount() == 2
-                            && BrushPigmentService.pigment(this.carried()) == 2 * per,
-                    "slot " + read(this.station.pigment().getItem(0)) + ", pigment "
+                    bag.getItem().getCount() == 2 && BrushPigmentService.pigment(this.carried()) == 2 * per,
+                    "bag " + read(bag.getItem()) + ", pigment "
                             + BrushPigmentService.pigment(this.carried()) + " of " + capacity);
 
             // A full brush takes nothing at all.
             menu.setCarried(brush(capacity));
-            menu.clicked(TalismanWorkstationMenu.PIGMENT_SLOT, 1, ContainerInput.PICKUP, this.player);
+            menu.clicked(bag.index, 1, ContainerInput.PICKUP, this.player);
             this.check("dip-when-full-takes-nothing",
-                    this.station.pigment().getItem(0).getCount() == 2
-                            && BrushPigmentService.pigment(this.carried()) == capacity,
-                    "slot " + read(this.station.pigment().getItem(0)) + ", pigment "
+                    bag.getItem().getCount() == 2 && BrushPigmentService.pigment(this.carried()) == capacity,
+                    "bag " + read(bag.getItem()) + ", pigment "
                             + BrushPigmentService.pigment(this.carried()));
 
-            // Without a brush on the cursor the click stays the vanilla one, so nothing is fed.
+            // Without a brush on the cursor the click stays the vanilla one: the pigment moves instead of being
+            // eaten one portion at a time, which is what a hook that fired anyway would show.
             menu.setCarried(MxtItems.BLANK_TALISMAN.toStack());
-            menu.clicked(TalismanWorkstationMenu.PIGMENT_SLOT, 1, ContainerInput.PICKUP, this.player);
-            this.check("dip-needs-the-brush-on-the-cursor", this.station.pigment().getItem(0).getCount() == 2,
-                    "slot " + read(this.station.pigment().getItem(0)));
+            menu.clicked(bag.index, 1, ContainerInput.PICKUP, this.player);
+            this.check("dip-needs-the-brush-on-the-cursor",
+                    this.carried().is(MxtItems.CINNABAR.get()) && this.carried().getCount() == 2
+                            && bag.getItem().is(MxtItems.BLANK_TALISMAN.get()),
+                    "carried " + read(this.carried()) + ", bag " + read(bag.getItem()));
 
             // The same gesture from the other side: the brush sits in a slot and the pigment is on the cursor.
-            Slot bag = menu.slots.stream()
-                    .filter(candidate -> candidate.container == this.player.getInventory()
-                            && candidate.getContainerSlot() == 0).findFirst().orElse(null);
-            if (bag == null) {
-                this.mismatch("dip-into-a-stowed-brush", "the player's first inventory slot is not in the menu");
-            } else {
-                ItemStack previous = bag.getItem().copy();
-                bag.set(brush(0));
-                menu.setCarried(MxtItems.CINNABAR.toStack(2));
-                menu.clicked(bag.index, 0, ContainerInput.PICKUP, this.player);
-                this.check("dip-into-a-stowed-brush",
-                        BrushPigmentService.pigment(bag.getItem()) == per && this.carried().getCount() == 1,
-                        "brush " + BrushPigmentService.pigment(bag.getItem()) + " of " + capacity + ", carried "
-                                + read(this.carried()));
-                bag.set(previous);
-            }
+            bag.set(brush(0));
+            menu.setCarried(MxtItems.CINNABAR.toStack(2));
+            menu.clicked(bag.index, 0, ContainerInput.PICKUP, this.player);
+            this.check("dip-into-a-stowed-brush",
+                    BrushPigmentService.pigment(bag.getItem()) == per && this.carried().getCount() == 1,
+                    "brush " + BrushPigmentService.pigment(bag.getItem()) + " of " + capacity + ", carried "
+                            + read(this.carried()));
 
-            this.station.pigment().setItem(0, ItemStack.EMPTY);
+            bag.set(previous);
             menu.setCarried(brush(PIGMENT));
+        }
+
+        /**
+         * The menu slot holding one player inventory stack, or null when the menu has no such slot.
+         */
+        private Slot inventorySlot(TalismanWorkstationMenu menu, int inventoryIndex) {
+            return menu.slots.stream()
+                    .filter(candidate -> candidate.container == this.player.getInventory()
+                            && candidate.getContainerSlot() == inventoryIndex)
+                    .findFirst().orElse(null);
         }
 
         // The formula list: what the paper in the station slot makes affordable, and what taking it out takes away.
         private void list() {
-            this.station.paper().setItem(0, MxtItems.BLANK_TALISMAN.toStack());
-            List<Entry> stocked = TalismanWorkstationService.entries(this.player, this.station.paper());
+            this.paper().setItem(0, MxtItems.BLANK_TALISMAN.toStack());
+            List<Entry> stocked = TalismanWorkstationService.entries(this.player, this.paper());
             Entry entry = entry(stocked);
             this.check("list-names-the-formula", entry != null, "the list holds " + names(stocked));
             if (entry == null) {
@@ -228,16 +237,16 @@ public final class DrawingProbes {
                 return;
             }
             this.check("list-affordable-with-paper", entry.affordable(), "affordable " + entry.affordable());
-            ItemStack lifted = this.station.paper().removeItem(0, 1);
-            Entry emptied = entry(TalismanWorkstationService.entries(this.player, this.station.paper()));
+            ItemStack lifted = this.paper().removeItem(0, 1);
+            Entry emptied = entry(TalismanWorkstationService.entries(this.player, this.paper()));
             this.check("list-not-affordable-without-paper", emptied != null && !emptied.affordable(),
                     emptied == null ? "the formula left the list" : "affordable " + emptied.affordable());
-            this.station.paper().setItem(0, lifted);
+            this.paper().setItem(0, lifted);
 
             // The brush is charged per stroke, so an empty cursor must not grey the list.
             ItemStack brush = this.carried();
             this.menu().setCarried(ItemStack.EMPTY);
-            Entry unbrushed = entry(TalismanWorkstationService.entries(this.player, this.station.paper()));
+            Entry unbrushed = entry(TalismanWorkstationService.entries(this.player, this.paper()));
             this.check("list-affordable-without-brush", unbrushed != null && unbrushed.affordable(),
                     unbrushed == null ? "the formula left the list" : "affordable " + unbrushed.affordable());
             this.menu().setCarried(brush);
@@ -248,10 +257,16 @@ public final class DrawingProbes {
             // The menu opened during setup is still the one open, and the session will belong to that same object.
             this.menu().select(this.player, SIGIL);
             TalismanDrawingSession session = this.session();
-            this.check("start-took-the-paper", session != null && this.station.paper().getItem(0).isEmpty(),
-                    session == null ? "no session" : "slot " + read(this.station.paper().getItem(0)));
+            this.check("start-took-the-paper", session != null && this.paper().getItem(0).isEmpty(),
+                    session == null ? "no session" : "slot " + read(this.paper().getItem(0)));
             this.check("start-recorded-the-formula", session != null && SIGIL.equals(session.recipeId()),
                     session == null ? "no session" : String.valueOf(session.recipeId()));
+            // The test formulas name no colours, so what the session's recipe carries are the codec defaults.
+            this.check("start-reads-the-formula-colours",
+                    session != null && session.recipe().backgroundColor() == TalismanDrawingRecipe.DEFAULT_BACKGROUND_COLOR
+                            && session.recipe().foregroundColor() == TalismanDrawingRecipe.DEFAULT_FOREGROUND_COLOR,
+                    session == null ? "no session" : "paper " + session.recipe().backgroundColor()
+                            + ", ink " + session.recipe().foregroundColor());
         }
 
         // Two rules the service alone cannot answer: picking a formula does not need the brush (the ink is charged
@@ -269,12 +284,12 @@ public final class DrawingProbes {
             this.menu().select(this.player, WARD);
             TalismanDrawingSession swapped = this.session();
             this.check("swap-needs-no-brush",
-                    swapped != null && WARD.equals(swapped.recipeId()) && this.station.paper().getItem(0).isEmpty(),
+                    swapped != null && WARD.equals(swapped.recipeId()) && this.paper().getItem(0).isEmpty(),
                     swapped == null ? "no session" : "formula " + swapped.recipeId() + ", slot "
-                            + read(this.station.paper().getItem(0)));
+                            + read(this.paper().getItem(0)));
 
             List<Entry> listed = swapped == null ? List.of() : TalismanWorkstationService.entries(this.player,
-                    this.station.paper(), swapped.chargedItems().isEmpty()
+                    this.paper(), swapped.chargedItems().isEmpty()
                             ? ItemStack.EMPTY : swapped.chargedItems().getFirst());
             Entry held = entry(listed);
             this.check("swap-keeps-the-next-formula-pickable", held != null && held.affordable(),
@@ -284,9 +299,9 @@ public final class DrawingProbes {
             this.menu().select(this.player, SIGIL);
             TalismanDrawingSession back = this.session();
             this.check("swap-back-is-also-free",
-                    back != null && SIGIL.equals(back.recipeId()) && this.station.paper().getItem(0).isEmpty(),
+                    back != null && SIGIL.equals(back.recipeId()) && this.paper().getItem(0).isEmpty(),
                     back == null ? "no session" : "formula " + back.recipeId() + ", slot "
-                            + read(this.station.paper().getItem(0)));
+                            + read(this.paper().getItem(0)));
         }
 
         // Charging one stroke at a time, the two refusals a stroke can meet, and nothing else moving.
@@ -380,7 +395,7 @@ public final class DrawingProbes {
                     "completion " + outcome.completion());
             this.check("submit-pigment-spent", outcome.pigmentSpent() == expected,
                     "spent " + outcome.pigmentSpent() + ", expected " + expected);
-            ItemStack held = this.station.paper().getItem(0);
+            ItemStack held = this.paper().getItem(0);
             this.check("submit-slot-holds-a-carrier", held.is(MxtItems.TALISMAN.get()), read(held));
             TalismanComponent inscribed = held.get(MxtDataComponents.TALISMAN);
             this.check("submit-carrier-names-the-formula",
@@ -399,18 +414,18 @@ public final class DrawingProbes {
                     + outcome.pigmentSpent() + ", quality " + (quality == null ? "none" : HolderHelper.id(quality))
                     + ", spirit storage " + (charge == null ? "none" : charge.amounts().size() + " aura(s), "
                     + charge.amounts().values().doubleStream().sum() + " unit(s)"));
-            this.station.paper().setItem(0, ItemStack.EMPTY);
+            this.paper().setItem(0, ItemStack.EMPTY);
         }
 
         // Ending a session without submitting it: nothing drawn hands everything back, one stroke does not.
         private void cancelAndRefund() {
             this.advance();
             int perStroke = BrushPigmentService.chargeForStroke(this.bitmap().getFirst().points());
-            this.station.paper().setItem(0, MxtItems.BLANK_TALISMAN.toStack());
             TalismanWorkstationMenu cancelMenu = this.open();
+            this.paper().setItem(0, MxtItems.BLANK_TALISMAN.toStack());
             cancelMenu.select(this.player, SIGIL);
             cancelMenu.cancel(this.player);
-            ItemStack back = this.station.paper().getItem(0);
+            ItemStack back = this.paper().getItem(0);
             this.check("cancel-with-no-strokes-returns-the-paper",
                     back.is(MxtItems.BLANK_TALISMAN.get()) && back.getCount() == 1 && cancelMenu.session() == null,
                     cancelMenu.session() == null ? read(back) : "the session is still open");
@@ -418,8 +433,8 @@ public final class DrawingProbes {
                     "pigment " + BrushPigmentService.pigment(this.carried()));
 
             this.advance();
-            this.station.paper().setItem(0, MxtItems.BLANK_TALISMAN.toStack());
             TalismanWorkstationMenu spentMenu = this.open();
+            this.paper().setItem(0, MxtItems.BLANK_TALISMAN.toStack());
             spentMenu.select(this.player, SIGIL);
             TalismanDrawingSession session = spentMenu.session();
             if (session == null) {
@@ -432,42 +447,42 @@ public final class DrawingProbes {
             TalismanWorkstationService.stroke(this.player, session, this.bitmap().getFirst().points());
             spentMenu.cancel(this.player);
             this.check("cancel-after-one-stroke-consumes-the-materials",
-                    this.station.paper().getItem(0).isEmpty() && spentMenu.session() == null,
-                    "slot " + read(this.station.paper().getItem(0)));
+                    this.paper().getItem(0).isEmpty() && spentMenu.session() == null,
+                    "slot " + read(this.paper().getItem(0)));
             this.check("cancel-after-one-stroke-spent-the-pigment",
                     before - BrushPigmentService.pigment(this.carried()) == perStroke,
                     "pigment " + before + " -> " + BrushPigmentService.pigment(this.carried())
                             + ", expected a charge of " + perStroke);
         }
 
-        // A stack in the station slot: each session takes one sheet, so each refund has to put exactly one back.
-        // Handing back the whole pre-state stack instead put one sheet per swap into the player's inventory while
-        // the station kept losing one - the duplication a player hit by swapping formula.
+        // A stack in the slot: each session takes one sheet, so each refund has to put exactly one back - and a close
+        // has to hand the whole slot to the player, which is the crafting table's contract this station now keeps.
         private void stackRefund() {
-            this.station.paper().setItem(0, MxtItems.BLANK_TALISMAN.toStack(3));
-            int bag = this.carriedPapers();
             TalismanWorkstationMenu menu = this.open();
+            this.paper().setItem(0, MxtItems.BLANK_TALISMAN.toStack(3));
+            int bag = this.carriedPapers();
             menu.select(this.player, SIGIL);
-            this.check("stack-start-takes-one-sheet", this.station.paper().getItem(0).getCount() == 2 && this.carriedPapers() == bag,
-                    "slot " + read(this.station.paper().getItem(0)) + ", carried papers " + this.carriedPapers()
+            this.check("stack-start-takes-one-sheet", this.paper().getItem(0).getCount() == 2 && this.carriedPapers() == bag,
+                    "slot " + read(this.paper().getItem(0)) + ", carried papers " + this.carriedPapers()
                             + " (was " + bag + ")");
 
             menu.select(this.player, WARD);
             TalismanDrawingSession swapped = menu.session();
             this.check("stack-swap-returns-what-it-took",
                     swapped != null && WARD.equals(swapped.recipeId())
-                            && this.station.paper().getItem(0).getCount() == 2 && this.carriedPapers() == bag,
+                            && this.paper().getItem(0).getCount() == 2 && this.carriedPapers() == bag,
                     "formula " + (swapped == null ? "none" : swapped.recipeId()) + ", slot "
-                            + read(this.station.paper().getItem(0)) + ", carried papers " + this.carriedPapers()
+                            + read(this.paper().getItem(0)) + ", carried papers " + this.carriedPapers()
                             + " (was " + bag + ")");
 
-            // Closing the screen settles an unpainted session through the same refund.
+            // Closing the screen: the unpainted session hands its sheet back into the slot, and the slot then goes to
+            // the player. Nothing of it may stay in the world, so what is counted is the player's own inventory.
             if (swapped == null) return;
-            TalismanWorkstationService.settle(this.player, swapped);
-            this.check("stack-close-returns-what-it-took",
-                    this.station.paper().getItem(0).getCount() == 3 && this.carriedPapers() == bag,
-                    "slot " + read(this.station.paper().getItem(0)) + ", carried papers " + this.carriedPapers()
-                            + " (was " + bag + ")");
+            this.menu().removed(this.player);
+            this.check("stack-close-hands-the-slot-to-the-player",
+                    this.paper().getItem(0).isEmpty() && this.carriedPapers() == bag + 3,
+                    "slot " + read(this.paper().getItem(0)) + ", carried papers " + this.carriedPapers()
+                            + " (wanted " + (bag + 3) + ")");
         }
 
         /** Blank talismans in the player's own inventory; a refund must never add to this. */
@@ -493,8 +508,8 @@ public final class DrawingProbes {
         }
 
         private void checkRejected(String step, int drawn, int submitted) {
-            this.station.paper().setItem(0, MxtItems.BLANK_TALISMAN.toStack());
             TalismanWorkstationMenu menu = this.open();
+            this.paper().setItem(0, MxtItems.BLANK_TALISMAN.toStack());
             menu.select(this.player, SIGIL);
             TalismanDrawingSession session = menu.session();
             if (session == null) {
@@ -510,8 +525,8 @@ public final class DrawingProbes {
                 TalismanWorkstationService.stroke(this.player, session, points);
             }
             boolean success = TalismanWorkstationService.submit(this.player, session, this.doctored(recorded, submitted)).success();
-            this.check(step, !success && this.station.paper().getItem(0).isEmpty(),
-                    "success " + success + ", slot " + read(this.station.paper().getItem(0)));
+            this.check(step, !success && this.paper().getItem(0).isEmpty(),
+                    "success " + success + ", slot " + read(this.paper().getItem(0)));
         }
 
         // Dropping a point, adding a stroke and swapping two are the three ways the whole-drawing comparison can
@@ -542,7 +557,8 @@ public final class DrawingProbes {
         }
 
         private TalismanWorkstationMenu open() {
-            TalismanWorkstationMenu menu = new TalismanWorkstationMenu(0, this.player.getInventory(), this.station);
+            TalismanWorkstationMenu menu = new TalismanWorkstationMenu(0, this.player.getInventory(),
+                    ContainerLevelAccess.create(this.level, this.at));
             menu.setCarried(brush(PIGMENT));
             this.player.containerMenu = menu;
             return menu;
@@ -550,6 +566,14 @@ public final class DrawingProbes {
 
         private TalismanWorkstationMenu menu() {
             return (TalismanWorkstationMenu) this.player.containerMenu;
+        }
+
+        /**
+         * The open menu's own slot. Nothing is stored in the world, so a fixture has to be put in after its menu is
+         * open - a new menu starts empty, exactly as it does for a player.
+         */
+        private Container paper() {
+            return this.menu().paper();
         }
 
         private TalismanDrawingSession session() {
@@ -569,8 +593,6 @@ public final class DrawingProbes {
             try {
                 if (this.player.containerMenu instanceof TalismanWorkstationMenu open) open.removed(this.player);
                 if (this.previousMenu != null) this.player.containerMenu = this.previousMenu;
-                this.station.paper().clearContent();
-                this.station.pigment().clearContent();
                 this.clock().setGameTime(this.previousGameTime);
             } finally {
                 this.level.setBlockAndUpdate(this.at, this.previousState);
