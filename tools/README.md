@@ -1,6 +1,6 @@
 # Tools
 
-Five scripts live here, none of which is part of the mod build:
+Five scripts and one HTML tool live here, none of which is part of the mod build:
 
 | File | What it is |
 | --- | --- |
@@ -9,6 +9,7 @@ Five scripts live here, none of which is part of the mod build:
 | `generate_rift_textures.py` | Regenerates the rift's surface pattern and the icons of the rift block and of the rift anchor with Pillow and NumPy. |
 | `codex_token_usage.py` | Tallies Codex token spend from local rollout logs, filtered by working directory. |
 | `export_alchemy_furnace.py` | Splits the Blockbench furnace export into multiblock models, blockstates and matching Java collision shapes. |
+| `talisman_strokes.html` | A browser editor for a drawing recipe's `pattern.strokes`. Documented below. |
 
 ## Alchemy Furnace (`export_alchemy_furnace.py`)
 
@@ -177,3 +178,30 @@ item. During an arm bend, the plugin keeps that bone rigid and moves it around
 the arm mesh's actual local bend centre on the X axis. This accounts for model
 files whose `right_item` / `left_item` origin is already placed at the hand.
 Other child bones remain unaffected.
+
+## Talisman Strokes (`talisman_strokes.html`)
+
+A single-file browser editor for the `pattern.strokes` of an `mxt:talisman_drawing` recipe. Open it straight
+from disk — `file://`, no build step, no server, no dependencies — and it draws the recipe's own canvas:
+90 × 210 pixels, points normalised to `[0,1]²`, paper `#FFFE85` and ink `#FF0000`, which are the two colours
+the recipe type defaults to. The board therefore looks like the workstation's paper.
+
+Two drawing modes: **polyline** (click a vertex; `Enter`, a right click or a double click ends the stroke,
+`Esc` drops it) and **freehand** (drag, and the stroke is simplified with Ramer-Douglas-Peucker at the ε in
+the toolbar). `Ctrl+Z` / `Ctrl+Y` undo and redo, the list under the toolbar removes one stroke, and
+`Load from JSON` takes back either a bare `strokes` array or a whole `pattern` block.
+
+What it shows, and why:
+
+* **Stroke order** — the dot and the number at each stroke's start, which is what `pattern.show_order: true`
+  asks the game to draw.
+* **Ink length** — the drawn length in pixels, which is about what the brush is charged: one pigment point
+  per pixel of arc length.
+* **Load-time problems** — a stroke with fewer than two points, more than 256 strokes, more than 4096 points
+  in one stroke, and a point cloud with no spread at all are the ways `validateStrokes` rejects a pattern.
+  The tool reports them before a data pack has to.
+
+It is deliberately only the shape. The recipe still needs its `talisman`, its `result` grades and whatever
+else it declares, and the tool does not write `pattern.tolerance` / `guide` / `show_order` — those are recipe
+fields, not strokes. Scoring resamples every 2 px and simplifies at `0.5 × tolerance` (6.3 px at the default
+`0.06`), so points closer together than that do not survive it.

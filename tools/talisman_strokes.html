@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Talisman Strokes — mxt:talisman_drawing pattern editor</title>
+<style>
+    :root {
+        --bg: #14161a;
+        --panel: #1e2126;
+        --line: #33383f;
+        --text: #e6e8ea;
+        --dim: #9aa2ab;
+        --accent: #7fb2ff;
+        --warn: #ff8f7a;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font: 13px/1.5 ui-sans-serif, system-ui, "Segoe UI", sans-serif;
+    }
+
+    header {
+        padding: 14px 18px 10px;
+        border-bottom: 1px solid var(--line);
+    }
+
+    h1 {
+        margin: 0 0 4px;
+        font-size: 16px;
+        font-weight: 600;
+    }
+
+    header p { margin: 0; color: var(--dim); max-width: 900px; }
+    code { font-family: ui-monospace, Consolas, monospace; color: var(--accent); }
+
+    main {
+        display: flex;
+        align-items: flex-start;
+        gap: 18px;
+        padding: 18px;
+    }
+
+    /* The board keeps the recipe's own colours, so what is drawn here is what the player sees. */
+    #board {
+        display: block;
+        border: 1px solid var(--line);
+        cursor: crosshair;
+        touch-action: none;
+    }
+
+    .readout {
+        margin-top: 6px;
+        color: var(--dim);
+        font-family: ui-monospace, Consolas, monospace;
+        font-size: 12px;
+        white-space: pre;
+    }
+
+    .panel {
+        width: 430px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .group {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px 14px;
+        padding: 8px 10px;
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 6px;
+    }
+
+    label { display: inline-flex; align-items: center; gap: 5px; color: var(--text); }
+    input[type="number"] { width: 62px; }
+    input[type="number"], select, textarea {
+        background: #101216;
+        color: var(--text);
+        border: 1px solid var(--line);
+        border-radius: 4px;
+        padding: 4px 6px;
+        font: inherit;
+    }
+
+    button {
+        background: #2a2f36;
+        color: var(--text);
+        border: 1px solid var(--line);
+        border-radius: 4px;
+        padding: 5px 10px;
+        font: inherit;
+        cursor: pointer;
+    }
+
+    button:hover { background: #343a43; }
+    button:disabled { opacity: .45; cursor: default; }
+
+    #stats { color: var(--dim); font-family: ui-monospace, Consolas, monospace; font-size: 12px; }
+
+    #warnings { display: flex; flex-direction: column; gap: 4px; }
+    #warnings div { color: var(--warn); }
+    #warnings div.ok { color: var(--dim); }
+
+    #list {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        max-height: 132px;
+        overflow: auto;
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 6px;
+    }
+
+    #list:empty { display: none; }
+
+    #list li {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 3px 8px;
+        border-bottom: 1px solid var(--line);
+        font-family: ui-monospace, Consolas, monospace;
+        font-size: 12px;
+    }
+
+    #list li:last-child { border-bottom: 0; }
+    #list li:hover { background: #262b32; }
+    #list li span { flex: 1; }
+    #list li button { padding: 1px 6px; }
+
+    #json {
+        width: 100%;
+        height: 240px;
+        resize: vertical;
+        font-family: ui-monospace, Consolas, monospace;
+        font-size: 12px;
+        white-space: pre;
+        overflow: auto;
+    }
+
+    .hint { margin: 0; color: var(--dim); font-size: 12px; }
+</style>
+</head>
+<body>
+<header>
+    <h1>Talisman strokes</h1>
+    <p>
+        Author the <code>pattern.strokes</code> of a <code>mxt:talisman_drawing</code> recipe: one polyline per
+        stroke, every point normalised to <code>[0,1]²</code> against the fixed <code>90 × 210</code> canvas.
+        This tool covers the shape only — the recipe still needs its <code>talisman</code>, <code>result</code> and
+        whatever else it declares. Scoring normalises translation and scale away but not rotation, so where the
+        shape sits and how big it is do not matter, while a turned one does.
+    </p>
+</header>
+
+<main>
+    <section>
+        <canvas id="board" width="270" height="630"></canvas>
+        <div class="readout" id="readout">pointer: —</div>
+        <div class="readout" id="stats"></div>
+        <div class="readout" id="status"></div>
+    </section>
+
+    <section class="panel">
+        <div class="group">
+            <label><input type="radio" name="mode" value="polyline" checked> Polyline (click to add, Enter / right click to end)</label>
+            <label><input type="radio" name="mode" value="free"> Freehand (drag)</label>
+        </div>
+
+        <div class="group">
+            <label><input type="checkbox" id="snap" checked> Snap to whole pixels</label>
+            <label><input type="checkbox" id="grid" checked> Grid</label>
+            <label><input type="checkbox" id="order" checked> Stroke order</label>
+        </div>
+
+        <div class="group">
+            <label>Simplify ε <input type="number" id="epsilon" value="2" min="0" max="30" step="0.5"> px</label>
+            <button id="simplify">Simplify all</button>
+            <label>Zoom <select id="zoom">
+                <option value="2">×2</option>
+                <option value="3" selected>×3</option>
+                <option value="4">×4</option>
+            </select></label>
+            <label>Decimals <select id="precision">
+                <option value="2">2</option>
+                <option value="3" selected>3</option>
+                <option value="4">4</option>
+                <option value="6">6</option>
+            </select></label>
+        </div>
+
+        <div class="group">
+            <button id="undo">Undo</button>
+            <button id="redo">Redo</button>
+            <button id="clear">Clear</button>
+        </div>
+
+        <div id="warnings"></div>
+        <ol id="list"></ol>
+
+        <div class="group">
+            <button id="copy">Copy JSON</button>
+            <button id="download">Download JSON</button>
+            <button id="load">Load from JSON</button>
+        </div>
+        <textarea id="json" spellcheck="false"></textarea>
+        <p class="hint">
+            Paste this as the value of <code>pattern.strokes</code>. The scorer resamples every
+            <code id="hint_resample">—</code> and drops detail finer than <code>0.5 × tolerance</code> —
+            <code id="hint_detail">—</code> at the default tolerance <code id="hint_tolerance">—</code>, so points
+            closer together than that are decoration. The brush is charged about one pigment point per pixel of
+            drawn length.
+        </p>
+    </section>
+</main>
+
+<script>
+'use strict';
+
+// ── constants mirrored from the mod ──────────────────────────────────────────────────────────────────────────
+// TalismanDrawingScorer.CANVAS_WIDTH / CANVAS_HEIGHT: the canvas is a code constant, never a recipe field.
+const COLUMNS = 90, ROWS = 210;
+// TalismanDrawingRecipe's load-time rules and the two colour defaults.
+const MAX_STROKES = 256, MIN_STROKE_POINTS = 2, MAX_STROKE_POINTS = 4096;
+const PAPER = '#fffe85', INK = '#ff0000';
+// TalismanDrawingScorer: RESAMPLE_STEP and SIMPLIFY_EPSILON (the latter is a multiple of pattern.tolerance).
+const RESAMPLE_STEP = 2, DEFAULT_TOLERANCE = 0.06, SIMPLIFY_FACTOR = 0.5;
+const DETAIL_PX = SIMPLIFY_FACTOR * DEFAULT_TOLERANCE * ROWS;
+const MIN_FREEHAND_STEP = 1;
+const MIN_RMS = 1e-6;
+
+const ORDER_INK = '#8a4a1e', GRID_INK = 'rgba(0,0,0,0.10)', AXIS_INK = 'rgba(0,0,0,0.22)';
+const ACTIVE_INK = 'rgba(255,0,0,0.55)', HOVER_INK = 'rgba(30,60,160,0.9)';
+
+// ── state ────────────────────────────────────────────────────────────────────────────────────────────────────
+// Strokes are kept in canvas pixels (x in 0..90, y in 0..210); the JSON is these divided by the canvas size.
+let strokes = [];
+let current = null;
+let history = [], future = [];
+let hover = -1, pointer = null;
+let mode = 'polyline', dragging = false;
+
+const board = document.getElementById('board');
+const ctx = board.getContext('2d');
+const readout = document.getElementById('readout');
+const status = document.getElementById('status');
+const statsBox = document.getElementById('stats');
+const warningsBox = document.getElementById('warnings');
+const list = document.getElementById('list');
+const jsonBox = document.getElementById('json');
+const snapBox = document.getElementById('snap');
+const gridBox = document.getElementById('grid');
+const orderBox = document.getElementById('order');
+const zoomBox = document.getElementById('zoom');
+const precisionBox = document.getElementById('precision');
+const epsilonBox = document.getElementById('epsilon');
+
+const zoom = () => Number(zoomBox.value);
+const precision = () => Number(precisionBox.value);
+const epsilon = () => Math.max(0, Number(epsilonBox.value) || 0);
+const clone = value => JSON.parse(JSON.stringify(value));
+
+// ── history ──────────────────────────────────────────────────────────────────────────────────────────────────
+function pushHistory() {
+    history.push(clone(strokes));
+    future.length = 0;
+    syncButtons();
+}
+
+function undo() {
+    if (!history.length) return;
+    future.push(clone(strokes));
+    strokes = history.pop();
+    current = null;
+    refresh();
+}
+
+function redo() {
+    if (!future.length) return;
+    history.push(clone(strokes));
+    strokes = future.pop();
+    current = null;
+    refresh();
+}
+
+function syncButtons() {
+    document.getElementById('undo').disabled = history.length === 0;
+    document.getElementById('redo').disabled = future.length === 0;
+}
+
+// ── geometry ─────────────────────────────────────────────────────────────────────────────────────────────────
+function toCanvas(event) {
+    const box = board.getBoundingClientRect();
+    const scale = zoom();
+    let x = (event.clientX - box.left) / scale;
+    let y = (event.clientY - box.top) / scale;
+    x = Math.min(COLUMNS, Math.max(0, x));
+    y = Math.min(ROWS, Math.max(0, y));
+    if (snapBox.checked) return {x: Math.round(x), y: Math.round(y)};
+    return {x, y};
+}
+
+function samePoint(a, b) {
+    return Math.abs(a.x - b.x) < 1e-9 && Math.abs(a.y - b.y) < 1e-9;
+}
+
+function strokeLength(points) {
+    let total = 0;
+    for (let index = 1; index < points.length; index++)
+        total += Math.hypot(points[index].x - points[index - 1].x, points[index].y - points[index - 1].y);
+    return total;
+}
+
+function segmentDistance(point, from, to) {
+    const dx = to.x - from.x, dy = to.y - from.y;
+    const length2 = dx * dx + dy * dy;
+    if (length2 === 0) return Math.hypot(point.x - from.x, point.y - from.y);
+    let t = ((point.x - from.x) * dx + (point.y - from.y) * dy) / length2;
+    t = Math.min(1, Math.max(0, t));
+    return Math.hypot(point.x - (from.x + t * dx), point.y - (from.y + t * dy));
+}
+
+/**
+ * Ramer-Douglas-Peucker, the same simplification the scorer applies before scoring: a freehand stroke is mostly
+ * points the judge throws away, and keeping them only makes the recipe longer to read.
+ */
+function simplify(points, tolerance) {
+    if (points.length < 3 || tolerance <= 0) return points.map(point => ({...point}));
+    const keep = new Array(points.length).fill(false);
+    keep[0] = keep[points.length - 1] = true;
+    const stack = [[0, points.length - 1]];
+    while (stack.length) {
+        const [first, last] = stack.pop();
+        let worst = -1, worstAt = -1;
+        for (let index = first + 1; index < last; index++) {
+            const distance = segmentDistance(points[index], points[first], points[last]);
+            if (distance > worst) { worst = distance; worstAt = index; }
+        }
+        if (worst > tolerance) {
+            keep[worstAt] = true;
+            stack.push([first, worstAt], [worstAt, last]);
+        }
+    }
+    return points.filter((_, index) => keep[index]).map(point => ({...point}));
+}
+
+// ── drawing ──────────────────────────────────────────────────────────────────────────────────────────────────
+function redraw() {
+    const device = window.devicePixelRatio || 1, scale = zoom();
+    board.style.width = (COLUMNS * scale) + 'px';
+    board.style.height = (ROWS * scale) + 'px';
+    board.width = Math.round(COLUMNS * scale * device);
+    board.height = Math.round(ROWS * scale * device);
+    // Everything below is drawn in canvas pixels, so the line the player gets is the line drawn here.
+    ctx.setTransform(device * scale, 0, 0, device * scale, 0, 0);
+
+    ctx.fillStyle = PAPER;
+    ctx.fillRect(0, 0, COLUMNS, ROWS);
+
+    if (gridBox.checked) {
+        ctx.lineWidth = 1 / scale;
+        ctx.strokeStyle = GRID_INK;
+        for (let x = 10; x < COLUMNS; x += 10) line(x, 0, x, ROWS);
+        for (let y = 10; y < ROWS; y += 10) line(0, y, COLUMNS, y);
+        ctx.strokeStyle = AXIS_INK;
+        line(COLUMNS / 2, 0, COLUMNS / 2, ROWS);
+        line(0, ROWS / 2, COLUMNS, ROWS / 2);
+    }
+
+    ctx.lineWidth = 2;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    strokes.forEach((points, index) => {
+        ctx.strokeStyle = index === hover ? HOVER_INK : INK;
+        path(points);
+    });
+
+    if (current) {
+        ctx.strokeStyle = INK;
+        path(current);
+        if (pointer && mode === 'polyline') {
+            ctx.save();
+            ctx.setLineDash([3, 3]);
+            ctx.strokeStyle = ACTIVE_INK;
+            line(current[current.length - 1].x, current[current.length - 1].y, pointer.x, pointer.y);
+            ctx.restore();
+        }
+    }
+
+    if (orderBox.checked) {
+        ctx.fillStyle = ORDER_INK;
+        ctx.font = '9px ui-sans-serif, system-ui, sans-serif';
+        ctx.textBaseline = 'middle';
+        strokes.forEach((points, index) => {
+            const start = points[0];
+            ctx.beginPath();
+            ctx.arc(start.x, start.y, 1.4, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillText(String(index + 1), start.x + 3, start.y);
+        });
+    }
+
+    if (pointer) {
+        ctx.save();
+        ctx.setLineDash([2, 4]);
+        ctx.strokeStyle = 'rgba(0,0,0,0.35)';
+        ctx.lineWidth = 1 / scale;
+        line(pointer.x, 0, pointer.x, ROWS);
+        line(0, pointer.y, COLUMNS, pointer.y);
+        ctx.restore();
+    }
+}
+
+function line(x1, y1, x2, y2) {
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.stroke();
+}
+
+function path(points) {
+    if (points.length === 0) return;
+    ctx.beginPath();
+    ctx.moveTo(points[0].x, points[0].y);
+    for (let index = 1; index < points.length; index++) ctx.lineTo(points[index].x, points[index].y);
+    if (points.length === 1) ctx.lineTo(points[0].x + 0.01, points[0].y);
+    ctx.stroke();
+}
+
+// ── the JSON the recipe takes ────────────────────────────────────────────────────────────────────────────────
+function number(value) {
+    let text = value.toFixed(precision());
+    if (text.includes('.')) text = text.replace(/0+$/, '').replace(/\.$/, '');
+    return text === '-0' ? '0' : text;
+}
+
+function toJson() {
+    if (!strokes.length) return '[]';
+    const rows = strokes.map(points => '    [' + points
+        .map(point => '[' + number(point.x / COLUMNS) + ', ' + number(point.y / ROWS) + ']')
+        .join(', ') + ']');
+    return '[\n' + rows.join(',\n') + '\n]';
+}
+
+function refresh() {
+    hover = -1;
+    jsonBox.value = toJson();
+    redraw();
+    report();
+}
+
+function report() {
+    const points = strokes.reduce((total, stroke) => total + stroke.length, 0);
+    const length = strokes.reduce((total, stroke) => total + strokeLength(stroke), 0);
+    statsBox.textContent = 'strokes: ' + strokes.length + ' / ' + MAX_STROKES
+        + '    points: ' + points
+        + '    ink length: ' + length.toFixed(0) + ' px (≈ that many pigment points)';
+
+    const problems = [];
+    if (strokes.length === 0) problems.push(['No strokes yet: a pattern needs at least one.', false]);
+    if (strokes.length > MAX_STROKES) problems.push(['The loader takes at most ' + MAX_STROKES + ' strokes.', true]);
+    strokes.forEach((stroke, index) => {
+        if (stroke.length < MIN_STROKE_POINTS)
+            problems.push(['Stroke ' + (index + 1) + ' has one point; every stroke needs at least two.', true]);
+        if (stroke.length > MAX_STROKE_POINTS)
+            problems.push(['Stroke ' + (index + 1) + ' has more than ' + MAX_STROKE_POINTS + ' points.', true]);
+    });
+    const rms = pointCloudRms();
+    if (points > 0 && rms <= MIN_RMS)
+        problems.push(['Every point is in the same place; a pattern like that is rejected at load.', true]);
+    if (!problems.some(problem => problem[1]))
+        problems.push(['The recipe loader would accept this shape.', false]);
+
+    warningsBox.replaceChildren(...problems.map(([text, bad]) => {
+        const row = document.createElement('div');
+        row.textContent = text;
+        if (!bad) row.className = 'ok';
+        return row;
+    }));
+
+    list.replaceChildren(...strokes.map((stroke, index) => {
+        const row = document.createElement('li');
+        const label = document.createElement('span');
+        label.textContent = '#' + (index + 1) + '  ' + stroke.length + ' pts  '
+            + strokeLength(stroke).toFixed(0) + ' px';
+        const remove = document.createElement('button');
+        remove.textContent = '✕';
+        remove.title = 'Remove this stroke';
+        remove.addEventListener('click', () => removeStroke(index));
+        row.append(label, remove);
+        row.addEventListener('mouseenter', () => { hover = index; redraw(); });
+        row.addEventListener('mouseleave', () => { hover = -1; redraw(); });
+        return row;
+    }));
+}
+
+function pointCloudRms() {
+    const points = strokes.flat();
+    if (!points.length) return 0;
+    const centreX = points.reduce((total, point) => total + point.x / COLUMNS, 0) / points.length;
+    const centreY = points.reduce((total, point) => total + point.y / ROWS, 0) / points.length;
+    const squared = points.reduce((total, point) => {
+        const dx = point.x / COLUMNS - centreX, dy = point.y / ROWS - centreY;
+        return total + dx * dx + dy * dy;
+    }, 0);
+    return Math.sqrt(squared / points.length);
+}
+
+// ── editing ──────────────────────────────────────────────────────────────────────────────────────────────────
+function removeStroke(index) {
+    pushHistory();
+    strokes.splice(index, 1);
+    refresh();
+}
+
+function finishStroke() {
+    if (!current) return;
+    const points = current;
+    current = null;
+    if (points.length < MIN_STROKE_POINTS) {
+        status.textContent = 'a stroke needs at least two points';
+        redraw();
+        return;
+    }
+    pushHistory();
+    strokes.push(points);
+    refresh();
+}
+
+function startStroke(point) {
+    current = [point];
+    redraw();
+}
+
+board.addEventListener('pointerdown', event => {
+    if (event.button !== 0) return;
+    board.setPointerCapture(event.pointerId);
+    const point = toCanvas(event);
+    if (mode === 'free') {
+        dragging = true;
+        startStroke(point);
+        return;
+    }
+    if (!current) startStroke(point);
+    else if (!samePoint(current[current.length - 1], point)) {
+        current.push(point);
+        redraw();
+    }
+});
+
+board.addEventListener('pointermove', event => {
+    pointer = toCanvas(event);
+    readout.textContent = 'pointer: x ' + pointer.x.toFixed(1) + '  y ' + pointer.y.toFixed(1)
+        + '    u ' + (pointer.x / COLUMNS).toFixed(3) + '  v ' + (pointer.y / ROWS).toFixed(3);
+    if (mode === 'free' && dragging && current) {
+        const last = current[current.length - 1];
+        if (Math.hypot(pointer.x - last.x, pointer.y - last.y) >= MIN_FREEHAND_STEP) current.push(pointer);
+    }
+    redraw();
+});
+
+board.addEventListener('pointerup', event => {
+    if (event.button !== 0) return;
+    if (board.hasPointerCapture(event.pointerId)) board.releasePointerCapture(event.pointerId);
+    if (mode !== 'free' || !dragging) return;
+    dragging = false;
+    if (current && epsilon() > 0) {
+        const reduced = simplify(current, epsilon());
+        if (reduced.length >= MIN_STROKE_POINTS) current = reduced;
+    }
+    finishStroke();
+});
+
+board.addEventListener('pointerleave', () => {
+    pointer = null;
+    redraw();
+});
+
+board.addEventListener('dblclick', event => {
+    event.preventDefault();
+    finishStroke();
+});
+
+board.addEventListener('contextmenu', event => {
+    event.preventDefault();
+    finishStroke();
+});
+
+document.addEventListener('keydown', event => {
+    const typing = event.target instanceof HTMLElement
+        && ['INPUT', 'TEXTAREA', 'SELECT'].includes(event.target.tagName);
+    if (event.key === 'Escape' && current && !typing) {
+        current = null;
+        redraw();
+        return;
+    }
+    if (event.key === 'Enter' && current && !typing) {
+        finishStroke();
+        return;
+    }
+    if (!(event.ctrlKey || event.metaKey) || typing) return;
+    if (event.key.toLowerCase() === 'z' && !event.shiftKey) { event.preventDefault(); undo(); }
+    else if (event.key.toLowerCase() === 'y' || (event.key.toLowerCase() === 'z' && event.shiftKey)) {
+        event.preventDefault();
+        redo();
+    }
+});
+
+document.querySelectorAll('input[name="mode"]').forEach(radio => {
+    radio.addEventListener('change', () => {
+        mode = document.querySelector('input[name="mode"]:checked').value;
+        if (current && current.length < MIN_STROKE_POINTS) current = null;
+        else if (current) finishStroke();
+    });
+});
+
+document.getElementById('undo').addEventListener('click', undo);
+document.getElementById('redo').addEventListener('click', redo);
+document.getElementById('clear').addEventListener('click', () => {
+    if (!strokes.length && !current) return;
+    pushHistory();
+    strokes = [];
+    current = null;
+    refresh();
+});
+
+document.getElementById('simplify').addEventListener('click', () => {
+    const tolerance = epsilon();
+    if (!strokes.length || tolerance <= 0) return;
+    pushHistory();
+    strokes = strokes.map(stroke => {
+        const reduced = simplify(stroke, tolerance);
+        return reduced.length >= MIN_STROKE_POINTS ? reduced : stroke;
+    });
+    refresh();
+});
+
+[snapBox, gridBox, orderBox].forEach(box => box.addEventListener('change', redraw));
+zoomBox.addEventListener('change', redraw);
+precisionBox.addEventListener('change', () => { jsonBox.value = toJson(); });
+
+document.getElementById('copy').addEventListener('click', async () => {
+    const text = toJson();
+    jsonBox.value = text;
+    try {
+        await navigator.clipboard.writeText(text);
+        status.textContent = 'copied ' + strokes.length + ' strokes';
+    } catch (error) {
+        jsonBox.select();
+        document.execCommand('copy');
+        status.textContent = 'copied (via the text selection)';
+    }
+});
+
+document.getElementById('download').addEventListener('click', () => {
+    const blob = new Blob([toJson() + '\n'], {type: 'application/json'});
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'talisman_strokes.json';
+    link.click();
+    URL.revokeObjectURL(link.href);
+});
+
+document.getElementById('load').addEventListener('click', () => {
+    let parsed;
+    try {
+        parsed = JSON.parse(jsonBox.value);
+    } catch (error) {
+        status.textContent = 'that is not JSON: ' + error.message;
+        return;
+    }
+    // Accept both the bare strokes array and the whole pattern block, so a recipe can be pasted in as it is.
+    const rows = Array.isArray(parsed) ? parsed : parsed.strokes;
+    if (!Array.isArray(rows)) {
+        status.textContent = 'no strokes array in that JSON';
+        return;
+    }
+    const loaded = [];
+    for (const row of rows) {
+        if (!Array.isArray(row)) { status.textContent = 'every stroke has to be an array of points'; return; }
+        const points = [];
+        for (const pair of row) {
+            if (!Array.isArray(pair) || pair.length !== 2 || !pair.every(Number.isFinite)) {
+                status.textContent = 'every point has to be a pair of finite numbers';
+                return;
+            }
+            const [u, v] = pair;
+            if (u < 0 || u > 1 || v < 0 || v > 1) {
+                status.textContent = 'a point is outside [0,1]²';
+                return;
+            }
+            points.push({x: u * COLUMNS, y: v * ROWS});
+        }
+        loaded.push(points);
+    }
+    pushHistory();
+    strokes = loaded;
+    current = null;
+    refresh();
+    status.textContent = 'loaded ' + loaded.length + ' strokes';
+});
+
+document.getElementById('hint_resample').textContent = RESAMPLE_STEP + ' px';
+document.getElementById('hint_detail').textContent = DETAIL_PX.toFixed(1) + ' px';
+document.getElementById('hint_tolerance').textContent = String(DEFAULT_TOLERANCE);
+syncButtons();
+refresh();
+</script>
+</body>
+</html>
