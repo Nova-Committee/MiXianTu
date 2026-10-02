@@ -3,61 +3,49 @@ package com.iafenvoy.mxt.recipe;
 import com.iafenvoy.mxt.data.cost.Cost;
 import com.iafenvoy.mxt.registry.MxtRecipeSerializers;
 import com.iafenvoy.mxt.registry.MxtRecipeTypes;
-import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.world.item.ItemStackTemplate;
-import net.minecraft.world.item.crafting.Ingredient;
+import net.minecraft.world.item.crafting.PlacementInfo;
 import net.minecraft.world.item.crafting.Recipe;
 import net.minecraft.world.item.crafting.RecipeSerializer;
 import net.minecraft.world.item.crafting.RecipeType;
+import net.minecraft.world.item.crafting.ShapedRecipePattern;
 import net.minecraft.world.level.Level;
 import org.jspecify.annotations.NonNull;
 
 import java.util.List;
-import java.util.Map;
 
-// Completion also consumes stored aura; matches scan the 3x3 grid for the pattern at any offset.
-public record SpiritShapedRecipe(List<String> pattern, Map<String, Ingredient> key, ItemStackTemplate result,
+/**
+ * A shaped recipe for the spirit crafting table, matched by vanilla's {@link ShapedRecipePattern}: the {@code key}
+ * and {@code pattern} fields are vanilla's own, so a pattern is shrunk to the cells it uses and compared against
+ * the rectangle the grid's items occupy. A layout therefore matches wherever it sits (and mirrored), and empty
+ * rows or columns in the JSON are ignored. Completion also consumes the table's stored aura.
+ */
+public record SpiritShapedRecipe(ShapedRecipePattern pattern, ItemStackTemplate result,
                                  List<Cost> aura) implements SpiritRecipe {
     public static final MapCodec<SpiritShapedRecipe> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
-            Codec.STRING.listOf(1, 3).fieldOf("pattern").forGetter(SpiritShapedRecipe::pattern),
-            Codec.unboundedMap(Codec.STRING, Ingredient.CODEC).fieldOf("key").forGetter(SpiritShapedRecipe::key),
+            ShapedRecipePattern.MAP_CODEC.forGetter(SpiritShapedRecipe::pattern),
             ItemStackTemplate.CODEC.fieldOf("result").forGetter(SpiritShapedRecipe::result),
             AURA_CODEC.fieldOf("aura").forGetter(SpiritShapedRecipe::aura)
     ).apply(i, SpiritShapedRecipe::new));
     public static final StreamCodec<RegistryFriendlyByteBuf, SpiritShapedRecipe> PACKET_CODEC = ByteBufCodecs.fromCodecWithRegistries(CODEC.codec());
 
     public SpiritShapedRecipe {
-        if (pattern.isEmpty() || pattern.stream().anyMatch(row -> row.isEmpty() || row.length() > 3))
-            throw new IllegalArgumentException("Spirit shaped recipe pattern must be 1x1 to 3x3");
-        if (key.keySet().stream().anyMatch(value -> value.length() != 1 || value.charAt(0) == ' '))
-            throw new IllegalArgumentException("Spirit shaped recipe keys must be single non-space characters");
         if (aura.isEmpty()) throw new IllegalArgumentException("Spirit crafting recipes must require aura");
     }
 
     @Override
     public boolean matches(SpiritCraftingInput input, @NonNull Level level) {
-        int height = this.pattern.size(), width = this.pattern.stream().mapToInt(String::length).max().orElse(0);
-        for (int offsetY = 0; offsetY <= 3 - height; offsetY++)
-            for (int offsetX = 0; offsetX <= 3 - width; offsetX++) {
-                boolean matches = true;
-                for (int y = 0; y < 3 && matches; y++)
-                    for (int x = 0; x < 3; x++) {
-                        char symbol = y >= offsetY && y < offsetY + height && x >= offsetX && x < this.pattern.get(y - offsetY).length()
-                                ? this.pattern.get(y - offsetY).charAt(x - offsetX) : ' ';
-                        Ingredient ingredient = symbol == ' ' ? null : this.key.get(String.valueOf(symbol));
-                        if (ingredient == null ? !input.getItem(x + y * 3).isEmpty() : !ingredient.test(input.getItem(x + y * 3))) {
-                            matches = false;
-                            break;
-                        }
-                    }
-                if (matches) return true;
-            }
-        return false;
+        return this.pattern.matches(input.craftingInput());
+    }
+
+    @Override
+    public @NonNull PlacementInfo placementInfo() {
+        return PlacementInfo.createFromOptionals(this.pattern.ingredients());
     }
 
     @Override

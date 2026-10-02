@@ -15,6 +15,7 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.item.crafting.RecipeHolder;
+import net.minecraft.world.item.crafting.ShapedRecipePattern;
 import org.jspecify.annotations.NonNull;
 
 /**
@@ -38,17 +39,16 @@ final class SpiritShapedCategory extends AbstractRecipeCategory<RecipeHolder<Spi
                 grid[y * 3 + x] = builder.addInputSlot(10 + x * 18, 8 + y * 18).setStandardSlotBackground();
             }
         }
-        int height = recipe.pattern().size();
-        int width = recipe.pattern().stream().mapToInt(String::length).max().orElse(0);
+        ShapedRecipePattern pattern = recipe.pattern();
+        int width = pattern.width();
+        int height = pattern.height();
         int offsetX = (3 - width) / 2;
         int offsetY = (3 - height) / 2;
-        for (int y = 0; y < height; y++) {
-            String row = recipe.pattern().get(y);
-            for (int x = 0; x < row.length(); x++) {
-                Ingredient ingredient = recipe.key().get(String.valueOf(row.charAt(x)));
+        for (int y = 0; y < height; y++)
+            for (int x = 0; x < width; x++) {
+                Ingredient ingredient = pattern.ingredients().get(x + y * width).orElse(null);
                 if (ingredient != null) grid[(y + offsetY) * 3 + x + offsetX].add(ingredient);
             }
-        }
         builder.addOutputSlot(106, 26).setOutputSlotBackground().add(recipe.result());
     }
 

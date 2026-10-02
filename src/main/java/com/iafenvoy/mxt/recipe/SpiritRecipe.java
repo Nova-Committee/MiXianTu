@@ -10,13 +10,17 @@ import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.ItemStackTemplate;
-import net.minecraft.world.item.crafting.PlacementInfo;
 import net.minecraft.world.item.crafting.Recipe;
 import net.minecraft.world.item.crafting.RecipeBookCategory;
 import org.jspecify.annotations.NonNull;
 
 import java.util.List;
 
+/**
+ * A recipe the spirit crafting table matches against its own 3x3 grid. Placement is answered by each type: the
+ * pattern for a shaped recipe, the ingredient list for a shapeless one. Leaving it impossible - a plain grid
+ * recipe with no placement - makes the recipe manager warn about it on every load.
+ */
 public interface SpiritRecipe extends Recipe<SpiritCraftingInput> {
     /**
      * What one craft takes out of the table's own store, written like every other cost. The pre-Cost aura map
@@ -45,11 +49,6 @@ public interface SpiritRecipe extends Recipe<SpiritCraftingInput> {
     @Override
     default @NonNull String group() {
         return "mxt.spirit_crafting";
-    }
-
-    @Override
-    default @NonNull PlacementInfo placementInfo() {
-        return PlacementInfo.NOT_PLACEABLE;
     }
 
     @Override

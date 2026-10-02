@@ -1,0 +1,14 @@
+{
+  "type": "mxt:spirit_shaped",
+  "pattern": ["A"],
+  "key": {
+    "A": "minecraft:stick"
+  },
+  "result": {
+    "id": "minecraft:torch",
+    "count": 4
+  },
+  "aura": {
+    "mxt_test:spirit_power": 20
+  }
+}

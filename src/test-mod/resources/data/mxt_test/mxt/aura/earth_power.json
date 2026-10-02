@@ -1,0 +1,5 @@
+{
+  "resource": "mxt_test:earth_power",
+  "aura_type": "mxt_test:earth",
+  "burst_amount": 10
+}

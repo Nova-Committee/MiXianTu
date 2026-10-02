@@ -1,0 +1,14 @@
+{
+  "type": "mxt:spirit_shaped",
+  "pattern": ["AB"],
+  "key": {
+    "A": "minecraft:stick",
+    "B": "minecraft:coal"
+  },
+  "result": {
+    "id": "minecraft:campfire"
+  },
+  "aura": {
+    "mxt_test:earth_power": 30
+  }
+}

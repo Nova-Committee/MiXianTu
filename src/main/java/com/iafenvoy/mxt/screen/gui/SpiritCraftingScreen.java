@@ -17,23 +17,36 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * The vanilla crafting grid plus the aura progress panel, both drawn by one page. The progress rows are
- * the menu's own data slots; a row with no aura is cleared rather than hidden, so the page keeps the old
- * fixed 8-row layout.
+ * The vanilla crafting grid plus the aura progress panel, both drawn by one page. The progress rows are the menu's
+ * own data slots. The page declares a single row and the screen copies it once per aura the recipe on the grid
+ * needs, so an empty grid leaves the panel with no rows at all while a recipe that asks for many still fits.
  */
 public final class SpiritCraftingScreen extends AuiContainerScreen<SpiritCraftingMenu> {
     private static final int PANEL_WIDTH = 308, PANEL_HEIGHT = 166;
     /**
-     * Rows the page provides; the menu publishes at most this many.
+     * Rows the page may grow to; the menu publishes at most this many.
      */
     private static final int ROWS = 8;
-    private static final int BAR_WIDTH = 112;
+    private static final int BAR_WIDTH = 105;
     /**
      * The interior the filled part is drawn in: 2px in from both sides, hence the 4px shortfall.
      */
     private static final int BAR_INSET = 2;
+    /**
+     * Aura panel metrics, mirroring {@code .subpanel.aura} / {@code .aura-row} in the page's stylesheet: rows are
+     * packed from the top padding at the page's own 26px pitch and squeezed down to their own 18px height once a
+     * recipe asks for more than five, so the last bar of a full panel still ends inside the box.
+     */
+    private static final int AURA_PANEL_HEIGHT = 155, AURA_PADDING = 10, ROW_HEIGHT = 18, ROW_PITCH = 26;
 
     private final List<Row> rows = new ArrayList<>(ROWS);
+    @Nullable
+    private Element auraPanel;
+    /**
+     * The page's own row; every further row is a copy of it.
+     */
+    @Nullable
+    private Element auraRow;
 
     public SpiritCraftingScreen(SpiritCraftingMenu menu, Inventory inventory, Component title) {
         super(menu, inventory, title, PANEL_WIDTH, PANEL_HEIGHT);
@@ -52,17 +65,15 @@ public final class SpiritCraftingScreen extends AuiContainerScreen<SpiritCraftin
     @Override
     public void bindPage() {
         this.panel = this.getOrThrow("panel");
-
-        List<Element> names = this.byIdPrefix("aura_name-", ROWS);
-        List<Element> amounts = this.byIdPrefix("aura_amount-", ROWS);
-        List<Element> fills = this.byIdPrefix("aura_fill-", ROWS);
+        this.auraPanel = this.getOrThrow("aura_panel");
+        Element prototype = this.getOrThrow("aura_row");
+        this.auraRow = prototype;
+        // The page's own row is the first one; every further row is a copy of it, made when a recipe asks for it.
+        this.rows.add(this.row(prototype));
         // Menu slot order: result, the nine grid cells, then the player inventory.
         this.bindCells("result", 0);
         this.bindCells("crafting", 1);
         this.bindInventoryCells("inventory");
-        for (int index = 0; index < ROWS; index++) {
-            this.rows.add(new Row(names.get(index), amounts.get(index), fills.get(index)));
-        }
         this.text(this.getOrThrow("title"), this.getTitle());
         this.text(this.getOrThrow("inventory_label"), Component.translatable("container.inventory"));
     }
@@ -70,6 +81,8 @@ public final class SpiritCraftingScreen extends AuiContainerScreen<SpiritCraftin
     @Override
     public void onBindingsCleared() {
         this.rows.clear();
+        this.auraPanel = null;
+        this.auraRow = null;
     }
 
     @Override
@@ -79,80 +92,94 @@ public final class SpiritCraftingScreen extends AuiContainerScreen<SpiritCraftin
 
     @Override
     protected void refresh() {
+        Element panel = this.auraPanel;
+        Element prototype = this.auraRow;
+        if (panel == null || prototype == null) return;
+        int count = 0;
+        while (count < ROWS && this.menu.progressAura(count) != null) count++;
+        this.fitRows(panel, prototype, count);
+        int pitch = pitch(count);
         for (int index = 0; index < this.rows.size(); index++) {
             Row row = this.rows.get(index);
-            Holder<Aura> aura = this.menu.progressAura(index);
+            Holder<Aura> aura = index < count ? this.menu.progressAura(index) : null;
             if (aura == null) {
-                row.clear();
+                row.hide();
                 continue;
             }
             int required = this.menu.progressRequirement(index);
             int amount = Math.min(this.menu.progressAmount(index), required);
             // The aura's own particle colour, lifted so it stays readable on the dark skin.
-            String color = String.format("#%06X",
-                    AuiStyles.readableOnDark(aura.value().resource().value().particleColor()));
-            row.show(DefinitionText.name(aura, "aura").getString(), amount + " / " + required, color,
-                    required <= 0 ? 0 : Math.round(BAR_WIDTH * amount / (float) required));
+            String color = AuiStyles.hex(AuiStyles.readableOnDark(aura.value().resource().value().particleColor()));
+            int filled = required <= 0 ? 0 : Math.round(BAR_WIDTH * amount / (float) required);
+            row.show(AURA_PADDING + index * pitch, DefinitionText.name(aura, "aura").getString(),
+                    amount + " / " + required, color, filled);
         }
     }
 
     /**
-     * One aura row: a name, a right-aligned "have / need" and the filled part of the bar. Every field is
-     * cached because writing to the DOM re-runs its style pass.
+     * Distance between two row tops; a single row sits at the padding, which is the old screen's look, and only a
+     * recipe needing more than five auras moves the rows closer together.
      */
-    private static final class Row {
-        private final Element name;
-        private final Element amount;
-        private final Element fill;
-        @Nullable
-        private String shownName;
-        @Nullable
-        private String shownAmount;
-        @Nullable
-        private String shownColor;
-        private int shownFill = -1;
+    private static int pitch(int count) {
+        if (count <= 1) return 0;
+        return Math.clamp((AURA_PANEL_HEIGHT - AURA_PADDING * 2 - ROW_HEIGHT) / (count - 1), ROW_HEIGHT, ROW_PITCH);
+    }
 
-        private Row(Element name, Element amount, Element fill) {
-            this.name = name;
-            this.amount = amount;
-            this.fill = fill;
-        }
+    /**
+     * Grows the rows to what the recipe needs, the way ApricityUI expands a repeated slot: the first row is the
+     * page's own and every further one is a copy of it. A copy carries the prototype's id for an instant, so the
+     * bind resolves that id before any copy exists and never looks it up again.
+     */
+    private void fitRows(Element panel, Element prototype, int count) {
+        while (this.rows.size() < count) this.rows.add(this.row(copyOf(panel, prototype)));
+    }
 
-        private void show(String name, String amount, String color, int filled) {
-            if (!name.equals(this.shownName)) {
-                AuiElements.setText(this.name, name);
-                this.shownName = name;
-            }
-            if (!color.equalsIgnoreCase(this.shownColor)) {
-                AuiElements.style(this.name, "color", color);
-                AuiElements.style(this.fill, "background-color", color);
-                this.shownColor = color;
-            }
-            if (!amount.equals(this.shownAmount)) {
-                AuiElements.setText(this.amount, amount);
-                this.shownAmount = amount;
-            }
+    /**
+     * One more row, attached to the panel. ApricityUI attaches through {@code Element.init}, which swaps in the
+     * element class registered for the tag, so the attached element is the one the screen keeps.
+     */
+    private static Element copyOf(Element panel, Element prototype) {
+        Element copy = prototype.cloneNode(true);
+        copy.removeAttribute("id");
+        return panel.appendChild(copy);
+    }
+
+    private Row row(Element root) {
+        return new Row(root, this.part(root, ".name"), this.part(root, ".amount"), this.part(root, ".bar .fill"));
+    }
+
+    /**
+     * One named element of a row. A copy carries the same children as the prototype, so this only faults on a page
+     * whose row is not the row this screen expects.
+     */
+    private Element part(Element root, String selector) {
+        Element found = root.querySelector(selector);
+        if (found == null) throw this.missing("aura_row " + selector);
+        return found;
+    }
+
+    /**
+     * One aura row: a name, a right-aligned "have / need" and the filled part of the bar. Every write goes through
+     * {@link AuiElements}, which compares first, because the rows are refreshed on every container tick.
+     */
+    private record Row(Element root, Element name, Element amount, Element fill) {
+        private void show(int top, String aura, String progress, String color, int filled) {
+            AuiElements.style(this.root, "top", top + "px");
+            AuiElements.style(this.root, "display", "block");
+            AuiElements.setText(this.name, aura);
+            AuiElements.style(this.name, "color", color);
+            AuiElements.setText(this.amount, progress);
+            AuiElements.style(this.fill, "background-color", color);
             // The old screen filled from 2px in and stopped 2px short of the right edge.
-            int width = Math.max(0, filled - BAR_INSET * 2);
-            if (width == this.shownFill) return;
-            AuiElements.style(this.fill, "width", width + "px");
-            this.shownFill = width;
+            AuiElements.style(this.fill, "width", Math.max(0, filled - BAR_INSET * 2) + "px");
         }
 
-        private void clear() {
-            if (this.shownName == null && this.shownAmount == null && this.shownFill == 0) return;
-            if (this.shownName != null) {
-                AuiElements.setText(this.name, "");
-                this.shownName = null;
-            }
-            if (this.shownAmount != null) {
-                AuiElements.setText(this.amount, "");
-                this.shownAmount = null;
-            }
-            if (this.shownFill != 0) {
-                AuiElements.style(this.fill, "width", "0px");
-                this.shownFill = 0;
-            }
+        /**
+         * Hides a row the recipe on the grid does not need. An unused row is kept for the next recipe rather than
+         * removed: the page is rebuilt wholesale by a hot reload, so nothing outlives the bind this way.
+         */
+        private void hide() {
+            AuiElements.style(this.root, "display", "none");
         }
     }
 }

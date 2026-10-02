@@ -1,0 +1,13 @@
+{
+  "type": "mxt:spirit_shaped",
+  "pattern": ["  P"],
+  "key": {
+    "P": "minecraft:paper"
+  },
+  "result": {
+    "id": "minecraft:map"
+  },
+  "aura": {
+    "mxt_test:wood_power": 20
+  }
+}

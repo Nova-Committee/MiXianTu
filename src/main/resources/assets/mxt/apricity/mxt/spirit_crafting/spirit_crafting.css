@@ -1,5 +1,5 @@
 /* 灵气工作台：只有这一页自己的尺寸与坐标，底子见 ../common/theme.css。
- * 旧屏幕 = 176x166 的原版工作台 + 右侧 (176,8) 处 132x122 的灵气面板，这里逐像素照抄。 */
+ * 旧屏幕 = 176x166 的原版工作台 + 右侧 132x122 的灵气面板；这里的面板占满右侧那一整条空列。 */
 
 #panel {
     width: 308px;
@@ -28,39 +28,44 @@
     top: 72px;
 }
 
-/* ── 灵气面板：(176,8) 132x122，行顶 = 面板顶 + 10 + 26n（旧版 PANEL_PADDING + row*26） ── */
+/* ── 灵气面板：176..301 宽 125（右边留 7px，与左边离背包的 7px 对称——面板贴到右沿会和面板自己的
+ * 描边叠成一条亮线），4..159 高 155（**下边与快捷栏底 159 对齐**，差 1px 就是两条并排的横线）。
+ * 旧屏幕那块背景贴图只有 122 高，按它排 8 行必然漏到面板外；行数由 Java 按配方生成，面板给足高度。 ── */
 .subpanel.aura {
     position: absolute;
     left: 176px;
-    top: 8px;
-    width: 132px;
-    height: 122px;
+    top: 4px;
+    width: 125px;
+    height: 155px;
     box-sizing: border-box;
 }
 
-.row {
+/* 一行：名字与"已有 / 需要"同行，进度条在下面。**不用主题的 .row**：那是可点列表行，带悬停高亮。
+ * 高 18 = 名字 9 + 2px + 条 7，是 Java 排版、以及行多时压缩行距的基准（见 SpiritCraftingScreen 的 ROW_HEIGHT）；
+ * 宽 105 = 面板宽 125 − 左右各 10px 内边距。 */
+.aura-row {
     position: absolute;
     left: 10px;
-    width: 112px;
-    height: 20px;
+    width: 105px;
+    height: 18px;
 }
 
 .name {
     left: 0;
     top: 0;
-    width: 76px;
+    width: 72px;
 }
 
 .amount {
     left: 0;
     top: 0;
-    width: 112px;
+    width: 105px;
     justify-content: flex-end;
 }
 
 .bar {
     left: 0;
     top: 11px;
-    width: 112px;
+    width: 105px;
     height: 7px;
 }

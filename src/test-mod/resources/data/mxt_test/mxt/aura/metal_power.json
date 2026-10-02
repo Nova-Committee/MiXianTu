@@ -1,0 +1,5 @@
+{
+  "resource": "mxt_test:metal_power",
+  "aura_type": "mxt_test:metal",
+  "burst_amount": 10
+}

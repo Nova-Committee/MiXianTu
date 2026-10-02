@@ -1,0 +1,17 @@
+{
+  "type": "mxt:spirit_shaped",
+  "pattern": ["ABC"],
+  "key": {
+    "A": "minecraft:stick",
+    "B": "minecraft:iron_ingot",
+    "C": "minecraft:gold_ingot"
+  },
+  "result": {
+    "id": "minecraft:lantern"
+  },
+  "aura": {
+    "mxt_test:qi": 40,
+    "mxt_test:spirit_power": 80,
+    "mxt_test:water_power": 60
+  }
+}

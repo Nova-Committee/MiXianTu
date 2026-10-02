@@ -1,0 +1,26 @@
+{
+  "type": "mxt:spirit_shapeless",
+  "ingredients": [
+    "minecraft:stick",
+    "minecraft:iron_ingot",
+    "minecraft:gold_ingot",
+    "minecraft:copper_ingot",
+    "minecraft:coal",
+    "minecraft:redstone",
+    "minecraft:lapis_lazuli",
+    "minecraft:quartz"
+  ],
+  "result": {
+    "id": "minecraft:diamond"
+  },
+  "aura": {
+    "mxt_test:spirit_power": 160,
+    "mxt_test:qi": 140,
+    "mxt_test:water_power": 120,
+    "mxt_test:fire_power": 100,
+    "mxt_test:soul_power": 80,
+    "mxt_test:metal_power": 60,
+    "mxt_test:wood_power": 40,
+    "mxt_test:earth_power": 20
+  }
+}
