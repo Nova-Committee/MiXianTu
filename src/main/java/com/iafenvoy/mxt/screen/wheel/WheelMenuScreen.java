@@ -4,18 +4,16 @@ import com.iafenvoy.mxt.api.WheelMenuEntry;
 import com.iafenvoy.mxt.data.IconReference;
 import com.iafenvoy.mxt.registry.MxtKeyMappings;
 import com.iafenvoy.mxt.render.IconRenderer;
-import com.iafenvoy.mxt.screen.AuiPages;
+import com.iafenvoy.mxt.screen.aui.AuiElements;
+import com.iafenvoy.mxt.screen.aui.AuiPages;
+import com.iafenvoy.mxt.screen.aui.AuiScreen;
 import com.sighs.apricityui.client.gui.ApricityGuiLayers;
 import com.sighs.apricityui.element.Item;
-import com.sighs.apricityui.init.Document;
 import com.sighs.apricityui.init.Element;
-import com.sighs.apricityui.screen.AuiLinkedScreen;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
-import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
-import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.player.Player;
 import org.jetbrains.annotations.NotNull;
@@ -34,7 +32,7 @@ import java.util.*;
  * <p>The page must not set {@code aui-mouse-events=intercept}: that makes ApricityUI cancel the native click,
  * and the left button would stop spending the pointed cell.</p>
  */
-public final class WheelMenuScreen extends Screen implements AuiLinkedScreen {
+public final class WheelMenuScreen extends AuiScreen {
     /**
      * The page's ring box in document pixels; the radii behind it are {@link WheelGeometry}'s.
      */
@@ -50,8 +48,7 @@ public final class WheelMenuScreen extends Screen implements AuiLinkedScreen {
     /**
      * The icon/name box at the middle of a sector, in document pixels.
      */
-    private static final int CONTENT_WIDTH = 40;
-    private static final int CONTENT_HEIGHT = 20;
+    private static final int CONTENT_WIDTH = 40, CONTENT_HEIGHT = 20;
     /**
      * The cooldown sheet covers this square over the icon; a sector that draws a name instead gets the whole
      * content box, so the sheet never sits as a patch in the middle of the text.
@@ -61,15 +58,6 @@ public final class WheelMenuScreen extends Screen implements AuiLinkedScreen {
      * The gap left between a name and the arc it sits on, as before this screen drew through a page.
      */
     private static final int LABEL_GAP = 6;
-
-    @Nullable
-    private Document document;
-    @Nullable
-    private Component pageError;
-    private final AuiPages.StyleHold styleHold = new AuiPages.StyleHold();
-    private List<FormattedCharSequence> errorLines = List.of();
-    private int errorWidth = -1;
-    private long boundGeneration = Long.MIN_VALUE;
 
     @Nullable
     private Element ring, sectors, centre;
@@ -86,27 +74,27 @@ public final class WheelMenuScreen extends Screen implements AuiLinkedScreen {
     }
 
     @Override
-    @Nullable
-    public Document getLinkedDocument() {
-        return this.document;
+    protected String pagePath() {
+        return AuiPages.wheelPage();
     }
 
     @Override
-    protected void init() {
-        super.init();
-        if (this.document == null) {
-            AuiPages.seed(AuiPages.WHEEL, AuiPages.WHEEL_FILES);
-            boolean stylesPrepared = AuiPages.warmUpStyles(AuiPages.wheelPage());
-            this.document = Document.create(AuiPages.wheelPage());
-            if (this.document == null) {
-                this.pageError = Component.translatable("screen.mxt.wheel.template_missing", AuiPages.WHEEL);
-                return;
-            }
-            this.styleHold.restart(stylesPrepared);
-        } else {
-            this.document.applyViewport(true);
-        }
-        this.rebind();
+    protected String pageName() {
+        return AuiPages.WHEEL;
+    }
+
+    /**
+     * The wheel's page is named as the bundled folder rather than as a screen, so its two faults read as the
+     * store they come from.
+     */
+    @Override
+    public Component pageMissing() {
+        return Component.translatable("screen.mxt.wheel.template_missing", this.pageName());
+    }
+
+    @Override
+    public Component pageInvalid(String missing) {
+        return Component.translatable("screen.mxt.wheel.template_invalid", missing);
     }
 
     /**
@@ -116,25 +104,15 @@ public final class WheelMenuScreen extends Screen implements AuiLinkedScreen {
     public void extractRenderState(@NotNull GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
         // Nothing at all is drawn while the page's stylesheet is still in flight: the ring's geometry is written
         // into the page, but without the stylesheet there is no box to clip it to.
-        if (this.pageError == null && this.styleHold.held()) return;
-        this.syncPage();
+        if (!this.auiReadyToDraw()) return;
+        if (this.auiPageWritable()) this.writeFrame();
         ApricityGuiLayers.submitUi(graphics);
         super.extractRenderState(graphics, mouseX, mouseY, partialTick);
         this.extractTooltip(graphics, mouseX, mouseY);
-        if (this.pageError != null) this.extractPageError(graphics);
+        this.extractPageError(graphics, this.font, this.width, this.height);
     }
 
-    @Override
-    public void tick() {
-        super.tick();
-        this.styleHold.tick();
-    }
-
-    private void syncPage() {
-        Document current = this.document;
-        if (current == null) return;
-        if (current.getRefreshGeneration() != this.boundGeneration) this.rebind();
-        if (this.cells.isEmpty()) return;
+    private void writeFrame() {
         Player player = Minecraft.getInstance().player;
         List<@Nullable WheelMenuEntry> sectors =
                 WheelMenuContent.sectors(WheelSelectionState.pages(), WheelSelectionState.page());
@@ -157,7 +135,7 @@ public final class WheelMenuScreen extends Screen implements AuiLinkedScreen {
         int percent = (int) Math.round(fit * 100.0D);
         if (percent == this.shownScalePercent) return;
         this.shownScalePercent = percent;
-        this.ring.setInlineStyleProperty("transform", "scale(" + percent / 100.0D + ")");
+        AuiElements.style(this.ring, "transform", "scale(" + percent / 100.0D + ")");
     }
 
     private void showSectors(List<@Nullable WheelMenuEntry> sectors, int pointed, @Nullable Player player) {
@@ -193,7 +171,7 @@ public final class WheelMenuScreen extends Screen implements AuiLinkedScreen {
 
     private void showCentre(@Nullable WheelMenuEntry entry, @Nullable Player player) {
         if (this.centre == null) return;
-        setFlag(this.centre, "empty", entry == null);
+        AuiElements.setClass(this.centre, "empty", entry == null);
         if (entry == null) {
             if (this.title != null) this.title.show("");
             if (this.note != null) this.note.show("");
@@ -213,8 +191,8 @@ public final class WheelMenuScreen extends Screen implements AuiLinkedScreen {
             this.shownPageNumber = number;
             this.turnFlip = !this.turnFlip;
             if (this.sectors != null) {
-                setFlag(this.sectors, "turn-a", this.turnFlip);
-                setFlag(this.sectors, "turn-b", !this.turnFlip);
+                AuiElements.setClass(this.sectors, "turn-a", this.turnFlip);
+                AuiElements.setClass(this.sectors, "turn-b", !this.turnFlip);
             }
         }
         if (this.page != null) this.page.show(Component.translatable("wheel.mxt.page_hint",
@@ -242,65 +220,28 @@ public final class WheelMenuScreen extends Screen implements AuiLinkedScreen {
         if (!lines.isEmpty()) graphics.setComponentTooltipForNextFrame(this.font, lines, mouseX, mouseY);
     }
 
-    private static void setFlag(Element element, String token, boolean on) {
-        if (element.getClassList().contains(token) != on) element.getClassList().toggle(token, on);
-    }
-
     /**
-     * Resolves the page contract again; a refresh (hot reload or resize) replaces every element.
+     * Resolves the page contract; a refresh (hot reload) replaces every element and the wheel writes the whole
+     * ring into the fresh one.
      */
-    private void rebind() {
-        this.clearBindings();
-        Document current = this.document;
-        if (current == null) return;
-        if (!this.bindDocument(current)) return;
-        this.boundGeneration = current.getRefreshGeneration();
-    }
+    @Override
+    public void bindPage() {
+        this.ring = this.getOrThrow("ring");
+        this.sectors = this.getOrThrow("sectors");
+        this.centre = this.getOrThrow("centre");
+        this.title = new Label(this.getOrThrow("title"));
+        this.note = new Label(this.getOrThrow("note"));
+        this.page = new Label(this.getOrThrow("page"));
 
-    private boolean bindDocument(Document current) {
-        if (current.getElementById("stage") == null) return this.fail("stage");
-        Element ring = current.getElementById("ring");
-        if (ring == null) return this.fail("ring");
-        Element sectors = current.getElementById("sectors");
-        if (sectors == null) return this.fail("sectors");
-        Element centre = current.getElementById("centre");
-        if (centre == null) return this.fail("centre");
-        Element title = current.getElementById("title");
-        if (title == null) return this.fail("title");
-        Element note = current.getElementById("note");
-        if (note == null) return this.fail("note");
-        Element page = current.getElementById("page");
-        if (page == null) return this.fail("page");
         WheelGeometry.Ring geometry = WheelGeometry.ring(RING_BOX, RING_BOX, 1.0D);
         for (int slot = 0; slot < WheelGeometry.SECTORS; slot++) {
-            Element root = current.getElementById("sector-" + slot);
-            if (root == null) return this.fail("sector-" + slot);
-            Element content = current.getElementById("content-" + slot);
-            if (content == null) return this.fail("content-" + slot);
-            if (!(current.getElementById("icon-" + slot) instanceof Item icon))
-                return this.fail("icon-" + slot + " (item)");
-            Element texture = current.getElementById("texture-" + slot);
-            if (texture == null) return this.fail("texture-" + slot);
-            Element name = current.getElementById("name-" + slot);
-            if (name == null) return this.fail("name-" + slot);
-            Element sheet = current.getElementById("sheet-" + slot);
-            if (sheet == null) return this.fail("sheet-" + slot);
-            root.setInlineStyleProperty("clip-path", sectorPolygon(slot, geometry));
+            Element root = this.getOrThrow("sector-" + slot), content = this.getOrThrow("content-" + slot);
+            AuiElements.style(root, "clip-path", sectorPolygon(slot, geometry));
             double angle = WheelGeometry.sectorCentre(slot);
-            content.setInlineStyleProperty("left",
-                    round(geometry.x(angle, geometry.iconRadius()) - CONTENT_WIDTH / 2.0D) + "px");
-            content.setInlineStyleProperty("top",
-                    round(geometry.y(angle, geometry.iconRadius()) - CONTENT_HEIGHT / 2.0D) + "px");
-            this.cells.add(new Sector(root, icon, texture, name, sheet));
+            AuiElements.style(content, "left", round(geometry.x(angle, geometry.iconRadius()) - CONTENT_WIDTH / 2.0D) + "px");
+            AuiElements.style(content, "top", round(geometry.y(angle, geometry.iconRadius()) - CONTENT_HEIGHT / 2.0D) + "px");
+            this.cells.add(new Sector(root, this.getOrThrow("icon-" + slot, Item.class), this.getOrThrow("texture-" + slot), this.getOrThrow("name-" + slot), this.getOrThrow("sheet-" + slot)));
         }
-        this.ring = ring;
-        this.sectors = sectors;
-        this.centre = centre;
-        this.title = new Label(title);
-        this.note = new Label(note);
-        this.page = new Label(page);
-        this.pageError = null;
-        return true;
     }
 
     /**
@@ -331,17 +272,8 @@ public final class WheelMenuScreen extends Screen implements AuiLinkedScreen {
         return String.format(Locale.ROOT, "%.1f", value);
     }
 
-    private boolean fail(String missing) {
-        Document current = this.document;
-        long generation = current == null ? Long.MIN_VALUE : current.getRefreshGeneration();
-        this.clearBindings();
-        // Keep the failed generation so a broken page is reported once instead of every frame.
-        this.boundGeneration = generation;
-        this.pageError = Component.translatable("screen.mxt.wheel.template_invalid", missing);
-        return false;
-    }
-
-    private void clearBindings() {
+    @Override
+    public void onBindingsCleared() {
         this.cells.clear();
         this.ring = null;
         this.sectors = null;
@@ -351,20 +283,6 @@ public final class WheelMenuScreen extends Screen implements AuiLinkedScreen {
         this.note = null;
         this.shownScalePercent = Integer.MIN_VALUE;
         this.shownPageNumber = Integer.MIN_VALUE;
-    }
-
-    private void extractPageError(GuiGraphicsExtractor graphics) {
-        Component error = this.pageError;
-        if (error == null) return;
-        if (this.errorWidth != this.width) {
-            this.errorLines = this.font.split(error, Math.max(40, this.width - 40));
-            this.errorWidth = this.width;
-        }
-        int y = this.height / 2 - this.errorLines.size() * 5;
-        for (FormattedCharSequence line : this.errorLines) {
-            graphics.text(this.font, line, (this.width - this.font.width(line)) / 2, y, 0xFFFF5555, false);
-            y += 10;
-        }
     }
 
     // What the pointer is on, or null for an empty cell - a selection is never built from one.
@@ -404,7 +322,7 @@ public final class WheelMenuScreen extends Screen implements AuiLinkedScreen {
 
     // The one page host that draws no backdrop at all: the wheel is read while the world is still running and the
     // HUD is still on screen, and the choice is made against what is behind it - the vanilla plate would flatten
-    // that, and super's own branch would blur it. Every other host draws AuiBackdrop.
+    // that, and super's own branch would blur it. Every other host draws the plate through AuiStyles.extract.
     @Override
     public void extractBackground(@NotNull GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
     }
@@ -417,31 +335,7 @@ public final class WheelMenuScreen extends Screen implements AuiLinkedScreen {
     @Override
     public void removed() {
         WheelMenuController.screenRemoved(this);
-        this.clearBindings();
-        if (this.document != null) {
-            this.document.remove();
-            this.document = null;
-        }
         super.removed();
-    }
-
-    /**
-     * Writes a text node only when it changed: every DOM write re-runs the page's style pass.
-     */
-    private static final class Label {
-        private final Element element;
-        @Nullable
-        private String shown;
-
-        private Label(Element element) {
-            this.element = element;
-        }
-
-        private void show(String value) {
-            if (value.equals(this.shown)) return;
-            this.shown = value;
-            this.element.setTextContent(value);
-        }
     }
 
     /**
@@ -473,11 +367,11 @@ public final class WheelMenuScreen extends Screen implements AuiLinkedScreen {
                           double cooldown) {
             boolean asItem = icon != null && icon.item().isPresent();
             boolean asTexture = icon != null && icon.texture().isPresent();
-            setFlag(this.root, "empty", !holds);
-            setFlag(this.root, "selected", pointed);
-            setFlag(this.root, "cooling", cooling);
-            setFlag(this.root, "icon-item", asItem);
-            setFlag(this.root, "icon-texture", asTexture);
+            AuiElements.setClass(this.root, "empty", !holds);
+            AuiElements.setClass(this.root, "selected", pointed);
+            AuiElements.setClass(this.root, "cooling", cooling);
+            AuiElements.setClass(this.root, "icon-item", asItem);
+            AuiElements.setClass(this.root, "icon-texture", asTexture);
             // The sheet covers the icon box, or the whole content box when this sector draws a name; it is
             // bottom-anchored in it the way the HUD cell draws it, and only whole pixels are written, so a
             // draining cooldown touches the page at most once per pixel instead of every frame.
@@ -489,11 +383,11 @@ public final class WheelMenuScreen extends Screen implements AuiLinkedScreen {
             if (signature != this.shownSheet) {
                 this.shownSheet = signature;
                 if (rows > 0) {
-                    this.sheet.setInlineStyleProperty("left", ((CONTENT_WIDTH - boxWidth) / 2) + "px");
-                    this.sheet.setInlineStyleProperty("width", boxWidth + "px");
-                    this.sheet.setInlineStyleProperty("top",
+                    AuiElements.style(this.sheet, "left", ((CONTENT_WIDTH - boxWidth) / 2) + "px");
+                    AuiElements.style(this.sheet, "width", boxWidth + "px");
+                    AuiElements.style(this.sheet, "top",
                             ((CONTENT_HEIGHT - boxHeight) / 2 + boxHeight - rows) + "px");
-                    this.sheet.setInlineStyleProperty("height", rows + "px");
+                    AuiElements.style(this.sheet, "height", rows + "px");
                 }
             }
             // An icon that did not change is not written again: pushing a stack repaints the element.
@@ -504,7 +398,7 @@ public final class WheelMenuScreen extends Screen implements AuiLinkedScreen {
                 if (asTexture) this.texture.setAttribute("src", icon.texture().orElseThrow().toString());
                 else this.texture.removeAttribute("src");
             }
-            if (!label.equals(this.name.getTextContent())) this.name.setTextContent(label);
+            AuiElements.setText(this.name, label);
         }
     }
 }

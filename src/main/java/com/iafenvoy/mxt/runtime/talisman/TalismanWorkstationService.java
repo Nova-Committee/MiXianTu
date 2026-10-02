@@ -331,11 +331,9 @@ public final class TalismanWorkstationService {
         List<Runnable> refunds = new ArrayList<>();
         for (Identifier id : planning.resources().keySet())
             MxtDatapackRegistries.holder(MxtResourceKeys.RESOURCE, id).ifPresent(resource -> {
-                ResourceHolderAttachment holder = target;
-                double value = holder.get(resource);
-                Audit audit = holder.audit(resource);
-                refunds.add(() -> holder.set(resource, value, audit.minSnapshot(), audit.maxSnapshot(),
-                        audit.lastChangedTick(), audit.source()));
+                double value = target.get(resource);
+                Audit audit = target.audit(resource);
+                refunds.add(() -> target.set(resource, value, audit.minSnapshot(), audit.maxSnapshot(), audit.lastChangedTick(), audit.source()));
             });
         return refunds;
     }

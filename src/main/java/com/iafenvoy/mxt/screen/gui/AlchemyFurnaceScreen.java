@@ -2,8 +2,9 @@ package com.iafenvoy.mxt.screen.gui;
 
 import com.iafenvoy.mxt.network.payload.AlchemyActionC2SPayload;
 import com.iafenvoy.mxt.network.payload.AlchemyActionC2SPayload.Action;
-import com.iafenvoy.mxt.screen.AuiContainerScreen;
-import com.iafenvoy.mxt.screen.AuiPages;
+import com.iafenvoy.mxt.screen.aui.AuiContainerScreen;
+import com.iafenvoy.mxt.screen.aui.AuiElements;
+import com.iafenvoy.mxt.screen.aui.AuiPages;
 import com.iafenvoy.mxt.screen.menu.AlchemyFurnaceMenu;
 import com.iafenvoy.mxt.screen.menu.AlchemyFurnaceMenu.TemperatureAck;
 import com.iafenvoy.mxt.screen.menu.AlchemyFurnaceView;
@@ -31,9 +32,7 @@ public final class AlchemyFurnaceScreen extends AuiContainerScreen<AlchemyFurnac
     private Element title, temperature, limit, status, progress, apply, start, abort;
     @Nullable
     private Input target;
-
-    private boolean draftDirty;
-    private boolean writingField;
+    private boolean draftDirty, writingField;
     @Nullable
     private String fieldText;
     private int observedEpoch;
@@ -41,7 +40,6 @@ public final class AlchemyFurnaceScreen extends AuiContainerScreen<AlchemyFurnac
     private double submitted = Double.NaN;
     @Nullable
     private Component rejection;
-
     private boolean startDisabled, abortDisabled;
     private float shownProgress = Float.NaN;
     private long shownTemperatureBits = Long.MIN_VALUE;
@@ -68,82 +66,59 @@ public final class AlchemyFurnaceScreen extends AuiContainerScreen<AlchemyFurnac
     }
 
     @Override
-    protected boolean bindPage(Document document) {
-        Element panel = document.getElementById("panel");
-        if (panel == null) return this.fail("panel");
-        Element title = document.getElementById("title");
-        if (title == null) return this.fail("title");
-        if (!(document.getElementById("machine") instanceof Container)) return this.fail("machine (container)");
-        if (!(document.getElementById("player_inventory") instanceof Container)) {
-            return this.fail("player_inventory (container)");
+    public void bindPage() {
+        this.panel = this.getOrThrow("panel");
+        this.title = this.getOrThrow("title");
+
+        this.getOrThrow("machine", Container.class);
+        this.getOrThrow("player_inventory", Container.class);
+        List<Element> machineCells = this.cellsOf("machine");
+        int machineSlots = this.menu.view().getMachineSlots();
+        if (machineCells.size() != machineSlots) {
+            throw this.missing("machine (" + machineCells.size() + " slots)");
         }
-        List<Element> machineCells = this.cellsOf(document, "machine");
-        if (machineCells == null || machineCells.size() != this.menu.view().getMachineSlots()) {
-            return this.fail("machine (" + (machineCells == null ? 0 : machineCells.size()) + " slots)");
-        }
-        List<Element> playerCells = this.cellsOf(document, "player_inventory");
-        if (playerCells == null || playerCells.size() != 36) {
-            return this.fail("player_inventory (" + (playerCells == null ? 0 : playerCells.size()) + " slots)");
-        }
-        this.panel = panel;
-        this.title = title;
-        if (!this.bindMachine(machineCells)) return false;
-        if (!this.bindCells(document, "player_inventory", this::inventoryMenuIndex)) return false;
-        if (this.menu.view() == AlchemyFurnaceMenu.View.MONITOR && !this.bindMonitor(document)) return false;
-        this.text(title, this.getTitle());
-        this.text(document.getElementById("inventory_label"), Component.translatable("container.inventory"));
-        return true;
+        List<Element> playerCells = this.cellsOf("player_inventory");
+        if (playerCells.size() != 36) throw this.missing("player_inventory (" + playerCells.size() + " slots)");
+        this.bindMachine(machineCells);
+        this.bindCells("player_inventory", this::inventoryMenuIndex);
+        if (this.menu.view() == AlchemyFurnaceMenu.View.MONITOR) this.bindMonitor();
+        this.text(this.title, this.getTitle());
+        this.text(this.getOrThrow("inventory_label"), Component.translatable("container.inventory"));
     }
 
-    private boolean bindMachine(List<Element> machineCells) {
+    private void bindMachine(List<Element> machineCells) {
         for (Element cell : machineCells) {
             int index = slotIndexOf(cell);
             if (index < 0 || index >= this.menu.view().getMachineSlots()) {
-                return this.fail("machine (slot-index " + index + ")");
+                throw this.missing("machine (slot-index " + index + ")");
             }
             this.cells.put(index, cell);
             this.tooltip(cell, () -> this.machineHint(index));
         }
-        return true;
     }
 
-    private boolean bindMonitor(Document document) {
-        Element temperature = document.getElementById("temperature");
-        if (temperature == null) return this.fail("temperature");
-        Element limit = document.getElementById("limit");
-        if (limit == null) return this.fail("limit");
-        Element status = document.getElementById("status");
-        if (status == null) return this.fail("status");
-        Element progress = document.getElementById("progress_fill");
-        if (progress == null) return this.fail("progress_fill");
-        if (!(document.getElementById("target") instanceof Input target)) return this.fail("target (input)");
-        Element apply = document.getElementById("apply");
-        if (apply == null) return this.fail("apply");
-        Element start = document.getElementById("start");
-        if (start == null) return this.fail("start");
-        Element abort = document.getElementById("abort");
-        if (abort == null) return this.fail("abort");
-        this.temperature = temperature;
-        this.limit = limit;
-        this.status = status;
-        this.progress = progress;
-        this.target = target;
-        this.apply = apply;
-        this.start = start;
-        this.abort = abort;
-        this.click(apply, this::applyTemperature);
-        this.click(start, () -> this.send(Action.START, 0));
-        this.click(abort, () -> this.send(Action.ABORT, 0));
+    private void bindMonitor() {
+        this.temperature = this.getOrThrow("temperature");
+        this.limit = this.getOrThrow("limit");
+        this.status = this.getOrThrow("status");
+        this.progress = this.getOrThrow("progress_fill");
+        this.target = this.getOrThrow("target", Input.class);
+        this.apply = this.getOrThrow("apply");
+        this.start = this.getOrThrow("start");
+        this.abort = this.getOrThrow("abort");
+
+        this.click(this.apply, this::applyTemperature);
+        this.click(this.start, () -> this.send(Action.START, 0));
+        this.click(this.abort, () -> this.send(Action.ABORT, 0));
         this.tooltip(this.title, this::titleTooltip);
-        this.tooltip(temperature, this::heatTooltip);
-        this.tooltip(limit, this::limitTooltip);
-        this.tooltip(target, this::fieldTooltip);
-        this.tooltip(apply, this::fieldTooltip);
-        return true;
+        this.tooltip(this.temperature, this::heatTooltip);
+        this.tooltip(this.limit, this::limitTooltip);
+        this.tooltip(this.target, this::fieldTooltip);
+        this.tooltip(this.apply, this::fieldTooltip);
     }
 
     @Override
-    protected void onBindingsCleared() {
+    public void onBindingsCleared() {
         this.title = null;
         this.temperature = null;
         this.limit = null;
@@ -168,7 +143,7 @@ public final class AlchemyFurnaceScreen extends AuiContainerScreen<AlchemyFurnac
     }
 
     @Override
-    protected void onPageBound() {
+    public void onPageBound() {
         this.refresh();
     }
 
@@ -189,7 +164,7 @@ public final class AlchemyFurnaceScreen extends AuiContainerScreen<AlchemyFurnac
         float progress = total > 0 && view.status().locked()
                 ? (float) (total - numbers.remaining()) / total : 0;
         if (this.progress != null && Float.floatToIntBits(progress) != Float.floatToIntBits(this.shownProgress)) {
-            style(this.progress, "width", Math.round(progress * 100) + "%");
+            AuiElements.style(this.progress, "width", Math.round(progress * 100) + "%");
             this.shownProgress = progress;
         }
         boolean canStart = view.status().canStart();

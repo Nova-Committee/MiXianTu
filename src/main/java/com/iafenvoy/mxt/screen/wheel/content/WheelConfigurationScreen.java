@@ -7,21 +7,18 @@ import com.iafenvoy.mxt.render.IconRenderer;
 import com.iafenvoy.mxt.runtime.wheel.WheelEntryKinds;
 import com.iafenvoy.mxt.runtime.wheel.WheelLayout;
 import com.iafenvoy.mxt.runtime.wheel.WheelSlot;
-import com.iafenvoy.mxt.screen.AuiBackdrop;
-import com.iafenvoy.mxt.screen.AuiPages;
+import com.iafenvoy.mxt.screen.aui.AuiElements;
+import com.iafenvoy.mxt.screen.aui.AuiPages;
+import com.iafenvoy.mxt.screen.aui.AuiScreen;
 import com.sighs.apricityui.client.gui.ApricityGuiLayers;
 import com.sighs.apricityui.element.Item;
-import com.sighs.apricityui.init.Document;
 import com.sighs.apricityui.init.Element;
-import com.sighs.apricityui.screen.AuiLinkedScreen;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
-import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
-import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.entity.player.Player;
 import org.jetbrains.annotations.Nullable;
 import org.jspecify.annotations.NonNull;
@@ -40,9 +37,8 @@ import java.util.Objects;
  * window, so the panel, the two pool origins, the sector row, the scrollbars and the divider are written into
  * the page as inline styles every frame - each write compares first, so a still frame writes nothing.
  */
-public final class WheelConfigurationScreen extends Screen implements AuiLinkedScreen {
-    private static final int SLOT_SIZE = 22;
-    private static final int SLOT_GAP = 2;
+public final class WheelConfigurationScreen extends AuiScreen {
+    private static final int SLOT_SIZE = 22, SLOT_GAP = 2;
     private static final int GRID_STEP = SLOT_SIZE + SLOT_GAP;
     private static final int POOL_COLUMNS = 6;
     private static final int POOL_WIDTH = POOL_COLUMNS * GRID_STEP - SLOT_GAP;
@@ -55,13 +51,12 @@ public final class WheelConfigurationScreen extends Screen implements AuiLinkedS
     // Divider, numbers, cells and the key line under them: the band stops just below the keys, so nothing is
     // left empty under the row and the pools get the rest of the panel. The divider is what anchors the band,
     // so the three offsets below it are the only way to nudge the row without moving the line.
-    private static final int SLOT_ROW_HEIGHT = 56, SLOT_NUMBER_OFFSET = 6, SLOT_TOP_OFFSET = 17, SLOT_KEY_OFFSET = 42;
+    private static final int SLOT_ROW_HEIGHT = 56, SLOT_TOP_OFFSET = 17;
     private static final int PANEL_HEIGHT = 268;
     /**
      * The rows a full-height band can show: the page's cell grid is fixed, the visible window slides over it.
      */
-    private static final int POOL_ROWS = 7;
-    private static final int POOL_CELLS = POOL_COLUMNS * POOL_ROWS;
+    private static final int POOL_ROWS = 7, POOL_CELLS = POOL_COLUMNS * POOL_ROWS;
     /**
      * The name drawn in a cell is cut to the cell width minus this inset, as {@link IconRenderer} does it.
      */
@@ -78,15 +73,6 @@ public final class WheelConfigurationScreen extends Screen implements AuiLinkedS
     private int panelLeft, panelTop, panelWidth, panelHeight;
     private int poolsTop, poolsBottom;
     private int slotRowLeft, slotRowTop;
-
-    @Nullable
-    private Document document;
-    @Nullable
-    private Component pageError;
-    private final AuiPages.StyleHold styleHold = new AuiPages.StyleHold();
-    private List<FormattedCharSequence> errorLines = List.of();
-    private int errorWidth = -1;
-    private long boundGeneration = Long.MIN_VALUE;
     @Nullable
     private Element panel, title, headingAura, headingOption, emptyAura, emptyOption, divider;
     @Nullable
@@ -109,40 +95,26 @@ public final class WheelConfigurationScreen extends Screen implements AuiLinkedS
     // ------------------------------------------------------------------ page contract
 
     @Override
-    @Nullable
-    public Document getLinkedDocument() {
-        return this.document;
+    protected String pagePath() {
+        return AuiPages.wheelConfigPage();
     }
 
     @Override
-    protected void init() {
-        super.init();
-        if (this.document == null) {
-            AuiPages.seed(AuiPages.WHEEL, AuiPages.WHEEL_FILES);
-            boolean stylesPrepared = AuiPages.warmUpStyles(AuiPages.wheelConfigPage());
-            this.document = Document.create(AuiPages.wheelConfigPage());
-            if (this.document == null) {
-                this.pageError = Component.translatable("screen.mxt.page.missing", "wheel_config");
-                return;
-            }
-            this.styleHold.restart(stylesPrepared);
-        } else {
-            this.document.applyViewport(true);
-        }
+    protected String pageName() {
+        return "wheel_config";
+    }
+
+    @Override
+    public void onPageBound() {
+        // The panel's geometry is computed from the window, so it is written before the page is told about it.
         this.layout();
-        this.rebind();
+        this.refreshPage();
     }
 
     @Override
     protected void repositionElements() {
         super.repositionElements();
         this.layout();
-    }
-
-    @Override
-    public void tick() {
-        super.tick();
-        this.styleHold.tick();
     }
 
     /**
@@ -165,12 +137,6 @@ public final class WheelConfigurationScreen extends Screen implements AuiLinkedS
         this.clampScroll();
     }
 
-    // The vanilla grey plate, not the blurred one super would pick for a plain Screen host.
-    @Override
-    public void extractBackground(@NonNull GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
-        AuiBackdrop.extract(this, graphics);
-    }
-
     /**
      * Runs before the vanilla pass so the page sits under the tooltips this class draws itself.
      */
@@ -178,36 +144,16 @@ public final class WheelConfigurationScreen extends Screen implements AuiLinkedS
     public void extractRenderState(@NonNull GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
         // Nothing at all is drawn while the page's stylesheet is still in flight: this screen's panel and pool
         // geometry are written into the page, but without the stylesheet there is no box to lay them out in.
-        if (this.pageError == null && this.styleHold.held()) return;
-        this.syncPage();
+        if (!this.auiReadyToDraw()) return;
+        if (this.auiPageWritable()) this.refreshPage();
         ApricityGuiLayers.submitUi(graphics);
         super.extractRenderState(graphics, mouseX, mouseY, partialTick);
         this.extractTooltip(graphics, mouseX, mouseY, Minecraft.getInstance().player);
-        this.extractPageError(graphics);
+        this.extractPageError(graphics, this.font, this.width, this.height);
     }
 
-    private void syncPage() {
-        Document current = this.document;
-        if (current == null) return;
-        if (current.getRefreshGeneration() != this.boundGeneration) {
-            this.rebind();
-            return;
-        }
-        if (this.panel == null) return;
-        this.refreshPage();
-    }
-
-    private void rebind() {
-        Document current = this.document;
-        this.clearBindings();
-        this.pageError = null;
-        if (current == null) return;
-        if (!this.bindPage(current)) return;
-        this.boundGeneration = current.getRefreshGeneration();
-        this.refreshPage();
-    }
-
-    private void clearBindings() {
+    @Override
+    public void onBindingsCleared() {
         this.poolCells.clear();
         this.sectorCells.clear();
         this.panel = null;
@@ -224,96 +170,53 @@ public final class WheelConfigurationScreen extends Screen implements AuiLinkedS
         this.trackOption = null;
         this.thumbAura = null;
         this.thumbOption = null;
-        this.boundGeneration = Long.MIN_VALUE;
     }
 
-    private boolean bindPage(Document document) {
-        Element panel = document.getElementById("panel");
-        if (panel == null) return this.fail("panel");
-        Element title = document.getElementById("title");
-        if (title == null) return this.fail("title");
-        Element headingAura = document.getElementById("heading_aura");
-        if (headingAura == null) return this.fail("heading_aura");
-        Element headingOption = document.getElementById("heading_option");
-        if (headingOption == null) return this.fail("heading_option");
-        Element emptyAura = document.getElementById("empty_aura");
-        if (emptyAura == null) return this.fail("empty_aura");
-        Element emptyOption = document.getElementById("empty_option");
-        if (emptyOption == null) return this.fail("empty_option");
-        Element divider = document.getElementById("divider");
-        if (divider == null) return this.fail("divider");
-        Element poolAura = document.getElementById("pool_aura");
-        if (poolAura == null) return this.fail("pool_aura");
-        Element poolOption = document.getElementById("pool_option");
-        if (poolOption == null) return this.fail("pool_option");
-        Element sectorRow = document.getElementById("sector_row");
-        if (sectorRow == null) return this.fail("sector_row");
-        Element trackAura = document.getElementById("track_aura");
-        if (trackAura == null) return this.fail("track_aura");
-        Element trackOption = document.getElementById("track_option");
-        if (trackOption == null) return this.fail("track_option");
-        Element thumbAura = document.getElementById("thumb_aura");
-        if (thumbAura == null) return this.fail("thumb_aura");
-        Element thumbOption = document.getElementById("thumb_option");
-        if (thumbOption == null) return this.fail("thumb_option");
-        this.panel = panel;
-        this.title = title;
-        this.headingAura = headingAura;
-        this.headingOption = headingOption;
-        this.emptyAura = emptyAura;
-        this.emptyOption = emptyOption;
-        this.divider = divider;
-        this.poolAura = poolAura;
-        this.poolOption = poolOption;
-        this.sectorRow = sectorRow;
-        this.trackAura = trackAura;
-        this.trackOption = trackOption;
-        this.thumbAura = thumbAura;
-        this.thumbOption = thumbOption;
+    @Override
+    public void bindPage() {
+        this.panel = this.getOrThrow("panel");
+        this.title = this.getOrThrow("title");
+        this.headingAura = this.getOrThrow("heading_aura");
+        this.headingOption = this.getOrThrow("heading_option");
+        this.emptyAura = this.getOrThrow("empty_aura");
+        this.emptyOption = this.getOrThrow("empty_option");
+        this.divider = this.getOrThrow("divider");
+        this.poolAura = this.getOrThrow("pool_aura");
+        this.poolOption = this.getOrThrow("pool_option");
+        this.sectorRow = this.getOrThrow("sector_row");
+        this.trackAura = this.getOrThrow("track_aura");
+        this.trackOption = this.getOrThrow("track_option");
+        this.thumbAura = this.getOrThrow("thumb_aura");
+        this.thumbOption = this.getOrThrow("thumb_option");
+
         for (int pool = 0; pool < 2; pool++) {
             String prefix = pool == AURA_POOL ? "aura" : "option";
             for (int index = 0; index < POOL_CELLS; index++) {
-                Cell cell = cell(document, this.font, prefix, index);
-                if (cell == null) return this.fail(prefix + "-" + index);
-                this.poolCells.add(cell);
+                this.poolCells.add(this.cell(prefix, index));
             }
         }
         for (int sector = 0; sector < WheelLayout.SLOTS; sector++) {
-            Cell cell = cell(document, this.font, "sector", sector);
-            if (cell == null) return this.fail("sector-" + sector);
-            this.sectorCells.add(cell);
+            this.sectorCells.add(this.cell("sector", sector));
         }
-        text(title, this.getTitle().getString());
-        text(headingAura, Component.translatable("wheel.mxt.pool.aura").getString());
-        text(headingOption, Component.translatable("wheel.mxt.pool.ability").getString());
-        text(emptyAura, Component.translatable("wheel.mxt.pool.empty").getString());
-        text(emptyOption, Component.translatable("wheel.mxt.pool.empty").getString());
-        return true;
+        AuiElements.setText(this.title, this.getTitle().getString());
+        AuiElements.setText(this.headingAura, Component.translatable("wheel.mxt.pool.aura").getString());
+        AuiElements.setText(this.headingOption, Component.translatable("wheel.mxt.pool.ability").getString());
+        AuiElements.setText(this.emptyAura, Component.translatable("wheel.mxt.pool.empty").getString());
+        AuiElements.setText(this.emptyOption, Component.translatable("wheel.mxt.pool.empty").getString());
     }
 
     /**
-     * One cell of the page: the root plus the four (five, for a sector) elements it writes into.
+     * One cell of the page: the root plus the four (five, for a sector) elements it writes into. The number, key
+     * and stale marks are optional, so only the parts every cell carries are required.
      */
-    @Nullable
-    private static Cell cell(Document document, Font font, String prefix, int index) {
-        Element root = document.getElementById(prefix + "-" + index);
-        Element icon = document.getElementById(prefix + "_item-" + index);
-        Element texture = document.getElementById(prefix + "_tex-" + index);
-        Element name = document.getElementById(prefix + "_name-" + index);
-        Element accent = document.getElementById(prefix + "_accent-" + index);
-        if (root == null || !(icon instanceof Item item) || texture == null || name == null || accent == null)
-            return null;
-        return new Cell(root, item, texture, name, accent, font,
-                document.getElementById(prefix + "_stale-" + index),
-                document.getElementById(prefix + "_number-" + index),
-                document.getElementById(prefix + "_key-" + index));
-    }
-
-    private boolean fail(String missing) {
-        Document current = this.document;
-        this.pageError = Component.translatable("screen.mxt.page.invalid", "wheel_config", missing);
-        this.boundGeneration = current == null ? Long.MIN_VALUE : current.getRefreshGeneration();
-        return false;
+    private Cell cell(String prefix, int index) {
+        return new Cell(this.getOrThrow(prefix + "-" + index),
+                this.getOrThrow(prefix + "_item-" + index, Item.class),
+                this.getOrThrow(prefix + "_tex-" + index),
+                this.getOrThrow(prefix + "_name-" + index),
+                this.getOrThrow(prefix + "_accent-" + index), this.font,
+                this.find(prefix + "_number-" + index),
+                this.find(prefix + "_key-" + index));
     }
 
     // ------------------------------------------------------------------ frame
@@ -321,12 +224,12 @@ public final class WheelConfigurationScreen extends Screen implements AuiLinkedS
     private void refreshPage() {
         Element panel = this.panel;
         if (panel == null) return;
-        put(panel, "left", this.panelLeft + "px");
-        put(panel, "top", this.panelTop + "px");
-        put(panel, "width", this.panelWidth + "px");
-        put(panel, "height", this.panelHeight + "px");
-        put(this.title, "left", "10px");
-        put(this.title, "top", "10px");
+        AuiElements.style(panel, "left", this.panelLeft + "px");
+        AuiElements.style(panel, "top", this.panelTop + "px");
+        AuiElements.style(panel, "width", this.panelWidth + "px");
+        AuiElements.style(panel, "height", this.panelHeight + "px");
+        AuiElements.style(this.title, "left", "10px");
+        AuiElements.style(this.title, "top", "10px");
 
         int band = Math.max(1, this.poolsBottom - this.poolsTop);
         for (int pool = 0; pool < 2; pool++) {
@@ -336,29 +239,29 @@ public final class WheelConfigurationScreen extends Screen implements AuiLinkedS
             Element empty = pool == AURA_POOL ? this.emptyAura : this.emptyOption;
             Element cells = pool == AURA_POOL ? this.poolAura : this.poolOption;
             Element track = pool == AURA_POOL ? this.trackAura : this.trackOption;
-            put(heading, "left", left + "px");
-            put(heading, "top", HEADER_HEIGHT + "px");
-            put(empty, "left", left + "px");
-            put(empty, "top", top + "px");
-            setClass(empty, "hidden", !this.pool(pool).isEmpty());
+            AuiElements.style(heading, "left", left + "px");
+            AuiElements.style(heading, "top", HEADER_HEIGHT + "px");
+            AuiElements.style(empty, "left", left + "px");
+            AuiElements.style(empty, "top", top + "px");
+            AuiElements.setClass(empty, "hidden", !this.pool(pool).isEmpty());
             // Scrolling moves the whole grid rather than each cell: one write, and the cells keep their own
             // static offsets inside the pool. The offset is rounded once and used by the window below too.
             int offset = (int) Math.round(this.scroll[pool]);
-            put(cells, "left", left + "px");
-            put(cells, "top", (top - offset) + "px");
-            put(track, "left", (left + POOL_WIDTH + 2) + "px");
-            put(track, "top", top + "px");
-            put(track, "height", band + "px");
+            AuiElements.style(cells, "left", left + "px");
+            AuiElements.style(cells, "top", (top - offset) + "px");
+            AuiElements.style(track, "left", (left + POOL_WIDTH + 2) + "px");
+            AuiElements.style(track, "top", top + "px");
+            AuiElements.style(track, "height", band + "px");
             this.showPool(pool, offset, band);
             this.showScrollBar(pool, band);
         }
 
-        put(this.divider, "left", "6px");
-        put(this.divider, "top", (this.poolsBottom - this.panelTop + 1) + "px");
-        put(this.divider, "width", Math.max(0, this.panelWidth - 12) + "px");
+        AuiElements.style(this.divider, "left", "6px");
+        AuiElements.style(this.divider, "top", (this.poolsBottom - this.panelTop + 1) + "px");
+        AuiElements.style(this.divider, "width", Math.max(0, this.panelWidth - 12) + "px");
 
-        put(this.sectorRow, "left", (this.slotRowLeft - this.panelLeft) + "px");
-        put(this.sectorRow, "top", (this.slotRowTop - this.panelTop) + "px");
+        AuiElements.style(this.sectorRow, "left", (this.slotRowLeft - this.panelLeft) + "px");
+        AuiElements.style(this.sectorRow, "top", (this.slotRowTop - this.panelTop) + "px");
         this.showSectors();
     }
 
@@ -389,9 +292,9 @@ public final class WheelConfigurationScreen extends Screen implements AuiLinkedS
             Cell cell = this.sectorCells.get(sector);
             // A sector whose id no longer resolves keeps its place but is marked, so it can still be cleared.
             cell.show(entry, false, false, entry == null && !slot.isEmpty());
-            text(cell.number, Integer.toString(sector + 1));
+            AuiElements.setText(cell.number, Integer.toString(sector + 1));
             Component key = this.slotKey(sector);
-            text(cell.key, key == null ? "" : key.getString());
+            AuiElements.setText(cell.key, key == null ? "" : key.getString());
         }
     }
 
@@ -400,26 +303,12 @@ public final class WheelConfigurationScreen extends Screen implements AuiLinkedS
         Element thumb = pool == AURA_POOL ? this.thumbAura : this.thumbOption;
         int rows = rows(this.pool(pool).size());
         int maxScroll = Math.max(0, rows * GRID_STEP - band);
-        setClass(track, "hidden", maxScroll == 0);
+        AuiElements.setClass(track, "hidden", maxScroll == 0);
         if (maxScroll == 0) return;
         int thumbHeight = Math.max(12, (int) ((double) band * band / (rows * GRID_STEP)));
         int thumbY = (int) ((band - thumbHeight) * (this.scroll[pool] / maxScroll));
-        put(thumb, "top", thumbY + "px");
-        put(thumb, "height", thumbHeight + "px");
-    }
-
-    private void extractPageError(GuiGraphicsExtractor graphics) {
-        Component error = this.pageError;
-        if (error == null) return;
-        if (this.errorWidth != this.width) {
-            this.errorLines = this.font.split(error, Math.max(40, this.width - 40));
-            this.errorWidth = this.width;
-        }
-        int y = this.height / 2 - this.errorLines.size() * 5;
-        for (FormattedCharSequence line : this.errorLines) {
-            graphics.text(this.font, line, (this.width - this.font.width(line)) / 2, y, 0xFFFF5555, false);
-            y += 10;
-        }
+        AuiElements.style(thumb, "top", thumbY + "px");
+        AuiElements.style(thumb, "height", thumbHeight + "px");
     }
 
     // ------------------------------------------------------------------ input
@@ -459,18 +348,6 @@ public final class WheelConfigurationScreen extends Screen implements AuiLinkedS
     public void onClose() {
         WheelContent.save(this.draft);
         super.onClose();
-    }
-
-    // The page outlives the screen unless it is unregistered here: the renderer draws every document, so a
-    // leaked one keeps drawing the panel over the game and each reopen stacks another copy on top.
-    @Override
-    public void removed() {
-        this.clearBindings();
-        if (this.document != null) {
-            this.document.remove();
-            this.document = null;
-        }
-        super.removed();
     }
 
     // ------------------------------------------------------------------ entries and geometry
@@ -568,56 +445,30 @@ public final class WheelConfigurationScreen extends Screen implements AuiLinkedS
 
     // ------------------------------------------------------------------ page writing
 
-    private static void put(@Nullable Element element, String property, String value) {
-        if (element == null) return;
-        if (value.equals(element.getInlineStylePropertyValue(property))) return;
-        element.setInlineStyleProperty(property, value);
-    }
-
-    private static void text(@Nullable Element element, String value) {
-        if (element == null) return;
-        if (value.equals(element.getTextContent())) return;
-        element.setTextContent(value);
-    }
-
-    private static void setClass(Element element, String token, boolean present) {
-        if (element.getClassList().contains(token) == present) return;
-        element.getClassList().toggle(token, present);
-    }
-
-    private static void flag(@Nullable Element element, String token, boolean present) {
-        if (element == null) return;
-        setClass(element, token, present);
-    }
-
     /**
      * One page cell and the state it was last given, so a frame that changes nothing writes nothing.
      */
     private static final class Cell {
-        private final Element root, name, accent;
+        private final Element root, name, accent, texture;
         private final Item item;
-        private final Element texture;
         private final Font font;
         @Nullable
-        private final Element stale, number, key;
+        private final Element number, key;
         @Nullable
         private IconReference shownIcon;
         @Nullable
         private WheelMenuEntry shownEntry;
         @Nullable
         private String shownLabel;
-        private int shownAccent = Integer.MIN_VALUE;
-        private int shownFlags = -1;
+        private int shownAccent = Integer.MIN_VALUE, shownFlags = -1;
 
-        private Cell(Element root, Item item, Element texture, Element name, Element accent, Font font,
-                     @Nullable Element stale, @Nullable Element number, @Nullable Element key) {
+        private Cell(Element root, Item item, Element texture, Element name, Element accent, Font font, @Nullable Element number, @Nullable Element key) {
             this.root = root;
             this.item = item;
             this.texture = texture;
             this.name = name;
             this.accent = accent;
             this.font = font;
-            this.stale = stale;
             this.number = number;
             this.key = key;
         }
@@ -626,17 +477,17 @@ public final class WheelConfigurationScreen extends Screen implements AuiLinkedS
             int flags = (hidden ? 1 : 0) | (selected ? 2 : 0) | (stale ? 4 : 0);
             if (flags != this.shownFlags) {
                 this.shownFlags = flags;
-                flag(this.root, "hidden", hidden);
-                flag(this.root, "selected", selected);
-                flag(this.root, "stale", stale);
+                AuiElements.setClass(this.root, "hidden", hidden);
+                AuiElements.setClass(this.root, "selected", selected);
+                AuiElements.setClass(this.root, "stale", stale);
             }
             IconReference icon = entry == null ? null : entry.icon().orElse(null);
             boolean asItem = icon != null && icon.item().isPresent();
             boolean asTexture = icon != null && icon.texture().isPresent();
             // The three ways a cell can carry something: an item, a texture, or the entry's name.
-            flag(this.root, "icon-item", asItem);
-            flag(this.root, "icon-texture", asTexture);
-            flag(this.root, "plain", entry != null && !asItem && !asTexture);
+            AuiElements.setClass(this.root, "icon-item", asItem);
+            AuiElements.setClass(this.root, "icon-texture", asTexture);
+            AuiElements.setClass(this.root, "plain", entry != null && !asItem && !asTexture);
             if (!Objects.equals(this.shownIcon, icon)) {
                 this.shownIcon = icon;
                 if (asItem) this.item.setIngredientStack(icon.item().orElseThrow().create());
@@ -652,13 +503,13 @@ public final class WheelConfigurationScreen extends Screen implements AuiLinkedS
                         : IconRenderer.fit(this.font, entry.title().getString(), SLOT_SIZE - NAME_INSET);
                 if (!label.equals(this.shownLabel)) {
                     this.shownLabel = label;
-                    this.name.setTextContent(label);
+                    AuiElements.setText(this.name, label);
                 }
             }
             int accent = entry == null ? 0 : entry.accentColor();
             if (accent == this.shownAccent) return;
             this.shownAccent = accent;
-            this.accent.setInlineStyleProperty("background-color", css(accent));
+            AuiElements.style(this.accent, "background-color", css(accent));
         }
 
         private static String css(int argb) {

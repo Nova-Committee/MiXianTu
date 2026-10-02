@@ -1,11 +1,11 @@
 package com.iafenvoy.mxt.screen.gui;
 
 import com.iafenvoy.mxt.runtime.economy.CurrencyValueService.ExchangeOffer;
-import com.iafenvoy.mxt.screen.AuiContainerScreen;
-import com.iafenvoy.mxt.screen.AuiPages;
+import com.iafenvoy.mxt.screen.aui.AuiContainerScreen;
+import com.iafenvoy.mxt.screen.aui.AuiElements;
+import com.iafenvoy.mxt.screen.aui.AuiPages;
 import com.iafenvoy.mxt.screen.menu.ExchangeStationMenu;
 import com.sighs.apricityui.element.Item;
-import com.sighs.apricityui.init.Document;
 import com.sighs.apricityui.init.Element;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
@@ -27,10 +27,8 @@ import java.util.List;
  * click only has to turn into the same menu button press the old screen sent.
  */
 public final class ExchangeStationScreen extends AuiContainerScreen<ExchangeStationMenu> {
-    private static final int PANEL_WIDTH = 176;
-    private static final int PANEL_HEIGHT = 166;
-    private static final int INPUT_SLOT = 0;
-    private static final int RESULT_SLOT = 1;
+    private static final int PANEL_WIDTH = 176, PANEL_HEIGHT = 166;
+    private static final int INPUT_SLOT = 0, RESULT_SLOT = 1;
     /**
      * The visible window: four columns of three.
      */
@@ -38,8 +36,7 @@ public final class ExchangeStationScreen extends AuiContainerScreen<ExchangeStat
     /**
      * The old scroller: a 15px thumb travelling 41px inside a 54px track, dragged over a 39px span.
      */
-    private static final float SCROLLER_TRAVEL = 41.0F;
-    private static final float SCROLLER_DRAG_SPAN = 39.0F;
+    private static final float SCROLLER_TRAVEL = 41.0F, SCROLLER_DRAG_SPAN = 39.0F;
     private final List<OfferCell> offerCells = new ArrayList<>(OFFER_CELLS);
     @Nullable
     private Element scroller;
@@ -64,40 +61,34 @@ public final class ExchangeStationScreen extends AuiContainerScreen<ExchangeStat
     }
 
     @Override
-    protected boolean bindPage(Document document) {
-        Element panel = document.getElementById("panel");
-        if (panel == null) return this.fail("panel");
-        Element title = document.getElementById("title");
-        if (title == null) return this.fail("title");
-        Element inventoryLabel = document.getElementById("inventory_label");
-        if (inventoryLabel == null) return this.fail("inventory_label");
-        Element scroller = document.getElementById("scroller");
-        if (scroller == null) return this.fail("scroller");
-        List<Element> roots = this.byIdPrefix(document, "offer-", OFFER_CELLS);
-        if (roots == null) return this.fail("offer-0..11");
-        List<Element> icons = this.byIdPrefix(document, "offer_item-", OFFER_CELLS);
-        if (icons == null) return this.fail("offer_item-0..11");
-        this.panel = panel;
-        this.scroller = scroller;
+    public void bindPage() {
+        this.panel = this.getOrThrow("panel");
+        this.scroller = this.getOrThrow("scroller");
+
         this.offerCells.clear();
+        List<Element> roots = this.byIdPrefix("offer-", OFFER_CELLS);
         for (int cell = 0; cell < OFFER_CELLS; cell++) {
-            Element icon = icons.get(cell);
-            if (!(icon instanceof Item item)) return this.fail("offer_item-" + cell);
-            this.offerCells.add(new OfferCell(roots.get(cell), item));
+            Item icon = this.getOrThrow("offer_item-" + cell, Item.class);
+            this.offerCells.add(new OfferCell(roots.get(cell), icon));
             int offset = cell;
             // The window start is read when the click happens, not when the cell was bound.
             this.click(roots.get(cell), () -> this.choose(this.startIndex + offset));
         }
-        if (!this.bindCells(document, "input", INPUT_SLOT)) return false;
-        if (!this.bindCells(document, "result", RESULT_SLOT)) return false;
-        if (!this.bindInventoryCells(document, "inventory")) return false;
-        this.text(title, this.getTitle());
-        this.text(inventoryLabel, Component.translatable("container.inventory"));
-        return true;
+        this.bindCells("input", INPUT_SLOT);
+        this.bindCells("result", RESULT_SLOT);
+        this.bindInventoryCells("inventory");
+        this.text(this.getOrThrow("title"), this.getTitle());
+        this.text(this.getOrThrow("inventory_label"), Component.translatable("container.inventory"));
     }
 
     @Override
-    protected void onPageBound() {
+    public void onBindingsCleared() {
+        this.offerCells.clear();
+        this.scroller = null;
+    }
+
+    @Override
+    public void onPageBound() {
         // Pushes the first state straight away, so the twelve cells are not all painted empty for one tick.
         this.refresh();
     }
@@ -115,8 +106,8 @@ public final class ExchangeStationScreen extends AuiContainerScreen<ExchangeStat
                     visible && index == this.menu.getSelectedExchange(), visible);
         }
         if (this.scroller == null) return;
-        setClass(this.scroller, "disabled", !this.isScrollBarActive());
-        style(this.scroller, "top", Math.round(SCROLLER_TRAVEL * this.scrollOffset) + "px");
+        AuiElements.setClass(this.scroller, "disabled", !this.isScrollBarActive());
+        AuiElements.style(this.scroller, "top", Math.round(SCROLLER_TRAVEL * this.scrollOffset) + "px");
     }
 
     // ------------------------------------------------------------------ input: the scroll bar only
@@ -182,11 +173,6 @@ public final class ExchangeStationScreen extends AuiContainerScreen<ExchangeStat
         this.refresh();
     }
 
-    private static void flag(Element element, String token, boolean present) {
-        if (element.getClassList().contains(token) == present) return;
-        element.getClassList().toggle(token, present);
-    }
-
     /**
      * One offer cell: the icon element is fed the offer's output stack and the classes carry the states.
      */
@@ -210,12 +196,12 @@ public final class ExchangeStationScreen extends AuiContainerScreen<ExchangeStat
             }
             if (filled != this.shownFilled) {
                 // "Holds an item" is the theme's icon toggle for the cell: `icon-item` is what `cell .icon` shows on.
-                flag(this.root, "icon-item", filled);
-                flag(this.root, "empty", !filled);
+                AuiElements.setClass(this.root, "icon-item", filled);
+                AuiElements.setClass(this.root, "empty", !filled);
                 this.shownFilled = filled;
             }
             if (selected == this.shownSelected) return;
-            flag(this.root, "selected", selected);
+            AuiElements.setClass(this.root, "selected", selected);
             this.shownSelected = selected;
         }
     }

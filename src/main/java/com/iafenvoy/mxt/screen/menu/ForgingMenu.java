@@ -78,7 +78,6 @@ public final class ForgingMenu extends AbstractContainerMenu {
     // The opener; the client half needs it only for the registries behind the two selector lists and the
     // step icons, never for the level's blocks.
     private final Player player;
-
     private final DataSlot[] synced = new DataSlot[SYNCED];
 
     public ForgingMenu(int containerId, Inventory inventory) {

@@ -1,4 +1,4 @@
-package com.iafenvoy.mxt.screen;
+package com.iafenvoy.mxt.screen.aui;
 
 import com.iafenvoy.mxt.MiXianTu;
 import com.sighs.apricityui.layout.Size;
@@ -211,7 +211,7 @@ public final class AuiPages {
     /**
      * Re-arms the warm-up on every client resource reload (startup, F3+T, pack toggles).
      */
-    private static final ResourceManagerReloadListener RELOAD = manager -> reloadPending = true;
+    private static final ResourceManagerReloadListener RELOAD = _ -> reloadPending = true;
 
     @SubscribeEvent
     public static void onRegisterReload(AddClientReloadListenersEvent event) {

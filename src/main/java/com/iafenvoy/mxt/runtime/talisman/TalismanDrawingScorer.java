@@ -8,8 +8,7 @@ import java.util.*;
  * Position and size are normalised away (centroid + RMS radius); rotation is deliberately not.
  */
 public final class TalismanDrawingScorer {
-    public static final double CANVAS_WIDTH = 90.0D;
-    public static final double CANVAS_HEIGHT = 210.0D;
+    public static final double CANVAS_WIDTH = 90.0D, CANVAS_HEIGHT = 210.0D;
     public static final double RESAMPLE_STEP = 2.0D;
     public static final double SIMPLIFY_EPSILON = 0.5D;
 
@@ -17,8 +16,7 @@ public final class TalismanDrawingScorer {
      * Fallback for a missing / non-finite recipe tolerance; the design doc default.
      */
     private static final double DEFAULT_TOLERANCE = 0.06D;
-    private static final int MIN_SAMPLES = 16;
-    private static final int MAX_SAMPLES = 256;
+    private static final int MIN_SAMPLES = 16, MAX_SAMPLES = 256;
     /**
      * Below this the point cloud has no usable scale (a single click, all points coincident).
      */

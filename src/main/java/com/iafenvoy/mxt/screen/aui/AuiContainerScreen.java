@@ -1,4 +1,4 @@
-package com.iafenvoy.mxt.screen;
+package com.iafenvoy.mxt.screen.aui;
 
 import com.iafenvoy.mxt.MiXianTu;
 import com.sighs.apricityui.client.gui.ApricityGuiLayers;
@@ -7,14 +7,11 @@ import com.sighs.apricityui.init.Document;
 import com.sighs.apricityui.init.Element;
 import com.sighs.apricityui.layout.Position;
 import com.sighs.apricityui.layout.Size;
-import com.sighs.apricityui.screen.AuiLinkedScreen;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.TextColor;
-import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.Slot;
@@ -39,8 +36,7 @@ import java.util.function.Supplier;
  * painted, so a cell that reads outside it is a read from before that layout: nothing is written, the
  * previous validated geometry is kept, and the next frame tries again.
  */
-public abstract class AuiContainerScreen<T extends AbstractContainerMenu> extends AbstractContainerScreen<T>
-        implements AuiLinkedScreen {
+public abstract class AuiContainerScreen<T extends AbstractContainerMenu> extends AbstractContainerScreen<T> implements AuiWrappedScreen {
     /**
      * An item is 16x16 inside an 18x18 cell.
      */
@@ -58,17 +54,16 @@ public abstract class AuiContainerScreen<T extends AbstractContainerMenu> extend
      * reports once that it cannot read the page.
      */
     private static final int GEOMETRY_WARN_FRAMES = 20;
+    private final AuiWrappedScreen.State state = new AuiWrappedScreen.State();
+    /**
+     * The page this screen is on; null before {@code init} and after {@code removed}. Held here and not in the
+     * state because {@code getLinkedDocument} is already the one answer to "which document is this screen on".
+     */
     @Nullable
     private Document document;
-    @Nullable
-    private Component pageError;
-    private List<FormattedCharSequence> errorLines = List.of();
-    private int errorWidth = -1;
-    private boolean pageBound;
     private boolean geometryReady;
     private boolean badCellReported;
     private int layoutWait;
-    private long boundGeneration = Long.MIN_VALUE;
 
     @Nullable
     protected Element panel;
@@ -77,7 +72,6 @@ public abstract class AuiContainerScreen<T extends AbstractContainerMenu> extend
      */
     protected final Map<Integer, Element> cells = new LinkedHashMap<>();
     private final List<TooltipAnchor> tooltipAnchors = new ArrayList<>();
-    private final AuiPages.StyleHold styleHold = new AuiPages.StyleHold();
 
     protected int panelLeft, panelTop;
     protected int panelWidth, panelHeight;
@@ -100,16 +94,20 @@ public abstract class AuiContainerScreen<T extends AbstractContainerMenu> extend
      */
     protected abstract String pageName();
 
-    /**
-     * Resolves every id the page contract names and binds the slot cells; answers false after calling
-     * {@link #fail} with the missing piece.
-     */
-    protected abstract boolean bindPage(Document document);
+    @Override
+    public AuiWrappedScreen.State auiState() {
+        return this.state;
+    }
 
-    /**
-     * Runs after a successful bind and after every rebind; the place to push the first state.
-     */
-    protected void onPageBound() {
+    @Override
+    @Nullable
+    public Document getLinkedDocument() {
+        return this.document;
+    }
+
+    @Override
+    public void auiSetDocument(@Nullable Document document) {
+        this.document = document;
     }
 
     /**
@@ -122,83 +120,38 @@ public abstract class AuiContainerScreen<T extends AbstractContainerMenu> extend
      * The page generation the current bindings came from; a different one means the DOM was rebuilt.
      */
     protected long boundGeneration() {
-        return this.boundGeneration;
+        return this.state.boundGeneration;
     }
 
     // ------------------------------------------------------------------ lifecycle
 
     @Override
-    @Nullable
-    public Document getLinkedDocument() {
-        return this.document;
-    }
-
-    @Override
     protected void init() {
         super.init();
-        if (this.document == null) {
-            AuiPages.seedAll();
-            boolean stylesPrepared = AuiPages.warmUpStyles(this.pagePath());
-            this.document = Document.create(this.pagePath());
-            if (this.document == null) {
-                this.pageError = Component.translatable("screen.mxt.page.missing", this.pageName());
-                return;
-            }
-            this.styleHold.restart(stylesPrepared);
-            this.rebind();
-            return;
-        }
-        // A window resize re-enters init() with the same DOM, and ApricityUI appends listeners without ever
-        // deduping them: rebinding here would stack a second click handler - and a second tooltip - on every
-        // element the page has, so one click would act twice. Only the viewport changed, and a document that was
-        // really rebuilt is caught by the generation check in syncPage.
-        this.document.applyViewport(true);
+        this.auiInit(this.pagePath(), this.pageName());
     }
 
     /**
-     * Resolves the page contract again; a refresh (hot reload) replaces every element, which is when the page's
-     * listeners have to be bound again.
+     * Drops the bindings and everything this host cached about them; the state a subclass caches is dropped by
+     * {@link #onBindingsCleared()}, which the base call reaches last.
      */
-    private void rebind() {
-        this.clearBindings();
-        this.pageError = null;
-        Document current = this.document;
-        if (current == null) return;
-        if (!this.bindPage(current)) return;
-        this.pageBound = true;
-        this.boundGeneration = current.getRefreshGeneration();
-        this.onPageBound();
-    }
-
-    /**
-     * Reports a contract violation once and keeps the generation so it is not retried every frame.
-     */
-    protected boolean fail(String missing) {
-        Document current = this.document;
-        long generation = current == null ? Long.MIN_VALUE : current.getRefreshGeneration();
-        this.clearBindings();
-        this.boundGeneration = generation;
-        this.pageError = Component.translatable("screen.mxt.page.invalid", this.pageName(), missing);
-        return false;
-    }
-
-    private void clearBindings() {
+    @Override
+    public void auiClearBindings() {
         this.tooltipAnchors.clear();
         this.cells.clear();
-        this.pageBound = false;
         this.geometryReady = false;
         this.badCellReported = false;
         this.layoutWait = 0;
-        this.parkSlots();
-        this.boundGeneration = Long.MIN_VALUE;
         this.panel = null;
-        this.onBindingsCleared();
+        this.parkSlots();
+        AuiWrappedScreen.super.auiClearBindings();
     }
 
     /**
      * Drops the state a subclass caches about the page; every element it remembered is dead after a rebind.
      */
-    protected void onBindingsCleared() {
+    @Override
+    public void onBindingsCleared() {
     }
 
     /**
@@ -216,12 +169,12 @@ public abstract class AuiContainerScreen<T extends AbstractContainerMenu> extend
     /**
      * Resolves a container by id and answers its own slot children in slot-index order.
      */
-    @Nullable
-    protected List<Element> cellsOf(Document document, String containerId) {
-        Element element = document.getElementById(containerId);
-        if (!(element instanceof Container container)) return null;
+    protected List<Element> cellsOf(String containerId) {
+        Container container = this.getOrThrow(containerId, Container.class);
+        Document current = this.getLinkedDocument();
+        if (current == null) throw this.missing(containerId);
         List<Element> found = new ArrayList<>();
-        for (Element candidate : document.getElements()) {
+        for (Element candidate : current.getElements()) {
             if (!(candidate instanceof com.sighs.apricityui.element.Slot slot)) continue;
             if (slot.findAncestor(Container.class) != container) continue;
             found.add(slot);
@@ -233,34 +186,32 @@ public abstract class AuiContainerScreen<T extends AbstractContainerMenu> extend
     /**
      * Binds a container whose slot-index is the menu slot index.
      */
-    protected boolean bindCells(Document document, String containerId, int menuBase) {
-        return this.bindCells(document, containerId, localIndex -> menuBase + localIndex);
+    protected void bindCells(String containerId, int menuBase) {
+        this.bindCells(containerId, localIndex -> menuBase + localIndex);
     }
 
     /**
-     * Binds a container whose slot-index is a local index, through an explicit local-to-menu mapping;
-     * a negative answer fails the bind.
+     * Binds a container whose slot-index is a local index, through an explicit local-to-menu mapping; an index the
+     * menu has no slot for fails the bind.
      */
-    protected boolean bindCells(Document document, String containerId, IntUnaryOperator menuIndex) {
-        List<Element> found = this.cellsOf(document, containerId);
-        if (found == null) return this.fail(containerId + " (container)");
-        if (found.isEmpty()) return this.fail(containerId + " (no slots)");
+    protected void bindCells(String containerId, IntUnaryOperator menuIndex) {
+        List<Element> found = this.cellsOf(containerId);
+        if (found.isEmpty()) throw this.missing(containerId + " (no slots)");
         for (Element cell : found) {
             int local = slotIndexOf(cell);
             int index = local < 0 ? -1 : menuIndex.applyAsInt(local);
             if (index < 0 || index >= this.menu.slots.size()) {
-                return this.fail(containerId + " (slot-index " + local + ")");
+                throw this.missing(containerId + " (slot-index " + local + ")");
             }
             this.cells.put(index, cell);
         }
-        return true;
     }
 
     /**
      * Binds the player inventory: slot-index is the vanilla inventory index (0..35).
      */
-    protected boolean bindInventoryCells(Document document, String containerId) {
-        return this.bindCells(document, containerId, this::inventoryMenuIndex);
+    protected void bindInventoryCells(String containerId) {
+        this.bindCells(containerId, this::inventoryMenuIndex);
     }
 
     /**
@@ -278,16 +229,11 @@ public abstract class AuiContainerScreen<T extends AbstractContainerMenu> extend
     }
 
     /**
-     * Resolves {@code count} elements named {@code prefix + 0..count-1}; null when one is missing.
+     * Resolves {@code count} elements named {@code prefix + 0..count-1}; the first missing id is the fault.
      */
-    @Nullable
-    protected List<Element> byIdPrefix(Document document, String prefix, int count) {
+    protected List<Element> byIdPrefix(String prefix, int count) {
         List<Element> found = new ArrayList<>(count);
-        for (int index = 0; index < count; index++) {
-            Element element = document.getElementById(prefix + index);
-            if (element == null) return null;
-            found.add(element);
-        }
+        for (int index = 0; index < count; index++) found.add(this.getOrThrow(prefix + index));
         return found;
     }
 
@@ -296,51 +242,11 @@ public abstract class AuiContainerScreen<T extends AbstractContainerMenu> extend
     }
 
     /**
-     * Applies text and its colour only when either changed; the page is written to, never read back.
-     */
-    protected void text(@Nullable Element element, Component text) {
-        if (element == null) return;
-        String value = text.getString();
-        if (!value.equals(element.getTextContent())) element.setTextContent(value);
-        TextColor color = text.getStyle().getColor();
-        if (color == null) return;
-        String hex = String.format(Locale.ROOT, "#%06X", color.getValue());
-        if (!hex.equalsIgnoreCase(element.getInlineStylePropertyValue("color"))) {
-            element.setInlineStyleProperty("color", hex);
-        }
-    }
-
-    protected void click(Element element, Runnable action) {
-        element.addEventListener("click", event -> action.run());
-    }
-
-    /**
      * Registers a hover tooltip for one page element. The lines go through the vanilla renderer like every other
      * tooltip in the mod, so the page's own web-scale box never appears.
      */
     protected void tooltip(Element element, Supplier<List<Component>> lines) {
         this.tooltipAnchors.add(new TooltipAnchor(element, lines));
-    }
-
-    /**
-     * Writes an inline property only when it differs; every write re-runs the style pass.
-     */
-    protected static void style(@Nullable Element element, String property, String value) {
-        if (element == null) return;
-        if (value.equals(element.getInlineStylePropertyValue(property))) return;
-        element.setInlineStyleProperty(property, value);
-    }
-
-    protected static boolean hasClass(Element element, String token) {
-        return element.getClassList().contains(token);
-    }
-
-    /**
-     * {@code toggle} rewrites the whole class attribute on every call, so the state is compared first.
-     */
-    protected static void setClass(Element element, String token, boolean present) {
-        if (hasClass(element, token) == present) return;
-        element.getClassList().toggle(token, present);
     }
 
     // ------------------------------------------------------------------ frame
@@ -352,20 +258,16 @@ public abstract class AuiContainerScreen<T extends AbstractContainerMenu> extend
     public void extractRenderState(@NonNull GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
         // Nothing at all is drawn while the page's stylesheet is still in flight: without it the page has no
         // layout, so this frame would put every cell, and every item behind one, in the top-left corner.
-        if (this.pageError == null && this.styleHold.held()) return;
+        if (!this.auiReadyToDraw()) return;
         this.syncPage();
         ApricityGuiLayers.submitUi(graphics);
         super.extractRenderState(graphics, mouseX, mouseY, partialTick);
     }
 
     private void syncPage() {
-        Document current = this.document;
+        if (!this.auiPageWritable()) return;
+        Document current = this.getLinkedDocument();
         if (current == null) return;
-        if (current.getRefreshGeneration() != this.boundGeneration) {
-            this.rebind();
-            return;
-        }
-        if (!this.pageBound) return;
         // A failed read keeps the geometry that was already validated instead of parking the slots:
         // ApricityUI invalidates the committed rects of a whole route whenever anything on it is marked
         // for relayout, and its tooltip does that on every mouse move, so parking here blinks the items
@@ -467,13 +369,13 @@ public abstract class AuiContainerScreen<T extends AbstractContainerMenu> extend
      * Items may only be drawn once the slot geometry behind them has actually been read.
      */
     protected boolean slotsDrawn() {
-        return this.pageBound && this.geometryReady;
+        return this.auiBound() && this.geometryReady;
     }
 
     @Override
     protected void containerTick() {
         super.containerTick();
-        this.styleHold.tick();
+        this.auiTick();
         this.refresh();
     }
 
@@ -482,17 +384,8 @@ public abstract class AuiContainerScreen<T extends AbstractContainerMenu> extend
     @Override
     public void extractBackground(@NonNull GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
         // The vanilla plate first, so the page is submitted over a grey the player already reads as a GUI.
-        AuiBackdrop.extract(this, graphics);
-        if (this.pageError == null) return;
-        if (this.errorWidth != this.width) {
-            this.errorLines = this.font.split(this.pageError, Math.max(40, this.width - 40));
-            this.errorWidth = this.width;
-        }
-        int y = this.height / 2 - this.errorLines.size() * 5;
-        for (FormattedCharSequence line : this.errorLines) {
-            graphics.text(this.font, line, (this.width - this.font.width(line)) / 2, y, 0xFFFF5555, false);
-            y += 10;
-        }
+        AuiStyles.extract(this, graphics);
+        this.extractPageError(graphics, this.font, this.width, this.height);
     }
 
     @Override
@@ -509,7 +402,7 @@ public abstract class AuiContainerScreen<T extends AbstractContainerMenu> extend
     @Override
     protected void extractTooltip(@NonNull GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
         super.extractTooltip(graphics, mouseX, mouseY);
-        Document current = this.document;
+        Document current = this.getLinkedDocument();
         if (current == null || !this.geometryReady || this.tooltipAnchors.isEmpty()) return;
         Position pointer = current.screenToDocumentPosition(new Position(mouseX, mouseY));
         for (TooltipAnchor anchor : this.tooltipAnchors) {
@@ -572,17 +465,13 @@ public abstract class AuiContainerScreen<T extends AbstractContainerMenu> extend
 
     @Override
     public boolean keyPressed(@NonNull KeyEvent event) {
-        if (!this.pageBound) return event.isEscape() && super.keyPressed(event);
+        if (!this.auiBound()) return event.isEscape() && super.keyPressed(event);
         return super.keyPressed(event);
     }
 
     @Override
     public void removed() {
-        this.clearBindings();
-        if (this.document != null) {
-            this.document.remove();
-            this.document = null;
-        }
+        this.auiClose();
         super.removed();
     }
 

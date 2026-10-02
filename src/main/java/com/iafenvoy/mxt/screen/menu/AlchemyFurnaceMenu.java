@@ -205,7 +205,7 @@ public final class AlchemyFurnaceMenu extends AbstractContainerMenu {
 
     @Override
     public void broadcastChanges() {
-        if (this.player instanceof ServerPlayer player && this.view == View.MONITOR) this.publish(player);
+        if (this.player instanceof ServerPlayer serverPlayer && this.view == View.MONITOR) this.publish(serverPlayer);
         super.broadcastChanges();
     }
 

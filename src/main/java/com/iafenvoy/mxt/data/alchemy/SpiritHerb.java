@@ -65,7 +65,7 @@ public record SpiritHerb(List<Entry> entries, Holder<ItemQuality> quality, Compo
         if (!Double.isFinite(herb.thermalBias) || herb.thermalBias < -1.0D || herb.thermalBias > 1.0D)
             return DataResult.error(() -> "thermal_bias must be finite and in [-1, 1], was " + herb.thermalBias);
         DataResult<NumberProvider> catalyst = nonNegative(herb.catalystPower, "catalyst_power");
-        if (catalyst.error().isPresent()) return DataResult.error(() -> catalyst.error().get().message());
+        if (catalyst instanceof DataResult.Error<NumberProvider> error) return DataResult.error(error::message);
         if (herb.growth.isEmpty()) return DataResult.success(herb);
         Growth growth = herb.growth.get();
         if (growth.seeds.isEmpty()) return DataResult.error(() -> "growth.seeds must name at least one seed");
@@ -74,7 +74,7 @@ public record SpiritHerb(List<Entry> entries, Holder<ItemQuality> quality, Compo
         // Harvest identity is not checked here. Item components are still unbound while a datapack registry
         // decodes, so building the template's stack throws, and a bare item would also drop the template's components.
         DataResult<NumberProvider> rate = nonNegative(growth.growthRate, "growth.growth_rate");
-        if (rate.error().isPresent()) return DataResult.error(() -> rate.error().get().message());
+        if (rate instanceof DataResult.Error<NumberProvider> error) return DataResult.error(error::message);
         return DataResult.success(herb);
     }
 
@@ -106,9 +106,9 @@ public record SpiritHerb(List<Entry> entries, Holder<ItemQuality> quality, Compo
             if (growth.maxAge < growth.matureAge)
                 return DataResult.error(() -> "growth.max_age must be at least mature_age");
             DataResult<List<Cost>> costs = Costs.validateAuras(growth.costs);
-            if (costs.error().isPresent()) return DataResult.error(() -> costs.error().get().message());
+            if (costs instanceof DataResult.Error<List<Cost>> error) return DataResult.error(error::message);
             DataResult<List<Cost>> unique = Costs.validate(growth.costs);
-            if (unique.error().isPresent()) return DataResult.error(() -> unique.error().get().message());
+            if (unique instanceof DataResult.Error<List<Cost>> error) return DataResult.error(error::message);
             if (growth.texture.getPath().isEmpty())
                 return DataResult.error(() -> "growth.texture must name a texture");
             return DataResult.success(growth);

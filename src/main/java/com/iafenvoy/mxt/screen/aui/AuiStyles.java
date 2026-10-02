@@ -1,4 +1,9 @@
-package com.iafenvoy.mxt.screen;
+package com.iafenvoy.mxt.screen.aui;
+
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.screens.Screen;
+
+import java.util.Locale;
 
 /**
  * Colour helpers for the ApricityUI pages. Tooltips are not here: every screen in the mod draws them with the
@@ -29,6 +34,14 @@ public final class AuiStyles {
         return (int) Math.round(channel + (255 - channel) * amount);
     }
 
-    private AuiStyles() {
+    /**
+     * A colour the way the page writes it; the alpha a data-driven colour may carry is dropped.
+     */
+    public static String hex(int rgb) {
+        return String.format(Locale.ROOT, "#%06X", rgb & 0xFFFFFF);
+    }
+
+    public static void extract(Screen screen, GuiGraphicsExtractor graphics) {
+        screen.extractTransparentBackground(graphics);
     }
 }

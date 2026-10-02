@@ -4,8 +4,9 @@ import com.iafenvoy.mxt.network.payload.*;
 import com.iafenvoy.mxt.runtime.talisman.BrushPigmentService;
 import com.iafenvoy.mxt.runtime.talisman.TalismanDrawingScorer;
 import com.iafenvoy.mxt.runtime.talisman.TalismanDrawingScorer.Point;
-import com.iafenvoy.mxt.screen.AuiContainerScreen;
-import com.iafenvoy.mxt.screen.AuiPages;
+import com.iafenvoy.mxt.screen.aui.AuiContainerScreen;
+import com.iafenvoy.mxt.screen.aui.AuiElements;
+import com.iafenvoy.mxt.screen.aui.AuiPages;
 import com.iafenvoy.mxt.screen.menu.TalismanWorkstationMenu;
 import com.sighs.apricityui.element.Canvas;
 import com.sighs.apricityui.init.Document;
@@ -42,8 +43,7 @@ import java.util.function.Consumer;
 public final class TalismanWorkstationScreen extends AuiContainerScreen<TalismanWorkstationMenu> {
     private static final int PANEL_WIDTH = 178, PANEL_HEIGHT = 306;
     private static final int ROWS = 8;
-    private static final int CANVAS_WIDTH = (int) TalismanDrawingScorer.CANVAS_WIDTH;
-    private static final int CANVAS_HEIGHT = (int) TalismanDrawingScorer.CANVAS_HEIGHT;
+    private static final int CANVAS_WIDTH = (int) TalismanDrawingScorer.CANVAS_WIDTH, CANVAS_HEIGHT = (int) TalismanDrawingScorer.CANVAS_HEIGHT;
     /**
      * Cinnabar red, the ink of the strokes.
      */
@@ -52,8 +52,7 @@ public final class TalismanWorkstationScreen extends AuiContainerScreen<Talisman
      * Faded brown, the reference a player traces over - deliberately not red, or it reads as ink.
      */
     private static final Color GUIDE = new Color(93, 64, 28, 89);
-    private static final int GUIDE_ALPHA_IDLE = 89;
-    private static final int GUIDE_ALPHA_TRACING = 38;
+    private static final int GUIDE_ALPHA_IDLE = 89, GUIDE_ALPHA_TRACING = 38;
     private static final float INK_WIDTH = 2.0F;
     private static final long FADE_RESTORE_MS = 2_000L;
     private static final long PREVIEW_INTERVAL_MS = 200L;
@@ -63,10 +62,8 @@ public final class TalismanWorkstationScreen extends AuiContainerScreen<Talisman
     private static final double MIN_POINT_DISTANCE = 1.0D;
 
     private final List<Element> rows = new ArrayList<>();
-    private final List<String> rowNames = new ArrayList<>();
     private final List<Boolean> rowAffordable = new ArrayList<>();
-    private final List<TalismanDrawingScorer.Stroke> referenceStrokes =
-            new ArrayList<>();
+    private final List<TalismanDrawingScorer.Stroke> referenceStrokes = new ArrayList<>();
     /**
      * The drawing as this side has it, in bitmap pixels; the server keeps its own copy of every accepted stroke.
      */
@@ -74,7 +71,7 @@ public final class TalismanWorkstationScreen extends AuiContainerScreen<Talisman
     private final List<String> rowIds = new ArrayList<>();
 
     @Nullable
-    private Element paperFrame, guideElement, inkElement, resultLine, previewLine, submitButton, cancelButton;
+    private Element paperFrame, resultLine, previewLine, submitButton, cancelButton;
     @Nullable
     private Canvas guideCanvas, inkCanvas;
     @Nullable
@@ -88,7 +85,7 @@ public final class TalismanWorkstationScreen extends AuiContainerScreen<Talisman
     private boolean emptyListHintShown;
     private long lastStrokeAt;
     private long lastPreviewAt;
-    private String shownResult = "", shownPreview = "";
+    private String shownPreview = "";
 
     public TalismanWorkstationScreen(TalismanWorkstationMenu menu, Inventory inventory, Component title) {
         super(menu, inventory, title, PANEL_WIDTH, PANEL_HEIGHT);
@@ -105,64 +102,46 @@ public final class TalismanWorkstationScreen extends AuiContainerScreen<Talisman
     }
 
     @Override
-    protected boolean bindPage(Document document) {
-        Element panel = document.getElementById("panel");
-        if (panel == null) return this.fail("panel");
-        if (!(document.getElementById("guide") instanceof Canvas guide)) return this.fail("guide (canvas)");
-        if (!(document.getElementById("paper") instanceof Canvas ink)) return this.fail("paper (canvas)");
-        Element frame = document.getElementById("paper_frame");
-        if (frame == null) return this.fail("paper_frame");
-        Element result = document.getElementById("result");
-        if (result == null) return this.fail("result");
-        Element preview = document.getElementById("preview");
-        if (preview == null) return this.fail("preview");
-        Element submit = document.getElementById("submit");
-        if (submit == null) return this.fail("submit");
-        Element cancel = document.getElementById("cancel");
-        if (cancel == null) return this.fail("cancel");
-        if (!this.bindCells(document, "station", TalismanWorkstationMenu.PAPER_SLOT)) return false;
-        if (!this.bindCells(document, "pigment", TalismanWorkstationMenu.PIGMENT_SLOT)) return false;
-        if (!this.bindInventoryCells(document, "inventory")) return false;
+    public void bindPage() {
+        this.panel = this.getOrThrow("panel");
+        this.paperFrame = this.getOrThrow("paper_frame");
+        this.guideCanvas = this.getOrThrow("guide", Canvas.class);
+        this.inkCanvas = this.getOrThrow("paper", Canvas.class);
+        this.resultLine = this.getOrThrow("result");
+        this.previewLine = this.getOrThrow("preview");
+        this.submitButton = this.getOrThrow("submit");
+        this.cancelButton = this.getOrThrow("cancel");
+
+        this.bindCells("station", TalismanWorkstationMenu.PAPER_SLOT);
+        this.bindCells("pigment", TalismanWorkstationMenu.PIGMENT_SLOT);
+        this.bindInventoryCells("inventory");
 
         this.rows.clear();
         for (int index = 0; index < ROWS; index++) {
-            Element row = document.getElementById("row-" + index);
-            if (row == null) return this.fail("row-" + index);
-            this.rows.add(row);
+            this.rows.add(this.getOrThrow("row-" + index));
         }
-        this.panel = panel;
-        this.paperFrame = frame;
-        this.guideElement = guide;
-        this.inkElement = ink;
-        this.guideCanvas = guide;
-        this.inkCanvas = ink;
-        this.resultLine = result;
-        this.previewLine = preview;
-        this.submitButton = submit;
-        this.cancelButton = cancel;
-        guide.setWidth(CANVAS_WIDTH);
-        guide.setHeight(CANVAS_HEIGHT);
-        ink.setWidth(CANVAS_WIDTH);
-        ink.setHeight(CANVAS_HEIGHT);
-        this.text(submit, Component.translatable("screen.mxt.talisman.submit"));
-        this.text(cancel, Component.translatable("screen.mxt.talisman.cancel"));
+        assert this.guideCanvas != null;
+        this.guideCanvas.setWidth(CANVAS_WIDTH);
+        this.guideCanvas.setHeight(CANVAS_HEIGHT);
+        assert this.inkCanvas != null;
+        this.inkCanvas.setWidth(CANVAS_WIDTH);
+        this.inkCanvas.setHeight(CANVAS_HEIGHT);
+        this.text(this.submitButton, Component.translatable("screen.mxt.talisman.submit"));
+        this.text(this.cancelButton, Component.translatable("screen.mxt.talisman.cancel"));
         for (int index = 0; index < this.rows.size(); index++) {
             int slot = index;
             this.click(this.rows.get(index), () -> this.select(slot));
         }
-        this.click(submit, this::submit);
-        this.click(cancel, this::cancel);
-        return true;
+        this.click(this.submitButton, this::submit);
+        this.click(this.cancelButton, this::cancel);
     }
 
     // Every element this screen remembered is dead after a rebind; the drawing itself stays, so a hot reload
     // redraws it instead of losing it.
     @Override
-    protected void onBindingsCleared() {
+    public void onBindingsCleared() {
         this.rows.clear();
         this.paperFrame = null;
-        this.guideElement = null;
-        this.inkElement = null;
         this.guideCanvas = null;
         this.inkCanvas = null;
         this.resultLine = null;
@@ -173,11 +152,10 @@ public final class TalismanWorkstationScreen extends AuiContainerScreen<Talisman
     }
 
     @Override
-    protected void onPageBound() {
+    public void onPageBound() {
         this.handledAck = Math.max(0, this.handledAck);
         this.redrawGuide(GUIDE_ALPHA_IDLE);
         this.redrawInk();
-        this.shownResult = "";
         this.shownPreview = "";
         this.submitDisabled = true;
         this.cancelDisabled = true;
@@ -200,7 +178,6 @@ public final class TalismanWorkstationScreen extends AuiContainerScreen<Talisman
         List<TalismanDrawingListS2CPayload.Row> source = this.menu.rows();
         TalismanDrawingStartS2CPayload open = this.menu.drawing();
         this.rowIds.clear();
-        this.rowNames.clear();
         this.rowAffordable.clear();
         // An empty list is indistinguishable from a page that failed to fill its rows, so it says so once.
         if (source.isEmpty()) {
@@ -215,18 +192,17 @@ public final class TalismanWorkstationScreen extends AuiContainerScreen<Talisman
             Element row = this.rows.get(index);
             if (index >= source.size()) {
                 this.text(row, Component.empty());
-                setClass(row, "dim", false);
-                setClass(row, "selected", false);
+                AuiElements.setClass(row, "dim", false);
+                AuiElements.setClass(row, "selected", false);
                 this.rowIds.add("");
                 continue;
             }
             TalismanDrawingListS2CPayload.Row entry = source.get(index);
             this.text(row, entry.name());
-            setClass(row, "dim", !entry.affordable());
+            AuiElements.setClass(row, "dim", !entry.affordable());
             // The open formula is marked, because until the first stroke the player may still pick another one.
-            setClass(row, "selected", open != null && entry.id().equals(open.recipeId()));
+            AuiElements.setClass(row, "selected", open != null && entry.id().equals(open.recipeId()));
             this.rowIds.add(entry.id().toString());
-            this.rowNames.add(entry.name().getString());
             this.rowAffordable.add(entry.affordable());
         }
     }

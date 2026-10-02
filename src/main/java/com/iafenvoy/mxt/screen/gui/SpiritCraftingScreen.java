@@ -1,12 +1,12 @@
 package com.iafenvoy.mxt.screen.gui;
 
 import com.iafenvoy.mxt.data.aura.Aura;
-import com.iafenvoy.mxt.screen.AuiContainerScreen;
-import com.iafenvoy.mxt.screen.AuiPages;
-import com.iafenvoy.mxt.screen.AuiStyles;
+import com.iafenvoy.mxt.screen.aui.AuiContainerScreen;
+import com.iafenvoy.mxt.screen.aui.AuiElements;
+import com.iafenvoy.mxt.screen.aui.AuiPages;
+import com.iafenvoy.mxt.screen.aui.AuiStyles;
 import com.iafenvoy.mxt.screen.menu.SpiritCraftingMenu;
 import com.iafenvoy.mxt.util.DefinitionText;
-import com.sighs.apricityui.init.Document;
 import com.sighs.apricityui.init.Element;
 import net.minecraft.core.Holder;
 import net.minecraft.network.chat.Component;
@@ -22,8 +22,7 @@ import java.util.List;
  * fixed 8-row layout.
  */
 public final class SpiritCraftingScreen extends AuiContainerScreen<SpiritCraftingMenu> {
-    private static final int PANEL_WIDTH = 308;
-    private static final int PANEL_HEIGHT = 166;
+    private static final int PANEL_WIDTH = 308, PANEL_HEIGHT = 166;
     /**
      * Rows the page provides; the menu publishes at most this many.
      */
@@ -51,39 +50,30 @@ public final class SpiritCraftingScreen extends AuiContainerScreen<SpiritCraftin
     }
 
     @Override
-    protected boolean bindPage(Document document) {
-        Element panel = document.getElementById("panel");
-        if (panel == null) return this.fail("panel");
-        Element title = document.getElementById("title");
-        if (title == null) return this.fail("title");
-        List<Element> names = this.byIdPrefix(document, "aura_name-", ROWS);
-        if (names == null) return this.fail("aura_name-*");
-        List<Element> amounts = this.byIdPrefix(document, "aura_amount-", ROWS);
-        if (amounts == null) return this.fail("aura_amount-*");
-        List<Element> fills = this.byIdPrefix(document, "aura_fill-", ROWS);
-        if (fills == null) return this.fail("aura_fill-*");
-        Element inventoryLabel = document.getElementById("inventory_label");
-        if (inventoryLabel == null) return this.fail("inventory_label");
-        this.panel = panel;
+    public void bindPage() {
+        this.panel = this.getOrThrow("panel");
+
+        List<Element> names = this.byIdPrefix("aura_name-", ROWS);
+        List<Element> amounts = this.byIdPrefix("aura_amount-", ROWS);
+        List<Element> fills = this.byIdPrefix("aura_fill-", ROWS);
         // Menu slot order: result, the nine grid cells, then the player inventory.
-        if (!this.bindCells(document, "result", 0)) return false;
-        if (!this.bindCells(document, "crafting", 1)) return false;
-        if (!this.bindInventoryCells(document, "inventory")) return false;
+        this.bindCells("result", 0);
+        this.bindCells("crafting", 1);
+        this.bindInventoryCells("inventory");
         for (int index = 0; index < ROWS; index++) {
             this.rows.add(new Row(names.get(index), amounts.get(index), fills.get(index)));
         }
-        this.text(title, this.getTitle());
-        this.text(inventoryLabel, Component.translatable("container.inventory"));
-        return true;
+        this.text(this.getOrThrow("title"), this.getTitle());
+        this.text(this.getOrThrow("inventory_label"), Component.translatable("container.inventory"));
     }
 
     @Override
-    protected void onBindingsCleared() {
+    public void onBindingsCleared() {
         this.rows.clear();
     }
 
     @Override
-    protected void onPageBound() {
+    public void onPageBound() {
         this.refresh();
     }
 
@@ -130,44 +120,39 @@ public final class SpiritCraftingScreen extends AuiContainerScreen<SpiritCraftin
 
         private void show(String name, String amount, String color, int filled) {
             if (!name.equals(this.shownName)) {
-                this.name.setTextContent(name);
+                AuiElements.setText(this.name, name);
                 this.shownName = name;
             }
             if (!color.equalsIgnoreCase(this.shownColor)) {
-                this.set(this.name, "color", color);
-                this.set(this.fill, "background-color", color);
+                AuiElements.style(this.name, "color", color);
+                AuiElements.style(this.fill, "background-color", color);
                 this.shownColor = color;
             }
             if (!amount.equals(this.shownAmount)) {
-                this.amount.setTextContent(amount);
+                AuiElements.setText(this.amount, amount);
                 this.shownAmount = amount;
             }
             // The old screen filled from 2px in and stopped 2px short of the right edge.
             int width = Math.max(0, filled - BAR_INSET * 2);
             if (width == this.shownFill) return;
-            this.set(this.fill, "width", width + "px");
+            AuiElements.style(this.fill, "width", width + "px");
             this.shownFill = width;
         }
 
         private void clear() {
             if (this.shownName == null && this.shownAmount == null && this.shownFill == 0) return;
             if (this.shownName != null) {
-                this.name.setTextContent("");
+                AuiElements.setText(this.name, "");
                 this.shownName = null;
             }
             if (this.shownAmount != null) {
-                this.amount.setTextContent("");
+                AuiElements.setText(this.amount, "");
                 this.shownAmount = null;
             }
             if (this.shownFill != 0) {
-                this.set(this.fill, "width", "0px");
+                AuiElements.style(this.fill, "width", "0px");
                 this.shownFill = 0;
             }
-        }
-
-        private void set(Element element, String property, String value) {
-            if (value.equals(element.getInlineStylePropertyValue(property))) return;
-            element.setInlineStyleProperty(property, value);
         }
     }
 }

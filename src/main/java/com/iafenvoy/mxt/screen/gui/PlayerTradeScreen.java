@@ -2,10 +2,10 @@ package com.iafenvoy.mxt.screen.gui;
 
 import com.iafenvoy.mxt.network.payload.PlayerTradeActionC2SPayload;
 import com.iafenvoy.mxt.network.payload.PlayerTradeActionC2SPayload.PlayerTradeAction;
-import com.iafenvoy.mxt.screen.AuiContainerScreen;
-import com.iafenvoy.mxt.screen.AuiPages;
+import com.iafenvoy.mxt.screen.aui.AuiContainerScreen;
+import com.iafenvoy.mxt.screen.aui.AuiElements;
+import com.iafenvoy.mxt.screen.aui.AuiPages;
 import com.iafenvoy.mxt.screen.menu.PlayerTradeMenu;
-import com.sighs.apricityui.init.Document;
 import com.sighs.apricityui.init.Element;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
@@ -18,8 +18,7 @@ import org.jspecify.annotations.Nullable;
  * The old screen drew the 176x221 texture with two vanilla buttons; the page carries the same coordinates.
  */
 public final class PlayerTradeScreen extends AuiContainerScreen<PlayerTradeMenu> {
-    private static final int PANEL_WIDTH = 176;
-    private static final int PANEL_HEIGHT = 221;
+    private static final int PANEL_WIDTH = 176, PANEL_HEIGHT = 221;
     /**
      * The menu interleaves the two offer grids rather than listing them one after the other: own cell
      * {@code i} is menu slot {@code 2i} and the partner's display cell is {@code 2i + 1}. The page numbers its
@@ -29,9 +28,7 @@ public final class PlayerTradeScreen extends AuiContainerScreen<PlayerTradeMenu>
     private static final int PARTNER_OFFSET = 1;
 
     @Nullable
-    private Element accept;
-    @Nullable
-    private Element partnerState;
+    private Element accept, partnerState;
     private boolean accepted;
 
     public PlayerTradeScreen(PlayerTradeMenu menu, Inventory inventory, Component title) {
@@ -49,34 +46,28 @@ public final class PlayerTradeScreen extends AuiContainerScreen<PlayerTradeMenu>
     }
 
     @Override
-    protected boolean bindPage(Document document) {
-        Element panel = document.getElementById("panel");
-        if (panel == null) return this.fail("panel");
-        Element title = document.getElementById("title");
-        if (title == null) return this.fail("title");
-        Element partnerName = document.getElementById("partner_name");
-        if (partnerName == null) return this.fail("partner_name");
-        Element inventoryLabel = document.getElementById("inventory_label");
-        if (inventoryLabel == null) return this.fail("inventory_label");
-        Element accept = document.getElementById("accept");
-        if (accept == null) return this.fail("accept");
-        Element partnerState = document.getElementById("partner_state");
-        if (partnerState == null) return this.fail("partner_state");
-        this.panel = panel;
-        if (!this.bindCells(document, "offer", index -> index * OFFER_STRIDE)) return false;
-        if (!this.bindCells(document, "partner", index -> index * OFFER_STRIDE + PARTNER_OFFSET)) return false;
-        if (!this.bindInventoryCells(document, "inventory")) return false;
-        this.accept = accept;
-        this.partnerState = partnerState;
-        this.click(accept, this::toggleAccept);
-        this.text(title, this.getTitle());
-        this.text(partnerName, this.menu.partnerName());
-        this.text(inventoryLabel, Component.translatable("container.inventory"));
-        return true;
+    public void bindPage() {
+        this.panel = this.getOrThrow("panel");
+        this.accept = this.getOrThrow("accept");
+        this.partnerState = this.getOrThrow("partner_state");
+
+        this.bindCells("offer", index -> index * OFFER_STRIDE);
+        this.bindCells("partner", index -> index * OFFER_STRIDE + PARTNER_OFFSET);
+        this.bindInventoryCells("inventory");
+        this.click(this.accept, this::toggleAccept);
+        this.text(this.getOrThrow("title"), this.getTitle());
+        this.text(this.getOrThrow("partner_name"), this.menu.partnerName());
+        this.text(this.getOrThrow("inventory_label"), Component.translatable("container.inventory"));
     }
 
     @Override
-    protected void onPageBound() {
+    public void onBindingsCleared() {
+        this.accept = null;
+        this.partnerState = null;
+    }
+
+    @Override
+    public void onPageBound() {
         // Pushes the first state straight away, so neither key is painted in the wrong state for one tick.
         this.refresh();
     }
@@ -91,10 +82,10 @@ public final class PlayerTradeScreen extends AuiContainerScreen<PlayerTradeMenu>
         boolean partnerAccepted = this.menu.partnerAccepted();
         this.text(partnerState, Component.translatable(partnerAccepted
                 ? "screen.mxt.player_trade.accepted" : "screen.mxt.player_trade.waiting"));
-        setClass(partnerState, "accepted", partnerAccepted);
+        AuiElements.setClass(partnerState, "accepted", partnerAccepted);
         this.text(accept, Component.translatable(this.accepted
                 ? "screen.mxt.player_trade.accepted" : "screen.mxt.player_trade.accept"));
-        setClass(accept, "accepted", this.accepted);
+        AuiElements.setClass(accept, "accepted", this.accepted);
     }
 
     // The old screen flipped its own flag and told the server which of the two edges this was.

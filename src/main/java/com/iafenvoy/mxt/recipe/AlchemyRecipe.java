@@ -142,7 +142,7 @@ public record AlchemyRecipe(Component name, Component description,
     private static DataResult<Map<Holder<MedicinalProperty>, NumberProvider>> optionalPositive(Map<Holder<MedicinalProperty>, NumberProvider> values) {
         for (NumberProvider provider : values.values()) {
             DataResult<NumberProvider> checked = positiveProvider(provider);
-            if (checked.error().isPresent()) return DataResult.error(() -> checked.error().get().message());
+            if (checked instanceof DataResult.Error<NumberProvider> error) return DataResult.error(error::message);
         }
         return DataResult.success(values);
     }

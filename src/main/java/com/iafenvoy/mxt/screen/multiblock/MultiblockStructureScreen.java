@@ -1,19 +1,16 @@
 package com.iafenvoy.mxt.screen.multiblock;
 
-import com.iafenvoy.mxt.screen.AuiBackdrop;
-import com.iafenvoy.mxt.screen.AuiPages;
+import com.iafenvoy.mxt.screen.aui.AuiElements;
+import com.iafenvoy.mxt.screen.aui.AuiPages;
+import com.iafenvoy.mxt.screen.aui.AuiScreen;
 import com.mojang.blaze3d.platform.InputConstants;
 import com.sighs.apricityui.client.gui.ApricityGuiLayers;
-import com.sighs.apricityui.init.Document;
 import com.sighs.apricityui.init.Element;
-import com.sighs.apricityui.screen.AuiLinkedScreen;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
-import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
-import net.minecraft.util.FormattedCharSequence;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
@@ -30,25 +27,9 @@ import java.util.List;
  * {@code aui-mouse-events=intercept}: the timeline seek and the scene drag are still hit-tested here, while the
  * keys are ordinary DOM clicks.
  */
-public final class MultiblockStructureScreen extends Screen implements AuiLinkedScreen {
-    /**
-     * The page name in the fallback error line, and what {@code /formation show} resets to if it is missing.
-     */
-    private static final String PAGE = "structure";
-
+public final class MultiblockStructureScreen extends AuiScreen {
     private final MultiblockStructure structure;
     private final MultiblockStructureView view = new MultiblockStructureView();
-
-    @Nullable
-    private Document document;
-    @Nullable
-    private Component pageError;
-    private final AuiPages.StyleHold styleHold = new AuiPages.StyleHold();
-    private List<FormattedCharSequence> errorLines = List.of();
-    private int errorWidth = -1;
-    private boolean pageBound;
-    private long boundGeneration = Long.MIN_VALUE;
-
     @Nullable
     private Element topBar, bottomBar, scene, back, timeline, timelineFill, timelineKnob;
     @Nullable
@@ -58,8 +39,7 @@ public final class MultiblockStructureScreen extends Screen implements AuiLinked
     /**
      * The window size the page was last written with; a resize is the only thing that changes the boxes.
      */
-    private int shownWidth = -1;
-    private int shownHeight = -1;
+    private int shownWidth = -1, shownHeight = -1;
 
     private MultiblockStructureScreen(MultiblockStructure structure) {
         super(structure.title());
@@ -72,39 +52,13 @@ public final class MultiblockStructureScreen extends Screen implements AuiLinked
     }
 
     @Override
-    @Nullable
-    public Document getLinkedDocument() {
-        return this.document;
+    protected String pagePath() {
+        return AuiPages.multiblockPage();
     }
 
     @Override
-    protected void init() {
-        super.init();
-        if (this.document == null) {
-            AuiPages.seedAll();
-            boolean stylesPrepared = AuiPages.warmUpStyles(AuiPages.multiblockPage());
-            this.document = Document.create(AuiPages.multiblockPage());
-            if (this.document == null) {
-                this.pageError = Component.translatable("screen.mxt.page.missing", PAGE);
-                return;
-            }
-            this.styleHold.restart(stylesPrepared);
-            this.rebind(true);
-            return;
-        }
-        // A resize re-enters init() with the same DOM, so the five keys keep the handlers they already have:
-        // binding them again would stack a second click on every one of them. ApricityUI does not rebuild the
-        // document for a viewport change, and the boxes are rewritten by syncPage below.
-        this.document.applyViewport(true);
-        this.shownWidth = -1;
-        this.shownHeight = -1;
-        this.syncPage();
-    }
-
-    @Override
-    public void tick() {
-        super.tick();
-        this.styleHold.tick();
+    protected String pageName() {
+        return "structure";
     }
 
     /**
@@ -115,23 +69,16 @@ public final class MultiblockStructureScreen extends Screen implements AuiLinked
     public void extractRenderState(@NonNull GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
         // Nothing is drawn while the page's stylesheet is still in flight: without it there is no box for the
         // scene, and the bars would sit at the document origin for two ticks.
-        if (this.pageError == null && this.styleHold.held()) return;
-        this.syncPage();
+        if (!this.auiReadyToDraw()) return;
+        if (this.auiPageWritable()) this.syncPage();
         ApricityGuiLayers.submitUi(graphics);
         this.view.extractScene(graphics, this.structure, mouseX, mouseY, this.width, this.height);
         super.extractRenderState(graphics, mouseX, mouseY, partialTick);
         this.view.extractTooltip(graphics, this.font, mouseX, mouseY);
-        if (this.pageError != null) this.extractPageError(graphics);
+        this.extractPageError(graphics, this.font, this.width, this.height);
     }
 
     private void syncPage() {
-        Document current = this.document;
-        if (current == null) return;
-        if (current.getRefreshGeneration() != this.boundGeneration) {
-            this.rebind(true);
-            return;
-        }
-        if (!this.pageBound) return;
         if (this.shownWidth != this.width || this.shownHeight != this.height) this.writeLayout();
         this.writeState();
     }
@@ -139,88 +86,47 @@ public final class MultiblockStructureScreen extends Screen implements AuiLinked
     // ------------------------------------------------------------------ the page contract
 
     /**
-     * Resolves the page contract again; a refresh (hot reload) replaces every element, which is also when the
-     * click handlers have to be bound again.
+     * Resolves the page contract; a refresh (hot reload) replaces every element, which is also when the click
+     * handlers have to be bound again, so every bind binds them.
      */
-    private void rebind(boolean bindHandlers) {
-        this.clearBindings();
-        this.pageError = null;
-        Document current = this.document;
-        if (current == null) return;
-        if (!this.bindPage(current, bindHandlers)) return;
-        this.pageBound = true;
-        this.boundGeneration = current.getRefreshGeneration();
-        this.writeLayout();
-        this.writeState();
-    }
+    @Override
+    public void bindPage() {
+        this.topBar = this.getOrThrow("top");
+        this.bottomBar = this.getOrThrow("bottom");
+        this.scene = this.getOrThrow("scene");
+        this.back = this.getOrThrow("back");
+        this.timeline = this.getOrThrow("timeline");
+        this.timelineFill = this.getOrThrow("timeline_fill");
+        this.timelineKnob = this.getOrThrow("timeline_knob");
+        this.title = new Label(this.getOrThrow("title"));
+        this.layer = new Label(this.getOrThrow("layer"));
+        this.hint = new Label(this.getOrThrow("hint"));
+        this.backLabel = new Label(this.back);
 
-    private boolean bindPage(Document document, boolean bindHandlers) {
-        Element topBar = document.getElementById("top");
-        if (topBar == null) return this.fail("top");
-        Element bottomBar = document.getElementById("bottom");
-        if (bottomBar == null) return this.fail("bottom");
-        Element scene = document.getElementById("scene");
-        if (scene == null) return this.fail("scene");
-        Element title = document.getElementById("title");
-        if (title == null) return this.fail("title");
-        Element layer = document.getElementById("layer");
-        if (layer == null) return this.fail("layer");
-        Element hint = document.getElementById("hint");
-        if (hint == null) return this.fail("hint");
-        Element back = document.getElementById("back");
-        if (back == null) return this.fail("back");
-        Element timeline = document.getElementById("timeline");
-        if (timeline == null) return this.fail("timeline");
-        Element timelineFill = document.getElementById("timeline_fill");
-        if (timelineFill == null) return this.fail("timeline_fill");
-        Element timelineKnob = document.getElementById("timeline_knob");
-        if (timelineKnob == null) return this.fail("timeline_knob");
         this.controlKeys.clear();
-        for (String id : List.of("previous", "restart", "toggle", "next")) {
-            Element key = document.getElementById(id);
-            if (key == null) return this.fail(id);
-            this.controlKeys.add(key);
-        }
-        this.topBar = topBar;
-        this.bottomBar = bottomBar;
-        this.scene = scene;
-        this.back = back;
-        this.timeline = timeline;
-        this.timelineFill = timelineFill;
-        this.timelineKnob = timelineKnob;
-        this.title = new Label(title);
-        this.layer = new Label(layer);
-        this.hint = new Label(hint);
+        for (String id : List.of("previous", "restart", "toggle", "next"))
+            this.controlKeys.add(this.getOrThrow(id));
         // The back key is the only fixed label on the page: the four controls are rewritten because play and
         // pause share one key.
-        this.backLabel = new Label(back);
         this.backLabel.show(Component.translatable("screen.mxt.multiblock.back").getString());
         this.controlLabels.clear();
         for (Element key : this.controlKeys) this.controlLabels.add(new Label(key));
         // The keys are the page's; only the two things that need the pointer's position stay here.
-        if (bindHandlers) {
-            this.click(back, this::onClose);
-            this.click(this.controlKeys.get(0), () -> this.view.previous(this.structure));
-            this.click(this.controlKeys.get(1), this.view::open);
-            this.click(this.controlKeys.get(2), () -> this.view.toggle(this.structure));
-            this.click(this.controlKeys.get(3), () -> this.view.next(this.structure));
-        }
-        return true;
+        this.click(this.back, this::onClose);
+        this.click(this.controlKeys.get(0), () -> this.view.previous(this.structure));
+        this.click(this.controlKeys.get(1), this.view::open);
+        this.click(this.controlKeys.get(2), () -> this.view.toggle(this.structure));
+        this.click(this.controlKeys.get(3), () -> this.view.next(this.structure));
     }
 
-    private boolean fail(String missing) {
-        Document current = this.document;
-        long generation = current == null ? Long.MIN_VALUE : current.getRefreshGeneration();
-        this.clearBindings();
-        // Keep the failed generation so a broken page is reported once instead of every frame.
-        this.boundGeneration = generation;
-        this.pageError = Component.translatable("screen.mxt.page.invalid", PAGE, missing);
-        return false;
+    @Override
+    public void onPageBound() {
+        this.writeLayout();
+        this.writeState();
     }
 
-    private void clearBindings() {
-        this.pageBound = false;
-        this.boundGeneration = Long.MIN_VALUE;
+    @Override
+    public void onBindingsCleared() {
         this.topBar = null;
         this.bottomBar = null;
         this.scene = null;
@@ -247,9 +153,10 @@ public final class MultiblockStructureScreen extends Screen implements AuiLinked
         box(this.bottomBar, this.view.bottomBar(this.width, this.height));
         box(this.scene, this.view.scene(this.width, this.height));
         box(this.back, this.view.back(this.font));
-        if (this.title != null) this.title.box(this.view.title(this.width));
-        if (this.layer != null) this.layer.box(this.view.layer(this.width));
-        if (this.hint != null) this.hint.box(this.view.hint(this.width));
+        // A line's own box: the page centres the text inside it with `.t-center`.
+        if (this.title != null) box(this.title.element(), this.view.title(this.width));
+        if (this.layer != null) box(this.layer.element(), this.view.layer(this.width));
+        if (this.hint != null) box(this.hint.element(), this.view.hint(this.width));
         box(this.timeline, this.view.timeline(this.width, this.height));
         List<MultiblockStructureView.StructureControl> controls = this.view.controls(this.font, this.width, this.height);
         for (int index = 0; index < this.controlKeys.size() && index < controls.size(); index++) {
@@ -327,13 +234,6 @@ public final class MultiblockStructureScreen extends Screen implements AuiLinked
 
     // ------------------------------------------------------------------ the vanilla pass
 
-    // The page fills the frame it was given; the vanilla grey plate still goes behind it, but not through super,
-    // whose branch would blur the world (and the HUD) instead.
-    @Override
-    public void extractBackground(@NonNull GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
-        AuiBackdrop.extract(this, graphics);
-    }
-
     @Override
     public boolean isPauseScreen() {
         return false;
@@ -344,75 +244,12 @@ public final class MultiblockStructureScreen extends Screen implements AuiLinked
         Minecraft.getInstance().setScreen(null);
     }
 
-    @Override
-    public void removed() {
-        this.clearBindings();
-        if (this.document != null) {
-            this.document.remove();
-            this.document = null;
-        }
-        super.removed();
-    }
-
-    private void extractPageError(GuiGraphicsExtractor graphics) {
-        Component error = this.pageError;
-        if (error == null) return;
-        if (this.errorWidth != this.width) {
-            this.errorLines = this.font.split(error, Math.max(40, this.width - 40));
-            this.errorWidth = this.width;
-        }
-        int y = this.height / 2 - this.errorLines.size() * 5;
-        for (FormattedCharSequence line : this.errorLines) {
-            graphics.text(this.font, line, (this.width - this.font.width(line)) / 2, y, 0xFFFF5555, false);
-            y += 10;
-        }
-    }
-
     // ------------------------------------------------------------------ page writes
 
-    private void click(Element element, Runnable action) {
-        element.addEventListener("click", event -> action.run());
-    }
-
     private static void box(@Nullable Element element, MultiblockStructureView.Rect rect) {
-        style(element, "left", rect.x() + "px");
-        style(element, "top", rect.y() + "px");
-        style(element, "width", rect.width() + "px");
-        style(element, "height", rect.height() + "px");
-    }
-
-    /**
-     * Writes an inline property only when it differs; every write re-runs the page's style pass.
-     */
-    private static void style(@Nullable Element element, String property, String value) {
-        if (element == null) return;
-        if (value.equals(element.getInlineStylePropertyValue(property))) return;
-        element.setInlineStyleProperty(property, value);
-    }
-
-    /**
-     * Writes a text node only when it changed, for the same reason.
-     */
-    private static final class Label {
-        private final Element element;
-        @Nullable
-        private String shown;
-
-        private Label(Element element) {
-            this.element = element;
-        }
-
-        private void show(String value) {
-            if (value.equals(this.shown)) return;
-            this.shown = value;
-            this.element.setTextContent(value);
-        }
-
-        /**
-         * The line's own box: the page centres the text inside it with {@code .t-center}.
-         */
-        private void box(MultiblockStructureView.Rect rect) {
-            MultiblockStructureScreen.box(this.element, rect);
-        }
+        AuiElements.style(element, "left", rect.x() + "px");
+        AuiElements.style(element, "top", rect.y() + "px");
+        AuiElements.style(element, "width", rect.width() + "px");
+        AuiElements.style(element, "height", rect.height() + "px");
     }
 }

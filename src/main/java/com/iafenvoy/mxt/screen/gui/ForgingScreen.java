@@ -11,12 +11,12 @@ import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.forging.ForgingSurface;
 import com.iafenvoy.mxt.runtime.item.ItemQualityService;
-import com.iafenvoy.mxt.screen.AuiContainerScreen;
-import com.iafenvoy.mxt.screen.AuiPages;
+import com.iafenvoy.mxt.screen.aui.AuiContainerScreen;
+import com.iafenvoy.mxt.screen.aui.AuiElements;
+import com.iafenvoy.mxt.screen.aui.AuiPages;
 import com.iafenvoy.mxt.screen.menu.ForgingMenu;
 import com.iafenvoy.mxt.util.TooltipText;
 import com.sighs.apricityui.element.Item;
-import com.sighs.apricityui.init.Document;
 import com.sighs.apricityui.init.Element;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -49,17 +49,13 @@ import java.util.List;
  */
 public final class ForgingScreen extends AuiContainerScreen<ForgingMenu> {
     private static final int PANEL_WIDTH = 322, PANEL_HEIGHT = 234;
-    private static final int CELLS = ForgingMenu.CELLS;
-    private static final int GRID_CELLS = CELLS * CELLS;
+    private static final int CELLS = ForgingMenu.CELLS, GRID_CELLS = CELLS * CELLS;
     private static final int STEPS = ForgingMenu.SUFFIX_STEPS;
     private static final int BLUEPRINT_X = ForgingMenu.BLUEPRINT_GRID_X;
     private static final int METHOD_X = ForgingMenu.METHOD_GRID_X;
     private static final int GRID_Y = ForgingMenu.GRID_Y;
-    private static final int CELL = ForgingMenu.CELL;
-    private static final int CELL_PITCH = ForgingMenu.CELL_PITCH;
-    private static final int RECESS_Y = ForgingMenu.RECESS_Y;
-    private static final int RECESS_W = ForgingMenu.RECESS_W;
-    private static final int RECESS_H = ForgingMenu.RECESS_H;
+    private static final int CELL = ForgingMenu.CELL, CELL_PITCH = ForgingMenu.CELL_PITCH;
+    private static final int RECESS_Y = ForgingMenu.RECESS_Y, RECESS_W = ForgingMenu.RECESS_W, RECESS_H = ForgingMenu.RECESS_H;
     // The scroller's own numbers, kept from the vanilla stonecutter the old screen copied.
     private static final int SCROLLER_WIDTH = 12, SCROLLER_HEIGHT = 15;
     private static final int SCROLL_TOP = ForgingMenu.RECESS_Y;
@@ -71,8 +67,7 @@ public final class ForgingScreen extends AuiContainerScreen<ForgingMenu> {
     private static final int METER_INNER_W = METER_W - 2;
     // An unset target cell draws a barrier: a row is always six cells wide, so a hole would leave the
     // alignment to be guessed.
-    private static final IconReference EMPTY_STEP =
-            IconReference.item(ItemStackTemplate.fromNonEmptyStack(new ItemStack(Items.BARRIER)));
+    private static final IconReference EMPTY_STEP = IconReference.item(ItemStackTemplate.fromNonEmptyStack(new ItemStack(Items.BARRIER)));
 
     private final List<IconBox> blueprintCells = new ArrayList<>(GRID_CELLS);
     private final List<IconBox> methodCells = new ArrayList<>(GRID_CELLS);
@@ -82,7 +77,6 @@ public final class ForgingScreen extends AuiContainerScreen<ForgingMenu> {
     private Element blueprintBar, methodBar, meterBand, meterZero, meterValueMark, meterPredicted;
     @Nullable
     private Element meterValue, stepsText, qualityText, useBlueprint, useMethod, cancel;
-
     // Scroll offset as a fraction of the list, as the stonecutter keeps it: the first visible cell is derived.
     private float blueprintOffs, methodOffs;
     // Which scrollbar is being dragged: 0 none, 1 blueprint, 2 method.
@@ -91,7 +85,6 @@ public final class ForgingScreen extends AuiContainerScreen<ForgingMenu> {
     // never sent on its own; only the buttons turn one into a request.
     @Nullable
     private Identifier selectedBlueprint, selectedMethod;
-
     // The last state written into the page; every write re-runs its style pass.
     private int hoveredBlueprint = -1, hoveredMethod = -1;
     // The scrollbar flags start "already applied" as disabled: a list short enough to need no scrolling is the
@@ -120,72 +113,38 @@ public final class ForgingScreen extends AuiContainerScreen<ForgingMenu> {
     }
 
     @Override
-    protected boolean bindPage(Document document) {
-        Element panel = document.getElementById("panel");
-        if (panel == null) return this.fail("panel");
-        Element title = document.getElementById("title");
-        if (title == null) return this.fail("title");
-        Element inventoryLabel = document.getElementById("inventory_label");
-        if (inventoryLabel == null) return this.fail("inventory_label");
-        Element targetCaption = document.getElementById("target_caption");
-        if (targetCaption == null) return this.fail("target_caption");
-        Element currentCaption = document.getElementById("current_caption");
-        if (currentCaption == null) return this.fail("current_caption");
-        this.panel = panel;
+    public void bindPage() {
+        this.panel = this.getOrThrow("panel");
+        this.blueprintBar = this.getOrThrow("bp_bar");
+        this.methodBar = this.getOrThrow("mt_bar");
+        this.meterBand = this.getOrThrow("meter_band");
+        this.meterZero = this.getOrThrow("meter_zero");
+        this.meterValueMark = this.getOrThrow("meter_value_mark");
+        this.meterPredicted = this.getOrThrow("meter_predicted");
+        this.meterValue = this.getOrThrow("meter_value");
+        this.stepsText = this.getOrThrow("steps");
+        this.qualityText = this.getOrThrow("quality");
+        this.useBlueprint = this.getOrThrow("use_blueprint");
+        this.useMethod = this.getOrThrow("use_method");
+        this.cancel = this.getOrThrow("cancel");
         // Menu slot order: 3 blueprints, 3 tools, 12 inputs, the output, then the player inventory.
-        if (!this.bindCells(document, "blueprints", ForgingSurface.BLUEPRINT_START)) return false;
-        if (!this.bindCells(document, "tools", ForgingSurface.TOOL_START)) return false;
-        if (!this.bindCells(document, "inputs", ForgingSurface.INPUT_START)) return false;
-        if (!this.bindCells(document, "output", ForgingSurface.OUTPUT_SLOT)) return false;
-        if (!this.bindInventoryCells(document, "inventory")) return false;
-        if (!this.bindGrid(document, "bp", GRID_CELLS, this.blueprintCells)) return false;
-        if (!this.bindGrid(document, "mt", GRID_CELLS, this.methodCells)) return false;
-        if (!this.bindGrid(document, "target", STEPS, this.targetCells)) return false;
-        if (!this.bindGrid(document, "current", STEPS, this.historyCells)) return false;
-        Element blueprintBar = document.getElementById("bp_bar");
-        if (blueprintBar == null) return this.fail("bp_bar");
-        Element methodBar = document.getElementById("mt_bar");
-        if (methodBar == null) return this.fail("mt_bar");
-        Element meterBand = document.getElementById("meter_band");
-        if (meterBand == null) return this.fail("meter_band");
-        Element meterZero = document.getElementById("meter_zero");
-        if (meterZero == null) return this.fail("meter_zero");
-        Element meterValueMark = document.getElementById("meter_value_mark");
-        if (meterValueMark == null) return this.fail("meter_value_mark");
-        Element meterPredicted = document.getElementById("meter_predicted");
-        if (meterPredicted == null) return this.fail("meter_predicted");
-        Element meterValue = document.getElementById("meter_value");
-        if (meterValue == null) return this.fail("meter_value");
-        Element stepsText = document.getElementById("steps");
-        if (stepsText == null) return this.fail("steps");
-        Element qualityText = document.getElementById("quality");
-        if (qualityText == null) return this.fail("quality");
-        Element useBlueprint = document.getElementById("use_blueprint");
-        if (useBlueprint == null) return this.fail("use_blueprint");
-        Element useMethod = document.getElementById("use_method");
-        if (useMethod == null) return this.fail("use_method");
-        Element cancel = document.getElementById("cancel");
-        if (cancel == null) return this.fail("cancel");
-        this.blueprintBar = blueprintBar;
-        this.methodBar = methodBar;
-        this.meterBand = meterBand;
-        this.meterZero = meterZero;
-        this.meterValueMark = meterValueMark;
-        this.meterPredicted = meterPredicted;
-        this.meterValue = meterValue;
-        this.stepsText = stepsText;
-        this.qualityText = qualityText;
-        this.useBlueprint = useBlueprint;
-        this.useMethod = useMethod;
-        this.cancel = cancel;
-        this.click(useBlueprint, this::useBlueprint);
-        this.click(useMethod, this::useMethod);
-        this.click(cancel, this::cancel);
+        this.bindCells("blueprints", ForgingSurface.BLUEPRINT_START);
+        this.bindCells("tools", ForgingSurface.TOOL_START);
+        this.bindCells("inputs", ForgingSurface.INPUT_START);
+        this.bindCells("output", ForgingSurface.OUTPUT_SLOT);
+        this.bindInventoryCells("inventory");
+        this.bindGrid("bp", GRID_CELLS, this.blueprintCells);
+        this.bindGrid("mt", GRID_CELLS, this.methodCells);
+        this.bindGrid("target", STEPS, this.targetCells);
+        this.bindGrid("current", STEPS, this.historyCells);
+        this.click(this.useBlueprint, this::useBlueprint);
+        this.click(this.useMethod, this::useMethod);
+        this.click(this.cancel, this::cancel);
         // The labels are Java's: the page's three buttons are empty boxes, and the theme's `.button` already
         // centres whatever text they carry.
-        this.text(useBlueprint, Component.translatable("screen.mxt.forging.use_blueprint"));
-        this.text(useMethod, Component.translatable("screen.mxt.forging.use_method"));
-        this.text(cancel, Component.translatable("screen.mxt.forging.cancel"));
+        this.text(this.useBlueprint, Component.translatable("screen.mxt.forging.use_blueprint"));
+        this.text(this.useMethod, Component.translatable("screen.mxt.forging.use_method"));
+        this.text(this.cancel, Component.translatable("screen.mxt.forging.cancel"));
         // A cell draws an icon and nothing else, so its tooltip is the only place a method's name appears.
         for (int index = 0; index < GRID_CELLS; index++) {
             int cell = index;
@@ -197,34 +156,27 @@ public final class ForgingScreen extends AuiContainerScreen<ForgingMenu> {
             this.tooltip(this.targetCells.get(index).root, () -> this.stepTooltip(position, true));
             this.tooltip(this.historyCells.get(index).root, () -> this.stepTooltip(position, false));
         }
-        this.text(title, this.getTitle());
-        this.text(inventoryLabel, Component.translatable("container.inventory"));
-        this.text(targetCaption, Component.translatable("screen.mxt.forging.target"));
-        this.text(currentCaption, Component.translatable("screen.mxt.forging.current"));
-        return true;
+        this.text(this.getOrThrow("title"), this.getTitle());
+        this.text(this.getOrThrow("inventory_label"), Component.translatable("container.inventory"));
+        this.text(this.getOrThrow("target_caption"), Component.translatable("screen.mxt.forging.target"));
+        this.text(this.getOrThrow("current_caption"), Component.translatable("screen.mxt.forging.current"));
     }
 
     /**
      * A grid of icon boxes: {@code prefix-N} is the cell, {@code prefix_item-N} and {@code prefix_tex-N}
      * its two icon elements.
      */
-    private boolean bindGrid(Document document, String prefix, int count, List<IconBox> target) {
-        List<Element> roots = this.byIdPrefix(document, prefix + "-", count);
-        if (roots == null) return this.fail(prefix + "-*");
-        List<Element> items = this.byIdPrefix(document, prefix + "_item-", count);
-        if (items == null) return this.fail(prefix + "_item-*");
-        List<Element> textures = this.byIdPrefix(document, prefix + "_tex-", count);
-        if (textures == null) return this.fail(prefix + "_tex-*");
+    private void bindGrid(String prefix, int count, List<IconBox> target) {
+        List<Element> roots = this.byIdPrefix(prefix + "-", count);
+        List<Element> textures = this.byIdPrefix(prefix + "_tex-", count);
         for (int index = 0; index < count; index++) {
-            Element item = items.get(index);
-            if (!(item instanceof Item icon)) return this.fail(prefix + "_item-" + index + " (item)");
+            Item icon = this.getOrThrow(prefix + "_item-" + index, Item.class);
             target.add(new IconBox(roots.get(index), icon, textures.get(index)));
         }
-        return true;
     }
 
     @Override
-    protected void onBindingsCleared() {
+    public void onBindingsCleared() {
         this.blueprintCells.clear();
         this.methodCells.clear();
         this.targetCells.clear();
@@ -256,7 +208,7 @@ public final class ForgingScreen extends AuiContainerScreen<ForgingMenu> {
     }
 
     @Override
-    protected void onPageBound() {
+    public void onPageBound() {
         this.refresh();
     }
 
@@ -287,11 +239,11 @@ public final class ForgingScreen extends AuiContainerScreen<ForgingMenu> {
             Entry entry = index < entries.size() ? entries.get(index) : null;
             if (entry == null) {
                 cell.clear();
-                flag(cell.root, "selected", false);
+                AuiElements.setClass(cell.root, "selected", false);
                 continue;
             }
             cell.show(entry.icon());
-            flag(cell.root, "selected", entry.id().equals(selected));
+            AuiElements.setClass(cell.root, "selected", entry.id().equals(selected));
         }
     }
 
@@ -304,20 +256,20 @@ public final class ForgingScreen extends AuiContainerScreen<ForgingMenu> {
         int top = SCROLL_TOP + 1 + Math.round(SCROLL_TRAVEL * offs);
         if (blueprint) {
             if (active != this.shownBlueprintScrollbar) {
-                flag(bar, "disabled", !active);
+                AuiElements.setClass(bar, "disabled", !active);
                 this.shownBlueprintScrollbar = active;
             }
             if (top == this.shownBlueprintScroller) return;
             this.shownBlueprintScroller = top;
         } else {
             if (active != this.shownMethodScrollbar) {
-                flag(bar, "disabled", !active);
+                AuiElements.setClass(bar, "disabled", !active);
                 this.shownMethodScrollbar = active;
             }
             if (top == this.shownMethodScroller) return;
             this.shownMethodScroller = top;
         }
-        put(bar, "top", top + "px");
+        AuiElements.style(bar, "top", top + "px");
     }
 
     private void showSteps(List<IconBox> cells, boolean target) {
@@ -345,11 +297,11 @@ public final class ForgingScreen extends AuiContainerScreen<ForgingMenu> {
         if (active) {
             int from = this.meterX(scale, this.menu.targetMin());
             int to = this.meterX(scale, this.menu.targetMax());
-            put(this.meterBand, "left", from + "px");
-            put(this.meterBand, "width", (to - from + 1) + "px");
-            put(this.meterBand, "display", "block");
+            AuiElements.style(this.meterBand, "left", from + "px");
+            AuiElements.style(this.meterBand, "width", (to - from + 1) + "px");
+            AuiElements.style(this.meterBand, "display", "block");
         } else {
-            put(this.meterBand, "display", "none");
+            AuiElements.style(this.meterBand, "display", "none");
         }
         // Every mark is positioned in the panel's own coordinates: the scale's left end is the trough's interior.
         this.showMark(this.meterZero, true, this.meterX(scale, 0));
@@ -361,13 +313,13 @@ public final class ForgingScreen extends AuiContainerScreen<ForgingMenu> {
 
     private void showMark(@Nullable Element mark, boolean visible, int left) {
         if (mark == null) return;
-        put(mark, "display", visible ? "block" : "none");
-        if (visible) put(mark, "left", left + "px");
+        AuiElements.style(mark, "display", visible ? "block" : "none");
+        if (visible) AuiElements.style(mark, "left", left + "px");
     }
 
     private void hideMeter() {
         for (Element mark : new Element[]{this.meterBand, this.meterZero, this.meterValueMark, this.meterPredicted}) {
-            put(mark, "display", "none");
+            AuiElements.style(mark, "display", "none");
         }
     }
 
@@ -402,30 +354,8 @@ public final class ForgingScreen extends AuiContainerScreen<ForgingMenu> {
         if (text.equals(this.shownQuality)) return;
         this.shownQuality = text;
         if (this.qualityText == null) return;
-        this.qualityText.setTextContent(text);
-        put(this.qualityText, "color", color);
-    }
-
-    // A button is enabled exactly when pressing it would name something the server accepts: a blueprint needs
-    // a live pick, no running session and its materials; a method needs a live pick and a running session.
-    private void refreshButtons() {
-        Identifier blueprint = this.picked(this.blueprintEntries(), this.selectedBlueprint);
-        this.blueprintReady = !this.menu.active() && blueprint != null && this.menu.materialsCovered(blueprint);
-        this.methodReady = this.menu.active() && this.picked(this.methodEntries(), this.selectedMethod) != null;
-        // With no session nothing is locked, so there is nothing to cancel.
-        this.cancelReady = this.menu.active();
-        if (this.blueprintReady != this.shownBlueprintReady) {
-            this.shownBlueprintReady = this.blueprintReady;
-            if (this.useBlueprint != null) this.useBlueprint.setDisabled(!this.blueprintReady);
-        }
-        if (this.methodReady != this.shownMethodReady) {
-            this.shownMethodReady = this.methodReady;
-            if (this.useMethod != null) this.useMethod.setDisabled(!this.methodReady);
-        }
-        if (this.cancelReady != this.shownCancelReady) {
-            this.shownCancelReady = this.cancelReady;
-            if (this.cancel != null) this.cancel.setDisabled(!this.cancelReady);
-        }
+        AuiElements.setText(this.qualityText, text);
+        AuiElements.style(this.qualityText, "color", color);
     }
 
     // ------------------------------------------------------------------ buttons
@@ -650,14 +580,14 @@ public final class ForgingScreen extends AuiContainerScreen<ForgingMenu> {
         if (blueprint != this.hoveredBlueprint) {
             this.hoveredBlueprint = blueprint;
             for (int index = 0; index < this.blueprintCells.size(); index++) {
-                flag(this.blueprintCells.get(index).root, "hover", index == blueprint);
+                AuiElements.setClass(this.blueprintCells.get(index).root, "hover", index == blueprint);
             }
         }
         int method = this.hoveredCell(mouseX, mouseY, METHOD_X);
         if (method != this.hoveredMethod) {
             this.hoveredMethod = method;
             for (int index = 0; index < this.methodCells.size(); index++) {
-                flag(this.methodCells.get(index).root, "hover", index == method);
+                AuiElements.setClass(this.methodCells.get(index).root, "hover", index == method);
             }
         }
     }
@@ -816,10 +746,10 @@ public final class ForgingScreen extends AuiContainerScreen<ForgingMenu> {
                 else this.texture.setAttribute("src", textureKey);
                 this.shownTexture = textureKey;
             }
-            flag(this.root, "icon-item", !stack.isEmpty());
-            flag(this.root, "icon-texture", !textureKey.isEmpty());
+            AuiElements.setClass(this.root, "icon-item", !stack.isEmpty());
+            AuiElements.setClass(this.root, "icon-texture", !textureKey.isEmpty());
             if (!this.shownEmpty) return;
-            flag(this.root, "empty", false);
+            AuiElements.setClass(this.root, "empty", false);
             this.shownEmpty = false;
         }
 
@@ -832,25 +762,11 @@ public final class ForgingScreen extends AuiContainerScreen<ForgingMenu> {
                 this.texture.removeAttribute("src");
                 this.shownTexture = "";
             }
-            flag(this.root, "icon-item", false);
-            flag(this.root, "icon-texture", false);
+            AuiElements.setClass(this.root, "icon-item", false);
+            AuiElements.setClass(this.root, "icon-texture", false);
             if (this.shownEmpty) return;
-            flag(this.root, "empty", true);
+            AuiElements.setClass(this.root, "empty", true);
             this.shownEmpty = true;
         }
-    }
-
-    private static void flag(Element element, String token, boolean present) {
-        if (element.getClassList().contains(token) == present) return;
-        element.getClassList().toggle(token, present);
-    }
-
-    /**
-     * {@code style} is already a static helper on the host class, and it is protected there.
-     */
-    private static void put(@Nullable Element element, String property, String value) {
-        if (element == null) return;
-        if (value.equals(element.getInlineStylePropertyValue(property))) return;
-        element.setInlineStyleProperty(property, value);
     }
 }
