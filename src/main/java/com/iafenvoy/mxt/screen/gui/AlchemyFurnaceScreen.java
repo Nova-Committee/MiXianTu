@@ -4,12 +4,12 @@ import com.iafenvoy.mxt.network.payload.AlchemyActionC2SPayload;
 import com.iafenvoy.mxt.network.payload.AlchemyActionC2SPayload.Action;
 import com.iafenvoy.mxt.screen.aui.AuiContainerScreen;
 import com.iafenvoy.mxt.screen.aui.AuiElements;
-import com.iafenvoy.mxt.screen.aui.AuiPages;
 import com.iafenvoy.mxt.screen.menu.AlchemyFurnaceMenu;
 import com.iafenvoy.mxt.screen.menu.AlchemyFurnaceMenu.TemperatureAck;
 import com.iafenvoy.mxt.screen.menu.AlchemyFurnaceView;
 import com.sighs.apricityui.element.Container;
 import com.sighs.apricityui.element.Input;
+import com.sighs.apricityui.element.Slot;
 import com.sighs.apricityui.init.Document;
 import com.sighs.apricityui.init.Element;
 import net.minecraft.network.chat.Component;
@@ -24,9 +24,7 @@ import java.util.Optional;
  * The four furnace views, one page each; see {@link AuiContainerScreen} for the page contract.
  */
 public final class AlchemyFurnaceScreen extends AuiContainerScreen<AlchemyFurnaceMenu> {
-    private static final int PANEL_WIDTH = 202;
-    private static final int PANEL_HEIGHT_MONITOR = 225;
-    private static final int PANEL_HEIGHT_PART = 160;
+    private static final int PLAYER_SLOTS = 36;
 
     @Nullable
     private Element title, temperature, limit, status, progress, apply, start, abort;
@@ -48,16 +46,7 @@ public final class AlchemyFurnaceScreen extends AuiContainerScreen<AlchemyFurnac
     private Component shownTitle, shownQuality, shownStatus;
 
     public AlchemyFurnaceScreen(AlchemyFurnaceMenu menu, Inventory inventory, Component title) {
-        super(menu, inventory, title, PANEL_WIDTH, panelHeight(menu.view()));
-    }
-
-    private static int panelHeight(AlchemyFurnaceMenu.View view) {
-        return view == AlchemyFurnaceMenu.View.MONITOR ? PANEL_HEIGHT_MONITOR : PANEL_HEIGHT_PART;
-    }
-
-    @Override
-    protected String pagePath() {
-        return AuiPages.alchemyPage(this.menu.view().getSlug());
+        super(menu, inventory, title);
     }
 
     @Override
@@ -65,29 +54,25 @@ public final class AlchemyFurnaceScreen extends AuiContainerScreen<AlchemyFurnac
         this.panel = this.getOrThrow("panel");
         this.title = this.getOrThrow("title");
 
-        this.getOrThrow("machine", Container.class);
-        this.getOrThrow("player_inventory", Container.class);
-        List<Element> machineCells = this.cellsOf("machine");
-        int machineSlots = this.menu.view().getMachineSlots();
-        if (machineCells.size() != machineSlots) {
+        List<Element> machineCells = this.getOrThrow("machine", Container.class).getChildren();
+        List<Element> playerCells = this.getOrThrow("player_inventory", Container.class).getChildren();
+        if (machineCells.size() != this.menu.view().getMachineSlots()) {
             throw this.missing("machine (" + machineCells.size() + " slots)");
         }
-        List<Element> playerCells = this.cellsOf("player_inventory");
-        if (playerCells.size() != 36) throw this.missing("player_inventory (" + playerCells.size() + " slots)");
+        if (playerCells.size() != PLAYER_SLOTS) throw this.missing("player_inventory (" + playerCells.size() + " slots)");
         this.bindMachine(machineCells);
-        this.bindCells("player_inventory", this::inventoryMenuIndex);
         if (this.menu.view() == AlchemyFurnaceMenu.View.MONITOR) this.bindMonitor();
         this.text(this.title, this.getTitle());
         this.text(this.getOrThrow("inventory_label"), Component.translatable("container.inventory"));
     }
 
     private void bindMachine(List<Element> machineCells) {
+        int machineSlots = this.menu.view().getMachineSlots();
         for (Element cell : machineCells) {
-            int index = slotIndexOf(cell);
-            if (index < 0 || index >= this.menu.view().getMachineSlots()) {
+            int index = cell instanceof Slot slot ? slot.getSlotIndex() : -1;
+            if (index < 0 || index >= machineSlots) {
                 throw this.missing("machine (slot-index " + index + ")");
             }
-            this.cells.put(index, cell);
             this.tooltip(cell, () -> this.machineHint(index));
         }
     }

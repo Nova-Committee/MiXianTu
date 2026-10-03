@@ -12,6 +12,8 @@ import com.iafenvoy.mxt.runtime.forging.ForgingPlan;
 import com.iafenvoy.mxt.runtime.forging.ForgingSession.Snapshot;
 import com.iafenvoy.mxt.runtime.forging.ForgingSurface;
 import com.iafenvoy.mxt.runtime.forging.ForgingWorkstationService;
+import com.iafenvoy.mxt.screen.aui.AuiPages;
+import com.sighs.apricityui.screen.ApricityContainerMenu;
 import net.minecraft.core.Registry;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
@@ -19,25 +21,34 @@ import net.minecraft.world.Container;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.inventory.DataSlot;
+import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import org.jspecify.annotations.NonNull;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
 
 /**
- * The forge table's menu: the machine slots of {@link ForgingSurface} then the player inventory, at the
- * coordinates the screen paints against. The session has no container, so it is mirrored onto
- * {@link DataSlot}s; a client's {@link ContainerLevelAccess} answers every lookup with nothing.
+ * The forge table's menu: one page container per group of {@link ForgingSurface} - blueprints, tools, inputs and
+ * the result - then the player inventory, which is the slot order the bundled page binds against. The session has
+ * no container, so it is mirrored onto {@link DataSlot}s; a client's {@link ContainerLevelAccess} answers every
+ * lookup with nothing.
  */
-public final class ForgingMenu extends AbstractContainerMenu {
+public final class ForgingMenu extends ApricityContainerMenu {
     public static final int MACHINE_SLOTS = ForgingSurface.TOTAL_SLOTS;
     public static final int PLAYER_START = MACHINE_SLOTS;
+    // ---- page containers, in the order the page declares them
+    // One container per group, so each group is one continuous run of menu slots and the page's
+    // slot-index is the index inside its group. The bounds are ForgingSurface's own.
+    private static final int BLUEPRINT_END = ForgingSurface.BLUEPRINT_START + ForgingSurface.BLUEPRINT_SLOTS;
+    private static final int TOOL_END = ForgingSurface.TOOL_START + ForgingSurface.TOOL_SLOTS;
+    private static final int INPUT_END = ForgingSurface.INPUT_START + ForgingSurface.INPUT_SLOTS;
+    private static final int OUTPUT_END = ForgingSurface.OUTPUT_SLOT + 1;
     // Fixed six: a session keeps at most six history entries and a finish pattern is empty or exactly six long.
     public static final int SUFFIX_STEPS = 6;
     // Sentinel for "no entry"; registry ids are never negative.
@@ -75,6 +86,8 @@ public final class ForgingMenu extends AbstractContainerMenu {
 
     private final Container machine;
     private final ContainerLevelAccess access;
+    // The page's containers and the layout the slots are built from.
+    private final Setup setup;
     // The opener; the client half needs it only for the registries behind the two selector lists and the
     // step icons, never for the level's blocks.
     private final Player player;
@@ -85,57 +98,59 @@ public final class ForgingMenu extends AbstractContainerMenu {
     }
 
     public ForgingMenu(int containerId, Inventory inventory, ContainerLevelAccess access) {
-        super(MxtMenus.FORGING_TABLE.get(), containerId);
+        this(containerId, inventory, access, new Setup(inventory, access));
+    }
+
+    private ForgingMenu(int containerId, Inventory inventory, ContainerLevelAccess access, Setup setup) {
+        super(containerId, inventory, setup.page().layout(), setup.page().sources(), Map.of(), null);
         this.access = access;
-        this.player = inventory.player;
+        this.setup = setup;
+        setup.owner = this;
         // The surface's own container on the server, reached through the access; a stand-in on the client,
         // which the container content packet fills through the slots - see Slot#set.
-        this.machine = this.fromTable(ForgingTableBlockEntity::forgingContainer, new SimpleContainer(MACHINE_SLOTS));
+        this.machine = setup.machine();
+        this.player = inventory.player;
         for (int index = 0; index < SYNCED; index++) {
             this.synced[index] = DataSlot.standalone();
             this.addDataSlot(this.synced[index]);
         }
-        this.addMachineSlots();
-        for (int row = 0; row < 3; row++)
-            for (int column = 0; column < 9; column++)
-                this.addSlot(new Slot(inventory, column + row * 9 + 9, INVENTORY_X + column * MACHINE_PITCH, INVENTORY_Y + row * MACHINE_PITCH));
-        for (int column = 0; column < 9; column++)
-            this.addSlot(new Slot(inventory, column, INVENTORY_X + column * MACHINE_PITCH, HOTBAR_Y));
     }
 
-    private void addMachineSlots() {
-        for (int row = 0; row < ForgingSurface.BLUEPRINT_SLOTS; row++)
-            this.addSlot(new MachineSlot(ForgingSurface.BLUEPRINT_START + row, INVENTORY_X, SLOT_TOP + row * MACHINE_PITCH));
-        for (int row = 0; row < ForgingSurface.TOOL_SLOTS; row++)
-            this.addSlot(new MachineSlot(ForgingSurface.TOOL_START + row, 225, SLOT_TOP + row * MACHINE_PITCH));
-        for (int index = 0; index < ForgingSurface.INPUT_SLOTS; index++)
-            this.addSlot(new MachineSlot(ForgingSurface.INPUT_START + index,
-                    INPUT_X + 27 + index % ForgingSurface.INPUT_COLUMNS * MACHINE_PITCH,
-                    SLOT_TOP + index / ForgingSurface.INPUT_COLUMNS * MACHINE_PITCH));
-        // The result is written by the service and never by hand.
-        this.addSlot(new MachineSlot(ForgingSurface.OUTPUT_SLOT, 198, SLOT_TOP + MACHINE_PITCH));
+    /**
+     * The menu type ApricityUI's base menu would report is its own; the open packet carries whatever this answers,
+     * and the client picks its screen factory from that.
+     */
+    @Override
+    public MenuType<?> getType() {
+        return MxtMenus.FORGING_TABLE.get();
     }
 
     // One slot on the machine surface: a plain Slot answers yes to everything, so the rule is asked here
     // too, through ForgingSurface.canPlace, rather than kept in a second copy.
-    private final class MachineSlot extends Slot {
-        MachineSlot(int index, int x, int y) {
-            super(ForgingMenu.this.machine, index, x, y);
+    private static final class MachineSlot extends Slot {
+        private final Setup setup;
+
+        private MachineSlot(Setup setup, Container machine, int index, int x, int y) {
+            super(machine, index, x, y);
+            this.setup = setup;
         }
 
         @Override
         public boolean mayPlace(@NonNull ItemStack stack) {
-            return ForgingMenu.this.accepts(this.getContainerSlot(), stack);
+            return this.menu().accepts(this.getContainerSlot(), stack);
         }
 
         // The surface is not a chest: what it holds is locked while a session runs, and its snapshot is
         // what a cancel or a failure returns.
         @Override
         public boolean mayPickup(@NonNull Player player) {
-            return ForgingSurface.canTake(this.getContainerSlot(), ForgingMenu.this.sessionLocked())
+            return ForgingSurface.canTake(this.getContainerSlot(), this.menu().sessionLocked())
                     && super.mayPickup(player);
         }
 
+        private ForgingMenu menu() {
+            return this.setup.owner;
+        }
     }
 
     // Always goes through the ContainerLevelAccess, so a table broken under an open menu yields fallback
@@ -322,14 +337,27 @@ public final class ForgingMenu extends AbstractContainerMenu {
         return false;
     }
 
+    // Shift-click walks the page's containers in declaration order: a machine slot empties into the player
+    // inventory, and a player slot fills the groups in turn, the result cell last - it takes nothing by hand,
+    // so a run that reaches it simply matches no group.
     @Override
     public @NonNull ItemStack quickMoveStack(@NonNull Player player, int index) {
+        if (index < 0 || index >= this.slots.size()) return ItemStack.EMPTY;
         Slot slot = this.slots.get(index);
         if (!slot.hasItem()) return ItemStack.EMPTY;
         ItemStack original = slot.getItem().copy();
-        boolean moved = index < MACHINE_SLOTS
-                ? this.moveItemStackTo(slot.getItem(), PLAYER_START, this.slots.size(), true)
-                : this.moveItemStackTo(slot.getItem(), 0, MACHINE_SLOTS, false);
+        boolean moved;
+        if (index < PLAYER_START) {
+            moved = this.moveItemStackTo(slot.getItem(), PLAYER_START, this.slots.size(), true);
+        } else if (this.moveItemStackTo(slot.getItem(), ForgingSurface.BLUEPRINT_START, BLUEPRINT_END, false)) {
+            moved = true;
+        } else if (this.moveItemStackTo(slot.getItem(), ForgingSurface.TOOL_START, TOOL_END, false)) {
+            moved = true;
+        } else if (this.moveItemStackTo(slot.getItem(), ForgingSurface.INPUT_START, INPUT_END, false)) {
+            moved = true;
+        } else {
+            moved = this.moveItemStackTo(slot.getItem(), ForgingSurface.OUTPUT_SLOT, OUTPUT_END, false);
+        }
         if (!moved) return ItemStack.EMPTY;
         if (slot.getItem().isEmpty()) slot.setByPlayer(ItemStack.EMPTY);
         else slot.setChanged();
@@ -339,5 +367,44 @@ public final class ForgingMenu extends AbstractContainerMenu {
     @Override
     public boolean stillValid(@NonNull Player player) {
         return stillValid(this.access, player, MxtBlocks.FORGING_TABLE.get());
+    }
+
+    /**
+     * The page's containers and the layout they are opened with; the machine surface has to be resolved before the
+     * menu exists, because {@code super(...)} needs the containers.
+     */
+    private static final class Setup {
+        private final Container machine;
+        private final PageSlots.Layout page;
+        // Set by the menu's constructor: a surface slot asks the menu for its synced state.
+        private ForgingMenu owner;
+
+        private Setup(Inventory inventory, ContainerLevelAccess access) {
+            // A null from the access answers "no table here", which is how the client half gets its stand-in.
+            this.machine = access
+                    .evaluate((level, pos) -> level.getBlockEntity(pos) instanceof ForgingTableBlockEntity table
+                            ? table.forgingContainer()
+                            : null)
+                    .orElseGet(() -> new SimpleContainer(MACHINE_SLOTS));
+            this.page = PageSlots.of(AuiPages.page(AuiPages.FORGING, "forging"))
+                    .container("blueprints", this.machine, this::newMachineSlot)
+                    .container("tools", this.machine, this::newMachineSlot)
+                    .container("inputs", this.machine, this::newMachineSlot)
+                    .container("output", this.machine, this::newMachineSlot)
+                    .player("inventory")
+                    .build();
+        }
+
+        private Slot newMachineSlot(Container container, int index, int x, int y) {
+            return new MachineSlot(this, container, index, x, y);
+        }
+
+        private Container machine() {
+            return this.machine;
+        }
+
+        private PageSlots.Layout page() {
+            return this.page;
+        }
     }
 }

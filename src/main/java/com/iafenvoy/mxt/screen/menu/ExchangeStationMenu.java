@@ -4,6 +4,8 @@ import com.iafenvoy.mxt.registry.MxtBlocks;
 import com.iafenvoy.mxt.registry.MxtMenus;
 import com.iafenvoy.mxt.runtime.economy.CurrencyValueService;
 import com.iafenvoy.mxt.runtime.economy.CurrencyValueService.ExchangeOffer;
+import com.iafenvoy.mxt.screen.aui.AuiPages;
+import com.sighs.apricityui.screen.ApricityContainerMenu;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
@@ -11,37 +13,30 @@ import net.minecraft.world.Container;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.inventory.DataSlot;
+import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import org.jspecify.annotations.NonNull;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * A stonecutter-style selector for one-way, data-driven currency exchanges.
  */
-public final class ExchangeStationMenu extends AbstractContainerMenu {
+public final class ExchangeStationMenu extends ApricityContainerMenu {
     private static final int INPUT_SLOT = 0;
     private static final int RESULT_SLOT = 1;
     private static final int INVENTORY_START = 2;
     private static final int INVENTORY_END = 38;
+    private final Setup setup;
     private final ContainerLevelAccess access;
     private final RegistryAccess registryAccess;
     private final Player owner;
     private final DataSlot selectedExchange = DataSlot.standalone();
-    private final Container input = new SimpleContainer(1) {
-        @Override
-        public void setChanged() {
-            super.setChanged();
-            ExchangeStationMenu.this.slotsChanged(this);
-            ExchangeStationMenu.this.updateListener.run();
-        }
-    };
-    private final Container result = new SimpleContainer(1);
     private final Slot inputSlot;
     private final Slot resultSlot;
     private ItemStack previousInput = ItemStack.EMPTY;
@@ -55,36 +50,30 @@ public final class ExchangeStationMenu extends AbstractContainerMenu {
     }
 
     public ExchangeStationMenu(int containerId, Inventory inventory, ContainerLevelAccess access) {
-        super(MxtMenus.EXCHANGE_STATION.get(), containerId);
+        this(containerId, inventory, access, new Setup(inventory));
+    }
+
+    private ExchangeStationMenu(int containerId, Inventory inventory, ContainerLevelAccess access, Setup setup) {
+        super(containerId, inventory, setup.page().layout(), setup.page().sources(), Map.of(), null);
         this.access = access;
         this.registryAccess = inventory.player.level().registryAccess();
         this.owner = inventory.player;
+        this.setup = setup;
+        // The layout builds every slot inside super(...), so nothing could hand a slot the menu before this point.
+        setup.bindMenu(this);
+        this.inputSlot = setup.inputSlot();
+        this.resultSlot = setup.resultSlot();
         this.selectedExchange.set(-1);
-        this.inputSlot = this.addSlot(new Slot(this.input, 0, 20, 33) {
-            @Override
-            public boolean mayPlace(@NonNull ItemStack stack) {
-                return CurrencyValueService.isExchangeInput(ExchangeStationMenu.this.registryAccess, ExchangeStationMenu.this.owner, stack);
-            }
-        });
-        this.resultSlot = this.addSlot(new Slot(this.result, 0, 143, 33) {
-            @Override
-            public boolean mayPlace(@NonNull ItemStack stack) {
-                return false;
-            }
-
-            @Override
-            public void onTake(@NonNull Player player, @NonNull ItemStack stack) {
-                ExchangeOffer offer = ExchangeStationMenu.this.selectedOffer();
-                if (offer == null || ExchangeStationMenu.this.inputSlot.getItem().getCount() < offer.cost()) return;
-                stack.onCraftedBy(player, stack.getCount());
-                ExchangeStationMenu.this.inputSlot.remove(offer.cost());
-                ExchangeStationMenu.this.setupResultSlot(ExchangeStationMenu.this.selectedExchange.get());
-                ExchangeStationMenu.this.playTakeSound();
-                super.onTake(player, stack);
-            }
-        });
-        this.addStandardInventorySlots(inventory, 8, 84);
         this.addDataSlot(this.selectedExchange);
+    }
+
+    /**
+     * The menu type ApricityUI's own base menu reports is AUI's, while the open packet carries whatever this
+     * answers and the client picks its screen factory from that.
+     */
+    @Override
+    public MenuType<?> getType() {
+        return MxtMenus.EXCHANGE_STATION.get();
     }
 
     public int getSelectedExchange() {
@@ -164,8 +153,8 @@ public final class ExchangeStationMenu extends AbstractContainerMenu {
     @Override
     public void removed(@NonNull Player player) {
         super.removed(player);
-        this.result.clearContent();
-        this.access.execute((level, position) -> this.clearContainer(player, this.input));
+        this.setup.result().clearContent();
+        this.access.execute((level, position) -> this.clearContainer(player, this.setup.input()));
     }
 
     private void setupOfferList(ItemStack stack) {
@@ -198,5 +187,102 @@ public final class ExchangeStationMenu extends AbstractContainerMenu {
                 this.lastSoundTime = time;
             }
         });
+    }
+
+    /**
+     * What the result cell does on a take, kept out of the slot: the slot comes from the base class' layout, so it
+     * is built before this menu's own body and cannot read its state directly.
+     */
+    private void takeResult(Player player, ItemStack stack) {
+        ExchangeOffer offer = this.selectedOffer();
+        if (offer == null || this.inputSlot.getItem().getCount() < offer.cost()) return;
+        stack.onCraftedBy(player, stack.getCount());
+        this.inputSlot.remove(offer.cost());
+        this.setupResultSlot(this.selectedExchange.get());
+        this.playTakeSound();
+    }
+
+    /**
+     * The page's containers and the slots its layout creates; both have to exist before the menu, so the public
+     * constructors build this and hand it to the private one.
+     */
+    private static final class Setup {
+        private final SimpleContainer input = new SimpleContainer(1) {
+            @Override
+            public void setChanged() {
+                super.setChanged();
+                Setup.this.inputChanged();
+            }
+        };
+        private final SimpleContainer result = new SimpleContainer(1);
+        private final PageSlots.Layout page;
+        /**
+         * Set by {@link #bindMenu} right after the menu's {@code super(...)}, which is where the slots are built;
+         * a slot only ever reaches back through this.
+         */
+        private ExchangeStationMenu menu;
+        private Slot inputSlot;
+        private Slot resultSlot;
+
+        private Setup(Inventory inventory) {
+            RegistryAccess registryAccess = inventory.player.level().registryAccess();
+            Player owner = inventory.player;
+            this.page = PageSlots.of(AuiPages.economyPage("exchange"))
+                    .container("input", this.input, (container, index, x, y) -> {
+                        this.inputSlot = new Slot(container, index, x, y) {
+                            @Override
+                            public boolean mayPlace(@NonNull ItemStack stack) {
+                                return CurrencyValueService.isExchangeInput(registryAccess, owner, stack);
+                            }
+                        };
+                        return this.inputSlot;
+                    })
+                    .container("result", this.result, (container, index, x, y) -> {
+                        this.resultSlot = new Slot(container, index, x, y) {
+                            @Override
+                            public boolean mayPlace(@NonNull ItemStack stack) {
+                                return false;
+                            }
+
+                            @Override
+                            public void onTake(@NonNull Player player, @NonNull ItemStack stack) {
+                                Setup.this.menu.takeResult(player, stack);
+                                super.onTake(player, stack);
+                            }
+                        };
+                        return this.resultSlot;
+                    })
+                    .player("inventory")
+                    .build();
+        }
+
+        private void bindMenu(ExchangeStationMenu menu) {
+            this.menu = menu;
+        }
+
+        private void inputChanged() {
+            this.menu.slotsChanged(this.input);
+            this.menu.updateListener.run();
+        }
+
+        private PageSlots.Layout page() {
+            return this.page;
+        }
+
+        private SimpleContainer input() {
+            return this.input;
+        }
+
+        private SimpleContainer result() {
+            return this.result;
+        }
+
+        private Slot inputSlot() {
+            return this.inputSlot;
+        }
+
+        private Slot resultSlot() {
+            return this.resultSlot;
+        }
     }
 }

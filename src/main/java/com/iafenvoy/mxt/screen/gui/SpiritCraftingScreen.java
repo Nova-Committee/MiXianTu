@@ -3,7 +3,6 @@ package com.iafenvoy.mxt.screen.gui;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.screen.aui.AuiContainerScreen;
 import com.iafenvoy.mxt.screen.aui.AuiElements;
-import com.iafenvoy.mxt.screen.aui.AuiPages;
 import com.iafenvoy.mxt.screen.aui.AuiStyles;
 import com.iafenvoy.mxt.screen.menu.SpiritCraftingMenu;
 import com.iafenvoy.mxt.util.DefinitionText;
@@ -20,9 +19,11 @@ import java.util.List;
  * The vanilla crafting grid plus the aura progress panel, both drawn by one page. The progress rows are the menu's
  * own data slots. The page declares a single row and the screen copies it once per aura the recipe on the grid
  * needs, so an empty grid leaves the panel with no rows at all while a recipe that asks for many still fits.
+ * <p>
+ * The page's containers map straight onto the menu's slots - {@code result} cell 0, {@code crafting} cells 0..8,
+ * {@code inventory} the vanilla player indices - so the screen binds no cells of its own.
  */
 public final class SpiritCraftingScreen extends AuiContainerScreen<SpiritCraftingMenu> {
-    private static final int PANEL_WIDTH = 308, PANEL_HEIGHT = 166;
     /**
      * Rows the page may grow to; the menu publishes at most this many.
      */
@@ -49,12 +50,7 @@ public final class SpiritCraftingScreen extends AuiContainerScreen<SpiritCraftin
     private Element auraRow;
 
     public SpiritCraftingScreen(SpiritCraftingMenu menu, Inventory inventory, Component title) {
-        super(menu, inventory, title, PANEL_WIDTH, PANEL_HEIGHT);
-    }
-
-    @Override
-    protected String pagePath() {
-        return AuiPages.page(AuiPages.SPIRIT_CRAFTING, "spirit_crafting");
+        super(menu, inventory, title);
     }
 
     @Override
@@ -65,10 +61,6 @@ public final class SpiritCraftingScreen extends AuiContainerScreen<SpiritCraftin
         this.auraRow = prototype;
         // The page's own row is the first one; every further row is a copy of it, made when a recipe asks for it.
         this.rows.add(this.row(prototype));
-        // Menu slot order: result, the nine grid cells, then the player inventory.
-        this.bindCells("result", 0);
-        this.bindCells("crafting", 1);
-        this.bindInventoryCells("inventory");
         this.text(this.getOrThrow("title"), this.getTitle());
         this.text(this.getOrThrow("inventory_label"), Component.translatable("container.inventory"));
     }

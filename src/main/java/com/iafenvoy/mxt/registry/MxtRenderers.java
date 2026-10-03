@@ -11,11 +11,14 @@ import com.iafenvoy.mxt.render.mount.MountRenderers;
 import com.iafenvoy.mxt.render.particle.RiftParticle.Provider;
 import com.iafenvoy.mxt.render.particle.SpiritWispParticle;
 import com.iafenvoy.mxt.screen.gui.*;
+import com.iafenvoy.mxt.screen.menu.*;
 import net.minecraft.client.gui.screens.inventory.ContainerScreen;
+import net.minecraft.client.gui.screens.MenuScreens.ScreenConstructor;
 import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.renderer.entity.NoopRenderer;
 import net.minecraft.client.renderer.entity.player.AvatarRenderer;
 import net.minecraft.world.entity.player.PlayerModelType;
+import net.minecraft.world.inventory.MenuType;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -54,18 +57,40 @@ public final class MxtRenderers {
 
     @SubscribeEvent
     public static void registerScreens(RegisterMenuScreensEvent event) {
-        event.register(MxtMenus.CHEQUE_TABLE.get(), ChequeTableScreen::new);
-        event.register(MxtMenus.EXCHANGE_STATION.get(), ExchangeStationScreen::new);
-        event.register(MxtMenus.SYSTEM_STATION_OWNER.get(), StationScreen::new);
-        event.register(MxtMenus.SYSTEM_STATION_CUSTOMER.get(), StationScreen::new);
-        event.register(MxtMenus.TRADE_STATION_OWNER.get(), StationScreen::new);
-        event.register(MxtMenus.TRADE_STATION_CUSTOMER.get(), StationScreen::new);
-        event.register(MxtMenus.PLAYER_TRADE.get(), PlayerTradeScreen::new);
-        event.register(MxtMenus.SPIRIT_CRAFTING_TABLE.get(), SpiritCraftingScreen::new);
-        event.register(MxtMenus.FORGING_TABLE.get(), ForgingScreen::new);
-        event.register(MxtMenus.ALCHEMY_FURNACE.get(), AlchemyFurnaceScreen::new);
-        event.register(MxtMenus.TALISMAN_WORKSTATION.get(), TalismanWorkstationScreen::new);
+        page(event, MxtMenus.CHEQUE_TABLE.get(), (menu, inventory, title) ->
+                new ChequeTableScreen((ChequeTableMenu) menu, inventory, title));
+        page(event, MxtMenus.EXCHANGE_STATION.get(), (menu, inventory, title) ->
+                new ExchangeStationScreen((ExchangeStationMenu) menu, inventory, title));
+        page(event, MxtMenus.SYSTEM_STATION_OWNER.get(), (menu, inventory, title) ->
+                new StationScreen((StationMenu) menu, inventory, title));
+        page(event, MxtMenus.SYSTEM_STATION_CUSTOMER.get(), (menu, inventory, title) ->
+                new StationScreen((StationMenu) menu, inventory, title));
+        page(event, MxtMenus.TRADE_STATION_OWNER.get(), (menu, inventory, title) ->
+                new StationScreen((StationMenu) menu, inventory, title));
+        page(event, MxtMenus.TRADE_STATION_CUSTOMER.get(), (menu, inventory, title) ->
+                new StationScreen((StationMenu) menu, inventory, title));
+        page(event, MxtMenus.PLAYER_TRADE.get(), (menu, inventory, title) ->
+                new PlayerTradeScreen((PlayerTradeMenu) menu, inventory, title));
+        page(event, MxtMenus.SPIRIT_CRAFTING_TABLE.get(), (menu, inventory, title) ->
+                new SpiritCraftingScreen((SpiritCraftingMenu) menu, inventory, title));
+        page(event, MxtMenus.FORGING_TABLE.get(), (menu, inventory, title) ->
+                new ForgingScreen((ForgingMenu) menu, inventory, title));
+        page(event, MxtMenus.ALCHEMY_FURNACE.get(), (menu, inventory, title) ->
+                new AlchemyFurnaceScreen((AlchemyFurnaceMenu) menu, inventory, title));
+        page(event, MxtMenus.TALISMAN_WORKSTATION.get(), (menu, inventory, title) ->
+                new TalismanWorkstationScreen((TalismanWorkstationMenu) menu, inventory, title));
         event.register(MxtMenus.ARTIFACT_STORAGE.get(), ContainerScreen::new);
+    }
+
+    /**
+     * Registers one page screen. The event's own bound wants a screen typed to the menu its type creates, while
+     * every page screen extends ApricityUI's container screen, which is typed to ApricityUI's menu base - so that
+     * bound cannot be written and the erasure is taken here instead. It is only a formality: the client hands this
+     * factory the menu its own menu type has just built, which is the page's menu.
+     */
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private static void page(RegisterMenuScreensEvent event, MenuType<?> type, ScreenConstructor constructor) {
+        event.register((MenuType) type, constructor);
     }
 
     @SubscribeEvent

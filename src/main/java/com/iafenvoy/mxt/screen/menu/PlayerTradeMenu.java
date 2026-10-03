@@ -2,6 +2,8 @@ package com.iafenvoy.mxt.screen.menu;
 
 import com.iafenvoy.mxt.registry.MxtMenus;
 import com.iafenvoy.mxt.screen.EconomySlots.Display;
+import com.iafenvoy.mxt.screen.aui.AuiPages;
+import com.sighs.apricityui.screen.ApricityContainerMenu;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.ComponentSerialization;
@@ -9,40 +11,49 @@ import net.minecraft.world.Container;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.DataSlot;
+import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import org.jspecify.annotations.NonNull;
 
+import java.util.Map;
+
 /**
  * One side of a server-owned, two-player item exchange.
  */
-public final class PlayerTradeMenu extends AbstractContainerMenu {
+public final class PlayerTradeMenu extends ApricityContainerMenu {
+    /**
+     * One side's offer grid, which is also the size both of the page's offer containers are declared with.
+     */
+    private static final int OFFER_SLOTS = 20;
     private final Component partnerName;
     private final DataSlot partnerAccepted = DataSlot.standalone();
 
     public PlayerTradeMenu(int containerId, Inventory inventory, RegistryFriendlyByteBuf buffer) {
-        this(containerId, inventory, new SimpleContainer(20), new SimpleContainer(20), ComponentSerialization.STREAM_CODEC.decode(buffer));
+        this(containerId, inventory, new SimpleContainer(OFFER_SLOTS), new SimpleContainer(OFFER_SLOTS),
+                ComponentSerialization.STREAM_CODEC.decode(buffer));
     }
 
     public PlayerTradeMenu(int containerId, Inventory inventory, Container ownOffer, Container partnerOffer, Component partnerName) {
-        super(MxtMenus.PLAYER_TRADE.get(), containerId);
-        checkContainerSize(ownOffer, 20);
-        checkContainerSize(partnerOffer, 20);
+        this(containerId, inventory, partnerName, new Setup(ownOffer, partnerOffer));
+    }
+
+    private PlayerTradeMenu(int containerId, Inventory inventory, Component partnerName, Setup setup) {
+        super(containerId, inventory, setup.page().layout(), setup.page().sources(), Map.of(), null);
+        checkContainerSize(setup.ownOffer(), OFFER_SLOTS);
+        checkContainerSize(setup.partnerOffer(), OFFER_SLOTS);
         this.partnerName = partnerName;
         this.addDataSlot(this.partnerAccepted);
-        for (int row = 0; row < 5; row++) {
-            for (int column = 0; column < 4; column++) {
-                int index = column + row * 4;
-                this.addSlot(new Slot(ownOffer, index, 8 + column * 18, 18 + row * 18));
-                this.addSlot(new Display(partnerOffer, index, 98 + column * 18, 18 + row * 18));
-            }
-        }
-        for (int row = 0; row < 3; row++)
-            for (int column = 0; column < 9; column++)
-                this.addSlot(new Slot(inventory, column + row * 9 + 9, 8 + column * 18, 140 + row * 18));
-        for (int column = 0; column < 9; column++) this.addSlot(new Slot(inventory, column, 8 + column * 18, 198));
+    }
+
+    /**
+     * The menu type ApricityUI's base menu would report is its own; the open packet carries whatever this answers,
+     * and the client picks its screen factory from that.
+     */
+    @Override
+    public MenuType<?> getType() {
+        return MxtMenus.PLAYER_TRADE.get();
     }
 
     public Component partnerName() {
@@ -64,10 +75,12 @@ public final class PlayerTradeMenu extends AbstractContainerMenu {
         Slot slot = this.slots.get(index);
         if (!slot.hasItem()) return ItemStack.EMPTY;
         ItemStack original = slot.getItem().copy();
-        if (index < 40) {
-            if ((index & 1) != 0 || !this.moveItemStackTo(slot.getItem(), 40, this.slots.size(), true))
-                return ItemStack.EMPTY;
-        } else if (!this.moveItemStackTo(slot.getItem(), 0, 40, false)) {
+        if (index < OFFER_SLOTS) {
+            if (!this.moveItemStackTo(slot.getItem(), OFFER_SLOTS * 2, this.slots.size(), true)) return ItemStack.EMPTY;
+        } else if (index < OFFER_SLOTS * 2) {
+            // The partner's grid is display-only, so a shift-click out of it never moves anything.
+            return ItemStack.EMPTY;
+        } else if (!this.moveItemStackTo(slot.getItem(), 0, OFFER_SLOTS, false)) {
             return ItemStack.EMPTY;
         }
         if (slot.getItem().isEmpty()) slot.setByPlayer(ItemStack.EMPTY);
@@ -78,5 +91,37 @@ public final class PlayerTradeMenu extends AbstractContainerMenu {
     @Override
     public boolean stillValid(@NonNull Player player) {
         return true;
+    }
+
+    /**
+     * The page's two offer containers and the layout they are opened with; the containers have to exist before the
+     * menu, so the public constructors build this and hand it to the private one.
+     */
+    private static final class Setup {
+        private final Container ownOffer;
+        private final Container partnerOffer;
+        private final PageSlots.Layout page;
+
+        private Setup(Container ownOffer, Container partnerOffer) {
+            this.ownOffer = ownOffer;
+            this.partnerOffer = partnerOffer;
+            this.page = PageSlots.of(AuiPages.economyPage("trade"))
+                    .container("offer", ownOffer, (container, index, x, y) -> new Slot(container, index, x, y))
+                    .container("partner", partnerOffer, (container, index, x, y) -> new Display(container, index, x, y))
+                    .player("inventory")
+                    .build();
+        }
+
+        private PageSlots.Layout page() {
+            return this.page;
+        }
+
+        private Container ownOffer() {
+            return this.ownOffer;
+        }
+
+        private Container partnerOffer() {
+            return this.partnerOffer;
+        }
     }
 }

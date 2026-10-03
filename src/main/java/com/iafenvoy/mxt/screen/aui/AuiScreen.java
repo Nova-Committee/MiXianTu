@@ -1,38 +1,31 @@
 package com.iafenvoy.mxt.screen.aui;
 
-import com.sighs.apricityui.init.Document;
+import com.sighs.apricityui.screen.ApricityScreen;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
-import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.network.chat.Component;
-import org.jetbrains.annotations.Nullable;
 import org.jspecify.annotations.NonNull;
 
 /**
- * The page host for an interface with no menu: {@link AuiWrappedScreen} over a plain {@link Screen}, which is every
- * page this mod draws outside a container (the information panel, the structure preview and the two wheel pages).
+ * The page host for an interface with no menu: {@link AuiWrappedScreen} over ApricityUI's {@link ApricityScreen},
+ * which is every page this mod draws outside a container (the information panel, the structure preview and the two
+ * wheel pages).
  * <p>
- * It holds the page state and the lifecycle - create on the first {@code init}, tick the style hold, drop the
- * document on {@code removed} - and draws the vanilla grey plate behind the page. A subclass only names its page,
- * resolves the contract and writes its own frame.
+ * ApricityUI owns the document (it builds one on every {@code init}, follows the viewport, drops it on close and
+ * submits it to the renderer) and the input around it (Ctrl +/-/0 zoom, the reload key). All this adds is the page
+ * contract and the vanilla grey plate behind the page. A subclass only names its page, resolves the contract and
+ * writes its own frame.
  */
-public abstract class AuiScreen extends Screen implements AuiWrappedScreen {
+public abstract class AuiScreen extends ApricityScreen implements AuiWrappedScreen {
     private final AuiWrappedScreen.State state = new AuiWrappedScreen.State();
     /**
-     * The page this screen is on; null before {@code init} and after {@code removed}. Held here and not in the
-     * state because {@code getLinkedDocument} is already the one answer to "which document is this screen on".
+     * The page path as given; ApricityUI keeps its own copy, and this one is what {@link #auiPreparePage} needs on
+     * every {@code init} - before the document exists.
      */
-    @Nullable
-    private Document document;
+    private final String pagePath;
 
-    protected AuiScreen(Component title) {
-        super(title);
+    protected AuiScreen(String pagePath) {
+        super(pagePath);
+        this.pagePath = pagePath;
     }
-
-    /**
-     * Document path of the page, e.g. {@code AuiPages.page(AuiPages.INFORMATION, "information")}; its name for the
-     * fallback line follows from it.
-     */
-    protected abstract String pagePath();
 
     @Override
     public AuiWrappedScreen.State auiState() {
@@ -40,30 +33,14 @@ public abstract class AuiScreen extends Screen implements AuiWrappedScreen {
     }
 
     @Override
-    @Nullable
-    public Document getLinkedDocument() {
-        return this.document;
-    }
-
-    @Override
-    public void auiSetDocument(@Nullable Document document) {
-        this.document = document;
-    }
-
-    @Override
     protected void init() {
+        this.auiPreparePage(this.pagePath);
         super.init();
-        this.auiInit(this.pagePath());
-    }
-
-    @Override
-    public void tick() {
-        super.tick();
-        this.auiTick();
+        this.auiPageOpened();
     }
 
     /**
-     * The vanilla grey plate, not the branch {@code super} would take: a plain {@link Screen} answers false to
+     * The vanilla grey plate, not the branch {@code super} would take: a plain {@code Screen} answers false to
      * {@code isInGameUi()}, so the vanilla one would blur the HUD and the world behind the page. The wheel menu
      * overrides this with nothing at all - it is read while the world is still running.
      */

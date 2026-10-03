@@ -4,7 +4,6 @@ import com.iafenvoy.mxt.network.payload.PlayerTradeActionC2SPayload;
 import com.iafenvoy.mxt.network.payload.PlayerTradeActionC2SPayload.PlayerTradeAction;
 import com.iafenvoy.mxt.screen.aui.AuiContainerScreen;
 import com.iafenvoy.mxt.screen.aui.AuiElements;
-import com.iafenvoy.mxt.screen.aui.AuiPages;
 import com.iafenvoy.mxt.screen.menu.PlayerTradeMenu;
 import com.sighs.apricityui.init.Element;
 import net.minecraft.network.chat.Component;
@@ -18,26 +17,12 @@ import org.jspecify.annotations.Nullable;
  * The old screen drew the 176x221 texture with two vanilla buttons; the page carries the same coordinates.
  */
 public final class PlayerTradeScreen extends AuiContainerScreen<PlayerTradeMenu> {
-    private static final int PANEL_WIDTH = 176, PANEL_HEIGHT = 221;
-    /**
-     * The menu interleaves the two offer grids rather than listing them one after the other: own cell
-     * {@code i} is menu slot {@code 2i} and the partner's display cell is {@code 2i + 1}. The page numbers its
-     * cells 0..19 per grid, so both mappings are these two constants - the page contract names nothing else.
-     */
-    private static final int OFFER_STRIDE = 2;
-    private static final int PARTNER_OFFSET = 1;
-
     @Nullable
     private Element accept, partnerState;
     private boolean accepted;
 
     public PlayerTradeScreen(PlayerTradeMenu menu, Inventory inventory, Component title) {
-        super(menu, inventory, title, PANEL_WIDTH, PANEL_HEIGHT);
-    }
-
-    @Override
-    protected String pagePath() {
-        return AuiPages.economyPage("trade");
+        super(menu, inventory, title);
     }
 
     @Override
@@ -46,9 +31,6 @@ public final class PlayerTradeScreen extends AuiContainerScreen<PlayerTradeMenu>
         this.accept = this.getOrThrow("accept");
         this.partnerState = this.getOrThrow("partner_state");
 
-        this.bindCells("offer", index -> index * OFFER_STRIDE);
-        this.bindCells("partner", index -> index * OFFER_STRIDE + PARTNER_OFFSET);
-        this.bindInventoryCells("inventory");
         this.click(this.accept, this::toggleAccept);
         this.text(this.getOrThrow("title"), this.getTitle());
         this.text(this.getOrThrow("partner_name"), this.menu.partnerName());

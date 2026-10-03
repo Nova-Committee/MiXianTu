@@ -4,7 +4,6 @@ import com.iafenvoy.mxt.screen.aui.AuiElements;
 import com.iafenvoy.mxt.screen.aui.AuiPages;
 import com.iafenvoy.mxt.screen.aui.AuiScreen;
 import com.mojang.blaze3d.platform.InputConstants;
-import com.sighs.apricityui.client.gui.ApricityGuiLayers;
 import com.sighs.apricityui.init.Element;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -42,7 +41,7 @@ public final class MultiblockStructureScreen extends AuiScreen {
     private int shownWidth = -1, shownHeight = -1;
 
     private MultiblockStructureScreen(MultiblockStructure structure) {
-        super(structure.title());
+        super(AuiPages.multiblockPage());
         this.structure = structure;
         this.view.open();
     }
@@ -51,26 +50,17 @@ public final class MultiblockStructureScreen extends AuiScreen {
         Minecraft.getInstance().setScreen(new MultiblockStructureScreen(structure));
     }
 
-    @Override
-    protected String pagePath() {
-        return AuiPages.multiblockPage();
-    }
-
     /**
-     * Runs before the vanilla pass, so the page is extracted under the scene's picture-in-picture state and both
-     * are under the hovered cell's tooltip.
+     * The page is submitted by {@code super} (ApricityScreen); the scene is extracted after it, which is the order
+     * the old host had - the page under the scene's picture-in-picture state, both under the hovered cell's
+     * tooltip.
      */
     @Override
     public void extractRenderState(@NonNull GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
-        // Nothing is drawn while the page's stylesheet is still in flight: without it there is no box for the
-        // scene, and the bars would sit at the document origin for two ticks.
-        if (!this.auiReadyToDraw()) return;
         if (this.auiPageWritable()) this.syncPage();
-        ApricityGuiLayers.submitUi(graphics);
-        this.view.extractScene(graphics, this.structure, mouseX, mouseY, this.width, this.height);
         super.extractRenderState(graphics, mouseX, mouseY, partialTick);
+        this.view.extractScene(graphics, this.structure, mouseX, mouseY, this.width, this.height);
         this.view.extractTooltip(graphics, this.font, mouseX, mouseY);
-        this.extractPageError(graphics, this.font, this.width, this.height);
     }
 
     private void syncPage() {
@@ -232,11 +222,6 @@ public final class MultiblockStructureScreen extends AuiScreen {
     @Override
     public boolean isPauseScreen() {
         return false;
-    }
-
-    @Override
-    public void onClose() {
-        Minecraft.getInstance().setScreen(null);
     }
 
     // ------------------------------------------------------------------ page writes

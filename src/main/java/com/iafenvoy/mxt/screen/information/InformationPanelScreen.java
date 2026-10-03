@@ -22,7 +22,6 @@ import com.iafenvoy.mxt.screen.information.InformationManager.Side;
 import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContexts;
-import com.sighs.apricityui.client.gui.ApricityGuiLayers;
 import com.sighs.apricityui.element.Item;
 import com.sighs.apricityui.init.Document;
 import com.sighs.apricityui.init.Element;
@@ -135,13 +134,8 @@ public final class InformationPanelScreen extends AuiScreen {
     }
 
     public InformationPanelScreen(Page page) {
-        super(Component.translatable("screen.mxt.information_panel"));
+        super(AuiPages.page(AuiPages.INFORMATION, "information"));
         this.page = page;
-    }
-
-    @Override
-    protected String pagePath() {
-        return AuiPages.page(AuiPages.INFORMATION, "information");
     }
 
     @Override
@@ -381,15 +375,13 @@ public final class InformationPanelScreen extends AuiScreen {
 
     @Override
     public void extractRenderState(@NonNull GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
-        // Nothing at all is drawn while the page's stylesheet is still in flight: without it there is no layout
-        // to lay the panel, the rows and the equipment cells out on.
-        if (!this.auiReadyToDraw()) return;
         boolean bound = this.auiPageWritable();
         if (bound && this.page == Page.INFO) this.showEquipment();
         if (bound) this.layout();
-        ApricityGuiLayers.submitUi(graphics);
-        if (bound && this.page == Page.INFO) this.extractPlayer(graphics, mouseX, mouseY);
+        // The page is submitted by super (ApricityScreen); the player preview is extracted after it so it lands
+        // over the page's transparent preview box.
         super.extractRenderState(graphics, mouseX, mouseY, partialTick);
+        if (bound && this.page == Page.INFO) this.extractPlayer(graphics, mouseX, mouseY);
         this.extractTooltip(graphics, mouseX, mouseY);
     }
 
@@ -458,13 +450,6 @@ public final class InformationPanelScreen extends AuiScreen {
         int y2 = y1 + PLAYER_PREVIEW_HEIGHT;
         InventoryScreen.extractEntityInInventoryFollowsMouse(graphics, x1, y1, x2, y2, PLAYER_RENDER_SCALE, 0,
                 mouseX, mouseY, this.minecraft.player);
-    }
-
-    @Override
-    public void extractBackground(@NonNull GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
-        // The plate first, then the fallback line over it: the page cannot cover either, since it is submitted later.
-        super.extractBackground(graphics, mouseX, mouseY, partialTick);
-        this.extractPageError(graphics, this.font, this.width, this.height);
     }
 
     @Override

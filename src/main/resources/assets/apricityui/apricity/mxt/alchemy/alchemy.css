@@ -5,7 +5,7 @@
  *
  * 坐标全部相对 #panel 的 padding box（ApricityUI 的 absolute 包含块就是它）。
  * 画布：监控 188x211、三个仓页 188x146 是旧皮（7px 九宫格边框）下的内容盒；槽位是 18x18 的
- * <slot>，物品 16x16 落在格心，所以 Java 写 Slot.x/y 时要 +1。
+ * <slot>，ApricityUI 把 <item> 画在槽位的 +1 处。
  *
  * 文字用主题的 `.t`（位图 9px、盒子顶就是字顶）；位图字形从行框顶画，11px 的内容盒因此靠
  * `display: flex; align-items: center`（.t 自带）把 9px 的行框居中。次要文字挂 `.dim` / `.label`。 */

@@ -37,7 +37,7 @@
  * 2. 文字：`font-family: initial` 是"用 Minecraft 自带位图字体绘制"的开关（写 `unset` 只会继承），
  *    `font-size: 9px` = 原版 1×。位图字形从行框顶画，所以文本盒 `top` 就是旧版 graphics.text 的 y。
  *    `white-space: nowrap` 让超长文字溢出而不是折行（原版也从不截断）。
- * 3. 槽位壳只管那一层格子底：18x18、border-box、1px 描边；物品 16x16 由原版画在 +1 处。
+ * 3. 槽位壳只管那一层格子底：18x18、border-box、1px 描边；物品 16x16 由 ApricityUI 画在槽位的 +1 处。
  *    `background-image: none` 是必需的——ApricityUI 的用户代理层给 `slot` 挂了一张
  *    `apricityui/img/gui/area.png`（原版凹面），只写 `background-color` 是盖不掉它的。
  * 4. 容器必须带 `primary="true"` 才会被 ApricityUI 展开，否则 `repeat` 不生效、`slot-index` 也不归一化。
@@ -134,7 +134,7 @@ body {
     font-weight: bold;
 }
 
-/* ── 槽位：一层很淡的格子底，物品由原版画在它上面 ── */
+/* ── 槽位：一层很淡的格子底，物品由 ApricityUI 画在它上面 ── */
 slot {
     position: relative;
     box-sizing: border-box;
@@ -389,7 +389,7 @@ textarea {
 /* 提示框**不在这一份里**：所有界面（含容器页与整页交给 ApricityUI 的那几个）都用原版渲染器画提示框，
  * 页面元素上的 `Tooltip.bind` / `.aui-tooltip` 一律不用——AUI 那套是网页尺度的白底深字盒（11px 雅黑、
  * 固定宽度），和这里的位图字体对不上，所以 Java 侧只登记"哪个元素、哪些行"，画由 `GuiGraphicsExtractor`
- * 负责（`AuiContainerScreen.extractTooltip`，以及人物信息 / 结构预览 / 轮盘各自那一份）。 */
+ * 负责（容器页走 `AuiContainerScreen.tooltip(...)` 与宿主自己那一遍，人物信息 / 结构预览 / 轮盘各自那一份）。 */
 
 /* ── 符纸：纸框描边（画符工作站的纸面，唯一不是深灰的一套底） ──
  * 纸底的**颜色不在这里**：它由配方给（`background_color`，默认浅黄），屏幕在绑定时写成内联样式——两处各写

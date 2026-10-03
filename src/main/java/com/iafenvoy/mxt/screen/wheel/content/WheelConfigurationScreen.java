@@ -10,7 +10,6 @@ import com.iafenvoy.mxt.runtime.wheel.WheelSlot;
 import com.iafenvoy.mxt.screen.aui.AuiElements;
 import com.iafenvoy.mxt.screen.aui.AuiPages;
 import com.iafenvoy.mxt.screen.aui.AuiScreen;
-import com.sighs.apricityui.client.gui.ApricityGuiLayers;
 import com.sighs.apricityui.element.Item;
 import com.sighs.apricityui.init.Element;
 import net.minecraft.client.KeyMapping;
@@ -79,7 +78,7 @@ public final class WheelConfigurationScreen extends AuiScreen {
     private Element poolAura, poolOption, sectorRow, trackAura, trackOption, thumbAura, thumbOption;
 
     private WheelConfigurationScreen(Player player) {
-        super(Component.translatable("screen.mxt.wheel_configuration"));
+        super(AuiPages.wheelConfigPage());
         this.auras = WheelContent.auras(player);
         this.options = WheelContent.options(player);
         this.draft = WheelContent.layoutFor(player);
@@ -93,11 +92,6 @@ public final class WheelConfigurationScreen extends AuiScreen {
     }
 
     // ------------------------------------------------------------------ page contract
-
-    @Override
-    protected String pagePath() {
-        return AuiPages.wheelConfigPage();
-    }
 
     @Override
     public void onPageBound() {
@@ -133,18 +127,13 @@ public final class WheelConfigurationScreen extends AuiScreen {
     }
 
     /**
-     * Runs before the vanilla pass so the page sits under the tooltips this class draws itself.
+     * The page is submitted by {@code super} (ApricityScreen), so the tooltips this class draws still land on top.
      */
     @Override
     public void extractRenderState(@NonNull GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
-        // Nothing at all is drawn while the page's stylesheet is still in flight: this screen's panel and pool
-        // geometry are written into the page, but without the stylesheet there is no box to lay them out in.
-        if (!this.auiReadyToDraw()) return;
         if (this.auiPageWritable()) this.refreshPage();
-        ApricityGuiLayers.submitUi(graphics);
         super.extractRenderState(graphics, mouseX, mouseY, partialTick);
         this.extractTooltip(graphics, mouseX, mouseY, Minecraft.getInstance().player);
-        this.extractPageError(graphics, this.font, this.width, this.height);
     }
 
     @Override

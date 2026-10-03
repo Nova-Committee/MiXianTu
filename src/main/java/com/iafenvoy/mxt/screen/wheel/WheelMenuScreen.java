@@ -7,7 +7,6 @@ import com.iafenvoy.mxt.render.IconRenderer;
 import com.iafenvoy.mxt.screen.aui.AuiElements;
 import com.iafenvoy.mxt.screen.aui.AuiPages;
 import com.iafenvoy.mxt.screen.aui.AuiScreen;
-import com.sighs.apricityui.client.gui.ApricityGuiLayers;
 import com.sighs.apricityui.element.Item;
 import com.sighs.apricityui.init.Element;
 import net.minecraft.client.Minecraft;
@@ -70,41 +69,17 @@ public final class WheelMenuScreen extends AuiScreen {
     private boolean turnFlip;
 
     public WheelMenuScreen() {
-        super(Component.translatable("screen.mxt.wheel"));
-    }
-
-    @Override
-    protected String pagePath() {
-        return AuiPages.wheelPage();
+        super(AuiPages.wheelPage());
     }
 
     /**
-     * The wheel's page is named as the bundled folder rather than as a screen, so its two faults read as the
-     * store they come from.
-     */
-    @Override
-    public Component pageMissing() {
-        return Component.translatable("screen.mxt.wheel.template_missing", AuiPages.WHEEL);
-    }
-
-    @Override
-    public Component pageInvalid(String missing) {
-        return Component.translatable("screen.mxt.wheel.template_invalid", missing);
-    }
-
-    /**
-     * Runs before the vanilla pass so the page sits under the pointed entry's tooltip.
+     * The page is submitted by {@code super} (ApricityScreen), so the pointed entry's tooltip still lands on top.
      */
     @Override
     public void extractRenderState(@NotNull GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
-        // Nothing at all is drawn while the page's stylesheet is still in flight: the ring's geometry is written
-        // into the page, but without the stylesheet there is no box to clip it to.
-        if (!this.auiReadyToDraw()) return;
         if (this.auiPageWritable()) this.writeFrame();
-        ApricityGuiLayers.submitUi(graphics);
         super.extractRenderState(graphics, mouseX, mouseY, partialTick);
         this.extractTooltip(graphics, mouseX, mouseY);
-        this.extractPageError(graphics, this.font, this.width, this.height);
     }
 
     private void writeFrame() {
@@ -320,11 +295,6 @@ public final class WheelMenuScreen extends AuiScreen {
     // that, and super's own branch would blur it. Every other host draws the plate through AuiStyles.extract.
     @Override
     public void extractBackground(@NotNull GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
-    }
-
-    @Override
-    public void onClose() {
-        Minecraft.getInstance().setScreen(null);
     }
 
     @Override

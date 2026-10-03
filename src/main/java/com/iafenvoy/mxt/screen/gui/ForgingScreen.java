@@ -13,7 +13,6 @@ import com.iafenvoy.mxt.runtime.forging.ForgingSurface;
 import com.iafenvoy.mxt.runtime.item.ItemQualityService;
 import com.iafenvoy.mxt.screen.aui.AuiContainerScreen;
 import com.iafenvoy.mxt.screen.aui.AuiElements;
-import com.iafenvoy.mxt.screen.aui.AuiPages;
 import com.iafenvoy.mxt.screen.menu.ForgingMenu;
 import com.iafenvoy.mxt.util.TooltipText;
 import com.sighs.apricityui.element.Item;
@@ -48,7 +47,6 @@ import java.util.List;
  * stay in step, which is why the page repeats them in comments next to each element.
  */
 public final class ForgingScreen extends AuiContainerScreen<ForgingMenu> {
-    private static final int PANEL_WIDTH = 322, PANEL_HEIGHT = 234;
     private static final int CELLS = ForgingMenu.CELLS, GRID_CELLS = CELLS * CELLS;
     private static final int STEPS = ForgingMenu.SUFFIX_STEPS;
     private static final int BLUEPRINT_X = ForgingMenu.BLUEPRINT_GRID_X;
@@ -93,12 +91,7 @@ public final class ForgingScreen extends AuiContainerScreen<ForgingMenu> {
     private boolean blueprintReady, methodReady, cancelReady;
 
     public ForgingScreen(ForgingMenu menu, Inventory inventory, Component title) {
-        super(menu, inventory, title, PANEL_WIDTH, PANEL_HEIGHT);
-    }
-
-    @Override
-    protected String pagePath() {
-        return AuiPages.page(AuiPages.FORGING, "forging");
+        super(menu, inventory, title);
     }
 
     @Override
@@ -116,12 +109,8 @@ public final class ForgingScreen extends AuiContainerScreen<ForgingMenu> {
         this.useBlueprint = this.getOrThrow("use_blueprint");
         this.useMethod = this.getOrThrow("use_method");
         this.cancel = this.getOrThrow("cancel");
-        // Menu slot order: 3 blueprints, 3 tools, 12 inputs, the output, then the player inventory.
-        this.bindCells("blueprints", ForgingSurface.BLUEPRINT_START);
-        this.bindCells("tools", ForgingSurface.TOOL_START);
-        this.bindCells("inputs", ForgingSurface.INPUT_START);
-        this.bindCells("output", ForgingSurface.OUTPUT_SLOT);
-        this.bindInventoryCells("inventory");
+        // The page's slot containers - blueprints, tools, inputs, output and the player inventory - are declared
+        // by ForgingMenu's layout, which is what ApricityUI binds these cells against.
         this.bindGrid("bp", GRID_CELLS, this.blueprintCells);
         this.bindGrid("mt", GRID_CELLS, this.methodCells);
         this.bindGrid("target", STEPS, this.targetCells);

@@ -3,7 +3,6 @@ package com.iafenvoy.mxt.screen.gui;
 import com.iafenvoy.mxt.runtime.economy.CurrencyValueService.ExchangeOffer;
 import com.iafenvoy.mxt.screen.aui.AuiContainerScreen;
 import com.iafenvoy.mxt.screen.aui.AuiElements;
-import com.iafenvoy.mxt.screen.aui.AuiPages;
 import com.iafenvoy.mxt.screen.menu.ExchangeStationMenu;
 import com.sighs.apricityui.element.Item;
 import com.sighs.apricityui.init.Element;
@@ -27,8 +26,6 @@ import java.util.List;
  * click only has to turn into the same menu button press the old screen sent.
  */
 public final class ExchangeStationScreen extends AuiContainerScreen<ExchangeStationMenu> {
-    private static final int PANEL_WIDTH = 176, PANEL_HEIGHT = 166;
-    private static final int INPUT_SLOT = 0, RESULT_SLOT = 1;
     /**
      * The visible window: four columns of three.
      */
@@ -46,13 +43,8 @@ public final class ExchangeStationScreen extends AuiContainerScreen<ExchangeStat
     private boolean displayOffers;
 
     public ExchangeStationScreen(ExchangeStationMenu menu, Inventory inventory, Component title) {
-        super(menu, inventory, title, PANEL_WIDTH, PANEL_HEIGHT);
+        super(menu, inventory, title);
         menu.registerUpdateListener(this::containerChanged);
-    }
-
-    @Override
-    protected String pagePath() {
-        return AuiPages.economyPage("exchange");
     }
 
     @Override
@@ -69,9 +61,6 @@ public final class ExchangeStationScreen extends AuiContainerScreen<ExchangeStat
             // The window start is read when the click happens, not when the cell was bound.
             this.click(roots.get(cell), () -> this.choose(this.startIndex + offset));
         }
-        this.bindCells("input", INPUT_SLOT);
-        this.bindCells("result", RESULT_SLOT);
-        this.bindInventoryCells("inventory");
         this.text(this.getOrThrow("title"), this.getTitle());
         this.text(this.getOrThrow("inventory_label"), Component.translatable("container.inventory"));
     }

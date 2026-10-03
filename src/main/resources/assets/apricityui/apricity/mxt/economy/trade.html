@@ -8,10 +8,10 @@
 <body>
 <!-- 玩家交易（176x221）：旧屏幕是一张同尺寸的贴图加两个原版 Button，坐标来自 PlayerTradeMenu。
      两片 4x5 的出价格各是一个容器：左边是**自己**的 20 格（可放可拿），右边是**对方**的 20 格
-     （EconomySlots.Display，只看不拿）。菜单把两片交错着加进槽位表——自己那格 i 是菜单槽位 2i、
-     对方那格 i 是 2i + 1——所以这里的 slot-index 是**格内下标 0..19**（4 列、行优先），
-     两处映射写在 PlayerTradeScreen 的 OFFER_STRIDE / PARTNER_OFFSET。
-     槽位壳放在**菜单坐标 − 1**（物品 16x16 画在 18x18 格子的 +1 处，Java 写 Slot.x/y 时再 +1）。
+     （EconomySlots.Display，只看不拿）。菜单把两片分成两段连续区间——offer 20 格在前、partner 20 格在后，
+     所以这里的 slot-index 是**格内下标 0..19**（4 列、行优先），
+     由 ApricityUI 的 SlotDataBinder 用 <container id> + slot-index 查出菜单槽位。
+     槽位壳放在**菜单坐标 − 1**（ApricityUI 把 <item> 画在槽位的 +1 处）。
      两颗 72x16 的按钮不是槽位，坐标照旧 (7,110) / (97,110)：左边那颗是"确认"，文字与状态由 Java 每刻写；
      右边那颗只显示**对方的**确认状态（旧版是一颗 disabled 的原版 Button），页面不给它绑点击。 -->
 <div class="panel" id="panel" style="width:176px;height:221px">

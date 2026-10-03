@@ -11,6 +11,8 @@ import com.iafenvoy.mxt.registry.MxtMenus;
 import com.iafenvoy.mxt.runtime.talisman.TalismanDrawingScorer.Stroke;
 import com.iafenvoy.mxt.runtime.talisman.TalismanDrawingSession;
 import com.iafenvoy.mxt.runtime.talisman.TalismanWorkstationService;
+import com.iafenvoy.mxt.screen.aui.AuiPages;
+import com.sighs.apricityui.screen.ApricityContainerMenu;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
@@ -18,8 +20,8 @@ import net.minecraft.world.Container;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ContainerLevelAccess;
+import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.network.PacketDistributor;
@@ -27,6 +29,7 @@ import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * The workstation's menu, and the only place a drawing session lives: two players at the same station keep two
@@ -38,7 +41,7 @@ import java.util.List;
  * <p>The client builds this menu with its own placeholder slot, the way the vanilla furnace does: slot contents
  * arrive through the vanilla slot packets.
  */
-public final class TalismanWorkstationMenu extends AbstractContainerMenu {
+public final class TalismanWorkstationMenu extends ApricityContainerMenu {
     public static final int PAPER_SLOT = 0;
     private static final int PLAYER_INVENTORY_START = 1;
     private static final int PLAYER_HOTBAR_END = PLAYER_INVENTORY_START + 36;
@@ -51,7 +54,7 @@ public final class TalismanWorkstationMenu extends AbstractContainerMenu {
      * The transient paper slot. It exists only for as long as the screen does, which is exactly the crafting table's
      * contract: {@link #removed(Player)} returns it, so nothing a player puts here can be stranded in the world.
      */
-    private final Container paper = new SimpleContainer(1);
+    private final Container paper;
     private final ContainerLevelAccess access;
     private final boolean hasStation;
     private @Nullable TalismanDrawingSession session;
@@ -73,7 +76,7 @@ public final class TalismanWorkstationMenu extends AbstractContainerMenu {
      * The server half: the block hands its own position in, which is what {@link #stillValid} checks.
      */
     public TalismanWorkstationMenu(int containerId, Inventory inventory, ContainerLevelAccess access) {
-        this(containerId, inventory, access, true);
+        this(containerId, inventory, access, true, new Setup());
         this.opener = inventory.player instanceof ServerPlayer player ? player : null;
     }
 
@@ -81,21 +84,23 @@ public final class TalismanWorkstationMenu extends AbstractContainerMenu {
      * The client half: the same shape, with no world to check and a slot the packets fill.
      */
     public TalismanWorkstationMenu(int containerId, Inventory inventory) {
-        this(containerId, inventory, ContainerLevelAccess.NULL, false);
+        this(containerId, inventory, ContainerLevelAccess.NULL, false, new Setup());
     }
 
-    private TalismanWorkstationMenu(int containerId, Inventory inventory, ContainerLevelAccess access, boolean hasStation) {
-        super(MxtMenus.TALISMAN_WORKSTATION.get(), containerId);
+    private TalismanWorkstationMenu(int containerId, Inventory inventory, ContainerLevelAccess access, boolean hasStation, Setup setup) {
+        super(containerId, inventory, setup.page().layout(), setup.page().sources(), Map.of(), null);
+        this.paper = setup.paper();
         this.access = access;
         this.hasStation = hasStation;
-        // The geometry here is a placeholder: the page's cell rewrites the slot's x/y each frame.
-        this.addSlot(new FilteredSlot(this.paper, 0, 24, 108, stack -> stack.is(TalismanDrawingRecipe.paper())));
-        for (int row = 0; row < 3; row++)
-            for (int column = 0; column < 9; column++)
-                this.addSlot(new Slot(inventory, column + row * 9 + 9,
-                        8 + column * 18, 220 + row * 18));
-        for (int column = 0; column < 9; column++)
-            this.addSlot(new Slot(inventory, column, 8 + column * 18, 278));
+    }
+
+    /**
+     * The menu type ApricityUI's base menu would report is its own; the open packet carries whatever this answers,
+     * and the client picks its screen factory from that.
+     */
+    @Override
+    public MenuType<?> getType() {
+        return MxtMenus.TALISMAN_WORKSTATION.get();
     }
 
     public Container paper() {
@@ -302,5 +307,32 @@ public final class TalismanWorkstationMenu extends AbstractContainerMenu {
     public boolean stillValid(@NonNull Player player) {
         if (!this.hasStation) return true;
         return stillValid(this.access, player, MxtBlocks.TALISMAN_WORKSTATION.get());
+    }
+
+    /**
+     * The station container and the layout it is opened with; the container has to exist before the menu, so the
+     * public constructors build this and hand it to the private one.
+     */
+    private static final class Setup {
+        private final SimpleContainer paper = new SimpleContainer(1);
+        private final PageSlots.Layout page;
+
+        private Setup() {
+            // The page's station container declares one cell, and the menu keeps one station-side slot behind it;
+            // the page's inventory container is the player's own 36.
+            this.page = PageSlots.of(AuiPages.talismanPage())
+                    .container("station", this.paper, (container, index, x, y) ->
+                            new FilteredSlot(container, index, x, y, stack -> stack.is(TalismanDrawingRecipe.paper())))
+                    .player("inventory")
+                    .build();
+        }
+
+        private PageSlots.Layout page() {
+            return this.page;
+        }
+
+        private SimpleContainer paper() {
+            return this.paper;
+        }
     }
 }

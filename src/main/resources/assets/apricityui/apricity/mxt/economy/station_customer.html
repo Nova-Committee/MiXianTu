@@ -8,7 +8,7 @@
 <body>
 <!-- 交易站（顾客视图，176x167）：StationMenu.SYSTEM_CUSTOMER / TRADE_CUSTOMER 两个菜单共用。
      槽位 slot-index 是"格内下标"：模板格 0..11（4x3 行优先），背包 0..35 是原版背包下标。
-     菜单里模板格是两个一组交错的（costs[i] = 2i、rewards[i] = 2i+1），映射写在 StationScreen 里。 -->
+     菜单把两片分成两段连续区间（costs 12 格在前、rewards 12 格在后），由 ApricityUI 的 SlotDataBinder 对上。 -->
 <div class="panel" id="panel" style="width:176px;height:167px">
     <div class="t title" id="title" style="left:8px;top:6px"></div>
     <container class="grid" id="costs" primary="true" style="left:7px;top:17px;grid-template-rows:18px 18px 18px;grid-template-columns:4">

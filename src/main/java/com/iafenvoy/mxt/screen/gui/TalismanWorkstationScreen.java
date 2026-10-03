@@ -7,7 +7,6 @@ import com.iafenvoy.mxt.runtime.talisman.TalismanDrawingScorer;
 import com.iafenvoy.mxt.runtime.talisman.TalismanDrawingScorer.Point;
 import com.iafenvoy.mxt.screen.aui.AuiContainerScreen;
 import com.iafenvoy.mxt.screen.aui.AuiElements;
-import com.iafenvoy.mxt.screen.aui.AuiPages;
 import com.iafenvoy.mxt.screen.aui.AuiStyles;
 import com.iafenvoy.mxt.screen.menu.TalismanWorkstationMenu;
 import com.sighs.apricityui.element.Canvas;
@@ -43,7 +42,6 @@ import java.util.function.Consumer;
  * is over the paper and the cursor holds the brush, and every other press goes to {@code super}.
  */
 public final class TalismanWorkstationScreen extends AuiContainerScreen<TalismanWorkstationMenu> {
-    private static final int PANEL_WIDTH = 178, PANEL_HEIGHT = 306;
     private static final int ROWS = 8;
     private static final int CANVAS_WIDTH = (int) TalismanDrawingScorer.CANVAS_WIDTH, CANVAS_HEIGHT = (int) TalismanDrawingScorer.CANVAS_HEIGHT;
     /**
@@ -92,12 +90,7 @@ public final class TalismanWorkstationScreen extends AuiContainerScreen<Talisman
     private int inkColor = TalismanDrawingRecipe.DEFAULT_FOREGROUND_COLOR;
 
     public TalismanWorkstationScreen(TalismanWorkstationMenu menu, Inventory inventory, Component title) {
-        super(menu, inventory, title, PANEL_WIDTH, PANEL_HEIGHT);
-    }
-
-    @Override
-    protected String pagePath() {
-        return AuiPages.talismanPage();
+        super(menu, inventory, title);
     }
 
     @Override
@@ -110,9 +103,6 @@ public final class TalismanWorkstationScreen extends AuiContainerScreen<Talisman
         this.previewLine = this.getOrThrow("preview");
         this.submitButton = this.getOrThrow("submit");
         this.cancelButton = this.getOrThrow("cancel");
-
-        this.bindCells("station", TalismanWorkstationMenu.PAPER_SLOT);
-        this.bindInventoryCells("inventory");
 
         this.rows.clear();
         for (int index = 0; index < ROWS; index++) {

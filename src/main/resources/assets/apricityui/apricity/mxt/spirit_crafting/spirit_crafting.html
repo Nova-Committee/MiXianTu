@@ -7,7 +7,7 @@
 </head>
 <body>
 <!-- 灵气工作台：原版工作台 176x166 + 右侧占满空列的灵气面板，坐标与旧屏幕逐像素对齐。
-     槽位 slot-index 是"组内下标"：#crafting / #result 按菜单声明顺序，#inventory 是原版背包下标 0..35。
+     槽位 slot-index 是"组内下标"：#crafting / #result 各在自己的容器里从 0 起，#inventory 是原版背包下标 0..35。
      容器必须带 primary="true"：ApricityUI 只展开可绑定容器，否则 repeat 不生效。
 
      灵气进度**只声明一行**（#aura_row）：配方要几种灵气，Java 就复制几行（见 SpiritCraftingScreen）。

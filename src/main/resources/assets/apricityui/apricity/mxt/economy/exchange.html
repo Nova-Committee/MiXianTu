@@ -7,9 +7,9 @@
 </head>
 <body>
 <!-- 兑换站：原版切石机那套 176x166 的布局，坐标与旧屏幕逐像素对齐（见 exchange.css 的文件头）。
-     槽位壳放在**菜单坐标 − 1**：18x18 的格子里，物品 16x16 画在 +1 处，Java 写 Slot.x/y 时再 +1。
+     槽位壳放在**菜单坐标 − 1**：ApricityUI 把 <item> 画在槽位的 +1 处。
      12 个条目格**不是菜单槽位**：它们只是画布，条目由 Java 按可见窗口推栈（<item>），点击也由
-     页面处理器转成一次菜单按钮点击——所以格子不需要 slot-index，也不进 bindCells。 -->
+     页面处理器转成一次菜单按钮点击——所以格子不需要 slot-index，SlotDataBinder 也不管它们。 -->
 <div class="panel" id="panel" style="width:176px;height:166px">
     <div class="t title" id="title" style="left:8px;top:6px"></div>
 

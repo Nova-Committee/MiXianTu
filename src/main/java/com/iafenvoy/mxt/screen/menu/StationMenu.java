@@ -4,13 +4,14 @@ import com.iafenvoy.mxt.registry.MxtBlocks;
 import com.iafenvoy.mxt.registry.MxtMenus;
 import com.iafenvoy.mxt.screen.EconomySlots.Display;
 import com.iafenvoy.mxt.screen.EconomySlots.Ghost;
+import com.iafenvoy.mxt.screen.aui.AuiPages;
 import com.iafenvoy.mxt.util.InventoryUtil;
+import com.sighs.apricityui.screen.ApricityContainerMenu;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.Container;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.inventory.Slot;
@@ -18,11 +19,13 @@ import net.minecraft.world.item.ItemStack;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
+import java.util.Map;
+
 /**
  * Server-authoritative menus for both configurable station blocks. The four menu
  * types preserve the server-selected permissions while sharing one implementation.
  */
-public final class StationMenu extends AbstractContainerMenu {
+public final class StationMenu extends ApricityContainerMenu {
     public enum Mode {
         SYSTEM_OWNER, SYSTEM_CUSTOMER, TRADE_OWNER, TRADE_CUSTOMER;
 
@@ -34,6 +37,14 @@ public final class StationMenu extends AbstractContainerMenu {
             return this == SYSTEM_OWNER || this == TRADE_OWNER;
         }
     }
+
+    /**
+     * The ranges of the grouped layout, in the order the page declares its containers: the two 12-cell templates,
+     * the owner-only display cell, the owner's 21 stock cells, then the player inventory. Shift-click only ever
+     * moves between the stock and the player inventory; the templates and the display cell stay where they are.
+     */
+    private static final int TEMPLATE_CELLS = 12, TEMPLATES_END = TEMPLATE_CELLS * 2;
+    private static final int STOCK_START = TEMPLATES_END + 1, STOCK_SLOTS = 21, PLAYER_START = STOCK_START + STOCK_SLOTS;
 
     private final Mode mode;
     private final Container costs;
@@ -51,24 +62,30 @@ public final class StationMenu extends AbstractContainerMenu {
 
     public StationMenu(Mode mode, int containerId, Inventory inventory, Container costs, Container rewards,
                        @Nullable Container stock, Container display, ContainerLevelAccess access) {
-        super(typeFor(mode), containerId);
+        this(mode, containerId, inventory, costs, rewards, stock, display, access, new Setup(mode, costs, rewards, stock, display));
+    }
+
+    private StationMenu(Mode mode, int containerId, Inventory inventory, Container costs, Container rewards,
+                        @Nullable Container stock, Container display, ContainerLevelAccess access, Setup setup) {
+        super(containerId, inventory, setup.page().layout(), setup.page().sources(), Map.of(), null);
         checkContainerSize(costs, 12);
         checkContainerSize(rewards, 12);
         checkContainerSize(display, 1);
-        if (mode == Mode.TRADE_OWNER && stock == null)
-            throw new IllegalArgumentException("Trade station owner menu requires stock");
         if (stock != null) checkContainerSize(stock, 21);
         this.mode = mode;
         this.costs = costs;
         this.rewards = rewards;
         this.stock = stock;
         this.access = access;
-        this.addTemplates();
-        if (mode == Mode.TRADE_OWNER) {
-            this.addSlot(new Ghost(this, display, 0, 152, 72));
-            this.addStock();
-        }
-        this.addPlayerInventory(inventory, mode == Mode.TRADE_OWNER ? 140 : 84);
+    }
+
+    /**
+     * The menu type ApricityUI's base menu would report is its own; the open packet carries whatever this answers,
+     * and the client picks its screen factory from that.
+     */
+    @Override
+    public MenuType<?> getType() {
+        return typeFor(this.mode);
     }
 
     public Mode mode() {
@@ -118,13 +135,13 @@ public final class StationMenu extends AbstractContainerMenu {
 
     @Override
     public @NonNull ItemStack quickMoveStack(@NonNull Player player, int index) {
-        if (this.mode != Mode.TRADE_OWNER || index < 25 || index >= this.slots.size()) return ItemStack.EMPTY;
+        if (this.mode != Mode.TRADE_OWNER || index < STOCK_START || index >= this.slots.size()) return ItemStack.EMPTY;
         Slot slot = this.slots.get(index);
         if (!slot.hasItem()) return ItemStack.EMPTY;
         ItemStack original = slot.getItem().copy();
-        if (index < 46) {
-            if (!this.moveItemStackTo(slot.getItem(), 46, this.slots.size(), true)) return ItemStack.EMPTY;
-        } else if (!this.moveItemStackTo(slot.getItem(), 25, 46, false)) {
+        if (index < PLAYER_START) {
+            if (!this.moveItemStackTo(slot.getItem(), PLAYER_START, this.slots.size(), true)) return ItemStack.EMPTY;
+        } else if (!this.moveItemStackTo(slot.getItem(), STOCK_START, PLAYER_START, false)) {
             return ItemStack.EMPTY;
         }
         if (slot.getItem().isEmpty()) slot.setByPlayer(ItemStack.EMPTY);
@@ -137,34 +154,16 @@ public final class StationMenu extends AbstractContainerMenu {
         return stillValid(this.access, player, this.mode.isSystem() ? MxtBlocks.SYSTEM_STATION.get() : MxtBlocks.TRADE_STATION.get());
     }
 
-    private void addTemplates() {
-        int templateY = this.mode == Mode.TRADE_OWNER ? 16 : 18;
-        for (int row = 0; row < 3; row++) {
-            for (int column = 0; column < 4; column++) {
-                int index = column + row * 4;
-                if (this.mode.isOwner()) {
-                    this.addSlot(new Ghost(this, this.costs, index, 8 + column * 18, templateY + row * 18));
-                    this.addSlot(new Ghost(this, this.rewards, index, 98 + column * 18, templateY + row * 18));
-                } else {
-                    this.addSlot(new Display(this.costs, index, 8 + column * 18, 18 + row * 18));
-                    this.addSlot(new Display(this.rewards, index, 98 + column * 18, 18 + row * 18));
-                }
-            }
-        }
-    }
-
-    private void addStock() {
-        if (this.stock != null)
-            for (int row = 0; row < 3; row++)
-                for (int column = 0; column < 7; column++)
-                    this.addSlot(new Slot(this.stock, column + row * 7, 8 + column * 18, 72 + row * 18));
-    }
-
-    private void addPlayerInventory(Inventory inventory, int y) {
-        for (int row = 0; row < 3; row++)
-            for (int column = 0; column < 9; column++)
-                this.addSlot(new Slot(inventory, column + row * 9 + 9, 8 + column * 18, y + row * 18));
-        for (int column = 0; column < 9; column++) this.addSlot(new Slot(inventory, column, 8 + column * 18, y + 58));
+    /**
+     * Swaps the template stand-ins for the cells they stand for. ApricityUI's base menu builds every slot from its
+     * own constructor, which runs before this menu's fields are set, and a {@link Ghost} has to be given the menu
+     * that owns it - this override is still inside that constructor and has the reference.
+     */
+    @Override
+    protected Slot addSlot(@NonNull Slot slot) {
+        if (slot instanceof PendingTemplate)
+            slot = new Ghost(this, slot.container, slot.getSlotIndex(), slot.x, slot.y);
+        return super.addSlot(slot);
     }
 
     private static MenuType<StationMenu> typeFor(Mode mode) {
@@ -174,5 +173,47 @@ public final class StationMenu extends AbstractContainerMenu {
             case TRADE_OWNER -> MxtMenus.TRADE_STATION_OWNER.get();
             case TRADE_CUSTOMER -> MxtMenus.TRADE_STATION_CUSTOMER.get();
         };
+    }
+
+    /**
+     * A template cell that does not know its menu yet; see {@link #addSlot}.
+     */
+    private static final class PendingTemplate extends Slot {
+        private PendingTemplate(Container container, int index, int x, int y) {
+            super(container, index, x, y);
+        }
+    }
+
+    /**
+     * The containers the pages bind, the layout they are declared in and the sources its slots are built from.
+     * The containers have to exist before the menu does, so the public constructors build this and hand it to
+     * the private one; the layout also names the page the client half opens.
+     */
+    private static final class Setup {
+        private final PageSlots.Layout page;
+
+        private Setup(Mode mode, Container costs, Container rewards, @Nullable Container stock, Container display) {
+            // The owner page has a stock container; without it the page would open a layout it cannot bind.
+            if (mode == Mode.TRADE_OWNER && stock == null)
+                throw new IllegalArgumentException("Trade station owner menu requires stock");
+            PageSlots slots = PageSlots.of(AuiPages.economyPage(mode == Mode.TRADE_OWNER ? "station_owner" : "station_customer"))
+                    .container("costs", costs, templates(mode))
+                    .container("rewards", rewards, templates(mode));
+            if (mode == Mode.TRADE_OWNER)
+                slots.container("display", display, PendingTemplate::new).container("stock", stock, Slot::new);
+            this.page = slots.player("inventory").build();
+        }
+
+        /**
+         * The two template groups: editable ghost cells for every owner menu, read-only previews for customers.
+         */
+        private static PageSlots.SlotFactory templates(Mode mode) {
+            if (mode.isOwner()) return PendingTemplate::new;
+            return Display::new;
+        }
+
+        private PageSlots.Layout page() {
+            return this.page;
+        }
     }
 }

@@ -15,8 +15,8 @@ import java.util.NoSuchElementException;
  * in ApricityUI paints a dark artefact.
  * <p>
  * A host resolves one through {@link AuiWrappedScreen#scrollList}, which is also where a page that does not carry
- * the rows becomes the fallback line; the hit test asks that same host for the page instead of caching a document
- * that a hot reload replaces.
+ * the rows fails the bind; the hit test asks that same host for the page instead of caching a document that a hot
+ * reload replaces.
  */
 public final class AuiScrollList<E> {
     /**
@@ -283,7 +283,7 @@ public final class AuiScrollList<E> {
     public interface Binding<E> {
         /**
          * Collects the cells of one list. A page that does not carry a row is reported through the screen's own
-         * helpers, so the fault names the piece that is missing and the bind turns it into the fallback line.
+         * helpers, so the fault names the piece that is missing and the bind fails with it.
          */
         List<Cell> bind(AuiWrappedScreen screen, String prefix, int count) throws NoSuchElementException;
 

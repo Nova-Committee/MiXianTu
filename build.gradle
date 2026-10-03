@@ -54,9 +54,6 @@ def testServerPort = project.findProperty('mxtTestServerPort') ?: '25566'
 neoForge {
     version = project.neo_version
 
-    // Slot.x/y are final in vanilla; the alchemy pages drive the slot layout, so keep them writable.
-    accessTransformers = ['src/main/resources/META-INF/accesstransformer.cfg']
-
     runs {
         client {
             client()

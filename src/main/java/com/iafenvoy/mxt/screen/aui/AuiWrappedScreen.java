@@ -1,28 +1,29 @@
 package com.iafenvoy.mxt.screen.aui;
 
+import com.iafenvoy.mxt.MiXianTu;
 import com.sighs.apricityui.init.Document;
 import com.sighs.apricityui.init.Element;
 import com.sighs.apricityui.screen.AuiLinkedScreen;
-import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.TextColor;
-import net.minecraft.util.FormattedCharSequence;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.List;
 import java.util.Locale;
 import java.util.NoSuchElementException;
 
 /**
- * What every page host in this mod shares: the bind of the page contract it names, the fallback line for a page
- * that does not match, and the element helpers that bind is written with.
+ * What every page host in this mod adds on top of ApricityUI's own hosts: the bind of the page contract it names,
+ * and the element helpers that bind is written with.
  * <p>
- * The behaviour is here and the data is in {@link State}, because the two hosts it is written for - the container
- * host and the plain one - already extend different vanilla classes and so cannot share a base class. The document
- * is the exception: {@link AuiLinkedScreen} already owns that value, so each host keeps one field behind
- * {@link #auiSetDocument} and every helper below reads it back through {@link AuiLinkedScreen#getLinkedDocument()}.
- * A host only names its page, resolves the contract in {@code bindPage} and writes whatever changes each frame.
+ * The document is ApricityUI's: {@code ApricityScreen} and {@code ApricityContainerScreen} create it, resize its
+ * viewport, drop it on close and submit it to the renderer, and {@link AuiLinkedScreen#getLinkedDocument()} is the
+ * one answer to "which document is this screen on". A host therefore only prepares the page's stylesheets before the
+ * document exists ({@link #auiPreparePage}), binds the contract once it does ({@link #auiPageOpened}), and writes
+ * whatever changes each frame.
+ * <p>
+ * A page that is missing or does not match its contract costs the page, not the screen - and it tells the player
+ * nothing: the bind simply does not happen, so the input gates stay closed, and one warning in the log names the
+ * piece. Only an author ever sees this, which is why it is not drawn.
  */
 public interface AuiWrappedScreen extends AuiLinkedScreen {
     /**
@@ -31,61 +32,42 @@ public interface AuiWrappedScreen extends AuiLinkedScreen {
     State auiState();
 
     /**
-     * Takes the document the host holds. The interface cannot hold it itself, and a second copy here would be a
-     * second answer to "which document is this screen on".
-     */
-    void auiSetDocument(@Nullable Document document);
-
-    /**
-     * Resolves every id the page contract names, binds the slot cells and binds the page's listeners. A piece the
-     * page does not provide throws {@link NoSuchElementException} naming it - {@link #getOrThrow} is that throw -
-     * and {@link #auiRebind} turns it into the fallback line instead of a crash.
+     * Resolves every id the page contract names and binds the page's listeners (the slots are ApricityUI's, see
+     * {@link #auiPageOpened()}). A piece the page does not provide throws {@link NoSuchElementException} naming it
+     * - {@link #getOrThrow} is that throw - and {@link #auiRebind} logs it and binds nothing.
      */
     void bindPage() throws NoSuchElementException;
 
     /**
-     * The page's name, as the fallback line prints it; it follows from the path the host opened.
+     * Prepares the stylesheets of the page about to be opened; the host calls it from its {@code init}
+     * <em>before</em> the document is created, because ApricityUI attaches them while it creates it. Preparing them
+     * up front is what keeps a page's first open down to building one document.
      */
-    default String pageName() {
-        return this.auiState().pageName;
+    default void auiPreparePage(String pagePath) {
+        AuiPages.warmUpStyles(pagePath);
     }
 
     /**
-     * Seeds the bundled pages, builds the document and binds the contract; the host passes the path of the page it
-     * wants, once, from its {@code init}.
+     * Binds the page the host just created; call it right after {@code super.init()} (which is where ApricityUI
+     * builds the document). A window resize re-enters {@code init} and ApricityUI rebuilds the document there, so
+     * this also runs per resize - ApricityUI appends listeners without ever deduping them, and only a fresh
+     * document can be rebound safely.
      * <p>
-     * A window resize re-enters {@code init} with the same DOM, and ApricityUI appends listeners without ever
-     * deduping them: a resize therefore only applies the viewport. A document that really was rebuilt is caught by
-     * the generation check in {@link #auiPageWritable()}, which is the one thing that has to happen per frame.
+     * A page ApricityUI could not create is not reported again here: its own {@code [AUI Document]} error already
+     * says why.
      */
-    default void auiInit(String pagePath) {
-        State state = this.auiState();
-        state.pageName = AuiPages.pageName(pagePath);
-        Document current = this.getLinkedDocument();
-        if (current != null) {
-            current.applyViewport(true);
-            return;
-        }
-        AuiPages.seedAll();
-        boolean stylesPrepared = AuiPages.warmUpStyles(pagePath);
-        Document created = Document.create(pagePath);
-        if (created == null) {
-            state.pageError = this.pageMissing();
-            return;
-        }
-        this.auiSetDocument(created);
-        state.styleHold.restart(stylesPrepared);
+    default void auiPageOpened() {
+        if (this.getLinkedDocument() == null) return;
         this.auiRebind();
     }
 
     /**
      * Resolves the page contract again; a refresh (hot reload) replaces every element, which is when the page's
-     * listeners have to be bound again. A page that does not match the contract costs the page, not the screen.
+     * listeners have to be bound again.
      */
     default void auiRebind() {
         this.auiClearBindings();
         State state = this.auiState();
-        state.pageError = null;
         Document current = this.getLinkedDocument();
         if (current == null) return;
         try {
@@ -123,32 +105,12 @@ public interface AuiWrappedScreen extends AuiLinkedScreen {
     }
 
     /**
-     * Ticks the hold that keeps a page off screen while its stylesheet is still in flight; call it from the host's
-     * own tick hook.
-     */
-    default void auiTick() {
-        this.auiState().styleHold.tick();
-    }
-
-    /**
-     * Drops the document; call it from the host's {@code removed}. The page outlives the screen unless it is
-     * unregistered here: the renderer draws every document, so a leaked one keeps drawing the panel over the game.
+     * Drops what the host cached about the page; call it from the host's {@code removed}. The document itself is
+     * ApricityUI's and is already dropped there - the renderer draws every live document, so a host that rebuilt
+     * one of its own would leak it onto the game.
      */
     default void auiClose() {
         this.auiClearBindings();
-        Document current = this.getLinkedDocument();
-        if (current == null) return;
-        current.remove();
-        this.auiSetDocument(null);
-    }
-
-    /**
-     * Whether this frame may draw at all: false while the page's stylesheet is still in flight, because a page
-     * drawn before it lands has no layout. A page error answers true, so its fallback line is drawn.
-     */
-    default boolean auiReadyToDraw() {
-        State state = this.auiState();
-        return state.pageError != null || !state.styleHold.held();
     }
 
     /**
@@ -174,39 +136,6 @@ public interface AuiWrappedScreen extends AuiLinkedScreen {
         return this.auiState().pageBound;
     }
 
-    /**
-     * The line for a page whose blueprint was not found; the wheel's page spells this its own way.
-     */
-    default Component pageMissing() {
-        return Component.translatable("screen.mxt.page.missing", this.auiState().pageName);
-    }
-
-    /**
-     * The line for a page that was built but does not match the contract; the message is the missing piece.
-     */
-    default Component pageInvalid(String missing) {
-        return Component.translatable("screen.mxt.page.invalid", this.auiState().pageName, missing);
-    }
-
-    /**
-     * Draws the fallback line in the middle of the screen. Each host calls it where its own page cannot cover it -
-     * on the background plate, or after the page has been submitted.
-     */
-    default void extractPageError(GuiGraphicsExtractor graphics, Font font, int width, int height) {
-        State state = this.auiState();
-        Component error = state.pageError;
-        if (error == null) return;
-        if (state.errorWidth != width) {
-            state.errorLines = font.split(error, Math.max(40, width - 40));
-            state.errorWidth = width;
-        }
-        int y = height / 2 - state.errorLines.size() * 5;
-        for (FormattedCharSequence line : state.errorLines) {
-            graphics.text(font, line, (width - font.width(line)) / 2, y, 0xFFFF5555, false);
-            y += 10;
-        }
-    }
-
     // ------------------------------------------------------------------ element helpers
 
     /**
@@ -220,8 +149,8 @@ public interface AuiWrappedScreen extends AuiLinkedScreen {
     }
 
     /**
-     * The element with that id, or a fault naming it. The thrown message is the missing piece as the fallback line
-     * prints it, not a sentence.
+     * The element with that id, or a fault naming it. The thrown message is the missing piece as the log prints it,
+     * not a sentence.
      */
     default Element getOrThrow(String id) {
         Element element = this.auiDocument().getElementById(id);
@@ -245,8 +174,7 @@ public interface AuiWrappedScreen extends AuiLinkedScreen {
     default <E extends Element> E getOrThrow(String id, Class<E> type) {
         Element element = this.auiDocument().getElementById(id);
         if (!type.isInstance(element)) {
-            throw this.missing(element == null
-                    ? id : id + " (" + type.getSimpleName().toLowerCase(Locale.ROOT) + ")");
+            throw this.missing(element == null ? id : id + " (" + type.getSimpleName().toLowerCase(Locale.ROOT) + ")");
         }
         return type.cast(element);
     }
@@ -286,8 +214,9 @@ public interface AuiWrappedScreen extends AuiLinkedScreen {
     }
 
     /**
-     * Turns a contract violation into the fallback line. The bindings are dropped a second time because a bind
-     * that threw has already written part of what it resolved; the generation is kept so it is reported once.
+     * Drops a bind that threw after having written part of what it resolved, and warns once: the generation is kept
+     * so every later frame sees a bind that already ran, instead of retrying and logging per frame. The player is
+     * told nothing - a page that does not match its contract is an authoring mistake.
      */
     private void invalidate(String missing) {
         State state = this.auiState();
@@ -295,7 +224,7 @@ public interface AuiWrappedScreen extends AuiLinkedScreen {
         long generation = current == null ? Long.MIN_VALUE : current.getRefreshGeneration();
         this.auiClearBindings();
         state.boundGeneration = generation;
-        state.pageError = this.pageInvalid(missing);
+        MiXianTu.LOGGER.warn("Page does not match its contract: {}", missing);
     }
 
     /**
@@ -307,21 +236,7 @@ public interface AuiWrappedScreen extends AuiLinkedScreen {
         }
     }
 
-    /**
-     * One host's page state: everything the bind of that document produced. The document itself is not here - the
-     * host holds it, see {@link #auiSetDocument}. The fields are package-private because both hosts live in this
-     * package and no page may reach them.
-     */
     final class State {
-        /**
-         * The page's name for the fallback line, read off the path the host opened.
-         */
-        String pageName = "";
-        @Nullable
-        Component pageError;
-        List<FormattedCharSequence> errorLines = List.of();
-        int errorWidth = -1;
-        final AuiPages.StyleHold styleHold = new AuiPages.StyleHold();
         /**
          * Whether the contract is bound; a page that failed its bind stays unbound until the DOM is rebuilt.
          */

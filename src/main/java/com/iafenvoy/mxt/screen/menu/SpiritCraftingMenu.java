@@ -12,7 +12,9 @@ import com.iafenvoy.mxt.registry.MxtBlocks;
 import com.iafenvoy.mxt.registry.MxtMenus;
 import com.iafenvoy.mxt.registry.MxtRecipeTypes;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.screen.aui.AuiPages;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
+import com.sighs.apricityui.screen.ApricityContainerMenu;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Registry;
 import net.minecraft.server.level.ServerLevel;
@@ -20,9 +22,9 @@ import net.minecraft.world.Container;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.inventory.DataSlot;
+import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.RecipeHolder;
@@ -39,17 +41,19 @@ import java.util.function.Function;
 import java.util.stream.IntStream;
 
 /**
- * A vanilla-sized crafting menu restricted to the two spirit recipe types. The recipe is matched here while
- * the aura buffer lives on the block, so the server half alone publishes the progress rows.
+ * The crafting menu restricted to the two spirit recipe types. The recipe is matched here while the aura buffer
+ * lives on the block, so the server half alone publishes the progress rows.
+ * <p>
+ * The slot order is the page's container order - result, the nine grid cells, then the player inventory - because
+ * ApricityUI maps a page slot to a menu slot by container, and each container is one contiguous range.
  */
-public final class SpiritCraftingMenu extends AbstractContainerMenu {
+public final class SpiritCraftingMenu extends ApricityContainerMenu {
     private static final int MAX_PROGRESS_ENTRIES = 8;
     private static final int RESULT_SLOT = 0;
     private static final int GRID_START = 1;
     private static final int PLAYER_START = 10;
+    private final Setup setup;
     private final Player player;
-    private final Container grid;
-    private final Container result;
     private final ContainerLevelAccess access;
     private final DataSlot[] progressTypes = new DataSlot[MAX_PROGRESS_ENTRIES];
     private final DataSlot[] progressAmounts = new DataSlot[MAX_PROGRESS_ENTRIES];
@@ -61,11 +65,14 @@ public final class SpiritCraftingMenu extends AbstractContainerMenu {
     }
 
     public SpiritCraftingMenu(int id, Inventory inventory, ContainerLevelAccess access) {
-        super(MxtMenus.SPIRIT_CRAFTING_TABLE.get(), id);
+        this(id, inventory, access, new Setup(access));
+    }
+
+    private SpiritCraftingMenu(int id, Inventory inventory, ContainerLevelAccess access, Setup setup) {
+        super(id, inventory, setup.page().layout(), setup.page().sources(), Map.of(), null);
+        this.setup = setup;
         this.player = inventory.player;
         this.access = access;
-        this.grid = this.fromTable(SpiritCraftingTableBlockEntity::grid, new SimpleContainer(9));
-        this.result = this.fromTable(SpiritCraftingTableBlockEntity::result, new SimpleContainer(1));
         for (int index = 0; index < MAX_PROGRESS_ENTRIES; index++) {
             this.progressTypes[index] = DataSlot.standalone();
             this.progressAmounts[index] = DataSlot.standalone();
@@ -75,25 +82,16 @@ public final class SpiritCraftingMenu extends AbstractContainerMenu {
             this.addDataSlot(this.progressAmounts[index]);
             this.addDataSlot(this.progressRequirements[index]);
         }
-        this.addSlot(new Slot(this.result, RESULT_SLOT, 124, 35) {
-            @Override
-            public boolean mayPlace(@NonNull ItemStack stack) {
-                return false;
-            }
-
-            @Override
-            public void onTake(@NonNull Player player, @NonNull ItemStack stack) {
-                super.onTake(player, stack);
-            }
-        });
-        for (int row = 0; row < 3; row++)
-            for (int column = 0; column < 3; column++)
-                this.addSlot(new Slot(this.grid, column + row * 3, 30 + column * 18, 17 + row * 18));
-        for (int row = 0; row < 3; row++)
-            for (int column = 0; column < 9; column++)
-                this.addSlot(new Slot(inventory, column + row * 9 + 9, 8 + column * 18, 84 + row * 18));
-        for (int column = 0; column < 9; column++) this.addSlot(new Slot(inventory, column, 8 + column * 18, 142));
         this.updateResult();
+    }
+
+    /**
+     * ApricityUI's base menu reports its own type to the open packet, and the client picks its screen factory
+     * from that.
+     */
+    @Override
+    public MenuType<?> getType() {
+        return MxtMenus.SPIRIT_CRAFTING_TABLE.get();
     }
 
     // Runs the action against the table, or does nothing when there is none: broken block, unloaded chunk, or
@@ -102,15 +100,6 @@ public final class SpiritCraftingMenu extends AbstractContainerMenu {
         this.access.execute((level, pos) -> {
             if (level.getBlockEntity(pos) instanceof SpiritCraftingTableBlockEntity table) action.accept(table);
         });
-    }
-
-    private <T> T fromTable(Function<SpiritCraftingTableBlockEntity, T> reader, T fallback) {
-        return this.access
-                .evaluate((level, pos) -> level.getBlockEntity(pos) instanceof SpiritCraftingTableBlockEntity table
-                        ? Optional.ofNullable(reader.apply(table))
-                        : Optional.<T>empty())
-                .flatMap(Function.identity())
-                .orElse(fallback);
     }
 
     public Holder<Aura> progressAura(int index) {
@@ -199,9 +188,14 @@ public final class SpiritCraftingMenu extends AbstractContainerMenu {
     }
 
     private SpiritCraftingInput input() {
-        return new SpiritCraftingInput(IntStream.range(0, 9).mapToObj(this.grid::getItem).toList());
+        return new SpiritCraftingInput(IntStream.range(0, 9).mapToObj(this.setup.gridContainer()::getItem).toList());
     }
 
+    /**
+     * The same movement the vanilla crafting table performs, over the reordered ranges: a cell on the grid dumps
+     * into the player inventory, anything in it merges into the grid, and the result is taken into the inventory.
+     * The grid range stops at {@code PLAYER_START}, so the result cell is never a merge target.
+     */
     @Override
     public @NonNull ItemStack quickMoveStack(@NonNull Player player, int index) {
         Slot slot = this.slots.get(index);
@@ -224,6 +218,59 @@ public final class SpiritCraftingMenu extends AbstractContainerMenu {
     @Override
     public boolean stillValid(@NonNull Player player) {
         return stillValid(this.access, player, MxtBlocks.SPIRIT_CRAFTING_TABLE.get());
+    }
+
+    // The block entity's own containers, read at construction so that the layout's capacity is the size the
+    // client half also reports from the layout alone; without a table it is the page's own size.
+    private static Container gridContainer(ContainerLevelAccess access) {
+        return resolve(access, SpiritCraftingTableBlockEntity::grid, 9);
+    }
+
+    private static Container resultContainer(ContainerLevelAccess access) {
+        return resolve(access, SpiritCraftingTableBlockEntity::result, 1);
+    }
+
+    private static Container resolve(ContainerLevelAccess access, Function<SpiritCraftingTableBlockEntity, Container> reader, int fallbackSize) {
+        return access
+                .evaluate((level, pos) -> level.getBlockEntity(pos) instanceof SpiritCraftingTableBlockEntity table
+                        ? Optional.ofNullable(reader.apply(table))
+                        : Optional.<Container>empty())
+                .flatMap(Function.identity())
+                .orElseGet(() -> new SimpleContainer(fallbackSize));
+    }
+
+    /**
+     * The page's containers and the layout they are opened with; the containers have to exist before the menu,
+     * so the public constructors build this and hand it to the private one.
+     */
+    private static final class Setup {
+        private final Container grid;
+        private final Container result;
+        private final PageSlots.Layout page;
+
+        private Setup(ContainerLevelAccess access) {
+            this.grid = SpiritCraftingMenu.gridContainer(access);
+            this.result = SpiritCraftingMenu.resultContainer(access);
+            // The page draws the nine grid cells and the result cell itself and groups them under these two ids.
+            this.page = PageSlots.of(AuiPages.page(AuiPages.SPIRIT_CRAFTING, "spirit_crafting"))
+                    .container("result", this.result, (container, index, x, y) -> new Slot(container, index, x, y) {
+                        @Override
+                        public boolean mayPlace(@NonNull ItemStack stack) {
+                            return false;
+                        }
+                    })
+                    .container("crafting", this.grid, Slot::new)
+                    .player("inventory")
+                    .build();
+        }
+
+        private PageSlots.Layout page() {
+            return this.page;
+        }
+
+        private Container gridContainer() {
+            return this.grid;
+        }
     }
 
     private record RecipeMatch(SpiritRecipe recipe, Map<Holder<Aura>, Integer> costs) {

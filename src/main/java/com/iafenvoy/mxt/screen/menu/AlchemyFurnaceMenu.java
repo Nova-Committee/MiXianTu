@@ -13,8 +13,10 @@ import com.iafenvoy.mxt.runtime.alchemy.*;
 import com.iafenvoy.mxt.runtime.alchemy.AlchemyWorkstationService.AlchemyPreview;
 import com.iafenvoy.mxt.runtime.alchemy.AlchemyWorkstationService.Parameters;
 import com.iafenvoy.mxt.runtime.item.ItemQualityService;
+import com.iafenvoy.mxt.screen.aui.AuiPages;
 import com.iafenvoy.mxt.screen.menu.AlchemyFurnaceView.Numbers;
 import com.iafenvoy.mxt.screen.menu.AlchemyFurnaceView.Status;
+import com.sighs.apricityui.screen.ApricityContainerMenu;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -25,8 +27,8 @@ import net.minecraft.world.Container;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.DataSlot;
+import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
@@ -37,12 +39,13 @@ import org.jetbrains.annotations.Nullable;
 import org.jspecify.annotations.NonNull;
 
 import java.util.Locale;
+import java.util.Map;
 
 /**
- * One menu type, four views. Slot indices are fixed here: machine slots, then player 9-35, then hotbar 0-8.
- * Template order never decides that.
+ * One menu type, four views. The slot order is the page's container order - the machine container, as wide as the
+ * view, then the player inventory - because ApricityUI maps a page cell to a menu slot by container.
  */
-public final class AlchemyFurnaceMenu extends AbstractContainerMenu {
+public final class AlchemyFurnaceMenu extends ApricityContainerMenu {
     public enum View {
         MONITOR("monitor", 1),
         MAIN("main_input", 2),
@@ -98,25 +101,29 @@ public final class AlchemyFurnaceMenu extends AbstractContainerMenu {
     }
 
     public AlchemyFurnaceMenu(int containerId, Inventory inventory, BlockPos accessPos, View view) {
-        super(MxtMenus.ALCHEMY_FURNACE.get(), containerId);
+        this(containerId, inventory, accessPos, view, new Setup(inventory, accessPos, view));
+    }
+
+    private AlchemyFurnaceMenu(int containerId, Inventory inventory, BlockPos accessPos, View view, Setup setup) {
+        super(containerId, inventory, setup.page().layout(), setup.page().sources(), Map.of(), null);
+        setup.attach(this);
         this.level = inventory.player.level();
         this.accessPos = accessPos.immutable();
         this.view = view;
         this.player = inventory.player;
-        BlockEntity found = physicalOwner(this.level, accessPos, view);
-        this.owner = found;
+        this.owner = setup.owner();
         this.addDataSlot(this.temperatureAccepted);
         // Epoch commits the acknowledgement, after the view and acceptance value have arrived.
         this.addDataSlot(this.temperatureEpoch);
-        // Client slots are a vanilla sync mirror. The server binds only the captured owner's container.
-        Container machine;
-        if (this.level.isClientSide()) machine = new SimpleContainer(view.getMachineSlots());
-        else if (found == null)
-            throw new IllegalStateException("Alchemy furnace menu has no physical owner at " + accessPos + " for " + view);
-        else machine = storage(found);
-        for (int index = 0; index < view.getMachineSlots(); index++) this.addSlot(new PartSlot(machine, index));
-        for (int index = 9; index < 36; index++) this.addSlot(new Slot(inventory, index, 0, 0));
-        for (int index = 0; index < 9; index++) this.addSlot(new Slot(inventory, index, 0, 0));
+    }
+
+    /**
+     * The menu type ApricityUI's base menu would report is its own; the open packet carries whatever this answers,
+     * and the client picks its screen factory from that.
+     */
+    @Override
+    public MenuType<?> getType() {
+        return MxtMenus.ALCHEMY_FURNACE.get();
     }
 
     /**
@@ -367,14 +374,21 @@ public final class AlchemyFurnaceMenu extends AbstractContainerMenu {
         return text("failure." + failure.name().toLowerCase(Locale.ROOT));
     }
 
-    private final class PartSlot extends Slot {
-        private PartSlot(Container container, int index) {
-            super(container, index, 0, 0);
+    /**
+     * One machine cell: the physical owner decides what may sit in it and when it may be taken. The layout builds
+     * the cells before the menu exists, so they reach the owner and the menu back through the setup that built them.
+     */
+    private static final class PartSlot extends Slot {
+        private final Setup setup;
+
+        private PartSlot(Setup setup, Container container, int index, int x, int y) {
+            super(container, index, x, y);
+            this.setup = setup;
         }
 
         @Override
         public boolean mayPlace(@NonNull ItemStack stack) {
-            BlockEntity owner = AlchemyFurnaceMenu.this.owner;
+            BlockEntity owner = this.setup.owner();
             if (owner instanceof AlchemyFurnaceBlockEntity furnace) return furnace.canPlaceFire(stack);
             if (owner instanceof AlchemyFurnaceInventoryBlockEntity part)
                 return part.canPlaceItem(this.getContainerSlot(), stack);
@@ -383,7 +397,7 @@ public final class AlchemyFurnaceMenu extends AbstractContainerMenu {
 
         @Override
         public boolean mayPickup(@NonNull Player player) {
-            BlockEntity owner = AlchemyFurnaceMenu.this.owner;
+            BlockEntity owner = this.setup.owner();
             if (owner instanceof AlchemyFurnaceBlockEntity furnace) return furnace.canTakeFire();
             if (owner instanceof AlchemyFurnaceInventoryBlockEntity part)
                 return part.canTakeItem(this.getContainerSlot(), this.getItem());
@@ -393,7 +407,50 @@ public final class AlchemyFurnaceMenu extends AbstractContainerMenu {
         @Override
         public void setChanged() {
             super.setChanged();
-            AlchemyFurnaceMenu.this.forceRefresh = true;
+            this.setup.menu().forceRefresh = true;
+        }
+    }
+
+    /**
+     * The machine container and the layout the page is opened with: ApricityUI's menu builds the slots inside its own
+     * constructor, so both exist before this menu's {@code super}, and the machine width is the view's slot count.
+     */
+    private static final class Setup {
+        @Nullable
+        private final BlockEntity owner;
+        private final PageSlots.Layout page;
+        private AlchemyFurnaceMenu menu;
+
+        private Setup(Inventory inventory, BlockPos accessPos, View view) {
+            Level level = inventory.player.level();
+            BlockEntity found = physicalOwner(level, accessPos, view);
+            // Client slots are a vanilla sync mirror. The server binds only the captured owner's container.
+            Container machine;
+            if (level.isClientSide()) machine = new SimpleContainer(view.getMachineSlots());
+            else if (found == null)
+                throw new IllegalStateException("Alchemy furnace menu has no physical owner at " + accessPos + " for " + view);
+            else machine = storage(found);
+            this.owner = found;
+            this.page = PageSlots.of(AuiPages.alchemyPage(view.getSlug()))
+                    .container("machine", machine, (container, index, x, y) -> new PartSlot(this, container, index, x, y))
+                    .player("player_inventory")
+                    .build();
+        }
+
+        private void attach(AlchemyFurnaceMenu menu) {
+            this.menu = menu;
+        }
+
+        private @Nullable BlockEntity owner() {
+            return this.owner;
+        }
+
+        private AlchemyFurnaceMenu menu() {
+            return this.menu;
+        }
+
+        private PageSlots.Layout page() {
+            return this.page;
         }
     }
 }

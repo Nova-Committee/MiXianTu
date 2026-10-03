@@ -75,6 +75,7 @@ data/<namespace>/mxt/<registry>/<path>.json
 - [灵气环境与灵气物品](aura)
 - [Ability、Cost 与 Condition](ability)
 - [物品绑定、品质与经济](items)
+- [载体物品：哪件物品装哪份定义](carriers)
 - [阵法、锻造与炼丹](formation)
 - [其他注册表](other)
 - [数据包示例](examples)

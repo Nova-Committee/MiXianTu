@@ -8,8 +8,8 @@
 <body>
 <!-- 锻造台 322x234。坐标全部照抄旧 ForgingScreen / ForgingMenu，Java 侧读的是同一批常量。
      三处约定：
-     1. 槽位（<slot>）的位置是"菜单坐标 - 1"：物品 16x16 画在 18x18 凹面的 +1 处，Java 写 Slot.x/y 时
-        也 +1（AuiContainerScreen.ITEM_INSET），两边相抵才落在旧屏幕的位置上。
+     1. 槽位（<slot>）的位置是"菜单坐标 - 1"：ApricityUI 把 <item> 画在槽位的 +1 处，
+        所以槽位壳减掉这 1px 才落在旧屏幕的位置上。
      2. 两个选择格与两行步骤格没有菜单槽位，是纯 DOM：NN-N 是格，格里的 item / texture 是它的两个图标，
         由格上的 icon-item / icon-texture 类决定画哪一个（Java 只在变化时改）。选择格的列距是 **18**
         （CELL）、行距是 **19**（CELL_PITCH），Java 的命中测试读同一组数。选择格是 `.cell`（空格不画）、
