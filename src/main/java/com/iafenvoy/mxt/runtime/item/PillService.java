@@ -7,11 +7,15 @@ import com.iafenvoy.mxt.data.item.Pill;
 import com.iafenvoy.mxt.data.item.PillBinding;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.item.ItemBindingService.PillResolution;
+import com.iafenvoy.mxt.util.TooltipText;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.Codec;
+import net.minecraft.ChatFormatting;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup.Provider;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.StringRepresentable;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
@@ -100,9 +104,18 @@ public final class PillService {
         if (Double.isFinite(threshold) && value >= threshold) {
             definition.onOverdose().execute(entity, context);
             toxicity.set(finite(definition.toxicityAfterOverdose().evaluate(context)));
+            notifyOverdose(entity, toxicity.toxicity());
             return Result.overdosed(toxicity.toxicity());
         }
         return Result.consumed(value);
+    }
+
+    // Every other outcome is whatever the pack's own actions say; an overdose with no word of its own would be the
+    // one built-in behaviour nobody can see.
+    private static void notifyOverdose(LivingEntity entity, double toxicity) {
+        if (entity instanceof ServerPlayer player)
+            player.sendSystemMessage(Component.translatable("actionbar.mxt.pill.overdose",
+                    TooltipText.number(toxicity)).withStyle(ChatFormatting.DARK_PURPLE), true);
     }
 
     public static double toxicity(Entity entity) {

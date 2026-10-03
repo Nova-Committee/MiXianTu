@@ -8,7 +8,7 @@ title: Java 公开 API
 
 三件事先说清楚：
 
-- **这些入口留在各自的模块包里**（`registry`、`util`、`runtime/*`），只有**要实现**的接口在 `com.iafenvoy.mxt.api`，见[特殊公开接口](interfaces)。
+- **这些入口留在各自的模块包里**（`registry`、`util`、`runtime/*`、`data`），只有**要实现**的接口在 `com.iafenvoy.mxt.api`，见[特殊公开接口](interfaces)。
 - **服务端权威**：扣费、修炼、技能、伤害、阵法结算都只在服务端做，客户端只渲染与发请求。哪些入口在客户端会失效，集中在[服务端与客户端的边界](#服务端与客户端的边界)。
 - 想知道某条线**为什么**长这样（而不是"有哪些方法"），看[数据包格式](../../数据包格式.md)的对应小节、[好友与敌我识别](../play/friends.md)与[网络协议与服务端权威](network)。
 
@@ -21,6 +21,7 @@ title: Java 公开 API
 | 拼一行提示框数值 | [`TooltipText`](#tooltiptext) | `util` |
 | 求一个数据包数值 | [`NumberProvider`](#numberprovider) | `util.formula` |
 | 判断"这件物品算不算这条定义" | [`ItemMatcher`](#itemmatcher) | `util.matcher` |
+| 把注册表里的定义变成创造栏物品 | [`CreativeTabHelper`](#creativetabhelper) | `data` |
 | 问某个坐标有多少灵气 | [`AuraService`](#auraservice) | `runtime.world` |
 | 读写实体身上的一条数值 | [`ResourceService`](#resourceservice) | `runtime.resource` |
 | 加修炼进度、突破、设置境界 | [`CultivationService`](#cultivationservice) | `runtime.cultivation` |
@@ -151,6 +152,41 @@ Entry 种类（`mxt:item_matcher_entry_type`，默认 `item`）：`item`、`tag`
 - **两类表读同一个匹配器，分工不同**：binding 表（`item` / `weapon` / `pill`）把本模组的规则接到一件**已经存在**的物品上，内容表（`artifact`、`spirit_herb`、`item_aura`、`currency`）本身就是被物品选中的定义。匹配器只回答"哪一条适用"，不决定那条定义是什么，也不替它执行。
 - **`itemLevel()` 是缓存安全的分界线**：它返回 `true` 表示"命中与否只由物品本身决定"，按物品开缓存的调用方**只能**缓存这类项；会读堆上的组件 / NBT 的项，以及答案来自另一条定义的项（`mxt:herb_tag` 问的是哪条 `spirit_herb` 认领这件物品）必须每个堆都问一次。
 - 简写只覆盖 `item` 与 `tag`；其它实现走简写编码会抛 `IllegalArgumentException`。
+
+## 物品目录与创造栏
+
+### `CreativeTabHelper`
+
+包 `com.iafenvoy.mxt.data`。**读**那条「注册表 → 可选项」目录的入口：`/picker` 界面与别的模组都走它。每一项是一行 `PickerItem(stack, names)`：`stack` 是要画的堆，`names` 是这一行能被哪些名字搜到。它只读——不往物品上写东西，也不判定谁能拿。
+
+每条查询都要求自己传注册表访问器（`HolderLookup.Provider`，`BuildCreativeModeTabContentsEvent.getParameters().holders()` 就是它），所以客户端用客户端已同步的表、服务端用服务端的表，不存在"读到另一侧"的问题。
+
+| 方法 | 作用 | 备注 |
+| --- | --- | --- |
+| `itemsOf(Provider, key)` | 一张表的全部行 | `key` 是注册表 key；**没登记成分类的表给空列表**，不抛 |
+| `itemsOf(Provider, key, Predicate<Holder<?>>)` | 按定义筛行 | 谓词拿到的是定义的 holder，按 id 筛与按定义本体筛是同一个入口，所以"模组 id"就是取 holder 的命名空间 |
+| `itemsOfMod(Provider, key, String)` | 一张表里属于某个命名空间的行 | `mxt:aura` 的条目属于 `mxt`，`mymod:aura/…` 属于 `mymod`；物品与方块两张表里定义就是物品，于是命名空间是物品的 |
+| `itemsOfMod(Provider, String)` | 跨全部分类，挑出某个命名空间的行 | 给自己做一个"我模组的东西"创造栏用它 |
+| `stacksOf(...)` / `stacksOfMod(...)` | 上面四条的堆视图 | 见下 |
+
+要点：
+
+- **给创造栏的是 `stacksOf` / `stacksOfMod`**：它们按**原版创造栏自己的规则**（`ItemStackLinkedSet`，同物品同组件算同一件）去掉重复，而且**每一份都是拷贝**——改它不会碰到选择器里的那一行。去重不是装饰：`mxt:aura` 的每一行都是同一颗灵石当替身，把行原样塞进创造栏，原版的 `accept` 会当场抛"这个堆已经在栏里了"。行视图（`itemsOf*`）一个定义一行，不去重。
+- **原版创造栏的 `accept` 还要求 `count == 1`**，本体的行都是 1；自己注册的行也请写 1。
+- 查询无副作用、双端可调：它只读你传进来的那份访问器，不碰服务端单例，也不写任何附件。
+- 想把这批行画成一张选择器页（而不是进创造栏），用 `ItemPickerScreen.over(title, stacks)`，见[界面与屏幕](screens)。
+
+**目录本身在别的类里**：哪张注册表对应哪些行、每行怎么造，是 `com.iafenvoy.mxt.screen.picker.ItemPickerManager`——`categories()` / `category(Identifier)` 列分类，`registerSingle` / `register` 登记一条分类（`mxt:` 的定义由本体登记好了）。`CreativeTabHelper` 只负责读它，两个类一眼能分开。有一条限制要知道：**一张注册表只认第一次注册的目录**，对已经登记过的 key 再注册一次是**静默无效**的（分类列表也只列一次），所以要换掉一条分类的造行方式只能改那一处注册。
+
+```java
+// 自己的创造栏：让这个模组贡献过的定义（以及它自己的物品）全进来
+@Override
+public void buildContents(BuildCreativeModeTabContentsEvent event) {
+    if (event.getTabKey() != MY_TAB) return;
+    for (ItemStack stack : CreativeTabHelper.stacksOfMod(event.getParameters().holders(), "mymod"))
+        event.accept(stack);
+}
+```
 
 ## 灵气与资源
 

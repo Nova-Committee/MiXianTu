@@ -435,6 +435,7 @@ public final class MxtTestCommands {
                 .then(literal("alchemy").executes(context -> AlchemyProbes.run(context.getSource())))
                 .then(literal("herb").executes(context -> HerbProbes.run(context.getSource())))
                 .then(literal("pill").executes(context -> PillProbes.run(context.getSource())))
+                .then(literal("picker").executes(context -> PickerProbes.run(context.getSource())))
                 .then(literal("perch").executes(context -> probePerch(context.getSource())))
                 .then(literal("artifacts").executes(context -> probeArtifactRoster(context.getSource())))
                 .then(literal("secret_realm")

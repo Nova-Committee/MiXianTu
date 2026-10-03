@@ -19,6 +19,7 @@ import com.iafenvoy.mxt.runtime.item.ItemBindingService;
 import com.iafenvoy.mxt.runtime.item.ItemQualityService;
 import com.iafenvoy.mxt.runtime.item.PillService;
 import com.iafenvoy.mxt.runtime.item.PillService.ModifyMode;
+import com.iafenvoy.mxt.runtime.item.PillUseService;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.number.Constant;
 import com.iafenvoy.mxt.util.math.Comparison;
@@ -121,9 +122,10 @@ public final class PillProbes {
             Holder<PillBinding> reenter = binding(player, "reenter_pill");
             Holder<PillBinding> limited = binding(player, "limited_pill");
             Holder<PillBinding> toxicity = binding(player, "toxicity_pill");
+            Holder<PillBinding> plainItem = binding(player, "plain_item_pill");
             boolean missingPill = pill(player, "disabled_ref") == null;
             if (blocked == null || hungry == null || reenter == null || limited == null
-                    || toxicity == null || !missingPill) {
+                    || toxicity == null || plainItem == null || !missingPill) {
                 source.sendFailure(Component.literal("pill probe: fixture missing"));
                 return 0;
             }
@@ -210,6 +212,27 @@ public final class PillProbes {
             ok &= leg(source, "persistent_usage", roundTrip.uses(limited) == 2 && pig.getData(MxtAttachments.PILL_USAGE).uses(limited) == 2,
                     "saved=" + roundTrip.uses(limited) + " copied=" + pig.getData(MxtAttachments.PILL_USAGE).uses(limited),
                     "2 and 2");
+
+            // A pill bound to an item with no use of its own: the click arms the carrier's cycle for it, vanilla
+            // eats one, and the item is left exactly as its author wrote it. Driven without a client, so the arm
+            // is called the way the click handler calls it.
+            clearLedgers(player);
+            feed(player, 20, 5.0F);
+            player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.GOLD_INGOT, 2));
+            ItemStack ingot = player.getMainHandItem();
+            PillUseService.arm(player, ingot);
+            boolean armed = ingot.has(DataComponents.CONSUMABLE);
+            int ingotsBefore = count(player, Items.GOLD_INGOT);
+            boolean swallowed = finish(player, 40);
+            ok &= leg(source, "plain_item_armed", armed && swallowed && close(PillService.toxicity(player), 25.0D)
+                            && count(player, Items.GOLD_INGOT) == ingotsBefore - 1
+                            && !player.getMainHandItem().has(DataComponents.CONSUMABLE)
+                            && PillService.uses(player, plainItem) == 1,
+                    "armed=" + armed + " eaten=" + swallowed + " reason=" + stopReason + " tox=" + PillService.toxicity(player)
+                            + " ingots=" + count(player, Items.GOLD_INGOT)
+                            + " component=" + player.getMainHandItem().has(DataComponents.CONSUMABLE)
+                            + " uses=" + PillService.uses(player, plainItem),
+                    "armed=true eaten=true tox=25 ingots-1 component=false uses=1");
 
             clearLedgers(player);
             boolean doses = true;

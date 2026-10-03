@@ -18,10 +18,12 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.core.HolderLookup.RegistryLookup;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.TextColor;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.food.FoodProperties;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -57,11 +59,14 @@ public final class ItemQualityService {
 
     @SubscribeEvent(priority = EventPriority.HIGHEST)
     public static void onItemUse(RightClickItem event) {
-        Optional<Failure> failure = checkForEvent(event.getEntity(), event.getEntity().getItemInHand(event.getHand()));
+        ItemStack stack = event.getEntity().getItemInHand(event.getHand());
+        Optional<Failure> failure = checkForEvent(event.getEntity(), stack);
         if (failure.isPresent()) {
             event.setCanceled(true);
             notifyCannotUse(event.getEntity(), failure.orElseThrow());
+            return;
         }
+        notifyStillFull(event.getEntity(), stack);
     }
 
     @SubscribeEvent(priority = EventPriority.HIGHEST)
@@ -100,6 +105,17 @@ public final class ItemQualityService {
             player.sendSystemMessage(Component.translatable("actionbar.mxt.item.cannot_use",
                             Component.translatable("actionbar.mxt.item.cannot_use." + failure.name().toLowerCase(Locale.ROOT)))
                     .withStyle(ChatFormatting.RED), true);
+    }
+
+    // A pill bound to a food is still that food's own use, and vanilla refuses a food the player is full of below
+    // this gate - where the refusal would otherwise be silent. The carrier itself is not a food and never lands here.
+    private static void notifyStillFull(LivingEntity entity, ItemStack stack) {
+        if (!(entity instanceof ServerPlayer player) || stack.isEmpty()) return;
+        FoodProperties food = stack.get(DataComponents.FOOD);
+        if (food == null || player.canEat(food.canAlwaysEat())) return;
+        if (ItemBindingService.resolvePill(player.level().registryAccess(), stack).effects().isEmpty()) return;
+        player.sendSystemMessage(Component.translatable("actionbar.mxt.pill.still_full")
+                .withStyle(ChatFormatting.RED), true);
     }
 
     private static Optional<Failure> checkForEvent(LivingEntity user, ItemStack stack) {

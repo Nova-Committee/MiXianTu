@@ -48,8 +48,9 @@ public final class MxtItems {
     public static final DeferredItem<Item> SPIRIT_WOOD = register("spirit_wood", Item::new);
     public static final DeferredItem<Item> SPIRIT_WOOD_CORE = register("spirit_wood_core", Item::new);
 
-    // Spirit root and technique
+    // Spirit root, physique and technique
     public static final DeferredItem<SpiritRootItem> SPIRIT_ROOT = register("spirit_root", SpiritRootItem::new);
+    public static final DeferredItem<PhysiqueItem> PHYSIQUE = register("physique", PhysiqueItem::new);
     public static final DeferredItem<Item> CULTIVATION_JADE_SLIP = register("cultivation_jade_slip", Item::new);
 
     // Containers and tools
@@ -87,9 +88,9 @@ public final class MxtItems {
     public static final DeferredItem<ChequeItem> CHEQUE = register("cheque", ChequeItem::new);
 
     // An easter egg, not framework: a plain vanilla food, so eating it, the nutrition and the stack behaviour are
-    // all vanilla's.
-    public static final DeferredItem<Item> FRIED_DOUGH_CAKE = register("fried_dough_cake",
-            properties -> new Item(properties.food(new FoodProperties.Builder().nutrition(6).saturationModifier(0.7F).build())));
+    // all vanilla's; the second argument is how many tooltip lines its language keys carry.
+    public static final DeferredItem<SpecialItem> FRIED_DOUGH_CAKE = register("fried_dough_cake",
+            properties -> new SpecialItem(properties.food(new FoodProperties.Builder().nutrition(6).saturationModifier(0.7F).build()), 1));
 
     public static <T extends Item> DeferredItem<T> register(String path, Function<Properties, T> factory) {
         ResourceKey<Item> key = ResourceKey.create(Registries.ITEM, Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, path));

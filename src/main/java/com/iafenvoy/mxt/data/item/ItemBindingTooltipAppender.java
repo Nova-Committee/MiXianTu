@@ -2,6 +2,8 @@ package com.iafenvoy.mxt.data.item;
 
 import com.iafenvoy.mxt.data.AttributeEntry;
 import com.iafenvoy.mxt.data.DescribedEntry;
+import com.iafenvoy.mxt.data.action.EntityAction;
+import com.iafenvoy.mxt.data.action.builtin.entity.GrantPhysiqueAction;
 import com.iafenvoy.mxt.data.action.builtin.entity.GrantSpiritRootAction;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.runtime.item.ItemBindingService;
@@ -16,6 +18,7 @@ import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item.TooltipContext;
@@ -57,10 +60,16 @@ public final class ItemBindingTooltipAppender {
         else
             resolution.effects().ifPresent(effects -> appendPill(builder, resolution.identity().orElse(null), effects, player));
         bindings.technique().ifPresent(technique -> appendTechnique(builder, technique));
-        bindings.item().map(ItemBinding::actions).orElse(List.of()).stream()
-                .filter(GrantSpiritRootAction.class::isInstance)
-                .map(GrantSpiritRootAction.class::cast)
-                .forEach(action -> appendSpiritRoot(builder, flag, action));
+        for (EntityAction action : bindings.item().map(ItemBinding::actions).orElse(List.of())) {
+            if (action instanceof GrantSpiritRootAction(
+                    Holder<com.iafenvoy.mxt.data.cultivation.SpiritRoot> spiritRoot
+            ))
+                appendGranted(builder, flag, "tooltip.mxt.item.spirit_root", HolderHelper.id(spiritRoot));
+            else if (action instanceof GrantPhysiqueAction(
+                    Holder<com.iafenvoy.mxt.data.cultivation.Physique> physique1
+            ))
+                appendGranted(builder, flag, "tooltip.mxt.item.physique", HolderHelper.id(physique1));
+        }
         if (player != null) {
             FormulaContext formula = FormulaContext.of(player);
             bindings.item().ifPresent(binding -> appendConditions(builder, binding.conditions(), player, formula));
@@ -82,11 +91,12 @@ public final class ItemBindingTooltipAppender {
         }
     }
 
-    private static void appendSpiritRoot(Consumer<Component> builder, TooltipFlag flag, GrantSpiritRootAction action) {
-        builder.accept(Component.translatable("tooltip.mxt.item.spirit_root").withStyle(ChatFormatting.AQUA));
-        // An advanced line always spells out the entry id, never the display text the line above already stands for.
+    // The line says what a click grants; the advanced half always spells out the entry id, never the display text
+    // the line above already stands for.
+    private static void appendGranted(Consumer<Component> builder, TooltipFlag flag, String key, Identifier id) {
+        builder.accept(Component.translatable(key).withStyle(ChatFormatting.AQUA));
         if (flag.isAdvanced())
-            builder.accept(Component.literal("   " + HolderHelper.id(action.spiritRoot())).withStyle(ChatFormatting.DARK_GRAY));
+            builder.accept(Component.literal("   " + id).withStyle(ChatFormatting.DARK_GRAY));
     }
 
     private static void appendWeapon(Consumer<Component> builder, WeaponBinding weapon) {

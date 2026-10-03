@@ -64,7 +64,7 @@ StartupEvents.registry('item', event => {
 }
 ```
 
-绑定必须写 `pill` 指向一份定义；次数和冷却是绑定的可选字段：`max_uses` 是正整数，`cooldown` 是 tick。纯数据包丹药用 `mxt:pill` 加上组件 `mxt:pill`，不要在物品脚本里再执行一次药效。
+绑定必须写 `pill` 指向一份定义；次数和冷却是绑定的可选字段：`max_uses` 是正整数，`cooldown` 是 tick。纯数据包丹药用 `mxt:pill` 加上组件 `mxt:pill`，不要在物品脚本里再执行一次药效。**被绑物品不一定要 `.food(...)`**：它自带 `minecraft:consumable` 就按那个物品自己的周期与饱食度规则吃，没有就由框架在右键那一刻替这一叠补上一次食用动作、吃完收回；药效都在一次完整使用周期结束那一拍跑。
 
 ```json
 // kubejs/data/example/mxt/technique_binding/fire_manual.json

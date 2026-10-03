@@ -1,5 +1,6 @@
 package com.iafenvoy.mxt.screen.picker;
 
+import com.iafenvoy.mxt.data.CreativeTabHelper;
 import com.iafenvoy.mxt.screen.picker.ItemPickerManager.PickerItem;
 import com.iafenvoy.mxt.screen.picker.ItemPickerScreen.PickerMenu;
 import com.mojang.blaze3d.platform.cursor.CursorTypes;
@@ -111,7 +112,7 @@ public final class ItemPickerScreen extends AbstractContainerScreen<PickerMenu> 
         if (access == null || minecraft.player == null) return null;
         List<PickerItem> picked = new ArrayList<>();
         for (Identifier category : categories)
-            ItemPickerManager.category(category).ifPresent(key -> picked.addAll(ItemPickerManager.itemsOf(access, key)));
+            ItemPickerManager.category(category).ifPresent(key -> picked.addAll(CreativeTabHelper.itemsOf(access, key)));
         return new ItemPickerScreen(title, candidates(picked));
     }
 

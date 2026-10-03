@@ -33,11 +33,15 @@ import org.jspecify.annotations.Nullable;
 import java.util.*;
 import java.util.function.BiFunction;
 import java.util.function.Function;
+import java.util.function.Predicate;
 
 /**
- * Registry-to-item catalogue behind the picker screen: each category names one registry and one function
- * turning an entry into the rows that stand for it. Client-side contents only - the grid is built from the
- * client's own synced registries, and taking an item out of it is the vanilla creative inventory's gesture.
+ * The picker's catalogue: each category names one registry and one function turning an entry into the rows that
+ * stand for it, and nothing else decides what a registry offers. Client-side contents only - the grid is built
+ * from the client's own synced registries, and taking an item out of it is the vanilla creative inventory's gesture.
+ *
+ * <p>Reading the catalogue - rows of a category, rows of one mod, the item list a creative tab takes - is
+ * {@code com.iafenvoy.mxt.data.CreativeTabHelper}, which is also what other mods call.</p>
  */
 public final class ItemPickerManager {
     private static final List<ItemProvider<?>> PROVIDERS = new LinkedList<>();
@@ -83,8 +87,10 @@ public final class ItemPickerManager {
         // Auras have no item of their own, so one stand-in item carries whatever the definition is called.
         registerSingle(MxtResourceKeys.AURA, holder -> described(MxtItems.SPIRIT_STONE.toStack(), holder));
         registerSingle(MxtResourceKeys.BLOCK_AURA, holder -> described(MxtItems.SPIRIT_STONE.toStack(), holder));
-        // A spirit root has an item of its own: the row carries the component, so the stack taken out grants that root.
+        // A spirit root and a physique have items of their own: each row carries the component, so the stack taken
+        // out grants that root or that physique.
         registerSingle(MxtResourceKeys.SPIRIT_ROOT, holder -> described(componentStack(MxtItems.SPIRIT_ROOT.toStack(), MxtDataComponents.SPIRIT_ROOT, holder), holder));
+        registerSingle(MxtResourceKeys.PHYSIQUE, holder -> described(componentStack(MxtItems.PHYSIQUE.toStack(), MxtDataComponents.PHYSIQUE, holder), holder));
 
         // A quality carries its name in the data pack rather than in a language file, so that name wins - and the
         // row is drawn in the tier's own colour, which is the one place the ladder is visible side by side.
@@ -92,9 +98,10 @@ public final class ItemPickerManager {
     }
 
     // Wildcard key is unwidened here because that is the shape the picker passes around; nothing reads the entry type back out.
+    // One key per category: a second provider registered for a key already taken is inert, so listing it twice would show its rows twice.
     @SuppressWarnings("unchecked")
     public static List<ResourceKey<Registry<?>>> categories() {
-        List<ResourceKey<Registry<?>>> keys = new ArrayList<>(PROVIDERS.size());
+        Set<ResourceKey<Registry<?>>> keys = new LinkedHashSet<>(PROVIDERS.size());
         for (ItemProvider<?> provider : PROVIDERS) keys.add((ResourceKey<Registry<?>>) (ResourceKey<?>) provider.key());
         return List.copyOf(keys);
     }
@@ -103,17 +110,20 @@ public final class ItemPickerManager {
         return categories().stream().filter(key -> key.identifier().equals(id)).findFirst();
     }
 
+    // The catalogue of one registry. Widened on purpose: a caller's key is a ResourceKey<Registry<Aura>>, and Java's
+    // invariance keeps that from becoming a ResourceKey<Registry<?>> - only `? extends Registry<?>` contains it
+    // (JLS 4.5.1 containment). An unregistered key gives null.
+    public static @Nullable ItemProvider<?> provider(ResourceKey<? extends Registry<?>> key) {
+        for (ItemProvider<?> provider : PROVIDERS)
+            if (provider.key().equals(key)) return provider;
+        return null;
+    }
+
     /**
      * One row the picker can offer. The row's display name is always among {@code names}, a list rather than a
      * single name because a definition can be known by more than one.
      */
     public record PickerItem(ItemStack stack, List<Component> names) {
-    }
-
-    public static List<PickerItem> itemsOf(Provider provider, ResourceKey<Registry<?>> key) {
-        ItemProvider<?> item = providerOf(key);
-        if (item == null) return List.of();
-        return item.collectItems(provider);
     }
 
     // Entries matching by anything but item or tag have no concrete item and are dropped silently.
@@ -143,6 +153,8 @@ public final class ItemPickerManager {
         register(key, (holder, access) -> List.of(provider.apply(holder, access)));
     }
 
+    // A key keeps the first provider registered for it; a later one is inert rather than merged, so a mod that adds
+    // rows under an id the mod already uses gets nothing back instead of a doubled category.
     public static <T> void register(ResourceKey<Registry<T>> key, Function<Holder<T>, List<PickerItem>> provider) {
         PROVIDERS.add(new ItemProvider<>(key, (holder, _) -> provider.apply(holder)));
     }
@@ -195,17 +207,15 @@ public final class ItemPickerManager {
         return stack;
     }
 
-    private static ItemProvider<?> providerOf(ResourceKey<Registry<?>> key) {
-        for (ItemProvider<?> provider : PROVIDERS)
-            if (provider.key().equals(key)) return provider;
-        return null;
-    }
-
+    // Widened on purpose: a caller's key is a ResourceKey<Registry<Aura>>, and Java's invariance keeps that from
+    // becoming a ResourceKey<Registry<?>> - only `? extends Registry<?>` contains it (JLS 4.5.1 containment).
     public record ItemProvider<T>(ResourceKey<Registry<T>> key,
                                   BiFunction<Holder<T>, Provider, List<PickerItem>> items) {
-        private List<PickerItem> collectItems(Provider provider) {
+        // The one collection path: the definition filter, the drop of empty rows and the row order all live here.
+        public List<PickerItem> collectItems(Provider provider, Predicate<Holder<?>> filter) {
             List<PickerItem> collected = new ArrayList<>();
             provider.lookup(this.key).stream().flatMap(HolderLookup::listElements).forEach(holder -> {
+                if (!filter.test(holder)) return;
                 for (PickerItem item : this.items.apply(holder, provider)) {
                     if (item == null || item.stack().isEmpty()) continue;
                     collected.add(item);

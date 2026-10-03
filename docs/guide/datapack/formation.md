@@ -651,4 +651,6 @@ give @s mxt:pill[mxt:pill={pill:"example:warming_pill"}]
 
 次数按这条绑定计，不按物品 ID；组件剂量不计次数。排毒用 `mxt:modify_pill_toxicity` 的负 `add`，不清次数。服务端配置「炼丹 → 每秒丹毒自然消退」默认 0。测试包原丹毒丹的 25 / 100 / 20 不要改。
 
+**能不能吃由被绑的物品自己答**：原版开始一次食用只看栈上的 `minecraft:consumable`。本体载体 `mxt:pill` 自带它；绑定到**自带它**的物品（食物、饮料、KubeJS `.food()` 物品）就按那个物品自己的时长与姿势吃，饱食度满时原版吃不下（会给一句提示）；绑定到**没有它**的物品（铁锭这类）时框架在右键那一刻替这一叠补上、动作结束时收回，所以绑定之后就能吃，物品上也留不下东西。可换装、盾牌与动能武器由原版自己的分支应答右键，那一路优先；同时被长按声明认领的物品按长按读，不按丹药吃。丹毒顶到 `toxicity_threshold` 的那一口会执行 `on_overdose`、把丹毒写回 `toxicity_after_overdose`，并给服丹者一行 actionbar 提示。
+
 KubeJS 仍监听 `alchemyCraft`。`Pre` 可取消，`inputs()` 是 `role` 与 `stack` 副本，改副本不改账；改真实库存则拒绝且不还原。`Post` 用 `success()`、`reason()` 和 `outputs()`，没有 `spoiled()`。输出入仓后先清旧会话，在事务守卫内执行完成行为与进度条件，释放守卫后才发 `Post`；`Post` 可开启下一批，不会被旧批次收尾覆盖。原操作者离线时，玩家行为不补发。
