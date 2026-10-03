@@ -47,7 +47,7 @@ import java.util.Map;
  */
 public final class AlchemyFurnaceMenu extends ApricityContainerMenu {
     public enum View {
-        MONITOR("monitor", 1),
+        MONITOR("monitor", 0),
         MAIN("main_input", 2),
         AUXILIARY("auxiliary_input", 3),
         OUTPUT("output", 4);
@@ -77,7 +77,6 @@ public final class AlchemyFurnaceMenu extends ApricityContainerMenu {
         }
     }
 
-    public static final String FIRE = "fire";
     public static final String[] MAIN_SLOTS = {"main_0", "main_1"};
     public static final String[] AUXILIARY_SLOTS = {"aux_0", "aux_1", "catalyst"};
     public static final String[] OUTPUT_SLOTS = {"output_0", "output_1", "output_2", "output_3"};
@@ -184,7 +183,7 @@ public final class AlchemyFurnaceMenu extends ApricityContainerMenu {
             return this.view.getMachineSlots() + (vanilla >= 9 ? vanilla - 9 : 27 + vanilla);
         }
         String[] ids = switch (this.view) {
-            case MONITOR -> new String[]{FIRE};
+            case MONITOR -> new String[0];
             case MAIN -> MAIN_SLOTS;
             case AUXILIARY -> AUXILIARY_SLOTS;
             case OUTPUT -> OUTPUT_SLOTS;
@@ -306,15 +305,12 @@ public final class AlchemyFurnaceMenu extends ApricityContainerMenu {
     }
 
     private static Container storage(BlockEntity owner) {
-        if (owner instanceof AlchemyFurnaceBlockEntity furnace) return furnace.fireContainer();
         if (owner instanceof AlchemyFurnaceInventoryBlockEntity part) return part.inventory();
         throw new IllegalStateException("Alchemy furnace menu owner is not a furnace part");
     }
 
     private static boolean owns(BlockEntity entity, View view) {
-        if (view == View.MONITOR) {
-            return entity instanceof AlchemyFurnaceBlockEntity furnace && furnace.fireContainer().getContainerSize() == view.getMachineSlots();
-        }
+        if (view == View.MONITOR) return entity instanceof AlchemyFurnaceBlockEntity;
         if (!(entity instanceof AlchemyFurnaceInventoryBlockEntity part)) return false;
         AlchemyInventoryKind expected = switch (view) {
             case MAIN -> AlchemyInventoryKind.MAIN;
@@ -389,19 +385,15 @@ public final class AlchemyFurnaceMenu extends ApricityContainerMenu {
         @Override
         public boolean mayPlace(@NonNull ItemStack stack) {
             BlockEntity owner = this.setup.owner();
-            if (owner instanceof AlchemyFurnaceBlockEntity furnace) return furnace.canPlaceFire(stack);
-            if (owner instanceof AlchemyFurnaceInventoryBlockEntity part)
-                return part.canPlaceItem(this.getContainerSlot(), stack);
-            return false;
+            return owner instanceof AlchemyFurnaceInventoryBlockEntity part
+                    && part.canPlaceItem(this.getContainerSlot(), stack);
         }
 
         @Override
         public boolean mayPickup(@NonNull Player player) {
             BlockEntity owner = this.setup.owner();
-            if (owner instanceof AlchemyFurnaceBlockEntity furnace) return furnace.canTakeFire();
-            if (owner instanceof AlchemyFurnaceInventoryBlockEntity part)
-                return part.canTakeItem(this.getContainerSlot(), this.getItem());
-            return false;
+            return owner instanceof AlchemyFurnaceInventoryBlockEntity part
+                    && part.canTakeItem(this.getContainerSlot(), this.getItem());
         }
 
         @Override
@@ -424,9 +416,12 @@ public final class AlchemyFurnaceMenu extends ApricityContainerMenu {
         private Setup(Inventory inventory, BlockPos accessPos, View view) {
             Level level = inventory.player.level();
             BlockEntity found = physicalOwner(level, accessPos, view);
+            // The monitor has no machine cell: the heat source is a block in the world, so its layout carries an
+            // empty container and only the player inventory holds slots.
             // Client slots are a vanilla sync mirror. The server binds only the captured owner's container.
             Container machine;
-            if (level.isClientSide()) machine = new SimpleContainer(view.getMachineSlots());
+            if (view == View.MONITOR) machine = new SimpleContainer(0);
+            else if (level.isClientSide()) machine = new SimpleContainer(view.getMachineSlots());
             else if (found == null)
                 throw new IllegalStateException("Alchemy furnace menu has no physical owner at " + accessPos + " for " + view);
             else machine = storage(found);

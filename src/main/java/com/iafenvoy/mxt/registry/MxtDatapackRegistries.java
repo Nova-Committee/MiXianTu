@@ -7,6 +7,7 @@ import com.iafenvoy.mxt.data.Tribulation;
 import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.alchemy.AlchemyFurnaceDefinition;
 import com.iafenvoy.mxt.data.alchemy.AlchemyWallMaterial;
+import com.iafenvoy.mxt.data.alchemy.HeatSource;
 import com.iafenvoy.mxt.data.alchemy.MedicinalProperty;
 import com.iafenvoy.mxt.data.alchemy.SpiritHerb;
 import com.iafenvoy.mxt.data.artifact.Artifact;
@@ -81,6 +82,7 @@ public final class MxtDatapackRegistries {
         register(event, MxtResourceKeys.SPIRIT_HERB, SpiritHerb.DIRECT_CODEC);
         register(event, MxtResourceKeys.ALCHEMY_FURNACE, AlchemyFurnaceDefinition.DIRECT_CODEC);
         register(event, MxtResourceKeys.ALCHEMY_WALL_MATERIAL, AlchemyWallMaterial.DIRECT_CODEC);
+        register(event, MxtResourceKeys.HEAT_SOURCE, HeatSource.DIRECT_CODEC);
         register(event, MxtResourceKeys.FORMATION, Formation.DIRECT_CODEC);
         register(event, MxtResourceKeys.TRIBULATION, Tribulation.DIRECT_CODEC);
         register(event, MxtResourceKeys.CREATURE_PROFILE, CreatureProfile.CODEC);

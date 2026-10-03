@@ -14,7 +14,7 @@ import net.minecraft.resources.RegistryFixedCodec;
 
 /**
  * One furnace specification. Slot counts, capacity and cooling are written here. Temperature ceiling comes from the
- * walls and the fire item, not from this definition. Quality is only the shared display and use-condition tier.
+ * walls and the heat block, not from this definition. Quality is only the shared display and use-condition tier.
  */
 public record AlchemyFurnaceDefinition(Component name, Component description, int mainSlots, int auxiliarySlots,
                                        Holder<ItemQuality> quality, int capacity, double coolingPerTick)

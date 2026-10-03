@@ -515,7 +515,7 @@ give @s mxt:formation_plate[mxt:formation_plate={allowed:["#mypack:wood_arrays"]
 
 ## 炼丹与灵植
 
-丹方、药性、炉型、炉壁材料和灵植都由数据包提供。本体给出核心 `mxt:alchemy_furnace`、主药仓 `mxt:alchemy_main_input`、辅药仓 `mxt:alchemy_auxiliary_input`、产物仓 `mxt:alchemy_output`、炉壁 `mxt:alchemy_furnace_casing`、灵田 `mxt:spirit_herb_plot` 和丹药载体 `mxt:pill`。本体没有默认异火。下面的 `example:` 条目不会随本体发布；测试包里才有可玩夹具。玩家点击开炉后的产物判定尚未实跑，不要把这篇教程当成这次改动的验收。
+丹方、药性、炉型、炉壁材料、供热方块和灵植都由数据包提供。本体给出核心 `mxt:alchemy_furnace`、主药仓 `mxt:alchemy_main_input`、辅药仓 `mxt:alchemy_auxiliary_input`、产物仓 `mxt:alchemy_output`、炉壁 `mxt:alchemy_furnace_casing`、灵田 `mxt:spirit_herb_plot` 和丹药载体 `mxt:pill`。本体没有默认供热方块。下面的 `example:` 条目不会随本体发布；测试包里才有可玩夹具。玩家点击开炉后的产物判定尚未实跑，不要把这篇教程当成这次改动的验收。
 
 ### 先写药性
 
@@ -568,7 +568,15 @@ give @s mxt:formation_plate[mxt:formation_plate={allowed:["#mypack:wood_arrays"]
 }
 ```
 
-炉型放在 `data/example/mxt/alchemy_furnace/basic.json`。炉壁材料放在 `data/example/mxt/alchemy_wall_material/basic_wall.json`。药引固定 1 格。品质只决定显示和使用条件。槽位、容量和冷却以炉型字段为准。耐温取 22 块炉壁的最低值，再和异火上限取较低值。只升级 `mxt:quality` 不会换成另一份规格，也不改变耐温。不要再写 `max_temperature`、`heating_per_tick`、`aura_capacity` 或 `heating_costs`。
+炉型放在 `data/example/mxt/alchemy_furnace/basic.json`。炉壁材料放在 `data/example/mxt/alchemy_wall_material/basic_wall.json`，供热方块放在 `data/example/mxt/heat_source/basic_fire.json`（`blocks` 收方块或 `#方块标签`，`max_temperature` 与 `heating_per_tick` 都是有限正数，重叠时比 `priority`）。药引固定 1 格。品质只决定显示和使用条件。槽位、容量和冷却以炉型字段为准。耐温取 18 块炉壁的最低值，再和供热方块的 `max_temperature` 取较低值。只升级 `mxt:quality` 不会换成另一份规格，也不改变耐温。炉型定义里不要再写 `max_temperature`、`heating_per_tick`、`aura_capacity` 或 `heating_costs`。
+
+```json
+{
+  "blocks": ["minecraft:magma_block"],
+  "max_temperature": 200,
+  "heating_per_tick": 4
+}
+```
 
 ```mcfunction
 give @s mxt:alchemy_furnace[mxt:alchemy_furnace="example:basic"]
@@ -581,12 +589,13 @@ give @s mxt:alchemy_furnace_casing[mxt:alchemy_wall_material="example:basic_wall
 
 1. 核心放在正面中层。本地坐标 `(1,1,0)`，index `x + 3 * z + 9 * y` 等于 10。默认朝北。站在北侧、面朝南时，左侧是本地 `x = 2`。
 2. 左侧主药仓放在 `(2,1,1)`，index 14。右侧辅药仓放在 `(0,1,1)`，index 12。顶部产物仓放在 `(1,2,1)`，index 22。
-3. 中心 `(1,1,1)` 留空。index 13 不能有方块。
-4. 其余 22 格放带材料的 `mxt:alchemy_furnace_casing`。炉壁不打开界面。
-5. 壳不齐或材料无效时不能成型，也不能开炉。活动中缺块或冲突会失败一次；有格子未加载则这一 tick 不推进，也不加载那个区块。
-6. 异火放进核心。`alchemy_env_bonus` 只顶替配方的环境门槛，不供热。本体没有默认异火。
-7. 主药放左侧仓，辅药和药引放右侧仓。产物仓只能取出。漏斗只能从产物仓下侧面抽出，成型后那一面对着中心空气，所以那里放不进漏斗。
-8. 活动中拆炉壁或一座仓：这一批失败一次，不退已消耗的材料，并停火。拆一座仓只掉这座仓自己的物品。拆核心只掉核心、异火和已生成待输出。
+3. 中层中心 `(1,1,1)`（index 13）现在是炉壁，要砌上——它以前是留空的那一格。
+4. 上面两层其余格与底面四角，一共 18 格放带材料的 `mxt:alchemy_furnace_casing`。炉壁不打开界面。
+5. **底面只有四角算结构**：底层 index 0 / 2 / 6 / 8 放炉壁，其余五格不校验，空着也不影响成型（整块底面由四角各画四分之一拼出）。那五格里放什么、区块加没加载都不看。
+6. 壳不齐或材料无效时不能成型，也不能开炉。活动中缺块或冲突会失败一次；有格子未加载则这一 tick 不推进，也不加载那个区块。
+7. **供热方块放进底层正中央那一格**（本地 index 4，上层炉体中心的正下方）：那个方块要在 `mxt:heat_source` 里，炉子才有热源；放别的方块或空着，可设炉温上限就是 0。方块自己实现了 `AlchemyHeatSource` 时以它自己的回答为准。`alchemy_env_bonus` 只顶替配方的环境门槛，不供热。本体没有默认供热方块。
+8. 主药放左侧仓，辅药和药引放右侧仓。产物仓只能取出。漏斗只能从产物仓下侧面抽出，成型后那一面对着中层中心的炉壁格，所以那里放不进漏斗。
+9. 活动中拆炉壁或一座仓：这一批失败一次，不退已消耗的材料，并停止供热。拆一座仓只掉这座仓自己的物品。拆核心只掉核心和已生成待输出，供热方块是独立的一格、不跟着掉。
 
 ### 丹方
 

@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "lit=false": {
+      "model": "mxt_test:block/alchemy_advanced_fire"
+    },
+    "lit=true": {
+      "model": "mxt_test:block/alchemy_advanced_fire"
+    }
+  }
+}

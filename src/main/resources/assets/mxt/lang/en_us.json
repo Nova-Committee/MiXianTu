@@ -1072,8 +1072,8 @@
   "screen.mxt.alchemy_furnace": "Alchemy Furnace",
   "tooltip.mxt.alchemy.slots": "Main %s / Auxiliary %s / Catalyst %s",
   "tooltip.mxt.alchemy.capacity": "Capacity: %s ingredients",
-  "tooltip.mxt.alchemy.structure": "Hollow 3x3x3: core, side inputs, top output, and 22 walls",
-  "tooltip.mxt.alchemy.fire": "Install exotic fire in the core; wall and fire limits both constrain temperature",
+  "tooltip.mxt.alchemy.structure": "3x3x3: core, side inputs, top output, and 18 walls; the bottom layer only needs its four corners, with the heat block in its centre",
+  "tooltip.mxt.alchemy.heat": "Put the heat block in the bottom layer's centre cell; the mod ships no heat source block",
   "tooltip.mxt.alchemy.no_wall_material": "No valid wall material",
   "tooltip.mxt.alchemy.wall_temperature": "Material temperature limit: %s",
   "tooltip.mxt.alchemy.wall_rule": "Mixed walls use the lowest temperature limit",
@@ -1089,5 +1089,6 @@
   "screen.mxt.alchemy.temperature_pending": "Waiting for the furnace to accept %s.",
   "screen.mxt.alchemy.temperature_draft": "Unsent temperature. Server set point %s, maximum %s.",
   "screen.mxt.alchemy.temperature_exact": "Heat %s / set %s / maximum %s",
-  "screen.mxt.alchemy.limit_exact": "Maximum %s / brewing target %s ± %s"
+  "screen.mxt.alchemy.limit_exact": "Maximum %s / brewing target %s ± %s",
+  "screen.mxt.alchemy.heat_cell": "The ceiling is the lower of the wall rating and the heat block. Put the heat block in the bottom layer's centre cell, directly under the sealed chamber; with that cell empty, or holding a block no heat_source entry covers, the furnace cools down."
 }

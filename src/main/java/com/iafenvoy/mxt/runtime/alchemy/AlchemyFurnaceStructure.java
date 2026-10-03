@@ -13,20 +13,27 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 /**
- * Fixed hollow 3x3x3. Local index is {@code x + 3z + 9y}; the controller is 10 and the air cell is 13.
+ * Fixed 3x3x3: the bottom layer anchors its four corners only, and the two layers above it are filled - the cell
+ * the shape used to leave hollow (13) is a wall now.
+ * Local index is {@code x + 3z + 9y}; the controller is 10 and the heating block goes in the bottom centre (4).
  * Main is 14 and auxiliary is 12 so a player facing the north front has the main port on their left.
  * Facing rotates cells with the same quarter turns as {@code AlchemyFurnaceShapes}. Never force-loads a chunk.
  */
 public final class AlchemyFurnaceStructure {
     public static final int SIZE = 3;
     public static final int CONTROLLER_INDEX = 10;
-    public static final int HOLLOW_INDEX = 13;
     public static final int MAIN_INDEX = AlchemyInventoryKind.MAIN.index();
     public static final int AUXILIARY_INDEX = AlchemyInventoryKind.AUXILIARY.index();
     public static final int OUTPUT_INDEX = AlchemyInventoryKind.OUTPUT.index();
+    /**
+     * The bottom layer's centre: the cell the heating block goes in, directly under the sealed chamber. One of the
+     * five cells the structure never validates, so nothing claims it and a furnace may lose its heat mid-batch.
+     */
+    public static final int HEAT_INDEX = 4;
     private static final int[] WALLS = wallIndices();
 
     private AlchemyFurnaceStructure() {
@@ -36,8 +43,17 @@ public final class AlchemyFurnaceStructure {
         return WALLS.clone();
     }
 
+    /**
+     * Whether this cell is part of the structure at all. The bottom layer is only held by its four corners: the
+     * base under the walls is drawn by the corner blocks themselves, so the five cells between them are the
+     * builder's business and nothing here - requirement, claim or chunk loading - looks at them.
+     */
+    public static boolean required(int index) {
+        return index / 9 > 0 || index % 3 != 1 && index / 3 % 3 != 1;
+    }
+
     public static boolean wall(int index) {
-        return index != CONTROLLER_INDEX && index != HOLLOW_INDEX && AlchemyInventoryKind.ofIndex(index) == null;
+        return required(index) && index != CONTROLLER_INDEX && AlchemyInventoryKind.ofIndex(index) == null;
     }
 
     public static BlockPos world(BlockPos controller, Direction facing, int index) {
@@ -60,23 +76,24 @@ public final class AlchemyFurnaceStructure {
         return world(controller, facing, 0);
     }
 
+    /**
+     * The cell a heat source block has to stand in. Rotates with the shell like every other cell.
+     */
+    public static BlockPos heatSource(BlockPos controller, Direction facing) {
+        return world(controller, facing, HEAT_INDEX);
+    }
+
     public static Status inspect(Level level, BlockPos controller, Direction facing) {
         List<BlockPos> missing = new ArrayList<>();
         List<BlockPos> unloaded = new ArrayList<>();
         List<BlockPos> conflicts = new ArrayList<>();
         boolean complete = true;
         for (int index = 0; index < 27; index++) {
+            if (!required(index)) continue;
             BlockPos pos = world(controller, facing, index);
             if (!level.isLoaded(pos)) {
                 unloaded.add(pos.immutable());
                 complete = false;
-                continue;
-            }
-            if (index == HOLLOW_INDEX) {
-                if (!level.getBlockState(pos).isAir()) {
-                    missing.add(pos.immutable());
-                    complete = false;
-                }
                 continue;
             }
             BlockState state = level.getBlockState(pos);
@@ -118,7 +135,7 @@ public final class AlchemyFurnaceStructure {
 
     public static void form(ServerLevel level, BlockPos controller, Direction facing, boolean lit) {
         for (int index = 0; index < 27; index++) {
-            if (index == HOLLOW_INDEX || index == CONTROLLER_INDEX) continue;
+            if (!required(index) || index == CONTROLLER_INDEX) continue;
             BlockPos pos = world(controller, facing, index);
             if (!level.isLoaded(pos)) continue;
             BlockState state = level.getBlockState(pos);
@@ -148,7 +165,7 @@ public final class AlchemyFurnaceStructure {
      */
     public static void release(ServerLevel level, BlockPos controller, Direction facing) {
         for (int index = 0; index < 27; index++) {
-            if (index == HOLLOW_INDEX || index == CONTROLLER_INDEX) continue;
+            if (!required(index) || index == CONTROLLER_INDEX) continue;
             BlockPos pos = world(controller, facing, index);
             if (!level.isLoaded(pos)) continue;
             BlockState state = level.getBlockState(pos);
@@ -176,7 +193,7 @@ public final class AlchemyFurnaceStructure {
         if (!level.isLoaded(controller) || !(level.getBlockState(controller).getBlock() instanceof AlchemyFurnaceBlock))
             return;
         for (int index = 0; index < 27; index++) {
-            if (index == HOLLOW_INDEX || index == CONTROLLER_INDEX) continue;
+            if (!required(index) || index == CONTROLLER_INDEX) continue;
             BlockPos pos = world(controller, facing, index);
             if (!level.isLoaded(pos)) continue;
             BlockState state = level.getBlockState(pos);
@@ -201,10 +218,10 @@ public final class AlchemyFurnaceStructure {
     }
 
     private static int[] wallIndices() {
-        int[] ids = new int[22];
+        int[] ids = new int[27];
         int cursor = 0;
         for (int index = 0; index < 27; index++) if (wall(index)) ids[cursor++] = index;
-        return ids;
+        return Arrays.copyOf(ids, cursor);
     }
 
     private static int turns(Direction facing) {

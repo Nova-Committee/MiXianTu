@@ -12,8 +12,8 @@ import net.minecraft.world.item.ItemStack;
 import java.util.Optional;
 
 /**
- * A placed furnace controller. Part block entities own material inventories. This controller owns the fire slot,
- * the furnace item and the batch.
+ * A placed furnace controller. Part block entities own material inventories. This controller owns the furnace item,
+ * the batch and the heat cell it reads.
  */
 public interface AlchemyWorkstation {
     /**
@@ -41,26 +41,24 @@ public interface AlchemyWorkstation {
     void setTemperature(double temperature);
 
     /**
-     * The single exotic-fire slot. Count is capped at 1.
+     * The cell the heat comes from: the bottom layer's centre, never claimed by the structure. A block standing
+     * there - read through the {@code mxt:heat_source} table or its own {@link AlchemyHeatSource} - is what heats
+     * the furnace; nothing has to be put into an interface.
      */
-    Container fireContainer();
-
-    boolean canPlaceFire(ItemStack stack);
-
-    boolean canTakeFire();
+    BlockPos heatSourcePos();
 
     /**
-     * Minimum of the 22 wall ratings, or 0 when any wall is missing, unloaded, disabled or illegal.
+     * Minimum over the wall cells' ratings, or 0 when any of them is missing, unloaded, disabled or illegal.
      */
     double wallTemperatureLimit();
 
     /**
-     * Fire item maximum, or 0 when the slot is empty or the answer is not finite and positive.
+     * Heat source maximum at {@link #heatSourcePos()}, or 0 when that cell is unloaded or holds no heat source.
      */
-    double fireTemperatureLimit();
+    double heatTemperatureLimit();
 
     /**
-     * {@code min(wall, fire)}, or 0 when either limit is unavailable.
+     * {@code min(wall, heat)}, or 0 when either limit is unavailable.
      */
     double maximumTemperature();
 

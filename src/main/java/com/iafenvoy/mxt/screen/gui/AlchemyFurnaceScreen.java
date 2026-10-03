@@ -54,20 +54,18 @@ public final class AlchemyFurnaceScreen extends AuiContainerScreen<AlchemyFurnac
         this.panel = this.getOrThrow("panel");
         this.title = this.getOrThrow("title");
 
-        List<Element> machineCells = this.getOrThrow("machine", Container.class).getChildren();
         List<Element> playerCells = this.getOrThrow("player_inventory", Container.class).getChildren();
-        if (machineCells.size() != this.menu.view().getMachineSlots()) {
-            throw this.missing("machine (" + machineCells.size() + " slots)");
-        }
-        if (playerCells.size() != PLAYER_SLOTS) throw this.missing("player_inventory (" + playerCells.size() + " slots)");
-        this.bindMachine(machineCells);
+        // The monitor has no machine cell: its heat source is a block in the world, not a slot.
         if (this.menu.view() == AlchemyFurnaceMenu.View.MONITOR) this.bindMonitor();
+        else this.bindMachine(this.getOrThrow("machine", Container.class).getChildren());
+        if (playerCells.size() != PLAYER_SLOTS) throw this.missing("player_inventory (" + playerCells.size() + " slots)");
         this.text(this.title, this.getTitle());
         this.text(this.getOrThrow("inventory_label"), Component.translatable("container.inventory"));
     }
 
     private void bindMachine(List<Element> machineCells) {
         int machineSlots = this.menu.view().getMachineSlots();
+        if (machineCells.size() != machineSlots) throw this.missing("machine (" + machineCells.size() + " slots)");
         for (Element cell : machineCells) {
             int index = cell instanceof Slot slot ? slot.getSlotIndex() : -1;
             if (index < 0 || index >= machineSlots) {
@@ -196,7 +194,8 @@ public final class AlchemyFurnaceScreen extends AuiContainerScreen<AlchemyFurnac
     private List<Component> limitTooltip() {
         AlchemyFurnaceView.Numbers numbers = this.menu.viewSnapshot().numbers();
         return List.of(Component.translatable("screen.mxt.alchemy.limit_exact",
-                roundTrip(numbers.maximum()), roundTrip(numbers.recipeTarget()), roundTrip(numbers.tolerance())));
+                        roundTrip(numbers.maximum()), roundTrip(numbers.recipeTarget()), roundTrip(numbers.tolerance())),
+                Component.translatable("screen.mxt.alchemy.heat_cell"));
     }
 
     private List<Component> fieldTooltip() {
@@ -303,10 +302,9 @@ public final class AlchemyFurnaceScreen extends AuiContainerScreen<AlchemyFurnac
     private List<Component> machineHint(int index) {
         if (this.menu.getSlot(index).hasItem()) return List.of();
         String key = switch (this.menu.view()) {
-            case MONITOR -> "tooltip.mxt.alchemy.fire";
             case MAIN -> "screen.mxt.alchemy.main";
             case AUXILIARY -> index == 2 ? "screen.mxt.alchemy.catalyst" : "screen.mxt.alchemy.auxiliary";
-            case OUTPUT -> "screen.mxt.alchemy.output";
+            default -> "screen.mxt.alchemy.output";
         };
         return List.of(Component.translatable(key));
     }

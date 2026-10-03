@@ -1,6 +1,5 @@
 package com.iafenvoy.mxt.item.block.entity;
 
-import com.iafenvoy.mxt.api.AlchemyHeatSource;
 import com.iafenvoy.mxt.api.AlchemyWorkstation;
 import com.iafenvoy.mxt.data.alchemy.AlchemyFurnaceDefinition;
 import com.iafenvoy.mxt.data.alchemy.AlchemyWallMaterial;
@@ -14,7 +13,6 @@ import net.minecraft.core.Holder;
 import net.minecraft.core.component.DataComponentMap;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.Container;
-import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
@@ -30,51 +28,13 @@ import java.util.Optional;
 /**
  * Never implement Container here: vanilla removal and hoppers would consume the ports' live stacks.
  * Only container() exposes the logical transaction view; each physical part keeps its own inventory.
+ * The heat source is a block in the bottom centre cell, not a slot here; the structure never claims that cell.
  */
 public final class AlchemyFurnaceBlockEntity extends BlockEntity implements AlchemyWorkstation {
     private final AlchemyAggregateContainer inventory = new AlchemyAggregateContainer(this);
-    private final SimpleContainer fire = new SimpleContainer(1) {
-        @Override
-        public void setChanged() {
-            AlchemyFurnaceBlockEntity.this.setChanged();
-        }
-
-        @Override
-        public int getMaxStackSize() {
-            return 1;
-        }
-
-        @Override
-        public boolean canPlaceItem(int slot, @NonNull ItemStack stack) {
-            return AlchemyFurnaceBlockEntity.this.canPlaceFire(stack);
-        }
-
-        @Override
-        public void setItem(int slot, @NonNull ItemStack stack) {
-            if (!AlchemyFurnaceBlockEntity.this.loading
-                    && (stack.isEmpty() ? !AlchemyFurnaceBlockEntity.this.canTakeFire() : !this.canPlaceItem(slot, stack)))
-                return;
-            super.setItem(slot, stack.isEmpty() || stack.getCount() == 1 ? stack : stack.copyWithCount(1));
-        }
-
-        @Override
-        public @NonNull ItemStack removeItem(int slot, int count) {
-            if (!AlchemyFurnaceBlockEntity.this.loading && !AlchemyFurnaceBlockEntity.this.canTakeFire())
-                return ItemStack.EMPTY;
-            return super.removeItem(slot, count);
-        }
-
-        @Override
-        public @NonNull ItemStack removeItemNoUpdate(int slot) {
-            if (!AlchemyFurnaceBlockEntity.this.loading && !AlchemyFurnaceBlockEntity.this.canTakeFire())
-                return ItemStack.EMPTY;
-            return super.removeItemNoUpdate(slot);
-        }
-    };
     private final AlchemyWorkstationState state = new AlchemyWorkstationState();
     private ItemStack furnaceItem = ItemStack.EMPTY;
     private boolean voidContents;
-    private boolean loading;
     private int structureTicker;
 
     public AlchemyFurnaceBlockEntity(BlockPos pos, BlockState blockState) {
@@ -119,7 +79,6 @@ public final class AlchemyFurnaceBlockEntity extends BlockEntity implements Alch
 
     public void voidContents() {
         this.voidContents = true;
-        this.fire.clearContent();
         this.state.session().ifPresent(AlchemySession::clearPending);
         this.state.clearSession();
         this.furnaceItem = ItemStack.EMPTY;
@@ -177,18 +136,8 @@ public final class AlchemyFurnaceBlockEntity extends BlockEntity implements Alch
     }
 
     @Override
-    public Container fireContainer() {
-        return this.fire;
-    }
-
-    @Override
-    public boolean canPlaceFire(ItemStack stack) {
-        return !this.state.busy() && stack.getItem() instanceof AlchemyHeatSource;
-    }
-
-    @Override
-    public boolean canTakeFire() {
-        return !this.state.busy();
+    public BlockPos heatSourcePos() {
+        return AlchemyFurnaceStructure.heatSource(this.worldPosition, this.facing());
     }
 
     @Override
@@ -212,20 +161,17 @@ public final class AlchemyFurnaceBlockEntity extends BlockEntity implements Alch
     }
 
     @Override
-    public double fireTemperatureLimit() {
+    public double heatTemperatureLimit() {
         if (!(this.level instanceof ServerLevel server)) return 0.0D;
-        ItemStack stack = this.fire.getItem(0);
-        if (!(stack.getItem() instanceof AlchemyHeatSource source)) return 0.0D;
-        double value = source.maxTemperature(stack, server, this.worldPosition);
-        return Double.isFinite(value) && value > 0.0D ? value : 0.0D;
+        return AlchemyHeatService.maxTemperature(server, this.heatSourcePos());
     }
 
     @Override
     public double maximumTemperature() {
         double wall = this.wallTemperatureLimit();
-        double fireLimit = this.fireTemperatureLimit();
-        if (wall <= 0.0D || fireLimit <= 0.0D) return 0.0D;
-        return Math.min(wall, fireLimit);
+        double heat = this.heatTemperatureLimit();
+        if (wall <= 0.0D || heat <= 0.0D) return 0.0D;
+        return Math.min(wall, heat);
     }
 
     @Override
@@ -244,12 +190,8 @@ public final class AlchemyFurnaceBlockEntity extends BlockEntity implements Alch
     public void preRemoveSideEffects(@NonNull BlockPos pos, @NonNull BlockState state) {
         if (this.level instanceof ServerLevel server && state.getBlock() instanceof AlchemyFurnaceBlock) {
             AlchemyFurnaceStructure.release(server, pos, state.getValue(AlchemyFurnaceBlock.FACING));
-            if (!this.voidContents) {
-                ItemStack flame = this.fire.getItem(0);
-                if (!flame.isEmpty()) Block.popResource(server, pos, flame.copy());
+            if (!this.voidContents)
                 this.state.session().ifPresent(session -> session.pendingOutputs().forEach(stack -> Block.popResource(server, pos, stack)));
-            }
-            this.fire.clearContent();
             this.state.clearSession();
         }
         super.preRemoveSideEffects(pos, state);
@@ -258,28 +200,26 @@ public final class AlchemyFurnaceBlockEntity extends BlockEntity implements Alch
     @Override
     protected void loadAdditional(@NonNull ValueInput input) {
         super.loadAdditional(input);
-        this.loading = true;
-        try {
-            this.furnaceItem = input.read("furnace_item", ItemStack.OPTIONAL_CODEC).orElse(ItemStack.EMPTY);
-            if (!this.furnaceItem.isEmpty()) this.furnaceItem.setCount(1);
-            this.fire.setItem(0, input.read("fire", ItemStack.OPTIONAL_CODEC).orElse(ItemStack.EMPTY));
-            if (!this.fire.getItem(0).isEmpty()) this.fire.getItem(0).setCount(1);
-            AlchemyWorkstationState loaded = input.read("state", AlchemyWorkstationState.CODEC).orElseGet(AlchemyWorkstationState::new);
-            this.state.clearSession();
-            loaded.session().ifPresent(this.state::begin);
-            this.state.setTemperature(loaded.temperature());
-            this.state.setTargetTemperature(loaded.targetTemperature());
-        } finally {
-            this.loading = false;
-        }
+        this.furnaceItem = input.read("furnace_item", ItemStack.OPTIONAL_CODEC).orElse(ItemStack.EMPTY);
+        if (!this.furnaceItem.isEmpty()) this.furnaceItem.setCount(1);
+        AlchemyWorkstationState loaded = input.read("state", AlchemyWorkstationState.CODEC).orElseGet(AlchemyWorkstationState::new);
+        this.state.clearSession();
+        loaded.session().ifPresent(this.state::begin);
+        this.state.setTemperature(loaded.temperature());
+        this.state.setTargetTemperature(loaded.targetTemperature());
     }
 
     @Override
     protected void saveAdditional(@NonNull ValueOutput output) {
         super.saveAdditional(output);
         output.store("furnace_item", ItemStack.OPTIONAL_CODEC, this.furnaceItem);
-        output.store("fire", ItemStack.OPTIONAL_CODEC, this.fire.getItem(0));
         output.store("state", AlchemyWorkstationState.CODEC, this.state);
+    }
+
+    // Every reader of the shell's facing goes through here: the state is not ours while the block is being replaced.
+    private Direction facing() {
+        return this.getBlockState().getBlock() instanceof AlchemyFurnaceBlock
+                ? this.getBlockState().getValue(AlchemyFurnaceBlock.FACING) : Direction.NORTH;
     }
 
     private void syncLit() {

@@ -6,7 +6,7 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import java.util.Optional;
 
 /**
- * Process state only. Part block entities own the real items; the core owns the fire slot separately.
+ * Process state only. Part block entities own the real items; the heat source is a block in the world.
  */
 public final class AlchemyWorkstationState {
     public static final Codec<AlchemyWorkstationState> CODEC = RecordCodecBuilder.create(i -> i.group(

@@ -1,0 +1,70 @@
+{
+  "credit": "Blockbench model; split by tools/export_alchemy_furnace.py",
+  "textures": {
+    "0": "mxt:block/alchemy_bronze",
+    "1": "mxt:block/alchemy_trim",
+    "3": "mxt:block/alchemy_vent",
+    "particle": "mxt:block/alchemy_bronze"
+  },
+  "elements": [
+    {
+      "from": [
+        0,
+        0,
+        0
+      ],
+      "to": [
+        16,
+        16,
+        16
+      ],
+      "faces": {}
+    },
+    {
+      "from": [
+        0,
+        0,
+        0
+      ],
+      "to": [
+        16,
+        14,
+        16
+      ],
+      "faces": {
+        "up": {
+          "uv": [
+            3.333333,
+            1.333333,
+            8.666667,
+            6.666667
+          ],
+          "texture": "#0"
+        }
+      }
+    },
+    {
+      "from": [
+        0,
+        0,
+        0
+      ],
+      "to": [
+        16,
+        14,
+        16
+      ],
+      "faces": {
+        "up": {
+          "uv": [
+            1.333333,
+            3.333333,
+            6.666667,
+            8.666667
+          ],
+          "texture": "#0"
+        }
+      }
+    }
+  ]
+}

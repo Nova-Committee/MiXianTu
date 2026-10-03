@@ -12,7 +12,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.RegistryFixedCodec;
 
 /**
- * Temperature rating of one furnace wall. The furnace limit is the minimum of the 22 placed walls, never an average.
+ * Temperature rating of one furnace wall. The furnace limit is the minimum over the wall cells, never an average.
  */
 public record AlchemyWallMaterial(Component name, Component description,
                                   double maxTemperature) implements NamedDefinition {

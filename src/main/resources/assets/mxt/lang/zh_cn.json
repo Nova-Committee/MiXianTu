@@ -1071,8 +1071,8 @@
   "screen.mxt.alchemy_furnace": "丹炉",
   "tooltip.mxt.alchemy.slots": "主药 %s / 辅药 %s / 药引 %s",
   "tooltip.mxt.alchemy.capacity": "容量：%s 件药材",
-  "tooltip.mxt.alchemy.structure": "空心3×3×3：核心、左右投料仓、顶部产物仓及22块炉壁",
-  "tooltip.mxt.alchemy.fire": "异火装入核心供热；耐温与异火能力共同限制炉温",
+  "tooltip.mxt.alchemy.structure": "3×3×3：核心、左右投料仓、顶部产物仓及18块炉壁；底层只放四角，供热方块放底层正中",
+  "tooltip.mxt.alchemy.heat": "供热方块放在底层正中央那一格；本体不提供热源方块",
   "tooltip.mxt.alchemy.no_wall_material": "未绑定有效炉壁材料",
   "tooltip.mxt.alchemy.wall_temperature": "材料耐温：%s",
   "tooltip.mxt.alchemy.wall_rule": "混用炉壁时，整炉取最低耐温",
@@ -1088,5 +1088,6 @@
   "screen.mxt.alchemy.temperature_pending": "正在等待丹炉接受 %s。",
   "screen.mxt.alchemy.temperature_draft": "尚未提交的炉温。服务器设定 %s，上限 %s。",
   "screen.mxt.alchemy.temperature_exact": "炉温 %s / 设定 %s / 上限 %s",
-  "screen.mxt.alchemy.limit_exact": "上限 %s / 炼制目标 %s ± %s"
+  "screen.mxt.alchemy.limit_exact": "上限 %s / 炼制目标 %s ± %s",
+  "screen.mxt.alchemy.heat_cell": "上限取炉壁耐温与供热方块热量的较低值。供热方块放在底层正中央那一格，也就是上层炉体中心的正下方；那一格不放东西、或方块不在 heat_source 里，炉温就回落。"
 }

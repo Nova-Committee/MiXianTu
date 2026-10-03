@@ -62,9 +62,9 @@
 
 /* ── 目标炉温输入框：外观在主题的 .input，这里只给位置与内边距 ── */
 .input {
-    left: 29px;
+    left: 7px;
     top: 70px;
-    width: 104px;
+    width: 126px;
     height: 18px;
     padding: 0 3px;
 }

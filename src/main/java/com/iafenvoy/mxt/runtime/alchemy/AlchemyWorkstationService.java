@@ -1,6 +1,5 @@
 package com.iafenvoy.mxt.runtime.alchemy;
 
-import com.iafenvoy.mxt.api.AlchemyHeatSource;
 import com.iafenvoy.mxt.api.AlchemyWorkstation;
 import com.iafenvoy.mxt.data.alchemy.AlchemyFurnaceDefinition;
 import com.iafenvoy.mxt.data.aura.Aura;
@@ -210,10 +209,7 @@ public final class AlchemyWorkstationService {
     }
 
     private static double heatingPerTick(ServerLevel level, AlchemyWorkstation station) {
-        ItemStack stack = station.fireContainer().getItem(0);
-        if (!(stack.getItem() instanceof AlchemyHeatSource source)) return 0.0D;
-        double value = source.heatingPerTick(stack, level, station.getBlockPos());
-        return Double.isFinite(value) && value > 0.0D ? value : 0.0D;
+        return AlchemyHeatService.heatingPerTick(level, station.heatSourcePos());
     }
 
     private static void approach(AlchemyWorkstationState state, double heating, double cooling, double target) {

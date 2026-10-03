@@ -76,7 +76,7 @@ public final class AlchemyFurnaceTooltipAppender {
             builder.accept(Component.translatable("tooltip.mxt.alchemy.capacity", spec.capacity()).withStyle(ChatFormatting.GRAY));
         }, () -> builder.accept(Component.translatable("screen.mxt.alchemy.no_furnace").withStyle(ChatFormatting.RED)));
         builder.accept(Component.translatable("tooltip.mxt.alchemy.structure").withStyle(ChatFormatting.GRAY));
-        builder.accept(Component.translatable("tooltip.mxt.alchemy.fire").withStyle(ChatFormatting.GRAY));
+        builder.accept(Component.translatable("tooltip.mxt.alchemy.heat").withStyle(ChatFormatting.GRAY));
     }
 
     private static Optional<Holder<AlchemyWallMaterial>> loadedWall(Provider registries, ItemStack stack) {

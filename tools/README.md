@@ -20,13 +20,21 @@ then export the Java block model to the adjacent `alchemy_furnace.json`. Run:
 python tools/export_alchemy_furnace.py
 ```
 
-The standard-library-only script scales the model to 3×3×3, clips its cubes and UVs at
-block boundaries, and overwrites the 26 occupied-cell models and their lit variants,
-the five blockstate files, unformed component models/item definitions, and
-`runtime/alchemy/AlchemyFurnaceShapes.java`. Rendering and collision use the same source
-bounds. The center cell 13 stays empty; core is 10, main input is 14, auxiliary/catalyst
-input is 12, output is 22. The remaining 22 cells are walls. Left/right refer to a player
-facing the front. Unformed components are cubes, not miniature assembled furnaces.
+The standard-library-only script scales the model to 3×3×3, clips its cubes and UVs, and
+overwrites the occupied-cell models and their lit variants, the five blockstate files,
+unformed component models/item definitions, and `runtime/alchemy/AlchemyFurnaceShapes.java`.
+Left/right refer to a player facing the front. Unformed components are cubes, not miniature
+assembled furnaces.
+
+The structure's two layers above the base are split cell by cell and are all occupied: core
+is 10, main input is 14, auxiliary/catalyst input is 12, output is 22, and the remaining 18
+cells are walls - including 13, which used to be the hollow one. The bottom layer only needs
+its four corners (0, 2, 6, 8), so it is cut along the model's mid-lines into four 1.5-cell
+quadrants, 24 units square, one per corner: the four corner blocks then draw the whole base
+between them and the five cells between the corners need no part at all (the script deletes
+stale ones). Rendering and collision use the same source bounds, so the Java shapes stay
+clipped to each block's own 16³ cell: nobody can stand in those five cells anyway, because
+the layer above them is solid.
 
 Output is deterministic. Rotated cubes and rotated UVs are rejected rather than
 silently producing different collision or texture geometry. Do not edit generated

@@ -15,6 +15,7 @@ import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.action.ItemAction;
 import com.iafenvoy.mxt.data.alchemy.AlchemyFurnaceDefinition;
 import com.iafenvoy.mxt.data.alchemy.AlchemyWallMaterial;
+import com.iafenvoy.mxt.data.alchemy.HeatSource;
 import com.iafenvoy.mxt.data.alchemy.MedicinalProperty;
 import com.iafenvoy.mxt.data.alchemy.SpiritHerb;
 import com.iafenvoy.mxt.data.artifact.Artifact;
@@ -111,6 +112,7 @@ public final class MxtResourceKeys {
     public static final ResourceKey<Registry<MedicinalProperty>> MEDICINAL_PROPERTY = create("medicinal_property");
     public static final ResourceKey<Registry<AlchemyFurnaceDefinition>> ALCHEMY_FURNACE = create("alchemy_furnace");
     public static final ResourceKey<Registry<AlchemyWallMaterial>> ALCHEMY_WALL_MATERIAL = create("alchemy_wall_material");
+    public static final ResourceKey<Registry<HeatSource>> HEAT_SOURCE = create("heat_source");
     public static final ResourceKey<Registry<Formation>> FORMATION = create("formation");
     public static final ResourceKey<Registry<Tribulation>> TRIBULATION = create("tribulation");
     public static final ResourceKey<Registry<CreatureProfile>> CREATURE_PROFILE = create("creature_profile");

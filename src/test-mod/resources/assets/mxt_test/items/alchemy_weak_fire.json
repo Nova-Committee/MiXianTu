@@ -1,3 +1,3 @@
 {
-  "model": {"type": "minecraft:model", "model": "minecraft:item/blaze_powder"}
+  "model": {"type": "minecraft:model", "model": "mxt_test:block/alchemy_weak_fire"}
 }

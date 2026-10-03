@@ -146,6 +146,7 @@ public final class AlchemyProbes {
             limitsAndParts(source, level, player, player.blockPosition().offset(6, 1, 60), touched);
             callbackFailures(source, level, player, player.blockPosition().offset(6, 1, 68), gate, touched);
             menuOwnership(source, level, player, player.blockPosition().offset(6, 1, 76), touched);
+            heatSources(source, level, player, player.blockPosition().offset(6, 1, 84), touched);
         } catch (PlaceRefused refused) {
             failed++;
             checks++;
@@ -290,11 +291,10 @@ public final class AlchemyProbes {
         sealed.refreshStructure();
         sealed.setTargetTemperature(50);
         fill(sealed);
-        sealed.fireContainer().setItem(0, new ItemStack(AlchemyTestFireItems.FIRE.get()));
         StartResult quality = AlchemyWorkstationService.start(player, sealed);
         check(source, "sealed-quality", quality.failure(), AlchemyFailure.QUALITY_CONDITIONS);
         check(source, "sealed-kept", sealed.container().getItem(0).getCount(), 2);
-        check(source, "sealed-fire", fireCount(sealed), 1);
+        check(source, "sealed-heat-kept", heatState(level, sealed).is(AlchemyTestHeatBlocks.FIRE.get()), true);
         clearFurnace(level, at, touched);
         AlchemyFurnaceBlockEntity wide = place(level, at, Direction.NORTH, item(level, WIDE), touched);
         wide.refreshStructure();
@@ -321,7 +321,6 @@ public final class AlchemyProbes {
         furnace.refreshStructure();
         furnace.setTargetTemperature(50);
         fillMarked(furnace, Items.ORANGE_TULIP);
-        furnace.fireContainer().setItem(0, new ItemStack(AlchemyTestFireItems.FIRE.get()));
         StartResult started = AlchemyWorkstationService.start(player, furnace);
         check(source, "full-start", started.started(), true);
         for (int slot = 5; slot < 9; slot++) furnace.container().setItem(slot, new ItemStack(Items.COBBLESTONE, 64));
@@ -331,36 +330,32 @@ public final class AlchemyProbes {
         check(source, "full-waiting", pending, 2);
         check(source, "full-not-inserted", furnace.container().getItem(5).is(Items.COBBLESTONE), true);
         double hot = furnace.temperature();
-        int fire = fireCount(furnace);
         tick(level, furnace);
         tick(level, furnace);
-        check(source, "ready-fire-kept-and-cools", fireCount(furnace) == fire && furnace.temperature() < hot, true);
+        check(source, "ready-heat-kept-and-cools", heatState(level, furnace).is(AlchemyTestHeatBlocks.FIRE.get())
+                && furnace.temperature() < hot, true);
         check(source, "full-no-dup", furnace.state().session().map(session -> session.pendingOutputs().stream().mapToInt(ItemStack::getCount).sum()).orElse(-1), pending);
         clearFurnace(level, at, touched);
         AlchemyFurnaceBlockEntity dual = place(level, at, Direction.NORTH, item(level, DUAL), touched);
         dual.refreshStructure();
         dual.setTargetTemperature(50);
         fill(dual);
-        dual.fireContainer().setItem(0, new ItemStack(AlchemyTestFireItems.FIRE.get()));
         StartResult dualStart = AlchemyWorkstationService.start(player, dual);
         check(source, "alternate-quality-start", dualStart.started(), true);
         tick(level, dual);
-        check(source, "running-fire-not-consumed", fireCount(dual), 1);
+        check(source, "running-heat-not-consumed", heatState(level, dual).is(AlchemyTestHeatBlocks.FIRE.get()), true);
         clearFurnace(level, at, touched);
         AlchemyFurnaceBlockEntity burstFurnace = place(level, at, Direction.NORTH, item(level, SMALL), touched);
         burstFurnace.refreshStructure();
-        burstFurnace.fireContainer().setItem(0, new ItemStack(AlchemyTestFireItems.FIRE.get()));
-        int before = fireCount(burstFurnace);
         double cold = burstFurnace.temperature();
         shoot(level, player, at.above(), aura(level, QI), 3);
-        check(source, "burst-no-fire", fireCount(burstFurnace), before);
+        check(source, "burst-heat-kept", heatState(level, burstFurnace).is(AlchemyTestHeatBlocks.FIRE.get()), true);
         check(source, "burst-no-heat", burstFurnace.temperature(), cold);
         clearFurnace(level, at, touched);
         AlchemyFurnaceBlockEntity bad = place(level, at, Direction.NORTH, item(level, WIDE), touched);
         bad.refreshStructure();
         bad.setTargetTemperature(50);
         fill(bad);
-        bad.fireContainer().setItem(0, new ItemStack(AlchemyTestFireItems.FIRE.get()));
         check(source, "bad-start", AlchemyWorkstationService.start(player, bad).started(), true);
         tickUntil(level, bad, 6, phase -> phase == AlchemyPhase.RUNNING);
         check(source, "bad-running", bad.phase(), AlchemyPhase.RUNNING);
@@ -386,16 +381,14 @@ public final class AlchemyProbes {
         furnace.refreshStructure();
         furnace.setTargetTemperature(50);
         fillMarked(furnace, Items.RED_TULIP);
-        furnace.fireContainer().setItem(0, new ItemStack(AlchemyTestFireItems.FIRE.get()));
         check(source, "save-start", AlchemyWorkstationService.start(player, furnace).started(), true);
         AlchemyFurnaceBlockEntity warming = reload(level, furnace);
         check(source, "warming-phase", warming.phase(), AlchemyPhase.WARMING);
         check(source, "warming-recipe", warming.state().session().map(session -> session.recipe().successOutputs().isEmpty()).orElse(true), false);
         tickUntil(level, furnace, 6, phase -> phase == AlchemyPhase.RUNNING);
-        int fire = fireCount(furnace);
         AlchemyFurnaceBlockEntity running = reload(level, furnace);
         check(source, "running-phase", running.phase(), AlchemyPhase.RUNNING);
-        check(source, "running-fire", fireCount(running), fire);
+        check(source, "running-heat", heatState(level, running).is(AlchemyTestHeatBlocks.FIRE.get()), true);
         check(source, "running-frozen", running.state().session().map(session -> session.recipeId().equals(LONG_BAD)).orElse(false), true);
         for (int slot = 5; slot < 9; slot++) furnace.container().setItem(slot, new ItemStack(Items.COBBLESTONE, 64));
         tickUntil(level, furnace, 90, phase -> phase == AlchemyPhase.READY);
@@ -439,11 +432,10 @@ public final class AlchemyProbes {
         furnace.refreshStructure();
         furnace.setTargetTemperature(50);
         fill(furnace);
-        furnace.fireContainer().setItem(0, new ItemStack(AlchemyTestFireItems.FIRE.get()));
         StartResult cancelled = AlchemyWorkstationService.start(player, furnace);
         check(source, "pre-cancel", cancelled.failure(), AlchemyFailure.CANCELLED);
         check(source, "pre-cancel-items", furnace.container().getItem(0).getCount(), 2);
-        check(source, "pre-cancel-fire", fireCount(furnace), 1);
+        check(source, "pre-cancel-heat", heatState(level, furnace).is(AlchemyTestHeatBlocks.FIRE.get()), true);
         gate.cancel = false;
         gate.mutate = true;
         fillMarked(furnace, Items.SUNFLOWER);
@@ -488,6 +480,34 @@ public final class AlchemyProbes {
             check(source, "facing-" + facing.getName(), furnace.structureStatus().complete()
                     && state.getValue(AlchemyFurnaceCasingBlock.PART) == 1
                     && state.getValue(AlchemyFurnaceCasingBlock.FACING) == facing, true);
+            // The cell the shape used to leave hollow is a wall now, so taking it out breaks the structure...
+            BlockPos centre = AlchemyFurnaceStructure.world(controller, facing, 13);
+            level.setBlockAndUpdate(centre, Blocks.AIR.defaultBlockState());
+            furnace.refreshStructure();
+            check(source, "facing-" + facing.getName() + "-centre", furnace.structureStatus().complete(), false);
+            level.setBlockAndUpdate(centre, shell(13, facing));
+            if (level.getBlockEntity(centre) instanceof AlchemyFurnaceCasingBlockEntity casing)
+                casing.acceptWallItem(wallItem(level, KILN_WALL));
+            // ...while the five bottom cells between the corners are none of its business.
+            BlockPos free = AlchemyFurnaceStructure.world(controller, facing, 4);
+            level.setBlockAndUpdate(free, Blocks.STONE.defaultBlockState());
+            touched.add(free);
+            furnace.refreshStructure();
+            check(source, "facing-" + facing.getName() + "-free", furnace.structureStatus().complete()
+                    && level.getBlockState(free).is(Blocks.STONE), true);
+            // The heat cell is one of those five, and it rotates with the shell; the offsets are spelled out here so
+            // a wrong quarter turn in the structure cannot hide behind its own helper.
+            BlockPos heat = switch (facing) {
+                case EAST -> controller.offset(-1, -1, 0);
+                case SOUTH -> controller.offset(0, -1, -1);
+                case WEST -> controller.offset(1, -1, 0);
+                default -> controller.offset(0, -1, 1);
+            };
+            check(source, "facing-" + facing.getName() + "-heat-cell", furnace.heatSourcePos(), heat);
+            check(source, "facing-" + facing.getName() + "-heat-absent", furnace.heatTemperatureLimit(), 0.0D);
+            level.setBlockAndUpdate(heat, AlchemyTestHeatBlocks.FIRE.get().defaultBlockState());
+            touched.add(heat);
+            check(source, "facing-" + facing.getName() + "-heat", furnace.heatTemperatureLimit(), 150.0D);
         }
     }
 
@@ -495,6 +515,7 @@ public final class AlchemyProbes {
         BlockPos controller = new BlockPos((player.getBlockX() >> 4) * 16 + 15 + 8000, Math.max(8, player.getBlockY()), (player.getBlockZ() >> 4) * 16 + 8);
         Set<BlockPos> before = new HashSet<>();
         for (int cell = 0; cell < 27; cell++) {
+            if (!AlchemyFurnaceStructure.required(cell)) continue;
             BlockPos pos = AlchemyFurnaceStructure.world(controller, Direction.NORTH, cell);
             if (!level.isLoaded(pos)) before.add(pos);
         }
@@ -513,7 +534,6 @@ public final class AlchemyProbes {
         split.refreshStructure();
         split.setTargetTemperature(50);
         fillMarked(split, Items.PEONY);
-        split.fireContainer().setItem(0, new ItemStack(AlchemyTestFireItems.FIRE.get()));
         split.container().setItem(5, ItemStack.EMPTY);
         split.container().setItem(6, new ItemStack(Items.APPLE, 63));
         split.container().setItem(7, new ItemStack(Items.STONE, 64));
@@ -527,7 +547,6 @@ public final class AlchemyProbes {
         pack.refreshStructure();
         pack.setTargetTemperature(50);
         fillMarked(pack, Items.ROSE_BUSH);
-        pack.fireContainer().setItem(0, new ItemStack(AlchemyTestFireItems.FIRE.get()));
         pack.container().setItem(5, new ItemStack(Items.APPLE, 60));
         pack.container().setItem(6, new ItemStack(Items.APPLE, 63));
         pack.container().setItem(7, new ItemStack(Items.STONE, 64));
@@ -687,7 +706,6 @@ public final class AlchemyProbes {
         furnace.refreshStructure();
         furnace.setTargetTemperature(50);
         fillMarked(furnace, Items.SPORE_BLOSSOM);
-        furnace.fireContainer().setItem(0, new ItemStack(AlchemyTestFireItems.FIRE.get()));
         check(source, "criterion-start", AlchemyWorkstationService.start(player, furnace).started(), true);
         tickUntil(level, furnace, 16, phase -> phase == AlchemyPhase.IDLE);
         boolean earned = player.getAdvancements().getOrStartProgress(holder).isDone();
@@ -710,6 +728,7 @@ public final class AlchemyProbes {
     private static AlchemyFurnaceBlockEntity place(ServerLevel level, BlockPos controller, Direction facing, ItemStack furnaceItem, List<BlockPos> touched, Identifier wallId) {
         BlockPos[] cells = new BlockPos[27];
         for (int cell = 0; cell < 27; cell++) {
+            if (!AlchemyFurnaceStructure.required(cell)) continue;
             BlockPos pos = AlchemyFurnaceStructure.world(controller, facing, cell).immutable();
             cells[cell] = pos;
             if (touched.contains(pos)) continue;
@@ -718,6 +737,7 @@ public final class AlchemyProbes {
         }
         ItemStack wall = wallItem(level, wallId);
         for (int cell = 0; cell < 27; cell++) {
+            if (!AlchemyFurnaceStructure.required(cell)) continue;
             BlockPos pos = cells[cell];
             if (!touched.contains(pos)) touched.add(pos);
             level.setBlockAndUpdate(pos, shell(cell, facing));
@@ -727,12 +747,14 @@ public final class AlchemyProbes {
         if (!(level.getBlockEntity(controller) instanceof AlchemyFurnaceBlockEntity furnace))
             throw new PlaceRefused("controller " + controller);
         furnace.acceptFurnaceItem(furnaceItem);
-        furnace.fireContainer().setItem(0, new ItemStack(AlchemyTestFireItems.FIRE.get()));
+        BlockPos heat = AlchemyFurnaceStructure.heatSource(controller, facing).immutable();
+        touched.add(heat);
+        placeHeat(level, controller, facing, AlchemyTestHeatBlocks.FIRE.get());
         return furnace;
     }
 
     private static BlockState shell(int cell, Direction facing) {
-        if (cell == AlchemyFurnaceStructure.HOLLOW_INDEX) return Blocks.AIR.defaultBlockState();
+        if (!AlchemyFurnaceStructure.required(cell)) return Blocks.AIR.defaultBlockState();
         if (cell == AlchemyFurnaceStructure.CONTROLLER_INDEX)
             return MxtBlocks.ALCHEMY_FURNACE.get().defaultBlockState().setValue(AlchemyFurnaceBlock.FACING, facing);
         if (cell == AlchemyFurnaceStructure.MAIN_INDEX)
@@ -864,8 +886,12 @@ public final class AlchemyProbes {
         return stack;
     }
 
-    private static int fireCount(AlchemyFurnaceBlockEntity furnace) {
-        return furnace.fireContainer().getItem(0).getCount();
+    private static void placeHeat(ServerLevel level, BlockPos controller, Direction facing, Block block) {
+        level.setBlockAndUpdate(AlchemyFurnaceStructure.heatSource(controller, facing), block.defaultBlockState());
+    }
+
+    private static BlockState heatState(ServerLevel level, AlchemyFurnaceBlockEntity furnace) {
+        return level.getBlockState(furnace.heatSourcePos());
     }
 
     private static void limitsAndParts(CommandSourceStack source, ServerLevel level, ServerPlayer player, BlockPos at, List<BlockPos> touched) {
@@ -880,14 +906,15 @@ public final class AlchemyProbes {
         clearFurnace(level, at, touched);
         AlchemyFurnaceBlockEntity weak = place(level, at, Direction.NORTH, item(level, WIDE), touched);
         weak.refreshStructure();
-        weak.fireContainer().setItem(0, new ItemStack(AlchemyTestFireItems.WEAK_FIRE.get()));
-        check(source, "weak-fire-limit", weak.maximumTemperature(), 80.0D);
-        check(source, "weak-fire-rejects-100", weak.setTargetTemperature(100.0D), false);
+        placeHeat(level, at, Direction.NORTH, AlchemyTestHeatBlocks.WEAK_FIRE.get());
+        check(source, "weak-heat-limit", weak.heatTemperatureLimit(), 80.0D);
+        check(source, "weak-heat-beats-tag", weak.maximumTemperature(), 80.0D);
+        check(source, "weak-heat-rejects-100", weak.setTargetTemperature(100.0D), false);
         weak.setTargetTemperature(80.0D);
         fillMarked(weak, Items.POPPY);
-        check(source, "weak-fire-hot", AlchemyWorkstationService.start(player, weak).failure(), AlchemyFailure.TEMPERATURE);
-        check(source, "weak-fire-kept", weak.container().getItem(0).getCount(), 2);
-        check(source, "weak-fire-remains", fireCount(weak), 1);
+        check(source, "weak-heat-hot", AlchemyWorkstationService.start(player, weak).failure(), AlchemyFailure.TEMPERATURE);
+        check(source, "weak-heat-kept", weak.container().getItem(0).getCount(), 2);
+        check(source, "weak-heat-remains", heatState(level, weak).is(AlchemyTestHeatBlocks.WEAK_FIRE.get()), true);
         clearFurnace(level, at, touched);
         AlchemyFurnaceBlockEntity mixed = place(level, at, Direction.NORTH, item(level, WIDE), touched);
         BlockPos low = AlchemyFurnaceStructure.world(at, Direction.NORTH, 0);
@@ -918,7 +945,8 @@ public final class AlchemyProbes {
         level.destroyBlock(at, true, player);
         List<ItemEntity> coreDrops = drops(level, at);
         check(source, "core-one-furnace", count(coreDrops, MxtBlocks.ALCHEMY_FURNACE.get().asItem()), 1);
-        check(source, "core-one-fire", count(coreDrops, AlchemyTestFireItems.FIRE.get()), 1);
+        check(source, "core-no-heat-drop", count(coreDrops, AlchemyTestHeatBlocks.FIRE.get().asItem()), 0);
+        check(source, "core-keeps-heat-block", heatState(level, owned).is(AlchemyTestHeatBlocks.FIRE.get()), true);
         check(source, "core-not-aux", count(coreDrops, Items.CORNFLOWER), 0);
         check(source, "core-not-output", count(coreDrops, Items.DIAMOND), 0);
         BlockPos aux = AlchemyFurnaceStructure.world(at, Direction.NORTH, AlchemyFurnaceStructure.AUXILIARY_INDEX);
@@ -933,14 +961,14 @@ public final class AlchemyProbes {
         furnace.setTargetTemperature(50);
         fill(furnace);
         gate.primary = furnace;
-        gate.removeFire = true;
+        gate.removeHeat = true;
         StartResult result = AlchemyWorkstationService.start(player, furnace);
-        gate.removeFire = false;
-        check(source, "pre-fire-removed", fireCount(furnace), 0);
-        check(source, "pre-fire-rejected", result.failure(), AlchemyFailure.TEMPERATURE);
-        check(source, "pre-fire-main-kept", furnace.container().getItem(0).getCount(), 2);
-        check(source, "pre-fire-aux-kept", furnace.container().getItem(2).getCount(), 2);
-        check(source, "pre-fire-catalyst-kept", furnace.container().getItem(4).getCount(), 1);
+        gate.removeHeat = false;
+        check(source, "pre-heat-removed", heatState(level, furnace).isAir(), true);
+        check(source, "pre-heat-rejected", result.failure(), AlchemyFailure.TEMPERATURE);
+        check(source, "pre-heat-main-kept", furnace.container().getItem(0).getCount(), 2);
+        check(source, "pre-heat-aux-kept", furnace.container().getItem(2).getCount(), 2);
+        check(source, "pre-heat-catalyst-kept", furnace.container().getItem(4).getCount(), 1);
         clearFurnace(level, at, touched);
         AlchemyFurnaceBlockEntity replaced = place(level, at, Direction.NORTH, item(level, WIDE), touched);
         replaced.refreshStructure();
@@ -994,9 +1022,15 @@ public final class AlchemyProbes {
         inputs.quickMoveStack(viewer, inputs.menuIndex("inventory_9"));
         check(source, "busy-occupied-input-rejects-shift", main.inventory().getItem(0).getCount(), 1);
         check(source, "busy-input-keeps-player-items", count(viewer, Items.ALLIUM), 3);
-        check(source, "busy-fire-cannot-be-taken", furnace.fireContainer().removeItem(0, 1).isEmpty(), true);
-        furnace.fireContainer().setItem(0, ItemStack.EMPTY);
-        check(source, "busy-fire-cannot-be-cleared", fireCount(furnace), 1);
+        // The heat block is a world block: nothing locks it during a batch, and taking it away only stops the heat.
+        BlockPos heat = furnace.heatSourcePos();
+        tick(level, furnace);
+        double warm = furnace.temperature();
+        level.setBlockAndUpdate(heat, Blocks.AIR.defaultBlockState());
+        tick(level, furnace);
+        check(source, "busy-heat-can-be-removed", level.getBlockState(heat).isAir(), true);
+        check(source, "busy-heat-removed-cools", furnace.temperature() < warm, true);
+        level.setBlockAndUpdate(heat, AlchemyTestHeatBlocks.FIRE.get().defaultBlockState());
         AlchemyWorkstationService.abort(level, at, furnace);
         tickUntil(level, furnace, 8, phase -> phase == AlchemyPhase.IDLE);
         viewer.getInventory().clearContent();
@@ -1031,6 +1065,58 @@ public final class AlchemyProbes {
         monitor.handleAction(viewer, new AlchemyActionC2SPayload(20, Action.TEMPERATURE, 40.0D));
         check(source, "replaced-core-invalidates-menu", monitor.stillValid(viewer), false);
         check(source, "stale-core-action-keeps-replacement", replacement.state().targetTemperature(), target);
+    }
+
+    /**
+     * The heat lookup: the bottom centre cell, the table entry behind a block tag, the priority override, and a
+     * block whose own {@code AlchemyHeatSource} answer outranks the table.
+     */
+    private static void heatSources(CommandSourceStack source, ServerLevel level, ServerPlayer player, BlockPos at, List<BlockPos> touched) {
+        AlchemyFurnaceBlockEntity furnace = place(level, at, Direction.NORTH, item(level, WIDE), touched);
+        furnace.refreshStructure();
+        check(source, "heat-cell-is-bottom-centre", furnace.heatSourcePos(), at.offset(0, -1, 1));
+        check(source, "heat-cell-never-required", AlchemyFurnaceStructure.required(AlchemyFurnaceStructure.HEAT_INDEX), false);
+        // One tag entry covers both test blocks at 150 / 40, and the kiln wall is rated 200, so the heat is the ceiling.
+        check(source, "heat-tag-limit", furnace.heatTemperatureLimit(), 150.0D);
+        check(source, "heat-tag-max", furnace.maximumTemperature(), 150.0D);
+        check(source, "heat-tag-start", startBatch(level, player, furnace, 50.0D), true);
+        tick(level, furnace);
+        check(source, "heat-tag-rate", furnace.temperature(), 40.0D);
+        // A block that is not a heat source is just a block: with it there the furnace has no heat at all.
+        level.setBlockAndUpdate(furnace.heatSourcePos(), Blocks.STONE.defaultBlockState());
+        AlchemyWorkstationService.abort(level, at, furnace);
+        tickUntil(level, furnace, 8, phase -> phase == AlchemyPhase.IDLE);
+        check(source, "heat-non-source", furnace.maximumTemperature(), 0.0D);
+        check(source, "heat-absent-rejects-50", furnace.setTargetTemperature(50.0D), false);
+        fill(furnace);
+        check(source, "heat-absent-start", AlchemyWorkstationService.start(player, furnace).failure(), AlchemyFailure.TEMPERATURE);
+        check(source, "heat-absent-kept", furnace.container().getItem(0).getCount(), 2);
+        // The API branch answers for itself: the table says 999 for this block, the block says 250 / 25 while lit.
+        level.setBlockAndUpdate(furnace.heatSourcePos(), advanced(true));
+        check(source, "heat-api-limit", furnace.heatTemperatureLimit(), 250.0D);
+        check(source, "heat-api-wall-binds", furnace.maximumTemperature(), 200.0D);
+        check(source, "heat-api-start", startBatch(level, player, furnace, 50.0D), true);
+        tick(level, furnace);
+        check(source, "heat-api-rate", furnace.temperature(), 25.0D);
+        AlchemyWorkstationService.abort(level, at, furnace);
+        tickUntil(level, furnace, 8, phase -> phase == AlchemyPhase.IDLE);
+        level.setBlockAndUpdate(furnace.heatSourcePos(), advanced(false));
+        check(source, "heat-api-unlit", furnace.heatTemperatureLimit(), 0.0D);
+    }
+
+    // One batch with room for it: aborts what runs, empties the output slots, then sets the target and starts.
+    private static boolean startBatch(ServerLevel level, ServerPlayer player, AlchemyFurnaceBlockEntity furnace, double target) {
+        AlchemyWorkstationService.abort(level, furnace.getBlockPos(), furnace);
+        tickUntil(level, furnace, 8, phase -> phase == AlchemyPhase.IDLE);
+        for (int slot = 5; slot < 9; slot++) furnace.container().setItem(slot, ItemStack.EMPTY);
+        if (!furnace.setTargetTemperature(target)) return false;
+        fill(furnace);
+        return AlchemyWorkstationService.start(player, furnace).started();
+    }
+
+    private static BlockState advanced(boolean lit) {
+        return AlchemyTestHeatBlocks.ADVANCED_FIRE.get().defaultBlockState()
+                .setValue(AlchemyTestHeatBlocks.ADVANCED_LIT, lit);
     }
 
     private static void clearDrops(ServerLevel level, BlockPos pos) {
@@ -1118,7 +1204,7 @@ public final class AlchemyProbes {
         private boolean mutate;
         private boolean reenter;
         private boolean move;
-        private boolean removeFire;
+        private boolean removeHeat;
         private boolean restart;
         private boolean restarted;
         private int posts;
@@ -1154,8 +1240,8 @@ public final class AlchemyProbes {
                 ItemStack taken = this.primary.container().removeItem(0, this.primary.container().getItem(0).getCount());
                 if (!taken.isEmpty()) this.player.getInventory().add(taken);
             }
-            if (this.removeFire && this.primary != null && event.pos().equals(this.primary.getBlockPos()))
-                this.primary.fireContainer().removeItem(0, 1);
+            if (this.removeHeat && this.primary != null && event.pos().equals(this.primary.getBlockPos()))
+                this.level.setBlockAndUpdate(this.primary.heatSourcePos(), Blocks.AIR.defaultBlockState());
         }
 
         @SubscribeEvent
@@ -1187,6 +1273,7 @@ public final class AlchemyProbes {
             throw new PlaceRefused("overlap controller " + controller);
         ItemStack wall = wallItem(level, KILN_WALL);
         for (int cell = 0; cell < 27; cell++) {
+            if (!AlchemyFurnaceStructure.required(cell)) continue;
             BlockPos pos = AlchemyFurnaceStructure.world(controller, facing, cell).immutable();
             if (!level.isLoaded(pos)) throw new PlaceRefused("unloaded " + pos);
             if (!level.getBlockState(pos).isAir()) continue;
@@ -1198,7 +1285,9 @@ public final class AlchemyProbes {
         if (!(level.getBlockEntity(controller) instanceof AlchemyFurnaceBlockEntity furnace))
             throw new PlaceRefused("overlap entity " + controller);
         furnace.acceptFurnaceItem(furnaceItem);
-        furnace.fireContainer().setItem(0, new ItemStack(AlchemyTestFireItems.FIRE.get()));
+        BlockPos heat = AlchemyFurnaceStructure.heatSource(controller, facing).immutable();
+        touched.add(heat);
+        placeHeat(level, controller, facing, AlchemyTestHeatBlocks.FIRE.get());
         return furnace;
     }
 
