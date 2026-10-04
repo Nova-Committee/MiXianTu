@@ -14,8 +14,10 @@ import com.iafenvoy.mxt.data.trigger.TriggerSignals;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.runtime.EntitySources;
 import com.iafenvoy.mxt.runtime.ServerCache;
 import com.iafenvoy.mxt.runtime.trigger.TriggerDispatcher;
+import com.iafenvoy.mxt.util.ChainCache;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
@@ -54,7 +56,7 @@ public final class ProgressionService {
     // Where a body stands on one owner it holds: the record, or that owner's entry level. Empty when the body
     // does not hold the owner at all, which is also what an administrative write answers with.
     public static Optional<Holder<Progression>> currentLevelOf(Entity entity, Identifier owner) {
-        return ProgressionSources.held(entity, owner).flatMap(held ->
+        return EntitySources.held(entity, owner).flatMap(held ->
                 currentLevel(entity.getExistingData(MxtAttachments.PROGRESSION).orElse(null), owner, held.definition()));
     }
 
@@ -65,7 +67,7 @@ public final class ProgressionService {
     // What the next level asks for and what the body already has of the resource that measures it. A mastery
     // formula that cannot be evaluated answers empty rather than zero, so a caller never reads a false "done".
     public static Optional<ProgressionMastery> masteryOf(Entity entity, Identifier owner) {
-        ProgressionSources.Owner held = ProgressionSources.held(entity, owner).orElse(null);
+        EntitySources.Owner held = EntitySources.held(entity, owner).orElse(null);
         if (held == null) return Optional.empty();
         Holder<Resource> mastery = held.definition().masteryResource().orElse(null);
         if (mastery == null) return Optional.empty();
@@ -134,7 +136,7 @@ public final class ProgressionService {
         ProgressionAttachment progress = entity.getExistingData(MxtAttachments.PROGRESSION).orElse(null);
         if (progress == null) return 0;
         int cleared = 0;
-        for (ProgressionSources.Owner owner : ProgressionSources.heldBy(entity)) {
+        for (EntitySources.Owner owner : EntitySources.heldBy(entity)) {
             Holder<Progression> stored = progress.level(owner.id());
             if (stored == null || follows(owner.definition(), stored)) continue;
             if (!progress.clearLevel(owner.id())) continue;
@@ -148,12 +150,53 @@ public final class ProgressionService {
     // The entry level itself, or anything the links reach from it. Also the answer an administrative write asks
     // before it stores a level, so the rule lives in one place.
     public static boolean follows(ProgressionOwner owner, Holder<Progression> level) {
+        return rankFromEntry(owner, level) >= 0;
+    }
+
+    /**
+     * Where a level sits above the owner's own entry level (0 is the entry itself), or -1 when the owner never
+     * reaches it. The validated chains answer while a server is running; a client, or anything asking before a world
+     * is loaded, gets the definitions' own links, bounded so a chain that escaped validation cannot stall it.
+     */
+    public static int rankFromEntry(ProgressionOwner owner, Holder<Progression> level) {
+        Holder<Progression> entry = owner.entryLevel().orElse(null);
+        if (entry == null) return -1;
+        Identifier entryId = HolderHelper.id(entry);
         Identifier wanted = HolderHelper.id(level);
-        Holder<Progression> current = owner.entryLevel().orElse(null);
-        for (int step = 0; current != null && step < MAX_CHAIN_LENGTH; step++) {
-            if (HolderHelper.id(current).equals(wanted)) return true;
+        ServerCache cache = ServerCache.get().orElse(null);
+        if (cache != null) {
+            ChainCache.Chain<Progression> chain = cache.progressionChains().chainOf(entryId).orElse(null);
+            if (chain == null) return -1;
+            int from = chain.indexOf(entryId);
+            int at = chain.indexOf(wanted);
+            return at < from ? -1 : at - from;
+        }
+        Holder<Progression> current = entry;
+        for (int rank = 0; current != null && rank < MAX_CHAIN_LENGTH; rank++) {
+            if (HolderHelper.id(current).equals(wanted)) return rank;
             current = nextLevel(current).orElse(null);
         }
-        return false;
+        return -1;
+    }
+
+    /**
+     * How many levels the owner's climb has, counted from its entry level up; zero when it declares no entry, and
+     * zero for a chain the server refused.
+     */
+    public static int levelCount(ProgressionOwner owner) {
+        Holder<Progression> entry = owner.entryLevel().orElse(null);
+        if (entry == null) return 0;
+        Identifier entryId = HolderHelper.id(entry);
+        ServerCache cache = ServerCache.get().orElse(null);
+        if (cache != null)
+            return cache.progressionChains().chainOf(entryId)
+                    .map(chain -> chain.size() - chain.indexOf(entryId)).orElse(0);
+        int count = 0;
+        Holder<Progression> current = entry;
+        while (current != null && count < MAX_CHAIN_LENGTH) {
+            count++;
+            current = nextLevel(current).orElse(null);
+        }
+        return count;
     }
 }

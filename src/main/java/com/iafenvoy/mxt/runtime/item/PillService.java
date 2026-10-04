@@ -96,6 +96,8 @@ public final class PillService {
     }
 
     public static Result apply(LivingEntity entity, Pill definition) {
+        // Toxicity and the overdose action are state: the settlement is the server's, and the caller already is.
+        if (entity.level().isClientSide()) return Result.consumed(0.0D);
         FormulaContext context = FormulaContext.of(entity);
         definition.onConsume().execute(entity, context);
         PillToxicityAttachment toxicity = entity.getData(MxtAttachments.PILL_TOXICITY);

@@ -5,13 +5,13 @@ import com.iafenvoy.mxt.data.CurrencyValue;
 import com.iafenvoy.mxt.data.alchemy.HeatSource;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.aura.AuraValue;
+import com.iafenvoy.mxt.data.aura.BlockAuraMerger;
 import com.iafenvoy.mxt.data.aura.ItemAura;
 import com.iafenvoy.mxt.data.forging.BlueprintBinding;
 import com.iafenvoy.mxt.data.forging.ToolBinding;
 import com.iafenvoy.mxt.data.item.ItemBinding;
 import com.iafenvoy.mxt.data.item.WeaponBinding;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
-import com.iafenvoy.mxt.runtime.world.BlockAuraService;
 import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
 import net.minecraft.core.Holder;
@@ -55,7 +55,7 @@ public final class MxtDataMaps {
             .build();
     public static final DataMapType<Block, Map<Holder<Aura>, AuraValue>> BLOCK_AURA = AdvancedDataMapType
             .builder(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "block_aura"), Registries.BLOCK, AuraValue.MAP_CODEC)
-            .merger(new BlockAuraService.AuraMerger())
+            .merger(new BlockAuraMerger())
             .synced(AuraValue.MAP_CODEC, false)
             .build();
     public static final DataMapType<Block, HeatSource> HEAT_SOURCE = AdvancedDataMapType

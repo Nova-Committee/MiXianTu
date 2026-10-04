@@ -1,4 +1,4 @@
-package com.iafenvoy.mxt.screen.picker;
+package com.iafenvoy.mxt.picker;
 
 import net.minecraft.core.Registry;
 import net.minecraft.resources.Identifier;

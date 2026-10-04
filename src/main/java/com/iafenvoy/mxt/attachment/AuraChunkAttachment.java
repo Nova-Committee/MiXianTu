@@ -13,6 +13,7 @@ import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.SectionPos;
 
@@ -28,30 +29,29 @@ public final class AuraChunkAttachment {
             Codec.BOOL.lenientOptionalFieldOf("initialized", false).forGetter(AuraChunkAttachment::initialized),
             AuraZone.CODEC.lenientOptionalFieldOf("template").forGetter(AuraChunkAttachment::template),
             CollectionCodecs.intObjectMap(BlockAuraSectionCache.CODEC).lenientOptionalFieldOf("block_aura_sections", new Int2ObjectOpenHashMap<>()).forGetter(AuraChunkAttachment::blockAuraSections),
-            AuraValue.MAP_CODEC.lenientOptionalFieldOf("absorbed_aura", Map.of()).forGetter(AuraChunkAttachment::absorbedAura),
             AuraPool.GROUPED_CODEC.lenientOptionalFieldOf("aura", Map.of()).forGetter(AuraChunkAttachment::auras)
     ).apply(i, AuraChunkAttachment::new));
     private boolean initialized;
     private Optional<Holder<AuraZone>> template;
     private final Map<Holder<Aura>, AuraValue> blockAura;
-    private final Map<Holder<Aura>, AuraValue> absorbedAura;
     private final Int2ObjectMap<BlockAuraSectionCache> blockAuraSections;
     private final Map<Holder<Aura>, AuraPool> auras;
+    // Who absorbs what, keyed by the absorbing formation's controller. Rebuilt with the sections, so it is never
+    // saved: a chunk that loads rebuilds before anything reads a supply.
+    private final Map<BlockPos, Map<Holder<Aura>, AuraValue>> absorbedAura = new LinkedHashMap<>();
     // Runtime-only; never saved.
     private final Map<SectionPos, Integer> auraVisitors = new LinkedHashMap<>();
 
     public AuraChunkAttachment() {
-        this(false, Optional.empty(), new Int2ObjectOpenHashMap<>(), Map.of(), Map.of());
+        this(false, Optional.empty(), new Int2ObjectOpenHashMap<>(), Map.of());
     }
 
     private AuraChunkAttachment(boolean initialized, Optional<Holder<AuraZone>> template,
-                                Int2ObjectMap<BlockAuraSectionCache> blockAuraSections, Map<Holder<Aura>, AuraValue> absorbedAura,
-                                Map<Holder<Aura>, AuraPool> auras) {
+                                Int2ObjectMap<BlockAuraSectionCache> blockAuraSections, Map<Holder<Aura>, AuraPool> auras) {
         this.initialized = initialized;
         this.template = template;
         this.blockAuraSections = new Int2ObjectOpenHashMap<>(blockAuraSections);
         this.blockAura = aggregate(this.blockAuraSections);
-        this.absorbedAura = new LinkedHashMap<>(absorbedAura);
         this.auras = new LinkedHashMap<>(auras);
     }
 
@@ -154,21 +154,27 @@ public final class AuraChunkAttachment {
         Map<Holder<Aura>, AuraValue> values = aggregate(this.blockAuraSections);
         this.blockAura.clear();
         this.blockAura.putAll(values);
-        Map<Holder<Aura>, AuraValue> absorbed = aggregate(sources.stream()
-                .filter(BlockAuraContribution::absorbed).toList());
         this.absorbedAura.clear();
-        this.absorbedAura.putAll(absorbed);
+        for (BlockAuraContribution source : sources)
+            for (BlockPos controller : source.absorbedBy())
+                mergeInto(this.absorbedAura.computeIfAbsent(controller, ignored -> new LinkedHashMap<>()), source.aura());
         if (this.initialized) this.applyBlockContribution(previous, this.blockAura);
     }
 
-    // Totals of the emitters inside a formation, which the formation spends instead of the environment.
-    public Map<Holder<Aura>, AuraValue> absorbedAura() {
-        return this.absorbedAura;
+    // Totals of the emitters one formation absorbs, which it spends instead of the environment. Empty for a
+    // controller that absorbs nothing, so a stale controller stops supplying on the next rebuild.
+    public Map<Holder<Aura>, AuraValue> absorbedFor(BlockPos controller) {
+        return this.absorbedAura.getOrDefault(controller, Map.of());
     }
 
     // Drops the per-subsection emitter details, keeping the aggregate as the baseline for an immediate rebuild.
     public void clearBlockAuraCache() {
         this.blockAuraSections.clear();
+        this.absorbedAura.clear();
+    }
+
+    private static void mergeInto(Map<Holder<Aura>, AuraValue> target, Map<Holder<Aura>, AuraValue> values) {
+        values.forEach((aura, value) -> target.merge(aura, value, AuraChunkAttachment::merge));
     }
 
     private static Map<Holder<Aura>, AuraValue> aggregate(List<BlockAuraContribution> sources) {

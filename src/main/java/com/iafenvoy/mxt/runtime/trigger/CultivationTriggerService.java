@@ -8,6 +8,7 @@ import com.iafenvoy.mxt.data.trigger.Trigger;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.runtime.ModuleHooks;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService.BreakthroughResult;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService.BreakthroughStatus;
@@ -24,8 +25,12 @@ import net.minecraft.world.entity.LivingEntity;
 public final class CultivationTriggerService {
     private static final String MODULE = "cultivation";
 
-    static {
-        TriggerRehydrators.register(new TriggerRehydrator() {
+    private CultivationTriggerService() {
+    }
+
+    // Called once from ModuleHooks.initialize().
+    public static void register() {
+        ModuleHooks.register(TriggerRehydrator.class, new TriggerRehydrator() {
             @Override
             public String module() {
                 return MODULE;
@@ -36,13 +41,6 @@ public final class CultivationTriggerService {
                 refresh(entity);
             }
         });
-    }
-
-    private CultivationTriggerService() {
-    }
-
-    // Forces class initialization so the rehydrator is registered before server startup.
-    public static void initialize() {
     }
 
     // Idempotent: the module is always cleared first, so stopping cultivation or changing the selected action

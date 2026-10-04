@@ -5,6 +5,7 @@ import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.cultivation.Element;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.runtime.aura.AuraLookup;
+import com.iafenvoy.mxt.runtime.cultivation.CultivationRanks;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService;
 import com.iafenvoy.mxt.runtime.cultivation.Elements;
 import com.iafenvoy.mxt.runtime.cultivation.LifeSpanService;
@@ -169,7 +170,7 @@ public final class MxtFormulaVariables {
                     .holder(AuraLookup.access(context), subject.resource()).orElse(null);
             if (key.equals("minor_stage"))
                 return aura == null ? Double.NaN : CultivationService.minorStage(aura, subject.cultivation(), context);
-            int rank = aura == null ? -1 : ResourceService.realmRank(subject.cultivation(), aura);
+            int rank = aura == null ? -1 : CultivationRanks.realmRank(subject.cultivation(), aura);
             if (key.equals("absorbed_aura") || key.equals("cultivation_progress"))
                 return rank < 0 ? 0.0D : subject.cultivation().cultivationProgress(aura);
             return Math.max(0, rank);

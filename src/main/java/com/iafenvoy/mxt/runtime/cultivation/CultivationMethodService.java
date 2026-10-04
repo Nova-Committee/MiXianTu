@@ -1,6 +1,5 @@
 package com.iafenvoy.mxt.runtime.cultivation;
 
-import com.iafenvoy.mxt.attachment.AuraChunkAttachment;
 import com.iafenvoy.mxt.attachment.CultivationAttachment;
 import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.config.MxtServerConfig;
@@ -11,6 +10,7 @@ import com.iafenvoy.mxt.data.condition.builtin.entity.AuraRangeEntityCondition;
 import com.iafenvoy.mxt.data.cost.CostTransaction;
 import com.iafenvoy.mxt.data.cost.Costs;
 import com.iafenvoy.mxt.data.cost.context.CostContext;
+import com.iafenvoy.mxt.data.cost.context.CostFailure;
 import com.iafenvoy.mxt.data.cost.context.CostOrigin;
 import com.iafenvoy.mxt.data.cultivation.Cultivation;
 import com.iafenvoy.mxt.data.cultivation.RealmStage;
@@ -24,7 +24,6 @@ import com.iafenvoy.mxt.runtime.resource.ResourceService.Bounds;
 import com.iafenvoy.mxt.runtime.resource.ResourceTransactions;
 import com.iafenvoy.mxt.runtime.resource.ResourceTransactions.Evaluation;
 import com.iafenvoy.mxt.runtime.trigger.CultivationTriggerService;
-import com.iafenvoy.mxt.runtime.world.AuraPool;
 import com.iafenvoy.mxt.runtime.world.AuraResult;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
@@ -38,6 +37,7 @@ import net.minecraft.world.entity.LivingEntity;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -78,21 +78,6 @@ public final class CultivationMethodService {
         return AuraLookup.all(entity).map(Reference::value)
                 .filter(aura -> aura.firstRealm().isPresent())
                 .allMatch(aura -> aura.startCultivateConditions().test(entity, context));
-    }
-
-    // Every resource and aura requirement is checked before anything mutates.
-    public static Result tick(CultivationAttachment spirit, ResourceHolderAttachment resources, AuraChunkAttachment aura, Identifier actionId,
-                              Cultivation definition, long gameTime, FormulaContext context,
-                              BooleanSupplier conditionsMet) {
-        return tick(spirit, resources, aura, actionId, definition, gameTime, context, conditionsMet, 1.0D);
-    }
-
-    // Only the spirit-root and technique cultivation modifiers apply on this path.
-    public static Result tick(LivingEntity entity, CultivationAttachment spirit, ResourceHolderAttachment resources, AuraChunkAttachment aura, Identifier actionId,
-                              Cultivation definition, long gameTime, FormulaContext context,
-                              BooleanSupplier conditionsMet) {
-        double affinity = CultivationAffinity.multiplier(entity.getData(MxtAttachments.SPIRIT_IDENTITY), aura, context);
-        return tick(spirit, resources, aura, actionId, definition, gameTime, context, conditionsMet, affinity);
     }
 
     public static Result tick(LivingEntity entity, CultivationAttachment spirit, ResourceHolderAttachment resources, AuraResult aura, Identifier actionId,
@@ -171,57 +156,19 @@ public final class CultivationMethodService {
         if (!preview.committed()) return Result.rejected(Failure.INSUFFICIENT_RESOURCE, preview.failedResource());
         if (!canApplyGains(entity, copyOf(resources), gains, context))
             return stop(entity, spirit, action, definition, gameTime, Failure.INVALID_FORMULA);
-        if (!auraPlan.auras().isEmpty() && !CostTransaction.commit(auraPlan, auraContext).paid())
-            return Result.rejected(Failure.INSUFFICIENT_AURA, null);
-        CostTransaction.PayResult payment = CostTransaction.commit(costPlan, costContext, resources);
-        if (!payment.paid()) return Result.rejected(Failure.INSUFFICIENT_RESOURCE, payment.failedResource());
+        // Both payments are one boundary: a body cost that refuses after the ground aura was taken would otherwise
+        // leave the aura spent without a settlement.
+        List<CostTransaction.Payment> payments = new ArrayList<>();
+        if (!auraPlan.auras().isEmpty()) payments.add(new CostTransaction.Payment(auraPlan, auraContext));
+        payments.add(new CostTransaction.Payment(costPlan, costContext, resources));
+        CostTransaction.PayResult payment = CostTransaction.commitAll(payments);
+        if (!payment.paid())
+            return Result.rejected(payment.failure() == CostFailure.INSUFFICIENT_AURA
+                    ? Failure.INSUFFICIENT_AURA : Failure.INSUFFICIENT_RESOURCE, payment.failedResource());
         applyGains(entity, resources, gains, context);
         spirit.scheduleCultivateTick(Math.addExact(gameTime, definition.tickInterval()));
         definition.cultivateAction().execute(entity, context);
         return Result.progressed(recovery.cultivation(), payment.resources());
-    }
-
-    private static Result tick(CultivationAttachment spirit, ResourceHolderAttachment resources, AuraChunkAttachment aura, Identifier actionId,
-                               Cultivation definition, long gameTime, FormulaContext context,
-                               BooleanSupplier conditionsMet, double affinity) {
-        Holder<Cultivation> action = MxtDatapackRegistries.holder(MxtResourceKeys.CULTIVATION, actionId).orElse(null);
-        if (action == null) return Result.rejected(Failure.DISABLED, null);
-        if (!spirit.cultivating() || spirit.cultivation().filter(action::equals).isEmpty())
-            return Result.rejected(Failure.NOT_ACTIVE, null);
-        if (!conditionsMet.getAsBoolean()) return stop(spirit, actionId, definition, gameTime, Failure.CONDITIONS);
-        if (gameTime < spirit.nextCultivateTick()) {
-            convertAll(spirit, resources, context);
-            return Result.waitingResult();
-        }
-        double gain = definition.absorbAmount().evaluate(context) * affinity;
-        Map<Holder<Aura>, Double> auraCosts = evaluateAuraCosts(definition, context);
-        if (auraCosts == null) return stop(spirit, actionId, definition, gameTime, Failure.INVALID_FORMULA);
-        double auraCost = auraCosts.values().stream().mapToDouble(Double::doubleValue).sum();
-        if (!Double.isFinite(affinity) || affinity < 0.0D || !Double.isFinite(gain) || gain < 0.0D)
-            return stop(spirit, actionId, definition, gameTime, Failure.INVALID_FORMULA);
-        CostContext costContext = CostContext.account(resources, null, context, CostOrigin.CULTIVATION);
-        CostTransaction.Planning costPlan = CostTransaction.plan(definition.costs(), costContext, resources, null);
-        if (!costPlan.ok()) return stop(spirit, actionId, definition, gameTime, Failure.INVALID_FORMULA);
-        Evaluation costs = Evaluation.of(costPlan.resources());
-        Map<Holder<Aura>, Double> gains;
-        try {
-            gains = evaluateGains(definition.auraGains(), context);
-        } catch (IllegalArgumentException | IllegalStateException error) {
-            return stop(spirit, actionId, definition, gameTime, Failure.INVALID_FORMULA);
-        }
-        ResourceTransactions.Result preview = ResourceTransactions.tryConsume(copyOf(resources), costs);
-        if (!preview.committed()) return Result.rejected(Failure.INSUFFICIENT_RESOURCE, preview.failedResource());
-        if (!canApplyGains(copyOf(resources), gains, context) || !canConvertAbsorption(spirit, resources, gain, context))
-            return stop(spirit, actionId, definition, gameTime, Failure.INVALID_FORMULA);
-        if (!hasAura(aura, auraCosts)) return Result.rejected(Failure.INSUFFICIENT_AURA, null);
-        CostTransaction.PayResult payment = CostTransaction.commit(costPlan, costContext, resources);
-        if (!payment.paid()) return Result.rejected(Failure.INSUFFICIENT_RESOURCE, payment.failedResource());
-        aura.consume(auraCosts);
-        restoreAbsorption(spirit, resources, gain, context);
-        convertAll(spirit, resources, context);
-        applyGains(resources, gains, context);
-        spirit.scheduleCultivateTick(Math.addExact(gameTime, definition.tickInterval()));
-        return Result.progressed(gain, payment.resources());
     }
 
     public static Result stop(CultivationAttachment spirit, Identifier actionId, Cultivation definition, long gameTime) {
@@ -276,23 +223,19 @@ public final class CultivationMethodService {
         return amounts;
     }
 
-    private static Map<Holder<Aura>, Double> evaluateAuraCosts(Cultivation definition,
-                                                               FormulaContext context) {
-        // Paid by hand here: this path holds the chunk store instead of a level, so it only needs the amounts.
-        return Costs.auras(definition.auraCosts(), CostContext.of(null, context, CostOrigin.CULTIVATION));
-    }
-
-    private static boolean hasAura(AuraChunkAttachment aura, Map<Holder<Aura>, Double> costs) {
-        return costs.entrySet().stream().allMatch(entry -> aura.auras().getOrDefault(entry.getKey(), AuraPool.empty()).amount() >= entry.getValue());
-    }
-
     // Realm chains are regenerated by cultivation itself, so each value's overflow can be committed to that
     // chain's cultivation progress.
     public static boolean handlesNaturalRegeneration(LivingEntity entity, Holder<Aura> aura) {
-        CultivationAttachment spirit = entity.getData(MxtAttachments.CULTIVATION);
+        CultivationAttachment spirit = entity.getExistingData(MxtAttachments.CULTIVATION).orElse(null);
+        if (spirit == null || !spirit.cultivating()) return false;
+        // The method's own condition decides whether this tick yields anything, and only a yielding tick runs the
+        // cultivation recovery: a tick that pays nothing and gains nothing must leave ordinary regeneration alone.
+        Holder<Cultivation> method = spirit.cultivation().orElse(null);
         Holder<RealmStage> stage = stageFor(spirit, aura);
-        return spirit.cultivating() && stage != null
-                && stage.value().cultivateCondition().test(entity, FormulaContexts.forEntity(entity));
+        if (method == null || stage == null) return false;
+        FormulaContext context = FormulaContexts.forEntity(entity);
+        return stage.value().cultivateCondition().test(entity, context)
+                && method.value().cultivateCondition().test(entity, context);
     }
 
     // Non-aura conditions stay strict, while each aura-range entry counts as an independent eligible source.

@@ -11,6 +11,7 @@ import com.iafenvoy.mxt.data.formation.builtin.BuffFormationAction;
 import com.iafenvoy.mxt.data.formation.builtin.BuffFormationAction.TargetMode;
 import com.iafenvoy.mxt.data.formation.builtin.RangeDisplayFormationAction;
 import com.iafenvoy.mxt.registry.MxtAttachments;
+import com.iafenvoy.mxt.runtime.Sources;
 import com.iafenvoy.mxt.runtime.ability.AbilityEventBridge;
 import com.iafenvoy.mxt.runtime.damage.DamageCalculationService;
 import com.iafenvoy.mxt.util.HolderHelper;
@@ -75,7 +76,7 @@ public final class FormationActionRunner {
     // ticker drops every ability of that source for an entity that leaves.
     private static void buff(BuffFormationAction buff, Entity entity, EntityActionContext context,
                              FormationInstance instance, FormationOwners owners) {
-        Identifier source = FormationSources.of(instance.formation());
+        Identifier source = Sources.formation(instance.formation());
         if (!targets(buff.target(), entity, owners)) {
             // An entity the module no longer has anything for must not keep the formation's grant, or losing
             // friend status while standing still leaves the gift behind. Releasing an unused source is cheap.

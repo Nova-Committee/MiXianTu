@@ -124,9 +124,33 @@ public final class AbilityService {
         return use(ability, actor, abilities, resources, gameTime, context, false, origin);
     }
 
+    /**
+     * Prices one carried ability onto detached drafts without executing anything, so a caller paying for several
+     * things in one act can check the whole price before any of them happens. Null means the price is reserved on
+     * the drafts; anything else is why this ability would not fire. It reads the same refusals as
+     * {@link #useCarried} except the ones only a run can answer (a reach that lands on nobody).
+     */
+    public static @Nullable Failure reserveCost(Holder<Ability> ability, Entity actor, AbilityAttachment abilities,
+                                                ResourceHolderAttachment draft, long gameTime, FormulaContext context,
+                                                @Nullable ItemCostDraft itemDraft) {
+        Ability definition = ability.value();
+        if (definition.castTime().evaluate(context) > 0.0D || definition.type() instanceof ChannelSource)
+            return Failure.CARRIED_NOT_INSTANT;
+        if (!definition.condition().test(actor, context)) return Failure.CONDITION_FAILED;
+        PrepareResult prepared = prepare(ability, abilities, draft, gameTime, context,
+                actor instanceof LivingEntity living ? living : null, false, itemDraft);
+        if (!prepared.approved()) return prepared.failure();
+        Result reserved = ResourceTransactions.tryConsume(actor instanceof LivingEntity living ? living : null, draft,
+                new Evaluation(prepared.use().costPlan().resources()));
+        return reserved.committed() ? null : Failure.INSUFFICIENT_RESOURCE;
+    }
+
     private static UseResult use(Holder<Ability> ability, Entity actor,
                                  AbilityAttachment abilities, ResourceHolderAttachment resources, long gameTime,
                                  FormulaContext context, boolean requiresGrant, @Nullable Vec3 origin) {
+        // Every use is authoritative: paying, writing state and running actions belong to the server, and a client
+        // that asked anyway gets the same answer the script boundary gives.
+        if (actor.level().isClientSide()) return UseResult.rejected(Failure.SERVER_ONLY, null);
         Ability definition = ability.value();
         if (actor instanceof LivingEntity living) {
             context = FormulaContexts.forEntity(living, context);
@@ -164,6 +188,7 @@ public final class AbilityService {
     public static UseResult finishCast(Holder<Ability> ability, Entity actor,
                                        AbilityAttachment abilities, ResourceHolderAttachment resources, long gameTime,
                                        FormulaContext context) {
+        if (actor.level().isClientSide()) return UseResult.rejected(Failure.SERVER_ONLY, null);
         Ability definition = ability.value();
         if (actor instanceof LivingEntity living) {
             context = FormulaContexts.forEntity(living, context);
@@ -220,6 +245,7 @@ public final class AbilityService {
     public static GateResult gate(ToggleContext context) {
         Holder<Ability> ability = context.ability();
         LivingEntity holder = context.holder();
+        if (holder.level().isClientSide()) return GateResult.rejected(Failure.SERVER_ONLY, null);
         AbilityAttachment abilities = holder.getData(MxtAttachments.ABILITY_HOLDER);
         ResourceHolderAttachment resources = holder.getData(MxtAttachments.RESOURCE_HOLDER);
         long gameTime = holder.level().getGameTime();
@@ -407,13 +433,21 @@ public final class AbilityService {
             prepared.use().costPlan().resources().forEach((id, amount) -> paid.merge(id, amount, Double::sum));
             steps.add(new CompositeStep(childHolder, prepared.use(), childContext));
         }
+        // One boundary for every child: a later child that refuses must not leave an earlier one paid for, and no
+        // child's cooldown or charges may be written before the whole group is paid for.
+        List<CostTransaction.Payment> payments = new ArrayList<>();
         for (CompositeStep step : steps) {
-            CommitResult committed = commit(step.use(), abilities, resources, gameTime, payer);
-            if (!committed.committed()) {
-                MiXianTu.LOGGER.error("Composite ability {} failed after prevalidation: {}", HolderHelper.id(composite), committed.failure());
-                return UseResult.rejected(committed.failure(), committed.failedResource());
-            }
+            if (AbilityStorage.onCooldown(abilities, HolderHelper.id(step.use().ability()), gameTime))
+                return UseResult.rejected(Failure.COOLDOWN, null);
+            payments.add(new CostTransaction.Payment(step.use().costPlan(),
+                    CostContext.of(payer, CostOrigin.ABILITY), resources));
         }
+        CostTransaction.PayResult payment = CostTransaction.commitAll(payments);
+        if (!payment.paid()) {
+            MiXianTu.LOGGER.error("Composite ability {} failed after prevalidation: {}", HolderHelper.id(composite), payment.failure());
+            return UseResult.rejected(costFailure(payment.failure()), payment.failedResource());
+        }
+        for (CompositeStep step : steps) applyAbilityState(step.use(), abilities, gameTime);
         for (CompositeStep step : steps) {
             if (step.ability().value().type() instanceof ChannelSource) {
                 abilities.setChannelledAbility(step.use().ability());

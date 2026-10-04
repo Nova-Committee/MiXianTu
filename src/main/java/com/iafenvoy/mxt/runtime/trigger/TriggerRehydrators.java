@@ -1,31 +1,24 @@
 package com.iafenvoy.mxt.runtime.trigger;
 
 import com.iafenvoy.mxt.MiXianTu;
+import com.iafenvoy.mxt.runtime.ModuleHooks;
 import net.minecraft.world.entity.LivingEntity;
 
-import java.util.LinkedHashMap;
-import java.util.Map;
 import java.util.UUID;
 
 /**
- * Registry of module-specific trigger rehydrators.
+ * Registry of module-specific trigger rehydrators: each module's subscription index is runtime-only, and this is
+ * what rebuilds it from the persisted attachment. A module whose rebuild throws is cleared rather than left with a
+ * half-built index.
  */
 public final class TriggerRehydrators {
-    private static final Map<String, TriggerRehydrator> REHYDRATORS = new LinkedHashMap<>();
-
     private TriggerRehydrators() {
-    }
-
-    public static synchronized void register(TriggerRehydrator rehydrator) {
-        TriggerRehydrator previous = REHYDRATORS.put(rehydrator.module(), rehydrator);
-        if (previous != null && previous != rehydrator)
-            MiXianTu.LOGGER.warn("Replacing trigger rehydrator for module {}", rehydrator.module());
     }
 
     public static void rehydrate(LivingEntity entity) {
         if (entity.level().isClientSide()) return;
         int before = TriggerDispatcher.subscriptionCount(entity.getUUID());
-        for (TriggerRehydrator rehydrator : snapshot()) {
+        for (TriggerRehydrator rehydrator : ModuleHooks.all(TriggerRehydrator.class)) {
             try {
                 rehydrator.rehydrate(entity);
             } catch (RuntimeException exception) {
@@ -44,11 +37,5 @@ public final class TriggerRehydrators {
 
     public static void clearAll() {
         TriggerDispatcher.clearAll();
-    }
-
-    private static TriggerRehydrator[] snapshot() {
-        synchronized (TriggerRehydrators.class) {
-            return REHYDRATORS.values().toArray(TriggerRehydrator[]::new);
-        }
     }
 }

@@ -129,7 +129,7 @@ public final class ForgingWorkstationService {
         if (!result.started()) return new StartOutcome(result.failure(), false);
 
         materials.consume(surface.forgingContainer());
-        state.lock(blueprintId, blueprint.plan(registries), result.session(), materials.consumed(), player.getUUID());
+        state.lock(blueprintId, ForgingPlan.of(blueprint, registries), result.session(), materials.consumed(), player.getUUID());
         surface.forgingChanged();
         settleIfComplete(player, surface, state, result.session());
         return new StartOutcome(null, true);

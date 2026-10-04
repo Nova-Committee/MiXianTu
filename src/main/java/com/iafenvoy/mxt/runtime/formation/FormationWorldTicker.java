@@ -11,6 +11,7 @@ import com.iafenvoy.mxt.event.FormationEvent.UpkeepFailed;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.runtime.Sources;
 import com.iafenvoy.mxt.runtime.formation.FormationService.MaintainResult;
 import com.iafenvoy.mxt.runtime.world.FormationAbsorption;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
@@ -133,7 +134,7 @@ public final class FormationWorldTicker {
         double radiusSquared = radius * radius;
         Vec3 center = controller.getCenter();
         FormationCarrier carrier = new FormationCarrier(instance.formation(), controller, radius, instance.owners());
-        Identifier source = FormationSources.of(instance.formation());
+        Identifier source = Sources.formation(instance.formation());
         // Resolved once per formation rather than per entity: the id outlives the owner logging out and the
         // entity does not, so a manager-level source can still answer for an absent owner.
         FormationOwners owners = instance.owners();
@@ -172,10 +173,19 @@ public final class FormationWorldTicker {
         // would build a source identifier for every formation in the level, every period.
         if (player.getExistingData(MxtAttachments.ABILITY_HOLDER).isEmpty()) return;
         BlockPos position = player.blockPosition();
-        for (Entry<BlockPos, FormationInstance> entry : level.getData(MxtAttachments.FORMATION_WORLD).formations().entrySet()) {
-            FormationInstance formation = entry.getValue();
-            if (entry.getKey().distSqr(position) <= formation.radius() * formation.radius()) continue;
-            FormationEntityActions.release(player, FormationSources.of(formation.formation()));
+        Map<BlockPos, FormationInstance> formations = level.getData(MxtAttachments.FORMATION_WORLD).formations();
+        // One source per definition: only a definition none of its instances still covers is released, so two
+        // instances of one definition cannot take each other's grant away.
+        Set<Identifier> present = new LinkedHashSet<>();
+        Set<Identifier> covered = new LinkedHashSet<>();
+        for (Entry<BlockPos, FormationInstance> entry : formations.entrySet()) {
+            Identifier definition = entry.getValue().formation();
+            present.add(definition);
+            if (covered.contains(definition)) continue;
+            if (entry.getKey().distSqr(position) <= entry.getValue().radius() * entry.getValue().radius())
+                covered.add(definition);
         }
+        present.removeAll(covered);
+        for (Identifier definition : present) FormationEntityActions.release(player, Sources.formation(definition));
     }
 }

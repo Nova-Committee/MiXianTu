@@ -35,6 +35,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.neoforged.neoforge.common.NeoForgeMod;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 
@@ -85,19 +86,29 @@ public final class FlightService {
             level.addFreshEntity(new ItemEntity(level, body.getX(), body.getY(), body.getZ(), stack));
     }
 
-    public static Result mount(LivingEntity holder, Holder<Ability> skill, FormulaContext context) {
+    // Everything a take-off needs before it does anything, as a read: the press asks this before the shared gate
+    // pays, so a press that cannot take off costs nothing. mount asks it again, and a state that changed in between
+    // is still caught.
+    public static @Nullable Failure canMount(LivingEntity holder, Holder<Ability> skill, FormulaContext context) {
         if (!(skill.value().type() instanceof FlightControlAbilityType control))
-            return Result.rejected(Failure.NOT_FLYABLE);
+            return Failure.NOT_FLYABLE;
         Mount found = find(holder, control.hand());
-        if (found == null) return Result.rejected(Failure.NO_VEHICLE);
+        if (found == null) return Failure.NO_VEHICLE;
         Provider access = holder.level().registryAccess();
         Reference<Artifact> definition = ArtifactService.definition(access, found.stack()).orElse(null);
         if (definition == null || !ArtifactService.mayUse(found.stack(), definition, holder.getUUID()))
-            return Result.rejected(Failure.NOT_OWNED);
+            return Failure.NOT_OWNED;
+        if (holder.getData(MxtAttachments.FLIGHT).active()) return Failure.ALREADY_ACTIVE;
+        return found.type().canMove(speed(found.type(), control, context)) ? null : Failure.INVALID_FORMULA;
+    }
+
+    public static Result mount(LivingEntity holder, Holder<Ability> skill, FormulaContext context) {
+        Failure refusal = canMount(holder, skill, context);
+        if (refusal != null) return Result.rejected(refusal);
+        FlightControlAbilityType control = (FlightControlAbilityType) skill.value().type();
+        Mount found = find(holder, control.hand());
         FlightAttachment data = holder.getData(MxtAttachments.FLIGHT);
-        if (data.active()) return Result.rejected(Failure.ALREADY_ACTIVE);
         double speed = speed(found.type(), control, context);
-        if (!found.type().canMove(speed)) return Result.rejected(Failure.INVALID_FORMULA);
         MountVehicle vehicle = createVehicle(holder.level(), found.type()).orElse(null);
         if (vehicle == null) return Result.rejected(Failure.INVALID_VEHICLE);
         // The contract promises a body, not one that is an entity: only an entity can be created by an EntityType and

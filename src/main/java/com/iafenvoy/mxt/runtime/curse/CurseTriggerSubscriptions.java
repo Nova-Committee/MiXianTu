@@ -7,10 +7,10 @@ import com.iafenvoy.mxt.data.curse.CurseType.Triggered;
 import com.iafenvoy.mxt.data.trigger.Trigger;
 import com.iafenvoy.mxt.data.trigger.TriggerSignal;
 import com.iafenvoy.mxt.registry.MxtAttachments;
+import com.iafenvoy.mxt.runtime.ModuleHooks;
 import com.iafenvoy.mxt.runtime.curse.CurseService.DefinitionState;
 import com.iafenvoy.mxt.runtime.trigger.TriggerDispatcher;
 import com.iafenvoy.mxt.runtime.trigger.TriggerRehydrator;
-import com.iafenvoy.mxt.runtime.trigger.TriggerRehydrators;
 import com.iafenvoy.mxt.runtime.trigger.TriggerSubscription;
 import com.iafenvoy.mxt.util.HolderHelper;
 import net.minecraft.core.Holder;
@@ -31,8 +31,12 @@ import java.util.Map.Entry;
 public final class CurseTriggerSubscriptions {
     private static final String MODULE = "curse";
 
-    static {
-        TriggerRehydrators.register(new TriggerRehydrator() {
+    private CurseTriggerSubscriptions() {
+    }
+
+    // Called once from ModuleHooks.initialize().
+    public static void register() {
+        ModuleHooks.register(TriggerRehydrator.class, new TriggerRehydrator() {
             @Override
             public String module() {
                 return MODULE;
@@ -45,13 +49,6 @@ public final class CurseTriggerSubscriptions {
                 rebuild(entity);
             }
         });
-    }
-
-    private CurseTriggerSubscriptions() {
-    }
-
-    // Forces class initialization so the rehydrator is registered before the first server lifecycle event.
-    public static void initialize() {
     }
 
     public static void rebuild(Entity entity) {

@@ -1,7 +1,8 @@
 package com.iafenvoy.mxt.screen.picker;
 
 import com.iafenvoy.mxt.data.CreativeTabHelper;
-import com.iafenvoy.mxt.screen.picker.ItemPickerManager.PickerItem;
+import com.iafenvoy.mxt.picker.ItemPickerManager;
+import com.iafenvoy.mxt.picker.ItemPickerManager.PickerItem;
 import com.iafenvoy.mxt.screen.picker.ItemPickerScreen.PickerMenu;
 import com.mojang.blaze3d.platform.cursor.CursorTypes;
 import net.minecraft.client.Minecraft;

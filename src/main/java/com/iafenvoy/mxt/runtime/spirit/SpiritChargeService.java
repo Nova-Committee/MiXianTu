@@ -10,8 +10,10 @@ import com.iafenvoy.mxt.data.item.HoldBinding;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
+import com.iafenvoy.mxt.runtime.ModuleHooks;
 import com.iafenvoy.mxt.runtime.cultivation.ItemAuraService;
 import com.iafenvoy.mxt.runtime.hold.HoldLookup;
+import com.iafenvoy.mxt.runtime.hold.HoldSource;
 import com.iafenvoy.mxt.runtime.resource.ResourceService;
 import com.iafenvoy.mxt.runtime.resource.ResourceService.Result;
 import com.iafenvoy.mxt.runtime.spirit.SpiritPour.Entry;
@@ -56,8 +58,8 @@ public final class SpiritChargeService {
     }
 
     // Registered once, at construction: the hold module drives the gesture and never learns what an item aura is.
-    public static void initialize() {
-        HoldLookup.register(registries -> List.of(SpiritChargeHold.INSTANCE));
+    public static void register() {
+        ModuleHooks.register(HoldSource.class, registries -> List.of(SpiritChargeHold.INSTANCE));
     }
 
     // This never cancels: an item that is also a technique manual, carries a talisman's invocation or declares

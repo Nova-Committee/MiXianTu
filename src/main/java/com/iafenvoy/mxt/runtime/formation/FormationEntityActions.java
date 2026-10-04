@@ -8,6 +8,7 @@ import com.iafenvoy.mxt.data.context.action.EntityActionContext;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.runtime.Sources;
 import com.iafenvoy.mxt.runtime.ability.AbilityEventBridge;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.BlockPos;
@@ -21,6 +22,7 @@ import net.minecraft.world.phys.Vec3;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.UUID;
 
@@ -60,6 +62,18 @@ final class FormationEntityActions {
             AbilityEventBridge.rebuildTriggerSubscriptions(living);
     }
 
+    // One source covers every instance of a definition, so an entity leaving one instance still holds the grant
+    // while another instance of the same definition reaches it. The instance being released is already gone from
+    // the registry by the time this runs.
+    static boolean coveredElsewhere(ServerLevel level, Entity entity, Identifier definition) {
+        for (Entry<BlockPos, FormationInstance> entry : level.getData(MxtAttachments.FORMATION_WORLD).formations().entrySet()) {
+            FormationInstance instance = entry.getValue();
+            if (!instance.formation().equals(definition)) continue;
+            if (entity.distanceToSqr(entry.getKey().getCenter()) <= instance.radius() * instance.radius()) return true;
+        }
+        return false;
+    }
+
     // Releases everything the formation handed to the entities it was tracking, then forgets them. The exit
     // action runs as well, because the formation's own deactivate_action is a block action and cannot reach them.
     static void releaseTracked(ServerLevel level, BlockPos controller, FormationInstance instance) {
@@ -67,7 +81,7 @@ final class FormationEntityActions {
         if (tracked.isEmpty()) return;
         double radius = instance.radius();
         FormationCarrier carrier = new FormationCarrier(instance.formation(), controller, radius, instance.owners());
-        Identifier source = FormationSources.of(instance.formation());
+        Identifier source = Sources.formation(instance.formation());
         EntityAction exit = MxtDatapackRegistries.get(MxtResourceKeys.FORMATION, instance.formation())
                 .map(Formation::entityExitAction).orElse(NoOpAction.INSTANCE);
         for (UUID id : tracked) {
@@ -75,7 +89,7 @@ final class FormationEntityActions {
             // newly arrived if it comes back.
             Entity entity = level.getEntities().get(id);
             if (entity == null) continue;
-            release(entity, source);
+            if (!coveredElsewhere(level, entity, instance.formation())) release(entity, source);
             exit.execute(context(entity, carrier, radius, entity.distanceToSqr(carrier.center())));
         }
     }

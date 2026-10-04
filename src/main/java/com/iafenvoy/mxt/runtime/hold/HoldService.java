@@ -26,7 +26,8 @@ import java.util.List;
  * while it runs, plays the sound and hands the item back untouched. A module plugs in by implementing
  * {@link HoldBinding} and registering a {@link HoldSource}; this class knows no module's registries.
  *
- * <p>It is the only place in the mod that writes the vanilla {@code minecraft:consumable} component, and it takes
+ * <p>It writes the vanilla {@code minecraft:consumable} component for a hold - {@code PillUseService} writes one for
+ * a bound pill whose item has no use of its own, and both go through {@link TemporaryUseComponent} - and it takes
  * that component back off the moment the cycle has started (after the duration was read), so
  * {@code Item.finishUsingItem} finds nothing to eat. A stack carrying a use component of its own is never written
  * over: that component is what makes the item edible, drinkable or throwable.
@@ -69,16 +70,12 @@ public final class HoldService {
         else armQuietly(registries, entity, stack, hold);
     }
 
-    // Only the server's copy is touched (the client needs its own for the pose), and only what this module put
-    // there: the component is the one every vanilla consumable uses, so taking it off anything else would stop
-    // that item from being used up at all.
+    // Only the server's copy is touched (the client needs its own for the pose), and only the component this module
+    // wrote: taking the component off anything else would stop that item from being used up at all.
     @SubscribeEvent
     public static void onUseStart(Start event) {
         if (event.getEntity().level().isClientSide()) return;
-        ItemStack stack = event.getItem();
-        HoldBinding hold = HoldLookup.hold(stack);
-        if (hold == null || !ours(stack, event.getEntity().level().registryAccess(), hold)) return;
-        stack.remove(DataComponents.CONSUMABLE);
+        TemporaryUseComponent.takeBack(event.getEntity());
     }
 
     // Keeps a read alive on the client, plays its sound on the server.
@@ -118,10 +115,10 @@ public final class HoldService {
     }
 
     private static void arm(Provider registries, LivingEntity holder, ItemStack stack, HoldBinding hold, Holder<SoundEvent> sound) {
-        // The same refusal the click path makes, so the one writer in this class cannot take an item's own use
-        // away from it.
+        // The same refusal the click path makes, so the hold module cannot take an item's own use away from it.
         if (stack.has(DataComponents.CONSUMABLE) && !ours(stack, registries, hold)) return;
-        stack.set(DataComponents.CONSUMABLE, consumable(hold, registries, stack, sound, hold.holdTicks(holder, registries, stack)));
+        TemporaryUseComponent.write(holder, stack,
+                consumable(hold, registries, stack, sound, hold.holdTicks(holder, registries, stack)));
     }
 
     private static Consumable consumable(HoldBinding hold, Provider registries, ItemStack stack, Holder<SoundEvent> sound, int ticks) {

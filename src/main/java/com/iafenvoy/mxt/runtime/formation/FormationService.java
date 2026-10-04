@@ -102,11 +102,11 @@ public final class FormationService {
         public static @Nullable PaymentPlan plan(Formation definition, CostContext context,
                                                  Map<Holder<Aura>, Double> supplied,
                                                  Map<Holder<Aura>, Double> stored, Map<Holder<Aura>, Double> capacity) {
-            // Whatever the bill names is charged in the value it is measured in: a formation's stores and its
-            // ground supply are mapped onto auras by that same value, below.
-            CostTransaction.Planning bill = CostTransaction.plan(definition.maintenanceCosts(),
+            // Whatever the bill names is charged in the value it is measured in, and only evaluated: the caller
+            // asks what the owner can afford of the remainder. An item charge has no channel here, so it refuses.
+            CostTransaction.Planning bill = CostTransaction.planDeferred(definition.maintenanceCosts(),
                     context.withAuraTarget(CostContext.AuraTarget.VALUE));
-            if (!bill.ok()) return null;
+            if (!bill.ok() || !bill.items().isEmpty()) return null;
             Map<Identifier, Double> cost = bill.resources();
             Map<Identifier, Holder<Aura>> byValue = new LinkedHashMap<>();
             for (Holder<Aura> aura : supplied.keySet())

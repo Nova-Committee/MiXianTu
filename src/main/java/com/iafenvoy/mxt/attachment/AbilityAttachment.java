@@ -11,8 +11,10 @@ import net.minecraft.resources.Identifier;
 import org.jspecify.annotations.Nullable;
 
 import java.util.Collection;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * Ability grants are tracked by source, so removing one source cannot remove another source's ability. The state a
@@ -81,10 +83,12 @@ public final class AbilityAttachment extends ShouldSyncAttachment {
         return true;
     }
 
-    // The same rule curses follow: what the source no longer declares is released, what it declares and does not
-    // hold yet is granted.
+    // What the source no longer declares is released and what it declares and does not hold yet is granted; an
+    // ability that lost its last source drops its state here too, so this path cleans up exactly like revoke.
     public boolean reconcileSource(Identifier source, Collection<Identifier> desiredAbilities) {
-        if (!this.sources.reconcile(source, desiredAbilities)) return false;
+        Set<Identifier> released = new LinkedHashSet<>();
+        if (!this.sources.reconcile(source, desiredAbilities, released)) return false;
+        for (Identifier ability : released) if (!this.sources.holds(ability)) this.storage.clear(ability);
         this.markDirty();
         return true;
     }

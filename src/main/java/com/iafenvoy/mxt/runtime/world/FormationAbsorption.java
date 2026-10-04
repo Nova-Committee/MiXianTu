@@ -38,12 +38,16 @@ public final class FormationAbsorption {
             return new Sources(List.copyOf(shapes));
         }
 
-        public boolean absorbed(BlockPos pos) {
-            for (Shape shape : this.shapes) {
-                if (shape.center().distToCenterSqr(pos.getX() + 0.5D, pos.getY() + 0.5D, pos.getZ() + 0.5D) <= shape.radiusSquared())
-                    return true;
-            }
-            return false;
+        // The formations this position stands inside, named by controller: the whole answer to who may spend it, so
+        // an emitter absorbed by two overlapping instances is counted for both.
+        public List<BlockPos> absorbedBy(BlockPos pos) {
+            List<BlockPos> controllers = new ArrayList<>();
+            double x = pos.getX() + 0.5D;
+            double y = pos.getY() + 0.5D;
+            double z = pos.getZ() + 0.5D;
+            for (Shape shape : this.shapes)
+                if (shape.center().distToCenterSqr(x, y, z) <= shape.radiusSquared()) controllers.add(shape.center());
+            return List.copyOf(controllers);
         }
 
         // Lets the rebuild skip the distance test on a level with no formations.
@@ -55,7 +59,8 @@ public final class FormationAbsorption {
     public record Shape(BlockPos center, double radiusSquared) {
     }
 
-    // Summed without distance weighting, so a block inside the formation gives it everything.
+    // Only this controller's emitters, and summed without distance weighting: a block inside the formation gives it
+    // everything. Which emitters those are is decided when the chunk is rebuilt, per instance.
     public static Map<Holder<Aura>, Double> absorbedFor(ServerLevel level, BlockPos controller, double radius) {
         Map<Holder<Aura>, Double> totals = new LinkedHashMap<>();
         int minChunkX = (int) Math.floor((controller.getX() - radius) / 16.0D);
@@ -66,7 +71,7 @@ public final class FormationAbsorption {
             for (int chunkZ = minChunkZ; chunkZ <= maxChunkZ; chunkZ++) {
                 if (!level.getChunkSource().hasChunk(chunkX, chunkZ)) continue;
                 AuraChunkAttachment aura = level.getChunk(chunkX, chunkZ).getData(MxtAttachments.AURA_CHUNK);
-                aura.absorbedAura().forEach((resource, value) ->
+                aura.absorbedFor(controller).forEach((resource, value) ->
                         totals.merge(resource, value.amount(), Double::sum));
             }
         }

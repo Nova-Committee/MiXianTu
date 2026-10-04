@@ -1,6 +1,5 @@
 package com.iafenvoy.mxt.runtime.economy;
 
-import com.iafenvoy.mxt.network.payload.PlayerTradeActionC2SPayload.PlayerTradeAction;
 import com.iafenvoy.mxt.screen.menu.PlayerTradeMenu;
 import com.iafenvoy.mxt.util.InventoryUtil;
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -134,6 +133,25 @@ public final class PlayerTradeService {
         REQUESTS.values().removeIf(request -> request.expiresAt() < now);
     }
 
+    // A menu that goes away on its own - the vanilla close packet, a replaced menu, a dimension change - ends the
+    // session too: the custom CLOSE is a UI intent, never the only way out.
+    public static void onMenuClosed(ServerPlayer player, PlayerTradeMenu menu) {
+        Session session = SESSIONS.get(player.getUUID());
+        if (session == null) return;
+        Side side = session.side(player);
+        if (side == null || side.menu != menu) return;
+        session.discard(side);
+    }
+
+    // Whether this player still holds the session's own menu. Server only: a client's mirror menu belongs to a
+    // different instance and answers false.
+    public static boolean stillOpen(ServerPlayer player, PlayerTradeMenu menu) {
+        Session session = SESSIONS.get(player.getUUID());
+        if (session == null || session.closed) return false;
+        Side side = session.side(player);
+        return side != null && side.menu == menu;
+    }
+
     // Removes one side's entry only when it still points at the given session, so a newer session registered
     // under the same UUID is never evicted by an older close.
     private static void forgetSession(UUID player, Session session) {
@@ -181,17 +199,54 @@ public final class PlayerTradeService {
         private void setAccepted(Side side, boolean accepted) {
             if (this.closed) return;
             side.accepted = accepted;
+            // A confirmation is about the offer as it stood, and a container carries no version of its own.
+            side.acceptedOffer = accepted ? snapshot(side.offer) : List.of();
             Side partner = this.partner(side);
             // The one player of a self-trade confirms for both sides in a single press.
-            if (this.isSelf()) partner.accepted = accepted;
+            if (this.isSelf()) {
+                partner.accepted = accepted;
+                partner.acceptedOffer = accepted ? List.copyOf(side.acceptedOffer) : List.of();
+            }
             // A side that already closed its menu no longer has a slot to notify; the pending
             // acceptance is kept so the trade still resolves once its own menu is gone.
+            if (side.menu != null) side.menu.setOwnAccepted(accepted);
             if (partner.menu != null) partner.menu.setPartnerAccepted(accepted);
             if (this.first.accepted && this.second.accepted) this.complete();
         }
 
+        // An offer that changed after a confirmation was given is a different trade, so both confirmations are
+        // dropped and both sides are told through their own data slot.
+        private boolean offerChanged() {
+            if (matches(this.first) && matches(this.second)) return false;
+            this.first.accepted = false;
+            this.second.accepted = false;
+            this.first.acceptedOffer = List.of();
+            this.second.acceptedOffer = List.of();
+            this.first.menu.setOwnAccepted(false);
+            this.first.menu.setPartnerAccepted(false);
+            if (!this.isSelf()) {
+                this.second.menu.setOwnAccepted(false);
+                this.second.menu.setPartnerAccepted(false);
+            }
+            return true;
+        }
+
+        private static boolean matches(Side side) {
+            if (side.offer.getContainerSize() != side.acceptedOffer.size()) return false;
+            for (int index = 0; index < side.offer.getContainerSize(); index++)
+                if (!ItemStack.matches(side.offer.getItem(index), side.acceptedOffer.get(index))) return false;
+            return true;
+        }
+
+        private static List<ItemStack> snapshot(Container offer) {
+            List<ItemStack> stacks = new ArrayList<>(offer.getContainerSize());
+            for (int index = 0; index < offer.getContainerSize(); index++) stacks.add(offer.getItem(index).copy());
+            return stacks;
+        }
+
         private void complete() {
             if (this.closed) return;
+            if (this.offerChanged()) return;
             this.swap(this.first, this.second);
             this.swap(this.second, this.first);
             this.eachSide(player -> player.sendSystemMessage(Component.translatable("command.mxt.trade.success")));
@@ -285,12 +340,14 @@ public final class PlayerTradeService {
 
     private static final class Side {
         private final ServerPlayer player;
-        private final Container offer = new SimpleContainer(20);
+        private final SimpleContainer offer = new SimpleContainer(20);
         // Items that could not fit when this side received a partner offer; dropped next to this side when the
         // session closes.
         private final List<ItemStack> overflow = new ArrayList<>();
         private PlayerTradeMenu menu;
         private boolean accepted;
+        // The offer as it stood when this side confirmed it; empty while nothing is confirmed.
+        private List<ItemStack> acceptedOffer = List.of();
 
         private Side(ServerPlayer player) {
             this.player = player;

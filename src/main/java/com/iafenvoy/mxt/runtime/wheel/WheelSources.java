@@ -8,7 +8,7 @@ import com.iafenvoy.mxt.data.ability.Abilities;
 import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.ability.AbilityActivationService;
-import com.iafenvoy.mxt.runtime.ability.AbilitySources;
+import com.iafenvoy.mxt.runtime.Sources;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactService;
 import com.iafenvoy.mxt.util.HolderHelper;
 import net.minecraft.core.Holder;
@@ -70,7 +70,7 @@ public final class WheelSources {
     // hand is whatever is picked up next. A charm in a Curios slot stays with the body and counts as the player's.
     public static boolean handOnly(LivingEntity entity, Holder<Ability> ability) {
         Set<Identifier> sources = sources(entity, HolderHelper.id(ability));
-        return !sources.isEmpty() && sources.stream().allMatch(AbilitySources::isEquipment);
+        return !sources.isEmpty() && sources.stream().allMatch(Sources::isEquipment);
     }
 
     // The stack an ability acts on, for one page: the first item the page names that offers it. Empty when the

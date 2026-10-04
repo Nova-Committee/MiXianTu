@@ -23,6 +23,7 @@ public final class PerchService {
     // Who asks the creature: an addon implements {@link Perchable} and the framework does the rest, so no caller
     // has to know a seat coordinate.
     public static Result perch(Entity entity, Entity vehicle) {
+        if (entity.level().isClientSide()) return Result.refused(Failure.SERVER_ONLY);
         if (entity == vehicle) return Result.refused(Failure.SELF);
         if (!(entity instanceof Perchable perchable)) return Result.refused(Failure.NOT_WILLING);
         Vec3 offset = perchable.perchOffset(vehicle, claimedOffsets(vehicle, entity)).orElse(null);
@@ -30,6 +31,7 @@ public final class PerchService {
     }
 
     public static Result perch(Entity entity, Entity vehicle, Vec3 offset) {
+        if (entity.level().isClientSide()) return Result.refused(Failure.SERVER_ONLY);
         if (entity == vehicle) return Result.refused(Failure.SELF);
         if (!isFinite(offset)) return Result.refused(Failure.INVALID_OFFSET);
         if (entity.isPassenger() && entity.getVehicle() != vehicle) return Result.refused(Failure.ALREADY_RIDING);
@@ -49,6 +51,7 @@ public final class PerchService {
     }
 
     public static Result release(Entity entity) {
+        if (entity.level().isClientSide()) return Result.refused(Failure.SERVER_ONLY);
         PerchAttachment perch = entity.getExistingData(MxtAttachments.PERCH).orElse(null);
         if (perch == null || !perch.perched()) return Result.unchanged();
         Entity vehicle = entity.getVehicle();
@@ -79,7 +82,7 @@ public final class PerchService {
 
     // NOT_WILLING covers both "the creature refused this vehicle" and "the creature does not implement the
     // contract at all": either way no seat was offered.
-    public enum Failure {SELF, INVALID_OFFSET, ALREADY_RIDING, FULL, REFUSED, NOT_WILLING}
+    public enum Failure {SELF, INVALID_OFFSET, ALREADY_RIDING, FULL, REFUSED, NOT_WILLING, SERVER_ONLY}
 
     public record Result(boolean changed, Failure failure) {
         static Result perched() {

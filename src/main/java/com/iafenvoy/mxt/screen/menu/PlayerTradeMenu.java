@@ -1,12 +1,14 @@
 package com.iafenvoy.mxt.screen.menu;
 
 import com.iafenvoy.mxt.registry.MxtMenus;
+import com.iafenvoy.mxt.runtime.economy.PlayerTradeService;
 import com.iafenvoy.mxt.screen.EconomySlots.Display;
 import com.iafenvoy.mxt.screen.aui.AuiPages;
 import com.sighs.apricityui.screen.ApricityContainerMenu;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.ComponentSerialization;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Container;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.player.Inventory;
@@ -29,6 +31,9 @@ public final class PlayerTradeMenu extends ApricityContainerMenu {
     private static final int OFFER_SLOTS = 20;
     private final Component partnerName;
     private final DataSlot partnerAccepted = DataSlot.standalone();
+    // Both sides are read back from here rather than kept as screen state: a change to either offer has to be able
+    // to clear a confirmation that was already given.
+    private final DataSlot ownAccepted = DataSlot.standalone();
 
     public PlayerTradeMenu(int containerId, Inventory inventory, RegistryFriendlyByteBuf buffer) {
         this(containerId, inventory, new SimpleContainer(OFFER_SLOTS), new SimpleContainer(OFFER_SLOTS),
@@ -45,6 +50,7 @@ public final class PlayerTradeMenu extends ApricityContainerMenu {
         checkContainerSize(setup.partnerOffer(), OFFER_SLOTS);
         this.partnerName = partnerName;
         this.addDataSlot(this.partnerAccepted);
+        this.addDataSlot(this.ownAccepted);
     }
 
     /**
@@ -62,6 +68,15 @@ public final class PlayerTradeMenu extends ApricityContainerMenu {
 
     public boolean partnerAccepted() {
         return this.partnerAccepted.get() != 0;
+    }
+
+    public boolean ownAccepted() {
+        return this.ownAccepted.get() != 0;
+    }
+
+    public void setOwnAccepted(boolean accepted) {
+        this.ownAccepted.set(accepted ? 1 : 0);
+        this.broadcastChanges();
     }
 
     public void setPartnerAccepted(boolean accepted) {
@@ -90,7 +105,15 @@ public final class PlayerTradeMenu extends ApricityContainerMenu {
 
     @Override
     public boolean stillValid(@NonNull Player player) {
-        return true;
+        // Server only: the client's mirror menu belongs to a different instance and knows no session. On the
+        // server a session whose menu is gone has nothing left to trade in, and answering false ends it.
+        return !(player instanceof ServerPlayer serverPlayer) || PlayerTradeService.stillOpen(serverPlayer, this);
+    }
+
+    @Override
+    public void removed(@NonNull Player player) {
+        super.removed(player);
+        if (player instanceof ServerPlayer serverPlayer) PlayerTradeService.onMenuClosed(serverPlayer, this);
     }
 
     /**

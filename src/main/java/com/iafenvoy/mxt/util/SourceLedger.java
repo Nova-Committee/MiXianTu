@@ -91,13 +91,23 @@ public final class SourceLedger<K> {
 
     // Replaces one source's whole contribution: release what it no longer wants, grant what it wants and lacks.
     public boolean reconcile(Identifier source, Collection<K> desired) {
+        return this.reconcile(source, desired, new ArrayList<>());
+    }
+
+    // The same, reporting the keys this source released into {@code released}: a caller holding state per key has
+    // to know which ones lost a source, since only it can tell whether that was the last one.
+    public boolean reconcile(Identifier source, Collection<K> desired, Collection<K> released) {
         Set<K> wanted = new LinkedHashSet<>(desired);
         List<K> previous = new ArrayList<>();
         this.sources.forEach((key, values) -> {
             if (values.contains(source)) previous.add(key);
         });
         boolean changed = false;
-        for (K key : previous) if (!wanted.contains(key)) changed |= this.revoke(key, source);
+        for (K key : previous)
+            if (!wanted.contains(key)) {
+                changed |= this.revoke(key, source);
+                released.add(key);
+            }
         for (K key : wanted) if (!previous.contains(key)) changed |= this.grant(key, source);
         return changed;
     }

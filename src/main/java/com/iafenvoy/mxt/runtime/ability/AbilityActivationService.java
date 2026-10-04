@@ -27,7 +27,12 @@ public final class AbilityActivationService {
     public static Togglable.Result activate(LivingEntity holder, Holder<Ability> ability, @Nullable ItemStack carrier) {
         if (holder == null || ability == null || !(ability.value().type() instanceof Togglable togglable))
             return Togglable.Result.refused(Togglable.Failure.UNAVAILABLE);
+        // A press writes state and world, so only the server answers one; reading the state stays two-sided.
+        if (holder.level().isClientSide()) return Togglable.Result.refused(Togglable.Failure.UNAVAILABLE);
         ToggleContext context = new ToggleContext(holder, carrier, ability);
+        // Nothing is paid for a press that cannot happen: the read-only precondition is asked before the gate.
+        Optional<Togglable.Failure> refusal = togglable.canActivate(context);
+        if (refusal.isPresent()) return Togglable.Result.refused(refusal.get());
         if (!togglable.gated(context)) return togglable.activate(context);
         AbilityService.GateResult gate = AbilityService.gate(context);
         return gate.approved() ? togglable.activate(context)

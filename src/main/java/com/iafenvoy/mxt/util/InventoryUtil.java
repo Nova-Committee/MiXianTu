@@ -6,7 +6,10 @@ import net.minecraft.world.item.ItemStack;
 
 /**
  * Shared exact-item inventory operations for station transactions; both mutation helpers are atomic, applying in
- * full or leaving the target container untouched.
+ * full or leaving the target container untouched. This is the shape for "these exact stacks, moved in or out";
+ * a station that charges by a definition's rule, or that must hand back exactly what it took, keeps its own draft
+ * (see {@code data/cost/ItemCostDraft} and the forging startup materials) because its payer and failure rules
+ * differ, and folding those in here would only move the branching.
  */
 public final class InventoryUtil {
     private InventoryUtil() {

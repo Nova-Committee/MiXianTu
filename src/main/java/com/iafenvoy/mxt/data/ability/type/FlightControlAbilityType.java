@@ -73,6 +73,14 @@ public record FlightControlAbilityType(Hand hand, NumberProvider speedMultiplier
     }
 
     @Override
+    public Optional<Failure> canActivate(ToggleContext context) {
+        // A press while flying means "put it away", which needs no vehicle to be read first.
+        if (this.state(context).orElse(false)) return Optional.empty();
+        return Optional.ofNullable(FlightService.canMount(context.holder(), context.ability(), context.formula()))
+                .map(FlightControlAbilityType::failureOf);
+    }
+
+    @Override
     public Result activate(ToggleContext context) {
         if (this.state(context).orElse(false)) {
             FlightService.dismount(context.holder(), FlightService.Failure.STOPPED);
@@ -82,7 +90,12 @@ public record FlightControlAbilityType(Hand hand, NumberProvider speedMultiplier
         if (mounted.failure() == null) return Result.activated();
         // Each reason a take-off can give is reported as itself; NOT_FLYABLE is the one failure this type cannot
         // produce, since the type was just read.
-        return Result.refused(switch (mounted.failure()) {
+        return Result.refused(failureOf(mounted.failure()));
+    }
+
+    // The take-off's own names, so a press and a cast report a reason through one table of messages.
+    private static Failure failureOf(FlightService.Failure failure) {
+        return switch (failure) {
             case NO_VEHICLE -> Failure.NO_VEHICLE;
             case NOT_OWNED -> Failure.NOT_OWNED;
             case INVALID_FORMULA -> Failure.INVALID_FORMULA;
@@ -92,6 +105,6 @@ public record FlightControlAbilityType(Hand hand, NumberProvider speedMultiplier
             case INVALID_VEHICLE -> Failure.CANNOT_MOUNT;
             case ALREADY_ACTIVE -> Failure.ALREADY_SET;
             default -> Failure.UNAVAILABLE;
-        });
+        };
     }
 }

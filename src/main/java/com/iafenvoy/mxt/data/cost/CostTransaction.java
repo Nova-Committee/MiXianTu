@@ -21,6 +21,7 @@ import com.mojang.datafixers.util.Either;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
+import net.minecraft.world.Container;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.Nullable;
@@ -115,8 +116,58 @@ public final class CostTransaction {
      */
     public static PayResult commit(Planning planning, CostContext context,
                                    @Nullable ResourceHolderAttachment resourceView) {
-        if (!planning.ok()) return PayResult.denied(planning);
         List<Runnable> rollbacks = new ArrayList<>();
+        Set<ItemCostDraft> staged = new LinkedHashSet<>();
+        PayResult denial = stage(planning, context, resourceView, rollbacks, staged, null);
+        if (denial != null) {
+            rollback(rollbacks);
+            return denial;
+        }
+        staged.forEach(ItemCostDraft::commit);
+        return PayResult.paid(planning);
+    }
+
+    /**
+     * One plan and the context and resource view it is paid in, for a caller paying several plans at once.
+     */
+    public record Payment(Planning plan, CostContext context, @Nullable ResourceHolderAttachment resourceView) {
+        public Payment(Planning plan, CostContext context) {
+            this(plan, context, null);
+        }
+    }
+
+    /**
+     * Pays several plans as one boundary: every plan is staged before any inventory write happens, so a later plan
+     * that refuses puts back what the earlier ones wrote. A plan still runs its own scripts while staging, and a
+     * script's external effects are not reversible - what this guarantees is this mod's own resources, auras and
+     * items, which is exactly what a payment split into parts needs.
+     */
+    public static PayResult commitAll(List<Payment> payments) {
+        List<Runnable> rollbacks = new ArrayList<>();
+        Set<ItemCostDraft> staged = new LinkedHashSet<>();
+        Map<Container, ItemCostDraft> drafts = new LinkedHashMap<>();
+        Map<Identifier, Double> resources = new LinkedHashMap<>();
+        Map<Holder<Aura>, Double> auras = new LinkedHashMap<>();
+        for (Payment payment : payments) {
+            PayResult denial = stage(payment.plan(), payment.context(), payment.resourceView(), rollbacks, staged, drafts);
+            if (denial != null) {
+                rollback(rollbacks);
+                return denial;
+            }
+            payment.plan().resources().forEach((id, amount) -> resources.merge(id, amount, Double::sum));
+            payment.plan().auras().forEach((aura, amount) -> auras.merge(aura, amount, Double::sum));
+        }
+        staged.forEach(ItemCostDraft::commit);
+        return new PayResult(true, null, -1, null, resources, auras);
+    }
+
+    // Stages one plan: every channel that can refuse is paid and its undo registered, while the inventory
+    // reservation is left to the caller, which writes it once every plan in the boundary has passed. A non-null
+    // answer is the refusal, and the caller rolls back what earlier plans wrote.
+    private static @Nullable PayResult stage(Planning planning, CostContext context,
+                                             @Nullable ResourceHolderAttachment resourceView, List<Runnable> rollbacks,
+                                             Set<ItemCostDraft> staged, @Nullable Map<Container, ItemCostDraft> sharedItems) {
+        if (!planning.ok()) return PayResult.denied(planning);
 
         // A bank is the one store another system can empty between planning and paying.
         if (!planning.auras().isEmpty() && context.auraTarget() == CostContext.AuraTarget.BANK) {
@@ -127,14 +178,10 @@ public final class CostTransaction {
             rollbacks.add(() -> taken.forEach((aura, units) -> bank.insert(context.payer(), aura, units, false)));
             for (Map.Entry<Holder<Aura>, Double> entry : planning.auras().entrySet()) {
                 int units = units(entry.getValue());
-                if (units <= 0) {
-                    rollback(rollbacks);
+                if (units <= 0)
                     return PayResult.denied(CostFailure.INVALID_AMOUNT, -1);
-                }
-                if (bank.extract(context.payer(), entry.getKey(), units, true) != 0) {
-                    rollback(rollbacks);
+                if (bank.extract(context.payer(), entry.getKey(), units, true) != 0)
                     return PayResult.denied(CostFailure.INSUFFICIENT_AURA, -1);
-                }
                 bank.extract(context.payer(), entry.getKey(), units, false);
                 taken.put(entry.getKey(), units);
             }
@@ -145,10 +192,8 @@ public final class CostTransaction {
             Level level = context.level();
             BlockPos pos = context.pos();
             if (level == null || pos == null) return PayResult.denied(CostFailure.NO_CHANNEL, -1);
-            if (!AuraService.consume(level, pos, planning.auras())) {
-                rollback(rollbacks);
+            if (!AuraService.consume(level, pos, planning.auras()))
                 return PayResult.denied(CostFailure.INSUFFICIENT_AURA, -1);
-            }
             Map<Holder<Aura>, Double> refund = new LinkedHashMap<>(planning.auras());
             rollbacks.add(() -> AuraService.change(level, pos, refund));
         }
@@ -156,17 +201,12 @@ public final class CostTransaction {
         // Resources: the draft validates every entry before the target account is touched.
         if (!planning.resources().isEmpty()) {
             ResourceHolderAttachment target = resourceView != null ? resourceView : context.resourceTarget();
-            if (target == null) {
-                rollback(rollbacks);
-                return PayResult.denied(CostFailure.NO_PAYER, -1);
-            }
+            if (target == null) return PayResult.denied(CostFailure.NO_PAYER, -1);
             Map<Holder<Resource>, ResourceSnapshot> before = snapshot(target, planning.resources().keySet());
             ResourceHolderAttachment draft = target.copy();
             Result result = ResourceTransactions.tryConsume(context.payer(), draft, new Evaluation(planning.resources()));
-            if (!result.committed()) {
-                rollback(rollbacks);
+            if (!result.committed())
                 return PayResult.denied(CostFailure.INSUFFICIENT_RESOURCE, -1, result.failedResource());
-            }
             before.keySet().forEach(resource -> {
                 Audit audit = draft.audit(resource);
                 target.set(resource, draft.get(resource), audit.minSnapshot(), audit.maxSnapshot(),
@@ -176,35 +216,28 @@ public final class CostTransaction {
                     value.min(), value.max(), value.changedAt(), value.source())));
         }
 
-        // Items are staged, not written: reserving them cannot fail after this point, and writing them waits
-        // until every channel that can still refuse has been paid.
-        ItemCostDraft itemDraft = null;
+        // Items are staged, not written: reserving them cannot fail after this point, and the write waits until
+        // every plan in the boundary has been paid. A boundary paying several plans shares one draft per store, so
+        // the second plan reserves against what the first one already took.
         if (!planning.items().isEmpty()) {
-            if (context.itemTarget() != null) itemDraft = new ItemCostDraft(context.itemTarget());
-            else {
+            Container container = context.itemTarget();
+            if (container == null) {
                 Player player = context.player();
-                if (player == null) {
-                    rollback(rollbacks);
-                    return PayResult.denied(CostFailure.NO_CHANNEL, -1);
-                }
-                itemDraft = new ItemCostDraft(player);
+                if (player == null) return PayResult.denied(CostFailure.NO_CHANNEL, -1);
+                container = player.getInventory();
             }
-            for (Charge.Items item : planning.items()) {
-                if (itemDraft.reserve(item)) continue;
-                rollback(rollbacks);
-                return PayResult.denied(CostFailure.MISSING_ITEM, -1);
-            }
+            ItemCostDraft itemDraft = sharedItems == null ? new ItemCostDraft(container)
+                    : sharedItems.computeIfAbsent(container, ItemCostDraft::new);
+            for (Charge.Items item : planning.items())
+                if (!itemDraft.reserve(item)) return PayResult.denied(CostFailure.MISSING_ITEM, -1);
+            staged.add(itemDraft);
         }
 
         // Scripts own their state and cannot be staged, so they run last among the channels that can refuse.
-        for (JsCost script : planning.scripts()) {
-            if (script.consume(context)) continue;
-            rollback(rollbacks);
-            return PayResult.denied(CostFailure.SCRIPT_REJECTED, -1);
-        }
+        for (JsCost script : planning.scripts())
+            if (!script.consume(context)) return PayResult.denied(CostFailure.SCRIPT_REJECTED, -1);
 
-        if (itemDraft != null) itemDraft.commit();
-        return PayResult.paid(planning);
+        return null;
     }
 
     private static CostFailure checkAvailability(Planning planning, CostContext context,

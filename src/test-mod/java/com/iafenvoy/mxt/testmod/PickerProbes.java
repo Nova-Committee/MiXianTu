@@ -2,8 +2,8 @@ package com.iafenvoy.mxt.testmod;
 
 import com.iafenvoy.mxt.data.CreativeTabHelper;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.screen.picker.ItemPickerManager;
-import com.iafenvoy.mxt.screen.picker.ItemPickerManager.PickerItem;
+import com.iafenvoy.mxt.picker.ItemPickerManager;
+import com.iafenvoy.mxt.picker.ItemPickerManager.PickerItem;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.network.chat.Component;

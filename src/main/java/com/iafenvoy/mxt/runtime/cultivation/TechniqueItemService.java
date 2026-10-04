@@ -8,9 +8,11 @@ import com.iafenvoy.mxt.data.item.TechniqueBinding;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.runtime.ModuleHooks;
 import com.iafenvoy.mxt.runtime.cultivation.TechniqueService.Result;
 import com.iafenvoy.mxt.runtime.hold.HoldLookup;
 import com.iafenvoy.mxt.runtime.hold.HoldService;
+import com.iafenvoy.mxt.runtime.hold.HoldSource;
 import com.iafenvoy.mxt.runtime.item.ItemBindingService;
 import com.iafenvoy.mxt.runtime.item.QualityService;
 import com.iafenvoy.mxt.runtime.item.QualityService.Failure;
@@ -77,8 +79,8 @@ public final class TechniqueItemService {
     // The whole wiring between the two modules, done once at construction: the hold module drives the gesture
     // and never learns what a technique is, and this module never touches the use cycle. A declaration that claims
     // items is registered as a second hold over them, so those items are read without carrying any component.
-    public static void initialize() {
-        HoldLookup.register(registries -> {
+    public static void register() {
+        ModuleHooks.register(HoldSource.class, registries -> {
             List<HoldBinding> holds = new ArrayList<>();
             holds.add(TechniqueHold.INSTANCE);
             MxtDatapackRegistries.holders(registries, MxtResourceKeys.TECHNIQUE_BINDING)

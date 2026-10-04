@@ -4,7 +4,7 @@ import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.api.WheelEntryKind;
 import com.iafenvoy.mxt.api.WheelSource;
 import com.iafenvoy.mxt.compat.CuriosIntegration;
-import com.iafenvoy.mxt.runtime.ability.AbilitySources;
+import com.iafenvoy.mxt.runtime.Sources;
 import com.iafenvoy.mxt.runtime.creature.ContractBells;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
@@ -159,7 +159,7 @@ public final class WheelSourceTypes {
 
         @Override
         public List<Identifier> grantSources(LivingEntity entity) {
-            return List.of(AbilitySources.equipment(this.slot, entity.getItemBySlot(this.slot)));
+            return List.of(Sources.equipment(this.slot, entity.getItemBySlot(this.slot)));
         }
 
         @Override
@@ -185,7 +185,7 @@ public final class WheelSourceTypes {
 
         @Override
         public List<Identifier> grantSources(LivingEntity entity) {
-            return List.of(AbilitySources.CURIOS);
+            return List.of(Sources.CURIOS);
         }
 
         @Override

@@ -12,12 +12,13 @@ import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.iafenvoy.mxt.util.formula.number.Constant;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.SimpleMenuProvider;
 import net.minecraft.world.inventory.ChestMenu;
 import net.minecraft.world.item.ItemStack;
+
+import java.util.Optional;
 
 /**
  * Gives the ability's carrier an inventory of its own; the slot count is the whole declaration and the contents
@@ -45,16 +46,25 @@ public record StorageAbilityType(NumberProvider slots,
     }
 
     @Override
-    public Result activate(ToggleContext context) {
-        if (!(context.holder() instanceof ServerPlayer player)) return Result.refused(Failure.UNAVAILABLE);
+    public Optional<Failure> canActivate(ToggleContext context) {
+        if (!(context.holder() instanceof ServerPlayer player)) return Optional.of(Failure.UNAVAILABLE);
         ItemStack carrier = context.carrier();
-        if (carrier == null || carrier.isEmpty()) return Result.refused(Failure.NO_CARRIER);
-        Provider access = player.level().registryAccess();
-        int capacity = ArtifactService.storageSlots(carrier, context.ability(), context.formula());
+        if (carrier == null || carrier.isEmpty()) return Optional.of(Failure.NO_CARRIER);
         // No slots is the slots formula's own answer, not a state the press cannot describe.
-        if (capacity <= 0) return Result.refused(Failure.INVALID_FORMULA);
-        if (!ArtifactStorageService.INSTANCE.mayAccess(access, carrier, context.ability(), player))
-            return Result.refused(Failure.NOT_OWNED);
+        if (ArtifactService.storageSlots(carrier, context.ability(), context.formula()) <= 0)
+            return Optional.of(Failure.INVALID_FORMULA);
+        if (!ArtifactStorageService.INSTANCE.mayAccess(player.level().registryAccess(), carrier, context.ability(), player))
+            return Optional.of(Failure.NOT_OWNED);
+        return Optional.empty();
+    }
+
+    @Override
+    public Result activate(ToggleContext context) {
+        Optional<Failure> refusal = this.canActivate(context);
+        if (refusal.isPresent()) return Result.refused(refusal.get());
+        ServerPlayer player = (ServerPlayer) context.holder();
+        ItemStack carrier = context.carrier();
+        int capacity = ArtifactService.storageSlots(carrier, context.ability(), context.formula());
         Component title = Component.translatable("screen.mxt.artifact_storage", context.ability().value().name());
         ArtifactStorageContainer contents = new ArtifactStorageContainer(player, context.ability(), capacity);
         int rows = capacity / ArtifactService.STORAGE_COLUMNS;

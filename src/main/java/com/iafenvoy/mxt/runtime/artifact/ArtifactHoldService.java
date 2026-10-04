@@ -8,8 +8,10 @@ import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.runtime.ModuleHooks;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactService.RefineResult;
 import com.iafenvoy.mxt.runtime.hold.HoldLookup;
+import com.iafenvoy.mxt.runtime.hold.HoldSource;
 import com.iafenvoy.mxt.runtime.resource.ResourceService;
 import com.iafenvoy.mxt.runtime.resource.ResourceService.Result;
 import com.iafenvoy.mxt.util.DefinitionText;
@@ -71,8 +73,8 @@ public final class ArtifactHoldService {
     }
 
     // Every artifact definition that declares a gesture, handed to the hold module once at construction.
-    public static void initialize() {
-        HoldLookup.register(registries -> MxtDatapackRegistries.holders(registries, MxtResourceKeys.ARTIFACT)
+    public static void register() {
+        ModuleHooks.register(HoldSource.class, registries -> MxtDatapackRegistries.holders(registries, MxtResourceKeys.ARTIFACT)
                 .map(Reference::value)
                 .map(ArtifactHold::new)
                 .filter(ArtifactHold::requiresHold)

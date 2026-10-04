@@ -217,6 +217,7 @@ public final class ChainCache<T> {
         private final Map<Identifier, Identifier> links = new LinkedHashMap<>();
         private final Map<Identifier, @Nullable Identifier> heads = new LinkedHashMap<>();
         private final Map<Identifier, String> refusals = new LinkedHashMap<>();
+        private @Nullable ChainCheck<T> check;
 
         private Builder(Map<Identifier, Holder<T>> nodes) {
             this.nodes = nodes;
@@ -240,20 +241,30 @@ public final class ChainCache<T> {
             return this;
         }
 
+        // A rule about a whole walked line - the kind only the domain can state. Non-null refuses that line, so a
+        // caller never has to walk the chains a second time to check them.
+        public Builder<T> check(ChainCheck<T> check) {
+            this.check = check;
+            return this;
+        }
+
         public ChainCache<T> build() {
-            List<Report> reports = new ArrayList<>(forks(this.links));
+            Map<Identifier, String> forked = forks(this.links);
+            List<Report> reports = new ArrayList<>();
+            forked.forEach((node, message) -> reports.add(new Report(node, message)));
             this.refusals.forEach((node, message) -> reports.add(new Report(node, message)));
             Map<Identifier, Chain<T>> byNode = new LinkedHashMap<>();
             Map<Identifier, Chain<T>> byKey = new LinkedHashMap<>();
             for (Map.Entry<Identifier, @Nullable Identifier> head : this.heads.entrySet()) {
                 // Walked from its head; an entry the walk stops at leaves the whole line out, since a prefix is
-                // not the line the data describes.
+                // not the line the data describes. A fork stops every line that runs into it: "what follows this"
+                // has no single answer there, so none of those lines is the one the data describes.
                 List<Identifier> order = new ArrayList<>();
                 Set<Identifier> seen = new LinkedHashSet<>();
                 Identifier stopped = null;
                 Identifier current = head.getKey();
                 while (current != null) {
-                    if (this.refusals.containsKey(current) || !this.nodes.containsKey(current)
+                    if (this.refusals.containsKey(current) || forked.containsKey(current) || !this.nodes.containsKey(current)
                             || !seen.add(current) || byNode.containsKey(current)) {
                         stopped = current;
                         break;
@@ -262,20 +273,36 @@ public final class ChainCache<T> {
                     current = this.links.get(current);
                 }
                 if (stopped != null) {
-                    // A refused entry already reported itself; anything else is this line's own problem.
-                    if (!this.refusals.containsKey(stopped))
+                    // A refused or forked entry already reported itself; anything else is this line's own problem.
+                    if (!this.refusals.containsKey(stopped) && !forked.containsKey(stopped))
                         reports.add(new Report(head.getKey(), stopMessage(stopped, this.nodes, byNode)));
                     continue;
                 }
                 List<Holder<T>> walked = new ArrayList<>();
                 for (Identifier node : order) walked.add(this.nodes.get(node));
-                Chain<T> chain = new Chain<>(head.getValue(), List.copyOf(walked));
+                List<Holder<T>> line = List.copyOf(walked);
+                if (this.check != null) {
+                    String refusal = this.check.refuse(line);
+                    if (refusal != null) {
+                        reports.add(new Report(head.getKey(), refusal));
+                        continue;
+                    }
+                }
+                Chain<T> chain = new Chain<>(head.getValue(), line);
                 order.forEach(node -> byNode.put(node, chain));
                 // Two lines may carry the same key when the caller reports that itself; the first one keeps it.
                 if (head.getValue() != null) byKey.putIfAbsent(head.getValue(), chain);
             }
             return new ChainCache<>(Map.copyOf(byNode), Map.copyOf(byKey), List.copyOf(reports));
         }
+    }
+
+    /**
+     * A rule about one walked line: null to keep it, or the reason the whole line is refused.
+     */
+    @FunctionalInterface
+    public interface ChainCheck<T> {
+        @Nullable String refuse(List<Holder<T>> line);
     }
 
     /**
@@ -286,17 +313,17 @@ public final class ChainCache<T> {
         return new Builder<>(Map.copyOf(nodes));
     }
 
-    // Two entries naming one successor: the successor is reported, and the first claimant in map order is the one
-    // the walk below keeps, so what a fork resolves to is fixed by the caller's own order rather than by chance.
-    private static List<Report> forks(Map<Identifier, Identifier> links) {
-        List<Report> reports = new ArrayList<>();
+    // Two entries naming one successor: the successor is a fork, so it is reported and nothing that runs into it
+    // is indexed - "what follows this" then has no single answer. Reported once, at the entry that is ambiguous.
+    private static <T> Map<Identifier, String> forks(Map<Identifier, Identifier> links) {
         Map<Identifier, Identifier> below = new LinkedHashMap<>();
+        Map<Identifier, String> messages = new LinkedHashMap<>();
         links.forEach((node, next) -> {
             Identifier other = below.putIfAbsent(next, node);
             if (other != null && !other.equals(node))
-                reports.add(new Report(next, "follows both " + other + " and " + node));
+                messages.putIfAbsent(next, "follows both " + other + " and " + node);
         });
-        return reports;
+        return messages;
     }
 
     // Why the walk stopped there, for an entry the caller did not refuse itself.

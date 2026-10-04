@@ -3,6 +3,7 @@ package com.iafenvoy.mxt.runtime.progression;
 import com.iafenvoy.mxt.attachment.ProgressionAttachment;
 import com.iafenvoy.mxt.data.progression.Progression;
 import com.iafenvoy.mxt.registry.MxtAttachments;
+import com.iafenvoy.mxt.runtime.EntitySources;
 import com.iafenvoy.mxt.util.HolderHelper;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
@@ -22,7 +23,7 @@ public final class ProgressionDamageMultiplier {
     public static double of(LivingEntity holder, Identifier ability) {
         ProgressionAttachment progress = holder.getExistingData(MxtAttachments.PROGRESSION).orElse(null);
         double best = 1.0D;
-        for (ProgressionSources.Owner owner : ProgressionSources.heldBy(holder)) {
+        for (EntitySources.Owner owner : EntitySources.heldBy(holder)) {
             Holder<Progression> current = ProgressionService.currentLevel(progress, owner.id(), owner.definition()).orElse(null);
             if (current == null) continue;
             boolean grants = ProgressionService.grantedAbilities(owner.definition(), current).stream()

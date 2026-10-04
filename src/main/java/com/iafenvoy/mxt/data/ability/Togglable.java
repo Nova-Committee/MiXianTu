@@ -24,6 +24,12 @@ public interface Togglable {
         return true;
     }
 
+    // Asked before the gate pays: a press that cannot happen must not cost anything. Empty is the ordinary case.
+    // Only what can be answered by reading belongs here, and a type that answers still re-checks inside activate.
+    default Optional<Failure> canActivate(ToggleContext context) {
+        return Optional.empty();
+    }
+
     // One call per press, server side only, which is why a refusal is a value rather than an exception.
     Result activate(ToggleContext context);
 

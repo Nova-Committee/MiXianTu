@@ -1,4 +1,4 @@
-package com.iafenvoy.mxt.screen.picker;
+package com.iafenvoy.mxt.picker;
 
 import com.iafenvoy.mxt.data.item.*;
 import com.iafenvoy.mxt.data.item.TalismanComponent.TriggerMode;

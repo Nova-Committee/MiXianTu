@@ -12,7 +12,7 @@ import com.iafenvoy.mxt.data.cost.Cost;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.data.storage.builtin.CooldownDataStorage;
 import com.iafenvoy.mxt.registry.MxtAttachments;
-import com.iafenvoy.mxt.runtime.ability.AbilitySources;
+import com.iafenvoy.mxt.runtime.Sources;
 import com.iafenvoy.mxt.runtime.ability.AbilityStorage;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactService;
 import com.iafenvoy.mxt.runtime.item.QualityService;
@@ -128,7 +128,7 @@ public record AbilityWheelEntry(Holder<Ability> ability, @Nullable ItemStack car
     // item down. An item's own page then reads as that item, and anything else stays unclaimed rather than guessed.
     private @Nullable Component origin(Player player) {
         Set<Identifier> sources = WheelSources.sources(player, HolderHelper.id(this.ability));
-        if (sources.stream().anyMatch(AbilitySources::isLearned))
+        if (sources.stream().anyMatch(Sources::isGranted))
             return Component.translatable("wheel.mxt.tooltip.source.learned");
         ItemStack carrier = this.carrier;
         if (carrier != null && !carrier.isEmpty())

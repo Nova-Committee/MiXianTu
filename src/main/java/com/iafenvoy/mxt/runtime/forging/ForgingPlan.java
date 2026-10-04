@@ -1,7 +1,12 @@
 package com.iafenvoy.mxt.runtime.forging;
 
+import com.iafenvoy.mxt.data.forging.ForgingBlueprint;
+import com.iafenvoy.mxt.data.forging.ForgingMethod;
+import com.iafenvoy.mxt.util.HolderHelper;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import net.minecraft.core.Holder;
+import net.minecraft.core.RegistryAccess;
 import net.minecraft.resources.Identifier;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -29,6 +34,19 @@ public record ForgingPlan(int meterMin, int meterMax, int targetMin, int targetM
                        int requiredSuffixSteps, Map<Identifier, Integer> deltas, int maxSteps) {
         this(meterMin, meterMax, targetMin, targetMax, finishPattern, requiredSuffixSteps, deltas, maxSteps,
                 findOptimalSteps(meterMin, meterMax, targetMin, targetMax, finishPattern, requiredSuffixSteps, deltas));
+    }
+
+    // Built from a definition once per session: the methods are resolved here, so a later datapack reload cannot
+    // change the plan a session locked in. The definition names no type of this package.
+    public static ForgingPlan of(ForgingBlueprint blueprint, RegistryAccess registries) {
+        Map<Identifier, Integer> deltas = new LinkedHashMap<>();
+        for (Holder<ForgingMethod> method : blueprint.resolvedMethods(registries))
+            deltas.put(HolderHelper.id(method), method.value().valueDelta());
+        int planMaxSteps = blueprint.hasStepLimit() ? blueprint.maxSteps() : Integer.MAX_VALUE;
+        return new ForgingPlan(blueprint.meter().min(), blueprint.meter().max(),
+                blueprint.meter().targetMin(), blueprint.meter().targetMax(),
+                blueprint.finishPattern().steps().stream().map(HolderHelper::id).toList(),
+                blueprint.finishPattern().requiredSuffixSteps(), deltas, planMaxSteps);
     }
 
     public ForgingPlan(int meterMin, int meterMax, int targetMin, int targetMax, List<Identifier> finishPattern,

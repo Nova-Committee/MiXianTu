@@ -1,6 +1,5 @@
 package com.iafenvoy.mxt.runtime.cultivation;
 
-import com.iafenvoy.mxt.attachment.AuraChunkAttachment;
 import com.iafenvoy.mxt.attachment.SpiritIdentityAttachment;
 import com.iafenvoy.mxt.data.ability.Ability.AffinityMode;
 import com.iafenvoy.mxt.data.aura.Aura;
@@ -27,21 +26,6 @@ import java.util.Optional;
  */
 public final class CultivationAffinity {
     private CultivationAffinity() {
-    }
-
-    // Attachment-only path: element separation is retained, but there are no zone-specific modifiers.
-    public static double multiplier(SpiritIdentityAttachment spirit, AuraChunkAttachment aura, FormulaContext context) {
-        double total = 0.0D;
-        int count = 0;
-        for (Holder<SpiritRoot> rootHolder : spirit.activeSpiritRoots()) {
-            SpiritRoot root = rootHolder.value();
-            double base = root.cultivationMultiplier().evaluate(context);
-            double concentration = concentration(root, aura.auras());
-            if (!Double.isFinite(base) || !Double.isFinite(concentration) || base < 0.0D) return Double.NaN;
-            total += base * Math.max(0.0D, 1.0D + concentration);
-            count++;
-        }
-        return combine(spirit, context, total, count);
     }
 
     public static double multiplier(SpiritIdentityAttachment spirit, AuraResult aura, FormulaContext context) {

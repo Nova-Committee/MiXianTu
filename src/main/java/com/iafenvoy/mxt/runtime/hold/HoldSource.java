@@ -7,8 +7,8 @@ import java.util.List;
 
 /**
  * Where hold declarations come from. Every module with hold-to-use items registers one - a one-liner at
- * construction, {@code HoldLookup.register(registries -> ...)} - so a module keeps its declarations in whatever
- * registry it already has and the hold module reads no other module's registries.
+ * construction, {@code ModuleHooks.register(HoldSource.class, registries -> ...)} - so a module keeps its
+ * declarations in whatever registry it already has and the hold module reads no other module's registries.
  */
 @FunctionalInterface
 public interface HoldSource {

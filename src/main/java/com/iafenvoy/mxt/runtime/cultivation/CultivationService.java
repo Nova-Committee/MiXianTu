@@ -165,13 +165,14 @@ public final class CultivationService {
         Identifier cultivationId = HolderHelper.id(aura);
         Holder<RealmStage> current = spirit.realmStage(aura);
         if (current != null) {
-            // The validated chain answers one rung at a time in either direction. A realm it does not hold (no
-            // server, or a chain the walk refused whole) still follows its own next_realm, and a link into another
-            // chain ends the transition there.
-            Identifier nextId = ServerCache.get().flatMap(cache -> cache.nextRealm(HolderHelper.id(current)))
-                    .orElseGet(() -> current.value().nextRealm()
-                            .filter(value -> HolderHelper.id(value.value().aura()).equals(cultivationId))
-                            .map(HolderHelper::id).orElse(null));
+            // The validated chain answers one rung at a time in either direction. Without one - no server, or
+            // before a world is loaded - the realm's own next_realm answers instead; a chain the walk refused does
+            // not, because advancing along a line nobody validated is what the refusal is about.
+            ServerCache cache = ServerCache.get().orElse(null);
+            Identifier nextId = cache != null ? cache.nextRealm(HolderHelper.id(current)).orElse(null)
+                    : current.value().nextRealm()
+                    .filter(value -> HolderHelper.id(value.value().aura()).equals(cultivationId))
+                    .map(HolderHelper::id).orElse(null);
             return nextId == null ? Optional.empty()
                     : MxtDatapackRegistries.holder(MxtResourceKeys.REALM_STAGE, nextId)
                     .map(value -> Transition.realm(current, value, aura));

@@ -41,7 +41,7 @@ public final class ForgingService {
         if (refusal != null) return StartResult.rejected(refusal);
         ForgingPlan plan;
         try {
-            plan = blueprint.plan(registries);
+            plan = ForgingPlan.of(blueprint, registries);
         } catch (IllegalArgumentException exception) {
             return StartResult.rejected(Failure.INVALID_BLUEPRINT);
         }

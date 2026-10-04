@@ -1,6 +1,7 @@
 package com.iafenvoy.mxt.runtime.hold;
 
 import com.iafenvoy.mxt.data.item.HoldBinding;
+import com.iafenvoy.mxt.runtime.ModuleHooks;
 import com.iafenvoy.mxt.util.matcher.ItemMatcher;
 import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.world.item.Item;
@@ -14,13 +15,12 @@ import org.jetbrains.annotations.Nullable;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * Which items are used by holding them down, and what each one's hold looks like. The question is asked from paths
  * that run while a gesture is live, so declarations answering from the item's identity are cached per item; one
  * that reads the stack - a manual, whose technique is its own component - is asked about every stack. The
- * declarations come from every registered {@link HoldSource}, and this class knows none of them.
+ * declarations come from the registered {@link HoldSource}s, and this class knows none of them.
  *
  * <p>The cache is captured on {@link TagsUpdatedEvent} and {@link ServerStartedEvent} rather than by walking every
  * registered item up front, because building an {@code ItemStack} during a pack load reads unbound component maps
@@ -30,17 +30,11 @@ import java.util.concurrent.CopyOnWriteArrayList;
 public final class HoldLookup {
     // Keyed by item, and only ever holding the declarations that match on the item's identity.
     private static final Map<Item, List<HoldBinding>> ITEM_MATCHED = new ConcurrentHashMap<>();
-    private static final List<HoldSource> SOURCES = new CopyOnWriteArrayList<>();
     // Sorted by the priority each declaration carries, then by the order the sources registered in, which is who
     // drives a stack two of them claim.
     private static volatile List<HoldBinding> holds = List.of();
 
     private HoldLookup() {
-    }
-
-    // Called once per module, at construction, long before a world can load.
-    public static void register(HoldSource source) {
-        SOURCES.add(source);
     }
 
     @SubscribeEvent
@@ -70,7 +64,7 @@ public final class HoldLookup {
 
     // Public so the server audit can drive it directly.
     public static void rebuild(Provider access) {
-        holds = SOURCES.stream().flatMap(source -> source.holds(access).stream())
+        holds = ModuleHooks.all(HoldSource.class).stream().flatMap(source -> source.holds(access).stream())
                 .filter(HoldBinding::requiresHold)
                 .sorted(ItemMatcher.ORDER)
                 .toList();

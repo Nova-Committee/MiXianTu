@@ -10,6 +10,7 @@ import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.aura.SpiritStorageComponent;
 import com.iafenvoy.mxt.data.cost.Cost;
 import com.iafenvoy.mxt.data.cost.CostTransaction;
+import com.iafenvoy.mxt.data.cost.ItemCostDraft;
 import com.iafenvoy.mxt.data.cost.builtin.AuraCost;
 import com.iafenvoy.mxt.data.cost.context.CostContext;
 import com.iafenvoy.mxt.data.cost.context.CostFailure;
@@ -283,15 +284,25 @@ public final class TalismanService {
                     Component.translatable("actionbar.mxt.talisman.failure.condition_failed")));
             return Attempt.REFUSED;
         }
-        // What the carrier's own definitions charge the holder for one invocation, planned before anything
-        // happens: a price the holder cannot pay refuses the invocation. Nothing is written by the plan, so a
-        // carrier whose abilities all refuse still costs nothing. The aura entries are not in it - they come out
-        // of the carrier's own store.
+        // One invocation is priced as a whole before anything happens: the carrier's own price plus every
+        // inscription's own price, checked on one set of detached drafts, so an inscription that has already fired
+        // can never be left unpaid for. The aura entries are not in it - they come out of the carrier's own store.
         CostContext costContext = CostContext.of(holder, context, CostOrigin.TALISMAN);
-        CostTransaction.Planning price = CostTransaction.plan(holderCosts(written), costContext);
-        if (!price.ok()) {
-            say(holder, Component.translatable("actionbar.mxt.talisman.failed", Component.translatable(
-                    "actionbar.mxt.talisman.failure." + costFailure(price.failure()).name().toLowerCase(Locale.ROOT))));
+        ResourceHolderAttachment draft = resources.copy();
+        ItemCostDraft itemDraft = costContext.itemTarget() != null ? new ItemCostDraft(costContext.itemTarget())
+                : costContext.player() == null ? null : new ItemCostDraft(costContext.player());
+        CostTransaction.Planning price = CostTransaction.plan(holderCosts(written), costContext, draft, itemDraft);
+        Failure refusal = price.ok() ? null : costFailure(price.failure());
+        if (refusal == null)
+            for (Holder<Ability> ability : abilities) {
+                Failure refused = AbilityService.reserveCost(ability, holder, holderAbilities, draft, gameTime, context, itemDraft);
+                if (refused == null) continue;
+                refusal = refused;
+                break;
+            }
+        if (refusal != null) {
+            say(holder, Component.translatable("actionbar.mxt.talisman.failed",
+                    Component.translatable("actionbar.mxt.talisman.failure." + refusal.name().toLowerCase(Locale.ROOT))));
             return Attempt.REFUSED;
         }
         int fired = 0;

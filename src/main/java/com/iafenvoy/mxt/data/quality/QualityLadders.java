@@ -92,14 +92,16 @@ public final class QualityLadders {
     }
 
     // A ladder is named on one tier and reaches every tier below it, so a pack writes it once. A tier carrying two
-    // different names from the tiers above it keeps the first one and is reported by the walk that crosses it.
+    // different names from the tiers above it keeps the first one; a cycle stops the name at the repeat rather than
+    // looping forever, so the walk is left to report it.
     private static Map<Identifier, Identifier> inherit(Map<Identifier, Holder<ItemQuality>> tiers) {
         Map<Identifier, Identifier> inherited = new LinkedHashMap<>();
         for (Map.Entry<Identifier, Holder<ItemQuality>> entry : tiers.entrySet()) {
             Identifier quality = entry.getValue().value().quality().orElse(null);
             if (quality == null) continue;
             Identifier current = entry.getKey();
-            while (current != null) {
+            Set<Identifier> visited = new LinkedHashSet<>();
+            while (current != null && visited.add(current)) {
                 inherited.putIfAbsent(current, quality);
                 Holder<ItemQuality> tier = tiers.get(current);
                 if (tier == null) break;

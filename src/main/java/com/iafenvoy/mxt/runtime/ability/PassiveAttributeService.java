@@ -1,15 +1,12 @@
 package com.iafenvoy.mxt.runtime.ability;
 
 import com.iafenvoy.mxt.MiXianTu;
-import com.iafenvoy.mxt.attachment.CultivationAttachment;
-import com.iafenvoy.mxt.attachment.SpiritIdentityAttachment;
 import com.iafenvoy.mxt.data.AttributeEntry;
-import com.iafenvoy.mxt.data.cultivation.Physique;
-import com.iafenvoy.mxt.data.cultivation.RealmStage;
-import com.iafenvoy.mxt.data.cultivation.Technique;
 import com.iafenvoy.mxt.registry.MxtAttachments;
+import com.iafenvoy.mxt.runtime.EntitySources;
+import com.iafenvoy.mxt.runtime.ModuleHooks;
+import com.iafenvoy.mxt.runtime.Sources;
 import com.iafenvoy.mxt.runtime.ability.AbilityModifierService.ResolvedModifier;
-import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.FormulaContexts;
 import net.minecraft.core.Holder;
@@ -96,18 +93,14 @@ public final class PassiveAttributeService {
         for (ResolvedModifier value : AbilityModifierService.resolve(entity, entity.getData(MxtAttachments.ABILITY_HOLDER))) {
             int index = abilityIndices.merge(value.ability(), 1, Integer::sum) - 1;
             AttributeEntry definition = value.modifier();
-            entries.add(new Entry("ability", value.ability(), index, definition,
-                    modifierId("ability", value.ability(), index, definition.modifier())));
+            entries.add(new Entry(Sources.Declaration.ABILITY, value.ability(), index, definition,
+                    modifierId(Sources.Declaration.ABILITY, value.ability(), index, definition.modifier())));
         }
 
-        CultivationAttachment cultivation = entity.getData(MxtAttachments.CULTIVATION);
-        SpiritIdentityAttachment spirit = entity.getData(MxtAttachments.SPIRIT_IDENTITY);
-        for (Holder<RealmStage> realm : cultivation.realmStages().values())
-            addAll(entries, "realm", HolderHelper.id(realm), realm.value().passiveModifiers());
-        for (Holder<Technique> technique : spirit.learnedTechniques())
-            addAll(entries, "technique", HolderHelper.id(technique), technique.value().passiveModifiers());
-        for (Holder<Physique> physique : spirit.activePhysiques())
-            addAll(entries, "physique", HolderHelper.id(physique), physique.value().attributeModifiers());
+        // Everything a datapack declares comes from the registered providers; a body with none of them has no
+        // entries beyond its own abilities.
+        EntitySources.AttributeSink sink = (kind, source, values) -> addAll(entries, kind, source, values);
+        for (EntitySources.Attributes source : ModuleHooks.all(EntitySources.Attributes.class)) source.collect(entity, sink);
         return entries;
     }
 
@@ -132,7 +125,7 @@ public final class PassiveAttributeService {
         return holders;
     }
 
-    private static void addAll(List<Entry> target, String kind, Identifier source, List<AttributeEntry> values) {
+    private static void addAll(List<Entry> target, Sources.Declaration kind, Identifier source, List<AttributeEntry> values) {
         for (int index = 0; index < values.size(); index++) {
             AttributeEntry definition = values.get(index);
             target.add(new Entry(kind, source, index, definition,
@@ -163,13 +156,13 @@ public final class PassiveAttributeService {
     }
 
     // Computed while the entry is collected, not on every tick.
-    private static Identifier modifierId(String kind, Identifier source, int index, AttributeModifier definition) {
+    private static Identifier modifierId(Sources.Declaration kind, Identifier source, int index, AttributeModifier definition) {
         String origin = source.getNamespace() + "/" + source.getPath();
         String original = definition.id().getNamespace() + "/" + definition.id().getPath();
         return Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID,
-                PREFIX + kind + "/" + origin + "/" + index + "/" + original);
+                PREFIX + kind.path() + "/" + origin + "/" + index + "/" + original);
     }
 
-    private record Entry(String kind, Identifier source, int index, AttributeEntry definition, Identifier id) {
+    private record Entry(Sources.Declaration kind, Identifier source, int index, AttributeEntry definition, Identifier id) {
     }
 }

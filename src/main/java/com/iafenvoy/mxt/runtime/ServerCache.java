@@ -47,6 +47,7 @@ public final class ServerCache {
 
     private final MinecraftServer server;
     private ChainCache<RealmStage> realmChains = ChainCache.empty();
+    private ChainCache<Progression> progressionChains = ChainCache.empty();
     private Map<Identifier, Identifier> headByLevel = new LinkedHashMap<>();
     private Map<Identifier, Integer> rankByLevel = new LinkedHashMap<>();
     private Map<Identifier, List<Reference<TriggerRule>>> triggerRulesBySignal = Map.of();
@@ -236,6 +237,14 @@ public final class ServerCache {
         return this.headByLevel.containsKey(level);
     }
 
+    /**
+     * The validated progression lines, for a caller that needs the whole line rather than one step: where a level
+     * sits above an owner's entry level, and how long the climb is.
+     */
+    public ChainCache<Progression> progressionChains() {
+        return this.progressionChains;
+    }
+
     public Optional<Integer> rankForLevel(Identifier level) {
         return Optional.ofNullable(this.rankByLevel.get(level));
     }
@@ -350,81 +359,79 @@ public final class ServerCache {
     // A chain is its next_level links, not the level a definition enters at: several owners may walk one chain
     // and enter it at different levels. A chain that cannot be walked is reported and left out, never indexed
     // partially.
+    // A chain is its next_level links, not the level a definition enters at: several owners may walk one chain
+    // and enter it at different levels. The walk, the fork rule and the whole-line refusal are ChainCache's; what is
+    // added here is only what a progression chain means - a level may not ask for less mastery than the one below.
     private void rebuildProgressionChains(List<String> problems) {
-        Map<Identifier, Progression> stages = new LinkedHashMap<>();
+        Map<Identifier, Holder<Progression>> stages = new LinkedHashMap<>();
         MxtDatapackRegistries.holders(this.server.registryAccess(), MxtResourceKeys.PROGRESSION)
-                .forEach(holder -> stages.put(holder.key().identifier(), holder.value()));
-        Map<Identifier, Identifier> previous = new LinkedHashMap<>();
-        for (Entry<Identifier, Progression> entry : stages.entrySet()) {
-            Identifier next = entry.getValue().nextLevel().map(HolderHelper::id).orElse(null);
+                .forEach(holder -> stages.put(holder.key().identifier(), holder));
+        ChainCache.Builder<Progression> chains = ChainCache.builder(stages);
+        Set<Identifier> pointedAt = new LinkedHashSet<>();
+        for (Entry<Identifier, Holder<Progression>> entry : stages.entrySet()) {
+            Identifier next = entry.getValue().value().nextLevel().map(HolderHelper::id).orElse(null);
             if (next == null) continue;
             if (!stages.containsKey(next)) {
-                problems.add(problem(MxtResourceKeys.PROGRESSION, entry.getKey(), "next_level " + next + " is not a progression"));
+                chains.refuse(entry.getKey(), "next_level " + next + " is not a progression");
                 continue;
             }
-            Identifier other = previous.putIfAbsent(next, entry.getKey());
-            if (other != null && !other.equals(entry.getKey()))
-                problems.add(problem(MxtResourceKeys.PROGRESSION, next,
-                        "follows both " + other + " and " + entry.getKey()));
+            pointedAt.add(next);
+            chains.link(entry.getKey(), next);
         }
-        Map<Identifier, Identifier> resolved = new LinkedHashMap<>();
-        Map<Identifier, Integer> ranks = new LinkedHashMap<>();
-        Set<Identifier> unwalked = new LinkedHashSet<>();
-        for (Identifier first : stages.keySet()) {
-            if (previous.containsKey(first)) continue;
-            Map<Identifier, Identifier> chain = new LinkedHashMap<>();
-            Map<Identifier, Integer> chainRanks = new LinkedHashMap<>();
-            Identifier current = first;
-            int rank = 0;
-            double lastMastery = Double.NEGATIVE_INFINITY;
-            String failure = null;
-            while (current != null) {
-                if (chain.containsKey(current) || ranks.containsKey(current)) {
-                    failure = "chain is cyclic, or joins another chain, at level " + current;
-                    break;
-                }
-                // A later level may not ask for less mastery than an earlier one. Only a constant can be
-                // compared: a formula provider that drops only makes advancement climb faster.
-                if (stages.get(current).mastery() instanceof Constant(double mastery)) {
-                    if (mastery < lastMastery) {
-                        failure = "lowers its mastery requirement at level " + current;
-                        break;
-                    }
-                    lastMastery = mastery;
-                }
-                chain.put(current, first);
-                chainRanks.put(current, rank++);
-                current = stages.get(current).nextLevel().map(HolderHelper::id).orElse(null);
-            }
-            if (failure != null) {
-                problems.add(problem(MxtResourceKeys.PROGRESSION, first, failure));
-                unwalked.addAll(chain.keySet());
-                unwalked.add(current);
-                continue;
-            }
-            // A chain is merged only once it has been walked to its end, so a failure never indexes a prefix.
-            resolved.putAll(chain);
-            ranks.putAll(chainRanks);
-        }
+        // A level nothing points at starts a line; the levels above it are its own.
         for (Identifier id : stages.keySet())
-            if (!ranks.containsKey(id) && !unwalked.contains(id))
+            if (!pointedAt.contains(id)) chains.head(id, null);
+        ChainCache<Progression> built = chains.check(ServerCache::masteryRefusal).build();
+        for (ChainCache.Report report : built.reports())
+            problems.add(problem(MxtResourceKeys.PROGRESSION, report.node(), report.message()));
+        Map<Identifier, Identifier> heads = new LinkedHashMap<>();
+        Map<Identifier, Integer> ranks = new LinkedHashMap<>();
+        for (Identifier id : stages.keySet()) {
+            ChainCache.Chain<Progression> chain = built.chainOf(id).orElse(null);
+            if (chain == null) continue;
+            heads.put(id, HolderHelper.id(chain.first()));
+            ranks.put(id, chain.indexOf(id));
+        }
+        // A level reported on its own line is not named a second time: the break that cut it is the one message
+        // that matters for everything the line carried.
+        Map<Identifier, Identifier> below = new LinkedHashMap<>();
+        stages.forEach((id, holder) -> holder.value().nextLevel().map(HolderHelper::id)
+                .ifPresent(next -> below.putIfAbsent(next, id)));
+        Set<Identifier> reported = new LinkedHashSet<>();
+        built.reports().forEach(report -> reported.add(report.node()));
+        for (Identifier id : stages.keySet())
+            if (!ranks.containsKey(id) && !reported.contains(id))
                 problems.add(problem(MxtResourceKeys.PROGRESSION, id,
-                        "cannot be reached from a first level: the chain is cyclic or split"));
-        this.validateTechniqueLevels(resolved, stages, problems);
-        this.headByLevel = resolved;
+                        "cannot be reached from a first level: the chain is cyclic, split, or refused"));
+        this.validateTechniqueLevels(built, stages, problems);
+        this.progressionChains = built;
+        this.headByLevel = heads;
         this.rankByLevel = ranks;
+    }
+
+    // A later level may not ask for less mastery than an earlier one. Only a constant can be compared: a formula
+    // provider that drops only makes advancement climb faster.
+    private static String masteryRefusal(List<Holder<Progression>> line) {
+        double lastMastery = Double.NEGATIVE_INFINITY;
+        for (Holder<Progression> level : line) {
+            if (!(level.value().mastery() instanceof Constant(double mastery))) continue;
+            if (mastery < lastMastery) return "lowers its mastery requirement at level " + HolderHelper.id(level);
+            lastMastery = mastery;
+        }
+        return null;
     }
 
     // A technique annotates one chain: a holder starts at its entry level and may be configured for every level
     // after it. A partially annotated chain is reported, so nobody reaches a level nothing describes.
-    private void validateTechniqueLevels(Map<Identifier, Identifier> resolved, Map<Identifier, Progression> stages,
+    private void validateTechniqueLevels(ChainCache<Progression> chains, Map<Identifier, Holder<Progression>> stages,
                                          List<String> problems) {
         MxtDatapackRegistries.holders(this.server.registryAccess(), MxtResourceKeys.TECHNIQUE).forEach(holder -> {
             Technique technique = holder.value();
             Identifier entry = technique.defaultLevel().map(HolderHelper::id).orElse(null);
             if (entry == null) return;
             Identifier techniqueId = holder.key().identifier();
-            if (resolved.get(entry) == null) {
+            ChainCache.Chain<Progression> chain = chains.chainOf(entry).orElse(null);
+            if (chain == null) {
                 // A stage that exists but was not indexed belongs to a chain that was already reported.
                 if (!stages.containsKey(entry))
                     problems.add(problem(MxtResourceKeys.TECHNIQUE, techniqueId, "enters the unknown progression level " + entry));
@@ -432,28 +439,17 @@ public final class ServerCache {
             }
             Set<Identifier> configured = new LinkedHashSet<>();
             technique.configuration().keySet().forEach(stage -> configured.add(HolderHelper.id(stage)));
-            Set<Identifier> reached = new LinkedHashSet<>();
-            Identifier current = entry;
-            while (current != null) {
-                if (!reached.add(current)) {
-                    problems.add(problem(MxtResourceKeys.TECHNIQUE, techniqueId, "walks a cyclic progression chain at level " + current));
-                    return;
-                }
-                if (!entry.equals(current) && !configured.contains(current)) {
-                    problems.add(problem(MxtResourceKeys.TECHNIQUE, techniqueId, "does not configure the progression level " + current));
-                    return;
-                }
-                Progression level = stages.get(current);
-                if (level == null) {
-                    problems.add(problem(MxtResourceKeys.TECHNIQUE, techniqueId, "walks the unknown progression level " + current));
-                    return;
-                }
-                current = level.nextLevel().map(HolderHelper::id).orElse(null);
-            }
             for (Identifier configuredStage : configured)
-                if (!reached.contains(configuredStage))
+                if (!chain.contains(configuredStage) || chain.indexOf(configuredStage) < chain.indexOf(entry))
                     problems.add(problem(MxtResourceKeys.TECHNIQUE, techniqueId,
                             "configures progression level " + configuredStage + ", which it can never reach from " + entry));
+            // Every level from the entry up has to be configured: one nobody describes is a level nobody reaches.
+            for (int index = chain.indexOf(entry) + 1; index < chain.size(); index++) {
+                Identifier level = HolderHelper.id(chain.at(index).orElseThrow());
+                if (configured.contains(level)) continue;
+                problems.add(problem(MxtResourceKeys.TECHNIQUE, techniqueId, "does not configure the progression level " + level));
+                return;
+            }
         });
     }
 }

@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.screen.gui;
 
 import com.iafenvoy.mxt.network.payload.PlayerTradeActionC2SPayload;
-import com.iafenvoy.mxt.network.payload.PlayerTradeActionC2SPayload.PlayerTradeAction;
+import com.iafenvoy.mxt.runtime.economy.PlayerTradeAction;
 import com.iafenvoy.mxt.screen.aui.AuiContainerScreen;
 import com.iafenvoy.mxt.screen.aui.AuiElements;
 import com.iafenvoy.mxt.screen.menu.PlayerTradeMenu;
@@ -19,7 +19,6 @@ import org.jspecify.annotations.Nullable;
 public final class PlayerTradeScreen extends AuiContainerScreen<PlayerTradeMenu> {
     @Nullable
     private Element accept, partnerState;
-    private boolean accepted;
 
     public PlayerTradeScreen(PlayerTradeMenu menu, Inventory inventory, Component title) {
         super(menu, inventory, title);
@@ -60,16 +59,19 @@ public final class PlayerTradeScreen extends AuiContainerScreen<PlayerTradeMenu>
         this.text(partnerState, Component.translatable(partnerAccepted
                 ? "screen.mxt.player_trade.accepted" : "screen.mxt.player_trade.waiting"));
         AuiElements.setClass(partnerState, "accepted", partnerAccepted);
-        this.text(accept, Component.translatable(this.accepted
+        // The key is painted from the menu too: a confirmation is cleared server-side when either offer changes,
+        // and a local copy could not be told about that.
+        boolean ownAccepted = this.menu.ownAccepted();
+        this.text(accept, Component.translatable(ownAccepted
                 ? "screen.mxt.player_trade.accepted" : "screen.mxt.player_trade.accept"));
-        AuiElements.setClass(accept, "accepted", this.accepted);
+        AuiElements.setClass(accept, "accepted", ownAccepted);
     }
 
-    // The old screen flipped its own flag and told the server which of the two edges this was.
+    // The server owns the flag, so this only reports which of the two edges the press was; the answer comes back
+    // through the menu's data slot.
     private void toggleAccept() {
-        this.accepted = !this.accepted;
-        ClientPacketDistributor.sendToServer(new PlayerTradeActionC2SPayload(this.accepted
-                ? PlayerTradeAction.ACCEPT : PlayerTradeAction.CANCEL_ACCEPT));
+        ClientPacketDistributor.sendToServer(new PlayerTradeActionC2SPayload(this.menu.ownAccepted()
+                ? PlayerTradeAction.CANCEL_ACCEPT : PlayerTradeAction.ACCEPT));
         this.refresh();
     }
 

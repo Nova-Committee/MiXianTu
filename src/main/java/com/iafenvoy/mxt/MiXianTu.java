@@ -5,12 +5,7 @@ import com.iafenvoy.jupiter.ServerConfigManager.PermissionChecker;
 import com.iafenvoy.mxt.compat.CuriosIntegration;
 import com.iafenvoy.mxt.config.MxtServerConfig;
 import com.iafenvoy.mxt.registry.*;
-import com.iafenvoy.mxt.runtime.ability.AbilityEventBridge;
-import com.iafenvoy.mxt.runtime.artifact.ArtifactHoldService;
-import com.iafenvoy.mxt.runtime.cultivation.TechniqueItemService;
-import com.iafenvoy.mxt.runtime.curse.CurseTriggerSubscriptions;
-import com.iafenvoy.mxt.runtime.spirit.SpiritChargeService;
-import com.iafenvoy.mxt.runtime.trigger.CultivationTriggerService;
+import com.iafenvoy.mxt.runtime.ModuleHooks;
 import com.mojang.logging.LogUtils;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.common.Mod;
@@ -25,12 +20,7 @@ public final class MiXianTu {
         ConfigManager.getInstance().registerServerConfigHandler(MxtServerConfig.INSTANCE, PermissionChecker.IS_OPERATOR);
 
         CuriosIntegration.registerPredicates();
-        AbilityEventBridge.initialize();
-        CultivationTriggerService.initialize();
-        CurseTriggerSubscriptions.initialize();
-        TechniqueItemService.initialize();
-        SpiritChargeService.initialize();
-        ArtifactHoldService.initialize();
+        ModuleHooks.initialize();
 
         MxtDataStorages.REGISTRY.register(bus);
         MxtTriggers.REGISTRY.register(bus);

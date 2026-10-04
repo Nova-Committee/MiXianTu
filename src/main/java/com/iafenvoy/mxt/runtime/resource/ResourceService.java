@@ -2,14 +2,10 @@ package com.iafenvoy.mxt.runtime.resource;
 
 import com.iafenvoy.mxt.attachment.CultivationAttachment;
 import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
-import com.iafenvoy.mxt.data.aura.Aura;
-import com.iafenvoy.mxt.data.cultivation.RealmStage;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.runtime.ServerCache;
-import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.FormulaContexts;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
@@ -97,28 +93,6 @@ public final class ResourceService {
 
     private static Bounds bounds(Resource definition, FormulaContext context) {
         return resolveBounds(definition, context).orElse(null);
-    }
-
-    // Rank of this entity's stage in the chain, or -1 when it has no stage in it. The chain holder is the state
-    // key, so no registry lookup is needed. Read by the resource formula variables.
-    public static int realmRank(CultivationAttachment spirit, Holder<Aura> aura) {
-        Holder<RealmStage> current = spirit.realmStage(aura);
-        if (current != null) {
-            Identifier currentId = HolderHelper.id(current);
-            Optional<Integer> cached = ServerCache.get().flatMap(cache -> cache.rankForRealm(currentId));
-            if (cached.isPresent()) return cached.get();
-            Holder<RealmStage> stage = aura.value().firstRealm().orElse(null);
-            for (int rank = 0; stage != null && rank < 1024; rank++) {
-                if (stage.equals(current)) return rank;
-                stage = stage.value().nextRealm().orElse(null);
-            }
-            return -1;
-        }
-        // A null realm stage represents a mortal, whose formulas still use the
-        // chain's first realm as the pending cultivation stage.
-        return aura.value().firstRealm()
-                .map(first -> ServerCache.get().flatMap(cache -> cache.rankForRealm(HolderHelper.id(first))).orElse(0))
-                .orElse(-1);
     }
 
     private static double clamp(double value, Bounds bounds) {

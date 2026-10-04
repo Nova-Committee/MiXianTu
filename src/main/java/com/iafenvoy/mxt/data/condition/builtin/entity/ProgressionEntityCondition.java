@@ -5,9 +5,9 @@ import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.data.context.condition.EntityConditionContext;
 import com.iafenvoy.mxt.data.progression.Progression;
 import com.iafenvoy.mxt.registry.MxtAttachments;
+import com.iafenvoy.mxt.runtime.EntitySources;
 import com.iafenvoy.mxt.runtime.ServerCache;
 import com.iafenvoy.mxt.runtime.progression.ProgressionService;
-import com.iafenvoy.mxt.runtime.progression.ProgressionSources;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
@@ -38,7 +38,7 @@ public record ProgressionEntityCondition(Holder<Progression> level, RealmEntityC
     @Override
     public boolean test(@NonNull EntityConditionContext ctx) {
         ProgressionAttachment progress = ctx.entity().getExistingData(MxtAttachments.PROGRESSION).orElse(null);
-        for (ProgressionSources.Owner held : ProgressionSources.heldBy(ctx.entity())) {
+        for (EntitySources.Owner held : EntitySources.heldBy(ctx.entity())) {
             if (!this.owner.isEmpty() && !this.owner.contains(held.id())) continue;
             Holder<Progression> current = ProgressionService.currentLevel(progress, held.id(), held.definition()).orElse(null);
             if (current != null && this.reached(current)) return true;

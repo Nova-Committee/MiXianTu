@@ -1,6 +1,5 @@
 package com.iafenvoy.mxt.runtime.curse;
 
-import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.attachment.CurseHolderAttachment;
 import com.iafenvoy.mxt.compat.CuriosIntegration;
 import com.iafenvoy.mxt.data.action.builtin.entity.ApplyCurseAction;
@@ -8,9 +7,9 @@ import com.iafenvoy.mxt.data.curse.Curse;
 import com.iafenvoy.mxt.data.curse.CurseContainerComponent;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
+import com.iafenvoy.mxt.runtime.Sources;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.Holder;
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.EquipmentSlot;
@@ -38,8 +37,6 @@ public final class CurseEventBridge {
     // The held slots count, so a cursed blade curses its wielder.
     private static final List<EquipmentSlot> SLOTS = List.of(EquipmentSlot.MAINHAND, EquipmentSlot.OFFHAND,
             EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET);
-    private static final Identifier CURIOS_SOURCE = Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "curios_equipment");
-    private static final String EQUIPMENT_PATH = "equipment/";
     private static final CurseContainerComponent EMPTY_CONTAINER = new CurseContainerComponent();
     private static final long RECONCILE_INTERVAL = 20L;
 
@@ -81,11 +78,11 @@ public final class CurseEventBridge {
         for (EquipmentSlot slot : SLOTS) {
             ItemStack stack = entity.getItemBySlot(slot);
             List<ApplyCurseAction> carried = carried(stack);
-            if (!carried.isEmpty()) declared.put(source(slot, stack), carried);
+            if (!carried.isEmpty()) declared.put(Sources.equipment(slot, stack), carried);
         }
         List<ApplyCurseAction> curios = new ArrayList<>();
         for (ItemStack stack : CuriosIntegration.equipped(entity)) curios.addAll(carried(stack));
-        if (!curios.isEmpty()) declared.put(CURIOS_SOURCE, curios);
+        if (!curios.isEmpty()) declared.put(Sources.CURIOS, curios);
         // Nothing is carried and there is nothing of ours to release: reading the attachment here would create
         // one on every living entity in the world for nothing.
         if (declared.isEmpty() && !entity.hasData(MxtAttachments.CURSE_HOLDER.get())) return;
@@ -113,9 +110,11 @@ public final class CurseEventBridge {
             }
             CurseService.reconcileSource(entity, source, wanted, gameTime, context);
         }
-        // A source whose gear is gone entirely is not in that map at all, so it is released on its own.
+        // A source whose gear is gone entirely is not in that map at all, so it is released on its own. The Curios
+        // source counts as carried gear here even though the ability side treats it as part of the body: what this
+        // asks is whether the source belongs to what is equipped right now.
         for (Identifier known : holder.sources().allSources()) {
-            if (!isEquipmentSource(known) || declared.containsKey(known)) continue;
+            if ((!Sources.isEquipment(known) && !known.equals(Sources.CURIOS)) || declared.containsKey(known)) continue;
             CurseService.reconcileSource(entity, known, List.of(), gameTime, context);
         }
     }
@@ -123,18 +122,5 @@ public final class CurseEventBridge {
     private static List<ApplyCurseAction> carried(ItemStack stack) {
         if (stack.isEmpty()) return List.of();
         return stack.getOrDefault(MxtDataComponents.CURSE_CONTAINER.get(), EMPTY_CONTAINER).curses();
-    }
-
-    private static boolean isEquipmentSource(Identifier source) {
-        return source.getNamespace().equals(MiXianTu.MOD_ID)
-                && (source.getPath().startsWith(EQUIPMENT_PATH) || source.equals(CURIOS_SOURCE));
-    }
-
-    // One equipped stack's own source, in the same shape the ability model uses for its grants.
-    private static Identifier source(EquipmentSlot slot, ItemStack stack) {
-        Identifier item = stack.isEmpty() ? Identifier.fromNamespaceAndPath("minecraft", "air")
-                : BuiltInRegistries.ITEM.getKey(stack.getItem());
-        return Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID,
-                EQUIPMENT_PATH + slot.getName() + "/" + item.getNamespace() + "/" + item.getPath());
     }
 }

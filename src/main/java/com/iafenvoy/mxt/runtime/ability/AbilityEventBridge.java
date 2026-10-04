@@ -4,7 +4,6 @@ import com.iafenvoy.mxt.attachment.AbilityAttachment;
 import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.compat.CuriosIntegration;
 import com.iafenvoy.mxt.data.ability.*;
-import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.data.storage.runtime.ActiveState;
 import com.iafenvoy.mxt.data.trigger.Trigger;
@@ -15,11 +14,12 @@ import com.iafenvoy.mxt.event.AbilityTriggeredEvent.Pre;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.runtime.EntityTickStages;
+import com.iafenvoy.mxt.runtime.ModuleHooks;
+import com.iafenvoy.mxt.runtime.Sources;
 import com.iafenvoy.mxt.runtime.ability.AbilityService.UseResult;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactService;
-import com.iafenvoy.mxt.runtime.cultivation.CultivationMethodService;
 import com.iafenvoy.mxt.runtime.item.QualityService;
-import com.iafenvoy.mxt.runtime.progression.ProgressionDriver;
 import com.iafenvoy.mxt.runtime.resource.ResourceService;
 import com.iafenvoy.mxt.runtime.trigger.*;
 import com.iafenvoy.mxt.util.HolderHelper;
@@ -42,7 +42,6 @@ import net.neoforged.neoforge.event.entity.living.LivingEquipmentChangeEvent;
 import net.neoforged.neoforge.event.entity.player.AttackEntityEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent.RightClickBlock;
 import net.neoforged.neoforge.event.level.block.BreakBlockEvent;
-import net.neoforged.neoforge.event.tick.EntityTickEvent;
 
 import java.util.*;
 import java.util.function.Consumer;
@@ -57,8 +56,14 @@ public final class AbilityEventBridge {
     // Guards one entity/ability pair against re-entering itself through an effect its own use publishes.
     private static final ThreadLocal<Set<DispatchKey>> DISPATCHING = ThreadLocal.withInitial(HashSet::new);
 
-    static {
-        TriggerRehydrators.register(new TriggerRehydrator() {
+    private AbilityEventBridge() {
+    }
+
+    // Called once from ModuleHooks.initialize(): the stages this module owns, in the order {@link EntityTickStages}
+    // declares them, plus its trigger rehydrator. Everything else the bridge does is a vanilla-event subscription;
+    // the per-entity tick is a table, not a method body.
+    public static void register() {
+        ModuleHooks.register(TriggerRehydrator.class, new TriggerRehydrator() {
             @Override
             public String module() {
                 return "ability";
@@ -69,13 +74,13 @@ public final class AbilityEventBridge {
                 rebuildTriggerSubscriptions(entity);
             }
         });
-    }
-
-    private AbilityEventBridge() {
-    }
-
-    // Forces class initialization so the rehydrator is registered before the first server lifecycle event.
-    public static void initialize() {
+        EntityTickStages.register("ability_resources", EntityTickStages.RESOURCES, AbilityEventBridge::tickResources);
+        EntityTickStages.register("ability_signals", EntityTickStages.TRIGGERS, AbilityEventBridge::tickSignals);
+        EntityTickStages.register("ability_attributes", EntityTickStages.ATTRIBUTES, PassiveAttributeService::tick);
+        EntityTickStages.register("ability_curios", EntityTickStages.CURIOS, AbilityEventBridge::tickCurios);
+        EntityTickStages.register("ability_lifecycle", EntityTickStages.ABILITIES, AbilityEventBridge::tickLifecycle);
+        EntityTickStages.register("ability_casts", EntityTickStages.CASTS, AbilityEventBridge::tickCasts);
+        EntityTickStages.register("ability_channel", EntityTickStages.CHANNEL, AbilityEventBridge::tickChannel);
     }
 
     @SubscribeEvent
@@ -87,34 +92,37 @@ public final class AbilityEventBridge {
                 .set("damage", (double) event.getInflictedDamage()));
     }
 
-    @SubscribeEvent
-    public static void onEntityTick(EntityTickEvent.Post event) {
-        if (!(event.getEntity() instanceof LivingEntity entity) || entity.level().isClientSide()) return;
-        AbilityAttachment abilities = entity.getData(MxtAttachments.ABILITY_HOLDER);
-        ResourceHolderAttachment resourceHolder = entity.getData(MxtAttachments.RESOURCE_HOLDER);
-        initializeHudResources(entity, resourceHolder);
-        // Only profiled values are visited at all: a plain counter is never looked at, and a profiled value
-        // with no stored entry yet is created by its first change instead of by this loop.
-        for (Reference<Aura> cultivation : MxtDatapackRegistries.holders(entity.level().registryAccess(), MxtResourceKeys.AURA).toList()) {
-            Holder<Resource> resource = cultivation.value().resource();
-            if (!resourceHolder.contains(resource)) continue;
-            if (CultivationMethodService.handlesNaturalRegeneration(entity, cultivation)) continue;
-            ResourceService.regenerate(resourceHolder, resource, cultivation.value().regen(), 1L,
-                    ResourceService.formulaContext(entity, resource, FormulaContext.EMPTY));
-        }
+    // HUD resources are part of the player's visible baseline state, so they are created on the first tick rather
+    // than the first time something spends one.
+    private static void tickResources(LivingEntity entity) {
+        initializeHudResources(entity, entity.getData(MxtAttachments.RESOURCE_HOLDER));
+    }
+
+    private static void tickSignals(LivingEntity entity) {
         dispatch(TriggerSignals.TICK, entity, FormulaContext.of(entity));
-        PassiveAttributeService.tick(entity);
-        if (entity.level().getGameTime() % 20L == 0L) {
-            // Curios is reconciled on a slow cadence, so the index has to follow it here: it is no longer
-            // rebuilt as a side effect of the next publication.
-            if (syncCuriosAbilities(entity, abilities)) rebuildTriggerSubscriptions(entity);
-            // Mastery is measured by a stored value, so it is re-read on the same slow cadence; whatever advanced
-            // decides for itself what a level grants, and that rebuild is one call for every system.
-            if (ProgressionDriver.tick(entity)) AbilityGrantService.recalculate(entity);
-        }
-        tickAbilities(entity, abilities, resourceHolder, entity.level().getGameTime());
-        finishDueCasts(entity, abilities, resourceHolder, entity.level().getGameTime());
-        abilities.channelledAbility().ifPresent(ability -> AbilityService.tickChannel(ability, entity, abilities, resourceHolder, entity.level().getGameTime(), FormulaContext.of(entity)));
+    }
+
+    // Curios is reconciled on a slow cadence, so the index has to follow it here: it is no longer rebuilt as a side
+    // effect of the next publication.
+    private static void tickCurios(LivingEntity entity) {
+        if (entity.level().getGameTime() % 20L != 0L) return;
+        if (syncCuriosAbilities(entity, entity.getData(MxtAttachments.ABILITY_HOLDER))) rebuildTriggerSubscriptions(entity);
+    }
+
+    private static void tickLifecycle(LivingEntity entity) {
+        tickAbilities(entity, entity.getData(MxtAttachments.ABILITY_HOLDER),
+                entity.getData(MxtAttachments.RESOURCE_HOLDER), entity.level().getGameTime());
+    }
+
+    private static void tickCasts(LivingEntity entity) {
+        finishDueCasts(entity, entity.getData(MxtAttachments.ABILITY_HOLDER),
+                entity.getData(MxtAttachments.RESOURCE_HOLDER), entity.level().getGameTime());
+    }
+
+    private static void tickChannel(LivingEntity entity) {
+        AbilityAttachment abilities = entity.getData(MxtAttachments.ABILITY_HOLDER);
+        abilities.channelledAbility().ifPresent(ability -> AbilityService.tickChannel(ability, entity, abilities,
+                entity.getData(MxtAttachments.RESOURCE_HOLDER), entity.level().getGameTime(), FormulaContext.of(entity)));
     }
 
     @SubscribeEvent
@@ -179,9 +187,12 @@ public final class AbilityEventBridge {
         LivingEntity entity = event.getEntity();
         if (entity.level().isClientSide()) return;
         AbilityAttachment holder = entity.getData(MxtAttachments.ABILITY_HOLDER);
-        Identifier source = AbilitySources.equipment(event.getSlot(), event.getTo());
-        itemAbilities(entity, event.getFrom()).forEach(ability -> holder.revoke(ability, source));
-        itemAbilities(entity, event.getTo()).forEach(ability -> holder.grant(ability, source));
+        // Each stack is named by its own source: revoking under the incoming item's id would leave everything the
+        // outgoing item granted in the ledger.
+        Identifier from = Sources.equipment(event.getSlot(), event.getFrom());
+        Identifier to = Sources.equipment(event.getSlot(), event.getTo());
+        itemAbilities(entity, event.getFrom()).forEach(ability -> holder.revoke(ability, from));
+        itemAbilities(entity, event.getTo()).forEach(ability -> holder.grant(ability, to));
         rebuildTriggerSubscriptions(entity);
         FormulaContext context = FormulaContext.of(entity, Map.of("equipment_slot", (double) event.getSlot().ordinal()));
         dispatch(TriggerSignals.EQUIP, entity, context,
@@ -201,7 +212,7 @@ public final class AbilityEventBridge {
         Set<Identifier> current = new LinkedHashSet<>();
         for (ItemStack stack : CuriosIntegration.equipped(entity))
             current.addAll(itemAbilities(entity, stack));
-        return holder.reconcileSource(AbilitySources.CURIOS, current);
+        return holder.reconcileSource(Sources.CURIOS, current);
     }
 
     // Called by the server-side cultivation entry points after a successful breakthrough.

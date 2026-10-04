@@ -4,7 +4,6 @@ import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.runtime.forging.ForgingPlan;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.codec.AutoIgnoreListCodec;
 import com.mojang.serialization.Codec;
@@ -92,16 +91,6 @@ public record ForgingBlueprint(List<ForgingMaterial> input, HolderSet<ForgingMet
             if (material.resolve().isEmpty()) return "unknown input item " + material.id();
         }
         return null;
-    }
-
-    // Resolved once per session so later datapack reloads do not mutate it. Candidate methods and the finish
-    // pattern are checked against the same allowed set, so a pattern naming a disallowed method is rejected here.
-    public ForgingPlan plan(RegistryAccess registries) {
-        Map<Identifier, Integer> deltas = new LinkedHashMap<>();
-        for (Holder<ForgingMethod> method : this.resolvedMethods(registries))
-            deltas.put(HolderHelper.id(method), method.value().valueDelta());
-        int planMaxSteps = this.maxSteps == UNLIMITED_STEPS ? Integer.MAX_VALUE : this.maxSteps;
-        return new ForgingPlan(this.meter.min(), this.meter.max(), this.meter.targetMin(), this.meter.targetMax(), this.finishPattern.steps().stream().map(HolderHelper::id).toList(), this.finishPattern.requiredSuffixSteps(), deltas, planMaxSteps);
     }
 
     public boolean hasStepLimit() {

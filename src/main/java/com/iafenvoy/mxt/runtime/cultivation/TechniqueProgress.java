@@ -6,7 +6,6 @@ import com.iafenvoy.mxt.attachment.SpiritIdentityAttachment;
 import com.iafenvoy.mxt.data.cultivation.Technique;
 import com.iafenvoy.mxt.data.progression.Progression;
 import com.iafenvoy.mxt.data.resource.Resource;
-import com.iafenvoy.mxt.runtime.ServerCache;
 import com.iafenvoy.mxt.runtime.progression.ProgressionService;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
@@ -20,16 +19,10 @@ import java.util.List;
 /**
  * The current level and mastery progress of each learned technique, as a plain display model. Nothing here is
  * client-only: the learned techniques, their progression levels and their mastery values are all synchronised
- * attachments, so a client builds the same rows a server would. Chain order comes from the links rather than from
- * {@link ServerCache}, which is bound to a running server; chains are short and validated, so walking them per row
- * is cheap.
+ * attachments, so a client builds the same rows a server would. Chain order comes from {@link ProgressionService},
+ * which reads the validated lines on a server and the definitions' own links on a client.
  */
 public final class TechniqueProgress {
-    /**
-     * Bound on a chain walk, so a chain that somehow escaped validation cannot stall a render.
-     */
-    private static final int MAX_CHAIN_LENGTH = 512;
-
     private TechniqueProgress() {
     }
 
@@ -109,24 +102,13 @@ public final class TechniqueProgress {
         return Double.isFinite(value) ? value : 0.0D;
     }
 
-    // The chain is validated when the server cache is built, so this only walks the links.
+    // The chain is validated when the server cache is built, so this only asks the shared service: the validated
+    // lines answer on a server, and the definitions' own links answer on a client.
     private static int chainLength(Technique definition) {
-        Holder<Progression> current = definition.entryLevel().orElse(null);
-        int count = 0;
-        while (current != null && count < MAX_CHAIN_LENGTH) {
-            count++;
-            current = ProgressionService.nextLevel(current).orElse(null);
-        }
-        return count;
+        return ProgressionService.levelCount(definition);
     }
 
     private static int rankOf(Technique definition, @Nullable Holder<Progression> level) {
-        if (level == null) return -1;
-        Holder<Progression> current = definition.entryLevel().orElse(null);
-        for (int rank = 0; current != null && rank < MAX_CHAIN_LENGTH; rank++) {
-            if (current.equals(level)) return rank;
-            current = ProgressionService.nextLevel(current).orElse(null);
-        }
-        return -1;
+        return level == null ? -1 : ProgressionService.rankFromEntry(definition, level);
     }
 }

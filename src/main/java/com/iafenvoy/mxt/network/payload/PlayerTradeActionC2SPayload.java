@@ -1,8 +1,7 @@
 package com.iafenvoy.mxt.network.payload;
 
 import com.iafenvoy.mxt.MiXianTu;
-import com.iafenvoy.mxt.util.codec.MiscStreamCodecs;
-import io.netty.buffer.ByteBuf;
+import com.iafenvoy.mxt.runtime.economy.PlayerTradeAction;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
@@ -21,12 +20,5 @@ public record PlayerTradeActionC2SPayload(PlayerTradeAction action) implements C
     @Override
     public @NonNull Type<PlayerTradeActionC2SPayload> type() {
         return TYPE;
-    }
-
-    public enum PlayerTradeAction {
-        ACCEPT,
-        CANCEL_ACCEPT,
-        CLOSE;
-        public static final StreamCodec<ByteBuf, PlayerTradeAction> STREAM_CODEC = MiscStreamCodecs.enumCodec(PlayerTradeAction.class);
     }
 }
