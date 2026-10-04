@@ -2,6 +2,6 @@
   "elements": ["mxt_test:water"],
   "cultivation_multiplier": 1.15,
   "element_ability_modifier": 1.05,
-  "rarity": "uncommon",
+  "quality": "mxt_test:normal",
   "granted_abilities": ["mxt_test:water_shield"]
 }

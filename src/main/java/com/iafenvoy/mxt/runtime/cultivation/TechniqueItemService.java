@@ -12,8 +12,8 @@ import com.iafenvoy.mxt.runtime.cultivation.TechniqueService.Result;
 import com.iafenvoy.mxt.runtime.hold.HoldLookup;
 import com.iafenvoy.mxt.runtime.hold.HoldService;
 import com.iafenvoy.mxt.runtime.item.ItemBindingService;
-import com.iafenvoy.mxt.runtime.item.ItemQualityService;
-import com.iafenvoy.mxt.runtime.item.ItemQualityService.Failure;
+import com.iafenvoy.mxt.runtime.item.QualityService;
+import com.iafenvoy.mxt.runtime.item.QualityService.Failure;
 import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.logging.LogUtils;
@@ -43,7 +43,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * interaction, and a refusal is reported on the action bar since it changes nothing else. The hold gesture
  * itself belongs to the hold module, which drives it without knowing what a technique is; this class only
  * declares how long a read lasts and answers what only this module can - which of its own holds this item is,
- * how far through it is, what to teach and what to report afterwards. {@link ItemQualityService} watches the
+ * how far through it is, what to teach and what to report afterwards. {@link QualityService} watches the
  * same interaction at a higher priority, so the gate check in {@link #use} speaks for direct callers.
  */
 @EventBusSubscriber
@@ -194,9 +194,9 @@ public final class TechniqueItemService {
         Optional<TechniqueBinding> binding = ItemBindingService.technique(stack);
         if (binding.isEmpty()) return false;
         TechniqueBinding value = binding.orElseThrow();
-        Optional<Failure> refused = ItemQualityService.check(entity, stack);
+        Optional<Failure> refused = QualityService.check(entity, stack);
         if (refused.isPresent()) {
-            ItemQualityService.notifyCannotUse(entity, refused.orElseThrow());
+            QualityService.notifyCannotUse(entity, refused.orElseThrow());
             return true;
         }
         // A binding that asks for a hold must not also teach on the click that starts it, or the hold

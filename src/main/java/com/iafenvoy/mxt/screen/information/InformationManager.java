@@ -10,10 +10,12 @@ import com.iafenvoy.mxt.data.cultivation.Physique;
 import com.iafenvoy.mxt.data.cultivation.RealmStage;
 import com.iafenvoy.mxt.data.cultivation.SpiritRoot;
 import com.iafenvoy.mxt.data.curse.Curse;
+import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService.BreakthroughStatus;
 import com.iafenvoy.mxt.runtime.cultivation.LifeSpanService;
+import com.iafenvoy.mxt.runtime.item.QualityService;
 import com.iafenvoy.mxt.runtime.resource.ResourceService;
 import com.iafenvoy.mxt.screen.information.InformationCollector.InformationEntry;
 import com.iafenvoy.mxt.util.DefinitionText;
@@ -143,7 +145,7 @@ public final class InformationManager {
                 }
                 line.append(Component.literal("(").append(names).append(")"));
             }
-            notes.add(identityNote(root, "spirit_root", root.value().rarity(), active));
+            notes.add(identityNote(root, "spirit_root", root.value().quality(), active));
         }
         collector.add(Component.translatable("info.mxt.spirit_roots"), line, VALUE_COLOR, joined(notes));
     }
@@ -164,14 +166,15 @@ public final class InformationManager {
             line.append(heldName(DefinitionText.name(physique, "physique"), active));
             int stacks = Collections.frequency(held, physique);
             if (stacks > 1) line.append(" ×" + stacks);
-            notes.add(identityNote(physique, "physique", physique.value().rarity(), active));
+            notes.add(identityNote(physique, "physique", physique.value().quality(), active));
         }
         collector.add(Component.translatable("info.mxt.physiques"), line, VALUE_COLOR, joined(notes));
     }
 
-    // Rarity is shown only here, in the row's tooltip: the panel is the one consumer every definition has.
-    private static Component identityNote(Holder<?> holder, String category, String rarity, boolean active) {
-        MutableComponent note = DefinitionText.name(holder, category).append(" · ").append(DefinitionText.rarity(rarity));
+    // The tier is shown only here, in the row's tooltip: the panel is the one consumer every definition has.
+    private static Component identityNote(Holder<?> holder, String category, Optional<Holder<ItemQuality>> quality, boolean active) {
+        MutableComponent note = DefinitionText.name(holder, category);
+        quality.ifPresent(tier -> note.append(" · ").append(QualityService.displayName(tier)));
         if (!active) note.append(" · ").append(Component.translatable("info.mxt.switched_off"));
         return note.withStyle(ChatFormatting.GRAY);
     }

@@ -19,7 +19,7 @@ import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtItems;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.runtime.item.ItemQualityService;
+import com.iafenvoy.mxt.runtime.item.QualityService;
 import com.iafenvoy.mxt.runtime.talisman.TalismanDrawingScorer.Point;
 import com.iafenvoy.mxt.runtime.talisman.TalismanDrawingScorer.Score;
 import com.iafenvoy.mxt.util.DefinitionText;
@@ -227,8 +227,8 @@ public final class TalismanWorkstationService {
         for (ItemStackTemplate template : grade.outputs())
             give(session.paperSlot(), player, template.create());
         recipe.result().successAction().execute(player, formula);
-        Component name = ItemQualityService.find(player.registryAccess(), product)
-                .map(quality -> ItemQualityService.coloredName(quality, DefinitionText.name(quality)))
+        Component name = QualityService.find(player.registryAccess(), product)
+                .map(QualityService::displayName)
                 .orElse(Component.empty());
         return new Outcome(true, completion, product, name, session.pigmentSpent());
     }
@@ -251,7 +251,7 @@ public final class TalismanWorkstationService {
     }
 
     private static void setQuality(ItemStack stack, Holder<ItemQuality> quality) {
-        ItemQualityService.set(stack, quality);
+        QualityService.set(stack, quality);
     }
 
     // One pour, the same shape the command uses: every aura the inscriptions make room for, scaled by the ratio.

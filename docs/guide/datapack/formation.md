@@ -532,12 +532,11 @@ give @s mxt:formation_plate[mxt:formation_plate={allowed:["#mypack:wood_arrays"]
 
 不可种植的药材省略 `growth`。可种植的要写种苗、年龄、贴图和收获物；收获物必须能解析回这条定义。药龄组件是 `mxt:herb_age`。旧的顶层 `age`、`growth_rate`、`drop_chance` 不要再写。
 
-火灵参若只是入药、不种植，保留原品质、标签和默认年龄 100 即可：
+火灵参若只是入药、不种植，保留标签和默认年龄 100 即可（灵植定义没有档位字段，要给档就写 `default_quality`）：
 
 ```json
 {
   "items": ["minecraft:red_mushroom", "#mxt_test:spirit_herbs"],
-  "quality": "mxt_test:spirit_iron",
   "default_age": 100,
   "element_tags": ["mxt_test:fire"],
   "material_tags": ["mxt_test:herb"],

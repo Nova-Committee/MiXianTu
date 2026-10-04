@@ -16,7 +16,7 @@ import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtItems;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.item.ItemBindingService;
-import com.iafenvoy.mxt.runtime.item.ItemQualityService;
+import com.iafenvoy.mxt.runtime.item.QualityService;
 import com.iafenvoy.mxt.runtime.item.PillService;
 import com.iafenvoy.mxt.runtime.item.PillService.ModifyMode;
 import com.iafenvoy.mxt.runtime.item.PillUseService;
@@ -478,7 +478,7 @@ public final class PillProbes {
     }
 
     private static String refusal(ServerPlayer player) {
-        return ItemQualityService.check(player, player.getMainHandItem())
+        return QualityService.check(player, player.getMainHandItem())
                 .map(failure -> failure.name().toLowerCase(Locale.ROOT))
                 .orElse("none") + " sat=" + player.getFoodData().getSaturationLevel();
     }

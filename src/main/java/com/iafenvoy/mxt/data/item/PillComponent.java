@@ -37,7 +37,7 @@ public record PillComponent(Optional<Holder<Pill>> pill, Optional<EntityAction> 
     public Pill applyTo(Pill base) {
         if (this.onConsume.isEmpty() && this.toxicityGain.isEmpty() && this.toxicityThreshold.isEmpty()
                 && this.onOverdose.isEmpty() && this.toxicityAfterOverdose.isEmpty()) return base;
-        return new Pill(base.name(), base.description(), base.color(),
+        return new Pill(base.name(), base.description(), base.quality(), base.color(),
                 this.onConsume.orElse(base.onConsume()), this.toxicityGain.orElse(base.toxicityGain()),
                 this.toxicityThreshold.orElse(base.toxicityThreshold()), this.onOverdose.orElse(base.onOverdose()),
                 this.toxicityAfterOverdose.orElse(base.toxicityAfterOverdose()), base.conditions());

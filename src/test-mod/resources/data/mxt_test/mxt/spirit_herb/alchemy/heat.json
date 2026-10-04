@@ -1,6 +1,5 @@
 {
   "items": "minecraft:poppy",
-  "quality": "mxt_test:spirit_iron",
   "main_effects": {
     "mxt_test:alchemy/heat": 2
   },

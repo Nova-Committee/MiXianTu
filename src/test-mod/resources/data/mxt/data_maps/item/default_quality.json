@@ -1,0 +1,7 @@
+{
+  "values": {
+    "minecraft:clay_ball": "mxt_test:normal",
+    "minecraft:cobblestone": "mxt_test:poor",
+    "mxt:alchemy_furnace": "mxt_test:alchemy/kiln_a"
+  }
+}

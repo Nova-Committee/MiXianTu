@@ -1,6 +1,7 @@
 package com.iafenvoy.mxt.data.cultivation;
 
 import com.iafenvoy.mxt.api.NamedDefinition;
+import com.iafenvoy.mxt.api.QualityProvider;
 import com.iafenvoy.mxt.data.AttributeEntry;
 import com.iafenvoy.mxt.data.IconReference;
 import com.iafenvoy.mxt.data.ability.Ability;
@@ -35,7 +36,8 @@ import java.util.Optional;
  * ({@code granted_abilities}) or by mastery ({@code configuration}), whose levels come from a shared
  * {@link Progression} chain. {@code default_level} is the chain entry point and is mandatory as soon as any level
  * is configured; {@code mastery_resource} names the stored value that measures mastery. {@code quality} is the
- * technique's own tier: what the panel shows as its 品阶 and the tier its carrier item starts on.
+ * technique's own tier, which is what a manual made for it starts on. Manuals default to one shared built-in
+ * carrier, so that item alone cannot say which tier applies.
  */
 public record Technique(Component name, Component description, Optional<Holder<ItemQuality>> quality,
                         Optional<IconReference> icon,
@@ -45,7 +47,7 @@ public record Technique(Component name, Component description, Optional<Holder<I
                         List<Either<Holder<Ability>, TagKey<Ability>>> grantedAbilities,
                         Optional<Holder<Progression>> defaultLevel,
                         Optional<Holder<Resource>> masteryResource,
-                        Map<Holder<Progression>, ProgressionConfig> configuration) implements NamedDefinition, ProgressionOwner {
+                        Map<Holder<Progression>, ProgressionConfig> configuration) implements NamedDefinition, ProgressionOwner, QualityProvider {
     private static final String CATEGORY = DefinitionText.category(MxtResourceKeys.TECHNIQUE.identifier());
     public static final Codec<Holder<Technique>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.TECHNIQUE);
     public static final Codec<Technique> DIRECT_CODEC = RecordCodecBuilder.<Technique>create(i -> i.group(
@@ -70,6 +72,11 @@ public record Technique(Component name, Component description, Optional<Holder<I
         if (technique.defaultLevel().isEmpty() && technique.masteryResource().isPresent())
             return DataResult.error(() -> "mastery_resource needs default_level to name the progression chain it measures");
         return DataResult.success(technique);
+    }
+
+    @Override
+    public Optional<Holder<ItemQuality>> defaultQuality() {
+        return this.quality;
     }
 
     @Override

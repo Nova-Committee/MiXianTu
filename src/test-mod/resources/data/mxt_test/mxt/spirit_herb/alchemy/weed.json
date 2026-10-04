@@ -1,6 +1,5 @@
 {
   "items": ["minecraft:dandelion"],
-  "quality": "mxt_test:spirit_iron",
   "default_age": 0,
   "main_effects": { "mxt_test:alchemy/extra": 1 },
   "thermal_bias": 0

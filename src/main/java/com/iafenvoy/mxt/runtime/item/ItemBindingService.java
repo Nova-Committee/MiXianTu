@@ -198,7 +198,7 @@ public final class ItemBindingService {
         if (holder.level().isClientSide()) return;
         ItemStack stack = holder.getMainHandItem();
         ResolvedBindings bindings = resolve(holder.level().registryAccess(), stack);
-        if (!ItemQualityService.canUse(holder, stack, bindings)) return;
+        if (!QualityService.canUse(holder, stack, bindings)) return;
         FormulaContext context = FormulaContext.of(holder);
         bindings.weapon().ifPresent(weapon -> weapon.tickAction().execute(holder, context));
     }
@@ -207,7 +207,7 @@ public final class ItemBindingService {
         if (holder.level().isClientSide()) return;
         ItemStack stack = holder.getMainHandItem();
         ResolvedBindings bindings = resolve(holder.level().registryAccess(), stack);
-        if (!ItemQualityService.canUse(holder, stack, bindings)) return;
+        if (!QualityService.canUse(holder, stack, bindings)) return;
         FormulaContext context = FormulaContext.of(holder, Map.of(
                 "target_is_living", target instanceof LivingEntity ? 1.0D : 0.0D,
                 "target_health", target instanceof LivingEntity living ? (double) living.getHealth() : 0.0D
@@ -219,7 +219,7 @@ public final class ItemBindingService {
         if (holder.level().isClientSide()) return;
         ItemStack stack = holder.getMainHandItem();
         ResolvedBindings bindings = resolve(holder.level().registryAccess(), stack);
-        if (!ItemQualityService.canUse(holder, stack, bindings)) return;
+        if (!QualityService.canUse(holder, stack, bindings)) return;
         FormulaContext context = FormulaContext.of(holder);
         bindings.weapon().ifPresent(weapon -> weapon.useAction().execute(holder, context));
     }
@@ -254,7 +254,7 @@ public final class ItemBindingService {
         ResolvedBindings bindings = resolve(entity.level().registryAccess(), stack);
         bindings.weapon().ifPresent(weapon -> {
             ItemAttributeModifiers baseline = baselineModifiers(stack, weapon);
-            ItemAttributeModifiers modifiers = ItemQualityService.canUse(entity, stack, bindings)
+            ItemAttributeModifiers modifiers = QualityService.canUse(entity, stack, bindings)
                     ? weaponModifiers(baseline, weapon, entity)
                     : baseline;
             if (!modifiers.equals(stack.get(DataComponents.ATTRIBUTE_MODIFIERS))) {

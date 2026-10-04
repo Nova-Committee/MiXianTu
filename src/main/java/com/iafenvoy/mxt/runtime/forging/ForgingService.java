@@ -11,7 +11,7 @@ import com.iafenvoy.mxt.data.forging.ForgingMethod;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.event.ForgingEvent;
 import com.iafenvoy.mxt.event.ForgingEvent.*;
-import com.iafenvoy.mxt.runtime.item.ItemQualityService;
+import com.iafenvoy.mxt.runtime.item.QualityService;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.Holder;
@@ -77,7 +77,7 @@ public final class ForgingService {
 
     public static FinishResult finish(ServerPlayer player, ForgingSurface surface, Holder<ForgingBlueprint> blueprint, ForgingSession session,
                                       IntFunction<Holder<ItemQuality>> qualityForExtraSteps) {
-        return finish(player, surface, blueprint, session, qualityForExtraSteps, ItemQualityService.DEFAULT_MODIFIER);
+        return finish(player, surface, blueprint, session, qualityForExtraSteps, QualityService.DEFAULT_MODIFIER);
     }
 
     // The modifier divides the extra count because extra steps are the penalty for not finishing optimally: a
@@ -91,9 +91,9 @@ public final class ForgingService {
         int extra = session.extraSteps();
         Holder<ItemQuality> quality = qualityForExtraSteps.apply(effectiveExtraSteps(extra, forgingModifier));
         if (quality == null) return FinishResult.rejected(Failure.INVALID_BLUEPRINT);
-        ForgingResultComponent result = new ForgingResultComponent(HolderHelper.id(blueprint), session.value(), session.steps(), session.optimalSteps(), extra, quality);
-        notifyListeners(new CompletePost(player, surface.pos(), blueprint, new ForgingSessionView(session), result));
-        return FinishResult.finished(result);
+        ForgingResultComponent result = new ForgingResultComponent(HolderHelper.id(blueprint), session.value(), session.steps(), session.optimalSteps(), extra);
+        notifyListeners(new CompletePost(player, surface.pos(), blueprint, new ForgingSessionView(session), result, quality));
+        return FinishResult.finished(result, quality);
     }
 
     // The lowest modifier among the materials the session locked, because a piece is only as good as its
@@ -101,12 +101,12 @@ public final class ForgingService {
     // consumed and stay editable during a session, so their quality at settlement would describe the table as
     // it is now rather than the input this piece was forged from.
     static double materialModifier(RegistryAccess access, List<ItemStack> consumed, FormulaContext context) {
-        double modifier = ItemQualityService.DEFAULT_MODIFIER;
+        double modifier = QualityService.DEFAULT_MODIFIER;
         boolean graded = false;
         for (ItemStack stack : consumed) {
-            Optional<Holder<ItemQuality>> quality = ItemQualityService.find(access, stack);
+            Optional<Holder<ItemQuality>> quality = QualityService.find(access, stack);
             if (quality.isEmpty()) continue;
-            double value = ItemQualityService.modifier(quality.orElseThrow(), ItemQuality::forgingModifier, context);
+            double value = QualityService.modifier(quality.orElseThrow(), ItemQuality::forgingModifier, context);
             modifier = graded ? Math.min(modifier, value) : value;
             graded = true;
         }
@@ -116,7 +116,7 @@ public final class ForgingService {
     // A count that would leave the integer range, or a modifier that is not a usable number, leaves the
     // session's own extra steps in place rather than inventing a tier no session produced.
     static int effectiveExtraSteps(int extraSteps, double forgingModifier) {
-        if (forgingModifier == ItemQualityService.DEFAULT_MODIFIER) return extraSteps;
+        if (forgingModifier == QualityService.DEFAULT_MODIFIER) return extraSteps;
         double scaled = extraSteps / forgingModifier;
         if (!Double.isFinite(scaled) || scaled < 0.0D || scaled > Integer.MAX_VALUE) return extraSteps;
         return (int) Math.round(scaled);
@@ -209,13 +209,15 @@ public final class ForgingService {
         }
     }
 
-    public record FinishResult(ForgingResultComponent result, Failure failure) {
-        private static FinishResult finished(ForgingResultComponent result) {
-            return new FinishResult(result, null);
+    // The tier is carried beside the record rather than inside it: the workstation writes it to the one quality
+    // component, and the record keeps only what the smith did.
+    public record FinishResult(ForgingResultComponent result, Holder<ItemQuality> quality, Failure failure) {
+        private static FinishResult finished(ForgingResultComponent result, Holder<ItemQuality> quality) {
+            return new FinishResult(result, quality, null);
         }
 
         private static FinishResult rejected(Failure failure) {
-            return new FinishResult(null, failure);
+            return new FinishResult(null, null, failure);
         }
 
         public boolean finished() {

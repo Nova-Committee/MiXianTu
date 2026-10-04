@@ -13,10 +13,10 @@ title: 命令
 | `/mxt registries list` | 列出动态注册表及条目数量。 |
 | `/mxt registries validate` | 校验数据包定义，并把本次构建**发现的全部问题一次列出**：每条都带出错的文件路径；没有问题时报告注册表与条目数量。 |
 | `/picker [<category>]`（= `/mxt picker`） | 打开物品选择器，列出所选数据包注册表定义对应的物品；`category` 是注册表 ID（如 `mxt:aura`、`mxt:artifact`、`mxt:item_binding`），不填列出全部已注册分类。需要 gamemaster 权限，且只在创造模式下可用。 |
-| `/quality`（= `/mxt quality`） | 查看自己**主手**物品的品质：解析出来的那一档（覆盖组件 → 锻造结果 → 定义默认，含炉型规格 → 链条默认 → 灵植声明）。不需要权限。 |
+| `/quality`（= `/mxt quality`） | 查看自己**主手**物品的品质：解析出来的那一档（覆盖组件 `mxt:quality` → 这一堆携带的定义声明的档 → 物品默认品质数据表 `mxt:default_quality`，这三层）。不需要权限。 |
 | `/quality get [<target>]`（= `/mxt quality get …`） | 同上，看别人的（需要 gamemaster 权限）。 |
-| `/quality set <targets> <quality>`（= `/mxt quality set …`） | 把品质**覆盖组件**写到目标主手的物品上（需要 gamemaster 权限）。它盖过定义默认档，`/quality clear` 摘掉；这一档能不能用仍由它自己的 `condition` 与所属链条决定。 |
-| `/quality clear <targets>`（= `/mxt quality clear …`） | 摘掉主手物品上的覆盖组件，让它回到定义默认档（需要 gamemaster 权限）。本来就没有覆盖时逐个目标报失败。 |
+| `/quality set <targets> <quality>`（= `/mxt quality set …`） | 把品质**覆盖组件**写到目标主手的物品上（需要 gamemaster 权限）。它盖过另外两层，`/quality clear` 摘掉；这一档能不能用仍由它自己的 `condition` 与所属链条决定。 |
+| `/quality clear <targets>`（= `/mxt quality clear …`） | 摘掉主手物品上的品质组件（`/quality set` 写的、**锻造结算**与**画符铭刻**写的都是同一个组件），让它先回到**这一堆携带的定义**声明的档，定义没声明（或没带定义）才回到数据表 `mxt:default_quality` 给的那一档（需要 gamemaster 权限）。本来就没有组件时逐个目标报失败。 |
 | `/quality upgrade <targets>`（= `/mxt quality upgrade …`） | 把主手物品在它所属的链条上**往上推一档**（需要 gamemaster 权限）：代价就是**下一档**自己声明的 `upgrade_costs`（`plan` → `commit` 整组原子，付不出就一点不动），并先过它的 `upgrade_condition`。已经在顶端、或解析出的档不在链上时都会逐个目标报出原因。 |
 | `/quality chain <quality>`（= `/mxt quality chain …`） | 打印这一档所在的**整条品质链**，不需要权限：链上在它之前的是灰色、它自己是绿色、之后的是白色。一档只属于一条链（它自己声明的 `quality`），没有链时报"没有品质链包含它"。 |
 | `/mxt attachment status` | 查看自身附件数量和修炼数据。 |
@@ -66,10 +66,10 @@ title: 命令
 | `/mxt formation owners <pos> add\|remove <player>` | 加 / 减一位阵主（需要 gamemaster 权限）。归属是一组 UUID：名单上的人都算阵主，因此 `mxt:formation_owner`、拆除权限、逐实体行为的"给阵主"与"给队友"都按这一组判定；好友系统也改成问**每一位**阵主（任一位认得你就算队友）。加一位已经在名单上的、或减一位不在名单上的，会照实回答且不改动。 |
 | `/mxt formation show <formation>`（= `/formation show`） | 在客户端打开一个**结构预览界面**，把该阵法声明的形状按层搭出来给玩家看（需由玩家执行，不需要权限）。形状在服务端解析后随网络包发过去：`structure_template` 属于服务端数据，客户端不一定有同一份包。方块一律取模板的**第一套 palette**，空气格不显示（与结构判定跳过空气同一条口径）。`structure_check: always` 的阵法没有声明形状，会直接说明而不是打开空界面；模板缺失、或方块数超过 4096（预览上限）也各报一条。界面里鼠标悬停到某一格会高亮该方块（白框）并显示它的物品提示。 |
 | `/mxt formation bind <formation>`（= `/formation bind`） | 把指定阵法写入**主手**的阵盘（需要 gamemaster 权限）。阵盘是唯一能把阵法带进世界的物品，而它的绑定存在物品组件里；这条命令是生存流程里取得可用阵盘的入口。Tab 补全列出注册表里的全部阵法（不再只列白名单内那些），但**白名单仍在写盘之前把关**：不在名单里的会被拒绝且不修改阵盘；重复绑定会覆盖原值，ID 写错时连解析都过不去，阵盘自然保持原样。 |
-| `/spirit_root list [<target>]`（= `/mxt spirit_root list`） | 列出该实体持有的灵根：名字、稀有度、绑定元素与是否生效。读附件而不是注册表，所以定义已不在当前包里的灵根照样列出来。不填 `target` 时看自己，不需要权限。 |
+| `/spirit_root list [<target>]`（= `/mxt spirit_root list`） | 列出该实体持有的灵根：名字、品质、绑定元素与是否生效（没写 `quality` 的显示 `-`）。读附件而不是注册表，所以定义已不在当前包里的灵根照样列出来。不填 `target` 时看自己，不需要权限。 |
 | `/spirit_root grant\|remove <targets> <root>`（= `/mxt spirit_root …`） | 授予或移除灵根（需要 gamemaster 权限）。授予走实体行为 `mxt:grant_spirit_root` 的同一套服务，因此 `conflicting_elements` 与「已持有」都会拒绝并逐个目标报出原因；移除按 `spirit_identity` 附件里**持有的那条引用**去找，所以定义已不在当前包里的灵根照样摘得掉。 |
 | `/spirit_root enable\|disable <targets> <root>`（= `/mxt spirit_root …`） | 「关闭但不失去」：关掉的灵根仍然持有，只是不再提供元素、修炼倍率、授予能力与 `conflicting_elements`。这与"从数据包里拿掉这条定义"是两件事。 |
-| `/physique list [<target>]`（= `/mxt physique list`） | 列出该实体持有的体质：名字、稀有度与是否生效（叠加时同名只列一行），不需要权限。 |
+| `/physique list [<target>]`（= `/mxt physique list`） | 列出该实体持有的体质：名字、品质与是否生效（叠加时同名只列一行；没写 `quality` 的显示 `-`），不需要权限。 |
 | `/physique grant\|remove <targets> <physique>`（= `/mxt physique …`） | 授予（按当前实体判定 `holder_condition` 与互斥标签）或移除体质（需要 gamemaster 权限）。移除与灵根同一口径：按附件里持有的引用找。 |
 | `/physique enable\|disable <targets> <physique>`（= `/mxt physique …`） | 与灵根同义的开关：关闭后属性修正、授予能力与两个伤害倍率全部不生效，但体质仍然被持有。 |
 | `/technique repair [dry-run]`（= `/mxt technique repair`） | 清理指向已删除功法定义的失效数据。 |

@@ -2,7 +2,7 @@ package com.iafenvoy.mxt.data.quality;
 
 import com.iafenvoy.mxt.config.MxtClientConfig;
 import com.iafenvoy.mxt.data.quality.ItemQuality.Modifier;
-import com.iafenvoy.mxt.runtime.item.ItemQualityService;
+import com.iafenvoy.mxt.runtime.item.QualityService;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup.Provider;
@@ -46,20 +46,20 @@ public final class ItemQualityTooltipAppender {
         if (registries == null) return;
         List<Component> lines = event.getToolTip();
         if (lines.isEmpty()) return;
-        ItemQualityService.find(registries, event.getItemStack())
-                .ifPresent(quality -> lines.set(0, ItemQualityService.coloredName(quality, lines.getFirst())));
+        QualityService.find(registries, event.getItemStack())
+                .ifPresent(quality -> lines.set(0, QualityService.coloredName(quality, lines.getFirst())));
     }
 
     private static void appendQuality(ItemStack stack, TooltipContext context, TooltipDisplay display,
                                       Player player, TooltipFlag flag, Consumer<Component> builder) {
         Provider registries = context.registries();
         if (registries == null) return;
-        ItemQualityService.find(registries, stack).ifPresent(quality -> appendQuality(builder, quality));
+        QualityService.find(registries, stack).ifPresent(quality -> appendQuality(builder, quality));
     }
 
     private static void appendQuality(Consumer<Component> builder, Holder<ItemQuality> quality) {
         ItemQuality value = quality.value();
-        builder.accept(Component.translatable("tooltip.mxt.item.quality", ItemQualityService.coloredName(quality, value.name())));
+        builder.accept(Component.translatable("tooltip.mxt.item.quality", QualityService.coloredName(quality, value.name())));
         if (!value.description().getString().isEmpty())
             builder.accept(value.description().copy().withStyle(ChatFormatting.GRAY));
         appendModifier(builder, value.valueMultiplier());

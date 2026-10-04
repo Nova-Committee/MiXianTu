@@ -33,7 +33,7 @@ public final class PillUseService {
     private PillUseService() {
     }
 
-    // The lowest priority: ItemQualityService refuses an illegal dose at the highest one, and a cancelled event
+    // The lowest priority: QualityService refuses an illegal dose at the highest one, and a cancelled event
     // never reaches a lower priority. A hold outranks a pill, so an item that is both is read instead of eaten.
     @SubscribeEvent(priority = EventPriority.LOWEST)
     public static void onItemUse(RightClickItem event) {

@@ -1,6 +1,5 @@
 {
   "items": "minecraft:fermented_spider_eye",
-  "quality": "mxt_test:spirit_iron",
   "growth": {
     "seeds": "minecraft:poisonous_potato",
     "mature_age": 1,

@@ -10,7 +10,7 @@ title: 载体物品：哪件物品装哪份定义
 | --- | --- | --- | --- |
 | **专属载体 + 堆上的组件** | 物品那一堆自己带组件 | 有 | 灵根、体质、功法玉简、丹药、符箓、阵盘、秘境令牌、契约卷轴、丹炉核心与外壳 |
 | **定义用 `items` 认领** | 定义那一侧写 `items`（`ItemMatcher`） | 没有，任何物品都行 | `artifact`、`spirit_herb`、`pill_binding`，以及 `technique_binding.items` |
-| **数据表按键认领** | 文件那一侧的键写条目 id 或 `#标签` | 没有，任何条目都行 | 物品键：`item_aura`、`currency`、`item_binding`、`weapon_binding`、`tool_binding`、`blueprint_binding`；方块键：`block_aura`、`heat_source` |
+| **数据表按键认领** | 文件那一侧的键写条目 id 或 `#标签` | 没有，任何条目都行 | 物品键：`item_aura`、`currency`、`item_binding`、`weapon_binding`、`tool_binding`、`blueprint_binding`、`default_quality`；方块键：`block_aura`、`heat_source` |
 | **通用组件** | 物品那一堆自己带组件 | 没有，任何物品都行 | `mxt:quality`、`mxt:element`、`mxt:pill`、`mxt:technique_reading`、`mxt:forging_methods`、`mxt:forging_blueprints`、`mxt:item_abilities`、`mxt:curse_container` |
 
 三种可以叠加。下面第一节是**本体自带的专属载体**（一件物品装一份定义），第二节是**任何物品都能挂的通用组件**，第三节是**没有专属物品、只能靠 `items` 认领的那一半**。
@@ -31,6 +31,8 @@ title: 载体物品：哪件物品装哪份定义
 | `mxt:alchemy_furnace_casing`（丹炉外壳，方块物品） | `mxt:alchemy_wall_material` | 一份 `alchemy_wall_material` | 放下时随外壳进方块实体，决定这一格炉壁的耐温 | 这一格读不出材料，整炉耐温取最小值＝0，同样开不了工 |
 
 丹炉的两个方块物品**掉落时把组件一起带回来**（战利品表用原版 `minecraft:copy_components` 从方块实体复制），所以一台炉子拆掉再摆回去，规格与炉壁材料都还在。
+
+**这些组件同时也是"品质第二层"的入口**：九个定义（功法 / 炉型 / 炉壁材料 / 灵根 / 体质 / 丹药 / 阵法 / 秘境 / 契约）可以在自己的定义里写可选的 `quality`，而读它靠的就是这张表里的专属载体——堆上带着哪份定义，就问那份定义要档。三个没接的（`artifact` / `spirit_herb` 按物品认领、`talisman` 的载体装一列符）以及列表型组件为什么不登记，见[数据包格式](../../数据包格式.md#quality)的「`quality`」。
 
 ### 存量型载体：键就是定义，但你不是"选一份"
 
@@ -70,6 +72,7 @@ title: 载体物品：哪件物品装哪份定义
 | `currency` | **数据表键** | 货币价值；硬币与灵石只是"被认领的物品" |
 | `spirit_herb` | `items`（必填） | 灵植；药龄在 `mxt:herb_age` |
 | `block_aura` | **数据表键** | 认领的是方块（`data/mxt/data_maps/block/block_aura.json`），值是那张灵气表；多个值命中同一方块是相加的 |
+| `default_quality` | **数据表键** | 物品的默认品质：解析顺序的**第三层**，堆上没有可问的定义时才读它（`artifact` / `spirit_herb` 按物品认领、没有可问的定义，也写在这里） |
 | `item_binding` / `weapon_binding` / `tool_binding` / `blueprint_binding` | **数据表键** | 四张物品数据表，键就是物品 id 或 `#标签`；`pill_binding` 仍是注册表，认领靠 `items` |
 | `technique_binding` | `items`（可选） | 手册的身份仍是堆上的 `mxt:technique` 组件，`items` 是"这件物品就是那门功法的手册"的第二条路 |
 
@@ -87,7 +90,7 @@ title: 载体物品：哪件物品装哪份定义
 | `mxt:rift` | 目标**维度 id** + 颜色 | `/mxt rift bind`、锚潜行右键 |
 | `mxt:identification` | 目标**物品 id**，`mxt:identification_mirror` 拿它把"未鉴定物品"换成那件物品 | 内容包（本体没有写入点） |
 | `mxt:artifact_state` | 主人 UUID + 名字 + 滋养度 | 认主与法器运行时 |
-| `mxt:forging_result` | 锻造记录（蓝图 id + 步数 + 品阶 Holder） | 锻造台产出 |
+| `mxt:forging_result` | 锻造记录（蓝图 id + 步数，**不含档位**——结算定下的档写进 `mxt:quality`） | 锻造台产出 |
 | `mxt:contract_bell` | 灵宠 UUID + 显示名 + 它自己答的命令 id 列表 | 御兽铃右键生物 |
 | `mxt:spirit_beast` | 灵兽袋里那具实体的数据；**其中含一份 `contract_type` 引用**（捕获时写入，放出时用来重建契约） | 灵兽袋 |
 

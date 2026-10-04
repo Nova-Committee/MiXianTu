@@ -1,6 +1,5 @@
 {
   "items": "minecraft:sweet_berries",
-  "quality": "mxt_test:spirit_iron",
   "growth": {
     "seeds": "minecraft:glow_berries",
     "mature_age": 10,

@@ -34,7 +34,7 @@ import java.util.Optional;
  * {@code growth} leaves the item usable in a furnace but unsowable. Overlapping entries resolve by {@code priority}:
  * the highest wins, and a tie keeps registry order.
  */
-public record SpiritHerb(List<Entry> entries, Holder<ItemQuality> quality, Component name, Component description,
+public record SpiritHerb(List<Entry> entries, Component name, Component description,
                          int defaultAge, List<Either<Holder<Element>, TagKey<Element>>> elementTags,
                          List<Identifier> materialTags, Map<Holder<MedicinalProperty>, NumberProvider> mainEffects,
                          Map<Holder<MedicinalProperty>, NumberProvider> auxiliaryEffects,
@@ -47,7 +47,6 @@ public record SpiritHerb(List<Entry> entries, Holder<ItemQuality> quality, Compo
     public static final Codec<Holder<SpiritHerb>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.SPIRIT_HERB);
     public static final Codec<SpiritHerb> DIRECT_CODEC = RecordCodecBuilder.<SpiritHerb>create(i -> i.group(
             ENTRIES_CODEC.fieldOf("items").forGetter(SpiritHerb::entries),
-            ItemQuality.CODEC.fieldOf("quality").forGetter(SpiritHerb::quality),
             ContextNameCodec.name(CATEGORY).forGetter(SpiritHerb::name),
             ContextNameCodec.description(CATEGORY).forGetter(SpiritHerb::description),
             Codec.intRange(0, Integer.MAX_VALUE).optionalFieldOf("default_age", 0).forGetter(SpiritHerb::defaultAge),

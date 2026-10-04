@@ -5,6 +5,6 @@
   ],
   "granted_abilities": [],
   "exclusive_tags": ["mxt_test:physique/bone"],
-  "rarity": "rare",
+  "quality": "mxt_test:excellent",
   "allow_stacking": false
 }

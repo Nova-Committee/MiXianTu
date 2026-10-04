@@ -52,8 +52,10 @@ the changelog.**
   moment the bill is full every inscribed ability fires and one carrier is spent. A carrier that would not fire -
   or one billed nothing at all - fires from a right-click instead, and a definition may declare durability for its
   carrier (`durability` / `consume`), which spends wear instead of whole carriers until the carrier breaks and
-  hands back whatever it never burned; `costs` is what the invocation takes from the holder and `quality` grades
-  the paper it is written on. A **drawing workstation** shows a formula's shape, the player traces it with a brush
+  hands back whatever it never burned; `costs` is what the invocation takes from the holder, and a talisman's tier
+  comes from the `grades[].quality` a drawing recipe hits written into the `mxt:quality` component at inscription
+  time, with the `default_quality` data map as the carrier's fallback (the `talisman` definition has no `quality`
+  field of its own). A **drawing workstation** shows a formula's shape, the player traces it with a brush
   that carries its own pigment, and how well it was traced decides success and tier.
 - **Display Stand**: any item can be put on one to be shown; a talisman there fires the moment a spirit burst
   fills it, **from the stand's own position** - the formulas' `block_x`/`block_y`/`block_z`, the centre of an area
@@ -111,7 +113,7 @@ datapacks or content packs; installing the mod alone does not give you a complet
 | Spirit Herbs                  |   🚧   | One spirit-herb plot grows one plant. Harvest returns an aged crop plus the original seed; age is stored on the item and read as potency.                                                                                                                                                                                      |
 | Item Binding                  |   🚧   | Brings existing items into gameplay: attach passive behavior and vanilla attribute modifiers to any item, or bind abilities that fire on right-click use and on attack.                                                                                                                                                        |
 | Talismans                     |   ✅    | A Talisman Brush inscribes ability definitions onto a carrier (one carrier can hold several); holding right-click until it is full fires them, spending a carrier or the wear a definition declares. A drawing workstation shows a formula's shape, the player traces it, and how well it was traced decides success and tier. |
-| Quality                       |   ✅    | Items show quality in tooltips; `quality` names a ladder and `next` links its upgrade tiers. Definitions set the default; `mxt:quality` overrides it.                                                                                                                                                                          |
+| Quality                       |   ✅    | Items show quality in tooltips; `quality` names a ladder and `next` links its upgrade tiers. A tier resolves in three layers: the `mxt:quality` component, the `quality` the carried definition declares, and the `default_quality` data map as fallback.                                                                        |
 | Artifacts                     |   🚧   | Items become artifacts via `artifact`: `items` claims them, `spirit_capacity` sets a per-aura ceiling, and `abilities` names what carrying it grants. An artifact declares itself a flying mount (speed, seats, fuel, looks) that a technique-granted flying skill takes from either hand.                                     |
 | Economy                       |   ✅    | Items can be defined as currency with a value, supporting exchange and change; players can trade directly with each other, or use trade stations and cheques to settle transactions.                                                                                                                                           |
 | Curios Slots                  |   ✅    | Players have Curios slots for a back weapon, a belt item and four artifacts, rendered on the character and swappable with the main hand by keybind.                                                                                                                                                                            |

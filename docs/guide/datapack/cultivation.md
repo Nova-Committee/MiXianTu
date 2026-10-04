@@ -16,7 +16,7 @@ title: 修炼、境界与灵根
 }
 ```
 
-**两者各自接进伤害结算的一角**（见[数据包格式](../../数据包格式.md#伤害结算)的「伤害结算」一节）：灵根的 `element_ability_modifier` 是施放亲和元素技能时第一层的因子（一条灵根绑多个元素时**只贡献一次**，多条匹配灵根按 `element_affinity_mode` 合并），体质的 `damage_dealt_multiplier` / `damage_taken_multiplier` 分别是第一层与第二层的因子，且体质那两条**与元素无关**——体质定义里出现任何元素或灵根字段都**不会被读**：记录式 codec 只认它自己声明的键，那份声明被静默忽略（不报错，见 [`docs/数据包格式.md`](../../数据包格式.md) 的 `physique`）。灵根还提供 `cultivation_multiplier`（配合区块灵气浓度算修炼亲和）与 `conflicting_elements`（同体互斥，按元素集合双向判定）；两者的 `rarity` 会显示在信息面板与该实体的 `/mxt spirit_root list` 与 `/mxt physique list` 里。灵根的 `elements` 是**列表**，每项可以只写 id 也可以带 `weight`（占比，读取时归一化：`["example:fire", {"element": "example:water", "weight": 0.3}]`）：持有的元素取并集，修炼亲和与对立惩罚按占比取**加权平均**，能力加成与互斥则与权重无关——逐条口径见[数据包格式](../../数据包格式.md)的 `spirit_root` 一节。
+**两者各自接进伤害结算的一角**（见[数据包格式](../../数据包格式.md#伤害结算)的「伤害结算」一节）：灵根的 `element_ability_modifier` 是施放亲和元素技能时第一层的因子（一条灵根绑多个元素时**只贡献一次**，多条匹配灵根按 `element_affinity_mode` 合并），体质的 `damage_dealt_multiplier` / `damage_taken_multiplier` 分别是第一层与第二层的因子，且体质那两条**与元素无关**——体质定义里出现任何元素或灵根字段都**不会被读**：记录式 codec 只认它自己声明的键，那份声明被静默忽略（不报错，见 [`docs/数据包格式.md`](../../数据包格式.md) 的 `physique`）。灵根还提供 `cultivation_multiplier`（配合区块灵气浓度算修炼亲和）与 `conflicting_elements`（同体互斥，按元素集合双向判定）；两者的可选 `quality` 会显示在信息面板的灵根 / 体质行 tooltip（写成「定义名 · 品质名」，没写 `quality` 就没有那一段）与 `/mxt spirit_root list` / `/mxt physique list` 两条命令里（命令里没有档时显示 `-`）。灵根的 `elements` 是**列表**，每项可以只写 id 也可以带 `weight`（占比，读取时归一化：`["example:fire", {"element": "example:water", "weight": 0.3}]`）：持有的元素取并集，修炼亲和与对立惩罚按占比取**加权平均**，能力加成与互斥则与权重无关——逐条口径见[数据包格式](../../数据包格式.md)的 `spirit_root` 一节。
 
 已持有的灵根和体质都可以**关闭而不失去**：脚本侧 `MxtSpiritRoots.setEnabled` / `MxtPhysiques.setEnabled`，管理员侧 `/mxt spirit_root enable|disable`、`/mxt physique enable|disable`，本模组不提供玩家界面。
 

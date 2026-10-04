@@ -18,7 +18,7 @@ import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.ability.AbilityService.UseResult;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactService;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationMethodService;
-import com.iafenvoy.mxt.runtime.item.ItemQualityService;
+import com.iafenvoy.mxt.runtime.item.QualityService;
 import com.iafenvoy.mxt.runtime.progression.ProgressionDriver;
 import com.iafenvoy.mxt.runtime.resource.ResourceService;
 import com.iafenvoy.mxt.runtime.trigger.*;
@@ -150,7 +150,7 @@ public final class AbilityEventBridge {
     @SubscribeEvent
     public static void onItemUseFinish(Finish event) {
         LivingEntity entity = event.getEntity();
-        if (entity.level().isClientSide() || !ItemQualityService.canUse(entity, event.getItem())) return;
+        if (entity.level().isClientSide() || !QualityService.canUse(entity, event.getItem())) return;
         dispatch(TriggerSignals.ITEM_USE, entity, FormulaContext.of(entity, Map.of("use_duration", (double) event.getDuration())),
                 triggerContext -> {
                     triggerContext.item(event.getItem());

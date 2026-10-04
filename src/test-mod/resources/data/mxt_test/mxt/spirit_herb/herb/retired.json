@@ -3,7 +3,6 @@
     { "type": "neoforge:never" }
   ],
   "items": "minecraft:blue_orchid",
-  "quality": "mxt_test:spirit_iron",
   "growth": {
     "seeds": "minecraft:lily_of_the_valley",
     "mature_age": 1,

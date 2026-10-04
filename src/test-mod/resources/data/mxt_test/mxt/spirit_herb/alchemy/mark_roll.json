@@ -1,6 +1,5 @@
 {
   "items": "minecraft:lilac",
-  "quality": "mxt_test:spirit_iron",
   "main_effects": {
     "mxt_test:alchemy/mark_roll": 1
   },

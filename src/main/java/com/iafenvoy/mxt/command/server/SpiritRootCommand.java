@@ -10,6 +10,7 @@ import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationIdentityService;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationIdentityService.Result;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationToggleService;
+import com.iafenvoy.mxt.runtime.item.QualityService;
 import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.TooltipText;
@@ -90,14 +91,15 @@ public final class SpiritRootCommand {
         }
         for (Holder<SpiritRoot> root : distinct) {
             SpiritRoot definition = definition(root).orElse(null);
-            // A root whose definition is gone has neither elements to name nor a rarity to read.
+            // A root whose definition is gone has neither elements to name nor a tier to read.
             Component elements = definition == null ? null : elements(definition);
-            Component rarity = DefinitionText.rarity(definition == null ? "?" : definition.rarity());
+            Component quality = definition == null || definition.quality().isEmpty()
+                    ? Component.literal("-") : QualityService.displayName(definition.quality().orElseThrow());
             Component state = Component.translatable(identity.isSpiritRootEnabled(root)
                     ? "command.mxt.identity.on" : "command.mxt.identity.off");
             Component bound = elements == null ? Component.empty() : Component.literal(" · ").append(elements);
             source.sendSuccess(() -> Component.translatable("command.mxt.identity.line",
-                    DefinitionText.name(root, "spirit_root"), rarity, bound, state), false);
+                    DefinitionText.name(root, "spirit_root"), quality, bound, state), false);
         }
         return distinct.size();
     }

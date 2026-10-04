@@ -6,14 +6,12 @@ import com.iafenvoy.mxt.attachment.SpiritIdentityAttachment;
 import com.iafenvoy.mxt.config.MxtClientConfig;
 import com.iafenvoy.mxt.data.IconReference;
 import com.iafenvoy.mxt.data.progression.Progression;
-import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.cultivation.TechniqueProgress;
 import com.iafenvoy.mxt.runtime.cultivation.TechniqueProgress.Entry;
 import com.iafenvoy.mxt.runtime.cultivation.TechniqueProgress.Mode;
 import com.iafenvoy.mxt.runtime.cultivation.TechniqueProgress.Progress;
-import com.iafenvoy.mxt.runtime.item.ItemQualityService;
 import com.iafenvoy.mxt.screen.aui.*;
 import com.iafenvoy.mxt.screen.aui.AuiScrollList.Cell;
 import com.iafenvoy.mxt.screen.information.InformationCollector.InformationEntry;
@@ -673,11 +671,9 @@ public final class InformationPanelScreen extends AuiScreen {
             cell.setClass("icon-texture", !textureKey.isEmpty());
         }
 
-        // The technique's own name in its tier's colour; the caller cuts the text to the room it has.
+        // A technique has no tier of its own any more, so the name is drawn in the panel's own colour.
         private Component nameText(Entry row) {
-            Component name = DefinitionText.name(row.technique(), "technique");
-            Optional<Holder<ItemQuality>> quality = row.technique().value().quality();
-            return quality.map(holder -> ItemQualityService.coloredName(holder, name)).orElse(name);
+            return DefinitionText.name(row.technique(), "technique");
         }
 
         // The level's own display name when the pack provides one, its rank otherwise.
@@ -715,16 +711,7 @@ public final class InformationPanelScreen extends AuiScreen {
             if (row.hasLevel() && row.level() != null)
                 line.append(" ").append(Component.literal(HolderHelper.id(row.level()).toString())
                         .withStyle(ChatFormatting.DARK_GRAY));
-            return List.of(line, Component.translatable("screen.mxt.technique_panel.grade", this.gradeText(row))
-                    .withStyle(ChatFormatting.GRAY));
-        }
-
-        // The tier's own name and colour. A technique that declares no tier says so, instead of printing a
-        // free-form grade word no language file can be asked for.
-        private Component gradeText(Entry row) {
-            Optional<Holder<ItemQuality>> quality = row.technique().value().quality();
-            return quality.isEmpty() ? Component.translatable("screen.mxt.technique_panel.grade_none")
-                    : ItemQualityService.coloredName(quality.orElseThrow(), DefinitionText.name(quality.orElseThrow()));
+            return List.of(line);
         }
     }
 

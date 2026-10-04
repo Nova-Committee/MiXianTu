@@ -2,5 +2,5 @@
   "elements": ["mxt_test:metal"],
   "cultivation_multiplier": 1.2,
   "element_ability_modifier": 1.08,
-  "rarity": "uncommon"
+  "quality": "mxt_test:normal"
 }

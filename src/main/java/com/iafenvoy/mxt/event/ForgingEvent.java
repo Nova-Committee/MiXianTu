@@ -5,6 +5,7 @@ import com.iafenvoy.mxt.data.artifact.ForgingResultComponent;
 import com.iafenvoy.mxt.data.cost.Cost;
 import com.iafenvoy.mxt.data.forging.ForgingBlueprint;
 import com.iafenvoy.mxt.data.forging.ForgingMethod;
+import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.runtime.forging.ForgingSessionView;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.BlockPos;
@@ -160,13 +161,15 @@ public abstract class ForgingEvent extends Event {
         private final Holder<ForgingBlueprint> blueprint;
         private final ForgingSessionView session;
         private final ForgingResultComponent result;
+        private final Holder<ItemQuality> quality;
 
         public CompletePost(ServerPlayer player, BlockPos pos, Holder<ForgingBlueprint> blueprint, ForgingSessionView session,
-                            ForgingResultComponent result) {
+                            ForgingResultComponent result, Holder<ItemQuality> quality) {
             super(player, pos);
             this.blueprint = blueprint;
             this.session = session;
             this.result = result;
+            this.quality = quality;
         }
 
         public Holder<ForgingBlueprint> blueprint() {
@@ -179,6 +182,12 @@ public abstract class ForgingEvent extends Event {
 
         public ForgingResultComponent result() {
             return this.result;
+        }
+
+        // Read here rather than off the result: the tier goes to the item's quality component, and a listener runs
+        // before the workstation writes it.
+        public Holder<ItemQuality> quality() {
+            return this.quality;
         }
     }
 }

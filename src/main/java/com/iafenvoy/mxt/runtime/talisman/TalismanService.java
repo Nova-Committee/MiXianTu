@@ -16,7 +16,6 @@ import com.iafenvoy.mxt.data.cost.context.CostFailure;
 import com.iafenvoy.mxt.data.cost.context.CostOrigin;
 import com.iafenvoy.mxt.data.item.TalismanComponent;
 import com.iafenvoy.mxt.data.item.TalismanComponent.TriggerMode;
-import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.event.AbilityUseEvent.Post;
 import com.iafenvoy.mxt.item.TalismanItem;
@@ -183,17 +182,6 @@ public final class TalismanService {
         for (Holder<Talisman> talisman : inscribed(stack))
             declared = add(declared, Math.max(0, talisman.value().durability()));
         return declared;
-    }
-
-    // The tier a carrier made from this is written on: the first inscription that declares one, in the order they
-    // were written, because a carrier holding several has no single tier of its own. Nothing is written onto the
-    // stack for it - the quality module reads this as the definition's own default.
-    public static Optional<Holder<ItemQuality>> quality(ItemStack stack) {
-        for (Holder<Talisman> talisman : inscribed(stack)) {
-            Optional<Holder<ItemQuality>> quality = talisman.value().quality();
-            if (quality.isPresent()) return quality;
-        }
-        return Optional.empty();
     }
 
     // What one invocation costs the holder, in the order the definitions were written. Every aura entry is left

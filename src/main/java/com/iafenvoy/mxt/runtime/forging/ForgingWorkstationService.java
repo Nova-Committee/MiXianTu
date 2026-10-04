@@ -13,6 +13,7 @@ import com.iafenvoy.mxt.runtime.forging.ForgingService.Failure;
 import com.iafenvoy.mxt.runtime.forging.ForgingService.FinishResult;
 import com.iafenvoy.mxt.runtime.forging.ForgingService.StartResult;
 import com.iafenvoy.mxt.runtime.forging.ForgingService.StrikeResult;
+import com.iafenvoy.mxt.runtime.item.QualityService;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.Holder;
@@ -223,6 +224,9 @@ public final class ForgingWorkstationService {
         ItemStack output = BuiltInRegistries.ITEM.getOptional(blueprint.result()).map(ItemStack::new).orElse(ItemStack.EMPTY);
         if (output.isEmpty()) return new FinishOutcome(Failure.DISABLED, false);
         output.set(MxtDataComponents.FORGING_RESULT.get(), result.result());
+        // The settled tier goes to the one quality component, so a forged piece is read exactly like one a pack
+        // stamped or an administrator set.
+        QualityService.set(output, result.quality());
         surface.forgingContainer().setItem(ForgingSurface.OUTPUT_SLOT, output);
         blueprint.completeAction().execute(player, FormulaContext.of(player));
         state.clear();

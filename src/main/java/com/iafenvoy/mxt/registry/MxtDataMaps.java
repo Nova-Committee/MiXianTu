@@ -10,6 +10,7 @@ import com.iafenvoy.mxt.data.forging.BlueprintBinding;
 import com.iafenvoy.mxt.data.forging.ToolBinding;
 import com.iafenvoy.mxt.data.item.ItemBinding;
 import com.iafenvoy.mxt.data.item.WeaponBinding;
+import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.runtime.world.BlockAuraService;
 import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
@@ -33,10 +34,10 @@ import java.util.Map;
 import java.util.function.ToIntFunction;
 
 /**
- * The data maps this mod publishes. The item-keyed six answer "what is this item" - the fuel it burns, the price it
- * carries, the behaviour it brings to a fight or to the forge; the block-keyed two answer "what does this block give
- * off" (its aura, its heat). They replace the matching tables that answered the same question by walking every
- * definition on every lookup.
+ * The data maps this mod publishes. The item-keyed seven answer "what is this item" - the fuel it burns, the price it
+ * carries, the behaviour it brings to a fight or to the forge, the tier it starts at; the block-keyed two answer
+ * "what does this block give off" (its aura, its heat). They replace the matching tables that answered the same
+ * question by walking every definition on every lookup.
  */
 @EventBusSubscriber
 public final class MxtDataMaps {
@@ -46,6 +47,12 @@ public final class MxtDataMaps {
     public static final DataMapType<Item, WeaponBinding> WEAPON_BINDING = table("weapon_binding", WeaponBinding.CODEC, WeaponBinding::priority);
     public static final DataMapType<Item, ToolBinding> TOOL_BINDING = table("tool_binding", ToolBinding.CODEC, ToolBinding::priority);
     public static final DataMapType<Item, BlueprintBinding> BLUEPRINT_BINDING = table("blueprint_binding", BlueprintBinding.CODEC, BlueprintBinding::priority);
+    // The item's own tier, read only when nothing else answers: no merger, because the value carries no priority -
+    // two packs claiming one item settle the way every other map does, the later one winning.
+    public static final DataMapType<Item, Holder<ItemQuality>> DEFAULT_QUALITY = DataMapType
+            .builder(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "default_quality"), Registries.ITEM, ItemQuality.CODEC)
+            .synced(ItemQuality.CODEC, false)
+            .build();
     public static final DataMapType<Block, Map<Holder<Aura>, AuraValue>> BLOCK_AURA = AdvancedDataMapType
             .builder(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "block_aura"), Registries.BLOCK, AuraValue.MAP_CODEC)
             .merger(new BlockAuraService.AuraMerger())
@@ -68,6 +75,7 @@ public final class MxtDataMaps {
         event.register(WEAPON_BINDING);
         event.register(TOOL_BINDING);
         event.register(BLUEPRINT_BINDING);
+        event.register(DEFAULT_QUALITY);
         event.register(BLOCK_AURA);
         event.register(HEAT_SOURCE);
     }

@@ -39,7 +39,7 @@ public record Talisman(Component name, Component description,
                        List<Either<Holder<Ability>, TagKey<Ability>>> abilities,
                        double capacity,
                        int durability, int consume,
-                       Optional<Holder<ItemQuality>> quality, EntityCondition condition,
+                       EntityCondition condition,
                        List<Cost> costs) implements NamedDefinition {
     private static final String CATEGORY = DefinitionText.category(MxtResourceKeys.TALISMAN.identifier());
     public static final Codec<Holder<Talisman>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.TALISMAN);
@@ -50,7 +50,6 @@ public record Talisman(Component name, Component description,
             Codec.doubleRange(1.0D, Double.MAX_VALUE).optionalFieldOf("capacity", 1.0D).forGetter(Talisman::capacity),
             Codec.INT.optionalFieldOf("durability", 0).forGetter(Talisman::durability),
             Codec.INT.optionalFieldOf("consume", 1).forGetter(Talisman::consume),
-            ItemQuality.CODEC.optionalFieldOf("quality").forGetter(Talisman::quality),
             EntityCondition.optionalCodec("condition").forGetter(Talisman::condition),
             Cost.LIST_CODEC.optionalFieldOf("costs", List.of()).forGetter(Talisman::costs)
     ).apply(i, Talisman::new)).flatXmap(Talisman::validate, Talisman::validate);

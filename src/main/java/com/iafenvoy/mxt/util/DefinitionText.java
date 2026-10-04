@@ -75,14 +75,6 @@ public final class DefinitionText {
                 || Language.getInstance().has(contents.getKey());
     }
 
-    /**
-     * A free-form pack value, shown verbatim unless the language file translates {@code mxt.rarity.<value>}.
-     */
-    public static MutableComponent rarity(String rarity) {
-        String key = "mxt.rarity." + rarity;
-        return Language.getInstance().has(key) ? Component.translatable(key) : Component.literal(rarity);
-    }
-
     private static String registryNamespace(Holder<?> holder) {
         return holder.unwrapKey().map(key -> key.registry().getNamespace()).orElse(MiXianTu.MOD_ID);
     }

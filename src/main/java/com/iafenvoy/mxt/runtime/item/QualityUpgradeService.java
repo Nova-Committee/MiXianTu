@@ -32,7 +32,7 @@ public final class QualityUpgradeService {
         if (actor.level().isClientSide()) return Result.rejected(Failure.SERVER_ONLY);
         if (stack.isEmpty()) return Result.rejected(Failure.EMPTY);
         Provider access = actor.level().registryAccess();
-        Holder<ItemQuality> current = ItemQualityService.find(access, stack).orElse(null);
+        Holder<ItemQuality> current = QualityService.find(access, stack).orElse(null);
         if (current == null) return Result.rejected(Failure.NO_QUALITY);
         ChainCache<ItemQuality> ladders = QualityLadders.cache(access);
         // A tier no ladder holds has nothing to climb, and a ladder the walk refused whole leaves all of its tiers
@@ -49,19 +49,19 @@ public final class QualityUpgradeService {
         CostTransaction.PayResult payment = CostTransaction.commit(plan, context);
         // The tier is written only after the price is actually paid, so a refusal leaves the stack untouched.
         if (!payment.paid()) return Result.rejected(costFailure(payment.failure()));
-        ItemQualityService.set(stack, next);
+        QualityService.set(stack, next);
         return Result.upgraded(current, next);
     }
 
     public static boolean canUpgrade(LivingEntity actor, ItemStack stack) {
         Provider access = actor.level().registryAccess();
-        Holder<ItemQuality> current = ItemQualityService.find(access, stack).orElse(null);
+        Holder<ItemQuality> current = QualityService.find(access, stack).orElse(null);
         return current != null && QualityLadders.cache(access).next(HolderHelper.id(current)).isPresent();
     }
 
     // The tier the ladder would move to, for a caller that wants to show it before anything is paid.
     public static Optional<Holder<ItemQuality>> nextTier(Provider access, ItemStack stack) {
-        return ItemQualityService.find(access, stack)
+        return QualityService.find(access, stack)
                 .flatMap(current -> QualityLadders.cache(access).next(HolderHelper.id(current)));
     }
 

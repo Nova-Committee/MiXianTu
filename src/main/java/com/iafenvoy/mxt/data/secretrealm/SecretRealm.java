@@ -1,8 +1,10 @@
 package com.iafenvoy.mxt.data.secretrealm;
 
 import com.iafenvoy.mxt.api.NamedDefinition;
+import com.iafenvoy.mxt.api.QualityProvider;
 import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
+import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.codec.ContextNameCodec;
@@ -12,6 +14,7 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Holder;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.RandomSource;
@@ -25,15 +28,17 @@ import java.util.Optional;
 /**
  * Datapack policy for a secret realm. A secret realm is not a fixed dimension: every instance is a dimension created on
  * demand from {@link SecretRealmGeneration}. A claimed ({@code owned}) secret realm only unloads when its last member leaves,
- * keeping its terrain, while an unclaimed one is destroyed with its region data.
+ * keeping its terrain, while an unclaimed one is destroyed with its region data. {@code quality} is the tier a token
+ * into it starts on, which several realms sharing one built-in token cannot state by item.
  */
-public record SecretRealm(Component name, Component description, SecretRealmGeneration generation, long seed,
+public record SecretRealm(Component name, Component description, Optional<Holder<ItemQuality>> quality,
+                          SecretRealmGeneration generation, long seed,
                           Optional<Border> border, int maxInstances,
                           Optional<Integer> maxMembers, boolean owned, long durationTicks,
                           List<StructurePlacement> structures, List<EntryPoint> entry,
                           EntityCondition enterCondition, EntityCondition exitCondition,
                           Optional<Component> enterDeniedMessage, Optional<Component> exitDeniedMessage,
-                          EntityAction enterAction, EntityAction exitAction) implements NamedDefinition {
+                          EntityAction enterAction, EntityAction exitAction) implements NamedDefinition, QualityProvider {
     // Written explicitly onto an instance without a border instead of inheriting the overworld border that derived
     // level data would otherwise hand to a runtime dimension.
     public static final double DEFAULT_BORDER_SIZE = 29999984.0D;
@@ -43,7 +48,12 @@ public record SecretRealm(Component name, Component description, SecretRealmGene
     private static final String CATEGORY = DefinitionText.category(MxtResourceKeys.SECRET_REALM.identifier());
     public static final Codec<SecretRealm> CODEC = RecordCodecBuilder.<SecretRealm>create(i -> i.group(
             ContextNameCodec.name(CATEGORY).forGetter(SecretRealm::name),
-            ContextNameCodec.description(CATEGORY).forGetter(SecretRealm::description),
+            // The description and the tier share one group slot, which keeps the group inside
+            // RecordCodecBuilder's component limit; the JSON keys are unchanged by it.
+            MiscCodecs.pair(
+                            ContextNameCodec.description(CATEGORY),
+                            ItemQuality.CODEC.optionalFieldOf("quality"))
+                    .forGetter(realm -> Pair.of(realm.description(), realm.quality())),
             SecretRealmGeneration.CODEC.fieldOf("generation").forGetter(SecretRealm::generation),
             Codec.LONG.optionalFieldOf("seed", 0L).forGetter(SecretRealm::seed),
             Border.CODEC.optionalFieldOf("border").forGetter(SecretRealm::border),
@@ -53,7 +63,7 @@ public record SecretRealm(Component name, Component description, SecretRealmGene
             MiscCodecs.longRange(0L, Long.MAX_VALUE).optionalFieldOf("duration_ticks", 0L).forGetter(SecretRealm::durationTicks),
             StructurePlacement.CODEC.listOf().optionalFieldOf("structures", List.of()).forGetter(SecretRealm::structures),
             EntryPoint.LIST_CODEC.optionalFieldOf("entry", List.of()).forGetter(SecretRealm::entry),
-            // Seventeen components; one pair keeps the group at sixteen.
+            // Eighteen components; two pairs keep the group at sixteen.
             MiscCodecs.pair(
                             EntityCondition.optionalCodec("enter_condition"),
                             EntityCondition.optionalCodec("exit_condition"))
@@ -62,11 +72,16 @@ public record SecretRealm(Component name, Component description, SecretRealmGene
             MiscCodecs.TRANSLATABLE_COMPONENT.optionalFieldOf("exit_denied_message").forGetter(SecretRealm::exitDeniedMessage),
             EntityAction.optionalCodec("enter_action").forGetter(SecretRealm::enterAction),
             EntityAction.optionalCodec("exit_action").forGetter(SecretRealm::exitAction)
-    ).apply(i, (name, description, generation, seed, border, maxInstances, maxMembers, owned, durationTicks,
+    ).apply(i, (name, text, generation, seed, border, maxInstances, maxMembers, owned, durationTicks,
                 structures, entry, conditions, enterDeniedMessage, exitDeniedMessage, enterAction, exitAction) ->
-            new SecretRealm(name, description, generation, seed, border, maxInstances, maxMembers, owned,
-                    durationTicks, structures, entry, conditions.getFirst(), conditions.getSecond(),
+            new SecretRealm(name, text.getFirst(), text.getSecond(), generation, seed, border, maxInstances, maxMembers,
+                    owned, durationTicks, structures, entry, conditions.getFirst(), conditions.getSecond(),
                     enterDeniedMessage, exitDeniedMessage, enterAction, exitAction))).validate(SecretRealm::validate);
+
+    @Override
+    public Optional<Holder<ItemQuality>> defaultQuality() {
+        return this.quality;
+    }
 
     // Never "whatever the overworld uses": an omitted definition border still gets the vanilla default.
     public Border effectiveBorder() {

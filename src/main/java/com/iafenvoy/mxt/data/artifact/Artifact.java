@@ -40,7 +40,7 @@ import java.util.Optional;
  * them. An artifact never holds an ability of its own, so every one it grants can also be granted by a book, a
  * command or a script, and the id it is granted under is the registry id in all four cases.
  */
-public record Artifact(Component name, Component description, Optional<Holder<ItemQuality>> quality, List<Entry> items,
+public record Artifact(Component name, Component description, List<Entry> items,
                        Map<Holder<Aura>, NumberProvider> spiritCapacity,
                        List<Either<Holder<Ability>, TagKey<Ability>>> abilities, boolean curiosEquipable,
                        boolean requireOwner, ItemAction claimAction, EntityCondition claimCondition,
@@ -59,7 +59,6 @@ public record Artifact(Component name, Component description, Optional<Holder<It
     private static final MapCodec<Artifact> RAW_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             ContextNameCodec.name(CATEGORY).forGetter(Artifact::name),
             ContextNameCodec.description(CATEGORY).forGetter(Artifact::description),
-            ItemQuality.CODEC.optionalFieldOf("quality").forGetter(Artifact::quality),
             ENTRIES_CODEC.fieldOf("items").forGetter(Artifact::items),
             CollectionCodecs.map(Aura.CODEC, NumberProvider.CODEC).optionalFieldOf("spirit_capacity", Map.of()).forGetter(Artifact::spiritCapacity),
             RegistryCodecs.holderOrTagList(MxtResourceKeys.ABILITY).optionalFieldOf("abilities", List.of()).forGetter(Artifact::abilities),

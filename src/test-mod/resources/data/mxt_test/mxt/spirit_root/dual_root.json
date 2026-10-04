@@ -5,7 +5,7 @@
   ],
   "cultivation_multiplier": 1.1,
   "element_ability_modifier": 1.1,
-  "rarity": "rare",
+  "quality": "mxt_test:excellent",
   "granted_abilities": ["mxt_test:firebolt"],
   "conflicting_elements": ["mxt_test:inert"]
 }

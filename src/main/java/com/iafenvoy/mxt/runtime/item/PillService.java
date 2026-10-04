@@ -52,7 +52,7 @@ public final class PillService {
     }
 
     // Conditions, the use cap and the cooldown. An explicit missing binding refuses and does not fall through.
-    // Quality is ItemQualityService's gate, not a second copy of that lookup.
+    // Quality is QualityService's gate, not a second copy of that lookup.
     public static Optional<Failure> check(Provider access, LivingEntity user, ItemStack stack) {
         PillResolution resolution = ItemBindingService.resolvePill(access, stack);
         if (resolution.unbound()) return Optional.of(Failure.UNBOUND);

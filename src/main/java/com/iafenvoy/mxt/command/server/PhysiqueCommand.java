@@ -10,6 +10,7 @@ import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationIdentityService;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationIdentityService.Result;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationToggleService;
+import com.iafenvoy.mxt.runtime.item.QualityService;
 import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
@@ -91,12 +92,13 @@ public final class PhysiqueCommand {
         }
         for (Holder<Physique> physique : distinct) {
             Physique definition = definition(physique).orElse(null);
-            Component rarity = DefinitionText.rarity(definition == null ? "?" : definition.rarity());
+            Component quality = definition == null || definition.quality().isEmpty()
+                    ? Component.literal("-") : QualityService.displayName(definition.quality().orElseThrow());
             Component state = Component.translatable(identity.isPhysiqueEnabled(physique)
                     ? "command.mxt.identity.on" : "command.mxt.identity.off");
             // A physique has no element to name, so the slot is empty rather than filled with a placeholder.
             source.sendSuccess(() -> Component.translatable("command.mxt.identity.line",
-                    DefinitionText.name(physique, "physique"), rarity, Component.empty(), state), false);
+                    DefinitionText.name(physique, "physique"), quality, Component.empty(), state), false);
         }
         return distinct.size();
     }

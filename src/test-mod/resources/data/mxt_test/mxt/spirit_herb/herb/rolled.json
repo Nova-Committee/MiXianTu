@@ -1,6 +1,5 @@
 {
   "items": "minecraft:pink_tulip",
-  "quality": "mxt_test:spirit_iron",
   "growth": {
     "seeds": "minecraft:white_tulip",
     "mature_age": 10,

@@ -1,6 +1,7 @@
 package com.iafenvoy.mxt.data.alchemy;
 
 import com.iafenvoy.mxt.api.NamedDefinition;
+import com.iafenvoy.mxt.api.QualityProvider;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.util.DefinitionText;
@@ -12,13 +13,16 @@ import net.minecraft.core.Holder;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.RegistryFixedCodec;
 
+import java.util.Optional;
+
 /**
  * One furnace specification. Slot counts, capacity and cooling are written here. Temperature ceiling comes from the
- * walls and the heat block, not from this definition. Quality is only the shared display and use-condition tier.
+ * walls and the heat block, not from this definition. {@code quality} is the tier a furnace built to this
+ * specification starts on: every specification shares one block item, so the item cannot say which tier applies.
  */
 public record AlchemyFurnaceDefinition(Component name, Component description, int mainSlots, int auxiliarySlots,
-                                       Holder<ItemQuality> quality, int capacity, double coolingPerTick)
-        implements NamedDefinition {
+                                       Optional<Holder<ItemQuality>> quality, int capacity, double coolingPerTick)
+        implements NamedDefinition, QualityProvider {
     public static final int CATALYST_SLOTS = 1;
     public static final int MAX_CAPACITY = 320;
     private static final String CATEGORY = DefinitionText.category(MxtResourceKeys.ALCHEMY_FURNACE.identifier());
@@ -29,10 +33,15 @@ public record AlchemyFurnaceDefinition(Component name, Component description, in
             ContextNameCodec.description(CATEGORY).forGetter(AlchemyFurnaceDefinition::description),
             Codec.intRange(1, 2).fieldOf("main_slots").forGetter(AlchemyFurnaceDefinition::mainSlots),
             Codec.intRange(0, 2).optionalFieldOf("auxiliary_slots", 0).forGetter(AlchemyFurnaceDefinition::auxiliarySlots),
-            ItemQuality.CODEC.fieldOf("quality").forGetter(AlchemyFurnaceDefinition::quality),
+            ItemQuality.CODEC.optionalFieldOf("quality").forGetter(AlchemyFurnaceDefinition::quality),
             Codec.intRange(1, MAX_CAPACITY).fieldOf("capacity").forGetter(AlchemyFurnaceDefinition::capacity),
             POSITIVE.fieldOf("cooling_per_tick").forGetter(AlchemyFurnaceDefinition::coolingPerTick)
     ).apply(i, AlchemyFurnaceDefinition::new));
+
+    @Override
+    public Optional<Holder<ItemQuality>> defaultQuality() {
+        return this.quality;
+    }
 
     /**
      * The catalyst slot count is fixed; it is not a pack field.

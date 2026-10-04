@@ -5,6 +5,6 @@
   ],
   "granted_abilities": [],
   "exclusive_tags": ["mxt_test:physique/qingxiao"],
-  "rarity": "uncommon",
+  "quality": "mxt_test:normal",
   "allow_stacking": false
 }

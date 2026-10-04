@@ -8,7 +8,7 @@ import com.iafenvoy.mxt.registry.MxtDataMaps;
 import com.iafenvoy.mxt.registry.MxtItems;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.item.ItemBindingService;
-import com.iafenvoy.mxt.runtime.item.ItemQualityService;
+import com.iafenvoy.mxt.runtime.item.QualityService;
 import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.matcher.ItemMatcher;
@@ -84,8 +84,8 @@ public final class ItemPickerManager {
             if (!holder.isBound()) return List.of();
             ItemStack stack = componentStack(MxtBlocks.ALCHEMY_FURNACE.toStack(), MxtDataComponents.ALCHEMY_FURNACE, holder);
             Component name = DefinitionText.name(holder);
-            Component quality = ItemQualityService.find(access, stack)
-                    .map(value -> ItemQualityService.coloredName(value, value.value().name()))
+            Component quality = QualityService.find(access, stack)
+                    .map(value -> QualityService.coloredName(value, value.value().name()))
                     .orElse(Component.translatable("screen.mxt.alchemy.no_quality"));
             return List.of(new PickerItem(stack, names(name, quality, idName(HolderHelper.idOrNull(holder)))));
         });
@@ -100,7 +100,7 @@ public final class ItemPickerManager {
 
         // A quality carries its name in the data pack rather than in a language file, so that name wins - and the
         // row is drawn in the tier's own colour, which is the one place the ladder is visible side by side.
-        registerSingle(MxtResourceKeys.ITEM_QUALITY, holder -> described(MxtItems.IDENTIFICATION_MIRROR.toStack(), holder, ItemQualityService.coloredName(holder, holder.value().name())));
+        registerSingle(MxtResourceKeys.ITEM_QUALITY, holder -> described(MxtItems.IDENTIFICATION_MIRROR.toStack(), holder, QualityService.coloredName(holder, holder.value().name())));
     }
 
     /**

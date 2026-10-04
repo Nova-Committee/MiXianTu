@@ -4,7 +4,7 @@ import com.iafenvoy.mxt.data.condition.ItemCondition;
 import com.iafenvoy.mxt.data.context.condition.ItemConditionContext;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.runtime.item.ItemQualityService;
+import com.iafenvoy.mxt.runtime.item.QualityService;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.DataResult;
@@ -35,7 +35,7 @@ public record ItemQualityCondition(
 
     @Override
     public boolean test(@NonNull ItemConditionContext ctx) {
-        return ItemQualityService.find(ctx.holder().level().registryAccess(), ctx.stack())
+        return QualityService.find(ctx.holder().level().registryAccess(), ctx.stack())
                 .map(quality -> RegistryCodecs.matches(this.qualities, quality)).orElse(false);
     }
 

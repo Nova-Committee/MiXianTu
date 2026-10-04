@@ -452,11 +452,11 @@ const sword = MxtProgression.level(player, 'mxt_test:sword_manual')
 
 | 方法 | 参数 | 返回值 | 说明 |
 | --- | --- | --- | --- |
-| `get(entity, stack)` | `Entity`、`ItemStack` | `String` 或 `null` | 这一栈解析出的品质 ID（`mxt:quality` 组件 → 锻造结果 → 定义默认 → 灵植声明）；没有则为 `null`，不补链的入口档。 |
+| `get(entity, stack)` | `Entity`、`ItemStack` | `String` 或 `null` | 这一栈解析出的品质 ID（`mxt:quality` 组件 → 这一堆携带的定义声明的档 → 数据表 `mxt:default_quality`，这三层）；没有则为 `null`，不补链的入口档。 |
 | `chain(entity, stack)` | `Entity`、`ItemStack` | `String` 或 `null` | 这一栈的品质所属的**链条** ID：就是这一档所在那条链的名字；它不在任何链上时返回 `null`。 |
 | `next(entity, stack)` | `Entity`、`ItemStack` | `String` 或 `null` | 链条上的下一档 ID；已经在顶端或没有链条时为 `null`。 |
-| `set(entity, stack, quality)` | `Entity`、`ItemStack`、品质 ID | `boolean` | 把品质条目引用写入 `mxt:quality` **组件**，盖过定义默认档，也改变这一栈读的链；ID 解析不出来或客户端调用返回 `false`。 |
-| `clear(entity, stack)` | `Entity`、`ItemStack` | `boolean` | 摘掉组件，回到定义默认档；本来就没有组件时返回 `false`。 |
+| `set(entity, stack, quality)` | `Entity`、`ItemStack`、品质 ID | `boolean` | 把品质条目引用写入 `mxt:quality` **组件**，盖过另外两层，也改变这一栈读的链；**格式不合法**的 ID 字符串会当场抛异常，格式合法但当前包里没有这一条、或客户端调用返回 `false`。 |
+| `clear(entity, stack)` | `Entity`、`ItemStack` | `boolean` | 摘掉组件（锻造结算与新画出来的符写的也是它），先回到**这一堆携带的定义**声明的那一档、再回到数据表那一层；本来就没有组件时返回 `false`。 |
 | `upgrade(entity, stack)` | `LivingEntity`、`ItemStack` | `{changed, failure, from, to}` | 在链条上**推一档**：先过**下一档**的 `upgrade_condition`，再用全局消耗事务付清它的 `upgrade_costs`（原子），付不出就一点不动、也不写档。 |
 
 `failure` 取值：`SERVER_ONLY`、`EMPTY`（手上没有物品）、`NO_QUALITY`、`NO_CHAIN`（不属于任何链条，或声明的链当前包走不出来）、`AT_TOP`、`CONDITION_FAILED`、`INSUFFICIENT_RESOURCE`、`INSUFFICIENT_COST`。成功时 `from` / `to` 是升级前后的品质 ID（失败时都是 `null`）。
@@ -674,7 +674,7 @@ MxtEvents.friendRelation(event => {
 | `techniqueLearn` | `Pre`、`Post` | `technique()`（`Holder<Technique>`）、`spirit()`；`Pre` 可取消。 |
 | `alchemyCraft` | `Pre`、`Post` | 事件名不变。两端都有 `recipe()`、`pos()`、`operator()`（UUID）。`recipe()` 是自动解析后冻进批次的身份，不是玩家选择。`Pre.player()` 一定有开炉的人。`Pre.inputs()` 是不可变 `InputCopy` 列表，每项 `role()` 与 `stack()` 副本，可取消；改副本不改账，取消不扣料。改真实库存则拒绝开炉且不还原库存。`Post.player()` 离线为空。`Post.success()`、`Post.reason()`（成功时为空）、`Post.outputs()` 是产物快照。结算先清待输出和会话，再在重入守卫内执行完成动作与判据，退出守卫后才发 `Post`；回调可在仍有效的丹炉上启动下一批，旧批次不会再清掉或破坏它。没有 `spoiled()`。原操作者离线不把玩家行为转给后来开界面的人。 |
 | `artifactRefine` | `Pre`、`Post` | `stack()`、`owner()`；`Pre` 可取消。 |
-| `forging` | `Start`、`Started`、`StrikePre`、`StrikePost`、`CompletePre`、`CompletePost`、`Cancel` | 每个阶段都可读 `player()`（`ServerPlayer`）与 `pos()`（`BlockPos`，台子位置）。分阶段：`Start.blueprint()`；`Started/StrikePost/Cancel.session()`；`StrikePre.method()`（`Holder<ForgingMethod>`）、`resources()`、`context()`、`costs()`、`setCosts(costs)`；`CompletePre.blueprint()`、`session()`；`CompletePost.blueprint()`、`session()`、`result()`。`Start`、`StrikePre`、`CompletePre`、`Cancel` 可取消。 |
+| `forging` | `Start`、`Started`、`StrikePre`、`StrikePost`、`CompletePre`、`CompletePost`、`Cancel` | 每个阶段都可读 `player()`（`ServerPlayer`）与 `pos()`（`BlockPos`，台子位置）。分阶段：`Start.blueprint()`；`Started/StrikePost/Cancel.session()`；`StrikePre.method()`（`Holder<ForgingMethod>`）、`resources()`、`context()`、`costs()`、`setCosts(costs)`；`CompletePre.blueprint()`、`session()`；`CompletePost.blueprint()`、`session()`、`result()`（锻造记录：蓝图 id 与步数）、`quality()`（这一炉定下的档，脚本要读档位读它——成品堆上的组件这时还没写）。`Start`、`StrikePre`、`CompletePre`、`Cancel` 可取消。 |
 | `formation` | `Activate`、`Deactivate`、`Tick`、`TickEffects`、`UpkeepFailed` | `level()`、`controller()`、`instance()`（阵法 ID 取 `instance().formation()`）；`Activate`、`TickEffects`、`UpkeepFailed` 可取消，`Deactivate` 与 `Tick` 不可取消。`Tick` 是"本周期已付费"的观察点，`TickEffects` 只挡这一周期的效果且不退费，`UpkeepFailed` 取消表示让阵法撑过付不出钱的这一周期；`UpkeepFailed` 另有 `payer()`（`Optional<Entity>`，无人付款时为空）与 `failedResource()`（`Optional<Identifier>`，没有付款者时为空），脚本据此知道谁欠费、欠的是哪种资源。 |
 | `lifespanEnd` | `Pre`、`Post` | `entity()`、`spirit()`；`Post` 另有 `outcome()`（`NONE`、`DEATH`、`REINCARNATE`）。`Pre` 可取消，但**取消不再等于永久不受限**：在事件里写下正值（经 `MxtLifespan` 或直接写附件）＝续命成功，倒计时从新值继续；什么都不写才是记账结束（`remaining = -1`、`total = 0`）。命令与 `MxtLifespan.reincarnate` 的**显式转世不走这个事件**（它不是寿元耗尽）。 |
 | `lifespanRebirth` | `Pre`、`Post` | **显式转世**专用：`entity()`、`spirit()`。`Pre` 可取消，取消＝这次转世整件不做（身体原样不动，调用方拿到 `cancelled`）；`Post` 在重置清单跑完、账本按「凡人基础寿元」重开之后发出，`spirit()` 就是下一世的账本。耗尽那条路不发它——那里发的是 `lifespanEnd`。 |

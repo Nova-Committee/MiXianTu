@@ -31,7 +31,7 @@
   另有 3 张"能迁但要补偿"（`currency`、`item_binding`、`weapon_binding`），4 张**不能迁**
   （`artifact`、`pill_binding`、`spirit_herb`、`technique_binding`）。
 - **不建议整体替代**：真正该用数据表的是**新**的"条目 → 数据"表（如 [`69`](69_品质匹配与数据表设计.md) 的
-  `mxt:quality`）与那三张"纯数据"表；`ItemMatcher` 表与数据表回答的是两个问题
+  `mxt:default_quality`）与那三张"纯数据"表；`ItemMatcher` 表与数据表回答的是两个问题
   （"这堆物品属于哪个概念" vs "这个条目附带什么数据"）。
 
 ## 1 那条轴：`ItemStack` vs `Holder`
@@ -84,7 +84,7 @@ data/<mapNamespace>/data_maps/<registryNamespace>/<registryPath>/<mapPath>.json
 ```
 
 - `<mapNamespace>` / `<mapPath>` 是**数据表 id** 的命名空间与路径，`<registryNamespace>` 在是 `minecraft` 时省略。
-  例：挂在 `minecraft:item` 上的 `mxt:quality` → `data/mxt/data_maps/item/quality.json`。
+  例：挂在 `minecraft:item` 上的 `mxt:default_quality` → `data/mxt/data_maps/item/default_quality.json`。
 - ⚠️ **第一段命名空间必须是"表"的命名空间，不是内容包自己的**：加载器用文件名推出一个 `Identifier`
   （`FileToIdConverter.fileToId`）再查已注册的表类型，而类型是按它自己的 id 注册的。写错地方会留一条
   `Found data map file for non-existent data map type` 的 warn。
@@ -312,7 +312,7 @@ priority 得靠"值是有序列的列表"；而且要求作者写两处——**�
 
 | 阶段 | 做什么 | 风险 |
 | --- | --- | --- |
-| 0 | **不动老表**：只做 `69` 的 `mxt:quality`（新表） | 零（新表面） |
+| 0 | **不动老表**：只做 `69` 的 `mxt:default_quality`（新表） | 零（新表面） |
 | 1 | 把 `item_aura` 迁成数据表（最干净的一张，用来验证形状 / 同步 / merger 四条机制） | 低（本体无内容，只动测试包与文档） |
 | 2 | `tool_binding` / `blueprint_binding`（要同时决定 picker 行怎么来） | 中 |
 | 3 | 再评估 `currency` / `item_binding` / `weapon_binding`（要同时决定 priority 与"堆级能力"的取舍） | 高（语义取舍） |

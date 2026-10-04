@@ -1,6 +1,5 @@
 {
   "items": "minecraft:wither_rose",
-  "quality": "mxt_test:spirit_iron",
   "main_effects": {
     "mxt_test:alchemy/fork": 1
   },

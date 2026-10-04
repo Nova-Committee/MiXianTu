@@ -2,5 +2,5 @@
   "elements": ["mxt_test:inert"],
   "cultivation_multiplier": 1,
   "element_ability_modifier": 1,
-  "rarity": "common"
+  "quality": "mxt_test:poor"
 }

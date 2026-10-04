@@ -12,7 +12,7 @@ import com.iafenvoy.mxt.registry.MxtMenus;
 import com.iafenvoy.mxt.runtime.alchemy.*;
 import com.iafenvoy.mxt.runtime.alchemy.AlchemyWorkstationService.AlchemyPreview;
 import com.iafenvoy.mxt.runtime.alchemy.AlchemyWorkstationService.Parameters;
-import com.iafenvoy.mxt.runtime.item.ItemQualityService;
+import com.iafenvoy.mxt.runtime.item.QualityService;
 import com.iafenvoy.mxt.screen.aui.AuiPages;
 import com.iafenvoy.mxt.screen.menu.AlchemyFurnaceView.Numbers;
 import com.iafenvoy.mxt.screen.menu.AlchemyFurnaceView.Status;
@@ -338,8 +338,8 @@ public final class AlchemyFurnaceMenu extends ApricityContainerMenu {
         Parameters parameters = session != null ? session.parameters() : preview.parameters().orElse(null);
         AlchemyFurnaceStructure.Status structure = furnace.structureStatus();
         Component name = furnace.furnaceDefinition().map(holder -> holder.value().name()).orElse(text("no_furnace"));
-        Component quality = ItemQualityService.find(player.registryAccess(), furnace.furnaceItem())
-                .map(holder -> ItemQualityService.coloredName(holder, holder.value().name())).orElse(text("no_quality"));
+        Component quality = QualityService.find(player.registryAccess(), furnace.furnaceItem())
+                .map(holder -> QualityService.coloredName(holder, holder.value().name())).orElse(text("no_quality"));
         boolean canStart = session == null && spec != null && structure.complete() && preview.blocker().isEmpty() && parameters != null;
         Component message = session != null
                 ? session.failed() ? text("failed_batch")

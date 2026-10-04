@@ -168,7 +168,7 @@ import com.iafenvoy.mxt.runtime.damage.DamageElements;
 import com.iafenvoy.mxt.runtime.element.ElementReactionService;
 import com.iafenvoy.mxt.runtime.hold.HoldLookup;
 import com.iafenvoy.mxt.runtime.item.ItemBindingService;
-import com.iafenvoy.mxt.runtime.item.ItemQualityService;
+import com.iafenvoy.mxt.runtime.item.QualityService;
 import com.iafenvoy.mxt.runtime.item.ItemStorageService;
 import com.iafenvoy.mxt.runtime.perch.PerchEventBridge;
 import com.iafenvoy.mxt.runtime.perch.PerchService;
@@ -955,18 +955,11 @@ public final class MxtTestCommands {
         return null;
     }
 
-    // The carrier's price and its tier, driven the same way: a price the actor cannot pay refuses the invocation
-    // before anything happens, the same price is taken when the invocation does happen, and the tier resolves
-    // through the quality module off the inscription rather than off a component.
+    // The carrier's price, driven the same way: a price the actor cannot pay refuses the invocation before anything
+    // happens, and the same price is taken when the invocation does happen. The tier is no longer checked here: a
+    // talisman definition declares none, and the drawing probes cover the grade an inscription stamps on the carrier.
     private static String verifyTalismanLedger(ServerLevel level, LivingEntity actor) {
         ItemStack stack = carrier(require(MxtResourceKeys.TALISMAN, id("graded_sigil")));
-        if (TalismanService.quality(stack).filter(holder -> HolderHelper.id(holder).equals(id("poor"))).isEmpty())
-            return "a talisman whose inscription declares a tier did not report it";
-        if (ItemQualityService.find(level.registryAccess(), stack)
-                .filter(holder -> HolderHelper.id(holder).equals(id("poor"))).isEmpty())
-            return "the tier its inscription declares did not resolve for the carrier";
-        if (ItemQualityService.find(level.registryAccess(), carrier(require(MxtResourceKeys.TALISMAN, id("free_sigil")))).isPresent())
-            return "a carrier whose inscription declares no tier resolved one anyway";
 
         ResourceHolderAttachment resources = actor.getData(MxtAttachments.RESOURCE_HOLDER);
         Holder<Resource> probe = require(MxtResourceKeys.RESOURCE, id("trigger_probe"));
@@ -1828,10 +1821,10 @@ public final class MxtTestCommands {
                 FormulaContext.of(entity)).changed();
     }
 
-    // Drives the cultivation identity surface end to end: the script API, the rarity a definition now reports,
+    // Drives the cultivation identity surface end to end: the script API, the tier a definition now reports,
     // and the reading of a physique written as if it were elemental. The three guarantees pinned: a switched-off
     // root or physique is still held while contributing nothing (so the reads answer both questions separately,
-    // and a switched-off physique must not scale anything); a rarity is a field with a reader; and a field
+    // and a switched-off physique must not scale anything); a tier is a reference with a reader; and a field
     // belonging to another registry is ignored while the definition still loads. Every leg is a number or a
     // boolean rather than a log line, so the probe fails loudly when a documented guarantee stops holding.
     private static int probeIdentity(CommandSourceStack source) {
@@ -1875,19 +1868,25 @@ public final class MxtTestCommands {
             source.sendSuccess(() -> Component.literal("identity probe: granted=" + granted + " listed=" + listed
                     + " switched_off=" + switchedOff + " removed=" + removed + (identity ? " OK" : " MISMATCH")), false);
 
-            // A rarity is content's own word: read back as written, falling back to itself when no language file
-            // names it.
+            // A tier is a reference rather than content's own word, so it is read back as the entry it names. The
+            // free-text rarity the two used to carry is gone; the fixtures now name real quality entries.
             Holder<Physique> physique = require(MxtResourceKeys.PHYSIQUE, PROBE_PHYSIQUE);
-            boolean rarity = physique.value().rarity().equals("probe") && DefinitionText.rarity("probe").getString().equals("probe") && require(MxtResourceKeys.SPIRIT_ROOT, PROBE_FIRE_ROOT).value().rarity().equals("uncommon");
-            source.sendSuccess(() -> Component.literal("identity probe: rarity=" + rarity
-                    + (rarity ? " OK" : " MISMATCH")), false);
+            boolean quality = physique.value().quality()
+                    .map(holder -> HolderHelper.id(holder).equals(id("spirit_iron"))).orElse(false)
+                    && require(MxtResourceKeys.SPIRIT_ROOT, PROBE_FIRE_ROOT).value().quality()
+                    .map(holder -> HolderHelper.id(holder).equals(id("normal"))).orElse(false);
+            source.sendSuccess(() -> Component.literal("identity probe: quality=" + quality
+                    + (quality ? " OK" : " MISMATCH")), false);
 
             // A physique that also names an element, an element relation or a spirit-root field keeps loading and
-            // those keys are ignored - the record codec's own reading of a key it was not told about. A written
-            // number is still checked while the pack loads, so a broken multiplier is not.
+            // those keys are ignored - the record codec's own reading of a key it was not told about, which now
+            // includes the rarity key this shape used to read. A written number is still checked while the pack
+            // loads, so a broken multiplier is not. A definition decoded with bare JsonOps has no entry id to derive
+            // its texts from, so every one of these JSONs writes both of them; without that the decode fails on the
+            // text rather than on the field under test.
             boolean foreignIgnored = ignoresForeignFields();
-            boolean negative = Physique.DIRECT_CODEC.parse(JsonOps.INSTANCE, single("damage_dealt_multiplier", -1.0D)).isError();
-            boolean plain = Physique.DIRECT_CODEC.parse(JsonOps.INSTANCE, single("rarity", "probe")).result().isPresent();
+            boolean negative = Physique.DIRECT_CODEC.parse(JsonOps.INSTANCE, named(single("damage_dealt_multiplier", -1.0D))).isError();
+            boolean plain = Physique.DIRECT_CODEC.parse(JsonOps.INSTANCE, named(single("rarity", "probe"))).result().isPresent();
             boolean loose = foreignIgnored && negative && plain;
             source.sendSuccess(() -> Component.literal("identity probe: foreign_fields_ignored=" + foreignIgnored
                     + " negative_refused=" + negative + " plain_accepted=" + plain + (loose ? " OK" : " MISMATCH")), false);
@@ -1907,7 +1906,7 @@ public final class MxtTestCommands {
             source.sendSuccess(() -> Component.literal("identity probe: mob_burst=" + burst
                     + " spent=" + burstResources.get(burstResource) + (burst ? " OK" : " MISMATCH")), false);
 
-            if (identity && rarity && loose && burst) {
+            if (identity && quality && loose && burst) {
                 source.sendSuccess(() -> Component.literal("identity probe: OK"), false);
                 return 1;
             }
@@ -2529,15 +2528,24 @@ public final class MxtTestCommands {
         return beast;
     }
 
-    // Ignoring a field is only a guarantee if it leaves no trace, so the two decoded definitions are compared.
+    // Ignoring a field is only a guarantee if it leaves no trace, so the two decoded definitions are compared. The
+    // rarity key is one of them: it is what this shape read before a tier became a reference.
     private static boolean ignoresForeignFields() {
         JsonObject foreign = new JsonObject();
         foreign.addProperty("element", "mxt_test:fire");
         foreign.addProperty("overcomes", "mxt_test:water");
         foreign.addProperty("damage_types", "mxt_test:fire");
         foreign.addProperty("rarity", "probe");
-        return Physique.DIRECT_CODEC.parse(JsonOps.INSTANCE, foreign).result()
-                .equals(Physique.DIRECT_CODEC.parse(JsonOps.INSTANCE, single("rarity", "probe")).result());
+        return Physique.DIRECT_CODEC.parse(JsonOps.INSTANCE, named(foreign)).result()
+                .equals(Physique.DIRECT_CODEC.parse(JsonOps.INSTANCE, named(new JsonObject())).result());
+    }
+
+    // A definition with no name or description would fail on those fields alone, which would make every leg below
+    // vacuous: both are only derivable from an entry id, and bare JsonOps carries none.
+    private static JsonObject named(JsonObject object) {
+        object.addProperty("name", "probe");
+        object.addProperty("description", "probe");
+        return object;
     }
 
     // One-field JSON object, for decode checks that ask whether a single key is enough to break a definition.

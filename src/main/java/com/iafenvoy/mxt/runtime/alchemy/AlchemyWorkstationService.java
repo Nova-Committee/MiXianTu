@@ -14,7 +14,7 @@ import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.alchemy.AlchemyResolver.Candidate;
 import com.iafenvoy.mxt.runtime.alchemy.AlchemyResolver.Evaluated;
 import com.iafenvoy.mxt.runtime.alchemy.AlchemyResolver.Gap;
-import com.iafenvoy.mxt.runtime.item.ItemQualityService;
+import com.iafenvoy.mxt.runtime.item.QualityService;
 import com.iafenvoy.mxt.runtime.world.AuraResult;
 import com.iafenvoy.mxt.runtime.world.AuraService;
 import com.iafenvoy.mxt.util.HolderHelper;
@@ -64,7 +64,7 @@ public final class AlchemyWorkstationService {
     private static Optional<Parameters> parameters(ServerPlayer player, AlchemyWorkstation station, AlchemyRecipe recipe, Evaluated evaluated) {
         if (!evaluated.valid()) return Optional.empty();
         double modifier = inputModifier(player.registryAccess(), station.container(), FormulaContext.of(player));
-        double scaled = modifier == ItemQualityService.DEFAULT_MODIFIER ? evaluated.duration() : evaluated.duration() / modifier;
+        double scaled = modifier == QualityService.DEFAULT_MODIFIER ? evaluated.duration() : evaluated.duration() / modifier;
         if (!Double.isFinite(scaled) || scaled <= 0.0D) scaled = evaluated.duration();
         long ticks = Math.max(1L, Math.round(Math.min(scaled, Long.MAX_VALUE)));
         return Optional.of(new Parameters(evaluated.targetTemperature(), evaluated.temperatureTolerance(),
@@ -96,14 +96,14 @@ public final class AlchemyWorkstationService {
         }
         if (mixture.inputFailure().isPresent()) blocker = mixture.inputFailure().get();
         AlchemyFurnaceDefinition spec = station.furnaceDefinition().map(Holder::value).orElse(null);
-        Optional<ItemQualityService.Failure> qualityFailure = Optional.empty();
+        Optional<QualityService.Failure> qualityFailure = Optional.empty();
         if (station.state().busy()) blocker = AlchemyFailure.ACTIVE;
         else if (!station.structureStatus().complete()) blocker = AlchemyFailure.STRUCTURE;
         else if (spec == null) blocker = AlchemyFailure.NO_FURNACE;
-        else if (ItemQualityService.find(player.registryAccess(), station.furnaceItem()).isEmpty())
+        else if (QualityService.find(player.registryAccess(), station.furnaceItem()).isEmpty())
             blocker = AlchemyFailure.FURNACE_QUALITY;
         else {
-            qualityFailure = ItemQualityService.check(player, station.furnaceItem());
+            qualityFailure = QualityService.check(player, station.furnaceItem());
             AlchemyFailure placed = placement(station.container(), spec);
             if (qualityFailure.isPresent()) blocker = mapQuality(qualityFailure.get());
             else if (placed != null) blocker = placed;
@@ -282,14 +282,14 @@ public final class AlchemyWorkstationService {
     }
 
     private static double inputModifier(Provider access, Container container, FormulaContext context) {
-        double modifier = ItemQualityService.DEFAULT_MODIFIER;
+        double modifier = QualityService.DEFAULT_MODIFIER;
         boolean graded = false;
         for (int index = 0; index < AlchemySlots.OUTPUT_START; index++) {
             ItemStack stack = container.getItem(index);
             if (stack.isEmpty()) continue;
-            Optional<Holder<ItemQuality>> quality = ItemQualityService.find(access, stack);
+            Optional<Holder<ItemQuality>> quality = QualityService.find(access, stack);
             if (quality.isEmpty()) continue;
-            double value = ItemQualityService.modifier(quality.get(), ItemQuality::alchemyModifier, context);
+            double value = QualityService.modifier(quality.get(), ItemQuality::alchemyModifier, context);
             modifier = graded ? Math.min(modifier, value) : value;
             graded = true;
         }
@@ -450,7 +450,7 @@ public final class AlchemyWorkstationService {
         return AlchemyFailure.INSUFFICIENT;
     }
 
-    private static AlchemyFailure mapQuality(ItemQualityService.Failure failure) {
+    private static AlchemyFailure mapQuality(QualityService.Failure failure) {
         return switch (failure) {
             case BINDING_CONDITIONS -> AlchemyFailure.BINDING_CONDITIONS;
             case QUALITY_CONDITIONS -> AlchemyFailure.QUALITY_CONDITIONS;
@@ -481,12 +481,12 @@ public final class AlchemyWorkstationService {
     public record AlchemyPreview(AlchemyMixture mixture, List<Candidate> candidates,
                                  Optional<ResourceKey<Recipe<?>>> resolvedRecipe,
                                  Optional<AlchemyFailure> blocker, Optional<Parameters> parameters,
-                                 Optional<ItemQualityService.Failure> qualityFailure, List<ItemStack> successOutputs,
+                                 Optional<QualityService.Failure> qualityFailure, List<ItemStack> successOutputs,
                                  List<ItemStack> failureOutputs) {
     }
 
     public record StartResult(boolean started, @Nullable AlchemyFailure failure,
-                              Optional<ItemQualityService.Failure> qualityFailure) {
+                              Optional<QualityService.Failure> qualityFailure) {
         public static StartResult success() {
             return new StartResult(true, null, Optional.empty());
         }
@@ -495,7 +495,7 @@ public final class AlchemyWorkstationService {
             return new StartResult(false, failure, Optional.empty());
         }
 
-        public static StartResult rejected(AlchemyFailure failure, ItemQualityService.Failure quality) {
+        public static StartResult rejected(AlchemyFailure failure, QualityService.Failure quality) {
             return new StartResult(false, failure, Optional.of(quality));
         }
     }

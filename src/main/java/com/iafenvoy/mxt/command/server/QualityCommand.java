@@ -5,7 +5,7 @@ import com.iafenvoy.mxt.command.ServerCommandManager;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.data.quality.QualityLadders;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.runtime.item.ItemQualityService;
+import com.iafenvoy.mxt.runtime.item.QualityService;
 import com.iafenvoy.mxt.runtime.item.QualityUpgradeService;
 import com.iafenvoy.mxt.util.ChainCache;
 import com.iafenvoy.mxt.util.DefinitionText;
@@ -72,13 +72,13 @@ public final class QualityCommand {
             source.sendFailure(Component.translatable("command.mxt.quality.no_item"));
             return 0;
         }
-        Optional<Holder<ItemQuality>> quality = ItemQualityService.find(target.level().registryAccess(), stack);
+        Optional<Holder<ItemQuality>> quality = QualityService.find(target.level().registryAccess(), stack);
         if (quality.isEmpty()) {
             source.sendSuccess(() -> Component.translatable("command.mxt.quality.none", stack.getHoverName()), false);
             return 1;
         }
         source.sendSuccess(() -> Component.translatable("command.mxt.quality.get", stack.getHoverName(),
-                ItemQualityService.coloredName(quality.orElseThrow(), DefinitionText.name(quality.orElseThrow()))), false);
+                QualityService.displayName(quality.orElseThrow())), false);
         return 1;
     }
 
@@ -97,10 +97,10 @@ public final class QualityCommand {
                 source.sendFailure(Component.translatable("command.mxt.quality.no_item"));
                 continue;
             }
-            ItemQualityService.set(stack, quality);
+            QualityService.set(stack, quality);
             changed++;
             source.sendSuccess(() -> Component.translatable("command.mxt.quality.set", stack.getHoverName(),
-                    ItemQualityService.coloredName(quality, DefinitionText.name(quality))), true);
+                    QualityService.displayName(quality)), true);
         }
         return changed;
     }
@@ -115,11 +115,11 @@ public final class QualityCommand {
                 source.sendFailure(Component.translatable("command.mxt.quality.no_item"));
                 continue;
             }
-            if (!ItemQualityService.hasOverride(stack)) {
+            if (!QualityService.hasOverride(stack)) {
                 source.sendFailure(Component.translatable("command.mxt.quality.clear_none", stack.getHoverName()));
                 continue;
             }
-            ItemQualityService.clear(stack);
+            QualityService.clear(stack);
             cleared++;
             source.sendSuccess(() -> Component.translatable("command.mxt.quality.cleared", stack.getHoverName()), true);
         }
@@ -140,7 +140,7 @@ public final class QualityCommand {
             if (result.changed()) {
                 upgraded++;
                 source.sendSuccess(() -> Component.translatable("command.mxt.quality.upgraded", stack.getHoverName(),
-                        ItemQualityService.coloredName(result.to(), DefinitionText.name(result.to()))), true);
+                        QualityService.displayName(result.to())), true);
             } else {
                 source.sendFailure(Component.translatable("command.mxt.quality.upgrade_failed", stack.getHoverName(),
                         Component.translatable("command.mxt.quality.failure." + result.failure().name().toLowerCase(Locale.ROOT))));

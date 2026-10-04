@@ -1,11 +1,13 @@
 package com.iafenvoy.mxt.data.creature;
 
 import com.iafenvoy.mxt.api.NamedDefinition;
+import com.iafenvoy.mxt.api.QualityProvider;
 import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.action.BiEntityAction;
 import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.data.cost.Cost;
+import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.codec.ContextNameCodec;
@@ -18,6 +20,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.tags.TagKey;
 
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Contract constraints, price and the effects of each moment of the contract. Every action field answers one
@@ -26,21 +29,26 @@ import java.util.List;
  * <p>The owner is a second subject, so the owner side has its own moments and its own grant: an action field per
  * moment, and abilities the owner holds while the contract lasts (rebuilt from the owner-side index of bound
  * beasts, so losing one of two beasts of the same type keeps them).</p>
+ *
+ * <p>{@code quality} is the tier a scroll of this contract starts on, which several contracts sharing one built-in
+ * scroll cannot state by item.</p>
  */
 // TODO: may be removed. Eligibility is a code fact and the owner belongs to the entity, so what is left here is
 // the two conditions, the actions, the price and the caps; ContractService, the type stored in
 // ContractAttachment and the /contract command would go with it if the creature ever declares that itself.
 // Marked, not scheduled.
-public record ContractType(Component name, Component description, EntityCondition ownerCondition,
+public record ContractType(Component name, Component description, Optional<Holder<ItemQuality>> quality,
+                           EntityCondition ownerCondition,
                            EntityCondition creatureCondition, EntityAction followAction, BiEntityAction combatAction,
                            EntityAction releaseAction, EntityAction deathAction, EntityAction ownerBindAction,
                            EntityAction ownerReleaseAction, EntityAction ownerDeathAction,
                            List<Either<Holder<Ability>, TagKey<Ability>>> ownerAbilities, List<Cost> costs,
-                           int maxOwned, int recallCooldown) implements NamedDefinition {
+                           int maxOwned, int recallCooldown) implements NamedDefinition, QualityProvider {
     private static final String CATEGORY = DefinitionText.category(MxtResourceKeys.CONTRACT_TYPE.identifier());
     public static final Codec<ContractType> CODEC = RecordCodecBuilder.create(i -> i.group(
             ContextNameCodec.name(CATEGORY).forGetter(ContractType::name),
             ContextNameCodec.description(CATEGORY).forGetter(ContractType::description),
+            ItemQuality.CODEC.optionalFieldOf("quality").forGetter(ContractType::quality),
             EntityCondition.optionalCodec("owner_condition").forGetter(ContractType::ownerCondition),
             EntityCondition.optionalCodec("creature_condition").forGetter(ContractType::creatureCondition),
             EntityAction.optionalCodec("follow_action").forGetter(ContractType::followAction),
@@ -55,4 +63,9 @@ public record ContractType(Component name, Component description, EntityConditio
             Codec.intRange(0, Integer.MAX_VALUE).optionalFieldOf("max_owned", 0).forGetter(ContractType::maxOwned),
             Codec.intRange(0, Integer.MAX_VALUE).optionalFieldOf("recall_cooldown", 0).forGetter(ContractType::recallCooldown)
     ).apply(i, ContractType::new));
+
+    @Override
+    public Optional<Holder<ItemQuality>> defaultQuality() {
+        return this.quality;
+    }
 }

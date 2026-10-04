@@ -22,6 +22,7 @@ title: Java 公开 API
 | 求一个数据包数值 | [`NumberProvider`](#numberprovider) | `util.formula` |
 | 判断"这件物品算不算这条定义" | [`ItemMatcher`](#itemmatcher) | `util.matcher` |
 | 把注册表里的定义变成创造栏物品 | [`CreativeTabHelper`](#creativetabhelper) | `data` |
+| 问一堆物品是哪一档、让自己的定义参与定档 | [`QualityService` / `QualityProvider`](#qualityservice-与-qualityprovider) | `runtime.item` / `api` |
 | 问某个坐标有多少灵气 | [`AuraService`](#auraservice) | `runtime.world` |
 | 读写实体身上的一条数值 | [`ResourceService`](#resourceservice) | `runtime.resource` |
 | 加修炼进度、突破、设置境界 | [`CultivationService`](#cultivationservice) | `runtime.cultivation` |
@@ -38,7 +39,7 @@ title: Java 公开 API
 
 ### `MxtDatapackRegistries`
 
-包 `com.iafenvoy.mxt.registry`。31 张原生数据包注册表的声明与统一读取入口，`/reload` 重建与客户端同步都交给原版注册表系统，这个类**不持有任何快照**。另有 8 张**数据表**（NeoForge Registry Data Map，物品键与方块键各几张）在 `MxtDataMaps`，读法只有 `MxtDataMaps.value(table, stack)` / `value(table, state)` 两处。
+包 `com.iafenvoy.mxt.registry`。31 张原生数据包注册表的声明与统一读取入口，`/reload` 重建与客户端同步都交给原版注册表系统，这个类**不持有任何快照**。另有 9 张**数据表**（NeoForge Registry Data Map，物品键 7 张 + 方块键 2 张）在 `MxtDataMaps`。读法就是条目自己的 `getData`：调用点直接写 `stack.getData(MxtDataMaps.X)` / `state.getData(MxtDataMaps.X)`（`ItemStack` 与 `BlockState` 自己实现 `IWithData`，`TypedInstanceExtension` 把它转给条目自己的 holder），没有别的包装方法。
 
 按 id / holder 取值（读服务端注册表）：
 
@@ -93,7 +94,6 @@ title: Java 公开 API
 | `key(String category, String registryNamespace, Identifier id)` | 底层拼接 | **拼定义键的唯一出口**，`ContextNameCodec` 的默认值也走它 |
 | `defaultText(String category, ResourceKey<?> entry, String suffix)` | 定义没写 `name` / `description` 时的回退文本 | **回退文本的唯一出口**；`suffix` 传 `""` 是名字、传 `".description"` 是描述 |
 | `resolved(Component text)` | 这段文本是"真文本"还是"没被翻译的裸键" | 读客户端语言文件，属显示层判断 |
-| `rarity(String rarity)` | 展示自由文本（`spirit_root` / `physique` 的 `rarity`） | 先查 `mxt.rarity.<值>`，有翻译用翻译，否则原样字面量 |
 
 要点：**别在别处再拼一套名字键**；键没被翻译时渲染出来就是键本身（不是空串），`resolved(...)` 就是用来判这一点的。
 
@@ -187,6 +187,52 @@ public void buildContents(BuildCreativeModeTabContentsEvent event) {
         event.accept(stack);
 }
 ```
+
+## 物品品质
+
+### `QualityService` 与 `QualityProvider`
+
+包 `com.iafenvoy.mxt.runtime.item`（服务类）与 `com.iafenvoy.mxt.api`（接口）。**"这一堆物品是哪一档"只有一个解析顺序**，只在 `QualityService.find` 一处，按**三层**往下取：堆上的 `mxt:quality` 组件 → **这一堆携带的定义**自己声明的档 → 数据表 `mxt:default_quality`。本模组今天有九个定义走第 2 层。字段级写法见[数据包格式](../../数据包格式.md#quality)。
+
+`api/QualityProvider` 是给**定义类型**用的契约：一个定义类型实现它，就是在说"我的物品起步的那一档归我自己报"。
+
+```java
+public interface QualityProvider {
+    Optional<Holder<ItemQuality>> defaultQuality();
+}
+```
+
+**实现它本身什么都不改**——一类定义要靠 `QualityService.carry` **登记一个载体组件**才算进了第 2 层：
+
+| 重载 | 用在 |
+| --- | --- |
+| `carry(Supplier<? extends DataComponentType<Holder<T>>> type)` | 组件的值**就是**那份定义，直接读 `Holder<T>` |
+| `carry(Supplier<? extends DataComponentType<C>> type, Function<C, Optional<Holder<T>>> extract)` | 组件是个 record，定义包在里面，由 `extract` 取出来 |
+
+`T extends QualityProvider`：给一个没实现这个接口的定义类型登记载体**编译不过**。
+
+要点：
+
+- **注册顺序只有一条**：本模组自己的载体在 `QualityService` 类加载时的静态块里登记完，所以**一定排在附属模组的载体之前**。一次查询会按登记顺序走完整个列表，先给出答案的那一个赢。
+- **这是一份登记，不是"扫一遍堆上碰巧带着的组件"**：两个 provider 同时挂在一堆上时，"谁先被问到"只能由登记顺序说了算——按组件遍历的先后没有任何契约。
+- **载体必须只凭这一堆就答得出**：两个重载**都不给它注册表**，因为"这件物品能不能用"那道闸门（`QualityService.check`）手里只有品质注册表。想按 id 回查别的注册表的写法在这里走不通。
+- **引用失效就当作没有**：载体取出的 holder 没绑定时（当前包把那条定义删了）这一层答空，解析继续往下走，而不是给出一个死档位。
+- **载体只是"被问到"的入口**：真正读的是定义自己的 `defaultQuality()`，所以一个类型实现了接口、又登记了载体之后，它的每一条定义都自动参与第 2 层。
+
+`QualityService` 对外的其余入口：
+
+| 方法 | 作用 | 备注 |
+| --- | --- | --- |
+| `find(Provider access, ItemStack stack)` | 这一堆解析出的档 | 三层顺序的唯一实现；空堆给空 |
+| `set(stack, quality)` / `clear(stack)` | 写 / 摘掉覆盖组件 | `clear` 之后这一堆退回**它携带的定义**那一层，再看数据表 |
+| `hasOverride(stack)` | 堆上**有没有**那个组件 | 与"解析出档没有"是两个问题：没写组件也可能从定义或数据表读到档 |
+| `canUse(user, stack)` / `check(user, stack)` | "能不能用"的闸门 | `check` 给出 `Failure` 枚举；绑定条件、档位自己的 `condition`、丹药次数与冷却都在这里 |
+| `modifier(...)` | 取品质的三个修正之一 | 是乘数；缺失、非有限或 ≤ 0 一律按 `DEFAULT_MODIFIER`（`1.0`） |
+| `displayName(quality)` | 品质这一档自己的名字，套上它自己的颜色 | **列一个档位时的统一写法**（就是 `coloredName(quality, DefinitionText.name(quality))`）；`/quality get\|set\|upgrade`、灵根/体质列表与画符结算都走它 |
+| `coloredName(quality, text)` | 给一段**别的**文本套上这一档的 `color` | 品质没写颜色就原样返回 |
+| `ordered()` / `ordered(Provider access)` | 按 `tooltip_order` 标签排好的全部档 | 客户端用带 `Provider` 的那个重载 |
+
+存单堆覆盖用 `set`，别自己往组件里写；被拒绝的使用想给玩家同一句提示就调 `notifyCannotUse`（它是公开的，好让排在闸门自己的优先级之下、仍要看这次拒绝的交互也能报出来）。
 
 ## 灵气与资源
 

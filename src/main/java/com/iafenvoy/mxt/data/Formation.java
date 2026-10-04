@@ -1,11 +1,13 @@
 package com.iafenvoy.mxt.data;
 
 import com.iafenvoy.mxt.api.NamedDefinition;
+import com.iafenvoy.mxt.api.QualityProvider;
 import com.iafenvoy.mxt.data.action.BlockAction;
 import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.cost.Cost;
 import com.iafenvoy.mxt.data.formation.FormationActionType;
+import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.codec.CollectionCodecs;
@@ -37,9 +39,11 @@ import java.util.function.Function;
  * never both: {@code structure_template}, whose air entries are ignored so a template says what must be present
  * and never what must be absent, or {@code structure}, an inline list of required blocks at offsets from the
  * controller. {@code spare_friends} decides whether per-entity work goes to everyone the array covers or only to
- * those its owner does not recognise; what the array is for is its actions, not this field.
+ * those its owner does not recognise; what the array is for is its actions, not this field. {@code quality} is the
+ * tier a plate carrying this array starts on, which several arrays sharing one built-in plate cannot state by item.
  */
-public record Formation(Component name, Component description, Optional<Identifier> structureTemplate,
+public record Formation(Component name, Component description, Optional<Holder<ItemQuality>> quality,
+                        Optional<Identifier> structureTemplate,
                         StructureCheck structureCheck,
                         List<RequiredBlock> structure,
                         NumberProvider radius, List<Cost> activationCosts,
@@ -48,14 +52,19 @@ public record Formation(Component name, Component description, Optional<Identifi
                         boolean spareFriends, BlockAction activateAction,
                         BlockAction tickAction, BlockAction deactivateAction,
                         EntityAction entityTickAction, EntityAction entityEnterAction,
-                        EntityAction entityExitAction) implements NamedDefinition {
+                        EntityAction entityExitAction) implements NamedDefinition, QualityProvider {
     private static final String CATEGORY = DefinitionText.category(MxtResourceKeys.FORMATION.identifier());
     public static final Codec<Holder<Formation>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.FORMATION);
     // The template and the check policy share one group slot, which keeps the group inside RecordCodecBuilder's
     // component limit; the JSON keys are unchanged by it.
     public static final Codec<Formation> DIRECT_CODEC = RecordCodecBuilder.<Formation>create(i -> i.group(
                     ContextNameCodec.name(CATEGORY).forGetter(Formation::name),
-                    ContextNameCodec.description(CATEGORY).forGetter(Formation::description),
+                    // The description and the tier share one group slot, which keeps the group inside
+                    // RecordCodecBuilder's component limit; the JSON keys are unchanged by it.
+                    MiscCodecs.pair(
+                                    ContextNameCodec.description(CATEGORY),
+                                    ItemQuality.CODEC.optionalFieldOf("quality"))
+                            .forGetter(formation -> Pair.of(formation.description(), formation.quality())),
                     MiscCodecs.pair(
                                     Identifier.CODEC.optionalFieldOf("structure_template"),
                                     StructureCheck.CODEC.optionalFieldOf("structure_check", StructureCheck.STRUCTURE))
@@ -77,13 +86,19 @@ public record Formation(Component name, Component description, Optional<Identifi
                     EntityAction.optionalCodec("entity_tick_action").forGetter(Formation::entityTickAction),
                     EntityAction.optionalCodec("entity_enter_action").forGetter(Formation::entityEnterAction),
                     EntityAction.optionalCodec("entity_exit_action").forGetter(Formation::entityExitAction)
-            ).apply(i, (name, description, structure, blocks, radius, activationCosts, maintenanceCosts, storage, actions,
+            ).apply(i, (name, text, structure, blocks, radius, activationCosts, maintenanceCosts, storage, actions,
                         spareFriends, activateAction, tickAction, deactivateAction, entityTickAction, entityEnterAction,
                         entityExitAction) ->
-                    new Formation(name, description, structure.getFirst(), structure.getSecond(), blocks, radius,
-                            activationCosts, maintenanceCosts, storage, actions, spareFriends, activateAction, tickAction,
-                            deactivateAction, entityTickAction, entityEnterAction, entityExitAction)))
+                    new Formation(name, text.getFirst(), text.getSecond(), structure.getFirst(), structure.getSecond(),
+                            blocks, radius, activationCosts, maintenanceCosts, storage, actions, spareFriends,
+                            activateAction, tickAction, deactivateAction, entityTickAction, entityEnterAction,
+                            entityExitAction)))
             .flatXmap(Formation::validate, Formation::validate);
+
+    @Override
+    public Optional<Holder<ItemQuality>> defaultQuality() {
+        return this.quality;
+    }
 
     /**
      * Whether standing on the right blocks is part of raising this array at all. {@code always} is for an array

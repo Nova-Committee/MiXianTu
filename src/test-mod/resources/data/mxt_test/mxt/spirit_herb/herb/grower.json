@@ -1,6 +1,5 @@
 {
   "items": "minecraft:torchflower",
-  "quality": "mxt_test:spirit_iron",
   "growth": {
     "seeds": "minecraft:torchflower_seeds",
     "mature_age": 10,

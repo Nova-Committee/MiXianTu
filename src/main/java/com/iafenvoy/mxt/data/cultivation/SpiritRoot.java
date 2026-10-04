@@ -1,7 +1,9 @@
 package com.iafenvoy.mxt.data.cultivation;
 
 import com.iafenvoy.mxt.api.NamedDefinition;
+import com.iafenvoy.mxt.api.QualityProvider;
 import com.iafenvoy.mxt.data.ability.Ability;
+import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.codec.ContextNameCodec;
@@ -19,6 +21,7 @@ import net.minecraft.resources.RegistryFixedCodec;
 import net.minecraft.tags.TagKey;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.function.Function;
 
 /**
@@ -28,12 +31,15 @@ import java.util.function.Function;
  * are weighted (see {@code CultivationAffinity}). {@code conflicting_elements} is a list of its own rather than
  * a reading of the element relations - two elements may be opposed in the damage pipeline and still be
  * perfectly possible to hold together - and the check is symmetric, so writing the rule on either root is enough.
+ * {@code quality} is the tier a root's own stone starts on, and it is also what a roster line names beside the
+ * root: the free-text {@code rarity} this field replaced was the same question answered twice.
  */
 public record SpiritRoot(Component name, Component description, List<ElementWeight> elements,
                          NumberProvider cultivationMultiplier,
-                         NumberProvider elementAbilityModifier, String rarity,
+                         NumberProvider elementAbilityModifier, Optional<Holder<ItemQuality>> quality,
                          List<Either<Holder<Ability>, TagKey<Ability>>> grantedAbilities,
-                         List<Either<Holder<Element>, TagKey<Element>>> conflictingElements) implements NamedDefinition {
+                         List<Either<Holder<Element>, TagKey<Element>>> conflictingElements)
+        implements NamedDefinition, QualityProvider {
     private static final String CATEGORY = DefinitionText.category(MxtResourceKeys.SPIRIT_ROOT.identifier());
     public static final Codec<Holder<SpiritRoot>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.SPIRIT_ROOT);
     public static final Codec<SpiritRoot> DIRECT_CODEC = RecordCodecBuilder.<SpiritRoot>create(i -> i.group(
@@ -42,10 +48,15 @@ public record SpiritRoot(Component name, Component description, List<ElementWeig
             ElementWeight.CODEC.listOf().fieldOf("elements").forGetter(SpiritRoot::elements),
             NumberProvider.CODEC.optionalFieldOf("cultivation_multiplier", new Constant(1.0D)).forGetter(SpiritRoot::cultivationMultiplier),
             NumberProvider.CODEC.optionalFieldOf("element_ability_modifier", new Constant(1.0D)).forGetter(SpiritRoot::elementAbilityModifier),
-            Codec.STRING.optionalFieldOf("rarity", "common").forGetter(SpiritRoot::rarity),
+            ItemQuality.CODEC.optionalFieldOf("quality").forGetter(SpiritRoot::quality),
             RegistryCodecs.holderOrTagList(MxtResourceKeys.ABILITY).optionalFieldOf("granted_abilities", List.of()).forGetter(SpiritRoot::grantedAbilities),
             RegistryCodecs.holderOrTagList(MxtResourceKeys.ELEMENT).optionalFieldOf("conflicting_elements", List.of()).forGetter(SpiritRoot::conflictingElements)
     ).apply(i, SpiritRoot::new)).validate(SpiritRoot::validate);
+
+    @Override
+    public Optional<Holder<ItemQuality>> defaultQuality() {
+        return this.quality;
+    }
 
     /**
      * One element of a root and its share of it. Weights are proportions rather than multipliers: they are

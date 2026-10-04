@@ -10,7 +10,6 @@ import com.iafenvoy.mxt.data.action.builtin.item.ConsumeHealthItemAction;
 import com.iafenvoy.mxt.data.action.builtin.item.meta.SequenceItemAction;
 import com.iafenvoy.mxt.data.artifact.Artifact;
 import com.iafenvoy.mxt.data.artifact.ArtifactStateComponent;
-import com.iafenvoy.mxt.data.artifact.ForgingResultComponent;
 import com.iafenvoy.mxt.data.artifact.ItemAbilitiesComponent;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.aura.SpiritStorageComponent;
@@ -305,11 +304,6 @@ public final class ArtifactService {
 
     public static ISpiritEnergy energyStorage(ItemStack stack, Holder<Aura> aura, double capacity) {
         return new ArtifactSpiritEnergy(stack, aura, capacity);
-    }
-
-    // Immutable, server-computed forge provenance.
-    public static void applyForgingResult(ItemStack stack, ForgingResultComponent result) {
-        stack.set(MxtDataComponents.FORGING_RESULT, result);
     }
 
     private static SpiritStorageComponent store(ItemStack stack) {

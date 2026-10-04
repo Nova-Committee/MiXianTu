@@ -1,16 +1,16 @@
 package com.iafenvoy.mxt.screen.gui;
 
 import com.iafenvoy.mxt.data.IconReference;
-import com.iafenvoy.mxt.data.artifact.ForgingResultComponent;
 import com.iafenvoy.mxt.data.forging.ForgingBlueprint;
 import com.iafenvoy.mxt.data.forging.ForgingMaterial;
 import com.iafenvoy.mxt.data.forging.ForgingMethod;
+import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.network.payload.ForgingActionC2SPayload;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.forging.ForgingSurface;
-import com.iafenvoy.mxt.runtime.item.ItemQualityService;
+import com.iafenvoy.mxt.runtime.item.QualityService;
 import com.iafenvoy.mxt.screen.aui.AuiContainerScreen;
 import com.iafenvoy.mxt.screen.aui.AuiElements;
 import com.iafenvoy.mxt.screen.menu.ForgingMenu;
@@ -20,6 +20,7 @@ import com.sighs.apricityui.init.Element;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.input.MouseButtonEvent;
+import net.minecraft.core.Holder;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
@@ -300,13 +301,14 @@ public final class ForgingScreen extends AuiContainerScreen<ForgingMenu> {
         this.text(this.stepsText, Component.translatable("screen.mxt.forging.steps", this.menu.steps()));
         // What the piece came out as is the server's own answer and only exists once the result is in the
         // output slot, so nothing here predicts it: the line appears with the finished piece and goes with it.
-        ForgingResultComponent result =
-                this.menu.getSlot(ForgingSurface.OUTPUT_SLOT).getItem().get(MxtDataComponents.FORGING_RESULT);
-        if (result == null) {
+        // The tier itself is read off the piece's quality component, the one every writer stamps.
+        ItemStack output = this.menu.getSlot(ForgingSurface.OUTPUT_SLOT).getItem();
+        Holder<ItemQuality> quality = output.get(MxtDataComponents.QUALITY);
+        if (output.get(MxtDataComponents.FORGING_RESULT) == null || quality == null) {
             this.showQuality("", "#FFFFFF");
             return;
         }
-        Component name = ItemQualityService.coloredName(result.quality(), result.quality().value().name());
+        Component name = QualityService.coloredName(quality, quality.value().name());
         TextColor color = name.getStyle().getColor();
         this.showQuality(Component.translatable("screen.mxt.forging.quality", name).getString(),
                 color == null ? "#FFFFFF" : String.format("#%06X", color.getValue()));
@@ -441,7 +443,7 @@ public final class ForgingScreen extends AuiContainerScreen<ForgingMenu> {
         // run is committed to. Each row is named in its own tier's colour.
         lines.add(Component.translatable("tooltip.mxt.forging.quality_tiers").withStyle(ChatFormatting.GOLD));
         for (ForgingBlueprint.QualityThreshold tier : blueprint.qualityByExtraSteps()) {
-            Component name = ItemQualityService.coloredName(tier.quality(), tier.quality().value().name());
+            Component name = QualityService.coloredName(tier.quality(), tier.quality().value().name());
             lines.add(tier.maxExtraSteps() == Integer.MAX_VALUE
                     ? Component.translatable("tooltip.mxt.forging.quality_tier.unbounded", name)
                     : Component.translatable("tooltip.mxt.forging.quality_tier", name, tier.maxExtraSteps()));

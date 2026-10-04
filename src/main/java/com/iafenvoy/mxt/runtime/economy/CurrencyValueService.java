@@ -4,7 +4,7 @@ import com.iafenvoy.mxt.data.CurrencyValue;
 import com.iafenvoy.mxt.data.CurrencyValue.UnavailableWhen;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.registry.MxtDataMaps;
-import com.iafenvoy.mxt.runtime.item.ItemQualityService;
+import com.iafenvoy.mxt.runtime.item.QualityService;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.core.RegistryAccess;
@@ -73,8 +73,8 @@ public final class CurrencyValueService {
     // declared denomination alone instead of clamping, so an unusable modifier can only ever mean "no change".
     private static OptionalLong unitValue(Provider access, ItemStack stack, CurrencyValue definition, boolean available, FormulaContext context) {
         if (!available) return OptionalLong.of(0L);
-        double multiplier = ItemQualityService.modifier(access, stack, ItemQuality::valueMultiplier, context);
-        if (multiplier == ItemQualityService.DEFAULT_MODIFIER) return OptionalLong.of(definition.value());
+        double multiplier = QualityService.modifier(access, stack, ItemQuality::valueMultiplier, context);
+        if (multiplier == QualityService.DEFAULT_MODIFIER) return OptionalLong.of(definition.value());
         double scaled = definition.value() * multiplier;
         if (!Double.isFinite(scaled) || scaled < 1.0D || scaled >= Long.MAX_VALUE)
             return OptionalLong.of(definition.value());

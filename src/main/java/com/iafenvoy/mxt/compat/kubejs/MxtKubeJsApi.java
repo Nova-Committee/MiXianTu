@@ -35,7 +35,7 @@ import com.iafenvoy.mxt.runtime.curse.CurseService;
 import com.iafenvoy.mxt.runtime.curse.CurseService.ApplyFailure;
 import com.iafenvoy.mxt.runtime.curse.CurseService.ApplyResult;
 import com.iafenvoy.mxt.runtime.element.ElementReactionService;
-import com.iafenvoy.mxt.runtime.item.ItemQualityService;
+import com.iafenvoy.mxt.runtime.item.QualityService;
 import com.iafenvoy.mxt.runtime.item.QualityUpgradeService;
 import com.iafenvoy.mxt.runtime.progression.ProgressionAdminService;
 import com.iafenvoy.mxt.runtime.progression.ProgressionMastery;
@@ -547,7 +547,7 @@ public final class MxtKubeJsApi {
      */
     public static @Nullable Identifier itemQuality(Entity entity, ItemStack stack) {
         if (entity.level().isClientSide()) return null;
-        return ItemQualityService.find(entity.level().registryAccess(), stack).map(HolderHelper::id).orElse(null);
+        return QualityService.find(entity.level().registryAccess(), stack).map(HolderHelper::id).orElse(null);
     }
 
     /**
@@ -556,7 +556,7 @@ public final class MxtKubeJsApi {
     public static @Nullable Identifier itemQualityChain(Entity entity, ItemStack stack) {
         if (entity.level().isClientSide()) return null;
         Provider access = entity.level().registryAccess();
-        return ItemQualityService.find(access, stack)
+        return QualityService.find(access, stack)
                 .flatMap(quality -> QualityLadders.cache(access).keyOf(HolderHelper.id(quality))).orElse(null);
     }
 
@@ -577,7 +577,7 @@ public final class MxtKubeJsApi {
         Holder<ItemQuality> holder = MxtDatapackRegistries
                 .holder(entity.level().registryAccess(), MxtResourceKeys.ITEM_QUALITY, quality).orElse(null);
         if (holder == null) return false;
-        ItemQualityService.set(stack, holder);
+        QualityService.set(stack, holder);
         return true;
     }
 
@@ -586,8 +586,8 @@ public final class MxtKubeJsApi {
      */
     public static boolean clearItemQuality(Entity entity, ItemStack stack) {
         if (entity.level().isClientSide()) return false;
-        if (!ItemQualityService.hasOverride(stack)) return false;
-        ItemQualityService.clear(stack);
+        if (!QualityService.hasOverride(stack)) return false;
+        QualityService.clear(stack);
         return true;
     }
 

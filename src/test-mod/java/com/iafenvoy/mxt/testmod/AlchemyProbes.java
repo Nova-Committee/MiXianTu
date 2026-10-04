@@ -287,6 +287,8 @@ public final class AlchemyProbes {
         check(source, "capacity", capacity.failure(), AlchemyFailure.CAPACITY);
         check(source, "capacity-kept", small.container().getItem(0).getCount(), 5);
         clearFurnace(level, at, touched);
+        // No quality component on the stack: the tier is the one this specification declares, which is the only way
+        // a furnace can state it, since every specification shares one block item.
         AlchemyFurnaceBlockEntity sealed = place(level, at, Direction.NORTH, item(level, SEALED), touched);
         sealed.refreshStructure();
         sealed.setTargetTemperature(50);

@@ -15,7 +15,7 @@ import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.ability.AbilitySources;
 import com.iafenvoy.mxt.runtime.ability.AbilityStorage;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactService;
-import com.iafenvoy.mxt.runtime.item.ItemQualityService;
+import com.iafenvoy.mxt.runtime.item.QualityService;
 import com.iafenvoy.mxt.runtime.wheel.WheelEntryKinds;
 import com.iafenvoy.mxt.runtime.wheel.WheelSources;
 import com.iafenvoy.mxt.screen.wheel.WheelDuration;
@@ -143,9 +143,9 @@ public record AbilityWheelEntry(Holder<Ability> ability, @Nullable ItemStack car
         RegistryAccess registries = player.level().registryAccess();
         Holder<Artifact> definition = ArtifactService.definition(registries, carrier).orElse(null);
         Component name = definition == null ? carrier.getHoverName() : DefinitionText.name(definition);
-        Holder<ItemQuality> quality = ItemQualityService.find(registries, carrier)
+        Holder<ItemQuality> quality = QualityService.find(registries, carrier)
                 .filter(holder -> holder.value().color().isPresent()).orElse(null);
-        return quality == null ? name.copy().withStyle(ChatFormatting.GOLD) : ItemQualityService.coloredName(quality, name);
+        return quality == null ? name.copy().withStyle(ChatFormatting.GOLD) : QualityService.coloredName(quality, name);
     }
 
     @Override

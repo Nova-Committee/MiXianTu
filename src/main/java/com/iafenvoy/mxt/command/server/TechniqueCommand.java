@@ -14,8 +14,8 @@ import com.iafenvoy.mxt.runtime.cultivation.TechniqueItemService;
 import com.iafenvoy.mxt.runtime.cultivation.TechniqueService;
 import com.iafenvoy.mxt.runtime.hold.HoldLookup;
 import com.iafenvoy.mxt.runtime.item.ItemBindingService;
-import com.iafenvoy.mxt.runtime.item.ItemQualityService;
-import com.iafenvoy.mxt.runtime.item.ItemQualityService.Failure;
+import com.iafenvoy.mxt.runtime.item.QualityService;
+import com.iafenvoy.mxt.runtime.item.QualityService.Failure;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
@@ -81,7 +81,7 @@ public final class TechniqueCommand {
                 value.learnTime(), value.holdAnimation().getSerializedName()), false);
 
         // This gate cancels Start and Tick, so a refusal here is what a pose that appears and then aborts looks like.
-        Optional<Failure> refusal = ItemQualityService.check(player, stack);
+        Optional<Failure> refusal = QualityService.check(player, stack);
         source.sendSuccess(() -> Component.translatable("command.mxt.technique.diagnose.gate", refusal.map(Enum::name).orElse("OK")), false);
 
         SpiritIdentityAttachment spirit = player.getData(MxtAttachments.SPIRIT_IDENTITY);
