@@ -121,7 +121,7 @@ public final class ForgingMenu extends ApricityContainerMenu {
      * and the client picks its screen factory from that.
      */
     @Override
-    public MenuType<?> getType() {
+    public @NonNull MenuType<?> getType() {
         return MxtMenus.FORGING_TABLE.get();
     }
 

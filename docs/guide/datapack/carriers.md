@@ -9,7 +9,8 @@ title: 载体物品：哪件物品装哪份定义
 | 方式 | 这份引用由谁写 | 有没有专属物品 | 例子 |
 | --- | --- | --- | --- |
 | **专属载体 + 堆上的组件** | 物品那一堆自己带组件 | 有 | 灵根、体质、功法玉简、丹药、符箓、阵盘、秘境令牌、契约卷轴、丹炉核心与外壳 |
-| **定义用 `items` 认领** | 定义那一侧写 `items`（`ItemMatcher`） | 没有，任何物品都行 | `artifact`、`item_aura`、`currency`、`spirit_herb`，以及五张 binding 与 `technique_binding.items`（`block_aura` 认的是方块，形状同源） |
+| **定义用 `items` 认领** | 定义那一侧写 `items`（`ItemMatcher`） | 没有，任何物品都行 | `artifact`、`spirit_herb`、`pill_binding`，以及 `technique_binding.items` |
+| **数据表按键认领** | 文件那一侧的键写条目 id 或 `#标签` | 没有，任何条目都行 | 物品键：`item_aura`、`currency`、`item_binding`、`weapon_binding`、`tool_binding`、`blueprint_binding`；方块键：`block_aura`、`heat_source` |
 | **通用组件** | 物品那一堆自己带组件 | 没有，任何物品都行 | `mxt:quality`、`mxt:element`、`mxt:pill`、`mxt:technique_reading`、`mxt:forging_methods`、`mxt:forging_blueprints`、`mxt:item_abilities`、`mxt:curse_container` |
 
 三种可以叠加。下面第一节是**本体自带的专属载体**（一件物品装一份定义），第二节是**任何物品都能挂的通用组件**，第三节是**没有专属物品、只能靠 `items` 认领的那一半**。
@@ -62,14 +63,14 @@ title: 载体物品：哪件物品装哪份定义
 
 这些注册表**本体不为它们提供物品**：定义自己写 `items`（`ItemMatcher`：单个 id、标签、`*`、正则、混合数组），谁被写中谁就是它。想做一件特殊的东西，就自己造物品（KubeJS / 内容模组）或复用现成物品——不存在"从本体拿一件专属载体"这条路。
 
-| 注册表 | 认领字段 | 备注 |
+| 注册表 / 数据表 | 认领字段 | 备注 |
 | --- | --- | --- |
 | `artifact` | `items` | 法器。一件物品被两条定义同时认领时按 `priority` 取一条，同分会在加载期诊断里报出来 |
-| `item_aura` | `items` | 物品可释放的灵气；剩余量在 `mxt:item_aura` 组件里 |
-| `currency` | `items` | 货币价值；硬币与灵石只是"被认领的物品" |
+| `item_aura` | **数据表键** | 物品可释放的灵气；剩余量在 `mxt:item_aura` 组件里 |
+| `currency` | **数据表键** | 货币价值；硬币与灵石只是"被认领的物品" |
 | `spirit_herb` | `items`（必填） | 灵植；药龄在 `mxt:herb_age` |
-| `block_aura` | `blocks` | 认领的是方块而不是物品，形状与 `item_aura` 同源 |
-| `item_binding` / `weapon_binding` / `pill_binding` / `tool_binding` / `blueprint_binding` | `items` | 五张绑定表，只匹配已有物品 |
+| `block_aura` | **数据表键** | 认领的是方块（`data/mxt/data_maps/block/block_aura.json`），值是那张灵气表；多个值命中同一方块是相加的 |
+| `item_binding` / `weapon_binding` / `tool_binding` / `blueprint_binding` | **数据表键** | 四张物品数据表，键就是物品 id 或 `#标签`；`pill_binding` 仍是注册表，认领靠 `items` |
 | `technique_binding` | `items`（可选） | 手册的身份仍是堆上的 `mxt:technique` 组件，`items` 是"这件物品就是那门功法的手册"的第二条路 |
 
 ## 四、只装状态、不指定义的组件

@@ -24,26 +24,38 @@ StartupEvents.registry('item', event => {
 对应的数据包绑定：
 
 ```json
-// kubejs/data/example/mxt/item_binding/fire_root_pellet.json
+// kubejs/data/mxt/data_maps/item/item_binding.json（数据表：目录第一段必须是 mxt）
 {
-  "items": "kubejs:fire_root_pellet"
-  "actions": [
-    {
-      "type": "mxt:grant_spirit_root",
-      "spirit_root": "example:fire_root"
+  "values": {
+    "kubejs:fire_root_pellet": {
+      "actions": [
+        {
+          "type": "mxt:grant_spirit_root",
+          "spirit_root": "example:fire_root"
+        }
+      ]
     }
-  ]
+  }
 }
 ```
 
 ```json
-// kubejs/data/example/mxt/weapon_binding/firebound_sword.json
+// kubejs/data/mxt/data_maps/item/weapon_binding.json
 {
-  "items": ["kubejs:firebound_sword", "#example:fire_weapons"],
-  "attributes": [
-    {"attribute": "minecraft:attack_damage", "id": "example:firebound_sword/damage", "amount": 8, "operation": "add_value"},
-    {"attribute": "minecraft:attack_speed", "id": "example:firebound_sword/speed", "amount": -2.4, "operation": "add_value"}
-  ]
+  "values": {
+    "kubejs:firebound_sword": {
+      "attributes": [
+        {"attribute": "minecraft:attack_damage", "id": "example:firebound_sword/damage", "amount": 8, "operation": "add_value"},
+        {"attribute": "minecraft:attack_speed", "id": "example:firebound_sword/speed", "amount": -2.4, "operation": "add_value"}
+      ]
+    },
+    "#example:fire_weapons": {
+      "attributes": [
+        {"attribute": "minecraft:attack_damage", "id": "example:firebound_sword/damage", "amount": 8, "operation": "add_value"},
+        {"attribute": "minecraft:attack_speed", "id": "example:firebound_sword/speed", "amount": -2.4, "operation": "add_value"}
+      ]
+    }
+  }
 }
 ```
 

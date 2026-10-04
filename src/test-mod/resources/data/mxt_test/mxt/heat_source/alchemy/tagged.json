@@ -1,5 +1,0 @@
-{
-  "blocks": ["#mxt_test:alchemy_heat/fire"],
-  "max_temperature": 150,
-  "heating_per_tick": 40
-}

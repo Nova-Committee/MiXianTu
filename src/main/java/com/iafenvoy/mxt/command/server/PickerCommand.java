@@ -3,6 +3,7 @@ package com.iafenvoy.mxt.command.server;
 import com.iafenvoy.mxt.command.ServerCommandManager;
 import com.iafenvoy.mxt.network.payload.ItemPickerS2CPayload;
 import com.iafenvoy.mxt.screen.picker.ItemPickerManager;
+import com.iafenvoy.mxt.screen.picker.PickerCategory;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
@@ -13,7 +14,6 @@ import net.minecraft.commands.SharedSuggestionProvider;
 import net.minecraft.commands.arguments.IdentifierArgument;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
-import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.network.PacketDistributor;
 
@@ -34,14 +34,14 @@ public final class PickerCommand {
     }
 
     private static CompletableFuture<Suggestions> suggestCategories(CommandContext<CommandSourceStack> context, SuggestionsBuilder builder) {
-        return SharedSuggestionProvider.suggest(ItemPickerManager.categories().stream().map(key -> key.identifier().toString()), builder);
+        return SharedSuggestionProvider.suggest(ItemPickerManager.categories().stream().map(category -> category.id().toString()), builder);
     }
 
     // An id this mod does not offer is rejected rather than letting the picker open on nothing.
     private static List<Identifier> categories(CommandContext<CommandSourceStack> context) {
         Identifier id = IdentifierArgument.getId(context, "category");
         return List.of(ItemPickerManager.categories().stream()
-                .map(ResourceKey::identifier)
+                .map(PickerCategory::id)
                 .filter(id::equals)
                 .findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("Unknown picker category " + id)));
@@ -57,7 +57,7 @@ public final class PickerCommand {
         // "No category" is sent as the explicit list of every category: the client builds the grid from the
         // registries it has synced, so the categories it walks have to be named rather than implied.
         List<Identifier> ids = categories.isEmpty()
-                ? ItemPickerManager.categories().stream().map(ResourceKey::identifier).toList()
+                ? ItemPickerManager.categories().stream().map(PickerCategory::id).toList()
                 : categories;
         PacketDistributor.sendToPlayer(player, new ItemPickerS2CPayload(Component.translatable("command.mxt.picker"), ids));
         return ids.size();

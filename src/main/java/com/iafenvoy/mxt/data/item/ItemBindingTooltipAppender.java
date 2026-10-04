@@ -6,6 +6,8 @@ import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.action.builtin.entity.GrantPhysiqueAction;
 import com.iafenvoy.mxt.data.action.builtin.entity.GrantSpiritRootAction;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
+import com.iafenvoy.mxt.data.cultivation.Physique;
+import com.iafenvoy.mxt.data.cultivation.SpiritRoot;
 import com.iafenvoy.mxt.runtime.item.ItemBindingService;
 import com.iafenvoy.mxt.runtime.item.ItemBindingService.ResolvedBindings;
 import com.iafenvoy.mxt.runtime.item.PillService;
@@ -62,11 +64,11 @@ public final class ItemBindingTooltipAppender {
         bindings.technique().ifPresent(technique -> appendTechnique(builder, technique));
         for (EntityAction action : bindings.item().map(ItemBinding::actions).orElse(List.of())) {
             if (action instanceof GrantSpiritRootAction(
-                    Holder<com.iafenvoy.mxt.data.cultivation.SpiritRoot> spiritRoot
+                    Holder<SpiritRoot> spiritRoot
             ))
                 appendGranted(builder, flag, "tooltip.mxt.item.spirit_root", HolderHelper.id(spiritRoot));
             else if (action instanceof GrantPhysiqueAction(
-                    Holder<com.iafenvoy.mxt.data.cultivation.Physique> physique1
+                    Holder<Physique> physique1
             ))
                 appendGranted(builder, flag, "tooltip.mxt.item.physique", HolderHelper.id(physique1));
         }

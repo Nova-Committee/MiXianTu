@@ -52,7 +52,7 @@ public final class PlayerTradeMenu extends ApricityContainerMenu {
      * and the client picks its screen factory from that.
      */
     @Override
-    public MenuType<?> getType() {
+    public @NonNull MenuType<?> getType() {
         return MxtMenus.PLAYER_TRADE.get();
     }
 
@@ -106,8 +106,8 @@ public final class PlayerTradeMenu extends ApricityContainerMenu {
             this.ownOffer = ownOffer;
             this.partnerOffer = partnerOffer;
             this.page = PageSlots.of(AuiPages.economyPage("trade"))
-                    .container("offer", ownOffer, (container, index, x, y) -> new Slot(container, index, x, y))
-                    .container("partner", partnerOffer, (container, index, x, y) -> new Display(container, index, x, y))
+                    .container("offer", ownOffer, Slot::new)
+                    .container("partner", partnerOffer, Display::new)
                     .player("inventory")
                     .build();
         }

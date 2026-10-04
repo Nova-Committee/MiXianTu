@@ -568,7 +568,7 @@ give @s mxt:formation_plate[mxt:formation_plate={allowed:["#mypack:wood_arrays"]
 }
 ```
 
-炉型放在 `data/example/mxt/alchemy_furnace/basic.json`。炉壁材料放在 `data/example/mxt/alchemy_wall_material/basic_wall.json`，供热方块放在 `data/example/mxt/heat_source/basic_fire.json`（`blocks` 收方块或 `#方块标签`，`max_temperature` 与 `heating_per_tick` 都是有限正数，重叠时比 `priority`）。药引固定 1 格。品质只决定显示和使用条件。槽位、容量和冷却以炉型字段为准。耐温取 18 块炉壁的最低值，再和供热方块的 `max_temperature` 取较低值。只升级 `mxt:quality` 不会换成另一份规格，也不改变耐温。炉型定义里不要再写 `max_temperature`、`heating_per_tick`、`aura_capacity` 或 `heating_costs`。
+炉型放在 `data/example/mxt/alchemy_furnace/basic.json`。炉壁材料放在 `data/example/mxt/alchemy_wall_material/basic_wall.json`，供热方块放在**数据表** `data/mxt/data_maps/block/heat_source.json`（键收方块 id 或 `#方块标签`，`max_temperature` 与 `heating_per_tick` 都是有限正数，重叠时比 `priority`）。药引固定 1 格。品质只决定显示和使用条件。槽位、容量和冷却以炉型字段为准。耐温取 18 块炉壁的最低值，再和供热方块的 `max_temperature` 取较低值。只升级 `mxt:quality` 不会换成另一份规格，也不改变耐温。炉型定义里不要再写 `max_temperature`、`heating_per_tick`、`aura_capacity` 或 `heating_costs`。
 
 ```json
 {
@@ -593,7 +593,7 @@ give @s mxt:alchemy_furnace_casing[mxt:alchemy_wall_material="example:basic_wall
 4. 上面两层其余格与底面四角，一共 18 格放带材料的 `mxt:alchemy_furnace_casing`。炉壁不打开界面。
 5. **底面只有四角算结构**：底层 index 0 / 2 / 6 / 8 放炉壁，其余五格不校验，空着也不影响成型（整块底面由四角各画四分之一拼出）。那五格里放什么、区块加没加载都不看。
 6. 壳不齐或材料无效时不能成型，也不能开炉。活动中缺块或冲突会失败一次；有格子未加载则这一 tick 不推进，也不加载那个区块。
-7. **供热方块放进底层正中央那一格**（本地 index 4，上层炉体中心的正下方）：那个方块要在 `mxt:heat_source` 里，炉子才有热源；放别的方块或空着，可设炉温上限就是 0。方块自己实现了 `AlchemyHeatSource` 时以它自己的回答为准。`alchemy_env_bonus` 只顶替配方的环境门槛，不供热。本体没有默认供热方块。
+7. **供热方块放进底层正中央那一格**（本地 index 4，上层炉体中心的正下方）：那个方块要在 `mxt:heat_source` **数据表**里，炉子才有热源；放别的方块或空着，可设炉温上限就是 0。方块自己实现了 `AlchemyHeatSource` 时以它自己的回答为准。`alchemy_env_bonus` 只顶替配方的环境门槛，不供热。本体没有默认供热方块。
 8. 主药放左侧仓，辅药和药引放右侧仓。产物仓只能取出。漏斗只能从产物仓下侧面抽出，成型后那一面对着中层中心的炉壁格，所以那里放不进漏斗。
 9. 活动中拆炉壁或一座仓：这一批失败一次，不退已消耗的材料，并停止供热。拆一座仓只掉这座仓自己的物品。拆核心只掉核心和已生成待输出，供热方块是独立的一格、不跟着掉。
 

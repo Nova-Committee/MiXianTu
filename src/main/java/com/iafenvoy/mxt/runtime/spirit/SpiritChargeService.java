@@ -154,19 +154,19 @@ public final class SpiritChargeService {
         }
         // The shared reading: one definition describes one item, so a stack moves as many times as it has
         // items, and a missing component is a pristine, fully charged item.
-        Holder<ItemAura> definition = ItemAuraService.find(registries, stack).orElse(null);
+        ItemAura definition = ItemAuraService.find(registries, stack).orElse(null);
         if (definition == null) return null;
         int capacity = ItemAuraService.capacity(registries, stack, context);
         if (capacity <= 0) return null;
         int count = Math.max(1, stack.getCount());
-        double intakeSpeed = definition.value().consumeSpeed().evaluate(context) * count;
-        double costSpeed = definition.value().releaseSpeed().evaluate(context) * count;
+        double intakeSpeed = definition.consumeSpeed().evaluate(context) * count;
+        double costSpeed = definition.releaseSpeed().evaluate(context) * count;
         if (!Double.isFinite(intakeSpeed) || intakeSpeed <= 0.0D) return null;
         // A written store files its amounts under the auras they count, so a re-typed definition simply stops
         // matching them; a store holding nothing leaves the declaration to say which aura this is.
         SpiritStorageComponent component = stack.get(MxtDataComponents.SPIRIT_STORAGE);
         Holder<Aura> aura = (component == null ? Optional.<Holder<Aura>>empty() : component.soleAura())
-                .orElse(definition.value().type());
+                .orElse(definition.type());
         int stored = component == null ? capacity : (int) Math.clamp(Math.floor(component.get(aura)), 0.0D, capacity);
         // What one whole unit costs: the ratio of the two speeds, the same for one item and for a stack.
         double unitCost = !Double.isFinite(costSpeed) || costSpeed <= 0.0D ? 0.0D : costSpeed / intakeSpeed;

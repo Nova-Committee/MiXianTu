@@ -51,7 +51,7 @@ public final class ChequeTableMenu extends ApricityContainerMenu {
      * and the client picks its screen factory from that.
      */
     @Override
-    public MenuType<?> getType() {
+    public @NonNull MenuType<?> getType() {
         return MxtMenus.CHEQUE_TABLE.get();
     }
 
@@ -123,8 +123,7 @@ public final class ChequeTableMenu extends ApricityContainerMenu {
                             new Input(container, index, x, y, stack -> this.hasValue(inventory, stack)))
                     .container("cheque_in", this.chequeInput, (container, index, x, y) ->
                             new Input(container, index, x, y, stack -> stack.is(MxtItems.CHEQUE.get())))
-                    .container("cheque_out", this.chequeOutput, (container, index, x, y) ->
-                            new Output(container, index, x, y))
+                    .container("cheque_out", this.chequeOutput, Output::new)
                     .player("inventory")
                     .build();
         }

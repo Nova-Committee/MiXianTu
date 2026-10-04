@@ -72,7 +72,7 @@ public final class ExchangeStationMenu extends ApricityContainerMenu {
      * answers and the client picks its screen factory from that.
      */
     @Override
-    public MenuType<?> getType() {
+    public @NonNull MenuType<?> getType() {
         return MxtMenus.EXCHANGE_STATION.get();
     }
 

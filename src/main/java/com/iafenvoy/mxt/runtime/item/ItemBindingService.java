@@ -5,6 +5,7 @@ import com.iafenvoy.mxt.data.AttributeEntry;
 import com.iafenvoy.mxt.data.cultivation.Technique;
 import com.iafenvoy.mxt.data.item.*;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
+import com.iafenvoy.mxt.registry.MxtDataMaps;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtItems;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
@@ -99,8 +100,7 @@ public final class ItemBindingService {
     }
 
     public static Optional<WeaponBinding> weapon(Provider access, ItemStack stack) {
-        return ItemMatcher.find(MxtDatapackRegistries.holders(access, MxtResourceKeys.WEAPON_BINDING)
-                .map(Reference::value), stack);
+        return Optional.ofNullable(stack.isEmpty() ? null : stack.getData(MxtDataMaps.WEAPON_BINDING));
     }
 
     // The stack's own component decides what the dose does and wins over the binding; the binding decides which
@@ -247,8 +247,7 @@ public final class ItemBindingService {
     // Public because it is one of the readings ItemElements takes when it asks what an item is made of; resolve()
     // wraps it for callers that want several binding kinds at once.
     public static Optional<ItemBinding> binding(Provider access, ItemStack stack) {
-        return ItemMatcher.find(MxtDatapackRegistries.holders(access, MxtResourceKeys.ITEM_BINDING)
-                .map(Reference::value), stack);
+        return Optional.ofNullable(stack.isEmpty() ? null : stack.getData(MxtDataMaps.ITEM_BINDING));
     }
 
     private static void refreshWeapon(LivingEntity entity, ItemStack stack) {

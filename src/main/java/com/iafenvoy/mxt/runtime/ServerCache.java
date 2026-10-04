@@ -13,7 +13,6 @@ import com.iafenvoy.mxt.data.quality.QualityLadders;
 import com.iafenvoy.mxt.data.trigger.TriggerRule;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.runtime.alchemy.AlchemyHeatService;
 import com.iafenvoy.mxt.runtime.damage.DamageElements;
 import com.iafenvoy.mxt.runtime.element.ElementReactionService;
 import com.iafenvoy.mxt.util.ChainCache;
@@ -86,7 +85,6 @@ public final class ServerCache {
         DamageElements.invalidate();
         ElementReactionService.invalidate();
         FormulaNames.invalidate();
-        AlchemyHeatService.invalidate();
         ChainCache.invalidate();
         get().ifPresent(ServerCache::rebuild);
     }

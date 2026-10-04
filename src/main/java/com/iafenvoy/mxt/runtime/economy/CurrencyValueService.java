@@ -3,12 +3,9 @@ package com.iafenvoy.mxt.runtime.economy;
 import com.iafenvoy.mxt.data.CurrencyValue;
 import com.iafenvoy.mxt.data.CurrencyValue.UnavailableWhen;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
-import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
-import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.registry.MxtDataMaps;
 import com.iafenvoy.mxt.runtime.item.ItemQualityService;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
-import com.iafenvoy.mxt.util.matcher.ItemMatcher;
-import net.minecraft.core.Holder.Reference;
 import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.server.MinecraftServer;
@@ -140,8 +137,7 @@ public final class CurrencyValueService {
 
     // Finds a currency definition by stack matcher without evaluating unavailable_when.
     public static Optional<CurrencyValue> definition(Provider access, ItemStack stack) {
-        if (stack.isEmpty()) return Optional.empty();
-        return ItemMatcher.find(MxtDatapackRegistries.holders(access, MxtResourceKeys.CURRENCY).map(Reference::value), stack);
+        return Optional.ofNullable(stack.isEmpty() ? null : stack.getData(MxtDataMaps.CURRENCY));
     }
 
     public static Optional<UnavailableWhen> unavailableReason(@NotNull Provider access, @Nullable Entity holder, @NotNull ItemStack stack) {
@@ -165,13 +161,11 @@ public final class CurrencyValueService {
     }
 
     private static Optional<CurrencyValue> find(Provider access, ItemStack stack) {
-        return ItemMatcher.find(MxtDatapackRegistries.holders(access, MxtResourceKeys.CURRENCY)
-                .map(Reference::value), stack);
+        return Optional.ofNullable(stack.isEmpty() ? null : stack.getData(MxtDataMaps.CURRENCY));
     }
 
     private static Optional<CurrencyValue> find(RegistryAccess access, ItemStack stack) {
-        return ItemMatcher.find(MxtDatapackRegistries.holders(access, MxtResourceKeys.CURRENCY)
-                .map(Reference::value), stack);
+        return Optional.ofNullable(stack.isEmpty() ? null : stack.getData(MxtDataMaps.CURRENCY));
     }
 
     // Empty when any stack is not configured as currency or the sum overflows.

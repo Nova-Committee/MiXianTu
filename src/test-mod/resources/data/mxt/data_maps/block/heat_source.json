@@ -1,0 +1,7 @@
+{
+  "values": {
+    "mxt_test:alchemy_advanced_fire": { "max_temperature": 999, "heating_per_tick": 999 },
+    "#mxt_test:alchemy_heat/fire": { "max_temperature": 150, "heating_per_tick": 40 },
+    "mxt_test:alchemy_weak_fire": { "max_temperature": 80, "heating_per_tick": 10, "priority": 5 }
+  }
+}

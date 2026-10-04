@@ -1,6 +1,0 @@
-{
-  "blocks": ["mxt_test:alchemy_weak_fire"],
-  "max_temperature": 80,
-  "heating_per_tick": 10,
-  "priority": 5
-}

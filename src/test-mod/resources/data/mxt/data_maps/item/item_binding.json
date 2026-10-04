@@ -1,0 +1,49 @@
+{
+  "values": {
+    "minecraft:apple": {
+      "conditions": [
+        {
+          "condition": { "type": "mxt:always" },
+          "description": "condition.mxt_test.fire_root_item"
+        }
+      ],
+      "actions": [
+        { "type": "mxt:grant_spirit_root", "spirit_root": "mxt_test:fire_root" }
+      ]
+    },
+    "#mxt_test:spirit_herbs": {
+      "conditions": [
+        {
+          "condition": { "type": "mxt:always" },
+          "description": "condition.mxt_test.fire_root_item"
+        }
+      ],
+      "actions": [
+        { "type": "mxt:grant_spirit_root", "spirit_root": "mxt_test:fire_root" }
+      ]
+    },
+    "minecraft:melon_slice": {
+      "actions": [
+        { "type": "mxt:grant_physique", "physique": "mxt_test:sword_bone" }
+      ]
+    },
+    "minecraft:carrot": {
+      "conditions": [
+        {
+          "condition": { "type": "mxt:never" },
+          "description": "condition.mxt_test.locked_carrot"
+        }
+      ]
+    },
+    "minecraft:bread": {
+      "actions": [
+        { "type": "mxt:remove_physique", "physique": "mxt_test:sword_bone" }
+      ]
+    },
+    "minecraft:cookie": {
+      "actions": [
+        { "type": "mxt:remove_spirit_root", "spirit_root": "mxt_test:water_root" }
+      ]
+    }
+  }
+}

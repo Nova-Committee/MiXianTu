@@ -4,9 +4,7 @@ import com.iafenvoy.mxt.data.CreativeTabHelper;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.screen.picker.ItemPickerManager;
 import com.iafenvoy.mxt.screen.picker.ItemPickerManager.PickerItem;
-import com.iafenvoy.mxt.util.HolderHelper;
 import net.minecraft.commands.CommandSourceStack;
-import net.minecraft.core.Holder;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
@@ -59,10 +57,10 @@ public final class PickerProbes {
             ok &= leg(source, "predicate",
                     CreativeTabHelper.itemsOf(access, MxtResourceKeys.AURA, _ -> true).size() == rows.size()
                             && CreativeTabHelper.itemsOf(access, MxtResourceKeys.AURA, _ -> false).isEmpty()
-                            && CreativeTabHelper.itemsOf(access, MxtResourceKeys.AURA, holder -> MOD.equals(namespace(holder))).size() == test.size(),
+                            && CreativeTabHelper.itemsOf(access, MxtResourceKeys.AURA, id -> MOD.equals(namespace(id))).size() == test.size(),
                     "all=" + CreativeTabHelper.itemsOf(access, MxtResourceKeys.AURA, _ -> true).size()
                             + " none=" + CreativeTabHelper.itemsOf(access, MxtResourceKeys.AURA, _ -> false).size()
-                            + " byId=" + CreativeTabHelper.itemsOf(access, MxtResourceKeys.AURA, holder -> MOD.equals(namespace(holder))).size(),
+                            + " byId=" + CreativeTabHelper.itemsOf(access, MxtResourceKeys.AURA, id -> MOD.equals(namespace(id))).size(),
                     "all=" + rows.size() + " none=0 byId=" + test.size());
 
             ok &= leg(source, "unknown_category",
@@ -113,8 +111,7 @@ public final class PickerProbes {
         return stacks;
     }
 
-    private static String namespace(Holder<?> holder) {
-        Identifier id = HolderHelper.idOrNull(holder);
+    private static String namespace(Identifier id) {
         return id == null ? "" : id.getNamespace();
     }
 

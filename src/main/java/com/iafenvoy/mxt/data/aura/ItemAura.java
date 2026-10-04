@@ -1,40 +1,30 @@
 package com.iafenvoy.mxt.data.aura;
 
 import com.iafenvoy.mxt.data.action.EntityAction;
-import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.iafenvoy.mxt.util.matcher.ItemMatcher;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
-import net.minecraft.resources.RegistryFixedCodec;
 import net.minecraft.world.item.ItemStackTemplate;
 
-import java.util.List;
 import java.util.Optional;
 
 /**
- * Defines how an item supplies temporary aura fuel while an entity cultivates; the definition is matched by item or
- * item tag. {@code type} names the {@link Aura} the item carries rather than the value it is counted in, and the
- * value - with its bounds - is read from {@code Aura#resource()} wherever the pool is written.
+ * How one item supplies temporary aura fuel while an entity cultivates. The item is the data map's key, so this
+ * record only describes the fuel. {@code type} names the {@link Aura} the item carries rather than the value it is
+ * counted in, and the value - with its bounds - is read from {@code Aura#resource()} wherever the pool is written.
  */
-public record ItemAura(List<Entry> items, Holder<Aura> type, NumberProvider aura, NumberProvider consumeSpeed,
+public record ItemAura(Holder<Aura> type, NumberProvider aura, NumberProvider consumeSpeed,
                        NumberProvider releaseSpeed, Optional<ItemStackTemplate> resultStack,
-                       EntityAction exhaustedAction, int priority) implements ItemMatcher {
-    public static final Codec<Holder<ItemAura>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.ITEM_AURA);
-    public static final Codec<ItemAura> DIRECT_CODEC = RecordCodecBuilder.create(i -> i.group(
-            ENTRIES_CODEC.fieldOf("items").forGetter(ItemAura::items),
+                       EntityAction exhaustedAction, int priority) {
+    public static final Codec<ItemAura> CODEC = RecordCodecBuilder.create(i -> i.group(
             Aura.CODEC.fieldOf("type").forGetter(ItemAura::type),
             NumberProvider.CODEC.fieldOf("aura").forGetter(ItemAura::aura),
             NumberProvider.CODEC.fieldOf("consume_speed").forGetter(ItemAura::consumeSpeed),
             NumberProvider.CODEC.fieldOf("release_speed").forGetter(ItemAura::releaseSpeed),
             ItemStackTemplate.CODEC.optionalFieldOf("result_stack").forGetter(ItemAura::resultStack),
             EntityAction.optionalCodec("exhausted_action").forGetter(ItemAura::exhaustedAction),
-            Codec.INT.optionalFieldOf("priority", DEFAULT_PRIORITY).forGetter(ItemAura::priority)
+            Codec.INT.optionalFieldOf("priority", ItemMatcher.DEFAULT_PRIORITY).forGetter(ItemAura::priority)
     ).apply(i, ItemAura::new));
-
-    @Override
-    public List<Entry> entries() {
-        return this.items;
-    }
 }

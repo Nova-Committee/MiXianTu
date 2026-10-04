@@ -84,7 +84,7 @@ public final class StationMenu extends ApricityContainerMenu {
      * and the client picks its screen factory from that.
      */
     @Override
-    public MenuType<?> getType() {
+    public @NonNull MenuType<?> getType() {
         return typeFor(this.mode);
     }
 
@@ -160,7 +160,7 @@ public final class StationMenu extends ApricityContainerMenu {
      * that owns it - this override is still inside that constructor and has the reference.
      */
     @Override
-    protected Slot addSlot(@NonNull Slot slot) {
+    protected @NonNull Slot addSlot(@NonNull Slot slot) {
         if (slot instanceof PendingTemplate)
             slot = new Ghost(this, slot.container, slot.getSlotIndex(), slot.x, slot.y);
         return super.addSlot(slot);

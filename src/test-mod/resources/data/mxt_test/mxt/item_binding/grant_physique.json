@@ -1,9 +1,0 @@
-{
-  "items": "minecraft:melon_slice",
-  "actions": [
-    {
-      "type": "mxt:grant_physique",
-      "physique": "mxt_test:sword_bone"
-    }
-  ]
-}

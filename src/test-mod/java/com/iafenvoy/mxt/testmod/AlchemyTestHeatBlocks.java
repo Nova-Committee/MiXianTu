@@ -20,7 +20,7 @@ import net.neoforged.neoforge.registries.DeferredRegister;
 
 /**
  * Test heat sources, none of them consumed and none of them craftable. Their numbers come from the test pack's
- * {@code mxt_test:heat_source} entries - a tag entry plus a higher-priority override - except the advanced one,
+ * {@code mxt:heat_source} data map - a tag entry plus a higher-priority override - except the advanced one,
  * which answers for itself and is what proves the API wins over the table.
  */
 public final class AlchemyTestHeatBlocks {

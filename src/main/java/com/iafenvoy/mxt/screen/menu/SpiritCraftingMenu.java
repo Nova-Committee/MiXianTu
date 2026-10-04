@@ -90,7 +90,7 @@ public final class SpiritCraftingMenu extends ApricityContainerMenu {
      * from that.
      */
     @Override
-    public MenuType<?> getType() {
+    public @NonNull MenuType<?> getType() {
         return MxtMenus.SPIRIT_CRAFTING_TABLE.get();
     }
 
@@ -250,7 +250,7 @@ public final class SpiritCraftingMenu extends ApricityContainerMenu {
 
         private Setup(ContainerLevelAccess access) {
             this.grid = SpiritCraftingMenu.gridContainer(access);
-            this.result = SpiritCraftingMenu.resultContainer(access);
+            this.result = resultContainer(access);
             // The page draws the nine grid cells and the result cell itself and groups them under these two ids.
             this.page = PageSlots.of(AuiPages.page(AuiPages.SPIRIT_CRAFTING, "spirit_crafting"))
                     .container("result", this.result, (container, index, x, y) -> new Slot(container, index, x, y) {
