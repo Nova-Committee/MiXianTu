@@ -8,6 +8,7 @@ import com.iafenvoy.mxt.render.accessory.BeltWeaponRenderer;
 import com.iafenvoy.mxt.render.cultivation.CultivationItemRenderer;
 import com.iafenvoy.mxt.render.lightning.ColoredLightningBoltRenderer;
 import com.iafenvoy.mxt.render.mount.MountRenderers;
+import com.iafenvoy.mxt.render.sword.SwordAuraRenderer;
 import com.iafenvoy.mxt.render.particle.RiftParticle.Provider;
 import com.iafenvoy.mxt.render.particle.SpiritWispParticle;
 import com.iafenvoy.mxt.screen.gui.*;
@@ -35,6 +36,7 @@ public final class MxtRenderers {
         event.registerEntityRenderer(MxtEntityTypes.SOUL.get(), NoopRenderer::new);
         event.registerEntityRenderer(MxtEntityTypes.SPIRIT_BURST.get(), NoopRenderer::new);
         event.registerEntityRenderer(MxtEntityTypes.COLORED_LIGHTNING.get(), ColoredLightningBoltRenderer::new);
+        event.registerEntityRenderer(MxtEntityTypes.SWORD_AURA.get(), SwordAuraRenderer::new);
         // The mount's own renderer never draws a mount by itself: it asks this registry, so the default look and the
         // optional GeckoLib one are two registrations rather than two code paths.
         MountRenderers.registerBuiltins();
