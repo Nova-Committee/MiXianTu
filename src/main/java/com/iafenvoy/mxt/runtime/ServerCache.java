@@ -258,10 +258,11 @@ public final class ServerCache {
                 && this.rankByLevel.getOrDefault(current, -1) >= this.rankByLevel.getOrDefault(required, Integer.MAX_VALUE);
     }
 
-    // The one thing a quality tier cannot check about itself, because it needs the whole registry: a next tier
-    // that does not exist, a ladder nothing can walk, or upgrade data on a tier that leads nowhere. The walk and
-    // the index behind it live in QualityLadders, over the shared ChainCache, so a report can never describe a
-    // different registry than the one the runtime reads.
+    // The one thing a quality tier cannot check about itself, because it needs the whole registry: upgrade data on
+    // a tier that leads nowhere, and a ladder nothing can walk. A next tier the pack does not provide is not a
+    // problem to report here - the reference stays unbound and the registry refuses to freeze, so the server does
+    // not start at all. The walk and the index behind it live in QualityLadders, over the shared ChainCache, so a
+    // report can never describe a different registry than the one the runtime reads.
     private void validateQualityLadders(List<String> problems) {
         Registry<ItemQuality> registry = MxtDatapackRegistries.registry(MxtResourceKeys.ITEM_QUALITY);
         registry.listElements().forEach(holder -> {
@@ -271,10 +272,6 @@ public final class ServerCache {
             if (tier.next().isEmpty() && (!tier.upgradeCosts().isEmpty() || !(tier.upgradeCondition() instanceof AlwaysCondition)))
                 problems.add(problem(MxtResourceKeys.ITEM_QUALITY, holder.key().identifier(),
                         "declares upgrade_costs or upgrade_condition but no next tier"));
-            tier.next().map(HolderHelper::id)
-                    .filter(next -> MxtDatapackRegistries.get(MxtResourceKeys.ITEM_QUALITY, next).isEmpty())
-                    .ifPresent(next -> problems.add(problem(MxtResourceKeys.ITEM_QUALITY, holder.key().identifier(),
-                            "next " + next + " is not a quality")));
         });
         for (ChainCache.Report report : QualityLadders.diagnose(registry).reports())
             problems.add(problem(MxtResourceKeys.ITEM_QUALITY, report.node(), report.message()));
@@ -293,12 +290,9 @@ public final class ServerCache {
             Identifier aura = HolderHelper.id(stage.aura());
             Identifier next = stage.nextRealm().map(HolderHelper::id).orElse(null);
             if (next == null) continue;
-            Holder<RealmStage> target = stages.get(next);
-            if (target == null) {
-                chains.refuse(entry.getKey(), "next_realm " + next + " is not a realm stage");
-                continue;
-            }
-            Identifier nextAura = HolderHelper.id(target.value().aura());
+            // A next_realm the pack does not provide is not a problem to report here: the reference stays unbound
+            // and the registry refuses to freeze, so the server does not start and this walk never runs on it.
+            Identifier nextAura = HolderHelper.id(stages.get(next).value().aura());
             if (!nextAura.equals(aura)) {
                 chains.refuse(entry.getKey(), "next_realm " + next + " belongs to " + nextAura + " instead of " + aura);
                 continue;

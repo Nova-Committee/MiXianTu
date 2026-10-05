@@ -1,11 +1,10 @@
 package com.iafenvoy.mxt.recipe;
 
+import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.data.Talisman;
-import com.iafenvoy.mxt.data.action.EntityAction;
-import com.iafenvoy.mxt.data.condition.EntityCondition;
+import com.iafenvoy.mxt.data.action.EntityAction;import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.data.cost.Cost;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
-import com.iafenvoy.mxt.registry.MxtItems;
 import com.iafenvoy.mxt.registry.MxtRecipeSerializers;
 import com.iafenvoy.mxt.registry.MxtRecipeTypes;
 import com.iafenvoy.mxt.runtime.talisman.TalismanDrawingScorer;
@@ -21,9 +20,12 @@ import com.mojang.serialization.DataResult;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.resources.Identifier;
+import net.minecraft.tags.TagKey;
 import net.minecraft.util.StringRepresentable;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -36,17 +38,20 @@ import org.slf4j.Logger;
 import java.util.*;
 
 /**
- * A talisman formula: what is drawn ({@code pattern}), the colours the paper is drawn on and drawn with
- * ({@code background_color} / {@code foreground_color}), how strictly it is scored ({@code judgement}) and what
- * the result is ({@code result}). The formula's name and description are the referenced {@code mxt:talisman}
- * definition's, never a field here.
+ * A talisman formula: what is drawn ({@code pattern}), the paper it is drawn on ({@code paper}), the colours the
+ * paper is drawn on and drawn with ({@code background_color} / {@code foreground_color}), how strictly it is
+ * scored ({@code judgement}) and what the result is ({@code result}). The formula's name and description are the
+ * referenced {@code mxt:talisman} definition's, never a field here.
  *
- * <p>The default cost is this type's own: one {@code mxt:blank_talisman} out of the workstation slot, which
- * {@code costs} can only add to. It never matches a crafting grid, so {@link #matches} answers false.
+ * <p>The default cost is this type's own: one paper out of the workstation slot, which {@code costs} can only add
+ * to. Which paper that is comes from {@code paper}, an ingredient defaulting to the tag {@link #paperTag()}, so a
+ * tier requirement is written by writing an {@code mxt:quality} ingredient there - a tag alone cannot say "at
+ * least the third tier". The slot itself still accepts the tag, which is the outer bound of every formula.
+ * It never matches a crafting grid, so {@link #matches} answers false.
  */
 public record TalismanDrawingRecipe(EntityCondition unlockCondition, Holder<Talisman> talisman, List<Cost> costs,
-                                    Pattern pattern, int backgroundColor, int foregroundColor,
-                                    TalismanDrawingScorer.Judgement judgement, Settlement result)
+                                    Optional<Ingredient> paper, Pattern pattern, int backgroundColor,
+                                    int foregroundColor, TalismanDrawingScorer.Judgement judgement, Settlement result)
         implements Recipe<RecipeInput> {
     private static final Logger LOGGER = LogUtils.getLogger();
     /**
@@ -54,7 +59,12 @@ public record TalismanDrawingRecipe(EntityCondition unlockCondition, Holder<Tali
      */
     public static final String PERCENTAGE = "percentage";
     /**
-     * The paper the station slot holds and the default cost takes; the slot's mayPlace reads the same item.
+     * The settlement's second variable: where the paper actually taken sits on its ladder, counted from that
+     * ladder's entry tier. Zero for the entry tier, and for a paper nothing grades.
+     */
+    public static final String PAPER_RANK = "paper_rank";
+    /**
+     * How many papers the default cost takes.
      */
     public static final int DEFAULT_PAPER_COUNT = 1;
     /**
@@ -93,6 +103,7 @@ public record TalismanDrawingRecipe(EntityCondition unlockCondition, Holder<Tali
             EntityCondition.optionalCodec("unlock_condition").forGetter(TalismanDrawingRecipe::unlockCondition),
             Talisman.CODEC.fieldOf("talisman").forGetter(TalismanDrawingRecipe::talisman),
             Cost.LIST_CODEC.optionalFieldOf("costs", List.of()).forGetter(TalismanDrawingRecipe::costs),
+            Ingredient.CODEC.optionalFieldOf("paper").forGetter(TalismanDrawingRecipe::paper),
             Pattern.CODEC.fieldOf("pattern").forGetter(TalismanDrawingRecipe::pattern),
             MiscCodecs.RGB_COLOR.optionalFieldOf("background_color", DEFAULT_BACKGROUND_COLOR)
                     .forGetter(TalismanDrawingRecipe::backgroundColor),
@@ -105,9 +116,20 @@ public record TalismanDrawingRecipe(EntityCondition unlockCondition, Holder<Tali
     public static final StreamCodec<RegistryFriendlyByteBuf, TalismanDrawingRecipe> PACKET_CODEC =
             ByteBufCodecs.fromCodecWithRegistries(CODEC.codec());
 
-    public static Item paper() {
-        return MxtItems.BLANK_TALISMAN.get();
+    /**
+     * The outer bound of everything the station slot accepts, and what a formula without {@code paper} takes: a
+     * content pack adds its own paper by adding it to {@code mxt:talisman_paper} and nothing here changes.
+     *
+     * <p>The slot reads this tag, not a formula's own {@code paper}: the question there is "is this paper at all",
+     * which the client can answer as well as the server, while "does this formula take it" is decided when a
+     * drawing opens. A formula whose {@code paper} names something outside the tag can therefore never be started.
+     */
+    public static TagKey<Item> paperTag() {
+        return PAPER;
     }
+
+    private static final TagKey<Item> PAPER = TagKey.create(Registries.ITEM,
+            Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "talisman_paper"));
 
     @Override
     public boolean matches(@NonNull RecipeInput input, @NonNull Level level) {
@@ -295,12 +317,12 @@ public record TalismanDrawingRecipe(EntityCondition unlockCondition, Holder<Tali
     }
 
     /**
-     * The settlement formulas may read the drawing's completion plus whatever the formula variable registry
-     * provides, so a name that is neither is a content bug rather than a silent zero.
+     * The settlement formulas may read the drawing's completion and the paper's rank plus whatever the formula
+     * variable registry provides, so a name that is none of those is a content bug rather than a silent zero.
      */
     private static DataResult<NumberProvider> validateVariables(NumberProvider provider, String field) {
         for (String name : variables(provider))
-            if (!name.equals(PERCENTAGE) && !FormulaVariables.contains(name))
+            if (!name.equals(PERCENTAGE) && !name.equals(PAPER_RANK) && !FormulaVariables.contains(name))
                 return DataResult.error(() -> field + " reads the unknown variable '" + name + "'");
         return DataResult.success(provider);
     }

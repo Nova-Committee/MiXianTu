@@ -5,7 +5,9 @@ import com.iafenvoy.mxt.runtime.alchemy.HerbTagEntry;
 import com.iafenvoy.mxt.runtime.cultivation.TechniqueEntry;
 import com.iafenvoy.mxt.runtime.spirit.SpiritStorageEntry;
 import com.iafenvoy.mxt.util.matcher.ItemMatcher.Entry;
+import com.iafenvoy.mxt.util.matcher.builtin.IngredientEntry;
 import com.iafenvoy.mxt.util.matcher.builtin.ItemEntry;
+import com.iafenvoy.mxt.util.matcher.builtin.QualityEntry;
 import com.iafenvoy.mxt.util.matcher.builtin.RegexEntry;
 import com.iafenvoy.mxt.util.matcher.builtin.TagEntry;
 import com.iafenvoy.mxt.util.matcher.builtin.WildcardEntry;
@@ -24,4 +26,6 @@ public final class MxtItemMatchers {
     public static final DeferredHolder<MapCodec<? extends Entry>, MapCodec<SpiritStorageEntry>> SPIRIT_STORAGE = REGISTRY.register("spirit_storage", () -> SpiritStorageEntry.CODEC);
     public static final DeferredHolder<MapCodec<? extends Entry>, MapCodec<HerbTagEntry>> HERB_TAG = REGISTRY.register("herb_tag", () -> HerbTagEntry.CODEC);
     public static final DeferredHolder<MapCodec<? extends Entry>, MapCodec<TechniqueEntry>> TECHNIQUE = REGISTRY.register("technique", () -> TechniqueEntry.CODEC);
+    public static final DeferredHolder<MapCodec<? extends Entry>, MapCodec<QualityEntry>> QUALITY = REGISTRY.register("quality", () -> QualityEntry.CODEC);
+    public static final DeferredHolder<MapCodec<? extends Entry>, MapCodec<IngredientEntry>> INGREDIENT = REGISTRY.register("ingredient", () -> IngredientEntry.CODEC);
 }

@@ -19,6 +19,7 @@ import com.iafenvoy.mxt.data.curse.Curse;
 import com.iafenvoy.mxt.data.progression.Progression;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.data.quality.QualityLadders;
+import com.iafenvoy.mxt.data.quality.QualityRequirement;
 import com.iafenvoy.mxt.data.trigger.TriggerContext;
 import com.iafenvoy.mxt.event.CurseRemoveEvent.Reason;
 import com.iafenvoy.mxt.registry.MxtAttachments;
@@ -35,6 +36,7 @@ import com.iafenvoy.mxt.runtime.curse.CurseService;
 import com.iafenvoy.mxt.runtime.curse.CurseService.ApplyFailure;
 import com.iafenvoy.mxt.runtime.curse.CurseService.ApplyResult;
 import com.iafenvoy.mxt.runtime.element.ElementReactionService;
+import com.iafenvoy.mxt.runtime.item.QualityRequirements;
 import com.iafenvoy.mxt.runtime.item.QualityService;
 import com.iafenvoy.mxt.runtime.item.QualityUpgradeService;
 import com.iafenvoy.mxt.runtime.progression.ProgressionAdminService;
@@ -65,6 +67,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
+import java.util.OptionalInt;
 import java.util.Set;
 import java.util.stream.Stream;
 
@@ -596,6 +599,40 @@ public final class MxtKubeJsApi {
      */
     public static QualityUpgradeService.Result upgradeItemQuality(LivingEntity entity, ItemStack stack) {
         return QualityUpgradeService.upgrade(entity, stack);
+    }
+
+    /**
+     * How far apart two tiers stand on the ladder they share, positive when the first is higher, or empty when no
+     * single ladder holds both.
+     */
+    public static OptionalInt compareQualities(Entity entity, Identifier left, Identifier right) {
+        if (entity.level().isClientSide()) return OptionalInt.empty();
+        Provider access = entity.level().registryAccess();
+        Holder<ItemQuality> first = MxtDatapackRegistries.holder(access, MxtResourceKeys.ITEM_QUALITY, left).orElse(null);
+        Holder<ItemQuality> second = MxtDatapackRegistries.holder(access, MxtResourceKeys.ITEM_QUALITY, right).orElse(null);
+        // An id the current pack does not provide has no position, which is the same answer as two unrelated ladders.
+        return first == null || second == null ? OptionalInt.empty() : QualityLadders.compare(access, first, second);
+    }
+
+    /**
+     * Whether the stack satisfies a tier requirement, which is the question the item condition, the matcher entry
+     * and the ingredient ask, answered by the same single point.
+     */
+    public static boolean satisfiesQualityRequirement(Entity entity, ItemStack stack, QualityRequirement requirement) {
+        return !entity.level().isClientSide()
+                && QualityRequirements.test(entity.level().registryAccess(), stack, requirement);
+    }
+
+    /**
+     * Whether the stack's tier stands at or above a floor on one shared ladder. Two tiers of different ladders, and
+     * a tier no walked ladder holds, both answer false rather than "lower".
+     */
+    public static boolean qualityAtLeast(Entity entity, ItemStack stack, Identifier floor) {
+        if (entity.level().isClientSide()) return false;
+        Holder<ItemQuality> minimum = MxtDatapackRegistries
+                .holder(entity.level().registryAccess(), MxtResourceKeys.ITEM_QUALITY, floor).orElse(null);
+        return minimum != null && QualityRequirements.test(entity.level().registryAccess(), stack,
+                new QualityRequirement(List.of(), Optional.of(minimum)));
     }
 
     public static AuraResult aura(Level level, BlockPos position) {

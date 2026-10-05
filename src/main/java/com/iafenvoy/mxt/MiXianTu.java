@@ -47,6 +47,7 @@ public final class MiXianTu {
         MxtFormationActionTypes.REGISTRY.register(bus);
         MxtFormulaFunctions.REGISTRY.register(bus);
         MxtFormulaVariables.REGISTRY.register(bus);
+        MxtIngredientTypes.REGISTRY.register(bus);
         MxtItemActions.REGISTRY.register(bus);
         MxtItemConditions.REGISTRY.register(bus);
         MxtItemMatchers.REGISTRY.register(bus);

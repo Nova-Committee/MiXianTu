@@ -1,0 +1,41 @@
+{
+  "type": "mxt:alchemy",
+  "name": "recipe.mxt.mxt_test.alchemy.failure_action",
+  "description": "recipe.mxt.mxt_test.alchemy.failure_action.description",
+  "main_requirements": {
+    "mxt_test:herb/main": 6,
+    "mxt_test:alchemy/mark_fail": 1
+  },
+  "auxiliary_requirements": {
+    "mxt_test:herb/auxiliary": 6
+  },
+  "catalyst_requirement": 1,
+  "balance_tolerance": 0,
+  "target_temperature": 50,
+  "temperature_tolerance": 5,
+  "duration": 20,
+  "max_bad_ticks": 0,
+  "success_outputs": [
+    {
+      "id": "minecraft:paper",
+      "count": 1
+    }
+  ],
+  "failure_outputs": [
+    {
+      "id": "minecraft:charcoal",
+      "count": 1
+    }
+  ],
+  "failure_action": {
+    "type": "mxt:give_item",
+    "stack": {
+      "id": "minecraft:prismarine_shard",
+      "count": 1
+    }
+  },
+  "failure_block_action": {
+    "type": "mxt:set_block",
+    "block": "minecraft:iron_block"
+  }
+}

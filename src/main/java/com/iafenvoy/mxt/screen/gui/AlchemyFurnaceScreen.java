@@ -84,6 +84,10 @@ public final class AlchemyFurnaceScreen extends AuiContainerScreen<AlchemyFurnac
         this.apply = this.getOrThrow("apply");
         this.start = this.getOrThrow("start");
         this.abort = this.getOrThrow("abort");
+        // The page draws bare boxes; the labels come from Java, like every other button of this screen.
+        this.text(this.apply, Component.translatable("screen.mxt.alchemy.apply"));
+        this.text(this.start, Component.translatable("screen.mxt.alchemy.start"));
+        this.text(this.abort, Component.translatable("screen.mxt.alchemy.abort"));
 
         this.click(this.apply, this::applyTemperature);
         this.click(this.start, () -> this.send(Action.START, 0));
@@ -203,7 +207,8 @@ public final class AlchemyFurnaceScreen extends AuiContainerScreen<AlchemyFurnac
         Component text = this.rejection != null ? this.rejection
                 : this.inflight > 0 ? Component.translatable("screen.mxt.alchemy.temperature_pending", roundTrip(this.submitted))
                 : Component.translatable("screen.mxt.alchemy.temperature_draft", roundTrip(numbers.target()), roundTrip(numbers.maximum()));
-        return List.of(text);
+        // The field has no room for a label of its own, so the tooltip's first line names it.
+        return List.of(Component.translatable("screen.mxt.alchemy.target"), text);
     }
 
     private void syncDraft(double authoritative) {

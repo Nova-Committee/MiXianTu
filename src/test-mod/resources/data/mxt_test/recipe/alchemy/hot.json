@@ -10,7 +10,8 @@
   "catalyst_requirement": 1,
   "target_temperature": 100,
   "temperature_tolerance": 5,
-  "duration": 4,
+  "duration": "4 + furnace_rank",
+  "furnace_quality": { "min_quality": "mxt_test:alchemy/kiln_a" },
   "success_outputs": [
     {
       "id": "minecraft:diamond",

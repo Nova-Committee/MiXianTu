@@ -1,0 +1,22 @@
+{
+  "type": "mxt:alchemy",
+  "main_requirements": {
+    "mxt_test:herb/main": 12,
+    "mxt_test:alchemy/heat": 2
+  },
+  "auxiliary_requirements": {
+    "mxt_test:herb/auxiliary": 12
+  },
+  "catalyst_requirement": 1,
+  "balance_tolerance": 0,
+  "target_temperature": 50,
+  "temperature_tolerance": 5,
+  "duration": "4 + furnace_rank",
+  "input_quality": { "min_quality": "mxt_test:alchemy/kiln_a" },
+  "success_outputs": [
+    {
+      "id": "minecraft:stick",
+      "count": 1
+    }
+  ]
+}

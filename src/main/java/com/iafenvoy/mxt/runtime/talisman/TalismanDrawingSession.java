@@ -26,6 +26,7 @@ public final class TalismanDrawingSession {
     private final List<Cost> costs;
     private final CostContext costContext;
     private final Container paperSlot;
+    private final ItemStack paper;
     private final List<ItemStack> chargedItems;
     private final List<Runnable> refunds;
     private final List<List<Point>> strokes = new ArrayList<>();
@@ -37,13 +38,14 @@ public final class TalismanDrawingSession {
     private boolean settled;
 
     TalismanDrawingSession(Identifier recipeId, TalismanDrawingRecipe recipe, List<Cost> costs,
-                           CostContext costContext, Container paperSlot, List<ItemStack> chargedItems,
-                           List<Runnable> refunds, long openedAt) {
+                           CostContext costContext, Container paperSlot, ItemStack paper,
+                           List<ItemStack> chargedItems, List<Runnable> refunds, long openedAt) {
         this.recipeId = recipeId;
         this.recipe = recipe;
         this.costs = List.copyOf(costs);
         this.costContext = costContext;
         this.paperSlot = paperSlot;
+        this.paper = paper.copy();
         this.chargedItems = List.copyOf(chargedItems);
         this.refunds = List.copyOf(refunds);
         this.openedAt = openedAt;
@@ -67,6 +69,14 @@ public final class TalismanDrawingSession {
 
     public Container paperSlot() {
         return this.paperSlot;
+    }
+
+    /**
+     * The one paper the payment took, as it was when it was taken. The settlement reads its tier from here, because
+     * by then it is out of the slot.
+     */
+    public ItemStack paper() {
+        return this.paper;
     }
 
     /**

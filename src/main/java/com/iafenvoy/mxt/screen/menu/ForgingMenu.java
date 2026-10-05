@@ -1,7 +1,6 @@
 package com.iafenvoy.mxt.screen.menu;
 
 import com.iafenvoy.mxt.data.forging.ForgingBlueprint;
-import com.iafenvoy.mxt.data.forging.ForgingMaterial;
 import com.iafenvoy.mxt.data.forging.ForgingMethod;
 import com.iafenvoy.mxt.item.block.entity.ForgingTableBlockEntity;
 import com.iafenvoy.mxt.registry.MxtBlocks;
@@ -26,6 +25,7 @@ import net.minecraft.world.inventory.DataSlot;
 import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
+import net.neoforged.neoforge.common.crafting.SizedIngredient;
 import org.jspecify.annotations.NonNull;
 
 import java.util.List;
@@ -195,8 +195,13 @@ public final class ForgingMenu extends ApricityContainerMenu {
         return ForgingWorkstationService.availableMethodIds(this.machine, this.player.level().registryAccess(), blueprintId);
     }
 
-    public int inputCount(ForgingMaterial entry) {
+    public int inputCount(SizedIngredient entry) {
         return ForgingWorkstationService.availableCount(this.machine, entry);
+    }
+
+    // The item to draw for one requirement; empty for a tag that currently holds nothing.
+    public ItemStack inputPreview(SizedIngredient entry) {
+        return ForgingWorkstationService.preview(entry);
     }
 
     // The server applies the same rule in its start action, so a button disabled here means a request that

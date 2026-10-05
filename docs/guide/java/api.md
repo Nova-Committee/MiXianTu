@@ -143,7 +143,7 @@ title: Java 公开 API
 
 `ItemMatcher.Entry` 的成员：`matches(ItemStack)`、`default boolean itemLevel()`、`codec()`，以及两个 codec 常量 `SHORTCUT_CODEC`（简写：裸物品 id → `item`、物品标签 → `tag`）与 `CODEC`（先试简写，再试带 `type` 的对象）。**Entry 不带优先级**：谁赢由定义自己的 `priority` 决定。
 
-Entry 种类（`mxt:item_matcher_entry_type`，默认 `item`）：`item`、`tag`、`wildcard`、`regex`；运行期的模块另外注册了 `spirit_storage`、`herb_tag`、`technique`。
+Entry 种类（`mxt:item_matcher_entry_type`，默认 `item`）：`item`、`tag`、`wildcard`、`regex`；运行期的模块另外注册了 `spirit_storage`、`herb_tag`、`technique`、`quality`、`ingredient`（最后一个把整份原版材料当条目，是材料侧要求进 `ItemMatcher` 的通道）。
 
 要点：
 

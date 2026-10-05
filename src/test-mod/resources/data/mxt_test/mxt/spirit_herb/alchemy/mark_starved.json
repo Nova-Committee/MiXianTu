@@ -1,0 +1,7 @@
+{
+  "items": "minecraft:sea_pickle",
+  "main_effects": {
+    "mxt_test:alchemy/mark_starved": 1
+  },
+  "thermal_bias": 0
+}

@@ -16,15 +16,18 @@ import net.minecraft.core.RegistryAccess;
 import net.minecraft.resources.HolderSetCodec;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.RegistryFixedCodec;
+import net.neoforged.neoforge.common.crafting.SizedIngredient;
 
 import java.util.*;
 
 /**
  * The bounded meter, material requirement, allowed methods and finish rule for one forgeable result.
- * {@code input} is order-independent, and a tag that resolves to no methods allows nothing (an absent or empty
- * {@code allowed_methods} restricts nothing).
+ * {@code input} is order-independent and each entry is a NeoForge sized ingredient
+ * ({@code {"ingredient": …, "count": n}}), so a requirement can read the stack itself - a {@code mxt:quality}
+ * ingredient is how a blueprint asks for graded material. A tag that resolves to no methods allows nothing (an
+ * absent or empty {@code allowed_methods} restricts nothing).
  */
-public record ForgingBlueprint(List<ForgingMaterial> input, HolderSet<ForgingMethod> allowedMethods, MeterBounds meter,
+public record ForgingBlueprint(List<SizedIngredient> input, HolderSet<ForgingMethod> allowedMethods, MeterBounds meter,
                                FinishPattern finishPattern, int maxSteps, List<QualityThreshold> qualityByExtraSteps,
                                Identifier result, EntityAction completeAction, EntityAction failAction,
                                FailureSettlement failureSettlement) {
@@ -40,7 +43,7 @@ public record ForgingBlueprint(List<ForgingMaterial> input, HolderSet<ForgingMet
 
     public static final Codec<Holder<ForgingBlueprint>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.FORGING_BLUEPRINT);
     public static final Codec<ForgingBlueprint> DIRECT_CODEC = RecordCodecBuilder.<ForgingBlueprint>create(i -> i.group(
-            ForgingMaterial.CODEC.listOf().fieldOf("input").forGetter(ForgingBlueprint::input),
+            SizedIngredient.NESTED_CODEC.listOf().fieldOf("input").forGetter(ForgingBlueprint::input),
             METHODS_CODEC.optionalFieldOf("allowed_methods", HolderSet.empty()).forGetter(ForgingBlueprint::allowedMethods),
             MeterBounds.MAP_CODEC.forGetter(ForgingBlueprint::meter),
             FinishPattern.MAP_CODEC.codec().optionalFieldOf("finish_pattern", FinishPattern.none()).forGetter(ForgingBlueprint::finishPattern),
@@ -79,17 +82,16 @@ public record ForgingBlueprint(List<ForgingMaterial> input, HolderSet<ForgingMet
         return DataResult.success(definition);
     }
 
-    // Duplicates are rejected instead of merged, so a datapack typo is reported at load time rather than silently
-    // fixed.
-    private static String inputError(List<ForgingMaterial> input) {
+    // An entry is an ingredient, so "the same item twice" is no longer decidable in general: two ingredients may
+    // legitimately overlap (one item may be a member of a tag the other names). What is still refused is the same
+    // ingredient with the same count twice, which is the typo a pack actually makes.
+    private static String inputError(List<SizedIngredient> input) {
         if (input.isEmpty()) return "input must not be empty";
         if (input.size() > MAX_INPUT_ENTRIES)
             return "input must not contain more than " + MAX_INPUT_ENTRIES + " entries";
-        Set<Identifier> seen = new HashSet<>();
-        for (ForgingMaterial material : input) {
-            if (!seen.add(material.id())) return "input must not contain the same item twice";
-            if (material.resolve().isEmpty()) return "unknown input item " + material.id();
-        }
+        Set<SizedIngredient> seen = new HashSet<>();
+        for (SizedIngredient material : input)
+            if (!seen.add(material)) return "input must not contain the same ingredient twice";
         return null;
     }
 

@@ -1,0 +1,21 @@
+{
+  "input": [
+    {
+      "ingredient": {
+        "neoforge:ingredient_type": "mxt:quality",
+        "items": "minecraft:clay_ball",
+        "min_quality": "mxt_test:normal"
+      },
+      "count": 1
+    }
+  ],
+  "meter_min": -10,
+  "meter_max": 10,
+  "target_min": 2,
+  "target_max": 4,
+  "quality_by_extra_steps": [
+    { "max_extra_steps": 0, "quality": "mxt_test:excellent" },
+    { "max_extra_steps": 2147483647, "quality": "mxt_test:poor" }
+  ],
+  "result": "minecraft:brick"
+}

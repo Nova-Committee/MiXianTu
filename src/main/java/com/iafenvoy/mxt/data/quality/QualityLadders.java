@@ -18,7 +18,8 @@ import java.util.*;
  * once; the tier nothing points at is the entry, and every tier after it is one step higher.
  *
  * <p>The ladder itself is a {@link ChainCache.Chain} of tiers, read in either direction; this class only says
- * which links belong to a ladder, what each ladder is called, and which of them are mistakes.
+ * which links belong to a ladder, what each ladder is called, which of them are mistakes, and how two tiers compare
+ * on the one ladder that holds them both.
  */
 public final class QualityLadders {
     private QualityLadders() {
@@ -37,6 +38,36 @@ public final class QualityLadders {
      */
     public static Optional<ChainCache.Chain<ItemQuality>> of(Provider access, @Nullable Holder<ItemQuality> tier) {
         return tier == null ? Optional.empty() : cache(access).chainOf(HolderHelper.id(tier));
+    }
+
+    /**
+     * Where a tier stands on its ladder, counted from that ladder's entry tier. Empty for a tier no walked ladder
+     * holds, which is both a tier this pack does not provide and every tier of a ladder the walk refused whole.
+     */
+    public static OptionalInt rank(Provider access, Holder<ItemQuality> tier) {
+        Optional<ChainCache.Chain<ItemQuality>> ladder = cache(access).chainOf(HolderHelper.id(tier));
+        return ladder.isEmpty() ? OptionalInt.empty() : OptionalInt.of(ladder.get().indexOf(HolderHelper.id(tier)));
+    }
+
+    /**
+     * How far apart two tiers stand on the ladder they share: positive when the first is higher, zero for one tier
+     * against itself. Empty when no single walked ladder holds both, since two ladders' positions are unrelated.
+     */
+    public static OptionalInt compare(Provider access, Holder<ItemQuality> left, Holder<ItemQuality> right) {
+        Optional<ChainCache.Chain<ItemQuality>> ladder = cache(access).chainOf(HolderHelper.id(left));
+        if (ladder.isEmpty()) return OptionalInt.empty();
+        int here = ladder.get().indexOf(HolderHelper.id(left));
+        // A tier of another ladder, and a tier no ladder holds, both read -1 here: no shared order, not a direction.
+        int there = ladder.get().indexOf(HolderHelper.id(right));
+        return there < 0 ? OptionalInt.empty() : OptionalInt.of(here - there);
+    }
+
+    /**
+     * Whether a tier stands at or above a floor on one shared ladder. The only reading the requirement layer uses.
+     */
+    public static boolean atLeast(Provider access, Holder<ItemQuality> tier, Holder<ItemQuality> floor) {
+        OptionalInt distance = compare(access, tier, floor);
+        return distance.isPresent() && distance.getAsInt() >= 0;
     }
 
     private static ChainCache<ItemQuality> index(RegistryLookup<ItemQuality> registry) {

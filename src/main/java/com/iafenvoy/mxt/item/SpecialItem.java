@@ -14,10 +14,16 @@ import java.util.function.Consumer;
 
 public final class SpecialItem extends Item {
     private final int tooltipLines;
+    private final ChatFormatting color;
 
     public SpecialItem(Properties properties, int tooltipLines) {
+        this(properties, tooltipLines, ChatFormatting.GOLD);
+    }
+
+    public SpecialItem(Properties properties, int tooltipLines, ChatFormatting color) {
         super(properties);
         this.tooltipLines = tooltipLines;
+        this.color = color;
     }
 
     @SuppressWarnings("deprecation")
@@ -26,6 +32,6 @@ public final class SpecialItem extends Item {
         super.appendHoverText(stack, context, display, builder, tooltipFlag);
         Identifier id = BuiltInRegistries.ITEM.getKey(stack.getItem());
         for (int line = 0; line < this.tooltipLines; line++)
-            builder.accept(Component.translatable(id.toLanguageKey("tooltip", Integer.toString(line))).withStyle(ChatFormatting.GOLD));
+            builder.accept(Component.translatable(id.toLanguageKey("tooltip", Integer.toString(line))).withStyle(this.color));
     }
 }

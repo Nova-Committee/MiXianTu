@@ -2,7 +2,7 @@ package com.iafenvoy.mxt.screen.gui;
 
 import com.iafenvoy.mxt.data.IconReference;
 import com.iafenvoy.mxt.data.forging.ForgingBlueprint;
-import com.iafenvoy.mxt.data.forging.ForgingMaterial;
+import net.neoforged.neoforge.common.crafting.SizedIngredient;
 import com.iafenvoy.mxt.data.forging.ForgingMethod;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.network.payload.ForgingActionC2SPayload;
@@ -424,13 +424,14 @@ public final class ForgingScreen extends AuiContainerScreen<ForgingMenu> {
         List<Component> lines = new ArrayList<>();
         lines.add(Component.translatable("tooltip.mxt.forging.materials").withStyle(ChatFormatting.GOLD));
         boolean covered = true;
-        for (ForgingMaterial requirement : blueprint.input()) {
+        for (SizedIngredient requirement : blueprint.input()) {
+            ItemStack preview = this.menu.inputPreview(requirement);
             int have = this.menu.inputCount(requirement);
             boolean met = have >= requirement.count();
             covered &= met;
             lines.add(Component.literal(met ? "✔ " : "✖ ")
                     .append(Component.translatable("tooltip.mxt.forging.materials.line",
-                            new ItemStack(requirement.item()).getHoverName(), have, requirement.count()))
+                            preview.isEmpty() ? Component.literal("?") : preview.getHoverName(), have, requirement.count()))
                     .withStyle(met ? ChatFormatting.GREEN : ChatFormatting.RED));
         }
         if (!covered)

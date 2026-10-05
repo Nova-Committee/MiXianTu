@@ -1,0 +1,7 @@
+{
+  "items": "minecraft:nether_wart",
+  "main_effects": {
+    "mxt_test:alchemy/mark_pill_reenter": 1
+  },
+  "thermal_bias": 0
+}

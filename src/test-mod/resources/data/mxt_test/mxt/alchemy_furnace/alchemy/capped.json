@@ -1,0 +1,9 @@
+{
+  "name": "alchemy_furnace.mxt.mxt_test.alchemy/capped",
+  "description": "alchemy_furnace.mxt.mxt_test.alchemy/capped.description",
+  "main_slots": 2,
+  "auxiliary_slots": 2,
+  "capacity": 64,
+  "cooling_per_tick": 40,
+  "max_temperature": 60
+}

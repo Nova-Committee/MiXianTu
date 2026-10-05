@@ -80,6 +80,10 @@ def clip(element, offset, extents, anchor):
                    round(uv[1] + (uv[3] - uv[1]) * v1, 6)],
             "texture": data["texture"],
         }
+    if not result["faces"]:
+        # Every face of this piece was a grid cut, so the piece draws nothing; the model loader rejects an
+        # element with no faces ("Expected between 1 and 6 unique faces, got 0") and the whole part is lost.
+        return None
     for key in ("shade", "light_emission"):
         if key in element:
             result[key] = element[key]

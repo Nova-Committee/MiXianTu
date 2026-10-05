@@ -1,0 +1,17 @@
+{
+  "type": "mxt:spirit_shapeless",
+  "ingredients": [
+    {
+      "neoforge:ingredient_type": "mxt:quality",
+      "items": "minecraft:clay_ball",
+      "min_quality": "mxt_test:normal"
+    }
+  ],
+  "result": {
+    "id": "minecraft:torch",
+    "count": 2
+  },
+  "aura": {
+    "mxt_test:spirit_power": 1
+  }
+}

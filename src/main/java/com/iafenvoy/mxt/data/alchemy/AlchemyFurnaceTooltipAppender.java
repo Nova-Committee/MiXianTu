@@ -9,6 +9,7 @@ import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.TooltipText;
 import net.minecraft.ChatFormatting;
+import net.minecraft.client.Minecraft;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.network.chat.Component;
@@ -69,14 +70,19 @@ public final class AlchemyFurnaceTooltipAppender {
         AlchemyWorkstationService.furnaceDefinition(registries, stack).ifPresentOrElse(holder -> {
             AlchemyFurnaceDefinition spec = holder.value();
             builder.accept(DefinitionText.name(holder).withStyle(ChatFormatting.DARK_GREEN));
-            if (DefinitionText.resolved(spec.description()) && !spec.description().getString().isBlank())
-                builder.accept(spec.description().copy().withStyle(ChatFormatting.GRAY));
             builder.accept(Component.translatable("tooltip.mxt.alchemy.slots", spec.mainSlots(), spec.auxiliarySlots(), spec.catalystSlots())
                     .withStyle(ChatFormatting.GRAY));
             builder.accept(Component.translatable("tooltip.mxt.alchemy.capacity", spec.capacity()).withStyle(ChatFormatting.GRAY));
+            spec.maxTemperature().ifPresent(limit -> builder.accept(Component.translatable(
+                    "tooltip.mxt.alchemy.furnace_temperature", TooltipText.number(limit)).withStyle(ChatFormatting.GRAY)));
         }, () -> builder.accept(Component.translatable("screen.mxt.alchemy.no_furnace").withStyle(ChatFormatting.RED)));
-        builder.accept(Component.translatable("tooltip.mxt.alchemy.structure").withStyle(ChatFormatting.GRAY));
-        builder.accept(Component.translatable("tooltip.mxt.alchemy.heat").withStyle(ChatFormatting.GRAY));
+        // The build guide is two long lines; behind Shift they do not push the numbers out of sight.
+        if (Minecraft.getInstance().hasShiftDown()) {
+            builder.accept(Component.translatable("tooltip.mxt.alchemy.structure").withStyle(ChatFormatting.GRAY));
+            builder.accept(Component.translatable("tooltip.mxt.alchemy.heat").withStyle(ChatFormatting.GRAY));
+        } else {
+            builder.accept(Component.translatable("tooltip.mxt.alchemy.hold_shift").withStyle(ChatFormatting.DARK_GRAY));
+        }
     }
 
     private static Optional<Holder<AlchemyWallMaterial>> loadedWall(Provider registries, ItemStack stack) {

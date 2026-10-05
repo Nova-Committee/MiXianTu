@@ -1,6 +1,7 @@
 package com.iafenvoy.mxt.runtime.item;
 
 import com.iafenvoy.mxt.api.QualityProvider;
+import com.iafenvoy.mxt.data.quality.DefaultQuality;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.data.quality.ItemQuality.Modifier;
 import com.iafenvoy.mxt.data.quality.ItemQualityTags;
@@ -166,7 +167,7 @@ public final class QualityService {
         if (stack.isEmpty()) return Optional.empty();
         return intrinsic(registry, stack)
                 .or(() -> carried(stack))
-                .or(() -> Optional.ofNullable(stack.getData(MxtDataMaps.DEFAULT_QUALITY)));
+                .or(() -> Optional.ofNullable(stack.getData(MxtDataMaps.DEFAULT_QUALITY)).map(DefaultQuality::quality));
     }
 
     // The carried source needs no registry: a carrier answers from the holder already on the stack.
@@ -180,7 +181,7 @@ public final class QualityService {
 
     // A registry the client has not been sent is not an error here: the stack simply resolves to whatever the
     // remaining slots answer.
-    private static Optional<RegistryLookup<ItemQuality>> registry(Provider access) {
+    static Optional<RegistryLookup<ItemQuality>> registry(Provider access) {
         return access.lookup(MxtResourceKeys.ITEM_QUALITY).map(lookup -> (RegistryLookup<ItemQuality>) lookup);
     }
 
@@ -325,12 +326,13 @@ public final class QualityService {
         return List.copyOf(values);
     }
 
-    // The tier the stack itself carries, read through the registry the caller already looked up: an id the current
-    // pack does not provide resolves to nothing rather than to a dead holder.
+    // The tier the stack itself carries. With a registry the id is re-resolved, so an id the current pack does not
+    // provide answers nothing rather than a dead holder; without one the held holder is the whole answer, which is
+    // the same rule attachments follow - a holder outlives the pack that wrote it until the stack is decoded again.
     private static Optional<Holder<ItemQuality>> intrinsic(@Nullable RegistryLookup<ItemQuality> registry, ItemStack stack) {
         Holder<ItemQuality> direct = stack.get(MxtDataComponents.QUALITY.get());
-        return direct == null ? Optional.empty()
-                : registry == null ? Optional.empty()
-                : direct.unwrapKey().flatMap(registry::get).map(holder -> holder);
+        if (direct == null) return Optional.empty();
+        if (registry == null) return direct.isBound() ? Optional.of(direct) : Optional.empty();
+        return direct.unwrapKey().flatMap(registry::get).map(holder -> holder);
     }
 }

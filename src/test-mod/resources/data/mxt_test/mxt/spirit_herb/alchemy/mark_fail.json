@@ -1,0 +1,7 @@
+{
+  "items": "minecraft:crimson_fungus",
+  "main_effects": {
+    "mxt_test:alchemy/mark_fail": 1
+  },
+  "thermal_bias": 0
+}

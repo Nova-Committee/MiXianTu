@@ -14,6 +14,7 @@ import com.iafenvoy.mxt.data.cost.context.CostOrigin;
 import com.iafenvoy.mxt.data.item.TalismanComponent;
 import com.iafenvoy.mxt.data.item.TalismanComponent.TriggerMode;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
+import com.iafenvoy.mxt.data.quality.QualityLadders;
 import com.iafenvoy.mxt.recipe.TalismanDrawingRecipe;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
@@ -27,9 +28,12 @@ import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.FormulaDiagnostics;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.iafenvoy.mxt.util.formula.number.Constant;
-import com.iafenvoy.mxt.util.matcher.builtin.ItemEntry;
+import com.iafenvoy.mxt.util.matcher.ItemMatcher;
+import com.iafenvoy.mxt.util.matcher.builtin.IngredientEntry;
+import com.iafenvoy.mxt.util.matcher.builtin.TagEntry;
 import net.minecraft.core.Holder;
 import net.minecraft.core.NonNullList;
+import net.minecraft.core.RegistryAccess;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
@@ -130,10 +134,13 @@ public final class TalismanWorkstationService {
         CostContext context = context(player, paperSlot);
         CostTransaction.Planning planning = CostTransaction.plan(costs, context);
         if (!planning.ok()) return Optional.empty();
+        // Read before the payment, because the settlement needs the paper's tier and by then the slot is empty.
+        ItemStack paper = firstMatching(paperSlot, paperEntry(recipe));
+        if (paper.isEmpty()) return Optional.empty();
         List<Runnable> refunds = snapshotResources(context, planning);
         List<ItemStack> before = contents(paperSlot);
         if (!CostTransaction.commit(planning, context).paid()) return Optional.empty();
-        return Optional.of(new TalismanDrawingSession(id, recipe, costs, context, paperSlot,
+        return Optional.of(new TalismanDrawingSession(id, recipe, costs, context, paperSlot, paper,
                 charged(before, paperSlot), refunds, player.level().getGameTime()));
     }
 
@@ -215,7 +222,9 @@ public final class TalismanWorkstationService {
 
     private static Outcome finish(ServerPlayer player, TalismanDrawingSession session, TalismanDrawingRecipe recipe,
                                   double completion, boolean success) {
-        FormulaContext formula = FormulaContext.of(player, Map.of(TalismanDrawingRecipe.PERCENTAGE, completion));
+        FormulaContext formula = FormulaContext.of(player, Map.of(
+                TalismanDrawingRecipe.PERCENTAGE, completion,
+                TalismanDrawingRecipe.PAPER_RANK, paperRank(player.level().registryAccess(), session.paper())));
         if (!success) {
             for (ItemStack extra : failureItems(recipe)) player.getInventory().placeItemBackInInventory(extra);
             recipe.result().failureAction().execute(player, formula);
@@ -318,10 +327,35 @@ public final class TalismanWorkstationService {
      */
     private static List<Cost> costs(TalismanDrawingRecipe recipe) {
         List<Cost> costs = new ArrayList<>(recipe.costs().size() + 1);
-        costs.add(new ItemCost(List.of(new ItemEntry(TalismanDrawingRecipe.paper())),
-                new Constant(TalismanDrawingRecipe.DEFAULT_PAPER_COUNT)));
+        costs.add(new ItemCost(List.of(paperEntry(recipe)), new Constant(TalismanDrawingRecipe.DEFAULT_PAPER_COUNT)));
         costs.addAll(recipe.costs());
         return costs;
+    }
+
+    /**
+     * What this formula draws on. A formula that names no paper takes the tag, which is what every formula did
+     * before the field existed - and what the station slot accepts in either case.
+     */
+    private static ItemMatcher.Entry paperEntry(TalismanDrawingRecipe recipe) {
+        return recipe.paper().<ItemMatcher.Entry>map(IngredientEntry::new)
+                .orElseGet(() -> new TagEntry(TalismanDrawingRecipe.paperTag()));
+    }
+
+    // The stack the paper cost will come out of: the plan reserves from the lowest matching slot, and the paper is
+    // the first cost in the array, so this is exactly the one the payment takes.
+    private static ItemStack firstMatching(Container container, ItemMatcher.Entry entry) {
+        for (int slot = 0; slot < container.getContainerSize(); slot++) {
+            ItemStack stack = container.getItem(slot);
+            if (entry.matches(stack)) return stack.copyWithCount(1);
+        }
+        return ItemStack.EMPTY;
+    }
+
+    // The only number a tier has: its position on the ladder it belongs to. A paper nothing grades and the entry
+    // tier both answer 0, which a settlement formula therefore cannot tell apart.
+    private static double paperRank(RegistryAccess access, ItemStack paper) {
+        Holder<ItemQuality> quality = QualityService.find(access, paper).orElse(null);
+        return quality == null ? 0.0D : QualityLadders.rank(access, quality).orElse(0);
     }
 
     private static CostContext context(ServerPlayer player, Container paperSlot) {

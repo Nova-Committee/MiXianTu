@@ -32,6 +32,14 @@ public final class AlchemyHeatService {
         return definition == null ? 0.0D : positive(definition.heatingPerTick());
     }
 
+    /**
+     * Whether this block claims to heat at all - a table entry, or a block answering for itself. The furnace reads
+     * the answer rather than this flag; a display asks it to tell "no heat source" from "one that is currently off".
+     */
+    public static boolean isHeatSource(BlockState state) {
+        return state.getBlock() instanceof AlchemyHeatSource || find(state) != null;
+    }
+
     // The heat cell may sit in a chunk nobody loaded; reading it must not generate one.
     private static @Nullable BlockState stateAt(ServerLevel level, BlockPos pos) {
         return level.isLoaded(pos) ? level.getBlockState(pos) : null;

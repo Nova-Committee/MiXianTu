@@ -6,6 +6,8 @@ import org.jspecify.annotations.NonNull;
 
 public enum AlchemyFailure implements StringRepresentable {
     FURNACE_QUALITY,
+    FURNACE_TIER,
+    INPUT_TIER,
     QUALITY_CONDITIONS,
     BINDING_CONDITIONS,
     UNBOUND,

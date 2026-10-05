@@ -1,5 +1,6 @@
 {
   "name": "quality.mxt.mxt_test.alchemy/kiln_a",
   "description": "quality.mxt.mxt_test.alchemy/kiln_a.description",
+  "next": "mxt_test:alchemy/kiln_b",
   "alchemy_modifier": { "modifier": 1 }
 }

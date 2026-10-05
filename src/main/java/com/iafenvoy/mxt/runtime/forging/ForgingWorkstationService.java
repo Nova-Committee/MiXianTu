@@ -3,7 +3,6 @@ package com.iafenvoy.mxt.runtime.forging;
 import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.data.forging.ForgingBlueprint;
 import com.iafenvoy.mxt.data.forging.ForgingBlueprint.FailureSettlement;
-import com.iafenvoy.mxt.data.forging.ForgingMaterial;
 import com.iafenvoy.mxt.data.forging.ForgingMethod;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
@@ -24,10 +23,14 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.Container;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.neoforged.neoforge.common.crafting.SizedIngredient;
 
 import java.util.*;
+import java.util.stream.Stream;
 
 /**
  * Authoritative forge-table transaction boundary - material matching, tool/blueprint gating, the shared
@@ -78,21 +81,31 @@ public final class ForgingWorkstationService {
 
     // ------------------------------------------------------------------ materials
 
-    // One entry's count is a total and not a share: a blueprint's validation rejects a list that names the
-    // same item twice.
-    public static int availableCount(Container container, ForgingMaterial entry) {
+    // One entry's count is a total across the input slots, not a share, which is why an entry is never tested with
+    // SizedIngredient#test - that one wants a single stack to hold the whole count.
+    public static int availableCount(Container container, SizedIngredient entry) {
         int available = 0;
         for (int index = ForgingSurface.INPUT_START; index < ForgingSurface.INPUT_START + ForgingSurface.INPUT_SLOTS; index++) {
             ItemStack stack = container.getItem(index);
-            if (entry.matches(stack)) available += stack.getCount();
+            if (entry.ingredient().test(stack)) available += stack.getCount();
         }
         return available;
     }
 
     // Exactly the resolution start performs before it consumes anything, so the screen's greyed button and
     // this refusal cannot diverge.
-    public static boolean materialsCovered(Container container, List<ForgingMaterial> requirement) {
+    public static boolean materialsCovered(Container container, List<SizedIngredient> requirement) {
         return StartupMaterials.resolve(container, requirement) != null;
+    }
+
+    // The item an entry names, for the interface: a plain ingredient answers from its holder set and a custom one
+    // from the items it enumerates. Empty for a tag that currently holds nothing.
+    public static ItemStack preview(SizedIngredient entry) {
+        Ingredient ingredient = entry.ingredient();
+        Stream<Holder<Item>> items = ingredient.isCustom()
+                ? ingredient.getCustomIngredient().items()
+                : ingredient.getValues().stream();
+        return items.findFirst().map(holder -> new ItemStack(holder.value())).orElse(ItemStack.EMPTY);
     }
 
     // ------------------------------------------------------------------ cancellation policy
@@ -316,44 +329,43 @@ public final class ForgingWorkstationService {
 
     // Resolution only inspects, so a partially satisfiable blueprint never consumes anything.
     static final class StartupMaterials {
-        private final List<ItemStack> declared;
+        private final List<ItemStack> taken;
         // Slot index to the number of items that will be removed from it.
         private final Map<Integer, Integer> removals;
 
-        private StartupMaterials(List<ItemStack> declared, Map<Integer, Integer> removals) {
-            this.declared = declared;
+        private StartupMaterials(List<ItemStack> taken, Map<Integer, Integer> removals) {
+            this.taken = taken;
             this.removals = removals;
         }
 
         // Returns null when the container cannot cover the requirement.
-        static StartupMaterials resolve(Container container, List<ForgingMaterial> requirement) {
+        static StartupMaterials resolve(Container container, List<SizedIngredient> requirement) {
             Map<Integer, Integer> removals = new LinkedHashMap<>();
             List<ItemStack> consumed = new ArrayList<>();
-            for (ForgingMaterial entry : requirement) {
-                ItemStack taken = entry.createStack();
-                if (taken.isEmpty()) return null;
-                int needed = taken.getCount();
+            for (SizedIngredient entry : requirement) {
+                int needed = entry.count();
                 for (int index = ForgingSurface.INPUT_START; index < ForgingSurface.INPUT_START + ForgingSurface.INPUT_SLOTS && needed > 0; index++) {
                     ItemStack available = container.getItem(index);
-                    if (available.isEmpty() || !entry.matches(available)) continue;
+                    if (available.isEmpty() || !entry.ingredient().test(available)) continue;
                     int already = removals.getOrDefault(index, 0);
                     int free = available.getCount() - already;
                     if (free <= 0) continue;
                     int moved = Math.min(needed, free);
                     removals.merge(index, moved, Integer::sum);
+                    // The stack actually taken rather than the declaration: a graded material keeps the components
+                    // it was taken with, which is what the settlement reads its tier from.
+                    consumed.add(available.copyWithCount(moved));
                     needed -= moved;
                 }
                 if (needed > 0) return null;
-                consumed.add(taken);
             }
             return new StartupMaterials(consumed, removals);
         }
 
         // The stacks that were taken, used for cancel and failure returns.
         List<ItemStack> consumed() {
-            return this.declared;
+            return this.taken;
         }
-
         void consume(Container container) {
             this.removals.forEach((index, takenCount) -> {
                 ItemStack available = container.getItem(index);

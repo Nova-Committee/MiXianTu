@@ -2,6 +2,7 @@ package com.iafenvoy.mxt.picker;
 
 import com.iafenvoy.mxt.data.item.*;
 import com.iafenvoy.mxt.data.item.TalismanComponent.TriggerMode;
+import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.registry.MxtBlocks;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.registry.MxtDataMaps;
@@ -66,7 +67,9 @@ public final class ItemPickerManager {
         registerDataMap(MxtDataMaps.WEAPON_BINDING, Registries.ITEM, Item::getDefaultInstance);
         registerDataMap(MxtDataMaps.TOOL_BINDING, Registries.ITEM, Item::getDefaultInstance);
         registerDataMap(MxtDataMaps.BLUEPRINT_BINDING, Registries.ITEM, Item::getDefaultInstance);
+        registerDataMap(MxtDataMaps.DEFAULT_QUALITY, Registries.ITEM, Item::getDefaultInstance);
         registerDataMap(MxtDataMaps.BLOCK_AURA, Registries.BLOCK, block -> block.asItem().getDefaultInstance());
+        registerDataMap(MxtDataMaps.HEAT_SOURCE, Registries.BLOCK, block -> block.asItem().getDefaultInstance());
 
         // One generic carrier per pill definition: the component names the pill, which is how a built-in dose is
         // handed out. Bindings stay item-shaped rows, because a binding is only about which items those are.
@@ -100,7 +103,7 @@ public final class ItemPickerManager {
 
         // A quality carries its name in the data pack rather than in a language file, so that name wins - and the
         // row is drawn in the tier's own colour, which is the one place the ladder is visible side by side.
-        registerSingle(MxtResourceKeys.ITEM_QUALITY, holder -> described(MxtItems.IDENTIFICATION_MIRROR.toStack(), holder, QualityService.coloredName(holder, holder.value().name())));
+        registerOrderedQualities();
     }
 
     /**
@@ -182,6 +185,21 @@ public final class ItemPickerManager {
                 }
             });
             return List.copyOf(collected);
+        }));
+    }
+
+    // The pack's own order for a list of tiers first, then everything it did not name; a picker page is exactly
+    // such a list, which makes it the consumer of the tooltip-order tag.
+    private static void registerOrderedQualities() {
+        PROVIDERS.add(new ItemProvider(new PickerCategory.OfRegistry<>(MxtResourceKeys.ITEM_QUALITY), (provider, filter) -> {
+            List<PickerItem> items = new ArrayList<>();
+            for (Holder<ItemQuality> holder : QualityService.ordered(provider)) {
+                Identifier id = HolderHelper.idOrNull(holder);
+                if (id == null || !filter.test(id)) continue;
+                items.add(described(MxtItems.IDENTIFICATION_MIRROR.toStack(), holder,
+                        QualityService.coloredName(holder, holder.value().name())));
+            }
+            return List.copyOf(items);
         }));
     }
 

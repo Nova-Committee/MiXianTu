@@ -1,6 +1,11 @@
 {
   "type": "mxt:talisman_drawing",
   "talisman": "mxt_test:drawing_ward",
+  "paper": {
+    "neoforge:ingredient_type": "mxt:quality",
+    "items": "#mxt:talisman_paper",
+    "min_quality": "mxt_test:normal"
+  },
   "pattern": {
     "guide": "fade",
     "strokes": [

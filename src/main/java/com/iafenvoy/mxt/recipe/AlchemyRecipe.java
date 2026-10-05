@@ -4,6 +4,7 @@ import com.iafenvoy.mxt.data.action.BlockAction;
 import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.alchemy.MedicinalProperty;
 import com.iafenvoy.mxt.data.aura.Aura;
+import com.iafenvoy.mxt.data.quality.QualityRequirement;
 import com.iafenvoy.mxt.registry.MxtRecipeSerializers;
 import com.iafenvoy.mxt.registry.MxtRecipeTypes;
 import com.iafenvoy.mxt.runtime.alchemy.AlchemyResolver;
@@ -31,7 +32,10 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * Property thresholds, not an item-id list. A guide is one example and never overrides the mixture check.
+ * Property thresholds, not an item-id list. A guide is one example and never overrides the mixture check. The
+ * furnace asks about two things the mixtures cannot say: {@code furnace_quality} is required of the core item and
+ * {@code input_quality} of every non-empty input slot. The core's tier position is readable in every formula here
+ * as {@code furnace_rank}.
  */
 public record AlchemyRecipe(Component name, Component description,
                             Map<Holder<MedicinalProperty>, NumberProvider> mainRequirements,
@@ -43,10 +47,30 @@ public record AlchemyRecipe(Component name, Component description,
                             List<ItemStackTemplate> successOutputs, List<ItemStackTemplate> failureOutputs,
                             EntityAction successAction, EntityAction failureAction,
                             BlockAction successBlockAction, BlockAction failureBlockAction,
+                            Optional<QualityRequirement> furnaceQuality, Optional<QualityRequirement> inputQuality,
                             Optional<Guide> guide) implements Recipe<AlchemyRecipeInput> {
+    /**
+     * The core's own tier position, which a formula of this recipe may read. Injected for one batch the way the
+     * drawing's {@code paper_rank} is, so it is not an {@code mxt:formula_variable} entry.
+     */
+    public static final String FURNACE_RANK = "furnace_rank";
+    // A tier required of the furnace item, or of every input. Nested rather than inlined, because a bare quality on
+    // a recipe would read as the product's tier; a written but empty one is refused at load.
+    private static final MapCodec<Optional<QualityRequirement>> FURNACE_QUALITY_FIELD = requirement("furnace_quality");
+    private static final MapCodec<Optional<QualityRequirement>> INPUT_QUALITY_FIELD = requirement("input_quality");
+
+    private static MapCodec<Optional<QualityRequirement>> requirement(String field) {
+        return QualityRequirement.CODEC.flatXmap(
+                requirement -> requirement.isEmpty()
+                        ? DataResult.error(() -> "mxt:alchemy " + field + " needs a quality list or a min_quality")
+                        : DataResult.success(requirement),
+                DataResult::success
+        ).codec().optionalFieldOf(field);
+    }
+
     private static final Codec<Map<Holder<MedicinalProperty>, NumberProvider>> PROPERTIES =
             Codec.unboundedMap(MedicinalProperty.CODEC, NumberProvider.CODEC);
-    public static final MapCodec<AlchemyRecipe> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+    public static final MapCodec<AlchemyRecipe> CODEC = RecordCodecBuilder.<AlchemyRecipe>mapCodec(i -> i.group(
             MiscCodecs.pair(
                             MiscCodecs.TRANSLATABLE_COMPONENT.optionalFieldOf("name", Component.empty()),
                             MiscCodecs.TRANSLATABLE_COMPONENT.optionalFieldOf("description", Component.empty()))
@@ -66,11 +90,14 @@ public record AlchemyRecipe(Component name, Component description,
                     .forGetter(recipe -> Pair.of(recipe.successAction(), recipe.failureAction())),
             MiscCodecs.pair(BlockAction.optionalCodec("success_block_action"), BlockAction.optionalCodec("failure_block_action"))
                     .forGetter(recipe -> Pair.of(recipe.successBlockAction(), recipe.failureBlockAction())),
-            Guide.CODEC.optionalFieldOf("guide").forGetter(AlchemyRecipe::guide)
+            // Both tier requirements read as one group: the third pair is what keeps the group at fifteen components.
+            MiscCodecs.pair(MiscCodecs.pair(FURNACE_QUALITY_FIELD, INPUT_QUALITY_FIELD), Guide.CODEC.optionalFieldOf("guide"))
+                    .forGetter(recipe -> Pair.of(Pair.of(recipe.furnaceQuality(), recipe.inputQuality()), recipe.guide()))
     ).apply(i, (texts, main, auxiliary, catalyst, balance, target, tolerance, duration, badTicks, aura,
-                success, failure, actions, blocks, guide) -> new AlchemyRecipe(
+                success, failure, actions, blocks, furnace) -> new AlchemyRecipe(
             texts.getFirst(), texts.getSecond(), main, auxiliary, catalyst, balance, target, tolerance, duration, badTicks, aura,
-            success, failure, actions.getFirst(), actions.getSecond(), blocks.getFirst(), blocks.getSecond(), guide)));
+            success, failure, actions.getFirst(), actions.getSecond(), blocks.getFirst(), blocks.getSecond(),
+            furnace.getFirst().getFirst(), furnace.getFirst().getSecond(), furnace.getSecond())));
     public static final StreamCodec<RegistryFriendlyByteBuf, AlchemyRecipe> PACKET_CODEC =
             ByteBufCodecs.fromCodecWithRegistries(CODEC.codec());
 

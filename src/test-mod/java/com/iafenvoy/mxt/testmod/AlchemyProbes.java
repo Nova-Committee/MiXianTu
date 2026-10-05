@@ -73,6 +73,7 @@ import java.util.function.Predicate;
 public final class AlchemyProbes {
     private static final String NS = "mxt_test";
     private static final Identifier WIDE = id("alchemy/wide");
+    private static final Identifier CAPPED = id("alchemy/capped");
     private static final Identifier SMALL = id("alchemy/small");
     private static final Identifier DUAL = id("alchemy/dual");
     private static final Identifier SEALED = id("alchemy/sealed");
@@ -147,6 +148,7 @@ public final class AlchemyProbes {
             callbackFailures(source, level, player, player.blockPosition().offset(6, 1, 68), gate, touched);
             menuOwnership(source, level, player, player.blockPosition().offset(6, 1, 76), touched);
             heatSources(source, level, player, player.blockPosition().offset(6, 1, 84), touched);
+            coreQuality(source, level, player, player.blockPosition().offset(6, 1, 92), touched);
         } catch (PlaceRefused refused) {
             failed++;
             checks++;
@@ -316,6 +318,34 @@ public final class AlchemyProbes {
         StartResult broken = AlchemyWorkstationService.start(player, wide);
         check(source, "missing-shell", broken.failure(), AlchemyFailure.STRUCTURE);
         check(source, "missing-kept", wide.container().getItem(0).getCount(), 2);
+    }
+
+    // The core is the one machine part a formula asks about: the tier it requires and the rank its own formulas
+    // read both come from the controller's item, never from the walls or the shape.
+    private static void coreQuality(CommandSourceStack source, ServerLevel level, ServerPlayer player, BlockPos at, List<BlockPos> touched) {
+        AlchemyFurnaceBlockEntity furnace = place(level, at, Direction.NORTH, item(level, WIDE), touched);
+        furnace.refreshStructure();
+        furnace.setTargetTemperature(50);
+        fillMarked(furnace, Items.POPPY);
+        // The plain core carries no tier of its own, so the default_quality table names the ladder's entry for it.
+        AlchemyPreview entry = AlchemyWorkstationService.preview(player, furnace);
+        check(source, "core-quality-resolved", resolvedId(entry), HOT);
+        check(source, "core-quality-entry", AlchemyWorkstationService.start(player, furnace).failure(), AlchemyFailure.TEMPERATURE);
+        check(source, "core-quality-entry-kept", furnace.container().getItem(0).getCount(), 2);
+        check(source, "furnace-rank-entry", entry.parameters().map(AlchemyWorkstationService.Parameters::durationTicks).orElse(-1L), 4L);
+        // One tier up the same ladder satisfies a floor set at the entry, and that tier's own alchemy_modifier is what
+        // shortens the batch: hot's numbers read rank 1 (4 + 1), the tier halves the result.
+        furnace.acceptFurnaceItem(tieredCore(level, id("alchemy/kiln_b")));
+        AlchemyPreview higher = AlchemyWorkstationService.preview(player, furnace);
+        check(source, "core-quality-higher", AlchemyWorkstationService.start(player, furnace).failure(), AlchemyFailure.TEMPERATURE);
+        check(source, "core-tier-speed", higher.parameters().map(AlchemyWorkstationService.Parameters::durationTicks).orElse(-1L), 3L);
+        // A tier from another ladder is neither above nor below it, so the requirement refuses instead of guessing.
+        furnace.acceptFurnaceItem(tieredCore(level, id("poor")));
+        check(source, "core-quality-cross-ladder", AlchemyWorkstationService.preview(player, furnace).blocker().orElse(null), AlchemyFailure.FURNACE_TIER);
+        check(source, "core-quality-refused", AlchemyWorkstationService.start(player, furnace).started(), false);
+        check(source, "core-quality-kept", furnace.container().getItem(0).getCount(), 2);
+        check(source, "core-quality-heat-kept", heatState(level, furnace).is(AlchemyTestHeatBlocks.FIRE.get()), true);
+        clearFurnace(level, at, touched);
     }
 
     private static void heatAndFailure(CommandSourceStack source, ServerLevel level, ServerPlayer player, BlockPos at, List<BlockPos> touched) {
@@ -781,6 +811,14 @@ public final class AlchemyProbes {
         return stack;
     }
 
+    // The same specification with a tier written on the core itself, which is how a furnace states one by hand.
+    private static ItemStack tieredCore(ServerLevel level, Identifier quality) {
+        ItemStack stack = item(level, WIDE);
+        stack.set(MxtDataComponents.QUALITY.get(), MxtDatapackRegistries
+                .holder(level.registryAccess(), MxtResourceKeys.ITEM_QUALITY, quality).orElseThrow());
+        return stack;
+    }
+
     private static Holder<AlchemyFurnaceDefinition> holder(ServerLevel level, Identifier id) {
         return MxtDatapackRegistries.holder(level.registryAccess(), MxtResourceKeys.ALCHEMY_FURNACE, id).orElseThrow();
     }
@@ -930,6 +968,14 @@ public final class AlchemyProbes {
         fill(mixed);
         check(source, "missing-material", AlchemyWorkstationService.start(player, mixed).failure(), AlchemyFailure.STRUCTURE);
         check(source, "missing-material-kept", mixed.container().getItem(0).getCount(), 2);
+        clearFurnace(level, at, touched);
+        // A specification that declares its own ceiling is the third and lowest one: kiln walls take 200 and the test
+        // heat block gives 80, yet this core caps the furnace at 60.
+        AlchemyFurnaceBlockEntity capped = place(level, at, Direction.NORTH, item(level, CAPPED), touched);
+        capped.refreshStructure();
+        check(source, "capped-limit", capped.maximumTemperature(), 60.0D);
+        check(source, "capped-rejects-80", capped.setTargetTemperature(80.0D), false);
+        check(source, "capped-accepts-60", capped.setTargetTemperature(60.0D), true);
         clearFurnace(level, at, touched);
         AlchemyFurnaceBlockEntity owned = place(level, at, Direction.NORTH, item(level, WIDE), touched);
         owned.refreshStructure();

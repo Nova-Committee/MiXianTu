@@ -17,10 +17,10 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * Small, bounded text helpers used by both spirit recipe categories.
+ * Small, bounded text helpers shared by the JEI recipe categories.
  */
 final class SpiritJeiText {
-    private static final int PANEL_BACKGROUND = 0xC6C6C6;
+    static final int PANEL_BACKGROUND = 0xC6C6C6;
     private static final double TEXT_CONTRAST_TARGET = 4.5D;
 
     private SpiritJeiText() {
@@ -61,7 +61,7 @@ final class SpiritJeiText {
         return DefinitionText.name(aura, "aura").getString();
     }
 
-    private static String providerName(NumberProvider provider) {
+    static String providerName(NumberProvider provider) {
         if (provider instanceof Constant(double value)) {
             if (value == Math.rint(value)) return Long.toString((long) value);
             return String.format(Locale.ROOT, "%.2f", value);
@@ -76,7 +76,7 @@ final class SpiritJeiText {
         return clipped + "...";
     }
 
-    private static int readableTextColor(int candidate, int background) {
+    static int readableTextColor(int candidate, int background) {
         return contrastRatio(background, candidate) >= TEXT_CONTRAST_TARGET
                 ? candidate : (contrastRatio(background, 0x000000) >= contrastRatio(background, 0xFFFFFF) ? 0x000000 : 0xFFFFFF);
     }

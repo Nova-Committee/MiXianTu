@@ -58,7 +58,8 @@ public interface AlchemyWorkstation {
     double heatTemperatureLimit();
 
     /**
-     * {@code min(wall, heat)}, or 0 when either limit is unavailable.
+     * The lowest of three ceilings: what the furnace's own specification allows, what the wall cells take, and what
+     * the heat source gives. Zero when the walls or the heat source are unavailable, since then it cannot run at all.
      */
     double maximumTemperature();
 

@@ -1,0 +1,7 @@
+{
+  "items": "minecraft:glow_lichen",
+  "main_effects": {
+    "mxt_test:alchemy/mark_env": 1
+  },
+  "thermal_bias": 0
+}

@@ -2,6 +2,11 @@
   "values": {
     "minecraft:clay_ball": "mxt_test:normal",
     "minecraft:cobblestone": "mxt_test:poor",
-    "mxt:alchemy_furnace": "mxt_test:alchemy/kiln_a"
+    "mxt:alchemy_furnace": "mxt_test:alchemy/kiln_a",
+    "#mxt_test:quality_probe": "mxt_test:poor",
+    "#mxt_test:quality_priority_low": { "quality": "mxt_test:poor", "priority": 0 },
+    "#mxt_test:quality_priority_high": { "quality": "mxt_test:excellent", "priority": 5 },
+    "minecraft:gravel": { "quality": "mxt_test:normal", "priority": 5 },
+    "minecraft:flint": { "quality": "mxt_test:normal", "priority": 0 }
   }
 }

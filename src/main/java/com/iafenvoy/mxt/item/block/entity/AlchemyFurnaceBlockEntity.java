@@ -157,7 +157,9 @@ public final class AlchemyFurnaceBlockEntity extends BlockEntity implements Alch
             minimum = Math.min(minimum, material.get().value().maxTemperature());
             counted++;
         }
-        return counted == 22 && Double.isFinite(minimum) ? minimum : 0.0D;
+        // Counted against the structure's own list, never a written number: a wall added or dropped there would
+        // otherwise silently turn this limit into zero.
+        return counted == AlchemyFurnaceStructure.walls().length && Double.isFinite(minimum) ? minimum : 0.0D;
     }
 
     @Override
@@ -168,10 +170,8 @@ public final class AlchemyFurnaceBlockEntity extends BlockEntity implements Alch
 
     @Override
     public double maximumTemperature() {
-        double wall = this.wallTemperatureLimit();
-        double heat = this.heatTemperatureLimit();
-        if (wall <= 0.0D || heat <= 0.0D) return 0.0D;
-        return Math.min(wall, heat);
+        AlchemyFurnaceDefinition spec = this.furnaceDefinition().map(Holder::value).orElse(null);
+        return AlchemyFurnaceDefinition.temperatureLimit(this.wallTemperatureLimit(), this.heatTemperatureLimit(), spec);
     }
 
     @Override

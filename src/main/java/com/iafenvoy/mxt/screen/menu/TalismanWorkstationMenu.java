@@ -319,10 +319,11 @@ public final class TalismanWorkstationMenu extends ApricityContainerMenu {
 
         private Setup() {
             // The page's station container declares one cell, and the menu keeps one station-side slot behind it;
-            // the page's inventory container is the player's own 36.
+            // the page's inventory container is the player's own 36. The slot takes the paper tag, not a formula's
+            // own paper, because both sides can answer a tag; a formula whose paper is narrower is refused at start.
             this.page = PageSlots.of(AuiPages.talismanPage())
                     .container("station", this.paper, (container, index, x, y) ->
-                            new FilteredSlot(container, index, x, y, stack -> stack.is(TalismanDrawingRecipe.paper())))
+                            new FilteredSlot(container, index, x, y, stack -> stack.is(TalismanDrawingRecipe.paperTag())))
                     .player("inventory")
                     .build();
         }

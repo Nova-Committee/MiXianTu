@@ -3,6 +3,7 @@ package com.iafenvoy.mxt.registry;
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.data.item.*;
 import com.iafenvoy.mxt.item.*;
+import net.minecraft.ChatFormatting;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
@@ -10,6 +11,7 @@ import net.minecraft.world.food.FoodProperties;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Item.Properties;
+import net.minecraft.world.item.ToolMaterial;
 import net.minecraft.world.level.block.Block;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredItem;
@@ -91,6 +93,9 @@ public final class MxtItems {
     // all vanilla's; the second argument is how many tooltip lines its language keys carry.
     public static final DeferredItem<SpecialItem> FRIED_DOUGH_CAKE = register("fried_dough_cake",
             properties -> new SpecialItem(properties.food(new FoodProperties.Builder().nutrition(6).saturationModifier(0.7F).build()), 1));
+    // The other easter egg: a netherite sword whose damage is a step above a netherite sword's, plus one red line.
+    public static final DeferredItem<SpecialItem> SKY_SWALLOWING_SWORD = register("sky_swallowing_sword",
+            properties -> new SpecialItem(properties.sword(ToolMaterial.NETHERITE, 5.0F, -2.4F), 1, ChatFormatting.RED));
 
     public static <T extends Item> DeferredItem<T> register(String path, Function<Properties, T> factory) {
         ResourceKey<Item> key = ResourceKey.create(Registries.ITEM, Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, path));

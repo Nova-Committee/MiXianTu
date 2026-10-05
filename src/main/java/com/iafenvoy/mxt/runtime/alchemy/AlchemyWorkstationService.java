@@ -4,6 +4,8 @@ import com.iafenvoy.mxt.api.AlchemyWorkstation;
 import com.iafenvoy.mxt.data.alchemy.AlchemyFurnaceDefinition;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
+import com.iafenvoy.mxt.data.quality.QualityLadders;
+import com.iafenvoy.mxt.data.quality.QualityRequirement;
 import com.iafenvoy.mxt.event.AlchemyCraftEvent;
 import com.iafenvoy.mxt.recipe.AlchemyRecipe;
 import com.iafenvoy.mxt.recipe.AlchemyRecipeInput.Slot;
@@ -14,6 +16,7 @@ import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.alchemy.AlchemyResolver.Candidate;
 import com.iafenvoy.mxt.runtime.alchemy.AlchemyResolver.Evaluated;
 import com.iafenvoy.mxt.runtime.alchemy.AlchemyResolver.Gap;
+import com.iafenvoy.mxt.runtime.item.QualityRequirements;
 import com.iafenvoy.mxt.runtime.item.QualityService;
 import com.iafenvoy.mxt.runtime.world.AuraResult;
 import com.iafenvoy.mxt.runtime.world.AuraService;
@@ -61,9 +64,12 @@ public final class AlchemyWorkstationService {
         return MxtDatapackRegistries.holder(access, MxtResourceKeys.ALCHEMY_FURNACE, id).map(holder -> holder);
     }
 
-    private static Optional<Parameters> parameters(ServerPlayer player, AlchemyWorkstation station, AlchemyRecipe recipe, Evaluated evaluated) {
+    private static Optional<Parameters> parameters(ServerPlayer player, AlchemyWorkstation station, AlchemyRecipe recipe, Evaluated evaluated, FormulaContext context) {
         if (!evaluated.valid()) return Optional.empty();
-        double modifier = inputModifier(player.registryAccess(), station.container(), FormulaContext.of(player));
+        // Two tiers shorten a batch: the slowest material's, which is what the herbs bring, and the core's own, which
+        // is what the furnace brings - so a higher core tier is faster on every formula without one line of formula.
+        double modifier = inputModifier(player.registryAccess(), station.container(), context)
+                * QualityService.modifier(player.registryAccess(), station.furnaceItem(), ItemQuality::alchemyModifier, context);
         double scaled = modifier == QualityService.DEFAULT_MODIFIER ? evaluated.duration() : evaluated.duration() / modifier;
         if (!Double.isFinite(scaled) || scaled <= 0.0D) scaled = evaluated.duration();
         long ticks = Math.max(1L, Math.round(Math.min(scaled, Long.MAX_VALUE)));
@@ -73,17 +79,24 @@ public final class AlchemyWorkstationService {
     }
 
     public static AlchemyPreview preview(ServerPlayer player, AlchemyWorkstation station) {
+        // The potency formulas read no core: the mixture is what decides which formulas match, so a better core must
+        // not move it. Only the recipe's own formulas read the tier (its thresholds, temperature, duration and
+        // environment), and the batch's length shortens by the core tier's own alchemy_modifier in parameters().
         FormulaContext context = FormulaContext.of(player);
         AlchemyMixture mixture = AlchemyResolver.mixture(player.registryAccess(), slots(station.container()), context);
-        List<Candidate> candidates = AlchemyResolver.candidates(player.level().getServer().getRecipeManager(), mixture, context);
+        List<Candidate> candidates = AlchemyResolver.candidates(player.level().getServer().getRecipeManager(), mixture,
+                context.with(AlchemyRecipe.FURNACE_RANK, furnaceRank(player.registryAccess(), station.furnaceItem())));
         Candidate chosen = AlchemyResolver.dominating(candidates);
         AlchemyFailure blocker = recipeBlocker(candidates, chosen);
         Optional<Parameters> numbers = Optional.empty();
         List<ItemStack> success = List.of(), failure = List.of();
+        QualityRequirement required = null, inputRequired = null;
         if (chosen != null) {
             Optional<RecipeHolder<AlchemyRecipe>> holder = recipe(player.level().getServer().getRecipeManager(), chosen.id());
             if (holder.isPresent()) {
-                numbers = parameters(player, station, holder.get().value(), chosen.evaluated());
+                required = holder.get().value().furnaceQuality().orElse(null);
+                inputRequired = holder.get().value().inputQuality().orElse(null);
+                numbers = parameters(player, station, holder.get().value(), chosen.evaluated(), context);
                 List<ItemStack> madeSuccess = create(holder.get().value().successOutputs());
                 List<ItemStack> madeFailure = create(holder.get().value().failureOutputs());
                 if (madeSuccess == null || madeFailure == null) blocker = AlchemyFailure.INVALID_FORMULA;
@@ -102,6 +115,10 @@ public final class AlchemyWorkstationService {
         else if (spec == null) blocker = AlchemyFailure.NO_FURNACE;
         else if (QualityService.find(player.registryAccess(), station.furnaceItem()).isEmpty())
             blocker = AlchemyFailure.FURNACE_QUALITY;
+        else if (required != null && !QualityRequirements.test(player.registryAccess(), station.furnaceItem(), required))
+            blocker = AlchemyFailure.FURNACE_TIER;
+        else if (inputRequired != null && !inputsSatisfy(player.registryAccess(), station.container(), inputRequired))
+            blocker = AlchemyFailure.INPUT_TIER;
         else {
             qualityFailure = QualityService.check(player, station.furnaceItem());
             AlchemyFailure placed = placement(station.container(), spec);
@@ -281,6 +298,16 @@ public final class AlchemyWorkstationService {
         return count > spec.capacity() ? AlchemyFailure.CAPACITY : null;
     }
 
+    // Every non-empty input slot answers the one requirement question; a single herb below the floor refuses the
+    // batch. The core's own requirement is asked separately, because it is the station rather than the contents.
+    private static boolean inputsSatisfy(Provider access, Container container, QualityRequirement requirement) {
+        for (int index = 0; index < AlchemySlots.OUTPUT_START; index++) {
+            ItemStack stack = container.getItem(index);
+            if (!stack.isEmpty() && !QualityRequirements.test(access, stack, requirement)) return false;
+        }
+        return true;
+    }
+
     private static double inputModifier(Provider access, Container container, FormulaContext context) {
         double modifier = QualityService.DEFAULT_MODIFIER;
         boolean graded = false;
@@ -436,6 +463,12 @@ public final class AlchemyWorkstationService {
             RecipeHolder<AlchemyRecipe> cast = (RecipeHolder<AlchemyRecipe>) holder;
             return cast;
         });
+    }
+
+    // The core's position on its own ladder; a core with no tier, or one no walked ladder holds, reads as 0, the
+    // same way the drawing's paper_rank answers 0 for both.
+    private static double furnaceRank(Provider access, ItemStack stack) {
+        return QualityService.find(access, stack).map(quality -> QualityLadders.rank(access, quality).orElse(0)).orElse(0);
     }
 
     private static @Nullable AlchemyFailure recipeBlocker(List<Candidate> candidates, @Nullable Candidate chosen) {

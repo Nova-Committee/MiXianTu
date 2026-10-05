@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.runtime.forging;
 
 import com.iafenvoy.mxt.data.forging.ForgingBlueprint;
-import com.iafenvoy.mxt.data.forging.ForgingMaterial;
+import net.neoforged.neoforge.common.crafting.SizedIngredient;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.world.Container;
@@ -62,8 +62,8 @@ public interface ForgingSurface {
         if (!isInputSlot(slot)) return false;
         if (active) return false;
         if (locked == null) return true;
-        for (ForgingMaterial requirement : locked.input())
-            if (requirement.matches(stack)) return true;
+        for (SizedIngredient requirement : locked.input())
+            if (requirement.ingredient().test(stack)) return true;
         return false;
     }
 
