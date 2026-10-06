@@ -7,8 +7,7 @@ import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.aura.AuraGain;
 import com.iafenvoy.mxt.data.aura.AuraRequirement;
 import com.iafenvoy.mxt.data.condition.builtin.entity.AuraRangeEntityCondition;
-import com.iafenvoy.mxt.data.cost.CostTransaction;
-import com.iafenvoy.mxt.data.cost.Costs;
+import com.iafenvoy.mxt.data.cost.CostPayment;
 import com.iafenvoy.mxt.data.cost.context.CostContext;
 import com.iafenvoy.mxt.data.cost.context.CostFailure;
 import com.iafenvoy.mxt.data.cost.context.CostOrigin;
@@ -121,16 +120,18 @@ public final class CultivationMethodService {
         // plan uses; the shared-pool allocation below scales the amounts before they are committed.
         CostContext auraContext = CostContext.pool(entity, entity.level(), entity.blockPosition(), context, CostOrigin.CULTIVATION);
         // Whatever size is available is not asked here: this tick's share is decided below, and the commit is
-        // what checks the pool against the amount actually spent.
-        CostTransaction.Planning auraPlan = CostTransaction.planDeferred(definition.auraCosts(), auraContext);
-        if (!auraPlan.ok()) return stop(entity, spirit, action, definition, gameTime, Failure.INVALID_FORMULA);
+        // what checks the pool against the amount actually spent, so the entries are only loaded.
+        CostPayment auraPlan = CostPayment.of(auraContext);
+        if (auraPlan.loadAll(definition.auraCosts()).isPresent())
+            return stop(entity, spirit, action, definition, gameTime, Failure.INVALID_FORMULA);
         Map<Holder<Aura>, Double> auraCosts = auraPlan.auras();
         double auraCost = auraCosts.values().stream().mapToDouble(Double::doubleValue).sum();
         if (!Double.isFinite(affinity) || affinity < 0.0D)
             return stop(entity, spirit, action, definition, gameTime, Failure.INVALID_FORMULA);
         CostContext costContext = CostContext.of(entity, context, CostOrigin.CULTIVATION);
-        CostTransaction.Planning costPlan = CostTransaction.plan(definition.costs(), costContext);
-        if (!costPlan.ok()) return stop(entity, spirit, action, definition, gameTime, Failure.INVALID_FORMULA);
+        CostPayment costPlan = CostPayment.of(costContext);
+        if (costPlan.loadAndTest(definition.costs()).isPresent())
+            return stop(entity, spirit, action, definition, gameTime, Failure.INVALID_FORMULA);
         Evaluation costs = Evaluation.of(costPlan.resources());
         Map<Holder<Aura>, Double> gains;
         try {
@@ -158,10 +159,10 @@ public final class CultivationMethodService {
             return stop(entity, spirit, action, definition, gameTime, Failure.INVALID_FORMULA);
         // Both payments are one boundary: a body cost that refuses after the ground aura was taken would otherwise
         // leave the aura spent without a settlement.
-        List<CostTransaction.Payment> payments = new ArrayList<>();
-        if (!auraPlan.auras().isEmpty()) payments.add(new CostTransaction.Payment(auraPlan, auraContext));
-        payments.add(new CostTransaction.Payment(costPlan, costContext, resources));
-        CostTransaction.PayResult payment = CostTransaction.commitAll(payments);
+        List<CostPayment> payments = new ArrayList<>();
+        if (!auraPlan.auras().isEmpty()) payments.add(auraPlan);
+        payments.add(costPlan);
+        CostPayment.Result payment = CostPayment.payAll(payments);
         if (!payment.paid())
             return Result.rejected(payment.failure() == CostFailure.INSUFFICIENT_AURA
                     ? Failure.INSUFFICIENT_AURA : Failure.INSUFFICIENT_RESOURCE, payment.failedResource());

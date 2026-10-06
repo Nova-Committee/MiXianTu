@@ -38,7 +38,8 @@ public record SecretRealm(Component name, Component description, Optional<Holder
                           List<StructurePlacement> structures, List<EntryPoint> entry,
                           EntityCondition enterCondition, EntityCondition exitCondition,
                           Optional<Component> enterDeniedMessage, Optional<Component> exitDeniedMessage,
-                          EntityAction enterAction, EntityAction exitAction) implements NamedDefinition, QualityProvider {
+                          EntityAction enterAction,
+                          EntityAction exitAction) implements NamedDefinition, QualityProvider {
     // Written explicitly onto an instance without a border instead of inheriting the overworld border that derived
     // level data would otherwise hand to a runtime dimension.
     public static final double DEFAULT_BORDER_SIZE = 29999984.0D;

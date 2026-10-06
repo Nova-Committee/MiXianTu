@@ -2,7 +2,8 @@ package com.iafenvoy.mxt.recipe;
 
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.data.Talisman;
-import com.iafenvoy.mxt.data.action.EntityAction;import com.iafenvoy.mxt.data.condition.EntityCondition;
+import com.iafenvoy.mxt.data.action.EntityAction;
+import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.data.cost.Cost;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.registry.MxtRecipeSerializers;

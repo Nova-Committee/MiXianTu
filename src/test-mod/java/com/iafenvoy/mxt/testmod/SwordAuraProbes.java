@@ -8,7 +8,9 @@ import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.ArrayList;
@@ -34,7 +36,7 @@ final class SwordAuraProbes {
     }
 
     private static int spawn(CommandSourceStack source, int count, double distance) throws CommandSyntaxException {
-        var player = source.getPlayerOrException();
+        ServerPlayer player = source.getPlayerOrException();
         clear(source);
         Vec3 forward = player.getLookAngle().normalize();
         Vec3 right = forward.cross(new Vec3(0, 1, 0));
@@ -47,7 +49,7 @@ final class SwordAuraProbes {
         for (int index = 0; index < count; index++) {
             Vec3 position = center.add(right.scale((index % side - (side - 1) * 0.5) * 1.25))
                     .add(up.scale((index / side - (side - 1) * 0.5) * 2.4));
-            SwordAuraEntity sword = MxtEntityTypes.SWORD_AURA.get().create(source.getLevel(), net.minecraft.world.entity.EntitySpawnReason.COMMAND);
+            SwordAuraEntity sword = MxtEntityTypes.SWORD_AURA.get().create(source.getLevel(), EntitySpawnReason.COMMAND);
             if (sword == null) continue;
             sword.setPos(position);
             sword.setLifetime(12000);
@@ -60,7 +62,7 @@ final class SwordAuraProbes {
     }
 
     private static int clear(CommandSourceStack source) {
-        var removed = new ArrayList<Entity>();
+        ArrayList<Entity> removed = new ArrayList<Entity>();
         for (Entity entity : source.getLevel().getAllEntities())
             if (entity instanceof SwordAuraEntity && entity.entityTags().contains(TAG)) removed.add(entity);
         removed.forEach(Entity::discard);

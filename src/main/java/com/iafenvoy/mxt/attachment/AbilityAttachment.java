@@ -10,11 +10,7 @@ import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
 import org.jspecify.annotations.Nullable;
 
-import java.util.Collection;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Ability grants are tracked by source, so removing one source cannot remove another source's ability. The state a

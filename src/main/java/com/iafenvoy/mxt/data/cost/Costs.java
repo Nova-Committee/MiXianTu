@@ -4,9 +4,7 @@ import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.cost.builtin.AuraCost;
 import com.iafenvoy.mxt.data.cost.builtin.ResourceCost;
 import com.iafenvoy.mxt.data.cost.context.CostContext;
-import com.iafenvoy.mxt.data.cost.context.CostFailure;
 import com.iafenvoy.mxt.util.HolderHelper;
-import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.DataResult;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
@@ -24,8 +22,8 @@ public final class Costs {
     /**
      * Two entries that name the same store are rejected: the order they are written in is invisible at runtime, so
      * a duplicate can only be a mistake. Entries that reach the same resource through different routes (an aura and
-     * the resource it is counted in) are not duplicates - the transaction adds them up, which is the one answer
-     * that does not depend on order.
+     * the resource it is counted in) are not duplicates - the draft adds them up, which is the one answer that does
+     * not depend on order.
      */
     public static DataResult<List<Cost>> validate(List<Cost> costs) {
         Set<Identifier> resources = new HashSet<>();
@@ -51,23 +49,17 @@ public final class Costs {
     }
 
     /**
-     * The aura amounts a costs array would take, evaluated only - no availability check. For the callers that pay
-     * a pool or a store by hand (a per-tick cultivation settlement that holds the chunk store rather than a
-     * level), and for the shared-pool allocation, which needs the amounts before it can scale them.
+     * The aura amounts a costs array would take, loaded only - no availability check. For the callers that pay a
+     * pool or a store by hand (a per-tick cultivation settlement that holds the chunk store rather than a level),
+     * and for the shared-pool allocation, which needs the amounts before it can scale them.
      * <p>
-     * Null means the array is not a set of aura amounts: an entry that cannot be evaluated, or one that names a
-     * value instead of an aura.
+     * Null means the array is not a set of aura amounts: an entry that is not an {@code mxt:aura} entry, or one that
+     * cannot be loaded. The whole array loads through one pass, so entries that name the same aura add up.
      */
     public static @Nullable Map<Holder<Aura>, Double> auras(List<Cost> costs, CostContext context) {
-        CostContext auraContext = context.withAuraTarget(CostContext.AuraTarget.POOL);
-        Map<Holder<Aura>, Double> amounts = new LinkedHashMap<>();
-        for (Cost cost : costs) {
-            Either<Charge, CostFailure> charge = cost.charge(auraContext);
-            if (charge.left().isEmpty() || !(charge.left().get() instanceof Charge.Auras(
-                    Map<Holder<Aura>, Double> amounts1
-            ))) return null;
-            amounts1.forEach((aura, amount) -> amounts.merge(aura, amount, Double::sum));
-        }
-        return amounts;
+        if (!costs.stream().allMatch(cost -> cost instanceof AuraCost)) return null;
+        CostPayment payment = CostPayment.of(context.withAuraTarget(CostContext.AuraTarget.POOL));
+        if (payment.loadAll(costs).isPresent()) return null;
+        return new LinkedHashMap<>(payment.auras());
     }
 }

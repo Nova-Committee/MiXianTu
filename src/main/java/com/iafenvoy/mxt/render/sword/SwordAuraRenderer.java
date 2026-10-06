@@ -1,15 +1,15 @@
 package com.iafenvoy.mxt.render.sword;
 
-import com.iafenvoy.mxt.runtime.sword.SwordAuraEntity;
 import com.iafenvoy.mxt.render.sword.flame.BurningItemManager;
+import com.iafenvoy.mxt.runtime.sword.SwordAuraEntity;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.EntityRendererProvider.Context;
 import net.minecraft.client.renderer.state.level.CameraRenderState;
-import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 import org.joml.Matrix4fc;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
@@ -150,7 +150,7 @@ public final class SwordAuraRenderer extends EntityRenderer<SwordAuraEntity, Swo
     }
 
     @Override
-    protected AABB getBoundingBoxForCulling(SwordAuraEntity entity) {
+    protected @NonNull AABB getBoundingBoxForCulling(SwordAuraEntity entity) {
         double radius = (entity.length() + entity.handleLength() + entity.guardWidth()) * entity.scale() + 5;
         return entity.getBoundingBox().inflate(radius);
     }

@@ -24,7 +24,9 @@ import net.minecraft.world.phys.Vec3;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
-/** Visual sword aura projectile. Movement is server-owned; the client only renders the synchronized state. */
+/**
+ * Visual sword aura projectile. Movement is server-owned; the client only renders the synchronized state.
+ */
 public final class SwordAuraEntity extends Entity {
     public static final int DEFAULT_BLADE_COLOR = 0xC778D9FF;
     public static final int DEFAULT_AURA_COLOR = 0xCC78D9FF;
@@ -180,7 +182,7 @@ public final class SwordAuraEntity extends Entity {
             if (velocity.lengthSqr() > 1.0E-8D) {
                 if (this.impact(velocity)) return;
                 this.move(MoverType.SELF, velocity);
-                updateRotation(velocity);
+                this.updateRotation(velocity);
             }
         }
     }

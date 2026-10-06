@@ -7,7 +7,7 @@ import com.iafenvoy.mxt.attachment.ResourceHolderAttachment.Audit;
 import com.iafenvoy.mxt.config.MxtServerConfig;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.cost.Cost;
-import com.iafenvoy.mxt.data.cost.CostTransaction;
+import com.iafenvoy.mxt.data.cost.CostPayment;
 import com.iafenvoy.mxt.data.cost.builtin.ItemCost;
 import com.iafenvoy.mxt.data.cost.context.CostContext;
 import com.iafenvoy.mxt.data.cost.context.CostOrigin;
@@ -106,7 +106,7 @@ public final class TalismanWorkstationService {
             TalismanDrawingRecipe recipe = holder.value();
             Component name = DefinitionText.name(recipe.talisman(), "talisman");
             boolean unlocked = recipe.unlockCondition().test(player, FormulaContext.of(player));
-            boolean affordable = CostTransaction.plan(costs(recipe), context(player, station)).ok();
+            boolean affordable = CostPayment.of(context(player, station)).loadAndTest(costs(recipe)).isEmpty();
             entries.add(new Entry(holder.id().identifier(), name, unlocked && affordable));
         }
         entries.sort(Comparator.comparing(entry -> entry.id().toString()));
@@ -114,7 +114,7 @@ public final class TalismanWorkstationService {
     }
 
     /**
-     * A one-slot stand-in for the menu's slot; only ever read, and only by {@code CostTransaction.plan}.
+     * A one-slot stand-in for the menu's slot; only ever read, and only by a payment that is never committed.
      */
     private static Container slotOf(ItemStack stack) {
         SimpleContainer container = new SimpleContainer(1);
@@ -132,14 +132,14 @@ public final class TalismanWorkstationService {
         if (!recipe.unlockCondition().test(player, FormulaContext.of(player))) return Optional.empty();
         List<Cost> costs = costs(recipe);
         CostContext context = context(player, paperSlot);
-        CostTransaction.Planning planning = CostTransaction.plan(costs, context);
-        if (!planning.ok()) return Optional.empty();
+        CostPayment planning = CostPayment.of(context);
+        if (planning.loadAndTest(costs).isPresent()) return Optional.empty();
         // Read before the payment, because the settlement needs the paper's tier and by then the slot is empty.
         ItemStack paper = firstMatching(paperSlot, paperEntry(recipe));
         if (paper.isEmpty()) return Optional.empty();
         List<Runnable> refunds = snapshotResources(context, planning);
         List<ItemStack> before = contents(paperSlot);
-        if (!CostTransaction.commit(planning, context).paid()) return Optional.empty();
+        if (!planning.commit().paid()) return Optional.empty();
         return Optional.of(new TalismanDrawingSession(id, recipe, costs, context, paperSlot, paper,
                 charged(before, paperSlot), refunds, player.level().getGameTime()));
     }
@@ -367,8 +367,8 @@ public final class TalismanWorkstationService {
     }
 
     // What the payer's own accounts held before the payment, so an empty session can hand it back. Only the
-    // resources the plan actually names are touched.
-    private static List<Runnable> snapshotResources(CostContext context, CostTransaction.Planning planning) {
+    // resources the price actually names are touched.
+    private static List<Runnable> snapshotResources(CostContext context, CostPayment planning) {
         ResourceHolderAttachment target = context.resourceTarget();
         if (target == null || planning.resources().isEmpty()) return List.of();
         List<Runnable> refunds = new ArrayList<>();

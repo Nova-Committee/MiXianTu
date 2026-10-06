@@ -16,8 +16,8 @@ public final class ParticleSampler implements AutoCloseable {
     private final GpuBuffer indices;
 
     public ParticleSampler() {
-        particles = vertices(MAX_PARTICLES, false);
-        surface = vertices((SURFACE_RINGS - 1) * 8, true);
+        this.particles = vertices(MAX_PARTICLES, false);
+        this.surface = vertices((SURFACE_RINGS - 1) * 8, true);
         ByteBuffer data = MemoryUtil.memAlloc(4 * 12);
         try {
             vertex(data, 0, 0, 0);
@@ -25,7 +25,7 @@ public final class ParticleSampler implements AutoCloseable {
             vertex(data, 1, 1, 0);
             vertex(data, 0, 1, 0);
             data.flip();
-            tile = RenderSystem.getDevice().createBuffer(() -> "Sword fluid tile", GpuBuffer.USAGE_VERTEX, data);
+            this.tile = RenderSystem.getDevice().createBuffer(() -> "Sword fluid tile", GpuBuffer.USAGE_VERTEX, data);
         } finally {
             MemoryUtil.memFree(data);
         }
@@ -36,7 +36,7 @@ public final class ParticleSampler implements AutoCloseable {
                 for (int index : new int[]{0, 1, 2, 2, 3, 0}) data.putShort((short) (offset + index));
             }
             data.flip();
-            indices = RenderSystem.getDevice().createBuffer(() -> "Sword flame indices", GpuBuffer.USAGE_INDEX, data);
+            this.indices = RenderSystem.getDevice().createBuffer(() -> "Sword flame indices", GpuBuffer.USAGE_INDEX, data);
         } finally {
             MemoryUtil.memFree(data);
         }
@@ -73,19 +73,19 @@ public final class ParticleSampler implements AutoCloseable {
     }
 
     public GpuBuffer particles() {
-        return particles;
+        return this.particles;
     }
 
     public GpuBuffer surface() {
-        return surface;
+        return this.surface;
     }
 
     public GpuBuffer tile() {
-        return tile;
+        return this.tile;
     }
 
     public GpuBuffer indices() {
-        return indices;
+        return this.indices;
     }
 
     public VertexFormat.IndexType indexType() {
@@ -94,9 +94,9 @@ public final class ParticleSampler implements AutoCloseable {
 
     @Override
     public void close() {
-        particles.close();
-        surface.close();
-        tile.close();
-        indices.close();
+        this.particles.close();
+        this.surface.close();
+        this.tile.close();
+        this.indices.close();
     }
 }

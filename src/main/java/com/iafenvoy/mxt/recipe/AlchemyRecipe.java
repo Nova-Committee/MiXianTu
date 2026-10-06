@@ -68,9 +68,8 @@ public record AlchemyRecipe(Component name, Component description,
         ).codec().optionalFieldOf(field);
     }
 
-    private static final Codec<Map<Holder<MedicinalProperty>, NumberProvider>> PROPERTIES =
-            Codec.unboundedMap(MedicinalProperty.CODEC, NumberProvider.CODEC);
-    public static final MapCodec<AlchemyRecipe> CODEC = RecordCodecBuilder.<AlchemyRecipe>mapCodec(i -> i.group(
+    private static final Codec<Map<Holder<MedicinalProperty>, NumberProvider>> PROPERTIES = Codec.unboundedMap(MedicinalProperty.CODEC, NumberProvider.CODEC);
+    public static final MapCodec<AlchemyRecipe> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             MiscCodecs.pair(
                             MiscCodecs.TRANSLATABLE_COMPONENT.optionalFieldOf("name", Component.empty()),
                             MiscCodecs.TRANSLATABLE_COMPONENT.optionalFieldOf("description", Component.empty()))

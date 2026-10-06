@@ -3,7 +3,7 @@ package com.iafenvoy.mxt.runtime.artifact;
 import com.iafenvoy.mxt.compat.CuriosIntegration;
 import com.iafenvoy.mxt.data.ability.type.UpkeepAbilityType;
 import com.iafenvoy.mxt.data.cost.Cost;
-import com.iafenvoy.mxt.data.cost.CostTransaction;
+import com.iafenvoy.mxt.data.cost.CostPayment;
 import com.iafenvoy.mxt.data.cost.context.CostContext;
 import com.iafenvoy.mxt.data.cost.context.CostOrigin;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
@@ -66,7 +66,7 @@ public final class ArtifactUpkeepService {
         FormulaContext context = FormulaContext.of(holder);
         long interval = interval(upkeep.type(), context);
         if (gameTime % interval != 0L) return false;
-        CostTransaction.PayResult payment = CostTransaction.pay(costs,
+        CostPayment.Result payment = CostPayment.pay(costs,
                 CostContext.of(holder, context, CostOrigin.ARTIFACT_UPKEEP));
         if (payment.paid()) return true;
         upkeep.type().onFail().execute(holder, stack, context);

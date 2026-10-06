@@ -16,9 +16,9 @@ import org.jspecify.annotations.NonNull;
  */
 public record ItemQualityCondition(QualityRequirement requirement) implements ItemCondition {
     public static final MapCodec<ItemQualityCondition> CODEC = RecordCodecBuilder.<ItemQualityCondition>mapCodec(i -> i.group(
-            QualityRequirement.QUALITIES_FIELD.forGetter(condition -> condition.requirement().qualities()),
-            QualityRequirement.MIN_QUALITY_FIELD.forGetter(condition -> condition.requirement().minQuality())
-    ).apply(i, (qualities, minimum) -> new ItemQualityCondition(new QualityRequirement(qualities, minimum))))
+                    QualityRequirement.QUALITIES_FIELD.forGetter(condition -> condition.requirement().qualities()),
+                    QualityRequirement.MIN_QUALITY_FIELD.forGetter(condition -> condition.requirement().minQuality())
+            ).apply(i, (qualities, minimum) -> new ItemQualityCondition(new QualityRequirement(qualities, minimum))))
             .validate(ItemQualityCondition::validate);
 
     // A condition asking for neither half would silently always pass, so it is refused at load.

@@ -4,7 +4,7 @@ import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.attachment.CultivationAttachment;
 import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.data.aura.Aura;
-import com.iafenvoy.mxt.data.cost.CostTransaction;
+import com.iafenvoy.mxt.data.cost.CostPayment;
 import com.iafenvoy.mxt.data.cost.context.CostContext;
 import com.iafenvoy.mxt.data.cost.context.CostFailure;
 import com.iafenvoy.mxt.data.cost.context.CostOrigin;
@@ -138,13 +138,14 @@ public final class CultivationService {
             return BreakthroughResult.rejected(Failure.INSUFFICIENT_PROGRESS, null);
         if (!conditionsMet.getAsBoolean()) return BreakthroughResult.rejected(Failure.CONDITIONS, null);
         CostContext costContext = CostContext.of(entity, context, CostOrigin.BREAKTHROUGH);
-        CostTransaction.Planning plan = CostTransaction.plan(target.breakthroughCosts(), costContext, resources, null);
-        if (!plan.ok()) return BreakthroughResult.rejected(failure(plan.failure()), null);
+        CostPayment plan = CostPayment.of(costContext);
+        Optional<CostFailure> refusal = plan.loadAndTest(target.breakthroughCosts());
+        if (refusal.isPresent()) return BreakthroughResult.rejected(failure(refusal.get()), null);
         Pre event = new Pre(spirit, resources, targetHolder, context, minimum, plan.resources());
         if (eventBus.post(event).isCanceled()) return BreakthroughResult.rejected(Failure.CANCELLED, null);
         plan.resources().clear();
         plan.resources().putAll(event.costs());
-        CostTransaction.PayResult payment = CostTransaction.commit(plan, costContext, resources);
+        CostPayment.Result payment = plan.commit();
         if (!payment.paid())
             return BreakthroughResult.rejected(failure(payment.failure()), payment.failedResource());
         spirit.setRealmStage(targetHolder);

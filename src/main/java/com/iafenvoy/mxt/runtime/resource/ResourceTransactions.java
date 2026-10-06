@@ -16,8 +16,8 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 /**
- * Performs all-or-nothing resource accounting for amounts a caller has already planned. Evaluating a costs array
- * is {@code CostTransaction}'s job; this is only the write, and it validates every entry before touching any.
+ * Performs all-or-nothing resource accounting for amounts a caller has already loaded. Reading a costs array is
+ * {@code CostPayment}'s job; this is only the write, and it validates every entry before touching any.
  */
 public final class ResourceTransactions {
     private ResourceTransactions() {

@@ -7,7 +7,7 @@ public final class LODController {
     }
 
     public static int level(double distanceSquared) {
-        var config = MxtClientConfig.INSTANCE.flames;
+        MxtClientConfig.Flames config = MxtClientConfig.INSTANCE.flames;
         double near = config.nearDistance.getValue();
         double middle = Math.max(near, config.middleDistance.getValue());
         double far = Math.max(middle, config.farDistance.getValue());
@@ -17,7 +17,7 @@ public final class LODController {
     }
 
     public static int particles(int level) {
-        var config = MxtClientConfig.INSTANCE.flames;
+        MxtClientConfig.Flames config = MxtClientConfig.INSTANCE.flames;
         return switch (level) {
             case 0 -> config.nearParticles.getValue();
             case 1 -> config.middleParticles.getValue();

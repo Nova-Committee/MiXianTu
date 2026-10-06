@@ -4,7 +4,7 @@ import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.data.Formation;
 import com.iafenvoy.mxt.data.Formation.Storage;
 import com.iafenvoy.mxt.data.aura.Aura;
-import com.iafenvoy.mxt.data.cost.CostTransaction;
+import com.iafenvoy.mxt.data.cost.CostPayment;
 import com.iafenvoy.mxt.data.cost.context.CostContext;
 import com.iafenvoy.mxt.data.cost.context.CostOrigin;
 import com.iafenvoy.mxt.runtime.formation.FormationService.MaintainRule.PaymentPlan;
@@ -37,7 +37,7 @@ public final class FormationService {
         if (!Double.isFinite(radius) || radius <= 0.0D) return ActivateResult.rejected(Failure.INVALID_FORMULA, null);
         // The activating player's own account is named directly: activation is driven from a controller block, so
         // there is no entity here to take a channel from, only an account to charge.
-        CostTransaction.PayResult payment = CostTransaction.pay(definition.activationCosts(),
+        CostPayment.Result payment = CostPayment.pay(definition.activationCosts(),
                 CostContext.account(resources, null, context, CostOrigin.FORMATION_ACTIVATION));
         if (!payment.paid())
             return ActivateResult.rejected(Failure.INSUFFICIENT_RESOURCE, payment.failedResource());
@@ -102,11 +102,10 @@ public final class FormationService {
         public static @Nullable PaymentPlan plan(Formation definition, CostContext context,
                                                  Map<Holder<Aura>, Double> supplied,
                                                  Map<Holder<Aura>, Double> stored, Map<Holder<Aura>, Double> capacity) {
-            // Whatever the bill names is charged in the value it is measured in, and only evaluated: the caller
-            // asks what the owner can afford of the remainder. An item charge has no channel here, so it refuses.
-            CostTransaction.Planning bill = CostTransaction.planDeferred(definition.maintenanceCosts(),
-                    context.withAuraTarget(CostContext.AuraTarget.VALUE));
-            if (!bill.ok() || !bill.items().isEmpty()) return null;
+            // Whatever the bill names is charged in the value it is measured in, and only loaded: the caller asks
+            // what the owner can afford of the remainder. An item charge has no channel here, so it refuses.
+            CostPayment bill = CostPayment.of(context.withAuraTarget(CostContext.AuraTarget.VALUE));
+            if (bill.loadAll(definition.maintenanceCosts()).isPresent() || bill.beyondResources()) return null;
             Map<Identifier, Double> cost = bill.resources();
             Map<Identifier, Holder<Aura>> byValue = new LinkedHashMap<>();
             for (Holder<Aura> aura : supplied.keySet())

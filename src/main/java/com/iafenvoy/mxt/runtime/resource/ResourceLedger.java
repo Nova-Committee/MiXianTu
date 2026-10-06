@@ -9,7 +9,7 @@ import java.util.Map.Entry;
 
 /**
  * Server-authoritative mutable resource balances with atomic multi-cost payment. Amounts arrive evaluated, so a
- * caller that holds a costs array plans it with {@code CostTransaction} and hands the result here.
+ * caller that holds a costs array loads it with {@code CostPayment} and hands the result here.
  */
 public final class ResourceLedger {
     private final Map<Identifier, Double> balances = new LinkedHashMap<>();

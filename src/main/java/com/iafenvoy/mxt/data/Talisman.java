@@ -4,7 +4,6 @@ import com.iafenvoy.mxt.api.NamedDefinition;
 import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.data.cost.Cost;
-import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.codec.ContextNameCodec;
@@ -19,7 +18,6 @@ import net.minecraft.resources.RegistryFixedCodec;
 import net.minecraft.tags.TagKey;
 
 import java.util.List;
-import java.util.Optional;
 
 /**
  * One inscribed talisman a carrier can hold: {@code abilities} is the only effect field, {@code capacity} how many

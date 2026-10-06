@@ -7,7 +7,6 @@ import com.iafenvoy.mxt.data.action.builtin.item.ConsumeHealthItemAction;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.data.cultivation.Element;
-import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.codec.CollectionCodecs;
@@ -28,7 +27,6 @@ import net.minecraft.tags.TagKey;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 /**
  * The rules of one artifact, shared by every item {@code items} opts into them. There is no field naming a

@@ -16,10 +16,10 @@ import java.util.List;
  */
 public record QualityEntry(List<ItemMatcher.Entry> items, QualityRequirement requirement) implements ItemMatcher.Entry {
     public static final MapCodec<QualityEntry> CODEC = RecordCodecBuilder.<QualityEntry>mapCodec(i -> i.group(
-            ItemMatcher.ENTRIES_CODEC.fieldOf("items").forGetter(QualityEntry::items),
-            QualityRequirement.QUALITIES_FIELD.forGetter(entry -> entry.requirement().qualities()),
-            QualityRequirement.MIN_QUALITY_FIELD.forGetter(entry -> entry.requirement().minQuality())
-    ).apply(i, (items, qualities, minimum) -> new QualityEntry(items, new QualityRequirement(qualities, minimum))))
+                    ItemMatcher.ENTRIES_CODEC.fieldOf("items").forGetter(QualityEntry::items),
+                    QualityRequirement.QUALITIES_FIELD.forGetter(entry -> entry.requirement().qualities()),
+                    QualityRequirement.MIN_QUALITY_FIELD.forGetter(entry -> entry.requirement().minQuality())
+            ).apply(i, (items, qualities, minimum) -> new QualityEntry(items, new QualityRequirement(qualities, minimum))))
             .validate(QualityEntry::validate);
 
     private static DataResult<QualityEntry> validate(QualityEntry entry) {

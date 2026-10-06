@@ -282,7 +282,8 @@ public final class TalismanWorkstationMenu extends ApricityContainerMenu {
     public void removed(@NonNull Player player) {
         super.removed(player);
         if (this.session != null) {
-            if (player instanceof ServerPlayer serverPlayer) TalismanWorkstationService.abandon(serverPlayer, this.session);
+            if (player instanceof ServerPlayer serverPlayer)
+                TalismanWorkstationService.abandon(serverPlayer, this.session);
             this.session = null;
         }
         this.access.execute((level, pos) -> this.clearContainer(player, this.paper));

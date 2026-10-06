@@ -366,6 +366,7 @@ public final class ForgingWorkstationService {
         List<ItemStack> consumed() {
             return this.taken;
         }
+
         void consume(Container container) {
             this.removals.forEach((index, takenCount) -> {
                 ItemStack available = container.getItem(index);

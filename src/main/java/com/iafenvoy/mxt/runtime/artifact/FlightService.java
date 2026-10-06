@@ -9,7 +9,7 @@ import com.iafenvoy.mxt.data.ability.type.MountAbilityType;
 import com.iafenvoy.mxt.data.artifact.Artifact;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.cost.Cost;
-import com.iafenvoy.mxt.data.cost.CostTransaction;
+import com.iafenvoy.mxt.data.cost.CostPayment;
 import com.iafenvoy.mxt.data.cost.context.CostContext;
 import com.iafenvoy.mxt.data.cost.context.CostOrigin;
 import com.iafenvoy.mxt.registry.MxtAttachments;
@@ -202,9 +202,10 @@ public final class FlightService {
     private static boolean payFuel(LivingEntity holder, MountVehicle vehicle, Level level, List<Cost> costs,
                                    FormulaContext context) {
         CostContext costContext = CostContext.of(holder, context, CostOrigin.ARTIFACT_FLIGHT);
-        CostTransaction.Planning planning = CostTransaction.planDeferred(costs, costContext);
+        CostPayment planning = CostPayment.of(costContext);
+        if (planning.loadAll(costs).isPresent()) return false;
         List<Fuel> burned = burn(vehicle, level, planning, context);
-        CostTransaction.PayResult payment = CostTransaction.commit(planning, costContext);
+        CostPayment.Result payment = planning.commit();
         if (payment.paid()) return true;
         refund(vehicle, level, burned, context);
         return false;
@@ -214,7 +215,7 @@ public final class FlightService {
     private record Fuel(Holder<Aura> aura, double amount) {
     }
 
-    private static List<Fuel> burn(MountVehicle vehicle, Level level, CostTransaction.Planning planning,
+    private static List<Fuel> burn(MountVehicle vehicle, Level level, CostPayment planning,
                                    FormulaContext context) {
         ItemStack stack = vehicle.visual();
         if (stack.isEmpty()) return List.of();

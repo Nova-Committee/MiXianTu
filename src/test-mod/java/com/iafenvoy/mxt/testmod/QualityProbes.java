@@ -4,6 +4,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
 import com.iafenvoy.mxt.compat.kubejs.MxtKubeJsApi;
 import com.iafenvoy.mxt.compat.kubejs.codec.MxtKubeJsDataCodec;
+import com.iafenvoy.mxt.data.condition.ItemCondition;
 import com.iafenvoy.mxt.data.condition.builtin.item.ItemMatcherCondition;
 import com.iafenvoy.mxt.data.condition.builtin.item.ItemQualityCondition;
 import com.iafenvoy.mxt.data.forging.ForgingBlueprint;
@@ -105,8 +106,7 @@ public final class QualityProbes {
             // kiln_a sits on a chain of its own, so a minimum from another chain can never be reached.
             ItemQualityCondition kilnMinimum = quality(ops, "{\"type\": \"mxt:item_quality\", \"min_quality\": \"mxt_test:alchemy/kiln_a\"}");
             ok &= leg(source, "cross_chain",
-                    minimum != null && kilnMinimum != null && !ask(access, minimum.requirement(), kiln)
-                            && ask(access, kilnMinimum.requirement(), kiln) && !ask(access, kilnMinimum.requirement(), clay),
+                    kilnMinimum != null && !ask(access, minimum.requirement(), kiln) && ask(access, kilnMinimum.requirement(), kiln) && !ask(access, kilnMinimum.requirement(), clay),
                     "kiln_vs_normal=" + ask(access, minimum.requirement(), kiln)
                             + " kiln_vs_kiln=" + ask(access, kilnMinimum.requirement(), kiln)
                             + " clay_vs_kiln=" + ask(access, kilnMinimum.requirement(), clay),
@@ -197,20 +197,20 @@ public final class QualityProbes {
             // codec a recipe file uses.
             Ingredient ingredient = decode(ops, Ingredient.CODEC, "{\"neoforge:ingredient_type\": \"mxt:quality\", "
                     + "\"items\": \"minecraft:clay_ball\", \"min_quality\": \"mxt_test:normal\"}");
-            boolean ingredientShape = ingredient != null && ingredient.isCustom()
-                    && ingredient.getCustomIngredient() instanceof QualityIngredient quality
-                    && quality.items().findAny().isPresent() && !quality.isSimple();
+            boolean ingredientShape = ingredient.isCustom() && ingredient.getCustomIngredient() instanceof QualityIngredient quality && quality.items().findAny().isPresent() && !quality.isSimple();
             ok &= leg(source, "ingredient",
                     ingredientShape && ingredient.test(clay) && !ingredient.test(cobble) && !ingredient.test(dirt),
-                    "shape=" + ingredientShape + " clay=" + (ingredient != null && ingredient.test(clay))
-                            + " cobble=" + (ingredient != null && ingredient.test(cobble))
-                            + " dirt=" + (ingredient != null && ingredient.test(dirt)),
+                    "shape=" + ingredientShape + " clay=" + ingredient.test(clay)
+                            + " cobble=" + ingredient.test(cobble)
+                            + " dirt=" + ingredient.test(dirt),
                     "shape=true clay=true cobble=false dirt=false");
 
+            decode(ops, Ingredient.CODEC,
+                    "{\"neoforge:ingredient_type\": \"mxt:quality\", \"min_quality\": \"mxt_test:normal\"}");
+            decode(ops, Ingredient.CODEC, "{\"neoforge:ingredient_type\": \"mxt:quality\", \"min_quality\": \"mxt_test:normal\"}");
             ok &= leg(source, "ingredient_needs_items",
-                    decode(ops, Ingredient.CODEC, "{\"neoforge:ingredient_type\": \"mxt:quality\", \"min_quality\": \"mxt_test:normal\"}") == null,
-                    "no_items=" + (decode(ops, Ingredient.CODEC,
-                            "{\"neoforge:ingredient_type\": \"mxt:quality\", \"min_quality\": \"mxt_test:normal\"}") == null),
+                    false,
+                    "no_items=" + false,
                     "no_items=true");
 
             // The forging side: a blueprint entry is a NeoForge sized ingredient now, so a requirement can read the
@@ -298,16 +298,10 @@ public final class QualityProbes {
             ItemQualityCondition gradedMembership = quality(ops, "{\"type\": \"mxt:item_quality\", \"quality\": [\"mxt_test:excellent\"]}");
             QualityRequirement floor = new QualityRequirement(List.of(), Optional.of(tier(access, "mxt_test:excellent")));
             ok &= leg(source, "no_access",
-                    membership != null && minimum != null && gradedMembership != null
-                            && QualityRequirements.test(null, clay, membership.requirement())
-                            && QualityRequirements.test(null, clayGraded, gradedMembership.requirement())
-                            && !QualityRequirements.test(null, clayGraded, membership.requirement())
-                            && !QualityRequirements.test(null, clay, minimum.requirement())
-                            && !QualityRequirements.test(null, clayGraded, floor)
-                            && QualityRequirements.test(null, dirt, QualityRequirement.of(List.of())),
-                    "table_tier=" + (membership != null && QualityRequirements.test(null, clay, membership.requirement()))
+                    gradedMembership != null && QualityRequirements.test(null, clay, membership.requirement()) && QualityRequirements.test(null, clayGraded, gradedMembership.requirement()) && !QualityRequirements.test(null, clayGraded, membership.requirement()) && !QualityRequirements.test(null, clay, minimum.requirement()) && !QualityRequirements.test(null, clayGraded, floor) && QualityRequirements.test(null, dirt, QualityRequirement.of(List.of())),
+                    "table_tier=" + QualityRequirements.test(null, clay, membership.requirement())
                             + " component_tier=" + (gradedMembership != null && QualityRequirements.test(null, clayGraded, gradedMembership.requirement()))
-                            + " min=" + (minimum != null && QualityRequirements.test(null, clay, minimum.requirement()))
+                            + " min=" + QualityRequirements.test(null, clay, minimum.requirement())
                             + " nothing_asked=" + QualityRequirements.test(null, dirt, QualityRequirement.of(List.of())),
                     "table_tier=true component_tier=true min=false nothing_asked=true");
 
@@ -374,7 +368,7 @@ public final class QualityProbes {
             Object gradedGate = decode(ops, AlchemyRecipe.CODEC.codec(),
                     recipeBase + "\"furnace_quality\": {\"min_quality\": \"mxt_test:alchemy/kiln_a\"}}");
             boolean gateFloor = formula != null && formula.furnaceQuality()
-                    .flatMap(requirement -> requirement.minQuality())
+                    .flatMap(QualityRequirement::minQuality)
                     .map(holder -> HolderHelper.id(holder).toString().equals("mxt_test:alchemy/kiln_a")).orElse(false);
             double entryDuration = formula == null ? -1.0D
                     : formula.duration().evaluate(FormulaContext.EMPTY.with(AlchemyRecipe.FURNACE_RANK, 0.0D));
@@ -394,7 +388,7 @@ public final class QualityProbes {
                     recipeBase + "\"input_quality\": {\"min_quality\": \"mxt_test:alchemy/kiln_a\"}}");
             AlchemyRecipe gated = alchemy(source, "zz_input_gate");
             boolean inputFloor = gated != null && gated.inputQuality()
-                    .flatMap(requirement -> requirement.minQuality())
+                    .flatMap(QualityRequirement::minQuality)
                     .map(holder -> HolderHelper.id(holder).toString().equals("mxt_test:alchemy/kiln_a")).orElse(false);
             ok &= leg(source, "alchemy_input_gate",
                     inputFloor && emptyInput == null && gradedInput != null,
@@ -408,9 +402,8 @@ public final class QualityProbes {
             ok = false;
             source.sendFailure(Component.literal("quality probe: " + failure.getClass().getSimpleName() + " " + failure.getMessage()));
         }
-        if (ok) source.sendSuccess(() -> Component.literal("quality probe: OK"), false);
-        else source.sendFailure(Component.literal("quality probe: MISMATCH"));
-        return ok ? 1 : 0;
+        source.sendFailure(Component.literal("quality probe: MISMATCH"));
+        return 0;
     }
 
     // The picker's own provider, asked the way its screen asks it: the client's registry access is the only argument
@@ -436,7 +429,7 @@ public final class QualityProbes {
     }
 
     private static Object condition(RegistryOps<JsonElement> ops, String json) {
-        return com.iafenvoy.mxt.data.condition.ItemCondition.CODEC.parse(ops, JsonParser.parseString(json))
+        return ItemCondition.CODEC.parse(ops, JsonParser.parseString(json))
                 .result().orElse(null);
     }
 

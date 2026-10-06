@@ -46,7 +46,7 @@ public final class QualityLadders {
      */
     public static OptionalInt rank(Provider access, Holder<ItemQuality> tier) {
         Optional<ChainCache.Chain<ItemQuality>> ladder = cache(access).chainOf(HolderHelper.id(tier));
-        return ladder.isEmpty() ? OptionalInt.empty() : OptionalInt.of(ladder.get().indexOf(HolderHelper.id(tier)));
+        return ladder.map(itemQualityChain -> OptionalInt.of(itemQualityChain.indexOf(HolderHelper.id(tier)))).orElseGet(OptionalInt::empty);
     }
 
     /**

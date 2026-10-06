@@ -21,7 +21,10 @@ import com.iafenvoy.mxt.runtime.ability.AbilityService.UseResult;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactService;
 import com.iafenvoy.mxt.runtime.item.QualityService;
 import com.iafenvoy.mxt.runtime.resource.ResourceService;
-import com.iafenvoy.mxt.runtime.trigger.*;
+import com.iafenvoy.mxt.runtime.trigger.TriggerDispatcher;
+import com.iafenvoy.mxt.runtime.trigger.TriggerPublishing;
+import com.iafenvoy.mxt.runtime.trigger.TriggerRehydrator;
+import com.iafenvoy.mxt.runtime.trigger.TriggerSubscription;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.BlockPos;
@@ -106,7 +109,8 @@ public final class AbilityEventBridge {
     // effect of the next publication.
     private static void tickCurios(LivingEntity entity) {
         if (entity.level().getGameTime() % 20L != 0L) return;
-        if (syncCuriosAbilities(entity, entity.getData(MxtAttachments.ABILITY_HOLDER))) rebuildTriggerSubscriptions(entity);
+        if (syncCuriosAbilities(entity, entity.getData(MxtAttachments.ABILITY_HOLDER)))
+            rebuildTriggerSubscriptions(entity);
     }
 
     private static void tickLifecycle(LivingEntity entity) {

@@ -12,12 +12,16 @@ import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.function.Function;
 
 /**
- * One entry of a costs array. An entry only describes what it takes ({@link #charge(CostContext)}); the same
- * evaluated plan is then both checked and spent by {@link CostTransaction}, so there is no second implementation
- * of "can this be paid" to drift away from "take it".
+ * One entry of a costs array. An entry is data: what it costs is read, merged and written by the {@link CostDraft}
+ * of its type, so there is no second implementation of "can this be paid" to drift away from "take it", and two
+ * entries that reach the same store add up instead of depending on the order they were written in.
+ *
+ * <p>{@link #test} and {@link #commit} are what an entry does on its own, and they are what {@link CostPayment}
+ * calls for a type it has no draft for - a script, whose state belongs to the script.
  */
 public interface Cost {
     Codec<Cost> TYPED_CODEC = MxtRegistries.COST_TYPE.byNameCodec().dispatch("type", Cost::codec, Function.identity());
@@ -35,12 +39,15 @@ public interface Cost {
     Codec<List<Cost>> LIST_CODEC = CODEC.listOf().validate(Costs::validate);
 
     /**
-     * Evaluates this entry against the channels the context offers. The right side is a failure - a formula that
-     * cannot produce a finite positive amount, or a channel this context does not have. Nothing is written here.
-     * {@code mxt:js} is the one entry whose availability is answered by the script itself, so planning it calls
-     * the script's read-only check.
+     * Whether this one entry can be charged here, asked without writing anything. The right side is a failure - a
+     * formula that cannot produce a finite positive amount, or a channel this context does not offer.
      */
-    Either<Charge, CostFailure> charge(CostContext context);
+    Optional<CostFailure> test(CostContext context);
+
+    /**
+     * Takes what this one entry asks for. Not reversible: an entry whose type has a draft is taken through it.
+     */
+    Optional<CostFailure> commit(CostContext context);
 
     MapCodec<? extends Cost> codec();
 }

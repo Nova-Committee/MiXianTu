@@ -98,7 +98,7 @@ import com.iafenvoy.mxt.data.creature.ContractTags;
 import com.iafenvoy.mxt.data.creature.ContractType;
 import com.iafenvoy.mxt.data.creature.CreatureProfile;
 import com.iafenvoy.mxt.data.cost.Cost;
-import com.iafenvoy.mxt.data.cost.CostTransaction;
+import com.iafenvoy.mxt.data.cost.CostPayment;
 import com.iafenvoy.mxt.data.cost.Costs;
 import com.iafenvoy.mxt.data.cost.builtin.AuraCost;
 import com.iafenvoy.mxt.data.cost.builtin.ResourceCost;
@@ -168,7 +168,6 @@ import com.iafenvoy.mxt.runtime.damage.DamageElements;
 import com.iafenvoy.mxt.runtime.element.ElementReactionService;
 import com.iafenvoy.mxt.runtime.hold.HoldLookup;
 import com.iafenvoy.mxt.runtime.item.ItemBindingService;
-import com.iafenvoy.mxt.runtime.item.QualityService;
 import com.iafenvoy.mxt.runtime.item.ItemStorageService;
 import com.iafenvoy.mxt.runtime.perch.PerchEventBridge;
 import com.iafenvoy.mxt.runtime.perch.PerchService;
@@ -1239,7 +1238,7 @@ public final class MxtTestCommands {
         account.set(probe, 100.0D, 0.0D, 10_000.0D, -1L, "probe");
         CostContext context = CostContext.account(account, null, FormulaContext.EMPTY, CostOrigin.SCRIPT);
 
-        CostTransaction.PayResult plain = CostTransaction.pay(decodeCosts(registries,
+        CostPayment.Result plain = CostPayment.pay(decodeCosts(registries,
                 "[{\"id\": \"mxt_test:trigger_probe\", \"amount\": 3}]"), context);
         if (!plain.paid()) return "a plain resource cost was refused: " + plain.failure();
         if (!close(account.get(probe), 97.0D))
@@ -1248,7 +1247,7 @@ public final class MxtTestCommands {
         // Two entries that reach the same value by different routes add up: the aura is charged as the resource
         // it is measured in, which is the only answer that does not depend on the order they were written in.
         account.set(qi, 10.0D, 0.0D, 100.0D, -1L, "probe");
-        CostTransaction.PayResult merged = CostTransaction.pay(decodeCosts(registries,
+        CostPayment.Result merged = CostPayment.pay(decodeCosts(registries,
                         "[{\"id\": \"mxt_test:qi\", \"amount\": 1}, {\"type\": \"mxt:aura\", \"aura\": \"mxt_test:qi\", \"amount\": 3}]"),
                 context);
         if (!merged.paid()) return "a resource entry plus the aura it names was refused: " + merged.failure();
@@ -1256,19 +1255,19 @@ public final class MxtTestCommands {
             return "1 + 3 of the same value left " + account.get(qi) + " instead of 6";
 
         double before = account.get(probe);
-        CostTransaction.PayResult refused = CostTransaction.pay(decodeCosts(registries,
+        CostPayment.Result refused = CostPayment.pay(decodeCosts(registries,
                         "[{\"id\": \"mxt_test:trigger_probe\", \"amount\": 1}, {\"id\": \"mxt_test:soul_power\", \"amount\": 9999}]"),
                 context);
         if (refused.paid()) return "an array whose second entry is unpayable was paid anyway";
         if (!close(account.get(probe), before))
             return "a refused payment still took " + (before - account.get(probe)) + " off the first entry";
 
-        CostTransaction.PayResult item = CostTransaction.pay(decodeCosts(registries,
+        CostPayment.Result item = CostPayment.pay(decodeCosts(registries,
                 "[{\"type\": \"mxt:item\", \"items\": [\"minecraft:emerald\"], \"amount\": 1}]"), context);
         if (item.paid() || item.failure() != CostFailure.NO_CHANNEL)
             return "an item cost without a player channel read as " + item.failure();
 
-        CostTransaction.PayResult invalid = CostTransaction.pay(decodeCosts(registries,
+        CostPayment.Result invalid = CostPayment.pay(decodeCosts(registries,
                 "[{\"id\": \"mxt_test:trigger_probe\", \"amount\": 0}]"), context);
         if (invalid.paid() || invalid.failure() != CostFailure.INVALID_AMOUNT)
             return "a zero amount read as " + invalid.failure();
@@ -1276,7 +1275,7 @@ public final class MxtTestCommands {
         ResourceHolderAttachment personal = player.getData(MxtAttachments.RESOURCE_HOLDER);
         double previous = personal.get(probe);
         personal.set(probe, 10.0D, 0.0D, 10_000.0D, -1L, "probe");
-        CostTransaction.PayResult onPlayer = CostTransaction.pay(decodeCosts(registries,
+        CostPayment.Result onPlayer = CostPayment.pay(decodeCosts(registries,
                         "[{\"id\": \"mxt_test:trigger_probe\", \"amount\": 2}]"),
                 CostContext.of(player, FormulaContext.of(player), CostOrigin.SCRIPT));
         double left = personal.get(probe);

@@ -2,7 +2,7 @@ package com.iafenvoy.mxt.runtime.creature;
 
 import com.iafenvoy.mxt.api.Contractable;
 import com.iafenvoy.mxt.attachment.ContractAttachment;
-import com.iafenvoy.mxt.data.cost.CostTransaction;
+import com.iafenvoy.mxt.data.cost.CostPayment;
 import com.iafenvoy.mxt.data.cost.context.CostContext;
 import com.iafenvoy.mxt.data.cost.context.CostOrigin;
 import com.iafenvoy.mxt.data.creature.ContractContext;
@@ -57,7 +57,7 @@ public final class ContractService {
         }
         if (NeoForge.EVENT_BUS.post(new Pre(data, Optional.of(type), owner.getUUID(), Action.BIND)).isCanceled())
             return Result.rejected(Failure.CANCELLED);
-        if (!force && !definition.costs().isEmpty() && !CostTransaction.pay(definition.costs(),
+        if (!force && !definition.costs().isEmpty() && !CostPayment.pay(definition.costs(),
                 CostContext.of(owner, CostOrigin.CONTRACT).withFormula(formula)).paid())
             return Result.rejected(Failure.INSUFFICIENT_COST);
         data.bind(type, owner.level().getGameTime());

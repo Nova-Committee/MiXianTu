@@ -15,11 +15,7 @@ import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.BitSet;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @EventBusSubscriber(Dist.CLIENT)
 public final class BurningItemManager {
@@ -55,21 +51,21 @@ public final class BurningItemManager {
 
     private void begin() {
         Minecraft minecraft = Minecraft.getInstance();
-        if (level != minecraft.level || !MxtClientConfig.INSTANCE.flames.enabled.getValue()) close();
-        level = minecraft.level;
-        frame++;
-        for (List<Entry> group : visible) group.clear();
-        camera = null;
+        if (this.level != minecraft.level || !MxtClientConfig.INSTANCE.flames.enabled.getValue()) this.close();
+        this.level = minecraft.level;
+        this.frame++;
+        for (List<Entry> group : this.visible) group.clear();
+        this.camera = null;
         long now = System.nanoTime();
-        delta = minecraft.isPaused() ? 0 : Math.clamp((now - lastNanos) * 1.0E-9F, 0, 0.05F);
-        if (lastNanos == 0) delta = 1 / 60.0F;
-        lastNanos = now;
-        time += delta;
-        var iterator = entries.values().iterator();
+        this.delta = minecraft.isPaused() ? 0 : Math.clamp((now - this.lastNanos) * 1.0E-9F, 0, 0.05F);
+        if (this.lastNanos == 0) this.delta = 1 / 60.0F;
+        this.lastNanos = now;
+        this.time += this.delta;
+        Iterator<Entry> iterator = this.entries.values().iterator();
         while (iterator.hasNext()) {
             Entry entry = iterator.next();
-            if (frame - entry.lastSeen > 120 || level == null || level.getEntity(entry.id) == null) {
-                release(entry);
+            if (this.frame - entry.lastSeen > 120 || this.level == null || this.level.getEntity(entry.id) == null) {
+                this.release(entry);
                 iterator.remove();
             }
         }
@@ -80,69 +76,71 @@ public final class BurningItemManager {
     }
 
     private void collect(SwordAuraRenderState state, Quaternionf rotation, CameraRenderState camera) {
-        if (level == null || !MxtClientConfig.INSTANCE.flames.enabled.getValue()
+        if (this.level == null || !MxtClientConfig.INSTANCE.flames.enabled.getValue()
                 || ((state.auraColor >>> 24) & 0xFF) == 0) return;
         int lod = LODController.level(state.distanceToCameraSq);
         if (lod == 3) return;
-        Entry entry = entries.get(state.entityId);
+        Entry entry = this.entries.get(state.entityId);
         if (entry == null) {
-            if (entries.size() >= SurfaceFluidSimulation.CAPACITY) {
+            if (this.entries.size() >= SurfaceFluidSimulation.CAPACITY) {
                 Entry oldest = null;
-                for (Entry candidate : entries.values())
-                    if (candidate.lastSeen != frame && (oldest == null || candidate.lastSeen < oldest.lastSeen)) oldest = candidate;
+                for (Entry candidate : this.entries.values())
+                    if (candidate.lastSeen != this.frame && (oldest == null || candidate.lastSeen < oldest.lastSeen))
+                        oldest = candidate;
                 if (oldest == null) return;
-                release(oldest);
-                entries.remove(oldest.id);
+                this.release(oldest);
+                this.entries.remove(oldest.id);
             }
             entry = new Entry(state.entityId);
-            entries.put(state.entityId, entry);
+            this.entries.put(state.entityId, entry);
         }
-        if (entry.lastSeen == frame) return;
-        entry.reset = entry.reset || entry.lastSeen != frame - 1 || entry.lod == 2;
-        entry.lastSeen = frame;
+        if (entry.lastSeen == this.frame) return;
+        entry.reset = entry.reset || entry.lastSeen != this.frame - 1 || entry.lod == 2;
+        entry.lastSeen = this.frame;
         entry.lod = lod;
         entry.state = state;
         entry.rotation.set(rotation);
-        if (lod == 2) release(entry);
+        if (lod == 2) this.release(entry);
         else if (entry.slot < 0) {
-            entry.slot = slots.nextClearBit(0);
-            slots.set(entry.slot);
+            entry.slot = this.slots.nextClearBit(0);
+            this.slots.set(entry.slot);
             entry.reset = true;
         }
-        entry.update = entry.reset || (delta > 0 && (lod == 0 || (frame & 1) == 0));
-        entry.step = entry.reset ? 1 / 60.0F : Math.clamp(time - entry.lastUpdateTime, 0, 0.05F);
+        entry.update = entry.reset || (this.delta > 0 && (lod == 0 || (this.frame & 1) == 0));
+        entry.step = entry.reset ? 1 / 60.0F : Math.clamp(this.time - entry.lastUpdateTime, 0, 0.05F);
         this.camera = camera;
-        visible.get(lod).add(entry);
+        this.visible.get(lod).add(entry);
     }
 
     private void render() {
-        if (camera == null) return;
-        if (renderer == null) renderer = new FlameRenderer();
-        if (!renderer.render(visible, camera, time, delta)) return;
-        for (List<Entry> group : visible) for (Entry entry : group) {
-            if (entry.update) entry.lastUpdateTime = time;
-            entry.reset = false;
-        }
+        if (this.camera == null) return;
+        if (this.renderer == null) this.renderer = new FlameRenderer();
+        if (!this.renderer.render(this.visible, this.camera, this.time, this.delta)) return;
+        for (List<Entry> group : this.visible)
+            for (Entry entry : group) {
+                if (entry.update) entry.lastUpdateTime = this.time;
+                entry.reset = false;
+            }
     }
 
     private void release(Entry entry) {
-        if (entry.slot >= 0) slots.clear(entry.slot);
+        if (entry.slot >= 0) this.slots.clear(entry.slot);
         entry.slot = -1;
     }
 
     private void close() {
-        if (renderer != null) renderer.close();
-        renderer = null;
-        entries.clear();
-        slots.clear();
-        for (List<Entry> group : visible) group.clear();
-        camera = null;
-        level = null;
-        time = 0;
-        lastNanos = 0;
+        if (this.renderer != null) this.renderer.close();
+        this.renderer = null;
+        this.entries.clear();
+        this.slots.clear();
+        for (List<Entry> group : this.visible) group.clear();
+        this.camera = null;
+        this.level = null;
+        this.time = 0;
+        this.lastNanos = 0;
     }
 
-    static final class Entry {
+    public static final class Entry {
         final int id;
         final float seed;
         final Quaternionf rotation = new Quaternionf();
@@ -158,36 +156,36 @@ public final class BurningItemManager {
 
         Entry(int id) {
             this.id = id;
-            seed = ((id * 0x9E3779B9) >>> 8) / 16777216.0F;
+            this.seed = ((id * 0x9E3779B9) >>> 8) / 16777216.0F;
         }
 
         void write(ByteBuffer buffer, CameraRenderState camera) {
-            var config = MxtClientConfig.INSTANCE.flames;
-            put(buffer, (float) (state.x - camera.pos.x), (float) (state.y + state.centerOffsetY - camera.pos.y),
-                    (float) (state.z - camera.pos.z), state.animationTime * 0.05F);
-            axis(buffer, 1, 0, 0);
-            axis(buffer, 0, 1, 0);
-            axis(buffer, 0, 0, 1);
-            put(buffer, state.length, state.bladeWidth, state.thickness, state.handleLength);
-            put(buffer, state.guardWidth, state.radialFlame ? 1.0F : 0.0F, seed, lod);
-            scratch.set((float) (config.windX.getValue() - state.velocity.x * 20),
-                    (float) (config.windY.getValue() - state.velocity.y * 20),
-                    (float) (config.windZ.getValue() - state.velocity.z * 20));
-            scratch.mul(config.windCoefficient.getValue().floatValue());
-            if (scratch.lengthSquared() > 144) scratch.normalize(12);
-            rotation.transformInverse(scratch);
-            scratch.div(state.scale);
-            put(buffer, scratch.x, scratch.y, scratch.z, 0);
-            put(buffer, slot, reset ? 1 : 0, update ? 1 : 0, step);
-            put(buffer, ((state.auraColor >>> 16) & 255) / 255.0F,
-                    ((state.auraColor >>> 8) & 255) / 255.0F,
-                    (state.auraColor & 255) / 255.0F,
-                    ((state.auraColor >>> 24) & 255) / 255.0F);
+            MxtClientConfig.Flames config = MxtClientConfig.INSTANCE.flames;
+            put(buffer, (float) (this.state.x - camera.pos.x), (float) (this.state.y + this.state.centerOffsetY - camera.pos.y),
+                    (float) (this.state.z - camera.pos.z), this.state.animationTime * 0.05F);
+            this.axis(buffer, 1, 0, 0);
+            this.axis(buffer, 0, 1, 0);
+            this.axis(buffer, 0, 0, 1);
+            put(buffer, this.state.length, this.state.bladeWidth, this.state.thickness, this.state.handleLength);
+            put(buffer, this.state.guardWidth, this.state.radialFlame ? 1.0F : 0.0F, this.seed, this.lod);
+            this.scratch.set((float) (config.windX.getValue() - this.state.velocity.x * 20),
+                    (float) (config.windY.getValue() - this.state.velocity.y * 20),
+                    (float) (config.windZ.getValue() - this.state.velocity.z * 20));
+            this.scratch.mul(config.windCoefficient.getValue().floatValue());
+            if (this.scratch.lengthSquared() > 144) this.scratch.normalize(12);
+            this.rotation.transformInverse(this.scratch);
+            this.scratch.div(this.state.scale);
+            put(buffer, this.scratch.x, this.scratch.y, this.scratch.z, 0);
+            put(buffer, this.slot, this.reset ? 1 : 0, this.update ? 1 : 0, this.step);
+            put(buffer, ((this.state.auraColor >>> 16) & 255) / 255.0F,
+                    ((this.state.auraColor >>> 8) & 255) / 255.0F,
+                    (this.state.auraColor & 255) / 255.0F,
+                    ((this.state.auraColor >>> 24) & 255) / 255.0F);
         }
 
         private void axis(ByteBuffer buffer, float x, float y, float z) {
-            rotation.transform(scratch.set(x, y, z)).mul(state.scale);
-            put(buffer, scratch.x, scratch.y, scratch.z, 0);
+            this.rotation.transform(this.scratch.set(x, y, z)).mul(this.state.scale);
+            put(buffer, this.scratch.x, this.scratch.y, this.scratch.z, 0);
         }
 
         private static void put(ByteBuffer buffer, float x, float y, float z, float w) {

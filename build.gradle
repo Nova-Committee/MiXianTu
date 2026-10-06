@@ -50,6 +50,7 @@ def testClientGameDirectory = project.findProperty('mxtTestClientGameDirectory')
 def testClientUsername = project.findProperty('mxtTestClientUsername')
 def testServerGameDirectory = project.findProperty('mxtTestServerGameDirectory') ?: 'run-test-server'
 def testServerPort = project.findProperty('mxtTestServerPort') ?: '25566'
+def testClientQuickPlay = project.findProperty('mxtTestQuickPlay')
 
 neoForge {
     version = project.neo_version
@@ -78,6 +79,10 @@ neoForge {
             if (testClientUsername) {
                 programArgument '--username'
                 programArgument testClientUsername
+            }
+            if (testClientQuickPlay) {
+                programArgument '--quickPlaySingleplayer'
+                programArgument testClientQuickPlay
             }
         }
 

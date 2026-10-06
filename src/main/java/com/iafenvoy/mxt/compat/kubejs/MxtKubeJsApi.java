@@ -8,7 +8,7 @@ import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.ability.Togglable;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.cost.Cost;
-import com.iafenvoy.mxt.data.cost.CostTransaction;
+import com.iafenvoy.mxt.data.cost.CostPayment;
 import com.iafenvoy.mxt.data.cost.context.CostContext;
 import com.iafenvoy.mxt.data.cost.context.CostOrigin;
 import com.iafenvoy.mxt.data.cultivation.Element;
@@ -63,12 +63,8 @@ import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.Optional;
-import java.util.OptionalInt;
-import java.util.Set;
 import java.util.stream.Stream;
 
 /**
@@ -541,7 +537,7 @@ public final class MxtKubeJsApi {
     public static Result tryConsumeResources(Entity entity, List<Cost> costs, FormulaContext context) {
         if (!(entity instanceof LivingEntity payer) || entity.level().isClientSide())
             return new Result(false, null, Map.of());
-        CostTransaction.PayResult payment = CostTransaction.pay(costs, CostContext.of(payer, context, CostOrigin.SCRIPT));
+        CostPayment.Result payment = CostPayment.pay(costs, CostContext.of(payer, context, CostOrigin.SCRIPT));
         return new Result(payment.paid(), payment.paid() ? null : payment.failedResource(), payment.resources());
     }
 

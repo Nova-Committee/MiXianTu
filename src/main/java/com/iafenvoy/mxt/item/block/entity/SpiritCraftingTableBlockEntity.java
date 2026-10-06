@@ -3,7 +3,7 @@ package com.iafenvoy.mxt.item.block.entity;
 import com.iafenvoy.mxt.api.AuraAccess;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.cost.Cost;
-import com.iafenvoy.mxt.data.cost.CostTransaction;
+import com.iafenvoy.mxt.data.cost.CostPayment;
 import com.iafenvoy.mxt.data.cost.Costs;
 import com.iafenvoy.mxt.data.cost.context.CostContext;
 import com.iafenvoy.mxt.data.cost.context.CostOrigin;
@@ -99,8 +99,7 @@ public final class SpiritCraftingTableBlockEntity extends BlockEntity implements
                 || stored.getCount() + produced.getCount() > max))) return;
         // Paid through the shared transaction, so a recipe's aura price behaves like every other cost.
         CostContext bankContext = CostContext.bank(this, null, FormulaContext.of(this.level), CostOrigin.RECIPE);
-        CostTransaction.Planning plan = CostTransaction.plan(recipe.aura(), bankContext);
-        if (!plan.ok() || !CostTransaction.commit(plan, bankContext).paid()) return;
+        if (!CostPayment.pay(recipe.aura(), bankContext).paid()) return;
         for (int index = 0; index < this.grid.getContainerSize(); index++) this.grid.getItem(index).shrink(1);
         if (stored.isEmpty()) this.result.setItem(0, produced);
         else stored.grow(produced.getCount());

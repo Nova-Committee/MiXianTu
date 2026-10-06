@@ -100,7 +100,8 @@ public final class PassiveAttributeService {
         // Everything a datapack declares comes from the registered providers; a body with none of them has no
         // entries beyond its own abilities.
         EntitySources.AttributeSink sink = (kind, source, values) -> addAll(entries, kind, source, values);
-        for (EntitySources.Attributes source : ModuleHooks.all(EntitySources.Attributes.class)) source.collect(entity, sink);
+        for (EntitySources.Attributes source : ModuleHooks.all(EntitySources.Attributes.class))
+            source.collect(entity, sink);
         return entries;
     }
 
@@ -163,6 +164,7 @@ public final class PassiveAttributeService {
                 PREFIX + kind.path() + "/" + origin + "/" + index + "/" + original);
     }
 
-    private record Entry(Sources.Declaration kind, Identifier source, int index, AttributeEntry definition, Identifier id) {
+    private record Entry(Sources.Declaration kind, Identifier source, int index, AttributeEntry definition,
+                         Identifier id) {
     }
 }

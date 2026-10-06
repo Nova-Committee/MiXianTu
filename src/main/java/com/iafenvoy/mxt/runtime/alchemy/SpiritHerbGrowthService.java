@@ -2,7 +2,7 @@ package com.iafenvoy.mxt.runtime.alchemy;
 
 import com.iafenvoy.mxt.data.alchemy.SpiritHerb;
 import com.iafenvoy.mxt.data.alchemy.SpiritHerb.Growth;
-import com.iafenvoy.mxt.data.cost.CostTransaction;
+import com.iafenvoy.mxt.data.cost.CostPayment;
 import com.iafenvoy.mxt.data.cost.context.CostContext;
 import com.iafenvoy.mxt.data.cost.context.CostOrigin;
 import com.iafenvoy.mxt.item.block.entity.SpiritHerbPlotBlockEntity;
@@ -94,8 +94,7 @@ public final class SpiritHerbGrowthService {
         }
         if (!growth.costs().isEmpty()) {
             CostContext context = CostContext.pool(null, level, pos, formula, CostOrigin.HERB_GROWTH);
-            CostTransaction.Planning plan = CostTransaction.plan(growth.costs(), context);
-            if (!plan.ok() || !CostTransaction.commit(plan, context).paid()) {
+            if (!CostPayment.pay(growth.costs(), context).paid()) {
                 plot.setGrowth(plot.progress(), 0, Pause.AURA);
                 plot.setChanged();
                 return;
@@ -173,7 +172,7 @@ public final class SpiritHerbGrowthService {
         if (growthAmount(level, pos, growth, formula) <= 0.0D) return Pause.GROWTH;
         if (growth.costs().isEmpty()) return Pause.NONE;
         CostContext context = CostContext.pool(null, level, pos, formula, CostOrigin.HERB_GROWTH);
-        return CostTransaction.plan(growth.costs(), context).ok() ? Pause.NONE : Pause.AURA;
+        return CostPayment.of(context).loadAndTest(growth.costs()).isEmpty() ? Pause.NONE : Pause.AURA;
     }
 
     private static Pause structural(ServerLevel level, BlockPos pos, SpiritHerbPlotBlockEntity plot) {

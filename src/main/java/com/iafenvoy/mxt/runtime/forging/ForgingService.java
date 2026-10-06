@@ -3,7 +3,7 @@ package com.iafenvoy.mxt.runtime.forging;
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.data.artifact.ForgingResultComponent;
-import com.iafenvoy.mxt.data.cost.CostTransaction;
+import com.iafenvoy.mxt.data.cost.CostPayment;
 import com.iafenvoy.mxt.data.cost.context.CostContext;
 import com.iafenvoy.mxt.data.cost.context.CostOrigin;
 import com.iafenvoy.mxt.data.forging.ForgingBlueprint;
@@ -61,9 +61,9 @@ public final class ForgingService {
         Failure refusal = postEvent(event);
         if (refusal != null) return StrikeResult.rejected(refusal, null);
         CostContext costContext = CostContext.of(player, context, CostOrigin.FORGING);
-        CostTransaction.Planning plan = CostTransaction.plan(event.costs(), costContext, resources, null);
-        if (!plan.ok()) return StrikeResult.rejected(Failure.INVALID_FORMULA, null);
-        CostTransaction.PayResult payment = CostTransaction.commit(plan, costContext, resources);
+        CostPayment plan = CostPayment.of(costContext);
+        if (plan.loadAndTest(event.costs()).isPresent()) return StrikeResult.rejected(Failure.INVALID_FORMULA, null);
+        CostPayment.Result payment = plan.commit();
         if (!payment.paid()) return StrikeResult.rejected(Failure.INSUFFICIENT_RESOURCE, payment.failedResource());
         if (!session.strike(methodId))
             throw new IllegalStateException("Forging session changed after its strike precheck");

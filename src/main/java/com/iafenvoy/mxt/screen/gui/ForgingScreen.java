@@ -2,7 +2,6 @@ package com.iafenvoy.mxt.screen.gui;
 
 import com.iafenvoy.mxt.data.IconReference;
 import com.iafenvoy.mxt.data.forging.ForgingBlueprint;
-import net.neoforged.neoforge.common.crafting.SizedIngredient;
 import com.iafenvoy.mxt.data.forging.ForgingMethod;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.network.payload.ForgingActionC2SPayload;
@@ -32,6 +31,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.ItemStackTemplate;
 import net.minecraft.world.item.Items;
 import net.neoforged.neoforge.client.network.ClientPacketDistributor;
+import net.neoforged.neoforge.common.crafting.SizedIngredient;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 

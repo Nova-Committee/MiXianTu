@@ -33,6 +33,7 @@ public final class MxtSwordAuraRenderTypes {
 
     @Nullable
     private static RenderType bladeType;
+
     private MxtSwordAuraRenderTypes() {
     }
 

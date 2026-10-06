@@ -19,7 +19,8 @@ public final class AlchemyHeatService {
     public static double maxTemperature(ServerLevel level, BlockPos pos) {
         BlockState state = stateAt(level, pos);
         if (state == null) return 0.0D;
-        if (state.getBlock() instanceof AlchemyHeatSource source) return positive(source.maxTemperature(state, level, pos));
+        if (state.getBlock() instanceof AlchemyHeatSource source)
+            return positive(source.maxTemperature(state, level, pos));
         HeatSource definition = find(state);
         return definition == null ? 0.0D : positive(definition.maxTemperature());
     }
@@ -27,7 +28,8 @@ public final class AlchemyHeatService {
     public static double heatingPerTick(ServerLevel level, BlockPos pos) {
         BlockState state = stateAt(level, pos);
         if (state == null) return 0.0D;
-        if (state.getBlock() instanceof AlchemyHeatSource source) return positive(source.heatingPerTick(state, level, pos));
+        if (state.getBlock() instanceof AlchemyHeatSource source)
+            return positive(source.heatingPerTick(state, level, pos));
         HeatSource definition = find(state);
         return definition == null ? 0.0D : positive(definition.heatingPerTick());
     }

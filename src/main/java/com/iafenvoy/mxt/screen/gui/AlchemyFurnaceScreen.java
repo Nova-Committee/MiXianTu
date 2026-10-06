@@ -58,7 +58,8 @@ public final class AlchemyFurnaceScreen extends AuiContainerScreen<AlchemyFurnac
         // The monitor has no machine cell: its heat source is a block in the world, not a slot.
         if (this.menu.view() == AlchemyFurnaceMenu.View.MONITOR) this.bindMonitor();
         else this.bindMachine(this.getOrThrow("machine", Container.class).getChildren());
-        if (playerCells.size() != PLAYER_SLOTS) throw this.missing("player_inventory (" + playerCells.size() + " slots)");
+        if (playerCells.size() != PLAYER_SLOTS)
+            throw this.missing("player_inventory (" + playerCells.size() + " slots)");
         this.text(this.title, this.getTitle());
         this.text(this.getOrThrow("inventory_label"), Component.translatable("container.inventory"));
     }

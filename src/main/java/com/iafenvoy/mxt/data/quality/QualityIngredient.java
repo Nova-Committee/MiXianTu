@@ -11,6 +11,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.neoforged.neoforge.common.crafting.ICustomIngredient;
 import net.neoforged.neoforge.common.crafting.IngredientType;
+import org.jspecify.annotations.NonNull;
 
 import java.util.stream.Stream;
 
@@ -24,10 +25,10 @@ import java.util.stream.Stream;
  */
 public record QualityIngredient(HolderSet<Item> values, QualityRequirement requirement) implements ICustomIngredient {
     public static final MapCodec<QualityIngredient> CODEC = RecordCodecBuilder.<QualityIngredient>mapCodec(i -> i.group(
-            Ingredient.NON_AIR_HOLDER_SET_CODEC.fieldOf("items").forGetter(QualityIngredient::values),
-            QualityRequirement.QUALITIES_FIELD.forGetter(ingredient -> ingredient.requirement().qualities()),
-            QualityRequirement.MIN_QUALITY_FIELD.forGetter(ingredient -> ingredient.requirement().minQuality())
-    ).apply(i, (values, qualities, minimum) -> new QualityIngredient(values, new QualityRequirement(qualities, minimum))))
+                    Ingredient.NON_AIR_HOLDER_SET_CODEC.fieldOf("items").forGetter(QualityIngredient::values),
+                    QualityRequirement.QUALITIES_FIELD.forGetter(ingredient -> ingredient.requirement().qualities()),
+                    QualityRequirement.MIN_QUALITY_FIELD.forGetter(ingredient -> ingredient.requirement().minQuality())
+            ).apply(i, (values, qualities, minimum) -> new QualityIngredient(values, new QualityRequirement(qualities, minimum))))
             .validate(QualityIngredient::validate);
     public static final IngredientType<QualityIngredient> TYPE = new IngredientType<>(CODEC);
 
@@ -49,7 +50,7 @@ public record QualityIngredient(HolderSet<Item> values, QualityRequirement requi
     }
 
     @Override
-    public Stream<Holder<Item>> items() {
+    public @NonNull Stream<Holder<Item>> items() {
         return this.values.stream();
     }
 
@@ -60,7 +61,7 @@ public record QualityIngredient(HolderSet<Item> values, QualityRequirement requi
     }
 
     @Override
-    public IngredientType<?> getType() {
+    public @NonNull IngredientType<?> getType() {
         return TYPE;
     }
 }
