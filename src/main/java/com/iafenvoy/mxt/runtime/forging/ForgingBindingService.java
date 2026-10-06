@@ -5,9 +5,12 @@ import com.iafenvoy.mxt.data.forging.ForgingBlueprint;
 import com.iafenvoy.mxt.data.forging.ForgingMethod;
 import com.iafenvoy.mxt.data.forging.ToolBinding;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
-import com.iafenvoy.mxt.registry.MxtDataMaps;
+import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
+import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.util.HolderHelper;
+import com.iafenvoy.mxt.util.matcher.ItemMatcher;
 import net.minecraft.core.Holder;
+import net.minecraft.core.Holder.Reference;
 import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
@@ -27,11 +30,15 @@ public final class ForgingBindingService {
     }
 
     public static Optional<ToolBinding> tool(Provider access, ItemStack stack) {
-        return Optional.ofNullable(stack.isEmpty() ? null : stack.getData(MxtDataMaps.TOOL_BINDING));
+        if (stack.isEmpty()) return Optional.empty();
+        return ItemMatcher.find(MxtDatapackRegistries.holders(access, MxtResourceKeys.TOOL_BINDING)
+                .map(Reference::value), stack);
     }
 
     public static Optional<BlueprintBinding> blueprint(Provider access, ItemStack stack) {
-        return Optional.ofNullable(stack.isEmpty() ? null : stack.getData(MxtDataMaps.BLUEPRINT_BINDING));
+        if (stack.isEmpty()) return Optional.empty();
+        return ItemMatcher.find(MxtDatapackRegistries.holders(access, MxtResourceKeys.BLUEPRINT_BINDING)
+                .map(Reference::value), stack);
     }
 
     public static List<Holder<ForgingMethod>> methods(Provider access, ItemStack stack) {

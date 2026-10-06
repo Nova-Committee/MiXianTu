@@ -9,9 +9,11 @@ import com.iafenvoy.mxt.data.aura.ItemAuraComponent;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
-import com.iafenvoy.mxt.registry.MxtDataMaps;
+import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
+import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.resource.ResourceService;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
+import com.iafenvoy.mxt.util.matcher.ItemMatcher;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.server.MinecraftServer;
@@ -38,16 +40,18 @@ public final class ItemAuraService {
     private ItemAuraService() {
     }
 
-    public static Optional<ItemAura> find(Provider access, ItemStack stack) {
-        return Optional.ofNullable(stack.isEmpty() ? null : stack.getData(MxtDataMaps.ITEM_AURA));
+    public static Optional<Holder<ItemAura>> find(Provider access, ItemStack stack) {
+        if (stack.isEmpty()) return Optional.empty();
+        return ItemMatcher.find(MxtDatapackRegistries.holders(access, MxtResourceKeys.ITEM_AURA),
+                Holder::value, stack);
     }
 
-    public static Optional<ItemAura> find(LivingEntity entity, ItemStack stack) {
+    public static Optional<Holder<ItemAura>> find(LivingEntity entity, ItemStack stack) {
         return find(entity.level().registryAccess(), stack);
     }
 
     public static Optional<Holder<Aura>> type(Provider access, ItemStack stack) {
-        return find(access, stack).map(ItemAura::type);
+        return find(access, stack).map(holder -> holder.value().type());
     }
 
     public static Optional<Holder<Aura>> type(ItemStack stack) {
@@ -57,7 +61,7 @@ public final class ItemAuraService {
 
     public static int capacity(Provider access, ItemStack stack, FormulaContext context) {
         return find(access, stack)
-                .map(definition -> saturatingMultiply(capacity(definition, context), stack.getCount()))
+                .map(holder -> saturatingMultiply(capacity(holder.value(), context), stack.getCount()))
                 .orElse(0);
     }
 
@@ -77,7 +81,7 @@ public final class ItemAuraService {
     public static TickResult tick(LivingEntity entity, ResourceHolderAttachment resources, FormulaContext context) {
         FloatHoldingItemAttachment holding = entity.getData(MxtAttachments.FLOAT_HOLDING_ITEM);
         ItemStack item = holding.item();
-        ItemAura active = activeDefinition(entity, item);
+        Holder<ItemAura> active = activeDefinition(entity, item);
         if (active == null) {
             if (!item.isEmpty()) return TickResult.EMPTY;
             item = loadNextItem(entity, context);
@@ -92,13 +96,13 @@ public final class ItemAuraService {
             return new TickResult(0.0D, 0.0D, true, true);
         }
         int stackSize = Math.max(1, item.getCount());
-        double speed = active.consumeSpeed().evaluate(context) * stackSize;
+        double speed = active.value().consumeSpeed().evaluate(context) * stackSize;
         if (!Double.isFinite(speed) || speed <= 0.0D) return TickResult.INVALID;
 
         double consumed = Math.min(state.remain(), speed);
         double remaining = state.remain() - consumed;
-        double released = release(entity, resources, active.type(),
-                active.releaseSpeed().evaluate(context) * stackSize, context);
+        double released = release(entity, resources, active.value().type(),
+                active.value().releaseSpeed().evaluate(context) * stackSize, context);
         if (remaining <= EPSILON) {
             exhaust(entity, item, active, context);
             return new TickResult(consumed, released, true, true);
@@ -124,7 +128,7 @@ public final class ItemAuraService {
         if (!event.getEntity().level().isClientSide()) returnFloatingItem(event.getEntity());
     }
 
-    private static ItemAura activeDefinition(LivingEntity entity, ItemStack item) {
+    private static Holder<ItemAura> activeDefinition(LivingEntity entity, ItemStack item) {
         if (item.isEmpty() || item.get(MxtDataComponents.ITEM_AURA) == null) return null;
         return find(entity, item).orElse(null);
     }
@@ -136,7 +140,7 @@ public final class ItemAuraService {
         if (item.isEmpty()) item = takeFreshInventoryItem(entity);
         if (item.isEmpty()) return ItemStack.EMPTY;
 
-        ItemAura definition = find(entity, item).orElse(null);
+        Holder<ItemAura> definition = find(entity, item).orElse(null);
         if (definition == null) {
             giveItem(entity, item);
             return ItemStack.EMPTY;
@@ -145,15 +149,15 @@ public final class ItemAuraService {
         FloatHoldingItemAttachment holding = entity.getData(MxtAttachments.FLOAT_HOLDING_ITEM);
         holding.set(item);
         if (item.get(MxtDataComponents.ITEM_AURA) == null) {
-            double total = definition.aura().evaluate(context);
+            double total = definition.value().aura().evaluate(context);
             if (!Double.isFinite(total) || total <= 0.0D) {
                 holding.clear();
                 giveItem(entity, item);
                 return ItemStack.EMPTY;
             }
             if (item.getItem() instanceof ItemAuraAccess access) {
-                int capacity = Math.max(0, access.getCapacity(entity, item).getInt(definition.type()));
-                int unavailable = access.extract(entity, item, definition.type(), capacity, true);
+                int capacity = Math.max(0, access.getCapacity(entity, item).getInt(definition.value().type()));
+                int unavailable = access.extract(entity, item, definition.value().type(), capacity, true);
                 int available = Math.max(0, capacity - unavailable);
                 if (available == 0) {
                     holding.clear();
@@ -240,21 +244,21 @@ public final class ItemAuraService {
         return result >= Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) result;
     }
 
-    private static void exhaust(LivingEntity entity, ItemStack item, ItemAura active, FormulaContext context) {
+    private static void exhaust(LivingEntity entity, ItemStack item, Holder<ItemAura> active, FormulaContext context) {
         entity.getData(MxtAttachments.FLOAT_HOLDING_ITEM).clear();
         if (item.getItem() instanceof ItemAuraAccess access) {
-            access.extract(entity, item, active.type(), Integer.MAX_VALUE, false);
+            access.extract(entity, item, active.value().type(), Integer.MAX_VALUE, false);
             item.remove(MxtDataComponents.ITEM_AURA);
             giveItem(entity, item);
         } else {
-            active.resultStack().ifPresent(template -> {
+            active.value().resultStack().ifPresent(template -> {
                 ItemStack result = template.create();
                 long count = (long) result.getCount() * Math.max(1, item.getCount());
                 result.setCount((int) Math.min(Integer.MAX_VALUE, count));
                 giveItem(entity, result);
             });
         }
-        active.exhaustedAction().execute(entity, context);
+        active.value().exhaustedAction().execute(entity, context);
     }
 
     private static double release(LivingEntity entity, ResourceHolderAttachment resources, Holder<Aura> aura,

@@ -1,0 +1,9 @@
+{
+  "items": "minecraft:cookie",
+  "actions": [
+    {
+      "type": "mxt:remove_spirit_root",
+      "spirit_root": "mxt_test:water_root"
+    }
+  ]
+}

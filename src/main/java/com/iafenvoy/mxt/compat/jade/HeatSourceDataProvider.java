@@ -25,7 +25,7 @@ public enum HeatSourceDataProvider implements IServerDataProvider<BlockAccessor>
     public void appendServerData(@NonNull CompoundTag data, BlockAccessor accessor) {
         if (!(accessor.getLevel() instanceof ServerLevel level)) return;
         BlockState state = accessor.getBlockState();
-        if (!AlchemyHeatService.isHeatSource(state)) return;
+        if (!AlchemyHeatService.isHeatSource(level, state)) return;
         data.putDouble(TEMPERATURE, AlchemyHeatService.maxTemperature(level, accessor.getPosition()));
         data.putDouble(HEATING, AlchemyHeatService.heatingPerTick(level, accessor.getPosition()));
     }

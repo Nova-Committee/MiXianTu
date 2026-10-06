@@ -191,8 +191,7 @@ public final class AuraChunkAttachment {
         return result;
     }
 
-    // Public because the block data map's own merger sums the same way this aggregate does.
-    public static AuraValue merge(AuraValue first, AuraValue second) {
+    private static AuraValue merge(AuraValue first, AuraValue second) {
         double amount = first.amount() + second.amount();
         double maximum = first.max().resolve(first.amount()) + second.max().resolve(second.amount());
         double firstWeight = Math.max(0.0D, first.amount());

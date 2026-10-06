@@ -4,6 +4,8 @@
 > `neoforge-26.1.2.99-sources.jar` 与 `minecraft-patched-26.1.2.99-sources.jar` 读过，并对着官方文档
 > <https://docs.neoforged.net/docs/resources/server/datamaps/>（26.1 版）复核过。
 > **状态**：**已落地**（2026-10-04）。用户拍板：**六张"可迁"的全部迁移**（`item_aura` / `currency` / `item_binding` / `weapon_binding` / `tool_binding` / `blueprint_binding`），并明确"不用考虑有些物品匹配不能匹配 `ItemStack` 的问题"——即**接受**§5.1 那条能力损失。**同日追加**：用户指出数据表的键可以是**任何注册表**，于是方块键的 `block_aura` 与 `heat_source` 也迁了（见 §11）。八张表全部建成 `AdvancedDataMapType`，各带自己的 merger（priority 表用共享的 `PriorityMerger`，方块灵气用累加口径），注册表总数 39 → 31；**§0 的结论、§7 的"不建议整体替代"与 §8 的路线都由此作废，保留原文作为决策记录**。实现形状以代码（`registry/MxtDataMaps.java`）与 [`docs/数据包格式.md`](../docs/数据包格式.md) 的「数据表」一节为准；它的前身是 [`69`](69_品质匹配与数据表设计.md) 拆出来的一节。
+>
+> **2026-10-05 追记（结论已作废）**：用户改口——**数据表全部撤回注册表**，九张表（上面八张 + `default_quality`）回到原版 datapack registry 与 `ItemMatcher`，`registry/MxtDataMaps.java` 已删除，注册表总数 31 → 40。所以**本文 §11 的落地结论、以及"接受 §5.1 能力损失"这条拍板都已作废**；§0 / §7 / §8 里"不迁老表"的建议重新成为现行口径。§1–§4 的数据表机制说明仍有阅读价值（本仓库不再有数据表）。设计稿见 [`75_数据表回退为注册表设计.md`](75_数据表回退为注册表设计.md)。
 
 ## 11 同日追加：方块键的两张（2026-10-04）
 

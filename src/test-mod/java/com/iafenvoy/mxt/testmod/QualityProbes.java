@@ -13,7 +13,6 @@ import com.iafenvoy.mxt.data.quality.QualityIngredient;
 import com.iafenvoy.mxt.data.quality.QualityLadders;
 import com.iafenvoy.mxt.data.quality.QualityRequirement;
 import com.iafenvoy.mxt.picker.ItemPickerManager;
-import com.iafenvoy.mxt.picker.PickerCategory;
 import com.iafenvoy.mxt.recipe.AlchemyRecipe;
 import com.iafenvoy.mxt.recipe.TalismanDrawingRecipe;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
@@ -34,6 +33,7 @@ import com.mojang.serialization.JsonOps;
 import com.mojang.authlib.GameProfile;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.core.Holder;
+import net.minecraft.core.Registry;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
@@ -292,18 +292,26 @@ public final class QualityProbes {
                     "paper_rank=" + (ranked != null) + " unknown=" + (unknownRank == null),
                     "paper_rank=true unknown=true");
 
-            // Without registry access both halves that need no ladder still answer - the data table for a plain stack
-            // and the component for a graded one, which is what a matching path on a pure client has - while a
-            // minimum cannot be answered at all, and answers no.
+            // Which source answered decides the membership answer: the component on a graded clay ball makes it
+            // excellent, while a plain one reads the default_quality table and is normal, so the same requirement
+            // takes one and refuses the other.
             ItemQualityCondition gradedMembership = quality(ops, "{\"type\": \"mxt:item_quality\", \"quality\": [\"mxt_test:excellent\"]}");
-            QualityRequirement floor = new QualityRequirement(List.of(), Optional.of(tier(access, "mxt_test:excellent")));
-            ok &= leg(source, "no_access",
-                    gradedMembership != null && QualityRequirements.test(null, clay, membership.requirement()) && QualityRequirements.test(null, clayGraded, gradedMembership.requirement()) && !QualityRequirements.test(null, clayGraded, membership.requirement()) && !QualityRequirements.test(null, clay, minimum.requirement()) && !QualityRequirements.test(null, clayGraded, floor) && QualityRequirements.test(null, dirt, QualityRequirement.of(List.of())),
-                    "table_tier=" + QualityRequirements.test(null, clay, membership.requirement())
-                            + " component_tier=" + (gradedMembership != null && QualityRequirements.test(null, clayGraded, gradedMembership.requirement()))
-                            + " min=" + QualityRequirements.test(null, clay, minimum.requirement())
-                            + " nothing_asked=" + QualityRequirements.test(null, dirt, QualityRequirement.of(List.of())),
-                    "table_tier=true component_tier=true min=false nothing_asked=true");
+            ok &= leg(source, "tier_source_layers",
+                    gradedMembership != null
+                            && !ask(access, gradedMembership.requirement(), clay) && ask(access, gradedMembership.requirement(), clayGraded)
+                            && ask(access, membership.requirement(), clay) && !ask(access, membership.requirement(), clayGraded),
+                    "table_as_excellent=" + ask(access, gradedMembership.requirement(), clay)
+                            + " graded_as_excellent=" + ask(access, gradedMembership.requirement(), clayGraded)
+                            + " graded_as_normal=" + ask(access, membership.requirement(), clayGraded),
+                    "table_as_excellent=false graded_as_excellent=true graded_as_normal=false");
+
+            // Nothing asked passes whatever the stack is: neither half written means "any tier, including none".
+            ok &= leg(source, "empty_requirement",
+                    QualityRequirements.test(access, clay, QualityRequirement.of(List.of()))
+                            && QualityRequirements.test(access, dirt, QualityRequirement.of(List.of())),
+                    "clay=" + QualityRequirements.test(access, clay, QualityRequirement.of(List.of()))
+                            + " dirt=" + QualityRequirements.test(access, dirt, QualityRequirement.of(List.of())),
+                    "clay=true dirt=true");
 
             // The table takes a priority the way every other item table does, and the bare tier id is still the whole
             // value: gravel is named by a tag at priority 0 and by itself at 5, flint the other way round, so both
@@ -409,8 +417,8 @@ public final class QualityProbes {
     // The picker's own provider, asked the way its screen asks it: the client's registry access is the only argument
     // that differs there.
     private static List<ItemPickerManager.PickerItem> qualityRows(RegistryAccess access) {
-        PickerCategory category = ItemPickerManager.category(MxtResourceKeys.ITEM_QUALITY.identifier()).orElse(null);
-        ItemPickerManager.ItemProvider provider = category == null ? null : ItemPickerManager.provider(category);
+        ResourceKey<Registry<?>> key = ItemPickerManager.category(MxtResourceKeys.ITEM_QUALITY.identifier()).orElse(null);
+        ItemPickerManager.ItemProvider<?> provider = key == null ? null : ItemPickerManager.provider(key);
         return provider == null ? List.of() : provider.items().apply(access, ignored -> true);
     }
 

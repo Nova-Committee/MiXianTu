@@ -3,32 +3,47 @@ package com.iafenvoy.mxt.data;
 import com.iafenvoy.mxt.data.condition.ItemCondition;
 import com.iafenvoy.mxt.util.codec.MiscCodecs;
 import com.iafenvoy.mxt.util.matcher.ItemMatcher;
+import com.iafenvoy.mxt.util.matcher.builtin.ItemEntry;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.ExtraCodecs;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStackTemplate;
 
 import java.util.List;
+import java.util.Optional;
 
 /**
- * One item as a currency denomination: what it is worth, when it cannot be spent, and what it can be exchanged
- * for. The item is the data map's key, so a definition no longer names the items it covers.
+ * Defines one item as a currency denomination. Definitions are datapack-owned,
+ * so modded items can participate without a hardcoded coin item class.
  */
-public record CurrencyValue(long value, List<UnavailableWhen> unavailableWhen,
-                            List<Exchange> exchanges, int priority) {
+public record CurrencyValue(List<Entry> items, long value, List<UnavailableWhen> unavailableWhen,
+                            List<Exchange> exchanges, int priority) implements ItemMatcher {
     public static final Codec<CurrencyValue> CODEC = RecordCodecBuilder.<CurrencyValue>create(i -> i.group(
+            ENTRIES_CODEC.optionalFieldOf("items", List.of()).forGetter(CurrencyValue::items),
+            BuiltInRegistries.ITEM.byNameCodec().optionalFieldOf("item").forGetter(definition -> definition.items().size() == 1 && definition.items().getFirst() instanceof ItemEntry(
+                    Item item
+            ) ? Optional.of(item) : Optional.empty()),
             Codec.LONG.fieldOf("value").forGetter(CurrencyValue::value),
             UnavailableWhen.CODEC.listOf().optionalFieldOf("unavailable_when", List.of()).forGetter(CurrencyValue::unavailableWhen),
             Exchange.CODEC.listOf().fieldOf("exchanges").forGetter(CurrencyValue::exchanges),
-            Codec.INT.optionalFieldOf("priority", ItemMatcher.DEFAULT_PRIORITY).forGetter(CurrencyValue::priority)
-    ).apply(i, CurrencyValue::new)).validate(CurrencyValue::validate);
+            Codec.INT.optionalFieldOf("priority", DEFAULT_PRIORITY).forGetter(CurrencyValue::priority)
+    ).apply(i, (items, legacyItem, value, unavailableWhen, exchanges, priority) -> new CurrencyValue(
+            items.isEmpty() ? legacyItem.map(item -> List.of((Entry) new ItemEntry(item))).orElse(List.of()) : items, value, unavailableWhen, exchanges, priority
+    ))).validate(CurrencyValue::validate);
+
+    @Override
+    public List<Entry> entries() {
+        return this.items;
+    }
 
     private static DataResult<CurrencyValue> validate(CurrencyValue definition) {
-        return definition.value > 0L
-                ? DataResult.success(definition)
-                : DataResult.error(() -> "Currency value must be positive");
+        if (definition.items.isEmpty() || definition.value <= 0L)
+            return DataResult.error(() -> "Currency items must not be empty and value must be positive");
+        return DataResult.success(definition);
     }
 
     /**

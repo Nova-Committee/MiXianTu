@@ -1,0 +1,4 @@
+{
+  "items": ["minecraft:cobblestone", "#mxt_test:quality_probe"],
+  "quality": "mxt_test:poor"
+}

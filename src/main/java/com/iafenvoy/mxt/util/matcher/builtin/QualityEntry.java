@@ -6,6 +6,7 @@ import com.iafenvoy.mxt.util.matcher.ItemMatcher;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.world.item.ItemStack;
 
 import java.util.List;
@@ -31,8 +32,11 @@ public record QualityEntry(List<ItemMatcher.Entry> items, QualityRequirement req
 
     @Override
     public boolean matches(ItemStack stack) {
-        return ItemMatcher.matches(this.items, stack)
-                && QualityRequirements.test(QualityRequirements.access(), stack, this.requirement);
+        // A matcher entry only ever sees the stack, so it has to look the registries up itself; with no level
+        // loaded there is no tier to compare and the entry answers no.
+        Provider access = QualityRequirements.access();
+        return access != null && ItemMatcher.matches(this.items, stack)
+                && QualityRequirements.test(access, stack, this.requirement);
     }
 
     // A requirement is always present (see the codec), and reading a tier reads the stack, so the per-item cache

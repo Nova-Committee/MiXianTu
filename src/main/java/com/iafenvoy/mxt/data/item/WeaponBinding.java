@@ -18,21 +18,21 @@ import net.minecraft.tags.TagKey;
 import java.util.List;
 
 /**
- * Weapon behaviour attached to an already registered physical item; the item is the data map's key. {@code element}
- * is what it is made of (falling back to the aura it stores or declares); attack numbers are ordinary
- * {@code attributes}, never a replacement.
+ * Weapon behaviour attached to an already registered physical item. {@code element} is what it is made of (falling
+ * back to the aura it stores or declares); attack numbers are ordinary {@code attributes}, never a replacement.
  */
-public record WeaponBinding(List<AttributeEntry> attributes, EntityAction useAction,
+public record WeaponBinding(List<Entry> entries, List<AttributeEntry> attributes, EntityAction useAction,
                             BiEntityAction attackAction, EntityAction tickAction,
                             List<DescribedEntry<EntityCondition>> conditions,
                             List<Either<Holder<Element>, TagKey<Element>>> element,
-                            int priority) {
+                            int priority) implements ItemMatcher {
     public static final Codec<WeaponBinding> CODEC = RecordCodecBuilder.create(i -> i.group(
+            ENTRIES_CODEC.fieldOf("items").forGetter(WeaponBinding::entries),
             AttributeEntry.CODEC.listOf().optionalFieldOf("attributes", List.of()).forGetter(WeaponBinding::attributes),
             EntityAction.optionalCodec("use_action").forGetter(WeaponBinding::useAction),
             BiEntityAction.optionalCodec("attack_action").forGetter(WeaponBinding::attackAction),
             EntityAction.optionalCodec("tick_action").forGetter(WeaponBinding::tickAction),
             DescribedEntry.codec(EntityCondition.CODEC, "condition").listOf().optionalFieldOf("conditions", List.of()).forGetter(WeaponBinding::conditions),
             RegistryCodecs.holderOrTagList(MxtResourceKeys.ELEMENT).optionalFieldOf("element", List.of()).forGetter(WeaponBinding::element),
-            Codec.INT.optionalFieldOf("priority", ItemMatcher.DEFAULT_PRIORITY).forGetter(WeaponBinding::priority)).apply(i, WeaponBinding::new));
+            Codec.INT.optionalFieldOf("priority", DEFAULT_PRIORITY).forGetter(WeaponBinding::priority)).apply(i, WeaponBinding::new));
 }

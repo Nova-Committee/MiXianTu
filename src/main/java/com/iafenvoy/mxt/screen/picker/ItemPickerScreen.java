@@ -113,7 +113,7 @@ public final class ItemPickerScreen extends AbstractContainerScreen<PickerMenu> 
         if (access == null || minecraft.player == null) return null;
         List<PickerItem> picked = new ArrayList<>();
         for (Identifier category : categories)
-            ItemPickerManager.category(category).ifPresent(picked1 -> picked.addAll(CreativeTabHelper.itemsOf(access, picked1)));
+            ItemPickerManager.category(category).ifPresent(key -> picked.addAll(CreativeTabHelper.itemsOf(access, key)));
         return new ItemPickerScreen(title, candidates(picked));
     }
 

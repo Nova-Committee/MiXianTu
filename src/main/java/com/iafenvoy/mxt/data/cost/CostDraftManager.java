@@ -53,7 +53,7 @@ public final class CostDraftManager {
      */
     @SuppressWarnings("unchecked")
     public static <T extends Cost> @Nullable CostDraft<T> create(Class<T> type, CostContext context,
-                                                                Map<Identifier, Double> account) {
+                                                                 Map<Identifier, Double> account) {
         CostDraftFactory<T> factory = (CostDraftFactory<T>) FACTORIES.get(type);
         return factory == null ? null : factory.create(context, account);
     }

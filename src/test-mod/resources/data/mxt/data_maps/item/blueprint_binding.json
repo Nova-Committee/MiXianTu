@@ -1,7 +1,0 @@
-{
-  "values": {
-    "mxt_test:pickaxe_manual": { "blueprints": ["mxt_test:pickaxe"] },
-    "mxt_test:sword_manual": { "blueprints": ["mxt_test:iron_sword"] },
-    "mxt_test:test_manual": { "blueprints": ["mxt_test:iron_sword"] }
-  }
-}

@@ -36,7 +36,7 @@ public final class ItemAuraTooltipAppender {
                                        Player player, TooltipFlag flag, Consumer<Component> builder) {
         Provider registries = context.registries();
         if (registries == null) return;
-        ItemAuraService.find(registries, stack).ifPresent(itemAura -> appendItemAura(builder, stack, itemAura));
+        ItemAuraService.find(registries, stack).ifPresent(itemAura -> appendItemAura(builder, stack, itemAura.value()));
     }
 
     private static void appendItemAura(Consumer<Component> builder, ItemStack stack, ItemAura itemAura) {

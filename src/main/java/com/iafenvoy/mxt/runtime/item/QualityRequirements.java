@@ -26,21 +26,21 @@ public final class QualityRequirements {
     private QualityRequirements() {
     }
 
-    public static boolean test(@Nullable Provider access, ItemStack stack, QualityRequirement requirement) {
+    public static boolean test(Provider access, ItemStack stack, QualityRequirement requirement) {
         // Nothing asked: every stack passes, including one whose tier nothing declares.
         if (requirement.isEmpty()) return true;
-        RegistryLookup<ItemQuality> registry = access == null ? null : QualityService.registry(access).orElse(null);
-        Holder<ItemQuality> quality = QualityService.find(registry, stack).orElse(null);
+        RegistryLookup<ItemQuality> registry = QualityService.registry(access).orElse(null);
+        Holder<ItemQuality> quality = QualityService.find(registry, access, stack).orElse(null);
         if (quality == null || !requirement.admits(quality)) return false;
         Holder<ItemQuality> minimum = requirement.minQuality().orElse(null);
-        // A ladder position cannot be read off the stack, so no access means the minimum cannot be answered.
-        return minimum == null || (access != null && QualityLadders.atLeast(access, quality, minimum));
+        // A ladder position is not written on the stack, so only the indexed chain can answer it.
+        return minimum == null || QualityLadders.atLeast(access, quality, minimum);
     }
 
     /**
      * The registry access a matching path can reach: the running server, else the client's own level. A ladder is
      * walked out of the synced registry, so a client answers a minimum exactly as the server does; null only where
-     * no level is loaded at all, and then only a membership list can still be answered.
+     * no level is loaded at all, and a reader handed null cannot answer a requirement.
      */
     public static @Nullable Provider access() {
         Provider server = serverAccess();

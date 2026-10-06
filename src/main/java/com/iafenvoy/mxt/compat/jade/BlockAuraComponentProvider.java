@@ -2,11 +2,16 @@ package com.iafenvoy.mxt.compat.jade;
 
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.data.aura.Aura;
-import com.iafenvoy.mxt.data.aura.AuraValue;
-import com.iafenvoy.mxt.registry.MxtDataMaps;
+import com.iafenvoy.mxt.data.aura.BlockAura;
+import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
+import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.TooltipText;
+import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import net.minecraft.core.Holder;
+import net.minecraft.core.Holder.Reference;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import org.jspecify.annotations.NonNull;
@@ -27,9 +32,12 @@ public enum BlockAuraComponentProvider implements IBlockComponentProvider {
 
     @Override
     public void appendTooltip(@NonNull ITooltip tooltip, BlockAccessor accessor, @NonNull IPluginConfig config) {
+        Identifier blockId = BuiltInRegistries.BLOCK.getKey(accessor.getBlock());
         Totals totals = new Totals();
-        Map<Holder<Aura>, AuraValue> aura = accessor.getBlockState().getData(MxtDataMaps.BLOCK_AURA);
-        if (aura != null) totals.add(aura);
+        MxtDatapackRegistries.holders(accessor.getLevel().registryAccess(), MxtResourceKeys.BLOCK_AURA)
+                .map(Reference::value)
+                .filter(definition -> RegistryCodecs.matches(definition.blocks(), BuiltInRegistries.BLOCK, Registries.BLOCK, blockId))
+                .forEach(totals::add);
         totals.appendTo(tooltip);
     }
 
@@ -41,8 +49,8 @@ public enum BlockAuraComponentProvider implements IBlockComponentProvider {
     private static final class Totals {
         private final Map<Holder<Aura>, double[]> resources = new LinkedHashMap<>();
 
-        private void add(Map<Holder<Aura>, AuraValue> aura) {
-            aura.forEach((resource, value) -> {
+        private void add(BlockAura definition) {
+            definition.aura().forEach((resource, value) -> {
                 double[] totals = this.resources.computeIfAbsent(resource, ignored -> new double[2]);
                 totals[0] += value.amount();
                 totals[1] += value.regenPerTick();

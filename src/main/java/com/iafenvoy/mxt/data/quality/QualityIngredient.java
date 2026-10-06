@@ -5,6 +5,7 @@ import com.mojang.serialization.DataResult;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
+import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.core.HolderSet;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -44,9 +45,12 @@ public record QualityIngredient(HolderSet<Item> values, QualityRequirement requi
     }
 
     @Override
-    public boolean test(ItemStack stack) {
-        return stack.is(this.values)
-                && QualityRequirements.test(QualityRequirements.access(), stack, this.requirement);
+    public boolean test(@NonNull ItemStack stack) {
+        // An ingredient only ever sees the stack, so it has to look the registries up itself; with no level loaded
+        // there is no tier to compare and the ingredient answers no.
+        Provider access = QualityRequirements.access();
+        return access != null && stack.is(this.values)
+                && QualityRequirements.test(access, stack, this.requirement);
     }
 
     @Override

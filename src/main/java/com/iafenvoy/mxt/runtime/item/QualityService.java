@@ -6,14 +6,15 @@ import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.data.quality.ItemQuality.Modifier;
 import com.iafenvoy.mxt.data.quality.ItemQualityTags;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
-import com.iafenvoy.mxt.registry.MxtDataMaps;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.item.ItemBindingService.ResolvedBindings;
 import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
+import com.iafenvoy.mxt.util.matcher.ItemMatcher;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.Holder;
+import net.minecraft.core.Holder.Reference;
 import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.core.HolderLookup.RegistryLookup;
 import net.minecraft.core.component.DataComponentType;
@@ -159,15 +160,16 @@ public final class QualityService {
     // tier of the definition it carries, else what the table says about that item. Read with a Provider because the
     // component is re-resolved through the registry the caller has.
     public static Optional<Holder<ItemQuality>> find(Provider access, ItemStack stack) {
-        return find(registry(access).orElse(null), stack);
+        return find(registry(access).orElse(null), access, stack);
     }
 
     // The same read for a caller that already looked the registry up (the use gate does).
-    static Optional<Holder<ItemQuality>> find(@Nullable RegistryLookup<ItemQuality> registry, ItemStack stack) {
+    static Optional<Holder<ItemQuality>> find(@Nullable RegistryLookup<ItemQuality> registry, Provider access, ItemStack stack) {
         if (stack.isEmpty()) return Optional.empty();
         return intrinsic(registry, stack)
                 .or(() -> carried(stack))
-                .or(() -> Optional.ofNullable(stack.getData(MxtDataMaps.DEFAULT_QUALITY)).map(DefaultQuality::quality));
+                .or(() -> ItemMatcher.find(MxtDatapackRegistries.holders(access, MxtResourceKeys.DEFAULT_QUALITY)
+                        .map(Reference::value), stack).map(DefaultQuality::quality));
     }
 
     // The carried source needs no registry: a carrier answers from the holder already on the stack.
@@ -239,7 +241,7 @@ public final class QualityService {
         FormulaContext context = FormulaContext.of(user);
         if (!bindings.conditionsMet(user, context)) return Optional.of(Failure.BINDING_CONDITIONS);
         Optional<RegistryLookup<ItemQuality>> registry = registry(access);
-        Optional<Holder<ItemQuality>> quality = find(registry.orElse(null), stack);
+        Optional<Holder<ItemQuality>> quality = find(registry.orElse(null), access, stack);
         if (quality.isPresent() && !quality.orElseThrow().value().condition().test(user, context))
             return Optional.of(Failure.QUALITY_CONDITIONS);
         return bindings.pill().identity().flatMap(holder -> PillService.usageFailure(user, holder))

@@ -11,16 +11,21 @@ import net.minecraft.core.Holder;
 import java.util.List;
 
 /**
- * The forging methods one item unlocks; the item is the data map's key. A stack may instead carry its own methods
- * through {@code mxt:forging_methods}, and the two are unioned.
+ * The forging methods one item unlocks, claimed by item like every other binding table. A stack may instead carry
+ * its own methods through {@code mxt:forging_methods}, and the two are unioned.
  */
-public record ToolBinding(List<Holder<ForgingMethod>> methods, int priority) {
-    public static final Codec<ToolBinding> CODEC = RecordCodecBuilder.<ToolBinding>create(i -> i.group(
+public record ToolBinding(List<Entry> entries, List<Holder<ForgingMethod>> methods,
+                          int priority) implements ItemMatcher {
+    public static final Codec<ToolBinding> DIRECT_CODEC = RecordCodecBuilder.<ToolBinding>create(i -> i.group(
+            ENTRIES_CODEC.fieldOf("items").forGetter(ToolBinding::entries),
             AutoIgnoreListCodec.create(ForgingMethod.CODEC).fieldOf("methods").forGetter(ToolBinding::methods),
-            Codec.INT.optionalFieldOf("priority", ItemMatcher.DEFAULT_PRIORITY).forGetter(ToolBinding::priority)
+            Codec.INT.optionalFieldOf("priority", DEFAULT_PRIORITY).forGetter(ToolBinding::priority)
     ).apply(i, ToolBinding::new)).validate(ToolBinding::validate);
 
     private static DataResult<ToolBinding> validate(ToolBinding value) {
+        // Nothing reaches a definition that claims no item: the component that used to point at one is gone, so
+        // an empty list would leave a file that loads and can never be read.
+        if (value.entries.isEmpty()) return DataResult.error(() -> "items must not be empty");
         if (value.methods.isEmpty()) return DataResult.error(() -> "methods must not be empty");
         if (value.methods.stream().map(HolderHelper::id).distinct().count() != value.methods.size())
             return DataResult.error(() -> "methods must not contain duplicates");

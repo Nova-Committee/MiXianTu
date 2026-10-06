@@ -1,0 +1,5 @@
+{
+  "blocks": ["mxt_test:alchemy_advanced_fire"],
+  "max_temperature": 999,
+  "heating_per_tick": 999
+}

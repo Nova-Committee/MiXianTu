@@ -1,7 +1,0 @@
-{
-  "values": {
-    "minecraft:emerald": { "value": 100, "exchanges": [] },
-    "#mxt_test:currency_nuggets": { "value": 1, "exchanges": [] },
-    "minecraft:iron_nugget": { "value": 1, "exchanges": [] }
-  }
-}

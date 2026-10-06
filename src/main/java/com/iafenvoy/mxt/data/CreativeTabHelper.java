@@ -3,7 +3,6 @@ package com.iafenvoy.mxt.data;
 import com.iafenvoy.mxt.picker.ItemPickerManager;
 import com.iafenvoy.mxt.picker.ItemPickerManager.ItemProvider;
 import com.iafenvoy.mxt.picker.ItemPickerManager.PickerItem;
-import com.iafenvoy.mxt.picker.PickerCategory;
 import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.core.Registry;
 import net.minecraft.resources.Identifier;
@@ -17,51 +16,36 @@ import java.util.Set;
 import java.util.function.Predicate;
 
 /**
- * Reading the picker catalogue: a category's entries turned into rows, or into the item list a creative tab takes.
- * Every query is handed the registry access to read from, so the client reads the tables it has synced and the
+ * Reading the picker catalogue: a registry's entries turned into rows, or into the item list a creative tab takes.
+ * Every query is handed the registry access to read from, so the client reads the registries it has synced and the
  * server its own; nothing here writes, resolves a side by itself or touches an attachment.
  *
- * <p>The catalogue itself - which table maps to which rows - is {@link ItemPickerManager}. A key that was never
- * registered as a category gives an empty list rather than an exception, and a category keeps only the first
- * provider registered for it, so registering a second one for an id already taken is silently inert.</p>
+ * <p>The catalogue itself - which registry maps to which rows - is {@link ItemPickerManager}. A key that was never
+ * registered as a category gives an empty list rather than an exception, and a registry keeps only the first
+ * category registered for it, so registering a second one for a key already taken is silently inert.</p>
  */
 public final class CreativeTabHelper {
     /**
-     * Every row of one category.
+     * Every row of one category, in registry order.
      */
-    public static List<PickerItem> itemsOf(Provider provider, PickerCategory category) {
-        return itemsOf(provider, category, _ -> true);
+    public static List<PickerItem> itemsOf(Provider provider, ResourceKey<? extends Registry<?>> key) {
+        return itemsOf(provider, key, _ -> true);
     }
 
     /**
      * The rows of one category whose own entry passes {@code filter}. The filter sees the row's id - the
-     * definition's for a registry, the item's for a data map - so a namespace check is one call.
+     * definition's for a registry entry - so a namespace check is one call.
      */
-    public static List<PickerItem> itemsOf(Provider provider, PickerCategory category, Predicate<Identifier> filter) {
-        ItemProvider item = ItemPickerManager.provider(category);
+    public static List<PickerItem> itemsOf(Provider provider, ResourceKey<? extends Registry<?>> key, Predicate<Identifier> filter) {
+        ItemProvider<?> item = ItemPickerManager.provider(key);
         return item == null ? List.of() : item.items().apply(provider, filter);
-    }
-
-    /**
-     * The same for a registry-backed category, which is what a caller holding a registry key has.
-     */
-    public static <T> List<PickerItem> itemsOf(Provider provider, ResourceKey<Registry<T>> key) {
-        return itemsOf(provider, new PickerCategory.OfRegistry<>(key));
-    }
-
-    public static <T> List<PickerItem> itemsOf(Provider provider, ResourceKey<Registry<T>> key, Predicate<Identifier> filter) {
-        return itemsOf(provider, new PickerCategory.OfRegistry<>(key), filter);
     }
 
     /**
      * The rows of one category whose entry id lives in {@code namespace} - the mod id of whatever shipped it.
      */
-    public static List<PickerItem> itemsOfMod(Provider provider, PickerCategory category, String namespace) {
-        return itemsOf(provider, category, inNamespace(namespace));
-    }
-
-    public static <T> List<PickerItem> itemsOfMod(Provider provider, ResourceKey<Registry<T>> key, String namespace) {
-        return itemsOfMod(provider, new PickerCategory.OfRegistry<>(key), namespace);
+    public static List<PickerItem> itemsOfMod(Provider provider, ResourceKey<? extends Registry<?>> key, String namespace) {
+        return itemsOf(provider, key, inNamespace(namespace));
     }
 
     /**
@@ -69,31 +53,23 @@ public final class CreativeTabHelper {
      */
     public static List<PickerItem> itemsOfMod(Provider provider, String namespace) {
         List<PickerItem> collected = new ArrayList<>();
-        for (PickerCategory category : ItemPickerManager.categories())
-            collected.addAll(itemsOfMod(provider, category, namespace));
+        for (ResourceKey<Registry<?>> key : ItemPickerManager.categories())
+            collected.addAll(itemsOfMod(provider, key, namespace));
         return List.copyOf(collected);
     }
 
     /**
      * The stacks of one category, which is what a creative tab takes.
      */
-    public static List<ItemStack> stacksOf(Provider provider, PickerCategory category) {
-        return stacks(itemsOf(provider, category));
-    }
-
-    public static List<ItemStack> stacksOf(Provider provider, PickerCategory category, Predicate<Identifier> filter) {
-        return stacks(itemsOf(provider, category, filter));
-    }
-
-    public static <T> List<ItemStack> stacksOf(Provider provider, ResourceKey<Registry<T>> key) {
+    public static List<ItemStack> stacksOf(Provider provider, ResourceKey<? extends Registry<?>> key) {
         return stacks(itemsOf(provider, key));
     }
 
-    public static <T> List<ItemStack> stacksOf(Provider provider, ResourceKey<Registry<T>> key, Predicate<Identifier> filter) {
+    public static List<ItemStack> stacksOf(Provider provider, ResourceKey<? extends Registry<?>> key, Predicate<Identifier> filter) {
         return stacks(itemsOf(provider, key, filter));
     }
 
-    public static <T> List<ItemStack> stacksOfMod(Provider provider, ResourceKey<Registry<T>> key, String namespace) {
+    public static List<ItemStack> stacksOfMod(Provider provider, ResourceKey<? extends Registry<?>> key, String namespace) {
         return stacks(itemsOfMod(provider, key, namespace));
     }
 

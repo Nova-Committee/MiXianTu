@@ -1,0 +1,10 @@
+{
+  "blocks": [
+    "mxt:spirit_stone_ore",
+    "#mxt_test:aura_emitters"
+  ],
+  "aura": {
+    "mxt_test:spirit_power": { "amount": 5.0, "max": 5.0, "regen_per_tick": 0.01 },
+    "mxt_test:water_power": { "amount": 5.0, "max": 5.0, "regen_per_tick": 0.01 }
+  }
+}

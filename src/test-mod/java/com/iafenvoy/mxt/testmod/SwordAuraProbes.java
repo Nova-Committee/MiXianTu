@@ -62,7 +62,7 @@ final class SwordAuraProbes {
     }
 
     private static int clear(CommandSourceStack source) {
-        ArrayList<Entity> removed = new ArrayList<Entity>();
+        ArrayList<Entity> removed = new ArrayList<>();
         for (Entity entity : source.getLevel().getAllEntities())
             if (entity instanceof SwordAuraEntity && entity.entityTags().contains(TAG)) removed.add(entity);
         removed.forEach(Entity::discard);
