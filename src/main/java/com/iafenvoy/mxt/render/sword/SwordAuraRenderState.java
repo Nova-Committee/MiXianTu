@@ -6,11 +6,11 @@ import net.minecraft.world.phys.Vec3;
 public final class SwordAuraRenderState extends EntityRenderState {
     public Vec3 velocity = Vec3.ZERO;
     public float animationTime;
-    public float speed;
+    public int entityId;
     public float centerOffsetY;
-    public int color;
-    public float bladeAlpha;
-    public float auraAlpha;
+    public int bladeColor;
+    public int auraColor;
+    public boolean radialFlame;
     public float length;
     public float bladeWidth;
     public float thickness;

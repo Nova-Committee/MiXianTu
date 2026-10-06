@@ -1,0 +1,156 @@
+package com.iafenvoy.mxt.render.sword.flame;
+
+import com.iafenvoy.mxt.MiXianTu;
+import com.iafenvoy.mxt.config.MxtClientConfig;
+import com.mojang.blaze3d.buffers.GpuBuffer;
+import com.mojang.blaze3d.buffers.GpuBufferSlice;
+import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.textures.FilterMode;
+import com.mojang.blaze3d.textures.GpuTexture;
+import com.mojang.blaze3d.textures.GpuTextureView;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.MappableRingBuffer;
+import net.minecraft.client.renderer.state.level.CameraRenderState;
+import org.joml.Vector3f;
+import org.lwjgl.system.MemoryUtil;
+
+import java.nio.ByteBuffer;
+import java.util.List;
+import java.util.OptionalDouble;
+import java.util.OptionalInt;
+
+public final class FlameRenderer implements AutoCloseable {
+    // 64 * 9 vec4 stays below the OpenGL 3.3 minimum uniform-block limit (16 KiB).
+    private static final int BATCH_SIZE = 64;
+    private static final int ITEM_BYTES = 9 * 16;
+    private static final int FRAME_BYTES = 64 + 5 * 16;
+    private static final int MAX_BATCHES = SurfaceFluidSimulation.CAPACITY / BATCH_SIZE + 3;
+    private final int batchStride;
+    private final int itemStart;
+    private final MappableRingBuffer uniforms;
+    private final ByteBuffer staging;
+    private final GpuBufferSlice[] batches = new GpuBufferSlice[MAX_BATCHES];
+    private final int[] counts = new int[MAX_BATCHES];
+    private final int[] lods = new int[MAX_BATCHES];
+    private final ParticleSampler sampler;
+    private final SurfaceFluidSimulation fluid;
+    private final Vector3f axis = new Vector3f();
+    private GpuTexture depthCopy;
+    private GpuTextureView depthView;
+    private boolean invalidLogged;
+
+    public FlameRenderer() {
+        int alignment = RenderSystem.getDevice().getUniformOffsetAlignment();
+        batchStride = align(BATCH_SIZE * ITEM_BYTES, alignment);
+        itemStart = align(FRAME_BYTES, alignment);
+        int bytes = itemStart + batchStride * MAX_BATCHES;
+        staging = MemoryUtil.memCalloc(bytes);
+        uniforms = new MappableRingBuffer(() -> "Sword flame records",
+                GpuBuffer.USAGE_UNIFORM | GpuBuffer.USAGE_MAP_WRITE | GpuBuffer.USAGE_COPY_DST, bytes);
+        sampler = new ParticleSampler();
+        fluid = new SurfaceFluidSimulation();
+    }
+
+    public boolean render(List<List<BurningItemManager.Entry>> visible, CameraRenderState camera, float time, float delta) {
+        var device = RenderSystem.getDevice();
+        if (!device.precompilePipeline(FlamePipelines.FLUID).isValid()
+                || !device.precompilePipeline(FlamePipelines.SURFACE).isValid()
+                || !device.precompilePipeline(FlamePipelines.PARTICLES).isValid()) {
+            if (!invalidLogged) MiXianTu.LOGGER.error("Sword flame shader compilation failed; inspect the preceding shader diagnostics");
+            invalidLogged = true;
+            return false;
+        }
+        invalidLogged = false;
+        var target = Minecraft.getInstance().getMainRenderTarget();
+        if (target.getColorTextureView() == null || target.getDepthTexture() == null) return false;
+        ensureDepth(target.getDepthTexture());
+        var encoder = device.createCommandEncoder();
+        // Sampling the attached depth texture is undefined; use a snapshot taken after world transparency.
+        encoder.copyTextureToTexture(target.getDepthTexture(), depthCopy, 0, 0, 0, 0, 0, target.width, target.height);
+        GpuBuffer buffer = uniforms.currentBuffer();
+        staging.clear();
+        camera.viewRotationMatrix.get(0, staging);
+        staging.position(64);
+        camera.orientation.transform(axis.set(1, 0, 0));
+        vector(axis.x, axis.y, axis.z, 0);
+        camera.orientation.transform(axis.set(0, 1, 0));
+        vector(axis.x, axis.y, axis.z, 0);
+        var config = MxtClientConfig.INSTANCE.flames;
+        vector(time, delta, config.intensity.getValue().floatValue(), 0);
+        vector(config.softDistance.getValue().floatValue(), device.isZZeroToOne() ? 1 : 0,
+                config.surfaceOpacity.getValue().floatValue(), 0);
+        vector(LODController.particles(0), LODController.particles(1), LODController.particles(2), 0);
+        int batchCount = 0;
+        for (int lod = 0; lod < visible.size(); lod++) {
+            var group = visible.get(lod);
+            for (int start = 0; start < group.size(); start += BATCH_SIZE) {
+                int offset = itemStart + batchStride * batchCount;
+                staging.position(offset);
+                int count = Math.min(BATCH_SIZE, group.size() - start);
+                for (int index = 0; index < count; index++) group.get(start + index).write(staging, camera);
+                // The bound range must cover the entire declared GLSL block, including unused instances.
+                while (staging.position() < offset + BATCH_SIZE * ITEM_BYTES) staging.putFloat(0);
+                batches[batchCount] = buffer.slice(offset, BATCH_SIZE * ITEM_BYTES);
+                counts[batchCount] = count;
+                lods[batchCount++] = lod;
+            }
+        }
+        staging.limit(itemStart + batchStride * batchCount).position(0);
+        encoder.writeToBuffer(buffer.slice(0, staging.remaining()), staging);
+        GpuBufferSlice frame = buffer.slice(0, FRAME_BYTES);
+        int fluidBatches = 0;
+        while (fluidBatches < batchCount && lods[fluidBatches] < 2) fluidBatches++;
+        if (fluidBatches > 0) fluid.update(encoder, sampler, frame, batches, counts, fluidBatches);
+        try (var pass = encoder.createRenderPass(() -> "Sword flames", target.getColorTextureView(), OptionalInt.empty(),
+                target.getDepthTextureView(), OptionalDouble.empty())) {
+            RenderSystem.bindDefaultUniforms(pass);
+            pass.setUniform("FlameFrame", frame);
+            pass.bindTexture("FluidField", fluid.field(), RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR));
+            pass.bindTexture("SceneDepth", depthView, RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST));
+            pass.setIndexBuffer(sampler.indices(), sampler.indexType());
+            for (int i = 0; i < batchCount; i++) {
+                pass.setUniform("FlameItems", batches[i]);
+                if (lods[i] < 2 && config.surfaceOpacity.getValue() > 0) {
+                    pass.setPipeline(FlamePipelines.SURFACE);
+                    pass.setVertexBuffer(0, sampler.surface());
+                    pass.drawIndexed(0, 0, (ParticleSampler.SURFACE_RINGS - 1) * 8 * 6, counts[i]);
+                }
+                pass.setPipeline(FlamePipelines.PARTICLES);
+                pass.setVertexBuffer(0, sampler.particles());
+                pass.drawIndexed(0, 0, LODController.particles(lods[i]) * 6, counts[i]);
+            }
+        }
+        uniforms.rotate();
+        return true;
+    }
+
+    private void vector(float x, float y, float z, float w) {
+        staging.putFloat(x).putFloat(y).putFloat(z).putFloat(w);
+    }
+
+    private void ensureDepth(GpuTexture source) {
+        int width = source.getWidth(0);
+        int height = source.getHeight(0);
+        if (depthCopy != null && depthCopy.getWidth(0) == width && depthCopy.getHeight(0) == height
+                && depthCopy.getFormat() == source.getFormat()) return;
+        if (depthView != null) depthView.close();
+        if (depthCopy != null) depthCopy.close();
+        depthCopy = RenderSystem.getDevice().createTexture("Sword flame soft depth",
+                GpuTexture.USAGE_COPY_DST | GpuTexture.USAGE_TEXTURE_BINDING, source.getFormat(), width, height, 1, 1);
+        depthView = RenderSystem.getDevice().createTextureView(depthCopy);
+    }
+
+    private static int align(int bytes, int alignment) {
+        return (bytes + alignment - 1) / alignment * alignment;
+    }
+
+    @Override
+    public void close() {
+        if (depthView != null) depthView.close();
+        if (depthCopy != null) depthCopy.close();
+        fluid.close();
+        sampler.close();
+        uniforms.close();
+        MemoryUtil.memFree(staging);
+    }
+}

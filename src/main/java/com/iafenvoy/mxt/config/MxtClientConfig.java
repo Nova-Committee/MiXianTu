@@ -25,6 +25,7 @@ public final class MxtClientConfig extends AutoInitConfigContainer {
     public final Rifts rifts = new Rifts();
     public final Wheel wheel = new Wheel();
     public final Tooltips tooltips = new Tooltips();
+    public final Flames flames = new Flames();
 
     private MxtClientConfig() {
         super(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "client"), "config.mxt.client", "./config/mxt/mxt-client.json");
@@ -119,6 +120,38 @@ public final class MxtClientConfig extends AutoInitConfigContainer {
 
         private Wheel() {
             super("wheel", "config.mxt.client.wheel");
+        }
+    }
+
+    public static final class Flames extends AutoInitConfigCategoryBase {
+        public final BooleanEntry enabled = BooleanEntry.builder("config.mxt.client.flames.enabled", true)
+                .key("enabled").tooltip("config.mxt.client.flames.enabled.tooltip").build();
+        public final DoubleEntry intensity = number("intensity", 1, 0, 4);
+        public final DoubleEntry windCoefficient = number("wind_coefficient", 1, 0, 8);
+        public final DoubleEntry windX = number("wind_x", 0.3, -12, 12);
+        public final DoubleEntry windY = number("wind_y", 0, -12, 12);
+        public final DoubleEntry windZ = number("wind_z", 0.1, -12, 12);
+        public final DoubleEntry nearDistance = number("near_distance", 16, 1, 256);
+        public final DoubleEntry middleDistance = number("middle_distance", 48, 1, 256);
+        public final DoubleEntry farDistance = number("far_distance", 128, 1, 256);
+        public final IntegerEntry nearParticles = particles("near_particles", 200);
+        public final IntegerEntry middleParticles = particles("middle_particles", 50);
+        public final IntegerEntry farParticles = particles("far_particles", 10);
+        public final DoubleEntry surfaceOpacity = number("surface_opacity", 0.18, 0, 1);
+        public final DoubleEntry softDistance = number("soft_distance", 0.12, 0, 1);
+
+        private Flames() {
+            super("flames", "config.mxt.client.flames");
+        }
+
+        private static DoubleEntry number(String name, double value, double min, double max) {
+            String key = "config.mxt.client.flames." + name;
+            return DoubleEntry.builder(key, value).key(name).tooltip(key + ".tooltip").range(min, max).build();
+        }
+
+        private static IntegerEntry particles(String name, int count) {
+            String key = "config.mxt.client.flames." + name;
+            return IntegerEntry.builder(key, count).key(name).tooltip(key + ".tooltip").range(1, 256).build();
         }
     }
 

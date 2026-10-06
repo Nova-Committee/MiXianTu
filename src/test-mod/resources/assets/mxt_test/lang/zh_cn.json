@@ -359,5 +359,7 @@
   "spirit_herb.mxt.mxt_test.alchemy/mark_pill_hungry": "饱食丹药标记草",
   "spirit_herb.mxt.mxt_test.alchemy/mark_pill_hungry.description": "饱食丹药标记 1，性平。",
   "spirit_herb.mxt.mxt_test.alchemy/mark_pill_reenter": "重入丹药标记草",
-  "spirit_herb.mxt.mxt_test.alchemy/mark_pill_reenter.description": "重入丹药标记 1，性平。"
+  "spirit_herb.mxt.mxt_test.alchemy/mark_pill_reenter.description": "重入丹药标记 1，性平。",
+  "command.mxt_test.sword_aura.spawned": "生成 %s 把测试剑气，持续 10 分钟；大阵列请在空中测试。/mxt_test sword_aura clear 清理。",
+  "command.mxt_test.sword_aura.cleared": "已清理 %s 把测试剑气。"
 }

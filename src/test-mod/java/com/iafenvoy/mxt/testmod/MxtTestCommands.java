@@ -422,6 +422,7 @@ public final class MxtTestCommands {
         CommandDispatcher<CommandSourceStack> dispatcher = event.getDispatcher();
         dispatcher.register(literal("mxt_test")
                 .requires(source -> source.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER))
+                .then(SwordAuraProbes.commands())
                 .then(literal("kit").executes(context -> giveKit(context.getSource())))
                 .then(literal("cultivate")
                         .executes(context -> startCultivation(context.getSource()))

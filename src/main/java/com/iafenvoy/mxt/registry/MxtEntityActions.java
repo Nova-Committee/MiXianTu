@@ -47,6 +47,7 @@ public final class MxtEntityActions {
     public static final DeferredHolder<MapCodec<? extends EntityAction>, MapCodec<ModifyStorageAction>> MODIFY_STORAGE = REGISTRY.register("modify_storage", () -> ModifyStorageAction.CODEC);
     public static final DeferredHolder<MapCodec<? extends EntityAction>, MapCodec<SpawnEntityAction>> SPAWN_ENTITY = REGISTRY.register("spawn_entity", () -> SpawnEntityAction.CODEC);
     public static final DeferredHolder<MapCodec<? extends EntityAction>, MapCodec<SpawnProjectileAction>> SPAWN_PROJECTILE = REGISTRY.register("spawn_projectile", () -> SpawnProjectileAction.CODEC);
+    public static final DeferredHolder<MapCodec<? extends EntityAction>, MapCodec<SpawnSwordAuraAction>> SPAWN_SWORD_AURA = REGISTRY.register("spawn_sword_aura", () -> SpawnSwordAuraAction.CODEC);
     public static final DeferredHolder<MapCodec<? extends EntityAction>, MapCodec<AddExperienceAction>> ADD_EXPERIENCE = REGISTRY.register("add_experience", () -> AddExperienceAction.CODEC);
     public static final DeferredHolder<MapCodec<? extends EntityAction>, MapCodec<AddVelocityAction>> ADD_VELOCITY = REGISTRY.register("add_velocity", () -> AddVelocityAction.CODEC);
     public static final DeferredHolder<MapCodec<? extends EntityAction>, MapCodec<ExhaustAction>> EXHAUST = REGISTRY.register("exhaust", () -> ExhaustAction.CODEC);

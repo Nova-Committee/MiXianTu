@@ -1,0 +1,17 @@
+{
+  "type": "mxt:active",
+  "icon": { "id": "mxt:sky_swallowing_sword" },
+  "cooldown": 200,
+  "entity_action": {
+    "type": "mxt:spawn_sword_aura",
+    "speed": 2.0,
+    "blade_color": "#C7FF2020",
+    "aura_color": "#CCFF5522",
+    "scale": 1.5,
+    "lifetime": 100,
+    "collide_action": {
+      "type": "mxt:explode",
+      "power": 8.0
+    }
+  }
+}

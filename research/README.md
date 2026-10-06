@@ -36,6 +36,7 @@
 | `备忘录.md`             | 未来迁移高版本的备忘（26.2 / 26.3 的原版注册表变化）                                                                               | 素材                                                       |
 | `71_审计问题修复设计.md`    | 修 `audit/all.md` 那 21 个问题的五处跨模块重构设计：授予与被动属性来源注册化 + 主 tick 阶段化、链条统一与整链拒收、阵法供给归属与授予身份、受控交易提交边界、临时使用组件所有权；小修只登记形状（不写稿） | 已落地（2026-10-04；§8 是逐批落地记录。**其中"每个功能各造一份来源注册表"的形状已由 `72` 取代**） |
 | `72_来源身份与模块钩子统一设计.md` | **把"来源"统一**（用户要求）：一个注册骨架 `runtime/ModuleHooks`（capability 接口当键）＋ 一个启动口，把六份同骨架注册表（`AbilityGrantSources` / `PassiveAttributeSources` / `ProgressionSources` / `HoldLookup` / `TriggerRehydrators` / `EntityTickStages`）收成一处；一份实体来源契约 `runtime/EntitySources`（`Grants` / `Attributes` / `Owns`）；来源 id 只由 `runtime/Sources` 生成（两个闭集枚举 `Grant` / `Declaration`）；每个模块一份 `Hooks` 类；删掉"静态块注册 + 空 `initialize()` 强制类初始化" | 已落地（2026-10-04，用户拍板"顺带统一所有同骨架注册点"；§5 是落地记录，形状以代码为准） |
+| `73_剑气表面流体与GPU粒子设计.md` | 剑气外层替换为 64×64 表面反应/对流场、Halton GPU 粒子及距离 LOD；使用原生 RenderPipeline / FBO，无额外 GPU 依赖 | 已落地；视觉与性能待实机验证 |
 
 ### B. 数据定义与系统内核
 

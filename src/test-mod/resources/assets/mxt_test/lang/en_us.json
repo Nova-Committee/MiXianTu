@@ -359,5 +359,7 @@
   "spirit_herb.mxt.mxt_test.alchemy/mark_pill_hungry": "Fasting Pill Marker",
   "spirit_herb.mxt.mxt_test.alchemy/mark_pill_hungry.description": "One fasting pill mark; thermally neutral.",
   "spirit_herb.mxt.mxt_test.alchemy/mark_pill_reenter": "Reentrant Pill Marker",
-  "spirit_herb.mxt.mxt_test.alchemy/mark_pill_reenter.description": "One reentrant pill mark; thermally neutral."
+  "spirit_herb.mxt.mxt_test.alchemy/mark_pill_reenter.description": "One reentrant pill mark; thermally neutral.",
+  "command.mxt_test.sword_aura.spawned": "Spawned %s test swords for 10 minutes; test large grids in open air. Clear with /mxt_test sword_aura clear.",
+  "command.mxt_test.sword_aura.cleared": "Cleared %s test swords."
 }
