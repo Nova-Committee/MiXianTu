@@ -212,6 +212,8 @@
 
 建议所有来源更新走统一 reconcile，并按“更新前持有、更新后不持有”清理一次。复测应比较逐项撤销和差分撤销的最终账本与 storage。
 
+**现状（2026-10-07）**：这两条都还成立，但形状已经变了。`reconcileSource` 早已按同一语义清理（与 `revoke` 同形），`AbilityGrantService.recalculate` 也改成按来源差分、不再整体清空，所以 F03 里“重建中途失去全部来源”的窗口没有了。同一天用户又改了口径：清理时**保留 `mxt:cooldown`**——武器上的技能在换下物品后冷却必须继续走，否则把物品换下去再换回来就能免冷却再放一次——其余种类（充能、引导游标、开关…）照旧随最后一份来源清掉，所以上面“真正失去全部来源的技能状态应删除”只对冷却以外的种类成立。实现是 `DataStorageHolder.clearExcept(id, CooldownDataStorage.class)`（`AbilityAttachment.revoke` / `reconcileSource` 两处），探针是 `/mxt_test verify` 链尾的 `verifyAbilityCooldown`。
+
 ### F05（P1）：阵法维护先验全额余额，违背供给与库存先付款
 
 证据：`FormationService.MaintainRule.plan`（`runtime/formation/FormationService.java:107`）先对完整 maintenance costs 调 `CostTransaction.plan`；`data/cost/CostTransaction.java:216` 在计划期对主人资源检查全额可用性。随后 `FormationService.java:123` 才减去 supply、stock 并得出 `fromOwner`。

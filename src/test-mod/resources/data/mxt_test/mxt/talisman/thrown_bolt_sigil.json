@@ -1,0 +1,13 @@
+{
+  "type": "mxt:thrown",
+  "speed": 1.5,
+  "block_action": {
+    "type": "mxt:spawn_entity",
+    "entity_type": "minecraft:lightning_bolt"
+  },
+  "bi_entity_action": {
+    "type": "mxt:target_action",
+    "action": { "type": "mxt:spawn_lightning", "damage": 5.0, "cause": true },
+    "use_target_position": true
+  }
+}

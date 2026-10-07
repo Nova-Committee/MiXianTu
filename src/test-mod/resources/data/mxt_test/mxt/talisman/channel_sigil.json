@@ -1,4 +1,6 @@
 {
-  "abilities": ["mxt_test:channel_pulse"],
+  "type": "mxt:self",
+  "entity_action": { "type": "mxt:add_resource", "resource": "mxt_test:channel_probe", "amount": 1 },
   "costs": [{ "type": "mxt:aura", "aura": "mxt_test:spirit_power", "amount": 1 }]
 }
+

@@ -1,4 +1,12 @@
 {
-  "abilities": ["#mxt_test:sigil/manifold_arts"],
+  "type": "mxt:self",
+  "entity_action": {
+    "type": "mxt:sequence",
+    "actions": [
+      { "type": "mxt:add_resource", "resource": "mxt:common", "amount": 1 },
+      { "type": "mxt:play_sound", "sound": "minecraft:block.enchantment_table.use", "volume": 0.6, "pitch": 1.2 }
+    ]
+  },
   "costs": [{ "type": "mxt:aura", "aura": "mxt_test:spirit_power", "amount": 3 }]
 }
+

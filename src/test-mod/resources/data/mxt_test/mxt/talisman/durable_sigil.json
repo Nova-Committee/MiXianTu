@@ -1,5 +1,7 @@
 {
-  "abilities": ["mxt_test:sigil_pulse"],
-  "durability": 5,
-  "consume": 2
+  "type": "mxt:self",
+  "max_use": 3,
+  "entity_action": { "type": "mxt:add_resource", "resource": "mxt:common", "amount": 3 }
 }
+
+

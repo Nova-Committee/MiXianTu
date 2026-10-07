@@ -1,5 +1,7 @@
 {
-  "abilities": ["mxt_test:sigil_pulse"],
+  "type": "mxt:self",
   "capacity": 2,
+  "entity_action": { "type": "mxt:add_resource", "resource": "mxt:common", "amount": 3 },
   "costs": [{ "type": "mxt:aura", "aura": "mxt_test:spirit_power", "amount": 4 }]
 }
+

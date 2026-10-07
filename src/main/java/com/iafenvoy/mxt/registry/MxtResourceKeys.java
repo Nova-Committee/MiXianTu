@@ -40,6 +40,7 @@ import com.iafenvoy.mxt.data.resourcebar.ResourceBarVisibility;
 import com.iafenvoy.mxt.data.secretrealm.SecretRealm;
 import com.iafenvoy.mxt.data.secretrealm.SecretRealmGeneration;
 import com.iafenvoy.mxt.data.storage.DataStorage;
+import com.iafenvoy.mxt.data.talisman.TalismanType;
 import com.iafenvoy.mxt.data.timeline.TimelineEntry;
 import com.iafenvoy.mxt.data.trigger.Trigger;
 import com.iafenvoy.mxt.data.trigger.TriggerRule;
@@ -60,6 +61,7 @@ public final class MxtResourceKeys {
     // Builtin registries
     public static final ResourceKey<Registry<MapCodec<? extends AbilityType>>> ABILITY_TYPE = create("ability_type");
     public static final ResourceKey<Registry<MapCodec<? extends TargetSelector>>> ABILITY_TARGET_SELECTOR_TYPE = create("ability_target_selector_type");
+    public static final ResourceKey<Registry<MapCodec<? extends TalismanType>>> TALISMAN_TYPE = create("talisman_type");
     public static final ResourceKey<Registry<MapCodec<? extends Cost>>> COST_TYPE = create("cost_type");
     public static final ResourceKey<Registry<MapCodec<? extends CurseType>>> CURSE_TYPE = create("curse_type");
     public static final ResourceKey<Registry<MapCodec<? extends DataStorage>>> DATA_STORAGE_TYPE = create("data_storage_type");

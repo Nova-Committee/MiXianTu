@@ -1,4 +1,7 @@
 {
-  "abilities": ["mxt_test:pull_pulse"],
+  "type": "mxt:area",
+  "target_selector": { "type": "mxt:area", "radius": 4 },
+  "bi_entity_action": { "type": "mxt:teleport", "teleport_target": true, "rotate": false },
   "costs": [{ "type": "mxt:aura", "aura": "mxt_test:spirit_power", "amount": 2 }]
 }
+

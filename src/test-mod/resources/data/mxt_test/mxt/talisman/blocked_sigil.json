@@ -1,4 +1,6 @@
 {
-  "abilities": ["mxt_test:sigil_pulse"],
-  "condition": { "type": "mxt:never" }
+  "type": "mxt:self",
+  "condition": { "type": "mxt:never" },
+  "entity_action": { "type": "mxt:add_resource", "resource": "mxt:common", "amount": 3 }
 }
+

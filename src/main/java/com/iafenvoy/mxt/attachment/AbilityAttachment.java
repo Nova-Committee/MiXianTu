@@ -2,6 +2,7 @@ package com.iafenvoy.mxt.attachment;
 
 import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.storage.DataStorageHolder;
+import com.iafenvoy.mxt.data.storage.builtin.CooldownDataStorage;
 import com.iafenvoy.mxt.util.ShouldSyncAttachment;
 import com.iafenvoy.mxt.util.SourceLedger;
 import com.mojang.serialization.MapCodec;
@@ -15,8 +16,9 @@ import java.util.*;
 /**
  * Ability grants are tracked by source, so removing one source cannot remove another source's ability. The state a
  * granted ability keeps lives here too, in a {@link DataStorageHolder} addressed by the ability's id: the values
- * belong to this attachment, so they are saved and synced with it. Revoking the last source drops that state with
- * it, so a re-granted ability does not come back with the charges it had before.
+ * belong to this attachment, so they are saved and synced with it. Revoking the last source drops that state with it
+ * - the cooldown excepted, which keeps running so that putting the item back cannot buy the press again - so a
+ * re-granted ability does not come back with the charges it had before.
  *
  * <p>Grants and stored state both address an ability by id and keep an id that no longer resolves rather than
  * dropping it, so revoking a definition that was deleted still takes it off. The channelled ability is the one
@@ -71,10 +73,11 @@ public final class AbilityAttachment extends ShouldSyncAttachment {
         return true;
     }
 
-    // When the revoked source was the last one, the state the ability owned goes with it.
+    // When the revoked source was the last one, the state the ability owned goes with it, except the cooldown: a
+    // weapon that leaves the hand must not hand its skill back ready.
     public boolean revoke(Identifier ability, Identifier source) {
         if (!this.sources.revoke(ability, source)) return false;
-        if (!this.sources.holds(ability)) this.storage.clear(ability);
+        if (!this.sources.holds(ability)) this.storage.clearExcept(ability, CooldownDataStorage.class);
         this.markDirty();
         return true;
     }
@@ -84,7 +87,8 @@ public final class AbilityAttachment extends ShouldSyncAttachment {
     public boolean reconcileSource(Identifier source, Collection<Identifier> desiredAbilities) {
         Set<Identifier> released = new LinkedHashSet<>();
         if (!this.sources.reconcile(source, desiredAbilities, released)) return false;
-        for (Identifier ability : released) if (!this.sources.holds(ability)) this.storage.clear(ability);
+        for (Identifier ability : released)
+            if (!this.sources.holds(ability)) this.storage.clearExcept(ability, CooldownDataStorage.class);
         this.markDirty();
         return true;
     }

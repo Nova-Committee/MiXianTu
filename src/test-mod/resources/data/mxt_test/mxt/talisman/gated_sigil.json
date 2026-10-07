@@ -1,5 +1,7 @@
 {
-  "abilities": ["mxt_test:sigil_pulse"],
+  "type": "mxt:self",
   "condition": { "type": "mxt:resource_compare", "resource": "mxt_test:trigger_probe", "min": 10 },
+  "entity_action": { "type": "mxt:add_resource", "resource": "mxt:common", "amount": 3 },
   "costs": [{ "id": "mxt_test:trigger_probe", "amount": 5 }]
 }
+

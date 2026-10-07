@@ -1,4 +1,12 @@
 {
-  "abilities": ["mxt_test:pos_pulse"],
+  "type": "mxt:self",
+  "entity_action": {
+    "type": "mxt:sequence",
+    "actions": [
+      { "type": "mxt:add_resource", "resource": "mxt:common", "amount": "block_x" },
+      { "type": "mxt:spawn_projectile", "entity_type": "minecraft:arrow", "velocity_x": 0, "velocity_y": 0, "velocity_z": 0 }
+    ]
+  },
   "costs": [{ "type": "mxt:aura", "aura": "mxt_test:spirit_power", "amount": 2 }]
 }
+

@@ -1,4 +1,9 @@
 {
-  "abilities": ["mxt_test:toll_pulse"],
-  "costs": [{ "type": "mxt:aura", "aura": "mxt_test:spirit_power", "amount": 1 }]
+  "type": "mxt:self",
+  "entity_action": { "type": "mxt:add_resource", "resource": "mxt:common", "amount": 1 },
+  "costs": [
+    { "type": "mxt:aura", "aura": "mxt_test:spirit_power", "amount": 1 },
+    { "type": "mxt:item", "items": "minecraft:apple", "amount": 1 }
+  ]
 }
+

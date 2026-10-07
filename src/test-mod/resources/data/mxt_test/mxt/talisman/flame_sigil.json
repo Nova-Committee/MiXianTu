@@ -1,4 +1,6 @@
 {
-  "abilities": ["mxt_test:qingxiao_firebolt"],
+  "type": "mxt:self",
+  "entity_action": { "type": "mxt:apply_effect", "effect": "minecraft:fire_resistance", "duration_ticks": 120 },
   "costs": [{ "type": "mxt:aura", "aura": "mxt_test:spirit_power", "amount": 12 }]
 }
+

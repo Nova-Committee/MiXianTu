@@ -18,6 +18,7 @@ import com.iafenvoy.mxt.data.resourcebar.ResourceBarRenderData;
 import com.iafenvoy.mxt.data.resourcebar.ResourceBarVisibility;
 import com.iafenvoy.mxt.data.secretrealm.SecretRealmGeneration;
 import com.iafenvoy.mxt.data.storage.DataStorage;
+import com.iafenvoy.mxt.data.talisman.TalismanType;
 import com.iafenvoy.mxt.data.timeline.TimelineEntry;
 import com.iafenvoy.mxt.data.trigger.Trigger;
 import com.iafenvoy.mxt.util.formula.FormulaVariable;
@@ -43,6 +44,7 @@ public final class MxtRegistries {
 
     public static final DefaultedRegistry<MapCodec<? extends AbilityType>> ABILITY_TYPE = create("empty", MxtResourceKeys.ABILITY_TYPE);
     public static final DefaultedRegistry<MapCodec<? extends TargetSelector>> ABILITY_TARGET_SELECTOR_TYPE = create("self", MxtResourceKeys.ABILITY_TARGET_SELECTOR_TYPE);
+    public static final DefaultedRegistry<MapCodec<? extends TalismanType>> TALISMAN_TYPE = create("empty", MxtResourceKeys.TALISMAN_TYPE);
     public static final DefaultedRegistry<MapCodec<? extends Cost>> COST_TYPE = create("resource", MxtResourceKeys.COST_TYPE);
     public static final DefaultedRegistry<MapCodec<? extends CurseType>> CURSE_TYPE = create("empty", MxtResourceKeys.CURSE_TYPE);
     public static final DefaultedRegistry<MapCodec<? extends DataStorage>> DATA_STORAGE_TYPE = create("empty", MxtResourceKeys.DATA_STORAGE_TYPE);

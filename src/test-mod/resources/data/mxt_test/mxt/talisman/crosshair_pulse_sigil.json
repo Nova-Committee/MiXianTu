@@ -1,0 +1,13 @@
+{
+  "type": "mxt:crosshair",
+  "max_use": 2,
+  "length": 8.0,
+  "radius": 0.75,
+  "entity_action": {
+    "type": "mxt:add_resource",
+    "resource": "mxt:common",
+    "amount": 2
+  },
+  "bi_entity_action": { "type": "mxt:heal_target", "amount": 2 }
+}
+

@@ -134,6 +134,7 @@ import com.iafenvoy.mxt.runtime.ServerCache;
 import com.iafenvoy.mxt.runtime.ability.AbilityActivationService;
 import com.iafenvoy.mxt.runtime.ability.AbilityEventBridge;
 import com.iafenvoy.mxt.runtime.ability.AbilityService;
+import com.iafenvoy.mxt.runtime.ability.AbilityStorage;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactHold;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactHoldService;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactHoldService.ClaimResult;
@@ -545,6 +546,12 @@ public final class MxtTestCommands {
             return 0;
         }
         source.sendSuccess(() -> Component.translatable("command.mxt_test.verify.talisman_ok"), false);
+        String cooldownFailure = verifyAbilityCooldown(player);
+        if (cooldownFailure != null) {
+            source.sendFailure(Component.translatable("command.mxt_test.verify.ability_cooldown_failed", cooldownFailure));
+            return 0;
+        }
+        source.sendSuccess(() -> Component.translatable("command.mxt_test.verify.ability_cooldown_ok"), false);
         return 1;
     }
 
@@ -882,6 +889,40 @@ public final class MxtTestCommands {
         return null;
     }
 
+    // A weapon's skill is granted by the item in hand, so putting the item away takes the whole grant with it. What
+    // must not go with it is the cooldown, or the skill could be fired again by swapping the item out and back; every
+    // other kind of state still goes, so a re-granted skill does not come back with its charges. This drives the same
+    // sequence an equipment change does - grant, cooldown, revoke, grant - on an actor of its own.
+    private static String verifyAbilityCooldown(ServerPlayer player) {
+        ServerLevel level = player.level();
+        BlockPos base = level.getHeightmapPos(Types.MOTION_BLOCKING_NO_LEAVES, player.blockPosition()).above(2);
+        LivingEntity actor = spawnProbe(level, base, null);
+        if (actor == null) return "could not create the probe being";
+        try {
+            AbilityAttachment abilities = actor.getData(MxtAttachments.ABILITY_HOLDER);
+            Identifier ability = id("firebolt");
+            Identifier source = id("grant/cooldown_probe");
+            long gameTime = level.getGameTime();
+            abilities.grant(ability, source);
+            AbilityStorage.startCooldown(abilities, ability, 200.0D, gameTime);
+            AbilityStorage.charges(abilities, ability, ChargesDataStorage.INSTANCE, gameTime).setRemaining(1.0D, gameTime);
+            if (!AbilityStorage.onCooldown(abilities, ability, gameTime))
+                return "the probe could not be put on cooldown at all";
+            abilities.revoke(ability, source);
+            if (abilities.has(ability)) return "revoking the only source left the ability granted";
+            long kept = AbilityStorage.cooldownRemaining(abilities, ability, gameTime);
+            if (kept <= 0L) return "the cooldown was dropped together with the item that granted the ability";
+            if (AbilityStorage.get(abilities, ability, ChargesDataStorage.class).isPresent())
+                return "the charges outlived the source they belonged to";
+            abilities.grant(ability, source);
+            boolean cooling = AbilityStorage.onCooldown(abilities, ability, gameTime);
+            abilities.revoke(ability, source);
+            return cooling ? null : "the re-granted ability was ready again with " + kept + " ticks left";
+        } finally {
+            actor.discard();
+        }
+    }
+
     private static String verifyTalisman(ServerPlayer player) {
         return player.level() instanceof ServerLevel level ? verifyTalisman(level, player)
                 : "the talisman probe needs a server level";
@@ -910,11 +951,11 @@ public final class MxtTestCommands {
     private static String verifyTalismanWear(ServerLevel level, LivingEntity actor) {
         Holder<Talisman> durable = require(MxtResourceKeys.TALISMAN, id("durable_sigil"));
         ItemStack stack = carrier(durable);
-        if (TalismanService.durability(stack) != 5 || TalismanService.durabilityCost(stack) != 2)
-            return "a carrier written with a five-point talisman read cap " + TalismanService.durability(stack)
-                    + " and cost " + TalismanService.durabilityCost(stack) + " instead of 5 and 2";
+        if (TalismanService.durability(stack) != 3 || TalismanService.durabilityCost(stack) != 1)
+            return "a carrier written with a three-use talisman read cap " + TalismanService.durability(stack)
+                    + " and cost " + TalismanService.durabilityCost(stack) + " instead of 3 and 1";
         TalismanService.applyDurability(stack);
-        if (!stack.isDamageableItem() || stack.getMaxDamage() != 5)
+        if (!stack.isDamageableItem() || stack.getMaxDamage() != 3)
             return "the declared durability did not land on the stack as max_damage";
         // A number a pack patched onto the stack is the one that counts, not the one the definition declares.
         ItemStack patched = stack.copy();
@@ -929,12 +970,12 @@ public final class MxtTestCommands {
             SpiritSource placed = SpiritSource.placed(level, actor.position(), actor);
             if (!TalismanService.invokeOnUse(placed, stack))
                 return "the first invocation of a worn carrier did not fire";
-            if (stack.getDamageValue() != 2)
-                return "the first invocation left the carrier at " + stack.getDamageValue() + " wear instead of 2";
+            if (stack.getDamageValue() != 1)
+                return "the first invocation left the carrier at " + stack.getDamageValue() + " wear instead of 1";
             if (!TalismanService.invokeOnUse(placed, stack))
                 return "the second invocation of a worn carrier did not fire";
-            if (stack.getDamageValue() != 4)
-                return "the second invocation left the carrier at " + stack.getDamageValue() + " wear instead of 4";
+            if (stack.getDamageValue() != 2)
+                return "the second invocation left the carrier at " + stack.getDamageValue() + " wear instead of 2";
             if (!TalismanService.invokeOnUse(placed, stack))
                 return "the invocation that wears the carrier past its cap did not fire";
             if (!stack.isEmpty())

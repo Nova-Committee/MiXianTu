@@ -1,0 +1,15 @@
+{
+  "type": "mxt:thrown",
+  "speed": 1.5,
+  "block_condition": {
+    "type": "mxt:blast_resistance",
+    "comparison": "<",
+    "compare_to": 1000000.0
+  },
+  "block_action": { "type": "mxt:explode", "power": 3.0 },
+  "bi_entity_action": {
+    "type": "mxt:target_action",
+    "action": { "type": "mxt:explode", "power": 3.0 },
+    "use_target_position": true
+  }
+}

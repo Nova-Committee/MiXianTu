@@ -63,6 +63,13 @@ public final class DataStorageHolder {
         return this.values.keySet().removeIf(address -> address.id().equals(id));
     }
 
+    // Clearing one host's state except the kinds that outlive it: an ability that loses its last source forgets its
+    // charges and its pending cast, while the cooldown it was paid with keeps running, so taking the item away and
+    // putting it back cannot buy the press again. A kind is addressed by its exact class, so this compares identity.
+    public boolean clearExcept(Identifier id, Class<? extends DataStorage> kept) {
+        return this.values.keySet().removeIf(address -> address.id().equals(id) && address.kind() != kept);
+    }
+
     // An item stack holds this as a value, so it is handed a new holder rather than a mutated one: a component
     // changed in place looks unchanged to the game's own comparison and to every copy of that stack.
     public DataStorageHolder with(Identifier id, DataStorage value) {

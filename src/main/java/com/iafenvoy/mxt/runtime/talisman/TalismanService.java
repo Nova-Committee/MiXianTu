@@ -1,11 +1,9 @@
 package com.iafenvoy.mxt.runtime.talisman;
 
 import com.iafenvoy.mxt.api.UseItemAuraAccess;
-import com.iafenvoy.mxt.attachment.AbilityAttachment;
 import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.config.MxtServerConfig;
 import com.iafenvoy.mxt.data.Talisman;
-import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.aura.SpiritStorageComponent;
 import com.iafenvoy.mxt.data.cost.Cost;
@@ -17,31 +15,24 @@ import com.iafenvoy.mxt.data.cost.context.CostOrigin;
 import com.iafenvoy.mxt.data.item.TalismanComponent;
 import com.iafenvoy.mxt.data.item.TalismanComponent.TriggerMode;
 import com.iafenvoy.mxt.data.resource.Resource;
-import com.iafenvoy.mxt.event.AbilityUseEvent.Post;
+import com.iafenvoy.mxt.data.talisman.TalismanType;
+import com.iafenvoy.mxt.data.talisman.TalismanUse;
 import com.iafenvoy.mxt.item.TalismanItem;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
-import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
-import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.runtime.ability.AbilityService;
-import com.iafenvoy.mxt.runtime.ability.AbilityService.Failure;
-import com.iafenvoy.mxt.runtime.ability.AbilityService.UseResult;
 import com.iafenvoy.mxt.runtime.resource.ResourceService;
 import com.iafenvoy.mxt.runtime.spirit.SpiritChargeService;
 import com.iafenvoy.mxt.runtime.spirit.SpiritPour.Entry;
 import com.iafenvoy.mxt.runtime.spirit.SpiritSource;
-import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import net.minecraft.core.Holder;
-import net.minecraft.core.Registry;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.common.NeoForge;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
@@ -53,15 +44,27 @@ import java.util.*;
  * room for several invocations fires again without being poured. What one invocation takes is its {@code costs}:
  * an aura entry comes out of that store, every other entry is paid by the holder. Whether the holder may use the
  * carrier at all is the definitions' own {@code condition}, asked before the price is planned. The pour itself
- * belongs to the spirit module ({@link UseItemAuraAccess#pour}), and a carrier takes one unit a tick at one for
- * one. Firing is the carrier's answer both to being charged and to a right-click once it holds a whole
- * invocation, so a carrier billed nothing at all is still usable. The invocation is an ordinary ability use with
- * one thing changed - the carrier answers for the grant - which is what keeps a talisman from being a way around
- * every other gate. What it costs the carrier is its own wear when the definitions written on it declare any, and
- * the carrier itself one item at a time when none of them do.
+ * belongs to the spirit module ({@link UseItemAuraAccess#pour}), and a carrier takes one unit a tick at one for one.
+ *
+ * <p>What one invocation <em>does</em> belongs to each inscription's {@link TalismanType}: the type decides the
+ * targets it lands on and runs its own action fields. A carrier holds a list of inscriptions, so one invocation asks
+ * every one of them to plan first - a type that cannot happen (a crosshair with nobody under it) refuses the whole
+ * carrier before the condition is asked and before anything is paid - then pays once and applies them all. Firing is
+ * the carrier's answer both to being charged and to a right-click once it holds a whole invocation, so a carrier
+ * billed nothing at all is still usable. What it costs the carrier is one of the uses its definitions declare, or
+ * the carrier itself one item at a time when none of them declare any.
  */
 public final class TalismanService {
     private TalismanService() {
+    }
+
+    // The words this module refuses with; the lang keys are `actionbar.mxt.talisman.failure.<lowercased name>`.
+    private enum Failure {
+        CONDITION_FAILED, INSUFFICIENT_RESOURCE, INSUFFICIENT_COST, INVALID_FORMULA, NO_TARGET
+    }
+
+    // One inscription's invocation: who is using it, where from, and the plan its own type answered with.
+    private record PlannedUse(TalismanUse use, TalismanType.Plan plan) {
     }
 
     // One entry per aura, each the aura one invocation wants times the multiplier, rounded up to the whole units a
@@ -104,7 +107,7 @@ public final class TalismanService {
     }
 
     // How many invocations a carrier still has in it. Wear is the only use count a carrier has, so a carrier whose
-    // definitions declare none is spent whole and has exactly one; one that declares wear has at least one, because
+    // definitions declare none is spent whole and has exactly one; one that declares uses has at least one, because
     // a carrier the wear has not destroyed yet can always fire once more - that shot is the one that destroys it. A
     // partial point of wear buys nothing, which is the same rounding `spend` does when it destroys the carrier.
     private static int remainingUses(ItemStack stack) {
@@ -141,27 +144,22 @@ public final class TalismanService {
         return stack.getOrDefault(MxtDataComponents.SPIRIT_STORAGE, SpiritStorageComponent.EMPTY);
     }
 
-    // How much wear a carrier has in it, read off the stack first and off what is written on it second: a cap the
-    // pack patched onto the stack overrides the definitions, and a carrier whose definitions declare none has no
-    // wear at all - it is still spent whole, one item per invocation. Wear belongs to a single carrier, so a stack
-    // of several never has any: vanilla refuses a stack that is both damageable and stackable, and a stacked
-    // carrier stays exactly what it was - one item per invocation.
+    // How many uses a carrier has in it, read off the stack first and off what is written on it second: a cap the
+    // pack patched onto the stack (a drawing grade, or the pack's own write) overrides the definitions, and a
+    // carrier whose definitions declare none has no wear at all - it is still spent whole, one item per invocation.
+    // Wear belongs to a single carrier, so a stack of several never has any: vanilla refuses a stack that is both
+    // damageable and stackable, and a stacked carrier stays exactly what it was - one item per invocation.
     public static int durability(ItemStack stack) {
         if (stack.getCount() > 1) return 0;
         return stack.has(DataComponents.MAX_DAMAGE) ? stack.getMaxDamage() : declaredDurability(stack);
     }
 
-    // What one invocation takes off that, summed over the definitions that declared a durability: a carrier
-    // written with two wearing ones wears as fast as both of them together. Definitions that declared none
-    // ride along and cost nothing.
+    // One invocation spends exactly one declared use: `max_use` is a count of uses rather than a wear rate, so
+    // there is nothing to sum. A carrier with no cap at all has no bar and costs nothing here - the item itself is
+    // what is spent (see spend).
     public static int durabilityCost(ItemStack stack) {
         if (stack.getCount() > 1) return 0;
-        int cost = 0;
-        for (Holder<Talisman> talisman : inscribed(stack)) {
-            Talisman written = talisman.value();
-            if (written.durability() > 0) cost = add(cost, written.consume());
-        }
-        return cost;
+        return durability(stack) > 0 ? 1 : 0;
     }
 
     // Puts the declared wear onto the stack in vanilla's own shape: the cap, a stack size of one and a damage
@@ -177,10 +175,10 @@ public final class TalismanService {
         stack.set(DataComponents.DAMAGE, stack.getOrDefault(DataComponents.DAMAGE, 0));
     }
 
+    // What every inscription written on the carrier declares together; a type that declares none adds nothing.
     private static int declaredDurability(ItemStack stack) {
         int declared = 0;
-        for (Holder<Talisman> talisman : inscribed(stack))
-            declared = add(declared, Math.max(0, talisman.value().durability()));
+        for (Holder<Talisman> talisman : inscribed(stack)) declared = add(declared, Math.max(0, talisman.value().type().maxUse()));
         return declared;
     }
 
@@ -235,13 +233,13 @@ public final class TalismanService {
         return !coolingDown(holder, stack);
     }
 
-    // One invocation, and whether it got as far as being one: every ability refusing, or the carrier's own
-    // condition refusing the holder, still means the carrier was used, while a carrier that is blank, uncharged,
-    // inert or cooling down was never attempted.
+    // One invocation, and whether it got as far as being one: a type refusing to plan, or the carrier's own
+    // condition refusing the holder, still means the carrier was used, while a carrier that is blank, uncharged or
+    // cooling down was never attempted.
     private static Attempt attempt(SpiritSource source, ItemStack stack) {
         LivingEntity holder = source.actor();
-        // Nothing living is answerable for it: an ability needs somebody to pay, to be credited and to answer
-        // for it. The carrier stays charged, which is what a click by a person can use.
+        // Nothing living is answerable for it: somebody has to pay, to be credited and to answer for it. The carrier
+        // stays charged, which is what a click by a person can use.
         if (holder == null || source.level().isClientSide() || !(stack.getItem() instanceof TalismanItem))
             return Attempt.NOT_AN_ATTEMPT;
         // Two rules, one per way in. The use window is about the hand alone: a placed carrier on a display stand
@@ -262,25 +260,27 @@ public final class TalismanService {
             say(holder, Component.translatable("actionbar.mxt.talisman.not_charged"));
             return Attempt.NOT_AN_ATTEMPT;
         }
-        List<Holder<Ability>> abilities = abilities(written);
-        if (abilities.isEmpty()) {
-            say(holder, Component.translatable("actionbar.mxt.talisman.inert"));
-            return Attempt.NOT_AN_ATTEMPT;
-        }
-
-        AbilityAttachment holderAbilities = holder.getData(MxtAttachments.ABILITY_HOLDER);
-        ResourceHolderAttachment resources = holder.getData(MxtAttachments.RESOURCE_HOLDER);
-        long gameTime = holder.level().getGameTime();
         // Where it happened, in the same shape every other position travels in: the explicit formula values
-        // block_x, block_y and block_z. The acting entity is still the actor, because that is who the abilities
-        // belong to - the position says where, not who.
+        // block_x, block_y and block_z. The acting entity is still the actor, because that is who the invocation
+        // belongs to - the position says where, not who.
         FormulaContext context = FormulaContext.of(holder, Map.of("block_x", source.position().x(),
                 "block_y", source.position().y(), "block_z", source.position().z()));
+        // Ask every inscription where its use would land before anything else happens: a type that cannot happen at
+        // all - a crosshair with nobody under it - refuses the carrier here, ahead of the condition and of the price.
+        List<PlannedUse> planned = new ArrayList<>(written.size());
+        for (Holder<Talisman> talisman : written) {
+            TalismanUse use = new TalismanUse(holder, context, source.position(), talisman);
+            TalismanType.Plan plan = talisman.value().type().plan(use);
+            if (!plan.runnable()) {
+                say(holder, failed(Failure.NO_TARGET));
+                return Attempt.REFUSED;
+            }
+            planned.add(new PlannedUse(use, plan));
+        }
         // The definitions' own gate, asked before the price is planned: what a carrier will not let the holder do
         // right now is refused while nothing has been paid, so a condition can never cost the holder anything.
         if (!allowed(written, holder, context)) {
-            say(holder, Component.translatable("actionbar.mxt.talisman.failed",
-                    Component.translatable("actionbar.mxt.talisman.failure.condition_failed")));
+            say(holder, failed(Failure.CONDITION_FAILED));
             return Attempt.REFUSED;
         }
         // One invocation is charged as a whole before anything happens: the carrier's own costs plus every
@@ -290,40 +290,16 @@ public final class TalismanService {
         CostContext costContext = CostContext.of(holder, context, CostOrigin.TALISMAN);
         CostPayment payment = CostPayment.of(costContext);
         Optional<CostFailure> priced = payment.loadAndTest(holderCosts(written));
-        Failure refusal = priced.map(TalismanService::costFailure).orElse(null);
-        if (refusal == null)
-            for (Holder<Ability> ability : abilities) {
-                Failure refused = AbilityService.reserveCost(ability, holder, holderAbilities, payment, gameTime, context);
-                if (refused == null) continue;
-                refusal = refused;
-                break;
-            }
-        if (refusal != null) {
-            say(holder, Component.translatable("actionbar.mxt.talisman.failed",
-                    Component.translatable("actionbar.mxt.talisman.failure." + refusal.name().toLowerCase(Locale.ROOT))));
+        if (priced.isPresent()) {
+            say(holder, failed(costFailure(priced.get())));
             return Attempt.REFUSED;
         }
-        int fired = 0;
-        Failure failure = null;
-        for (Holder<Ability> ability : abilities) {
-            UseResult result = AbilityService.useCarried(ability, holder, holderAbilities, resources, gameTime, context, source.position());
-            if (result.committed()) {
-                fired++;
-                NeoForge.EVENT_BUS.post(new Post(holder, ability, context, result.amounts()));
-            } else if (result.failure() != null) {
-                failure = result.failure();
-            }
-        }
-        if (fired == 0) {
-            Failure reason = failure == null ? Failure.INVALID_FORMULA : failure;
-            say(holder, Component.translatable("actionbar.mxt.talisman.failed",
-                    Component.translatable("actionbar.mxt.talisman.failure." + reason.name().toLowerCase(Locale.ROOT))));
-            return Attempt.REFUSED;
-        }
+        // What each type does once the price can be paid. A type answers for its own targets; the ones that land
+        // immediately run their actions here, and a thrown one leaves its effect to the moment it hits.
+        for (PlannedUse entry : planned) entry.use().definition().value().type().apply(entry.use(), entry.plan());
         CostPayment.Result paid = CostPayment.pay(holderCosts(written), costContext);
         if (!paid.paid()) {
-            say(holder, Component.translatable("actionbar.mxt.talisman.failed", Component.translatable(
-                    "actionbar.mxt.talisman.failure." + costFailure(paid.failure()).name().toLowerCase(Locale.ROOT))));
+            say(holder, failed(costFailure(paid.failure())));
             return Attempt.REFUSED;
         }
         // This invocation's share of the store is spent here; whatever the definitions wrote on top of one
@@ -333,7 +309,7 @@ public final class TalismanService {
         if (left.isEmpty()) stack.remove(MxtDataComponents.SPIRIT_STORAGE);
         else stack.set(MxtDataComponents.SPIRIT_STORAGE, left);
         if (spend(stack, holder, inHand)) refund(left, holder);
-        say(holder, Component.translatable("actionbar.mxt.talisman.invoked", fired));
+        say(holder, Component.translatable("actionbar.mxt.talisman.invoked", planned.size()));
         return Attempt.FIRED;
     }
 
@@ -344,9 +320,14 @@ public final class TalismanService {
     }
 
     // A price the holder cannot make is the same two answers every other cost gives: not enough of one resource,
-    // or not enough of everything else. The carrier reports it with the ability failures it already has words for.
+    // or not enough of everything else.
     private static Failure costFailure(CostFailure failure) {
         return failure == CostFailure.INSUFFICIENT_RESOURCE ? Failure.INSUFFICIENT_RESOURCE : Failure.INSUFFICIENT_COST;
+    }
+
+    private static Component failed(Failure failure) {
+        return Component.translatable("actionbar.mxt.talisman.failed",
+                Component.translatable("actionbar.mxt.talisman.failure." + failure.name().toLowerCase(Locale.ROOT)));
     }
 
     // What a carrier was still holding when it was spent, handed back to whoever set that invocation off. The pour
@@ -365,8 +346,8 @@ public final class TalismanService {
         });
     }
 
-    // One invocation's share of the carrier, in one of two currencies: the wear its definitions declare, or the
-    // carrier itself - one item off the stack, which is what a carrier with no wear to spend has always cost.
+    // One invocation's share of the carrier, in one of two currencies: the uses its definitions declare, or the
+    // carrier itself - one item off the stack, which is what a carrier with no uses to spend has always cost.
     // Wear that passes the cap destroys the carrier and leaves nothing behind, so the damage a stack shows is
     // always the wear of the item on top. A creative hand spends neither, which is vanilla's own answer that its
     // stack is not the thing being spent. True means the carrier is gone, which is when what it was still holding
@@ -436,14 +417,6 @@ public final class TalismanService {
     // carrier written before the mode existed decodes as.
     private static TalismanComponent component(ItemStack stack) {
         return stack.getOrDefault(MxtDataComponents.TALISMAN, TalismanComponent.EMPTY);
-    }
-
-    // With the tags they accept expanded, once each: a carrier that names the same ability twice fires it once.
-    private static List<Holder<Ability>> abilities(List<Holder<Talisman>> written) {
-        Registry<Ability> registry = MxtDatapackRegistries.registry(MxtResourceKeys.ABILITY);
-        return written.stream()
-                .flatMap(talisman -> RegistryCodecs.resolve(talisman.value().abilities(), registry))
-                .distinct().toList();
     }
 
     // The whole store of a stack as the pour reads it: one entry per aura, in the order capacity was written,

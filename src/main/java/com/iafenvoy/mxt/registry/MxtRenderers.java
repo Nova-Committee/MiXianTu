@@ -11,6 +11,7 @@ import com.iafenvoy.mxt.render.mount.MountRenderers;
 import com.iafenvoy.mxt.render.particle.RiftParticle.Provider;
 import com.iafenvoy.mxt.render.particle.SpiritWispParticle;
 import com.iafenvoy.mxt.render.sword.SwordAuraRenderer;
+import com.iafenvoy.mxt.render.talisman.TalismanProjectileRenderer;
 import com.iafenvoy.mxt.screen.gui.*;
 import com.iafenvoy.mxt.screen.menu.*;
 import net.minecraft.client.gui.screens.MenuScreens.ScreenConstructor;
@@ -35,6 +36,8 @@ public final class MxtRenderers {
         event.registerEntityRenderer(MxtEntityTypes.FLYING_SWORD.get(), FlyingSwordRenderer::new);
         event.registerEntityRenderer(MxtEntityTypes.SOUL.get(), NoopRenderer::new);
         event.registerEntityRenderer(MxtEntityTypes.SPIRIT_BURST.get(), NoopRenderer::new);
+        // A thrown carrier is drawn as the item itself, turning over in flight at its own random rate.
+        event.registerEntityRenderer(MxtEntityTypes.TALISMAN_PROJECTILE.get(), TalismanProjectileRenderer::new);
         event.registerEntityRenderer(MxtEntityTypes.COLORED_LIGHTNING.get(), ColoredLightningBoltRenderer::new);
         event.registerEntityRenderer(MxtEntityTypes.SWORD_AURA.get(), SwordAuraRenderer::new);
         // The mount's own renderer never draws a mount by itself: it asks this registry, so the default look and the
