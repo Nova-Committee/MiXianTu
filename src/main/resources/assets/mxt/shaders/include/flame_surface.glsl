@@ -1,3 +1,5 @@
+// Defines the sword's local surface geometry from its blade and hilt dimensions.
+// Used to place the surface flame and sample the fluid field along the sword.
 #ifndef MXT_FLAME_SURFACE
 #define MXT_FLAME_SURFACE
 float swordBottom(FlameItem item) {

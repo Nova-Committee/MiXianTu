@@ -29,6 +29,7 @@ import com.iafenvoy.mxt.data.trigger.TriggerRule;
 import com.mojang.serialization.Codec;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.core.Registry;
 import net.minecraft.core.RegistryAccess;
@@ -98,11 +99,18 @@ public final class MxtDatapackRegistries {
         register(event, MxtResourceKeys.DEFAULT_QUALITY, DefaultQuality.DIRECT_CODEC);
         register(event, MxtResourceKeys.TRIGGER, TriggerRule.DIRECT_CODEC);
         register(event, MxtResourceKeys.TALISMAN, Talisman.DIRECT_CODEC);
+        register(event, MxtResourceKeys.INCOMPLETE, IncompleteMarker.CODEC);
     }
 
     private static <T> void register(NewRegistry event, ResourceKey<Registry<T>> key, Codec<T> codec) {
         event.dataPackRegistry(key, codec, codec);
         KEYS.add(key);
+    }
+
+    // The lookup a render path can use: this registry is synced, and a client draws frames before it has received
+    // it, where lookupOrThrow would throw inside the frame rather than answer "nothing is declared".
+    public static <T> Stream<Reference<T>> holdersOrEmpty(Provider access, ResourceKey<Registry<T>> key) {
+        return access.lookup(key).map(HolderLookup::listElements).orElseGet(Stream::empty);
     }
 
     public static List<ResourceKey<? extends Registry<?>>> registries() {

@@ -1,3 +1,5 @@
+// Selects the flame's travel direction relative to the sword surface.
+// Supports upward flow and radial flow toward the sword's center.
 #ifndef MXT_FLAME_FLOW
 #define MXT_FLAME_FLOW
 bool isRadialFlame(FlameItem item) {

@@ -1,0 +1,20 @@
+{
+  "items": "minecraft:debug_stick",
+  "conditions": [
+    {
+      "condition": {
+        "type": "mxt:not",
+        "condition": {
+          "type": "mxt:and",
+          "conditions": [
+            {"type": "mxt:main_hand_item", "item_condition": {"type": "mxt:item_physique", "physiques": ["mxt_test:sword_bone", "#mxt_test:physiques"]}},
+            {"type": "mxt:main_hand_item", "item_condition": {"type": "mxt:item_technique", "techniques": ["mxt_test:sword_manual", "#mxt_test:techniques"]}},
+            {"type": "mxt:main_hand_item", "item_condition": {"type": "mxt:item_spirit_root", "spirit_roots": ["mxt_test:fire_root", "#mxt_test:spirit_roots"]}},
+            {"type": "mxt:main_hand_item", "item_condition": {"type": "mxt:item_talisman", "talismans": ["mxt_test:flame_sigil", "#mxt_test:talismans"]}}
+          ]
+        }
+      },
+      "description": "condition.mxt_test.item_condition_probe"
+    }
+  ]
+}

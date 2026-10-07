@@ -76,6 +76,7 @@
   "command.mxt_test.verify.talisman_failed": "符箓检查失败：%s",
   "command.mxt_test.verify.talisman_ok": "符箓：定义合计成耐久上限、原版组件与耐久条都到位，每次激发扣耐久、越过上限那一次销毁载体并把没烧掉的灵气退回，代价付不出就拒绝激发、付得出才结算，铭刻声明的品阶经品质模块生效",
   "condition.mxt_test.fire_root_item": "需要满足火灵根物品条件",
+  "condition.mxt_test.item_condition_probe": "物品身份探针：手上的东西是不是指定体质、功法、灵根或符箓",
   "condition.mxt_test.locked_carrot": "该物品当前不可使用",
   "condition.mxt_test.toxicity_pill": "丹药使用条件满足",
   "contract_type.mxt.mxt_test.master_servant": "主仆契约",

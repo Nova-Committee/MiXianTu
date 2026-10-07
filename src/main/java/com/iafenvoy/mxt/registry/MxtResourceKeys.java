@@ -128,6 +128,7 @@ public final class MxtResourceKeys {
     public static final ResourceKey<Registry<DefaultQuality>> DEFAULT_QUALITY = create("default_quality");
     public static final ResourceKey<Registry<TriggerRule>> TRIGGER = create("trigger");
     public static final ResourceKey<Registry<Talisman>> TALISMAN = create("talisman");
+    public static final ResourceKey<Registry<IncompleteMarker>> INCOMPLETE = create("incomplete");
 
     private static <T> ResourceKey<Registry<T>> create(String path) {
         return ResourceKey.createRegistryKey(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, path));

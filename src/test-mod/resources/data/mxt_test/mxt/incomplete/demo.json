@@ -1,0 +1,10 @@
+{
+  "items": [
+    "minecraft:debug_stick",
+    {
+      "type": "mxt:quality",
+      "items": "minecraft:cobblestone",
+      "quality": "mxt_test:poor"
+    }
+  ]
+}

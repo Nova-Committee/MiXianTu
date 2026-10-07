@@ -1,3 +1,5 @@
+// Reconstructs scene depth and fades flames where they intersect solid geometry.
+// Keeps particle and surface layers from ending in hard, distracting edges.
 #ifndef MXT_FLAME_DEPTH
 #define MXT_FLAME_DEPTH
 uniform sampler2D SceneDepth;

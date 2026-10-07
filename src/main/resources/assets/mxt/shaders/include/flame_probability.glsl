@@ -1,3 +1,5 @@
+// Shared sampling and shading helpers for the flame layers.
+// Computes low-discrepancy samples, flame density, and heat/age-based tinting.
 #ifndef MXT_FLAME_PROBABILITY
 #define MXT_FLAME_PROBABILITY
 float halton(int index, int base) {

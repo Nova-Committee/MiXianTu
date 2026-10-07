@@ -48,4 +48,8 @@ public final class MxtItemConditions {
     public static final DeferredHolder<MapCodec<? extends ItemCondition>, MapCodec<CurseContainerItemCondition>> CURSE_CONTAINER = REGISTRY.register("curse_container", () -> CurseContainerItemCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends ItemCondition>, MapCodec<ItemQualityCondition>> ITEM_QUALITY = REGISTRY.register("item_quality", () -> ItemQualityCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends ItemCondition>, MapCodec<ItemAbilitiesItemCondition>> ITEM_ABILITIES = REGISTRY.register("item_abilities", () -> ItemAbilitiesItemCondition.CODEC);
+    public static final DeferredHolder<MapCodec<? extends ItemCondition>, MapCodec<ItemPhysiqueCondition>> ITEM_PHYSIQUE = REGISTRY.register("item_physique", () -> ItemPhysiqueCondition.CODEC);
+    public static final DeferredHolder<MapCodec<? extends ItemCondition>, MapCodec<ItemTechniqueCondition>> ITEM_TECHNIQUE = REGISTRY.register("item_technique", () -> ItemTechniqueCondition.CODEC);
+    public static final DeferredHolder<MapCodec<? extends ItemCondition>, MapCodec<ItemSpiritRootCondition>> ITEM_SPIRIT_ROOT = REGISTRY.register("item_spirit_root", () -> ItemSpiritRootCondition.CODEC);
+    public static final DeferredHolder<MapCodec<? extends ItemCondition>, MapCodec<ItemTalismanCondition>> ITEM_TALISMAN = REGISTRY.register("item_talisman", () -> ItemTalismanCondition.CODEC);
 }

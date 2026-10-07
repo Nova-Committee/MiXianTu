@@ -1,3 +1,5 @@
+// Shared flame item/frame layouts and fluid-field sampling helpers.
+// Also provides noise functions and conversions between sword-local and world space.
 #ifndef MXT_FLAME_DATA
 #define MXT_FLAME_DATA
 struct FlameItem {
