@@ -1,0 +1,9 @@
+{
+  "replace": false,
+  "values": [
+    "mxt:spirit_stone",
+    "mxt:medium_spirit_stone",
+    "mxt:high_spirit_stone",
+    "mxt:supreme_spirit_stone"
+  ]
+}

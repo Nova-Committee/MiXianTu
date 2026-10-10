@@ -1,9 +1,9 @@
 package com.iafenvoy.mxt.data.talisman.type;
 
+import com.iafenvoy.mxt.data.ability.ActionCarrier;
 import com.iafenvoy.mxt.data.action.BiEntityAction;
 import com.iafenvoy.mxt.data.action.BlockAction;
 import com.iafenvoy.mxt.data.action.EntityAction;
-import com.iafenvoy.mxt.data.ability.ActionCarrier;
 import com.iafenvoy.mxt.data.condition.BiEntityCondition;
 import com.iafenvoy.mxt.data.condition.BlockCondition;
 import com.iafenvoy.mxt.data.context.action.BiEntityActionContext;
@@ -33,7 +33,8 @@ import java.util.Optional;
  * acts on the block that was struck instead.
  */
 public record ThrownTalismanType(NumberProvider speed, NumberProvider gravity, BiEntityCondition targetCondition,
-                                 EntityAction entityAction, BiEntityAction biEntityAction, BlockCondition blockCondition,
+                                 EntityAction entityAction, BiEntityAction biEntityAction,
+                                 BlockCondition blockCondition,
                                  BlockAction blockAction) implements TalismanType {
     // A throw far past a hand's own reach would only make the level walk every entity it holds.
     private static final double MAX_SPEED = 4.0D;

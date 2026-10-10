@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.data.forging;
 
 import com.iafenvoy.mxt.util.HolderHelper;
-import com.iafenvoy.mxt.util.codec.AutoIgnoreListCodec;
+import com.iafenvoy.mxt.util.codec.TolerantListCodec;
 import com.iafenvoy.mxt.util.matcher.ItemMatcher;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
@@ -18,7 +18,7 @@ public record ToolBinding(List<Entry> entries, List<Holder<ForgingMethod>> metho
                           int priority) implements ItemMatcher {
     public static final Codec<ToolBinding> DIRECT_CODEC = RecordCodecBuilder.<ToolBinding>create(i -> i.group(
             ENTRIES_CODEC.fieldOf("items").forGetter(ToolBinding::entries),
-            AutoIgnoreListCodec.create(ForgingMethod.CODEC).fieldOf("methods").forGetter(ToolBinding::methods),
+            TolerantListCodec.create(ForgingMethod.CODEC).fieldOf("methods").forGetter(ToolBinding::methods),
             Codec.INT.optionalFieldOf("priority", DEFAULT_PRIORITY).forGetter(ToolBinding::priority)
     ).apply(i, ToolBinding::new)).validate(ToolBinding::validate);
 

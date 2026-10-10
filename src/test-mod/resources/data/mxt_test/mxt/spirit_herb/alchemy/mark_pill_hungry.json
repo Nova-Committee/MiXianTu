@@ -1,5 +1,5 @@
 {
-  "items": "minecraft:brown_mushroom",
+  "blocks": "minecraft:brown_mushroom",
   "main_effects": {
     "mxt_test:alchemy/mark_pill_hungry": 1
   },

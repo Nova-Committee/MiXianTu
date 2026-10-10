@@ -1,5 +1,5 @@
 {
-  "items": ["minecraft:red_mushroom", "#mxt_test:spirit_herbs"],
+  "blocks": ["minecraft:red_mushroom", "#mxt_test:spirit_herbs"],
   "element_tags": ["mxt_test:fire"],
   "material_tags": ["mxt_test:herb"],
   "default_age": 100

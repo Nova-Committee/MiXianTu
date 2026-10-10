@@ -64,6 +64,13 @@ public final class AuraChunkTicker {
         DIRTY.computeIfAbsent(level, ignored -> Collections.newSetFromMap(new IdentityHashMap<>())).add(level.getChunkAt(pos));
     }
 
+    // A snapshot of the chunks this level currently has loaded, for other per-chunk work that must not scan a
+    // whole level every tick. Copied, because the caller iterates while chunks may still load or unload.
+    public static Set<LevelChunk> loadedChunks(ServerLevel level) {
+        Set<LevelChunk> chunks = LOADED.get(level);
+        return chunks == null ? Set.of() : new LinkedHashSet<>(chunks);
+    }
+
     // Rebuilds queued block-aura caches once, so a placement becomes visible without scanning the chunk for
     // every individual block event.
     public static void flushDirty(ServerLevel level) {

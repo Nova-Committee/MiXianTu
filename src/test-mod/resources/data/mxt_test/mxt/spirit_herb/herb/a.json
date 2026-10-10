@@ -1,13 +1,11 @@
 {
-  "items": "minecraft:allium",
+  "blocks": "minecraft:allium",
   "main_effects": { "mxt_test:herb/main": "3 * (1 + herb_age / 100)" },
   "thermal_bias": 1,
   "growth": {
-    "seeds": "minecraft:beetroot_seeds",
     "mature_age": 100,
     "max_age": 100,
     "growth_rate": 25,
-    "harvest": { "id": "minecraft:allium", "count": 1 },
-    "texture": "mxt_test:block/herb/grower"
+    "drops": "minecraft:allium"
   }
 }

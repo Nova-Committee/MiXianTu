@@ -4,6 +4,7 @@ import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.attachment.SpiritBurstCooldownAttachment;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.resource.Resource;
+import com.iafenvoy.mxt.item.SpiritVesselItem;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
@@ -13,10 +14,12 @@ import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.item.ItemStack;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerLoggedOutEvent;
 import net.neoforged.neoforge.event.tick.EntityTickEvent.Post;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 
@@ -110,9 +113,26 @@ public final class SpiritBurstService {
         if (amount <= 0) return false;
         if (!ResourceService.initialize(resources, resource, context).valid() || resources.get(resource) < amount)
             return false;
+        // A vessel in hand is a store rather than a target: the same payment, poured into it instead of fired. Asked
+        // before anything is paid, so a vessel with no room refuses the burst rather than drinking the cost.
+        SpiritVesselItem vessel = heldVessel(holder, aura, amount);
         if (!ResourceService.change(resources, resource, -amount, context).valid()) return false;
+        if (vessel != null) {
+            ItemStack stack = holder.getMainHandItem();
+            vessel.insert(holder, stack, aura, amount, false);
+            SpiritVesselItem.showCharge(holder, stack, resource);
+            return true;
+        }
         holder.level().addFreshEntity(new SpiritBurstEntity(holder.level(), holder, aura, amount, resource.value().particleColor()));
         return true;
+    }
+
+    // The vessel this burst charges instead of firing, or null when it is a burst after all: a vessel in the main
+    // hand that would really take some of what is being fired.
+    private static @Nullable SpiritVesselItem heldVessel(LivingEntity holder, Holder<Aura> aura, int amount) {
+        ItemStack stack = holder.getMainHandItem();
+        if (!(stack.getItem() instanceof SpiritVesselItem vessel)) return null;
+        return vessel.insert(holder, stack, aura, amount, true) < amount ? vessel : null;
     }
 
     private static int asWholeAmount(double value) {

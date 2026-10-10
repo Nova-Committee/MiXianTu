@@ -1,5 +1,5 @@
 {
-  "items": "minecraft:sea_pickle",
+  "blocks": "minecraft:sea_pickle",
   "main_effects": {
     "mxt_test:alchemy/mark_starved": 1
   },

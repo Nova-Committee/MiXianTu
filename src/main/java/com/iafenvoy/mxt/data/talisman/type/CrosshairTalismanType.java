@@ -1,10 +1,10 @@
 package com.iafenvoy.mxt.data.talisman.type;
 
-import com.iafenvoy.mxt.data.action.BiEntityAction;
-import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.ability.ActionCarrier;
 import com.iafenvoy.mxt.data.ability.target.RayTargetSelector;
 import com.iafenvoy.mxt.data.ability.target.TargetOrder;
+import com.iafenvoy.mxt.data.action.BiEntityAction;
+import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.condition.BiEntityCondition;
 import com.iafenvoy.mxt.data.talisman.TalismanType;
 import com.iafenvoy.mxt.data.talisman.TalismanUse;

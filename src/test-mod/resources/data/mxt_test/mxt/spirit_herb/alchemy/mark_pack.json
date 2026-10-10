@@ -1,5 +1,5 @@
 {
-  "items": "minecraft:rose_bush",
+  "blocks": "minecraft:rose_bush",
   "main_effects": {
     "mxt_test:alchemy/mark_pack": 1
   },

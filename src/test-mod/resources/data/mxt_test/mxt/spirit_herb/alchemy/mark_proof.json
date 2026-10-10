@@ -1,5 +1,5 @@
 {
-  "items": "minecraft:spore_blossom",
+  "blocks": "minecraft:spore_blossom",
   "main_effects": {
     "mxt_test:alchemy/mark_proof": 1
   },

@@ -36,6 +36,7 @@ public record TokenComponent(Optional<String> kind, Optional<String> value,
         event.registerComponentAppenderBeforeAll(MxtDataComponents.TOKEN, TooltipAppender.createComponentAppender(MxtDataComponents.TOKEN.get()));
     }
 
+    // `owner` stays out of the tooltip on purpose: it is a permission record, not something to read off the item.
     @Override
     public void addToTooltip(@NonNull TooltipContext context, @NonNull Consumer<Component> consumer, @NonNull TooltipFlag flag, @NonNull DataComponentGetter components) {
         this.kind.ifPresent(kind -> consumer.accept(Component.translatable("tooltip.mxt.token", kind, this.value.orElse("-"))));

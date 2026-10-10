@@ -78,16 +78,9 @@ public final class ForgingMenu extends ApricityContainerMenu {
     // recess, far enough out that neither it nor its scroller touches the third cell column (which ends at 61 /
     // 304). The hit tests read these, so the drawn track and the clickable one stay the same rectangle.
     public static final int SCROLLBAR_X = 63, SCROLLBAR_X_RIGHT = 306;
-    public static final int MACHINE_PITCH = 18;
-    public static final int SLOT_TOP = 18;
-    public static final int INPUT_X = 81;
-    public static final int INVENTORY_X = 81, INVENTORY_Y = 152;
-    public static final int HOTBAR_Y = 210;
 
     private final Container machine;
     private final ContainerLevelAccess access;
-    // The page's containers and the layout the slots are built from.
-    private final Setup setup;
     // The opener; the client half needs it only for the registries behind the two selector lists and the
     // step icons, never for the level's blocks.
     private final Player player;
@@ -104,7 +97,7 @@ public final class ForgingMenu extends ApricityContainerMenu {
     private ForgingMenu(int containerId, Inventory inventory, ContainerLevelAccess access, Setup setup) {
         super(containerId, inventory, setup.page().layout(), setup.page().sources(), Map.of(), null);
         this.access = access;
-        this.setup = setup;
+        // The page's containers and the layout the slots are built from.
         setup.owner = this;
         // The surface's own container on the server, reached through the access; a stand-in on the client,
         // which the container content packet fills through the slots - see Slot#set.
@@ -386,10 +379,7 @@ public final class ForgingMenu extends ApricityContainerMenu {
 
         private Setup(Inventory inventory, ContainerLevelAccess access) {
             // A null from the access answers "no table here", which is how the client half gets its stand-in.
-            this.machine = access
-                    .evaluate((level, pos) -> level.getBlockEntity(pos) instanceof ForgingTableBlockEntity table
-                            ? table.forgingContainer()
-                            : null)
+            this.machine = access.evaluate((level, pos) -> level.getBlockEntity(pos) instanceof ForgingTableBlockEntity table ? table.forgingContainer() : null)
                     .orElseGet(() -> new SimpleContainer(MACHINE_SLOTS));
             this.page = PageSlots.of(AuiPages.page(AuiPages.FORGING, "forging"))
                     .container("blueprints", this.machine, this::newMachineSlot)

@@ -1,6 +1,8 @@
 package com.iafenvoy.mxt.picker;
 
 import com.iafenvoy.mxt.data.alchemy.HeatSource;
+import com.iafenvoy.mxt.data.alchemy.SpiritHerb;
+import com.iafenvoy.mxt.data.alchemy.SpiritHerb.Growth;
 import com.iafenvoy.mxt.data.aura.BlockAura;
 import com.iafenvoy.mxt.data.item.*;
 import com.iafenvoy.mxt.data.item.TalismanComponent.TriggerMode;
@@ -60,7 +62,6 @@ public final class ItemPickerManager {
         // Item-shaped definitions: the row is the matched item, named by the definition's own language key.
         registerMatcher(MxtResourceKeys.ITEM_AURA);
         registerMatcher(MxtResourceKeys.CURRENCY);
-        registerMatcher(MxtResourceKeys.SPIRIT_HERB);
         registerMatcher(MxtResourceKeys.PILL_BINDING);
         registerMatcher(MxtResourceKeys.ARTIFACT);
         registerMatcher(MxtResourceKeys.ITEM_BINDING);
@@ -72,6 +73,8 @@ public final class ItemPickerManager {
         // Block-shaped definitions: the definition names no item, so the row is every block its `blocks` claims.
         registerBlocks(MxtResourceKeys.BLOCK_AURA, BlockAura::blocks);
         registerBlocks(MxtResourceKeys.HEAT_SOURCE, HeatSource::blocks);
+        // A herb is item-shaped in effect: what a player reads it on is its fruit, not the block it grows as.
+        registerHerbs(MxtResourceKeys.SPIRIT_HERB);
 
         // One generic carrier per pill definition: the component names the pill, which is how a built-in dose is
         // handed out. Bindings stay item-shaped rows, because a binding is only about which items those are.
@@ -137,15 +140,28 @@ public final class ItemPickerManager {
         return null;
     }
 
-    // Entries matching by anything but item or tag have no concrete item and are dropped silently.
+    // Item and tag entries name their items outright. Every other entry is asked of each registered item instead,
+    // because a wildcard, a regex, an ingredient or a capability answers from the item alone. The entries that read
+    // the stack - a tier, a technique component - answer no for a bare stack and so contribute no row, which is the
+    // reading this side has always had.
     public static List<ItemStack> stackItems(List<Entry> entries) {
         Set<Item> items = new LinkedHashSet<>();
+        List<Entry> byItem = new ArrayList<>();
         for (Entry entry : entries) {
             switch (entry) {
                 case ItemEntry(Item item) -> items.add(item);
                 case TagEntry(TagKey<Item> tag) -> BuiltInRegistries.ITEM.get(tag)
                         .ifPresent(set -> set.forEach(holder -> items.add(holder.value())));
-                default -> {
+                default -> byItem.add(entry);
+            }
+        }
+        if (!byItem.isEmpty()) {
+            for (Item item : BuiltInRegistries.ITEM) {
+                ItemStack candidate = item.getDefaultInstance();
+                for (Entry entry : byItem) {
+                    if (!entry.matches(candidate)) continue;
+                    items.add(item);
+                    break;
                 }
             }
         }
@@ -197,6 +213,36 @@ public final class ItemPickerManager {
             }
             return List.copyOf(items);
         }));
+    }
+
+    /**
+     * A herb is shown by the item it is read from, which is the fruit its {@code growth.drops} claims - that is the
+     * stack a tooltip and a furnace actually ask about. A herb with no growth bears no fruit, so it falls back to
+     * the item form of every block it claims, which is the same fallback {@code SpiritHerbService.find} uses.
+     */
+    private static void registerHerbs(ResourceKey<Registry<SpiritHerb>> key) {
+        register(key, (holder, access) -> {
+            Identifier id = HolderHelper.idOrNull(holder);
+            Component definition = DefinitionText.name(holder);
+            SpiritHerb herb = holder.value();
+            List<PickerItem> items = new ArrayList<>();
+            Optional<Growth> growth = herb.growth();
+            if (growth.isPresent()) {
+                // A tag entry shows the whole fruit family it covers.
+                for (Holder<Item> item : RegistryCodecs.resolve(growth.get().drops(), access, Registries.ITEM).toList()) {
+                    ItemStack stack = item.value().getDefaultInstance();
+                    if (stack.isEmpty()) continue;
+                    items.add(new PickerItem(stack, names(stack.getHoverName(), definition, idName(id))));
+                }
+                return List.copyOf(items);
+            }
+            for (Holder<Block> block : RegistryCodecs.resolve(herb.blocks(), access, Registries.BLOCK).toList()) {
+                ItemStack stack = block.value().asItem().getDefaultInstance();
+                if (stack.isEmpty()) continue;
+                items.add(new PickerItem(stack, names(stack.getHoverName(), definition, idName(id))));
+            }
+            return List.copyOf(items);
+        });
     }
 
     // A definition that names blocks rather than items is expanded against the block registry: every block it
@@ -269,3 +315,4 @@ public final class ItemPickerManager {
     private ItemPickerManager() {
     }
 }
+

@@ -1,431 +1,321 @@
 package com.iafenvoy.mxt.testmod;
 
-import com.iafenvoy.mxt.attachment.AuraChunkAttachment;
-import com.iafenvoy.mxt.data.aura.Aura;
-import com.iafenvoy.mxt.item.block.entity.SpiritHerbPlotBlockEntity;
-import com.iafenvoy.mxt.item.block.entity.SpiritHerbPlotBlockEntity.Pause;
+import com.iafenvoy.mxt.attachment.HerbChunkAttachment;
+import com.iafenvoy.mxt.data.alchemy.SpiritHerb;
 import com.iafenvoy.mxt.registry.MxtAttachments;
-import com.iafenvoy.mxt.registry.MxtBlocks;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
-import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
-import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.runtime.alchemy.SpiritHerbGrowthService;
 import com.iafenvoy.mxt.runtime.alchemy.SpiritHerbService;
-import com.iafenvoy.mxt.runtime.alchemy.SpiritHerbService.HerbPotency;
-import com.iafenvoy.mxt.runtime.alchemy.SpiritHerbService.HerbRole;
-import com.iafenvoy.mxt.runtime.world.AuraPool;
-import com.iafenvoy.mxt.runtime.world.AuraQueryCache;
-import com.iafenvoy.mxt.runtime.world.AuraService;
-import com.iafenvoy.mxt.runtime.world.AuraWorldAttachment.Area;
-import com.iafenvoy.mxt.runtime.world.AuraWorldAttachment.Shape;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
-import com.mojang.brigadier.context.CommandContext;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
 import net.minecraft.core.Holder;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.util.RandomSource;
-import net.minecraft.world.InteractionHand;
-import net.minecraft.world.InteractionResult;
-import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.item.ItemEntity;
-import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.phys.AABB;
-import net.minecraft.world.phys.BlockHitResult;
-import net.minecraft.world.phys.Vec3;
 
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 
 /**
- * Real plot, inventory and aura-pool checks for the herb loop. Each leg prints actual and expected.
+ * End-to-end checks for the herb loop. Each leg prints actual and expected.
+ * <p>
+ * The loop has five moving parts and every leg aims at one of them: a claimed block placed in the world opens a
+ * row at the current game time; a claimed block that was already there is rolled once and parked as an unsettled
+ * row; an open row settles every 20 ticks and advances by exactly what it paid for; reading a plant twice answers
+ * the same age and never goes backwards; and breaking a plant stamps its age onto whatever its {@code drops}
+ * claims. There is no sowing and no right-click, so nothing here clicks a block.
  */
 public final class HerbProbes {
-    private static final Identifier A = id("herb/a");
     private static final Identifier GROWER = id("herb/grower");
-    private static final Identifier NURSERY = id("herb/nursery");
+    private static final Identifier AGING = id("herb/aging");
+    private static final Identifier ROLLED = id("herb/rolled");
+    private static final int MAX = 20;
 
     private HerbProbes() {
     }
 
-    public static int run(CommandContext<CommandSourceStack> context) {
-        return run(context.getSource());
-    }
-
     public static int run(CommandSourceStack source) {
-        ServerPlayer player = source.getPlayer();
-        if (player == null) {
-            source.sendFailure(Component.literal("herb probe: needs a player MISMATCH"));
-            return 0;
-        }
         ServerLevel level = source.getLevel();
-        BlockPos pos = player.blockPosition().above(2);
-        BlockPos side = pos.east();
-        if (!level.getBlockState(pos).isAir() || !level.getBlockState(side).isAir()) {
-            source.sendFailure(Component.literal("herb probe: positions occupied actual="
-                    + level.getBlockState(pos).getBlock() + "," + level.getBlockState(side).getBlock()
-                    + " expected=air MISMATCH"));
-            return 0;
-        }
-        ItemStack hand = player.getMainHandItem().copy();
-        ItemStack[] inventory = snapshot(player);
-        GameType mode = player.gameMode();
-        boolean instabuild = player.getAbilities().instabuild;
-        boolean shift = player.isShiftKeyDown();
-        AuraChunkAttachment chunk = level.getChunkAt(pos).getData(MxtAttachments.AURA_CHUNK);
-        Map<Holder<Aura>, AuraPool> auraBefore = new LinkedHashMap<>(chunk.auras());
-        String area = null;
+        BlockPos origin = BlockPos.containing(source.getPosition());
+        // Above the world's own terrain, so every leg starts from air and no leg inherits another's block.
+        BlockPos base = new BlockPos(origin.getX(), Math.min(level.getMaxY() - 8, 200), origin.getZ());
         boolean ok = true;
-        try {
-            player.getAbilities().instabuild = false;
-            area = level.getData(MxtAttachments.AURA_WORLD).add(new Area(NURSERY, shape(pos, side), 10_000));
-            AuraQueryCache.setEnabled(false);
-            Holder<Aura> spirit = aura(level, "spirit_power");
-            Holder<Aura> water = aura(level, "water_power");
-            if (spirit == null || water == null) {
-                ok &= check(source, "herb probe: aura fixtures", "missing", "spirit_power and water_power");
-            } else {
-                chunk.initializeAuras(Map.of(spirit, AuraPool.natural(10.0D, 10.0D, 0.0D), water, AuraPool.natural(0.0D, 10.0D, 0.0D)));
-                ok &= potency(source, level);
-                ok &= place(level, pos);
-                double bonus = AuraService.getPositionAura(level, pos).rules().spiritPlantBonus();
-                ok &= check(source, "herb probe: nursery bonus", bonus, 0.5D);
-                ok &= refuse(source, level, pos, player);
-                ok &= growth(source, level, pos, player, spirit, water, chunk);
-                ok &= breaks(source, level, side, player);
-            }
-        } catch (RuntimeException exception) {
-            ok = false;
-            source.sendFailure(Component.literal("herb probe: exception " + exception + " MISMATCH"));
-        } finally {
-            AuraQueryCache.setEnabled(true);
-            if (area != null) level.getData(MxtAttachments.AURA_WORLD).remove(area);
-            chunk.initializeAuras(auraBefore);
-            level.setBlockAndUpdate(pos, Blocks.AIR.defaultBlockState());
-            level.setBlockAndUpdate(side, Blocks.AIR.defaultBlockState());
-            clearDrops(level, pos);
-            clearDrops(level, side);
-            restore(player, inventory);
-            player.setItemInHand(InteractionHand.MAIN_HAND, hand);
-            player.getAbilities().instabuild = instabuild;
-            player.setShiftKeyDown(shift);
-            if (player.gameMode() != mode) player.setGameMode(mode);
-        }
-        if (ok) source.sendSuccess(() -> Component.literal("herb probe: OK"), false);
-        else source.sendFailure(Component.literal("herb probe: MISMATCH"));
+
+        ok &= findBlockLeg(source, level, base);
+        ok &= placedClockLeg(source, level, base);
+        ok &= wildRollLeg(source, level, base);
+        ok &= settleLeg(source, level, base);
+        ok &= stabilityLeg(source, level, base);
+        ok &= dropsLeg(source, level, base);
+        ok &= unclaimedLeg(source, level, base);
+
+        final boolean passed = ok;
+        source.sendSuccess(() -> Component.literal(passed ? "herb probe: all legs OK" : "herb probe: MISMATCH"), false);
         return ok ? 1 : 0;
     }
 
-    private static boolean potency(CommandSourceStack source, ServerLevel level) {
-        boolean ok = check(source, "herb probe: ginseng default age",
-                SpiritHerbService.age(level.registryAccess(), new ItemStack(Items.RED_MUSHROOM)), 100);
-        ItemStack young = new ItemStack(Items.ALLIUM);
-        ItemStack century = new ItemStack(Items.ALLIUM);
-        century.set(MxtDataComponents.HERB_AGE.get(), 100);
-        Optional<HerbPotency> main = SpiritHerbService.potency(level.registryAccess(), young, HerbRole.MAIN, FormulaContext.of(level));
-        Optional<HerbPotency> aged = SpiritHerbService.potency(level.registryAccess(), century, HerbRole.MAIN, FormulaContext.of(level));
-        Optional<HerbPotency> auxiliary = SpiritHerbService.potency(level.registryAccess(), young, HerbRole.AUXILIARY, FormulaContext.of(level));
-        ok &= check(source, "herb probe: A main age 0", main.map(HerbPotency::totalPower).orElse(-1.0D), 3.0D);
-        ok &= check(source, "herb probe: A main age 100", aged.map(HerbPotency::totalPower).orElse(-1.0D), 6.0D);
-        ok &= check(source, "herb probe: A auxiliary", auxiliary.map(HerbPotency::totalPower).orElse(-1.0D), 0.0D);
-        ok &= check(source, "herb probe: B main", power(level, Items.AZURE_BLUET, HerbRole.MAIN), 6.0D);
-        ok &= check(source, "herb probe: C auxiliary", power(level, Items.CORNFLOWER, HerbRole.AUXILIARY), 3.0D);
-        ok &= check(source, "herb probe: C bias", bias(level, Items.CORNFLOWER, HerbRole.AUXILIARY), -1.0D);
-        ok &= check(source, "herb probe: D catalyst", power(level, Items.OXEYE_DAISY, HerbRole.CATALYST), 1.0D);
-        ItemStack split = century.copyWithCount(2);
-        ItemStack half = split.split(1);
-        boolean splitKeeps = half.get(MxtDataComponents.HERB_AGE.get()) == 100 && split.get(MxtDataComponents.HERB_AGE.get()) == 100;
-        boolean unmerged = !ItemStack.isSameItemSameComponents(young, century);
-        ok &= check(source, "herb probe: age split and no merge", splitKeeps && unmerged, true);
-        Identifier found = main.flatMap(potency -> potency.herb().unwrapKey()).map(ResourceKey::identifier).orElse(null);
-        return ok && check(source, "herb probe: A id", String.valueOf(found), A.toString());
-    }
-
-    private static boolean refuse(CommandSourceStack source, ServerLevel level, BlockPos pos, ServerPlayer player) {
-        ItemStack stick = new ItemStack(Items.STICK, 2);
-        InteractionResult passed = click(player, level, pos, stick, false);
-        boolean stickKept = passed == InteractionResult.PASS && stick.getCount() == 2 && !plot(level, pos).occupied();
-        boolean stickOk = check(source, "herb probe: non-seed refused", stickKept, true);
-        GameType mode = player.gameMode();
-        player.setGameMode(GameType.ADVENTURE);
-        ItemStack protectedSeeds = new ItemStack(Items.TORCHFLOWER_SEEDS, 2);
-        InteractionResult blocked = click(player, level, pos, protectedSeeds, false);
-        boolean protectedOk = blocked != InteractionResult.SUCCESS && protectedSeeds.getCount() == 2 && !plot(level, pos).occupied();
-        player.setGameMode(mode);
-        player.getAbilities().instabuild = false;
-        return stickOk && check(source, "herb probe: protected position", protectedOk, true);
-    }
-
-    private static boolean growth(CommandSourceStack source, ServerLevel level, BlockPos pos, ServerPlayer player,
-                                  Holder<Aura> spirit, Holder<Aura> water, AuraChunkAttachment chunk) {
+    // A herb is identified by its block, and only its block.
+    private static boolean findBlockLeg(CommandSourceStack source, ServerLevel level, BlockPos base) {
         boolean ok = true;
-        ItemStack seeds = new ItemStack(Items.TORCHFLOWER_SEEDS, 2);
-        InteractionResult planted = click(player, level, pos, seeds, false);
-        SpiritHerbPlotBlockEntity plot = plot(level, pos);
-        ok &= check(source, "herb probe: sowed", planted == InteractionResult.SUCCESS && plot.occupied() && plot.progress() == 0.0F && seeds.getCount() == 1, true);
-        InteractionResult again = click(player, level, pos, seeds, false);
-        ok &= check(source, "herb probe: no second plant", again != InteractionResult.SUCCESS && seeds.getCount() == 1, true);
-        tick(level, pos, 19);
-        ok &= check(source, "herb probe: 19 ticks", plot.progress(), 0.0F);
-        ok &= emptyClick(source, "herb probe: immature status", player, level, pos, false);
-        ok &= check(source, "herb probe: status left the plant", plot.occupied() && plot.progress() == 0.0F, true);
-        tick(level, pos, 1);
-        ok &= check(source, "herb probe: one period", plot.progress(), 3.0F);
-        tick(level, pos, 60);
-        ok &= check(source, "herb probe: four periods", plot.progress(), 12.0F);
-        ItemStack[] beforeFull = snapshot(player);
-        fill(player);
-        ok &= emptyClick(source, "herb probe: harvest click", player, level, pos, false);
-        ItemStack flower = stackOf(player, level, pos, Items.TORCHFLOWER);
-        int flowers = count(player, Items.TORCHFLOWER) + dropped(level, pos, Items.TORCHFLOWER);
-        int returned = count(player, Items.TORCHFLOWER_SEEDS) + dropped(level, pos, Items.TORCHFLOWER_SEEDS);
-        boolean same = flower != null && GROWER.equals(SpiritHerbService.findHolder(level.registryAccess(), flower)
-                .flatMap(holder -> holder.unwrapKey().map(ResourceKey::identifier)).orElse(null));
-        int age = flower == null ? -1 : flower.getOrDefault(MxtDataComponents.HERB_AGE.get(), -1);
-        ok &= check(source, "herb probe: harvest once", flowers == 1 && returned == 1 && age == 12 && same && !plot.occupied(), true);
-        clearDrops(level, pos);
-        restore(player, beforeFull);
-        ItemStack resow = new ItemStack(Items.TORCHFLOWER_SEEDS);
-        click(player, level, pos, resow, false);
-        ok &= check(source, "herb probe: resown at 0", plot.occupied() && plot.progress() == 0.0F, true);
-        int seedsBefore = count(player, Items.TORCHFLOWER_SEEDS);
-        clearDrops(level, pos);
-        ok &= emptyClick(source, "herb probe: immature pull click", player, level, pos, true);
-        int seedBack = count(player, Items.TORCHFLOWER_SEEDS) - seedsBefore + dropped(level, pos, Items.TORCHFLOWER_SEEDS);
-        ok &= check(source, "herb probe: immature pull", seedBack == 1 && dropped(level, pos, Items.TORCHFLOWER) == 0 && !plot.occupied(), true);
-        clearDrops(level, pos);
-        plot.clear();
-        plot.sync();
+        BlockState soil = HerbTestBlocks.SOIL.get().defaultBlockState();
+        BlockState grower = HerbTestBlocks.WILD_GROWER.get().defaultBlockState();
+        BlockState stone = Blocks.STONE.defaultBlockState();
 
-        ok &= sowAndTick(source, level, pos, player, Items.POISONOUS_POTATO, 20);
-        ok &= check(source, "herb probe: condition pause", plot.pause() == Pause.CONDITION && plot.progress() == 0.0F && amount(chunk, spirit) == 10.0D, true);
-        plot.clear();
-        plot.sync();
-        ok &= sowAndTick(source, level, pos, player, Items.GLOW_BERRIES, 20);
-        ok &= check(source, "herb probe: no partial charge", plot.pause() == Pause.AURA && plot.progress() == 0.0F
-                && amount(chunk, spirit) == 10.0D && amount(chunk, water) == 0.0D, true);
-        plot.clear();
-        plot.sync();
-        ok &= sowAndTick(source, level, pos, player, Items.PITCHER_POD, 20);
-        ok &= check(source, "herb probe: paid growth", plot.progress() == 3.0F && amount(chunk, spirit) == 8.0D, true);
-        tick(level, pos, 20);
-        ok &= check(source, "herb probe: cap stops payment", plot.progress() == 3.0F && plot.pause() == Pause.CAPPED && amount(chunk, spirit) == 8.0D, true);
-        plot.clear();
-        plot.sync();
-        ok &= randomRoll(source, level, pos, player, spirit, chunk);
-
-        boolean retiredFile = level.getServer().getResourceManager()
-                .getResource(Identifier.fromNamespaceAndPath("mxt_test", "mxt/spirit_herb/herb/retired.json")).isPresent();
-        boolean retiredAbsent = level.registryAccess().lookupOrThrow(MxtResourceKeys.SPIRIT_HERB)
-                .get(ResourceKey.create(MxtResourceKeys.SPIRIT_HERB, id("herb/retired"))).isEmpty();
-        ok &= check(source, "herb probe: excluded file", retiredFile, true);
-        ok &= check(source, "herb probe: excluded holder", retiredAbsent, true);
-        plot.restore(null, new ItemStack(Items.LILY_OF_THE_VALLEY), 4.0F, 0, Pause.NONE);
-        tick(level, pos, 20);
-        boolean stopped = plot.progress() == 4.0F && plot.herb() == null && plot.pause() == Pause.MISSING;
-        int before = count(player, Items.LILY_OF_THE_VALLEY);
-        clearDrops(level, pos);
-        ok &= emptyClick(source, "herb probe: absent pull click", player, level, pos, true);
-        int gained = count(player, Items.LILY_OF_THE_VALLEY) - before + dropped(level, pos, Items.LILY_OF_THE_VALLEY);
-        ok &= check(source, "herb probe: absent returns seed", stopped && gained == 1 && !plot.occupied(), true);
+        ok &= check(source, "herb probe: soil is claimed by grower",
+                SpiritHerbService.findBlock(level.registryAccess(), soil).map(HerbProbes::idOf).orElse(null), GROWER);
+        ok &= check(source, "herb probe: wild grower block is claimed by rolled",
+                SpiritHerbService.findBlock(level.registryAccess(), grower).map(HerbProbes::idOf).orElse(null), ROLLED);
+        ok &= check(source, "herb probe: the third test block is claimed by aging",
+                SpiritHerbService.findBlock(level.registryAccess(), HerbTestBlocks.WILD_ROLLED.get().defaultBlockState())
+                        .map(HerbProbes::idOf).orElse(null), AGING);
+        ok &= check(source, "herb probe: stone is not a herb",
+                SpiritHerbService.findBlock(level.registryAccess(), stone).isPresent(), false);
+        // The drop matcher is how an item is traced back to its plant, and it is not the block matcher.
+        ok &= check(source, "herb probe: torchflower resolves to grower",
+                SpiritHerbService.find(level.registryAccess(), new ItemStack(Items.TORCHFLOWER))
+                        .map(HerbProbes::idOf).orElse(null), GROWER);
+        ok &= check(source, "herb probe: dirt does not resolve to a herb",
+                SpiritHerbService.find(level.registryAccess(), new ItemStack(Items.DIRT)).isPresent(), false);
+        // A herb with no growth bears no fruit, so its block's own item is the only handle it has. Without that
+        // fallback its power fields could never be read from any stack, and the picker row would show no tooltip.
+        ok &= check(source, "herb probe: a furnace-only herb is readable from its block's item",
+                SpiritHerbService.find(level.registryAccess(), new ItemStack(Items.CACTUS))
+                        .map(HerbProbes::idOf).orElse(null), id("alchemy/rank"));
+        // ... but a herb that does have a growth must not also match by its block, or one stack would be claimed
+        // by two definitions at once.
+        ok &= check(source, "herb probe: a fruiting herb does not also match by its block item",
+                SpiritHerbService.find(level.registryAccess(), new ItemStack(Items.HONEYCOMB_BLOCK)).isPresent(), false);
+        ok &= check(source, "herb probe: a fruiting herb still matches by its fruit",
+                SpiritHerbService.find(level.registryAccess(), new ItemStack(Items.HONEYCOMB))
+                        .map(HerbProbes::idOf).orElse(null), id("herb/tiered"));
         return ok;
     }
 
-    private static boolean breaks(CommandSourceStack source, ServerLevel level, BlockPos pos, ServerPlayer player) {
-        place(level, pos);
-        ItemStack seed = new ItemStack(Items.TORCHFLOWER_SEEDS);
-        click(player, level, pos, seed, false);
-        level.destroyBlock(pos, true, player);
-        int immatureFlower = dropped(level, pos, Items.TORCHFLOWER);
-        int immatureSeed = dropped(level, pos, Items.TORCHFLOWER_SEEDS);
-        clearDrops(level, pos);
-        boolean immature = check(source, "herb probe: immature break", immatureFlower == 0 && immatureSeed == 1, true);
-        place(level, pos);
-        click(player, level, pos, new ItemStack(Items.TORCHFLOWER_SEEDS), false);
-        tick(level, pos, 80);
-        level.destroyBlock(pos, true, player);
-        int matureFlower = dropped(level, pos, Items.TORCHFLOWER);
-        int matureSeed = dropped(level, pos, Items.TORCHFLOWER_SEEDS);
-        return immature && check(source, "herb probe: mature break once", matureFlower == 1 && matureSeed == 1, true);
+    // Planting is placing. The clock is the current game time, and nothing about the stack that placed it.
+    private static boolean placedClockLeg(CommandSourceStack source, ServerLevel level, BlockPos base) {
+        BlockPos pos = base.offset(0, 0, 0);
+        boolean ok = true;
+        level.setBlockAndUpdate(pos, Blocks.AIR.defaultBlockState());
+        level.setBlockAndUpdate(pos, HerbTestBlocks.SOIL.get().defaultBlockState());
+        SpiritHerbGrowthService.placed(level, pos, level.getBlockState(pos));
+
+        Long clock = clock(level, pos);
+        ok &= check(source, "herb probe: placing a claimed block opens a clock", clock != null, true);
+        ok &= check(source, "herb probe: the clock is the current game time", clock, level.getGameTime());
+
+        // A placed plant starts young however long the world has run.
+        ok &= check(source, "herb probe: a placed plant starts at age 0", ageAt(level, pos), 0.0D);
+        level.setBlockAndUpdate(pos, Blocks.AIR.defaultBlockState());
+        return ok;
     }
 
-    private static boolean sowAndTick(CommandSourceStack source, ServerLevel level, BlockPos pos, ServerPlayer player,
-                                      Item seed, int ticks) {
-        ItemStack stack = new ItemStack(seed);
-        InteractionResult result = click(player, level, pos, stack, false);
-        tick(level, pos, ticks);
-        return check(source, "herb probe: sowed " + seed, result == InteractionResult.SUCCESS && stack.getCount() == 0, true);
+    // A block nobody placed has no row, and the first read rolls one and stores it negative.
+    private static boolean wildRollLeg(CommandSourceStack source, ServerLevel level, BlockPos base) {
+        BlockPos pos = base.offset(2, 0, 0);
+        boolean ok = true;
+        level.setBlockAndUpdate(pos, Blocks.AIR.defaultBlockState());
+        // alchemy_test_wild_grower is claimed by herb/rolled: wild_age is a uniform 1..3, max_age is 40.
+        level.setBlockAndUpdate(pos, HerbTestBlocks.WILD_GROWER.get().defaultBlockState());
+        forget(level, pos);
+
+        ok &= check(source, "herb probe: an untouched wild block has no row", clock(level, pos), null);
+        double rolled = ageAt(level, pos);
+        ok &= check(source, "herb probe: the first read rolls a non-negative age", rolled >= 0.0D, true);
+        ok &= check(source, "herb probe: the rolled age is capped at max_age", rolled <= 40.0D, true);
+
+        // The roll is parked in the age field with a negative clock marking the row unsettled; the next read
+        // settles it into a real row.
+        Long stored = clock(level, pos);
+        ok &= check(source, "herb probe: the roll is left as an unsettled negative clock", stored != null && stored < 0L, true);
+        // A second read must agree with the first: this is the regression the age-oscillation bug was.
+        ok &= check(source, "herb probe: the second read agrees with the first", ageAt(level, pos), rolled);
+        // ... and the row it settled into is a normal, positive one, still at the same age.
+        Long settled = clock(level, pos);
+        ok &= check(source, "herb probe: reading it again turns the row into a real clock", settled != null && settled >= 0L, true);
+        ok &= check(source, "herb probe: a settled row keeps the rolled age", ageAt(level, pos), rolled);
+        // herb/aging rolls a fractional range, so the parked roll must survive the round trip exactly: encoding it
+        // in the clock's magnitude used to truncate it and make the first read disagree with the second.
+        BlockPos fractional = base.offset(3, 0, 0);
+        level.setBlockAndUpdate(fractional, Blocks.AIR.defaultBlockState());
+        level.setBlockAndUpdate(fractional, HerbTestBlocks.WILD_ROLLED.get().defaultBlockState());
+        forget(level, fractional);
+        double firstRoll = ageAt(level, fractional);
+        ok &= check(source, "herb probe: a rolled age survives the first read exactly",
+                ageAt(level, fractional), firstRoll);
+        ok &= check(source, "herb probe: a rolled age survives the second read exactly",
+                ageAt(level, fractional), firstRoll);
+        level.setBlockAndUpdate(fractional, Blocks.AIR.defaultBlockState());
+        forget(level, fractional);
+        level.setBlockAndUpdate(pos, Blocks.AIR.defaultBlockState());
+        forget(level, pos);
+        return ok;
     }
 
-    private static boolean emptyClick(CommandSourceStack source, String label, ServerPlayer player, ServerLevel level,
-                                      BlockPos pos, boolean sneak) {
-        return check(source, label, click(player, level, pos, ItemStack.EMPTY, sneak), InteractionResult.SUCCESS);
+    // An open clock settles a period at a time, and pays for exactly the periods it moves.
+    private static boolean settleLeg(CommandSourceStack source, ServerLevel level, BlockPos base) {
+        BlockPos pos = base.offset(4, 0, 0);
+        boolean ok = true;
+        level.setBlockAndUpdate(pos, Blocks.AIR.defaultBlockState());
+        level.setBlockAndUpdate(pos, HerbTestBlocks.SOIL.get().defaultBlockState());
+        SpiritHerbGrowthService.placed(level, pos, level.getBlockState(pos));
+        ok &= check(source, "herb probe: settled plant starts at 0", ageAt(level, pos), 0.0D);
+
+        // Rewind the clock and let the real settlement run, so the period boundary is the server's own.
+        rewind(level, pos, 20);
+        settle(level, pos);
+        double afterOne = ageAt(level, pos);
+        ok &= check(source, "herb probe: one period grows the plant", afterOne > 0.0D, true);
+        ok &= check(source, "herb probe: growth stops at mature_age for a constant rate", afterOne <= MAX, true);
+
+        // The clock moved up by what it paid for, so the same time can never be charged twice.
+        Long moved = clock(level, pos);
+        ok &= check(source, "herb probe: the clock advanced past the settled span", moved != null && moved > level.getGameTime() - 40L, true);
+
+        // Time paid for twice is time grown twice.
+        rewind(level, pos, 20);
+        settle(level, pos);
+        ok &= check(source, "herb probe: a second period grows further", ageAt(level, pos) >= afterOne, true);
+        level.setBlockAndUpdate(pos, Blocks.AIR.defaultBlockState());
+        forget(level, pos);
+        return ok;
     }
 
-    private static boolean randomRoll(CommandSourceStack source, ServerLevel level, BlockPos pos, ServerPlayer player,
-                                      Holder<Aura> spirit, AuraChunkAttachment chunk) {
-        long seed = distinguishingSeed();
-        RandomSource single = RandomSource.create(seed);
-        double growth = uniform(single, 1.0D, 3.0D);
-        double cost = uniform(single, 1.0D, 2.0D);
-        chunk.initializeAuras(Map.of(spirit, AuraPool.natural(10.0D, 10.0D, 0.0D)));
-        ItemStack seedStack = new ItemStack(Items.WHITE_TULIP);
-        InteractionResult planted = click(player, level, pos, seedStack, false);
-        if (planted != InteractionResult.SUCCESS) return check(source, "herb probe: rolled sow", planted, InteractionResult.SUCCESS);
-        level.getRandom().setSeed(seed);
-        tick(level, pos, 20);
-        SpiritHerbPlotBlockEntity plot = plot(level, pos);
-        float expectedProgress = (float) (growth * 1.5D);
-        boolean progress = plot.progress() == expectedProgress;
-        boolean charged = Math.abs(amount(chunk, spirit) - (10.0D - cost)) < 1.0E-9D;
-        boolean ok = check(source, "herb probe: one growth roll", plot.progress(), expectedProgress);
-        ok &= check(source, "herb probe: one cost roll", amount(chunk, spirit), 10.0D - cost);
-        plot.clear();
-        plot.sync();
-        return ok && progress && charged;
-    }
+    // Reading a plant must never move its age backwards, and reading it twice must not grow it twice. This is the
+    // regression for the age oscillation: a replayed window used to answer differently on every read.
+    private static boolean stabilityLeg(CommandSourceStack source, ServerLevel level, BlockPos base) {
+        BlockPos pos = base.offset(10, 0, 0);
+        boolean ok = true;
+        level.setBlockAndUpdate(pos, Blocks.AIR.defaultBlockState());
+        level.setBlockAndUpdate(pos, HerbTestBlocks.SOIL.get().defaultBlockState());
+        SpiritHerbGrowthService.placed(level, pos, level.getBlockState(pos));
 
-    private static long distinguishingSeed() {
-        for (long seed = 1L; seed < 64L; seed++) {
-            RandomSource single = RandomSource.create(seed);
-            double growth = uniform(single, 1.0D, 3.0D);
-            double cost = uniform(single, 1.0D, 2.0D);
-            RandomSource doubled = RandomSource.create(seed);
-            uniform(doubled, 1.0D, 3.0D);
-            double secondGrowth = uniform(doubled, 1.0D, 3.0D);
-            double secondCost = uniform(doubled, 1.0D, 2.0D);
-            if (growth != secondGrowth && cost != secondCost) return seed;
+        // Give it real time behind it, then read many times in a row without any time passing between the reads.
+        rewind(level, pos, 400);
+        double first = ageAt(level, pos);
+        ok &= check(source, "herb probe: a long span grows the plant", first > 0.0D, true);
+        boolean stable = true;
+        for (int i = 0; i < 8; i++)
+            stable &= ageAt(level, pos) == first;
+        // Repeated identical reads are the exact shape of the bug: Jade polls, so a plant that answers differently
+        // each time shows up as a number flickering between two values.
+        ok &= check(source, "herb probe: repeated reads answer the same age", stable, true);
+
+        // A read must also never go backwards when time does pass.
+        double seen = first;
+        boolean monotonic = true;
+        for (int i = 0; i < 8; i++) {
+            rewind(level, pos, 20);
+            settle(level, pos);
+            double now = ageAt(level, pos);
+            monotonic &= now >= seen;
+            seen = now;
         }
-        return 1L;
+        ok &= check(source, "herb probe: age never decreases as time passes", monotonic, true);
+        level.setBlockAndUpdate(pos, Blocks.AIR.defaultBlockState());
+        forget(level, pos);
+        return ok;
     }
 
-    private static double uniform(RandomSource random, double min, double max) {
-        return min + random.nextDouble() * (max - min);
+    // Breaking stamps the age onto the dropped fruit and only onto the dropped fruit.
+    private static boolean dropsLeg(CommandSourceStack source, ServerLevel level, BlockPos base) {
+        BlockPos pos = base.offset(6, 0, 0);
+        boolean ok = true;
+        level.setBlockAndUpdate(pos, Blocks.AIR.defaultBlockState());
+        level.setBlockAndUpdate(pos, HerbTestBlocks.SOIL.get().defaultBlockState());
+        SpiritHerbGrowthService.placed(level, pos, level.getBlockState(pos));
+        SpiritHerb herb = SpiritHerbService.findBlock(level.registryAccess(), level.getBlockState(pos))
+                .map(Holder::value).orElse(null);
+        ok &= check(source, "herb probe: the placed block has a herb to stamp with", herb != null, true);
+        if (herb == null) return false;
+
+        ItemStack fruit = new ItemStack(Items.TORCHFLOWER);
+        ItemStack other = new ItemStack(Items.DIRT);
+        List<ItemEntity> drops = List.of(
+                SpiritHerbGrowthService.item(level, pos, fruit),
+                SpiritHerbGrowthService.item(level, pos, other));
+
+        // Rewind so the plant has a real age to stamp, then break it through the framework's own entry point.
+        rewind(level, pos, 200);
+        settle(level, pos);
+        SpiritHerbGrowthService.harvested(level, pos, level.getBlockState(pos), drops);
+
+        ok &= check(source, "herb probe: the fruit is stamped with an age",
+                drops.getFirst().getItem().get(MxtDataComponents.HERB_AGE.get()) != null, true);
+        ok &= check(source, "herb probe: an unclaimed drop is left alone",
+                drops.get(1).getItem().get(MxtDataComponents.HERB_AGE.get()) != null, false);
+        // The row is the plant's, and the plant is gone.
+        level.setBlockAndUpdate(pos, Blocks.AIR.defaultBlockState());
+        SpiritHerbGrowthService.harvested(level, pos, Blocks.AIR.defaultBlockState(), List.of());
+        ok &= check(source, "herb probe: breaking the plant clears its clock", clock(level, pos), null);
+        forget(level, pos);
+        return ok;
     }
 
-    private static ItemStack stackOf(ServerPlayer player, ServerLevel level, BlockPos pos, Item item) {
-        for (int slot = 0; slot < player.getInventory().getContainerSize(); slot++) {
-            ItemStack stack = player.getInventory().getItem(slot);
-            if (stack.is(item)) return stack;
-        }
-        return firstDrop(level, pos, item);
+    // Nothing at all happens on a block no herb claims.
+    private static boolean unclaimedLeg(CommandSourceStack source, ServerLevel level, BlockPos base) {
+        BlockPos pos = base.offset(8, 0, 0);
+        boolean ok = true;
+        level.setBlockAndUpdate(pos, Blocks.AIR.defaultBlockState());
+        level.setBlockAndUpdate(pos, Blocks.STONE.defaultBlockState());
+        forget(level, pos);
+        SpiritHerbGrowthService.placed(level, pos, level.getBlockState(pos));
+        ok &= check(source, "herb probe: an unclaimed block gets no clock", clock(level, pos), null);
+        ok &= check(source, "herb probe: an unclaimed block has no age", ageAt(level, pos), null);
+        level.setBlockAndUpdate(pos, Blocks.AIR.defaultBlockState());
+        return ok;
     }
 
-    private static int count(ServerPlayer player, Item item) {
-        int total = 0;
-        for (int slot = 0; slot < player.getInventory().getContainerSize(); slot++) {
-            ItemStack stack = player.getInventory().getItem(slot);
-            if (stack.is(item)) total += stack.getCount();
-        }
-        return total;
+    private static Double ageAt(ServerLevel level, BlockPos pos) {
+        return SpiritHerbGrowthService.ageAt(level, pos, level.getBlockState(pos)).orElse(null);
     }
 
-    private static InteractionResult click(ServerPlayer player, ServerLevel level, BlockPos pos, ItemStack stack, boolean sneak) {
-        player.setShiftKeyDown(sneak);
-        player.setItemInHand(InteractionHand.MAIN_HAND, stack);
-        BlockHitResult hit = new BlockHitResult(Vec3.atCenterOf(pos), Direction.UP, pos, false);
-        return player.gameMode.useItemOn(player, level, stack, InteractionHand.MAIN_HAND, hit);
+    private static void settle(ServerLevel level, BlockPos pos) {
+        SpiritHerbGrowthService.settle(level, level.getChunkAt(pos), attachment(level, pos));
     }
 
-    private static void tick(ServerLevel level, BlockPos pos, int times) {
-        SpiritHerbPlotBlockEntity plot = plot(level, pos);
-        BlockState state = plot.getBlockState();
-        for (int i = 0; i < times; i++) SpiritHerbPlotBlockEntity.serverTick(level, pos, state, plot);
+    // Puts the clock back so the next real settlement has a full period to pay for.
+    private static void rewind(ServerLevel level, BlockPos pos, int ticks) {
+        HerbChunkAttachment attachment = attachment(level, pos);
+        HerbChunkAttachment.Plant plant = attachment.find(pos).orElse(null);
+        if (plant == null) return;
+        attachment.set(pos, plant.age(), plant.clock() - ticks);
+        level.getChunkAt(pos).markUnsaved();
     }
 
-    private static boolean place(ServerLevel level, BlockPos pos) {
-        return level.setBlockAndUpdate(pos, MxtBlocks.SPIRIT_HERB_PLOT.get().defaultBlockState());
+    private static void forget(ServerLevel level, BlockPos pos) {
+        HerbChunkAttachment attachment = level.getChunkAt(pos).getExistingDataOrNull(MxtAttachments.HERB_CHUNK.get());
+        if (attachment == null) return;
+        if (attachment.remove(pos)) level.getChunkAt(pos).markUnsaved();
     }
 
-    private static SpiritHerbPlotBlockEntity plot(ServerLevel level, BlockPos pos) {
-        if (!(level.getBlockEntity(pos) instanceof SpiritHerbPlotBlockEntity plot))
-            throw new IllegalStateException("spirit herb plot missing at " + pos);
-        return plot;
+    private static Long clock(ServerLevel level, BlockPos pos) {
+        HerbChunkAttachment attachment = level.getChunkAt(pos).getExistingDataOrNull(MxtAttachments.HERB_CHUNK.get());
+        HerbChunkAttachment.Plant plant = attachment == null ? null : attachment.find(pos).orElse(null);
+        return plant == null ? null : plant.clock();
     }
 
-    private static double power(ServerLevel level, Item item, HerbRole role) {
-        return SpiritHerbService.potency(level.registryAccess(), new ItemStack(item), role, FormulaContext.of(level))
-                .map(HerbPotency::totalPower).orElse(-1.0D);
+    private static HerbChunkAttachment attachment(ServerLevel level, BlockPos pos) {
+        return level.getChunkAt(pos).getData(MxtAttachments.HERB_CHUNK);
     }
 
-    private static double bias(ServerLevel level, Item item, HerbRole role) {
-        return SpiritHerbService.potency(level.registryAccess(), new ItemStack(item), role, FormulaContext.of(level))
-                .map(HerbPotency::thermalBias).orElse(99.0D);
-    }
-
-    private static Holder<Aura> aura(ServerLevel level, String path) {
-        return MxtDatapackRegistries.holder(level.registryAccess(), MxtResourceKeys.AURA, id(path)).orElse(null);
-    }
-
-    private static double amount(AuraChunkAttachment chunk, Holder<Aura> aura) {
-        AuraPool pool = chunk.auras().get(aura);
-        return pool == null ? -1.0D : pool.amount();
-    }
-
-    private static int dropped(ServerLevel level, BlockPos pos, Item item) {
-        int total = 0;
-        for (ItemEntity entity : drops(level, pos, item)) total += entity.getItem().getCount();
-        return total;
-    }
-
-    private static ItemStack firstDrop(ServerLevel level, BlockPos pos, Item item) {
-        List<ItemEntity> found = drops(level, pos, item);
-        return found.isEmpty() ? null : found.getFirst().getItem();
-    }
-
-    private static List<ItemEntity> drops(ServerLevel level, BlockPos pos, Item item) {
-        return level.getEntities(EntityType.ITEM, new AABB(pos).inflate(2.0D), entity -> entity.getItem().is(item));
-    }
-
-    private static void clearDrops(ServerLevel level, BlockPos pos) {
-        for (ItemEntity entity : level.getEntities(EntityType.ITEM, new AABB(pos).inflate(2.0D), entity -> true))
-            entity.discard();
-    }
-
-    private static void fill(ServerPlayer player) {
-        ItemStack cobble = new ItemStack(Items.COBBLESTONE, 64);
-        for (int slot = 0; slot < player.getInventory().getContainerSize(); slot++)
-            player.getInventory().setItem(slot, cobble.copy());
-    }
-
-    private static ItemStack[] snapshot(ServerPlayer player) {
-        ItemStack[] slots = new ItemStack[player.getInventory().getContainerSize()];
-        for (int slot = 0; slot < slots.length; slot++) slots[slot] = player.getInventory().getItem(slot).copy();
-        return slots;
-    }
-
-    private static void restore(ServerPlayer player, ItemStack[] slots) {
-        for (int slot = 0; slot < slots.length; slot++) player.getInventory().setItem(slot, slots[slot]);
-    }
-
-    private static Shape shape(BlockPos first, BlockPos second) {
-        return new Shape(Math.min(first.getX(), second.getX()), Math.min(first.getY(), second.getY()),
-                Math.min(first.getZ(), second.getZ()), Math.max(first.getX(), second.getX()),
-                Math.max(first.getY(), second.getY()), Math.max(first.getZ(), second.getZ()));
+    private static Identifier idOf(Holder<SpiritHerb> holder) {
+        return holder.unwrapKey().map(ResourceKey::identifier).orElse(null);
     }
 
     private static Identifier id(String path) {
-        return Identifier.fromNamespaceAndPath("mxt_test", path);
+        return Identifier.fromNamespaceAndPath(MxtTestMod.MOD_ID, path);
     }
 
     private static boolean check(CommandSourceStack source, String label, Object actual, Object expected) {
-        boolean same = actual instanceof Double left && expected instanceof Double right
-                ? Double.compare(left, right) == 0 : Objects.equals(actual, expected);
-        String line = label + " actual=" + actual + " expected=" + expected + (same ? " OK" : " MISMATCH");
-        if (same) source.sendSuccess(() -> Component.literal(line), false);
-        else source.sendFailure(Component.literal(line));
+        boolean same = Objects.equals(actual, expected);
+        source.sendSuccess(() -> Component.literal(label + " actual=" + actual + " expected=" + expected
+                + (same ? " OK" : " MISMATCH")), false);
         return same;
     }
 }

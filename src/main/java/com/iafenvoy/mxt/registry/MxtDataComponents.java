@@ -19,15 +19,17 @@ import com.iafenvoy.mxt.data.forging.ForgingMethod;
 import com.iafenvoy.mxt.data.item.*;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.data.storage.DataStorageHolder;
-import com.iafenvoy.mxt.util.codec.AutoIgnoreListCodec;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
+import com.iafenvoy.mxt.util.codec.TolerantListCodec;
 import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
 import net.minecraft.core.Holder;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.tags.TagKey;
+import net.minecraft.world.level.storage.loot.LootTable;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import net.neoforged.neoforge.registries.DeferredRegister.DataComponents;
@@ -38,8 +40,8 @@ public final class MxtDataComponents {
     public static final DataComponents REGISTRY = DeferredRegister.createDataComponents(Registries.DATA_COMPONENT_TYPE, MiXianTu.MOD_ID);
 
     public static final DeferredHolder<DataComponentType<?>, DataComponentType<ForgingResultComponent>> FORGING_RESULT = register("forging_result", ForgingResultComponent.CODEC);
-    public static final DeferredHolder<DataComponentType<?>, DataComponentType<List<Holder<ForgingMethod>>>> FORGING_METHODS = register("forging_methods", AutoIgnoreListCodec.create(ForgingMethod.CODEC));
-    public static final DeferredHolder<DataComponentType<?>, DataComponentType<List<Holder<ForgingBlueprint>>>> FORGING_BLUEPRINTS = register("forging_blueprints", AutoIgnoreListCodec.create(ForgingBlueprint.CODEC));
+    public static final DeferredHolder<DataComponentType<?>, DataComponentType<List<Holder<ForgingMethod>>>> FORGING_METHODS = register("forging_methods", TolerantListCodec.create(ForgingMethod.CODEC));
+    public static final DeferredHolder<DataComponentType<?>, DataComponentType<List<Holder<ForgingBlueprint>>>> FORGING_BLUEPRINTS = register("forging_blueprints", TolerantListCodec.create(ForgingBlueprint.CODEC));
     public static final DeferredHolder<DataComponentType<?>, DataComponentType<Holder<ItemQuality>>> QUALITY = register("quality", ItemQuality.CODEC);
     public static final DeferredHolder<DataComponentType<?>, DataComponentType<List<Either<Holder<Element>, TagKey<Element>>>>> ELEMENT = register("element", RegistryCodecs.holderOrTagList(MxtResourceKeys.ELEMENT));
     public static final DeferredHolder<DataComponentType<?>, DataComponentType<PillComponent>> PILL = register("pill", PillComponent.CODEC);
@@ -56,7 +58,13 @@ public final class MxtDataComponents {
     public static final DeferredHolder<DataComponentType<?>, DataComponentType<SpiritBeastComponent>> SPIRIT_BEAST = register("spirit_beast", SpiritBeastComponent.CODEC);
     public static final DeferredHolder<DataComponentType<?>, DataComponentType<FormationPlateComponent>> FORMATION_PLATE = register("formation_plate", FormationPlateComponent.CODEC);
     public static final DeferredHolder<DataComponentType<?>, DataComponentType<SecretRealmTokenComponent>> SECRET_REALM_TOKEN = register("secret_realm_token", SecretRealmTokenComponent.CODEC);
+    // The loot table a reward box opens. A ResourceKey rather than a Holder: /reload swaps loot table instances, and
+    // a held one would keep rolling the table from before the reload.
+    public static final DeferredHolder<DataComponentType<?>, DataComponentType<ResourceKey<LootTable>>> REWARD_BOX = register("reward_box", ResourceKey.codec(Registries.LOOT_TABLE));
     public static final DeferredHolder<DataComponentType<?>, DataComponentType<ResourceContainerComponent>> RESOURCE_CONTAINER = register("resource_container", ResourceContainerComponent.CODEC);
+    // What the container holds and how much of each resource fits. No capacity component means no room: a resource
+    // has no maximum of its own, so the number has to be written somewhere.
+    public static final DeferredHolder<DataComponentType<?>, DataComponentType<ResourceCapacityComponent>> RESOURCE_CAPACITY = register("resource_capacity", ResourceCapacityComponent.CODEC);
     public static final DeferredHolder<DataComponentType<?>, DataComponentType<TokenComponent>> TOKEN = register("token", TokenComponent.CODEC);
     public static final DeferredHolder<DataComponentType<?>, DataComponentType<IdentificationComponent>> IDENTIFICATION = register("identification", IdentificationComponent.CODEC);
     public static final DeferredHolder<DataComponentType<?>, DataComponentType<TalismanComponent>> TALISMAN = register("talisman", TalismanComponent.CODEC);

@@ -21,7 +21,8 @@ import java.util.List;
  * is whether one of these is written on it rather than whether the stack is one of them. Read through
  * {@link TalismanService}, so a stack carrying no {@code mxt:talisman} component is a blank carrier and answers no.
  */
-public record ItemTalismanCondition(List<Either<Holder<Talisman>, TagKey<Talisman>>> talismans) implements ItemCondition {
+public record ItemTalismanCondition(
+        List<Either<Holder<Talisman>, TagKey<Talisman>>> talismans) implements ItemCondition {
     public static final MapCodec<ItemTalismanCondition> CODEC = RecordCodecBuilder.<ItemTalismanCondition>mapCodec(i -> i.group(
             RegistryCodecs.holderOrTagList(MxtResourceKeys.TALISMAN).fieldOf("talismans").forGetter(ItemTalismanCondition::talismans)
     ).apply(i, ItemTalismanCondition::new)).validate(ItemTalismanCondition::validate);

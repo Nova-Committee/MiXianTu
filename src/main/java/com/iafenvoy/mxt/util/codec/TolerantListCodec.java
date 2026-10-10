@@ -8,11 +8,11 @@ import org.slf4j.Logger;
 import java.util.LinkedList;
 import java.util.List;
 
-public record AutoIgnoreListCodec<E>(Codec<E> elementCodec) implements Codec<List<E>> {
+public record TolerantListCodec<E>(Codec<E> elementCodec) implements Codec<List<E>> {
     private static final Logger LOGGER = LogUtils.getLogger();
 
-    public static <E> AutoIgnoreListCodec<E> create(Codec<E> elementCodec) {
-        return new AutoIgnoreListCodec<>(elementCodec);
+    public static <E> TolerantListCodec<E> create(Codec<E> elementCodec) {
+        return new TolerantListCodec<>(elementCodec);
     }
 
     @Override
@@ -44,7 +44,7 @@ public record AutoIgnoreListCodec<E>(Codec<E> elementCodec) implements Codec<Lis
         }
 
         public void accept(final T value) {
-            final DataResult<Pair<E, T>> elementResult = AutoIgnoreListCodec.this.elementCodec.decode(this.ops, value);
+            final DataResult<Pair<E, T>> elementResult = TolerantListCodec.this.elementCodec.decode(this.ops, value);
             elementResult.result().ifPresentOrElse(pair -> this.elements.add(pair.getFirst()),
                     () -> LOGGER.warn("Ignoring invalid list element: {}", elementResult.error().orElseThrow().message()));
         }

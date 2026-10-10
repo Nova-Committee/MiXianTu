@@ -1,0 +1,12 @@
+{
+  "replace": false,
+  "values": [
+    "mxt:exchange_station",
+    "mxt:cheque_table",
+    "mxt:trade_station",
+    "mxt:system_station",
+    "mxt:spirit_crafting_table",
+    "mxt:forging_table",
+    "mxt:talisman_workstation"
+  ]
+}

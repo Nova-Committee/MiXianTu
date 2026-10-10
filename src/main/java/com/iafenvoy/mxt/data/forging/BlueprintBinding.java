@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.data.forging;
 
 import com.iafenvoy.mxt.util.HolderHelper;
-import com.iafenvoy.mxt.util.codec.AutoIgnoreListCodec;
+import com.iafenvoy.mxt.util.codec.TolerantListCodec;
 import com.iafenvoy.mxt.util.matcher.ItemMatcher;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
@@ -18,7 +18,7 @@ public record BlueprintBinding(List<Entry> entries, List<Holder<ForgingBlueprint
                                int priority) implements ItemMatcher {
     public static final Codec<BlueprintBinding> DIRECT_CODEC = RecordCodecBuilder.<BlueprintBinding>create(i -> i.group(
             ENTRIES_CODEC.fieldOf("items").forGetter(BlueprintBinding::entries),
-            AutoIgnoreListCodec.create(ForgingBlueprint.CODEC).fieldOf("blueprints").forGetter(BlueprintBinding::blueprints),
+            TolerantListCodec.create(ForgingBlueprint.CODEC).fieldOf("blueprints").forGetter(BlueprintBinding::blueprints),
             Codec.INT.optionalFieldOf("priority", DEFAULT_PRIORITY).forGetter(BlueprintBinding::priority)
     ).apply(i, BlueprintBinding::new)).validate(BlueprintBinding::validate);
 

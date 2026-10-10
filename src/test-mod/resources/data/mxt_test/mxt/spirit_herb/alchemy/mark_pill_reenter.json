@@ -1,5 +1,5 @@
 {
-  "items": "minecraft:nether_wart",
+  "blocks": "minecraft:nether_wart",
   "main_effects": {
     "mxt_test:alchemy/mark_pill_reenter": 1
   },

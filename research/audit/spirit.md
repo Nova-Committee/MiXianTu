@@ -358,9 +358,9 @@ resource），元素是档案的 `aura_type`，两者不是一回事"。NBT 键�
 
 顺带记下查这件事时发现的一处文档问题（本轮**未改代码**，只记在这里）：`docs/通用物品.md` 里灵力容器的示例写的是
 `mxt:resource_container={values:{"mxt_test:qi":25.0}}`，但该组件的 codec 是**裸 map**（
-`CollectionCodecs.doubleMap(Resource.CODEC).xmap(...)` → `AutoIgnoreMapCodec`），并没有 `values` 这一层——`values` 是**附件
+`CollectionCodecs.doubleMap(Resource.CODEC).xmap(...)` → `TolerantMapCodec`），并没有 `values` 这一层——`values` 是**附件
 ** `ResourceHolderAttachment` 的字段名（`CollectionCodecs.doubleMap(Resource.CODEC).fieldOf("values")`），看着是从那里抄过来的。更麻烦的是
-`AutoIgnoreMapCodec.decode` 对解不出的条目**只打一条 WARN 然后丢弃**，所以按文档那条命令实际得到的是**空容器**
+`TolerantMapCodec.decode` 对解不出的条目**只打一条 WARN 然后丢弃**，所以按文档那条命令实际得到的是**空容器**
 而不是报错。要钉住它得加一条审计断言（两种写法各解一次），本轮没做。
 
 ### 7.7 键改成 `Holder<Aura>`：灵气才是身份（2026-09-17）

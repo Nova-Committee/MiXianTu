@@ -1,7 +1,13 @@
 {
-  "items": "minecraft:wither_rose",
+  "blocks": "minecraft:wither_rose",
   "main_effects": {
     "mxt_test:alchemy/fork": 1
   },
-  "thermal_bias": 0
+  "thermal_bias": 0,
+  "growth": {
+    "mature_age": 10,
+    "max_age": 20,
+    "growth_rate": 2,
+    "drops": "minecraft:wither_rose"
+  }
 }

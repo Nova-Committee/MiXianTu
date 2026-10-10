@@ -1,0 +1,11 @@
+{
+  "replace": false,
+  "values": [
+    "mxt:oak_display_stand",
+    "mxt:birch_display_stand",
+    "mxt:spruce_display_stand",
+    "mxt:jungle_display_stand",
+    "mxt:acacia_display_stand",
+    "mxt:dark_oak_display_stand"
+  ]
+}

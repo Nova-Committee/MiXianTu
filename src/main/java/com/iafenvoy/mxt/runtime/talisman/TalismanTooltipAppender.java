@@ -89,7 +89,7 @@ public final class TalismanTooltipAppender {
     // registry the type's own codec is registered under, so nothing here repeats a type name by hand.
     private static Optional<Component> usageLine(TalismanType type, Set<Identifier> explained) {
         Identifier id = MxtRegistries.TALISMAN_TYPE.getKey(type.codec());
-        if (id == null || !explained.add(id)) return Optional.empty();
+        if (!explained.add(id)) return Optional.empty();
         MutableComponent line = Component.translatable(DefinitionText.key(USAGE_CATEGORY, TYPE_REGISTRY_NAMESPACE, id));
         return DefinitionText.resolved(line) ? Optional.of(line.withStyle(ChatFormatting.GRAY)) : Optional.empty();
     }

@@ -1,0 +1,11 @@
+{
+  "replace": false,
+  "values": [
+    "mxt:copper_coin",
+    "mxt:iron_coin",
+    "mxt:gold_coin",
+    "mxt:diamond_coin",
+    "mxt:emerald_coin",
+    "mxt:netherite_coin"
+  ]
+}

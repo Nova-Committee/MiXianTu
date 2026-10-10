@@ -1,0 +1,20 @@
+{
+  "type": "minecraft:gift",
+  "pools": [
+    {
+      "rolls": 3,
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "mxt:spirit_stone",
+          "weight": 3
+        },
+        {
+          "type": "minecraft:item",
+          "name": "mxt:gold_coin",
+          "weight": 1
+        }
+      ]
+    }
+  ]
+}

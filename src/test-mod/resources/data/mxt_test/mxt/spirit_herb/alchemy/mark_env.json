@@ -1,5 +1,5 @@
 {
-  "items": "minecraft:glow_lichen",
+  "blocks": "minecraft:glow_lichen",
   "main_effects": {
     "mxt_test:alchemy/mark_env": 1
   },

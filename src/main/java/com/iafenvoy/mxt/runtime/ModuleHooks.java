@@ -8,6 +8,7 @@ import com.iafenvoy.mxt.runtime.cultivation.TechniqueItemService;
 import com.iafenvoy.mxt.runtime.curse.CurseTriggerSubscriptions;
 import com.iafenvoy.mxt.runtime.progression.ProgressionTickStage;
 import com.iafenvoy.mxt.runtime.resource.ResourceRegenStage;
+import com.iafenvoy.mxt.runtime.resource.VesselPourService;
 import com.iafenvoy.mxt.runtime.spirit.SpiritChargeService;
 import com.iafenvoy.mxt.runtime.trigger.CultivationTriggerService;
 
@@ -54,6 +55,7 @@ public final class ModuleHooks {
         SpiritChargeService.register();
         ArtifactHoldService.register();
         ResourceRegenStage.register();
+        VesselPourService.register();
         ProgressionTickStage.register();
     }
 }

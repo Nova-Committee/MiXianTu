@@ -1,5 +1,5 @@
 {
-  "items": "minecraft:bamboo",
+  "blocks": "minecraft:bamboo",
   "main_effects": {
     "mxt_test:alchemy/cross": 1
   },

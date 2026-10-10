@@ -1,6 +1,12 @@
 {
-  "items": ["minecraft:dandelion"],
+  "blocks": "minecraft:dandelion",
   "default_age": 0,
   "main_effects": { "mxt_test:alchemy/extra": 1 },
-  "thermal_bias": 0
+  "thermal_bias": 0,
+  "growth": {
+    "mature_age": 10,
+    "max_age": 20,
+    "growth_rate": 2,
+    "drops": "minecraft:dandelion"
+  }
 }

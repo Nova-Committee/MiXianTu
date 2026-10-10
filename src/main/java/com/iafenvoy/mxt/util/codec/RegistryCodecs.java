@@ -40,6 +40,24 @@ public final class RegistryCodecs {
         return values.stream().anyMatch(value -> value.map(entry -> entry.value() == candidate.value(), candidate::is));
     }
 
+    // A caller holding the value rather than its holder - a block or an item it already has in hand - asks the same
+    // question the holder form does, without having to find the holder first.
+    public static <T> boolean matchesValue(Collection<Either<Holder<T>, TagKey<T>>> values, Registry<T> registry, T candidate) {
+        if (values.isEmpty()) return false;
+        for (Either<Holder<T>, TagKey<T>> value : values) {
+            if (value.left().isPresent()) {
+                if (value.left().get().value() == candidate) return true;
+                continue;
+            }
+            TagKey<T> tag = value.right().orElse(null);
+            if (tag != null && registry.getResourceKey(candidate)
+                    .flatMap(registry::get)
+                    .map(holder -> holder.is(tag))
+                    .orElse(false)) return true;
+        }
+        return false;
+    }
+
     public static <T> boolean matches(Collection<Either<Holder<T>, TagKey<T>>> values, Registry<T> registry, ResourceKey<Registry<T>> key, Identifier candidate) {
         return registry.get(ResourceKey.create(key, candidate)).map(holder -> matches(values, holder)).orElse(false);
     }

@@ -1,0 +1,10 @@
+{
+  "blocks": "mxt_test:alchemy_test_wild_rolled",
+  "growth": {
+    "mature_age": 10,
+    "max_age": 40,
+    "growth_rate": "2 + herb_age",
+    "drops": "minecraft:lily_pad",
+    "wild_age": { "type": "mxt:uniform", "min": 5.25, "max": 15.75 }
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "blocks": "minecraft:honeycomb_block",
+  "quality_by_age": [
+    { "min_age": 10, "quality": "mxt_test:poor" },
+    { "min_age": 30, "quality": "mxt_test:excellent" }
+  ],
+  "growth": {
+    "mature_age": 1,
+    "max_age": 200,
+    "growth_rate": 3,
+    "drops": "minecraft:honeycomb"
+  }
+}

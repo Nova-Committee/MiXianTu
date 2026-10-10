@@ -1,12 +1,10 @@
 {
-  "items": "minecraft:pitcher_plant",
+  "blocks": "minecraft:pitcher_plant",
   "growth": {
-    "seeds": "minecraft:pitcher_pod",
     "mature_age": 1,
     "max_age": 3,
     "growth_rate": 2,
     "costs": [{ "type": "mxt:aura", "aura": "mxt_test:spirit_power", "amount": 2 }],
-    "harvest": { "id": "minecraft:pitcher_plant", "count": 1 },
-    "texture": "mxt_test:block/herb/grower"
+    "drops": "minecraft:pitcher_plant"
   }
 }

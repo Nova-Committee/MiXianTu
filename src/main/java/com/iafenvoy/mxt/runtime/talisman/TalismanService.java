@@ -178,7 +178,8 @@ public final class TalismanService {
     // What every inscription written on the carrier declares together; a type that declares none adds nothing.
     private static int declaredDurability(ItemStack stack) {
         int declared = 0;
-        for (Holder<Talisman> talisman : inscribed(stack)) declared = add(declared, Math.max(0, talisman.value().type().maxUse()));
+        for (Holder<Talisman> talisman : inscribed(stack))
+            declared = add(declared, Math.max(0, talisman.value().type().maxUse()));
         return declared;
     }
 

@@ -10,10 +10,10 @@ import com.iafenvoy.mxt.data.cost.Costs;
 import com.iafenvoy.mxt.data.cost.builtin.AuraCost;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.util.DefinitionText;
-import com.iafenvoy.mxt.util.codec.AutoIgnoreListCodec;
 import com.iafenvoy.mxt.util.codec.CollectionCodecs;
 import com.iafenvoy.mxt.util.codec.ContextNameCodec;
 import com.iafenvoy.mxt.util.codec.MiscCodecs;
+import com.iafenvoy.mxt.util.codec.TolerantListCodec;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.iafenvoy.mxt.util.formula.number.Constant;
 import com.mojang.datafixers.util.Either;
@@ -63,7 +63,7 @@ public record Cultivation(Component name, Component description, int priority,
             Cost.LIST_CODEC.optionalFieldOf("costs", List.of()).forGetter(Cultivation::costs),
             NumberProvider.CODEC.optionalFieldOf("absorb_amount", new Constant(1.0D)).forGetter(Cultivation::absorbAmount),
             AURA_COSTS.optionalFieldOf("aura_costs", List.of()).forGetter(Cultivation::auraCosts),
-            AutoIgnoreListCodec.create(AuraGain.CODEC).optionalFieldOf("aura_gains", List.of()).forGetter(Cultivation::auraGains),
+            TolerantListCodec.create(AuraGain.CODEC).optionalFieldOf("aura_gains", List.of()).forGetter(Cultivation::auraGains),
             Codec.intRange(0, 72_000).optionalFieldOf("cooldown", 0).forGetter(Cultivation::cooldownTicks),
             MiscCodecs.TRANSLATABLE_COMPONENT.optionalFieldOf("abort_reason").forGetter(Cultivation::abortReason)
     ).apply(i, Cultivation::new));

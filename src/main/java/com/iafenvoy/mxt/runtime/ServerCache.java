@@ -388,11 +388,6 @@ public final class ServerCache {
             heads.put(id, HolderHelper.id(chain.first()));
             ranks.put(id, chain.indexOf(id));
         }
-        // A level reported on its own line is not named a second time: the break that cut it is the one message
-        // that matters for everything the line carried.
-        Map<Identifier, Identifier> below = new LinkedHashMap<>();
-        stages.forEach((id, holder) -> holder.value().nextLevel().map(HolderHelper::id)
-                .ifPresent(next -> below.putIfAbsent(next, id)));
         Set<Identifier> reported = new LinkedHashSet<>();
         built.reports().forEach(report -> reported.add(report.node()));
         for (Identifier id : stages.keySet())

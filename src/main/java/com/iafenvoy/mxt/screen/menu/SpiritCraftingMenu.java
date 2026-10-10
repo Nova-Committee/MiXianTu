@@ -245,15 +245,13 @@ public final class SpiritCraftingMenu extends ApricityContainerMenu {
      */
     private static final class Setup {
         private final Container grid;
-        private final Container result;
         private final PageSlots.Layout page;
 
         private Setup(ContainerLevelAccess access) {
             this.grid = SpiritCraftingMenu.gridContainer(access);
-            this.result = resultContainer(access);
             // The page draws the nine grid cells and the result cell itself and groups them under these two ids.
             this.page = PageSlots.of(AuiPages.page(AuiPages.SPIRIT_CRAFTING, "spirit_crafting"))
-                    .container("result", this.result, (container, index, x, y) -> new Slot(container, index, x, y) {
+                    .container("result", resultContainer(access), (container, index, x, y) -> new Slot(container, index, x, y) {
                         @Override
                         public boolean mayPlace(@NonNull ItemStack stack) {
                             return false;

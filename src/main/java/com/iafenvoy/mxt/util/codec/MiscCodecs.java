@@ -51,6 +51,6 @@ public final class MiscCodecs {
     }
 
     public static <T> Codec<List<T>> combineCodec(Codec<T> codec) {
-        return Codec.either(codec, AutoIgnoreListCodec.create(codec)).xmap(x -> x.map(List::of, l -> l), l -> l.size() == 1 ? Either.left(l.getFirst()) : Either.right(l));
+        return Codec.either(codec, TolerantListCodec.create(codec)).xmap(x -> x.map(List::of, l -> l), l -> l.size() == 1 ? Either.left(l.getFirst()) : Either.right(l));
     }
 }

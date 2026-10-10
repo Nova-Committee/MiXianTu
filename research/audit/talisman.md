@@ -76,7 +76,7 @@
   `Map<Holder<Resource>, Integer>`）；2026-09-17 起它与灵石共用 `mxt:spirit_storage`，键类型随后改成 `Holder<Aura>`
   （见文首变更记录与 `research/audit/spirit.md` §7.7）。"满了" = 账单里每一条都满。
 - 一次灌注只填**一条**：按 `aura_cost` 的书写顺序取第一条未满的；填满一条后再按住会继续填下一条。顺序之所以是确定的，是因为
-  `CollectionCodecs.map` 解出的是保序 Map（`AutoIgnoreMapCodec` 读进 `LinkedHashMap` 再 `ImmutableMap.copyOf`）。
+  `CollectionCodecs.map` 解出的是保序 Map（`TolerantMapCodec` 读进 `LinkedHashMap` 再 `ImmutableMap.copyOf`）。
 - 账单按**空公式上下文**求值：容量同时决定灌注时长，而客户端要为姿势算出同一个数（与 `item_aura.aura`
   对容量的口径一致）。因此只在有持有者时才有值的写法（`"realm_rank * 4"`）会求出 0、被当作"这条不参与灌注"
   ；一条都不剩的载体等同于免费符（右键即发动）。这一条是"必须两端同源"的直接后果，而不是取舍。

@@ -2,13 +2,11 @@
   "neoforge:conditions": [
     { "type": "neoforge:never" }
   ],
-  "items": "minecraft:blue_orchid",
+  "blocks": "minecraft:blue_orchid",
   "growth": {
-    "seeds": "minecraft:lily_of_the_valley",
     "mature_age": 1,
     "max_age": 20,
     "growth_rate": 2,
-    "harvest": { "id": "minecraft:blue_orchid", "count": 1 },
-    "texture": "mxt_test:block/herb/grower"
+    "drops": "minecraft:blue_orchid"
   }
 }

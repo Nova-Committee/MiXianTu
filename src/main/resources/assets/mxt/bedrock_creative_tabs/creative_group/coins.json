@@ -1,0 +1,9 @@
+{
+  "entries": "#mxt:coins",
+  "icon": {
+    "id": "mxt:gold_coin"
+  },
+  "creative_tabs": [
+    "mxt:main"
+  ]
+}

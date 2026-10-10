@@ -21,7 +21,8 @@ import java.util.List;
  * physique stone states and the only place a stack states one - a stack carrying no component answers no. An entry
  * may be an id or a {@code #tag}, as everywhere else a list is asked about a definition.
  */
-public record ItemPhysiqueCondition(List<Either<Holder<Physique>, TagKey<Physique>>> physiques) implements ItemCondition {
+public record ItemPhysiqueCondition(
+        List<Either<Holder<Physique>, TagKey<Physique>>> physiques) implements ItemCondition {
     public static final MapCodec<ItemPhysiqueCondition> CODEC = RecordCodecBuilder.<ItemPhysiqueCondition>mapCodec(i -> i.group(
             RegistryCodecs.holderOrTagList(MxtResourceKeys.PHYSIQUE).fieldOf("physiques").forGetter(ItemPhysiqueCondition::physiques)
     ).apply(i, ItemPhysiqueCondition::new)).validate(ItemPhysiqueCondition::validate);

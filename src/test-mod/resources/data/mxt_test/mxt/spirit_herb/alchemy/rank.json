@@ -1,5 +1,5 @@
 {
-  "items": "minecraft:cactus",
+  "blocks": "minecraft:cactus",
   "main_effects": {
     "mxt_test:alchemy/rank": 1
   },

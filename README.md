@@ -42,7 +42,8 @@ the changelog.**
   Exchange Station, Trade Station, Cheque Table, Display Stand, plus Spirit Stone Ore and Spirit Stone Block. An
   alchemy furnace is hand-built as a 3×3×3: core at the front, main bin on the left when you face it, auxiliary bin on
   the right, output on top, and 18 material walls - the two layers above the base are filled, and the base only needs
-  its four corners, so the five cells between them are not checked. A spirit herb plot holds one plant.
+  its four corners, so the five cells between them are not checked. **No herb block is among them**: a herb definition
+  claims existing blocks with `blocks` and its own fruit with `growth.drops`, and the mod registers no herb block.
 - **Items**: materials such as Lesser to Supreme Spirit Stones, Spirit Iron, Spirit Wood and Cinnabar; generic items
   such as Spirit Ring, Spirit Stone Bag, Spirit Vessel, Identification Mirror, Cultivation Jade Slip, Blank Talisman
   Paper, Talisman Brush and Talisman (written with a sigil, poured full of aura, and spent the moment it
@@ -110,11 +111,11 @@ datapacks or content packs; installing the mod alone does not give you a complet
 | Spirit Crafting Table         |   ✅    | Crafting with a spirit crafting recipe at the Spirit Crafting Table costs aura in addition to materials, deducted when the result is taken out.                                                                                                           |
 | Forging                       |   ✅    | At a Forge Table, several materials are hammered into a result following a blueprint; different tools unlock different methods, and the quality of the result depends on the process and the number of steps.                                             |
 | Alchemy                       |   🚧   | Hand-build a 3×3×3 furnace from a core, role bins and walls, and put a heat block in the bottom centre cell. When the player starts, it resolves the output from the actual properties. Pills keep use limits, cooldowns and toxicity.                    |
-| Spirit Herbs                  |   🚧   | One spirit-herb plot grows one plant. Harvest returns an aged crop plus the original seed; age is stored on the item and read as potency.                                                                                                                 |
+| Spirit Herbs                  |   ✅    | Any existing block can be a spirit herb: a definition claims blocks with `blocks` and its own fruit with `growth.drops`; placing one starts its age, world-generated ones already carry their own, and breaking it tiers the fruit by that age.           |
 | Item Binding                  |   ✅    | Brings existing items into gameplay: attach passive behavior and vanilla attribute modifiers to any item, or bind abilities that fire on right-click use and on attack.                                                                                   |
 | Talismans                     |   ✅    | A Talisman Brush inscribes definitions onto a carrier (one holds several); a full right-click hold fires them, at the cost of a carrier or the wear it declares. A drawing workstation turns a traced formula into success and tier.                      |
 | Quality                       |   ✅    | Items carry a quality shown in their tooltip; `quality` and `next` link the tiers into a ladder, and a stack's tier resolves in three layers: the item component, the `quality` its definition declares, and the `default_quality` registry.              |
-| Artifacts                     |   🚧   | Items become artifacts via `artifact`: `items` claims them, `spirit_capacity` sets a per-aura ceiling, and `abilities` names what carrying it grants. An artifact can also declare itself a flying mount (speed, seats, fuel, looks).                     |
+| Artifacts                     |   ✅    | Items become artifacts via `artifact`: `items` claims them, `spirit_capacity` sets a per-aura ceiling, and `abilities` names what carrying it grants. An artifact can also declare itself a flying mount (speed, seats, fuel, looks).                     |
 | Economy                       |   ✅    | Items can be defined as currency with a value, supporting exchange and change; players can trade directly with each other, or use trade stations and cheques to settle transactions.                                                                      |
 | Curios Slots                  |   ✅    | Players have Curios slots for a back weapon, a belt item and four artifacts, rendered on the character and swappable with the main hand by keybind.                                                                                                       |
 | Friend and Foe Identification |   ✅    | Every player keeps a list of the players they treat as their own, for the session or saved with the world; other mods or scripts can answer the same question through a TriState event asked by player id.                                                |
@@ -128,11 +129,9 @@ recipes. You need a datapack or content pack (including content written with Kub
 
 ### What dependencies are required?
 
-Jupiter and ApricityUI are required dependencies needed manual installation (ApricityUI on the client only), and every
-other required dependency is bundled
-inside the mod. KubeJS is only needed if you want to register content from scripts. JEI and Jade are optional
-compatibility
-mods, and the game works fine without them.
+Jupiter and ApricityUI are required dependencies needed manual installation, and every other required dependency is
+bundled inside the mod. KubeJS is only needed if you want to register content from scripts. JEI and Jade are optional
+compatibility mods, and the game works fine without them.
 
 ### Can I make my own content pack and distribute it?
 

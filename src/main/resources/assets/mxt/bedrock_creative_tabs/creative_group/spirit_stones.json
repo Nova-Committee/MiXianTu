@@ -1,0 +1,9 @@
+{
+  "entries": "#mxt:spirit_stones",
+  "icon": {
+    "id": "mxt:spirit_stone"
+  },
+  "creative_tabs": [
+    "mxt:main"
+  ]
+}

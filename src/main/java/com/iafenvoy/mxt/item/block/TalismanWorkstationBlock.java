@@ -19,7 +19,6 @@ import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.EnumProperty;
 import net.minecraft.world.phys.BlockHitResult;
-import org.jetbrains.annotations.Nullable;
 import org.jspecify.annotations.NonNull;
 
 /**
@@ -48,7 +47,7 @@ public final class TalismanWorkstationBlock extends Block {
     }
 
     @Override
-    public @Nullable BlockState getStateForPlacement(@NonNull BlockPlaceContext context) {
+    public @NonNull BlockState getStateForPlacement(@NonNull BlockPlaceContext context) {
         return this.defaultBlockState().setValue(FACING, context.getHorizontalDirection().getOpposite());
     }
 

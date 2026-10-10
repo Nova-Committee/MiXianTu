@@ -46,11 +46,14 @@ public record HerbTagEntry(Optional<Either<Holder<Element>, TagKey<Element>>> el
     public boolean matches(ItemStack stack) {
         if (stack.isEmpty() || (this.element.isEmpty() && this.material.isEmpty())) return false;
         try {
-            SpiritHerb herb = SpiritHerbService.find(stack).orElse(null);
-            if (herb == null) return false;
             // The element registry only exists while a server runs, and a matcher is also evaluated on a client,
             // where the honest answer is "not known to be that herb" - hence the fetch inside this block.
             Registry<Element> registry = MxtDatapackRegistries.registry(MxtResourceKeys.ELEMENT);
+            SpiritHerb herb = MxtDatapackRegistries.holders(MxtResourceKeys.SPIRIT_HERB)
+                    .map(Holder::value)
+                    .filter(candidate -> SpiritHerbService.claims(candidate, stack))
+                    .findFirst().orElse(null);
+            if (herb == null) return false;
             return this.element.map(query -> Elements.aligned(registry, herb.elementTags(), query)).orElse(true)
                     && this.material.map(herb.materialTags()::contains).orElse(true);
         } catch (IllegalStateException exception) {

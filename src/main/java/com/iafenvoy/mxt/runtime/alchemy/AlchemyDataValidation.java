@@ -31,7 +31,7 @@ public final class AlchemyDataValidation {
         TagsUpdatedEvent.ServerDataLoad reload = PENDING.get();
         PENDING.remove();
         if (reload == null) return;
-        SpiritHerbService.validateBoundHarvests(reload.getRegistries());
+        SpiritHerbService.validateExclusiveClaims(reload.getRegistries());
         for (RecipeHolder<?> holder : reload.getServerResources().getRecipeManager().getRecipes()) {
             if (!(holder.value() instanceof AlchemyRecipe recipe)) continue;
             validateOutputs(holder.id(), "success_outputs", recipe.successOutputs());

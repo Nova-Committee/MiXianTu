@@ -64,10 +64,14 @@ public final class DisplayStandBlockEntity extends BlockEntity implements AuraAc
         if (!(this.displayedItem.getItem() instanceof ItemAuraAccess access)) return amount;
         if (this.level == null) return amount;
         int remaining = access.insert(entity, this.displayedItem, aura, amount, simulate);
-        if (!simulate && remaining != amount && access instanceof UseItemAuraAccess manual) {
-            // The store is in nobody's hands, so the place it is at travels with the report instead of being read
-            // off the entity - and the item may spend itself in answer, which is a change this stand has to publish.
-            manual.onCharged(SpiritSource.placed(this.level, this.worldPosition.getCenter(), entity), this.displayedItem);
+        if (!simulate && remaining != amount) {
+            if (access instanceof UseItemAuraAccess manual) {
+                // The store is in nobody's hands, so the place it is at travels with the report instead of being read
+                // off the entity - and the item may spend itself in answer, which is a change this stand has to publish.
+                manual.onCharged(SpiritSource.placed(this.level, this.worldPosition.getCenter(), entity), this.displayedItem);
+            }
+            // Whatever the item changed about itself lives in the stack this stand is holding, so the stand publishes
+            // it either way: a store that only writes through insert is filled here just the same.
             this.markChangedAndSync();
         }
         return remaining;

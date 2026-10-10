@@ -1,5 +1,5 @@
 {
-  "items": "minecraft:sunflower",
+  "blocks": "minecraft:sunflower",
   "main_effects": {
     "mxt_test:alchemy/mark_watch": 1
   },

@@ -127,4 +127,8 @@ public final class ProbeMount extends Entity implements MountVehicle {
             return null;
         }
     }
+
+    public double getSpeed() {
+        return this.speed;
+    }
 }

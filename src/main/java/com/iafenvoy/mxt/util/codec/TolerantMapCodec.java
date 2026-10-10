@@ -13,12 +13,12 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
 
-public record AutoIgnoreMapCodec<K, V>(Codec<K> keyCodec,
-                                       Codec<V> elementCodec) implements BaseMapCodec<K, V>, Codec<Map<K, V>> {
+public record TolerantMapCodec<K, V>(Codec<K> keyCodec,
+                                     Codec<V> elementCodec) implements BaseMapCodec<K, V>, Codec<Map<K, V>> {
     private static final Logger LOGGER = LogUtils.getLogger();
 
-    public static <K, V> AutoIgnoreMapCodec<K, V> create(Codec<K> keyCodec, Codec<V> elementCodec) {
-        return new AutoIgnoreMapCodec<>(keyCodec, elementCodec);
+    public static <K, V> TolerantMapCodec<K, V> create(Codec<K> keyCodec, Codec<V> elementCodec) {
+        return new TolerantMapCodec<>(keyCodec, elementCodec);
     }
 
     @Override

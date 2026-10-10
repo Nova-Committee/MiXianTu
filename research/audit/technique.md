@@ -281,7 +281,7 @@
   `next_realm` 同形，唯一区别是链身份不是注册表条目，所以多个功法（以及将来的其它系统）可以共用一条链。
 - `Technique` 新增 `default_stage`（可选，链入口）与 `configuration`（`Map<Holder<skill_stage>, StageConfiguration>`；条目 =
   必填 `condition` + 选填 `ability`）。为了让链可达，`configuration` 非空而 `default_stage` 缺失会在解析期报错。
-- 地图值选了 `Codec.unboundedMap` 而不是 `CollectionCodecs.map`：后者（`AutoIgnoreMapCodec.java:31-38`）会**静默丢弃**
+- 地图值选了 `Codec.unboundedMap` 而不是 `CollectionCodecs.map`：后者（`TolerantMapCodec.java:31-38`）会**静默丢弃**
   解码失败的键值、只打一行 warn，与"加载期把所有问题收集起来报出"的既有策略冲突。
 - **语义（2026-09-12 定稿）**：`ability` 是**最低要求**——当前水平位于该级或其之后时生效（累积解锁）；`condition` 是**到达**
   该级的条件。链条顺序由 `ServerCache.rebuildSkillChains` 在服务端启动/数据包重载时推导（链首 + rank，拒绝成环/分叉/缺失）。
@@ -918,21 +918,21 @@ TechniqueItemService.onUseFinish(new Finish(reader, manual, 0, manual.copy()));
 ```java
 // CollectionCodecs.java:25-31
 public static <K, V> Codec<Map<K, V>> map(Codec<K> keyCodec, Codec<V> valueCodec) {
-    return AutoIgnoreMapCodec.create(keyCodec, valueCodec);
+    return TolerantMapCodec.create(keyCodec, valueCodec);
 }
 public static <T> Codec<List<T>> list(Codec<T> elementCodec) {
-    return AutoIgnoreListCodec.create(elementCodec);
+    return TolerantListCodec.create(elementCodec);
 }
 ```
 
-`SpiritIdentityAttachment` **本来就在用**这两个宽松 codec。`AutoIgnoreListCodec.accept`（第 46-50 行）逐元素 decode，失败的元素
+`SpiritIdentityAttachment` **本来就在用**这两个宽松 codec。`TolerantListCodec.accept`（第 46-50 行）逐元素 decode，失败的元素
 **只记一条 WARN 并跳过**，其余元素正常进入列表。所以**失效引用只损失它自己**，不会拖垮附件。
 
 **实证**（`MxtTestMod.verifyStaleReferenceDecode`）：构造含 `["mxt_test:sword_manual", "mxt_test:never_existed"]` 的附件
 JSON 解码，断言 `learnedTechniques().size() == 1`（好的存活、坏的消失）且附件整体解码成功。服务端日志确认：
 
 ```
-[WARN] [AutoIgnoreListCodec]: Ignoring invalid list element: Failed to get element mxt_test:never_existed
+[WARN] [TolerantListCodec]: Ignoring invalid list element: Failed to get element mxt_test:never_existed
 ```
 
 **同时否掉了"失效引用"这个假设本身。** 既然存在失效引用必然打 WARN，就去查了用户的客户端日志：

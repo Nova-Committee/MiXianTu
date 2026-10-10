@@ -56,6 +56,8 @@ public final class MxtAttachments {
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<AuraWorldAttachment>> AURA_WORLD = REGISTRY.register("aura_world", () -> AttachmentType.builder(AuraWorldAttachment::new).serialize(AuraWorldAttachment.MAP_CODEC).build());
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<FormationWorldAttachment>> FORMATION_WORLD = REGISTRY.register("formation_world", () -> AttachmentType.builder(FormationWorldAttachment::new).serialize(FormationWorldAttachment.MAP_CODEC).build());
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<AuraChunkAttachment>> AURA_CHUNK = REGISTRY.register("aura_chunk", () -> AttachmentType.builder(AuraChunkAttachment::new).serialize(AuraChunkAttachment.CODEC).build());
+    // Server-only: growth appearance travels through the block's own state, so nothing here is synced.
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<HerbChunkAttachment>> HERB_CHUNK = REGISTRY.register("herb_chunk", () -> AttachmentType.builder(HerbChunkAttachment::new).serialize(HerbChunkAttachment.MAP_CODEC).build());
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<SecretRealmWorldAttachment>> SECRET_REALM_WORLD = REGISTRY.register("secret_realm_world", () -> AttachmentType.builder(SecretRealmWorldAttachment::new).serialize(SecretRealmWorldAttachment.MAP_CODEC).build());
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<BoundBeastsAttachment>> BOUND_BEASTS = REGISTRY.register("bound_beasts", () -> AttachmentType.builder(BoundBeastsAttachment::new).serialize(BoundBeastsAttachment.MAP_CODEC).build());
 

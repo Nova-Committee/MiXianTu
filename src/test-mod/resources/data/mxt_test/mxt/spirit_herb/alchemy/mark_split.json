@@ -1,5 +1,5 @@
 {
-  "items": "minecraft:peony",
+  "blocks": "minecraft:peony",
   "main_effects": {
     "mxt_test:alchemy/mark_split": 1
   },

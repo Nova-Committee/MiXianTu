@@ -23,11 +23,11 @@ import java.util.stream.Collectors;
  */
 public final class CollectionCodecs {
     public static <K, V> Codec<Map<K, V>> map(Codec<K> keyCodec, Codec<V> valueCodec) {
-        return AutoIgnoreMapCodec.create(keyCodec, valueCodec);
+        return TolerantMapCodec.create(keyCodec, valueCodec);
     }
 
     public static <T> Codec<List<T>> list(Codec<T> elementCodec) {
-        return AutoIgnoreListCodec.create(elementCodec);
+        return TolerantListCodec.create(elementCodec);
     }
 
     public static <T> Codec<Set<T>> set(Codec<T> elementCodec) {
@@ -35,7 +35,7 @@ public final class CollectionCodecs {
     }
 
     public static <K, V> Codec<Multimap<K, V>> multiMap(Codec<K> keyCodec, Codec<V> valueCodec) {
-        return new AutoIgnoreMapCodec<>(keyCodec, valueCodec.listOf()).xmap(values -> {
+        return new TolerantMapCodec<>(keyCodec, valueCodec.listOf()).xmap(values -> {
             Builder<K, V> builder = ImmutableListMultimap.builder();
             values.forEach(builder::putAll);
             return builder.build();

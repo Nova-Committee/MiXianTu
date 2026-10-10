@@ -36,7 +36,6 @@ public final class MxtBlocks {
     public static final DeferredBlock<AlchemyFurnaceInventoryBlock> ALCHEMY_AUXILIARY_INPUT = registerAlchemy("alchemy_auxiliary_input", properties -> new AlchemyFurnaceInventoryBlock(properties, AlchemyInventoryKind.AUXILIARY));
     public static final DeferredBlock<AlchemyFurnaceInventoryBlock> ALCHEMY_OUTPUT = registerAlchemy("alchemy_output", properties -> new AlchemyFurnaceInventoryBlock(properties, AlchemyInventoryKind.OUTPUT));
     public static final DeferredBlock<TalismanWorkstationBlock> TALISMAN_WORKSTATION = registerSolidTable("talisman_workstation", TalismanWorkstationBlock::new);
-    public static final DeferredBlock<SpiritHerbPlotBlock> SPIRIT_HERB_PLOT = register("spirit_herb_plot", properties -> new SpiritHerbPlotBlock(properties.strength(0.6F).sound(SoundType.GRAVEL)));
     public static final DeferredBlock<DisplayStandBlock> OAK_DISPLAY_STAND = register("oak_display_stand", DisplayStandBlock::new);
     public static final DeferredBlock<DisplayStandBlock> BIRCH_DISPLAY_STAND = register("birch_display_stand", DisplayStandBlock::new);
     public static final DeferredBlock<DisplayStandBlock> SPRUCE_DISPLAY_STAND = register("spruce_display_stand", DisplayStandBlock::new);

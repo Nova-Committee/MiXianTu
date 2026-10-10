@@ -1,7 +1,13 @@
 {
-  "items": "minecraft:poppy",
+  "blocks": "minecraft:poppy",
   "main_effects": {
     "mxt_test:alchemy/heat": 2
   },
-  "thermal_bias": 0
+  "thermal_bias": 0,
+  "growth": {
+    "mature_age": 10,
+    "max_age": 20,
+    "growth_rate": 2,
+    "drops": "minecraft:poppy"
+  }
 }

@@ -11,7 +11,7 @@
     "lifetime": 100,
     "collide_action": {
       "type": "mxt:explode",
-      "power": 8.0
+      "power": 20.0
     }
   }
 }

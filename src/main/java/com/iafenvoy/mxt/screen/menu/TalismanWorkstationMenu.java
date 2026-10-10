@@ -16,6 +16,8 @@ import com.sighs.apricityui.screen.ApricityContainerMenu;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.Container;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.player.Inventory;
@@ -237,11 +239,21 @@ public final class TalismanWorkstationMenu extends ApricityContainerMenu {
         this.session = null;
         TalismanWorkstationService.Outcome outcome =
                 TalismanWorkstationService.submit(player, ended, strokes.stream().map(Stroke::points).toList());
+        if (outcome.success()) this.playSubmitSound();
         PacketDistributor.sendToPlayer(player, new TalismanResultS2CPayload(this.containerId,
                 TalismanResultS2CPayload.SETTLED, outcome.completion(), outcome.success(), outcome.text(),
                 outcome.product(), outcome.pigmentSpent()));
         // What a formula costs changed with the paper the session took, so the list is recomputed for the next pick.
         this.sendList(player);
+    }
+
+    /**
+     * The cartography table's own take-result click, from the station rather than from the player. Only the server
+     * settles a submission, so unlike the take-result menus this needs no per-tick guard against a second call.
+     */
+    private void playSubmitSound() {
+        this.access.execute((level, position) -> level.playSound(null, position,
+                SoundEvents.UI_CARTOGRAPHY_TABLE_TAKE_RESULT, SoundSource.BLOCKS, 1.0F, 1.0F));
     }
 
     /**

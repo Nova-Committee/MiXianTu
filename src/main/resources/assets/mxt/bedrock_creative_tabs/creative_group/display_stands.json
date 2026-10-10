@@ -1,0 +1,9 @@
+{
+  "entries": "#mxt:display_stands",
+  "icon": {
+    "id": "mxt:oak_display_stand"
+  },
+  "creative_tabs": [
+    "mxt:main"
+  ]
+}

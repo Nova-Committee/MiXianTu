@@ -58,7 +58,8 @@ public final class MxtItems {
     // Containers and tools
     public static final DeferredItem<Item> SPIRIT_RING = register("spirit_ring", Item::new);
     public static final DeferredItem<Item> SPIRIT_STONE_BAG = register("spirit_stone_bag", Item::new);
-    public static final DeferredItem<SpiritVesselItem> SPIRIT_VESSEL = register("spirit_vessel", properties -> new SpiritVesselItem(properties.stacksTo(1).component(MxtDataComponents.RESOURCE_CONTAINER, ResourceContainerComponent.EMPTY)));
+    public static final DeferredItem<SpiritVesselItem> SPIRIT_VESSEL = register("spirit_vessel", properties -> new SpiritVesselItem(properties.stacksTo(1)
+            .component(MxtDataComponents.RESOURCE_CONTAINER, ResourceContainerComponent.EMPTY)));
     public static final DeferredItem<IdentificationMirrorItem> IDENTIFICATION_MIRROR = register("identification_mirror", properties -> new IdentificationMirrorItem(properties.stacksTo(1)));
 
     // The talisman chain in the order a carrier is made: paper, brush, pigment, carrier, recall
@@ -81,7 +82,7 @@ public final class MxtItems {
     // Formations, secret realms and the tokens they share
     public static final DeferredItem<FormationPlateItem> FORMATION_PLATE = register("formation_plate", properties -> new FormationPlateItem(properties.stacksTo(1).component(MxtDataComponents.FORMATION_PLATE, FormationPlateComponent.EMPTY)));
     public static final DeferredItem<SecretRealmTokenItem> SECRET_REALM_TOKEN = register("secret_realm_token", properties -> new SecretRealmTokenItem(properties.stacksTo(1).component(MxtDataComponents.SECRET_REALM_TOKEN, SecretRealmTokenComponent.EMPTY)));
-    public static final DeferredItem<Item> SECRET_REALM_REWARD_BOX = register("secret_realm_reward_box", Item::new);
+    public static final DeferredItem<RewardBoxItem> REWARD_BOX = register("reward_box", RewardBoxItem::new);
     public static final DeferredItem<RiftAnchorItem> RIFT_ANCHOR = register("rift_anchor", properties -> new RiftAnchorItem(properties.stacksTo(1).component(MxtDataComponents.RIFT, RiftComponent.EMPTY)));
     public static final DeferredItem<TokenItem> WOODEN_TOKEN = register("wooden_token", properties -> new TokenItem(properties.component(MxtDataComponents.TOKEN, TokenComponent.EMPTY)));
     public static final DeferredItem<TokenItem> STONE_TOKEN = register("stone_token", properties -> new TokenItem(properties.component(MxtDataComponents.TOKEN, TokenComponent.EMPTY)));
@@ -89,13 +90,8 @@ public final class MxtItems {
     // Economy
     public static final DeferredItem<ChequeItem> CHEQUE = register("cheque", ChequeItem::new);
 
-    // An easter egg, not framework: a plain vanilla food, so eating it, the nutrition and the stack behaviour are
-    // all vanilla's; the second argument is how many tooltip lines its language keys carry.
-    public static final DeferredItem<SpecialItem> FRIED_DOUGH_CAKE = register("fried_dough_cake",
-            properties -> new SpecialItem(properties.food(new FoodProperties.Builder().nutrition(6).saturationModifier(0.7F).build()), 1));
-    // The other easter egg: a netherite sword whose damage is a step above a netherite sword's, plus one red line.
-    public static final DeferredItem<SpecialItem> SKY_SWALLOWING_SWORD = register("sky_swallowing_sword",
-            properties -> new SpecialItem(properties.sword(ToolMaterial.NETHERITE, 5.0F, -2.4F), 1, ChatFormatting.RED));
+    public static final DeferredItem<SpecialItem> FRIED_DOUGH_CAKE = register("fried_dough_cake", properties -> new SpecialItem(properties.food(new FoodProperties.Builder().nutrition(6).saturationModifier(0.7F).build()), 1));
+    public static final DeferredItem<SpecialItem> SKY_SWALLOWING_SWORD = register("sky_swallowing_sword", properties -> new SpecialItem(properties.sword(ToolMaterial.NETHERITE, 5.0F, -2.4F), 1, ChatFormatting.RED));
 
     public static <T extends Item> DeferredItem<T> register(String path, Function<Properties, T> factory) {
         ResourceKey<Item> key = ResourceKey.create(Registries.ITEM, Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, path));

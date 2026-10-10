@@ -4,7 +4,7 @@ import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.util.codec.AutoIgnoreListCodec;
+import com.iafenvoy.mxt.util.codec.TolerantListCodec;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.MapCodec;
@@ -122,7 +122,7 @@ public record ForgingBlueprint(List<SizedIngredient> input, HolderSet<ForgingMet
     // A requiredSuffixSteps of zero leaves the pattern unused, but the surface still renders the six result slots.
     public record FinishPattern(List<Holder<ForgingMethod>> steps, int requiredSuffixSteps) {
         public static final MapCodec<FinishPattern> MAP_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
-                AutoIgnoreListCodec.create(ForgingMethod.CODEC).optionalFieldOf("steps", List.of()).forGetter(FinishPattern::steps),
+                TolerantListCodec.create(ForgingMethod.CODEC).optionalFieldOf("steps", List.of()).forGetter(FinishPattern::steps),
                 Codec.intRange(0, 6).optionalFieldOf("required_suffix_steps", 0).forGetter(FinishPattern::requiredSuffixSteps)
         ).apply(i, FinishPattern::new));
 

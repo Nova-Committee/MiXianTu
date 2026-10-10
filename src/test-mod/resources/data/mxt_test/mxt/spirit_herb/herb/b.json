@@ -1,5 +1,5 @@
 {
-  "items": "minecraft:azure_bluet",
+  "blocks": "minecraft:azure_bluet",
   "main_effects": { "mxt_test:herb/main": 6 },
   "thermal_bias": 1
 }

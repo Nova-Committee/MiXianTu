@@ -21,7 +21,8 @@ import java.util.List;
  * what a spirit root stone states; a stack carrying no component answers no. An entry may be an id or a
  * {@code #tag}.
  */
-public record ItemSpiritRootCondition(List<Either<Holder<SpiritRoot>, TagKey<SpiritRoot>>> spiritRoots) implements ItemCondition {
+public record ItemSpiritRootCondition(
+        List<Either<Holder<SpiritRoot>, TagKey<SpiritRoot>>> spiritRoots) implements ItemCondition {
     public static final MapCodec<ItemSpiritRootCondition> CODEC = RecordCodecBuilder.<ItemSpiritRootCondition>mapCodec(i -> i.group(
             RegistryCodecs.holderOrTagList(MxtResourceKeys.SPIRIT_ROOT).fieldOf("spirit_roots").forGetter(ItemSpiritRootCondition::spiritRoots)
     ).apply(i, ItemSpiritRootCondition::new)).validate(ItemSpiritRootCondition::validate);

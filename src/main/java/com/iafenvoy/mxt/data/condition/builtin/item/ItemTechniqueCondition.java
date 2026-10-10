@@ -22,7 +22,8 @@ import java.util.List;
  * path takes: the stack's own {@code mxt:technique} component, or a {@code technique_binding} declaration that claims
  * the item, which teaches that technique without any component. An entry may be an id or a {@code #tag}.
  */
-public record ItemTechniqueCondition(List<Either<Holder<Technique>, TagKey<Technique>>> techniques) implements ItemCondition {
+public record ItemTechniqueCondition(
+        List<Either<Holder<Technique>, TagKey<Technique>>> techniques) implements ItemCondition {
     public static final MapCodec<ItemTechniqueCondition> CODEC = RecordCodecBuilder.<ItemTechniqueCondition>mapCodec(i -> i.group(
             RegistryCodecs.holderOrTagList(MxtResourceKeys.TECHNIQUE).fieldOf("techniques").forGetter(ItemTechniqueCondition::techniques)
     ).apply(i, ItemTechniqueCondition::new)).validate(ItemTechniqueCondition::validate);

@@ -1,5 +1,5 @@
 {
-  "items": "minecraft:orange_tulip",
+  "blocks": "minecraft:orange_tulip",
   "main_effects": {
     "mxt_test:alchemy/mark_balanced": 1
   },
