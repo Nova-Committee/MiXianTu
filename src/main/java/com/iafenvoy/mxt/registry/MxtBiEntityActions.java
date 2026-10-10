@@ -4,6 +4,7 @@ import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.compat.kubejs.type.action.JsBiEntityAction;
 import com.iafenvoy.mxt.data.action.BiEntityAction;
 import com.iafenvoy.mxt.data.action.NoOpAction;
+import com.iafenvoy.mxt.data.action.builtin.SendMessageAction;
 import com.iafenvoy.mxt.data.action.builtin.bientity.*;
 import com.iafenvoy.mxt.data.action.builtin.bientity.meta.*;
 import com.mojang.serialization.MapCodec;
@@ -31,4 +32,5 @@ public final class MxtBiEntityActions {
     public static final DeferredHolder<MapCodec<? extends BiEntityAction>, MapCodec<ChoiceAction>> CHOICE = REGISTRY.register("choice", () -> ChoiceAction.CODEC);
     public static final DeferredHolder<MapCodec<? extends BiEntityAction>, MapCodec<ActorAction>> ACTOR_ACTION = REGISTRY.register("actor_action", () -> ActorAction.CODEC);
     public static final DeferredHolder<MapCodec<? extends BiEntityAction>, MapCodec<TargetAction>> TARGET_ACTION = REGISTRY.register("target_action", () -> TargetAction.CODEC);
+    public static final DeferredHolder<MapCodec<? extends BiEntityAction>, MapCodec<SendMessageAction>> SEND_MESSAGE = REGISTRY.register("send_message", () -> SendMessageAction.CODEC);
 }

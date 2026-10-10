@@ -4,6 +4,7 @@ import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.compat.kubejs.type.action.JsBlockAction;
 import com.iafenvoy.mxt.data.action.BlockAction;
 import com.iafenvoy.mxt.data.action.NoOpAction;
+import com.iafenvoy.mxt.data.action.builtin.SendMessageAction;
 import com.iafenvoy.mxt.data.action.builtin.block.*;
 import com.iafenvoy.mxt.data.action.builtin.block.meta.*;
 import com.mojang.serialization.MapCodec;
@@ -30,4 +31,5 @@ public final class MxtBlockActions {
     public static final DeferredHolder<MapCodec<? extends BlockAction>, MapCodec<OffsetAction>> OFFSET = REGISTRY.register("offset", () -> OffsetAction.CODEC);
     public static final DeferredHolder<MapCodec<? extends BlockAction>, MapCodec<ExplodeAction>> EXPLODE = REGISTRY.register("explode", () -> ExplodeAction.CODEC);
     public static final DeferredHolder<MapCodec<? extends BlockAction>, MapCodec<SpawnEntityAction>> SPAWN_ENTITY = REGISTRY.register("spawn_entity", () -> SpawnEntityAction.CODEC);
+    public static final DeferredHolder<MapCodec<? extends BlockAction>, MapCodec<SendMessageAction>> SEND_MESSAGE = REGISTRY.register("send_message", () -> SendMessageAction.CODEC);
 }

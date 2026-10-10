@@ -4,6 +4,7 @@ import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.compat.kubejs.type.action.JsItemAction;
 import com.iafenvoy.mxt.data.action.ItemAction;
 import com.iafenvoy.mxt.data.action.NoOpAction;
+import com.iafenvoy.mxt.data.action.builtin.SendMessageAction;
 import com.iafenvoy.mxt.data.action.builtin.item.*;
 import com.iafenvoy.mxt.data.action.builtin.item.meta.ChanceAction;
 import com.iafenvoy.mxt.data.action.builtin.item.meta.ChoiceAction;
@@ -33,4 +34,5 @@ public final class MxtItemActions {
     public static final DeferredHolder<MapCodec<? extends ItemAction>, MapCodec<AddEnchantmentAction>> ADD_ENCHANTMENT = REGISTRY.register("add_enchantment", () -> AddEnchantmentAction.CODEC);
     public static final DeferredHolder<MapCodec<? extends ItemAction>, MapCodec<MergeComponentsAction>> MERGE_COMPONENTS = REGISTRY.register("merge_components", () -> MergeComponentsAction.CODEC);
     public static final DeferredHolder<MapCodec<? extends ItemAction>, MapCodec<AddAbilityAction>> ADD_ABILITY = REGISTRY.register("add_ability", () -> AddAbilityAction.CODEC);
+    public static final DeferredHolder<MapCodec<? extends ItemAction>, MapCodec<SendMessageAction>> SEND_MESSAGE = REGISTRY.register("send_message", () -> SendMessageAction.CODEC);
 }

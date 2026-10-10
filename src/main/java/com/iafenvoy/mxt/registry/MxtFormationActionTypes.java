@@ -19,6 +19,7 @@ public final class MxtFormationActionTypes {
     public static final DeferredHolder<MapCodec<? extends FormationActionType>, MapCodec<BuffFormationAction>> BUFF = REGISTRY.register("buff", () -> BuffFormationAction.CODEC);
     public static final DeferredHolder<MapCodec<? extends FormationActionType>, MapCodec<ProtectionFormationAction>> PROTECTION = REGISTRY.register("protection", () -> ProtectionFormationAction.CODEC);
     public static final DeferredHolder<MapCodec<? extends FormationActionType>, MapCodec<RangeDisplayFormationAction>> RANGE_DISPLAY = REGISTRY.register("range_display", () -> RangeDisplayFormationAction.CODEC);
+    public static final DeferredHolder<MapCodec<? extends FormationActionType>, MapCodec<SendMessageFormationAction>> SEND_MESSAGE = REGISTRY.register("send_message", () -> SendMessageFormationAction.CODEC);
 
     private MxtFormationActionTypes() {
     }

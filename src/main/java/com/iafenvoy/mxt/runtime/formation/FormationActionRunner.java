@@ -10,6 +10,7 @@ import com.iafenvoy.mxt.data.formation.builtin.AttackFormationAction;
 import com.iafenvoy.mxt.data.formation.builtin.BuffFormationAction;
 import com.iafenvoy.mxt.data.formation.builtin.BuffFormationAction.TargetMode;
 import com.iafenvoy.mxt.data.formation.builtin.RangeDisplayFormationAction;
+import com.iafenvoy.mxt.data.formation.builtin.SendMessageFormationAction;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.Sources;
 import com.iafenvoy.mxt.runtime.ability.AbilityEventBridge;
@@ -19,6 +20,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.TriState;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
@@ -54,6 +56,7 @@ public final class FormationActionRunner {
                 case AttackFormationAction attack ->
                         attack(attack, entity, context, owners.primaryEntity(entity.level()));
                 case BuffFormationAction buff -> buff(buff, entity, context, instance, owners);
+                case SendMessageFormationAction message -> message(message, entity, context);
                 // The terrain ward is not per-entity work: it answers block events instead, and there is
                 // no entity to act on. The default module declares nothing at all.
                 case null, default -> {
@@ -70,6 +73,14 @@ public final class FormationActionRunner {
             DamageCalculationService.deal(attack.attributeToOwner() ? owner : null, entity, amount,
                     attack.damageType(), context.formula());
         for (ApplyEffectAction effect : attack.effects()) effect.execute(context);
+    }
+
+    // Addressed to the entity the formation is being run for, which is why this is per-entity work and not a
+    // whole-level broadcast: each covered entity is told in turn.
+    private static void message(SendMessageFormationAction module, Entity entity, EntityActionContext context) {
+        if (!(entity instanceof ServerPlayer player)) return;
+        if (!module.recipients().test(player, context)) return;
+        player.sendSystemMessage(module.message(), module.channel().actionBar());
     }
 
     // Grants under the source convention, which is also what releases them: nothing here does, because the

@@ -4,8 +4,6 @@ import com.iafenvoy.mxt.data.action.BlockAction;
 import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.recipe.AlchemyRecipe;
 import com.iafenvoy.mxt.runtime.alchemy.AlchemyWorkstationService.Parameters;
-import com.iafenvoy.mxt.util.codec.MiscCodecs;
-import com.mojang.datafixers.util.Pair;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.UUIDUtil;
@@ -196,15 +194,15 @@ public final class AlchemySession {
     }
 
     public record Snapshot(Identifier recipeId, AlchemyRecipe recipe, Parameters parameters,
-                           List<ItemStack> successOutputs, List<ItemStack> failureOutputs,
-                           UUID operator, AlchemyMixture mixture, AlchemyPhase phase, long remainingTicks, int badTicks,
+                           List<ItemStack> successOutputs, List<ItemStack> failureOutputs, UUID operator,
+                           AlchemyMixture mixture, AlchemyPhase phase, long remainingTicks, int badTicks,
                            Optional<AlchemyFailure> failure, boolean settled, List<ItemStack> pending) {
         public static final Codec<Snapshot> CODEC = RecordCodecBuilder.create(i -> i.group(
-                MiscCodecs.pair(Identifier.CODEC.fieldOf("recipe"), AlchemyRecipe.CODEC.codec().fieldOf("frozen_recipe"))
-                        .forGetter(snapshot -> Pair.of(snapshot.recipeId(), snapshot.recipe())),
+                Identifier.CODEC.fieldOf("recipe").forGetter(Snapshot::recipeId),
+                AlchemyRecipe.CODEC.codec().fieldOf("frozen_recipe").forGetter(Snapshot::recipe),
                 Parameters.CODEC.fieldOf("parameters").forGetter(Snapshot::parameters),
-                MiscCodecs.pair(ItemStack.CODEC.listOf(1, 4).fieldOf("success"), ItemStack.CODEC.listOf(0, 4).fieldOf("failure_outputs"))
-                        .forGetter(snapshot -> Pair.of(snapshot.successOutputs(), snapshot.failureOutputs())),
+                ItemStack.CODEC.listOf(1, 4).fieldOf("success").forGetter(Snapshot::successOutputs),
+                ItemStack.CODEC.listOf(0, 4).fieldOf("failure_outputs").forGetter(Snapshot::failureOutputs),
                 UUIDUtil.CODEC.fieldOf("operator").forGetter(Snapshot::operator),
                 AlchemyMixture.CODEC.fieldOf("mixture").forGetter(Snapshot::mixture),
                 AlchemyPhase.CODEC.fieldOf("phase").forGetter(Snapshot::phase),
@@ -213,8 +211,6 @@ public final class AlchemySession {
                 AlchemyFailure.CODEC.lenientOptionalFieldOf("failure").forGetter(Snapshot::failure),
                 Codec.BOOL.lenientOptionalFieldOf("settled", false).forGetter(Snapshot::settled),
                 ItemStack.OPTIONAL_CODEC.listOf(0, 4).lenientOptionalFieldOf("pending", List.of()).forGetter(Snapshot::pending)
-        ).apply(i, (identity, parameters, outputs, operator, mixture, phase, remaining, bad, failure, settled, pending) ->
-                new Snapshot(identity.getFirst(), identity.getSecond(), parameters,
-                        outputs.getFirst(), outputs.getSecond(), operator, mixture, phase, remaining, bad, failure, settled, pending)));
+        ).apply(i, Snapshot::new));
     }
 }

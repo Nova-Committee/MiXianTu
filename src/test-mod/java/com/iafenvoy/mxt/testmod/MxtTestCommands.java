@@ -435,6 +435,7 @@ public final class MxtTestCommands {
                 .then(literal("progression").executes(context -> probeProgression(context.getSource())))
                 .then(literal("alchemy").executes(context -> AlchemyProbes.run(context.getSource())))
                 .then(literal("herb").executes(context -> HerbProbes.run(context.getSource())))
+                .then(literal("message").executes(context -> MessageProbes.run(context.getSource())))
                 .then(literal("pill").executes(context -> PillProbes.run(context.getSource())))
                 .then(literal("picker").executes(context -> PickerProbes.run(context.getSource())))
                 .then(literal("quality").executes(context -> QualityProbes.run(context.getSource())))

@@ -51,8 +51,7 @@ public record RealmStage(Component name, Component description, Holder<Aura> aur
      * What standing on one minor stage of this realm unlocks: an entry is active from its own {@code stage}
      * onwards (0-based, the same index {@code minor_stage} reports), and the unlock stays once reached.
      */
-    public record MinorStageAbilities(int stage,
-                                      List<Either<Holder<Ability>, TagKey<Ability>>> abilities) {
+    public record MinorStageAbilities(int stage, List<Either<Holder<Ability>, TagKey<Ability>>> abilities) {
         public static final Codec<MinorStageAbilities> CODEC = RecordCodecBuilder.create(i -> i.group(
                 Codec.INT.fieldOf("stage").forGetter(MinorStageAbilities::stage),
                 RegistryCodecs.holderOrTagList(MxtResourceKeys.ABILITY).optionalFieldOf("ability", List.of()).forGetter(MinorStageAbilities::abilities)

@@ -5,6 +5,7 @@ import com.iafenvoy.mxt.compat.kubejs.type.action.JsEntityAction;
 import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.action.NoOpAction;
 import com.iafenvoy.mxt.data.action.builtin.entity.*;
+import com.iafenvoy.mxt.data.action.builtin.SendMessageAction;
 import com.iafenvoy.mxt.data.action.builtin.entity.meta.ChanceAction;
 import com.iafenvoy.mxt.data.action.builtin.entity.meta.ChoiceAction;
 import com.iafenvoy.mxt.data.action.builtin.entity.meta.IfElseAction;
@@ -55,6 +56,7 @@ public final class MxtEntityActions {
     public static final DeferredHolder<MapCodec<? extends EntityAction>, MapCodec<GainAirAction>> GAIN_AIR = REGISTRY.register("gain_air", () -> GainAirAction.CODEC);
     public static final DeferredHolder<MapCodec<? extends EntityAction>, MapCodec<GiveItemAction>> GIVE_ITEM = REGISTRY.register("give_item", () -> GiveItemAction.CODEC);
     public static final DeferredHolder<MapCodec<? extends EntityAction>, MapCodec<PlaySoundAction>> PLAY_SOUND = REGISTRY.register("play_sound", () -> PlaySoundAction.CODEC);
+    public static final DeferredHolder<MapCodec<? extends EntityAction>, MapCodec<SendMessageAction>> SEND_MESSAGE = REGISTRY.register("send_message", () -> SendMessageAction.CODEC);
     public static final DeferredHolder<MapCodec<? extends EntityAction>, MapCodec<RemoveEffectAction>> REMOVE_EFFECT = REGISTRY.register("remove_effect", () -> RemoveEffectAction.CODEC);
     public static final DeferredHolder<MapCodec<? extends EntityAction>, MapCodec<SetFallDistanceAction>> SET_FALL_DISTANCE = REGISTRY.register("set_fall_distance", () -> SetFallDistanceAction.CODEC);
     public static final DeferredHolder<MapCodec<? extends EntityAction>, MapCodec<SetNoGravityAction>> SET_NO_GRAVITY = REGISTRY.register("set_no_gravity", () -> SetNoGravityAction.CODEC);
