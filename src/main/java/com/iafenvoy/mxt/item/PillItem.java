@@ -3,6 +3,7 @@ package com.iafenvoy.mxt.item;
 import com.iafenvoy.mxt.data.item.Pill;
 import com.iafenvoy.mxt.data.item.PillComponent;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
+import com.iafenvoy.mxt.util.DefinitionText;
 import net.minecraft.core.Holder;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
@@ -32,7 +33,7 @@ public class PillItem extends Item {
         PillComponent component = stack.get(MxtDataComponents.PILL.get());
         if (component != null) {
             Holder<Pill> pill = component.pill().orElse(null);
-            if (pill != null && pill.isBound()) return pill.value().name();
+            if (pill != null && pill.isBound()) return DefinitionText.name(pill);
         }
         return Component.translatable(this.getDescriptionId());
     }

@@ -1,6 +1,5 @@
 package com.iafenvoy.mxt.data.cultivation;
 
-import com.iafenvoy.mxt.api.NamedDefinition;
 import com.iafenvoy.mxt.data.AttributeEntry;
 import com.iafenvoy.mxt.data.ParticleEffect;
 import com.iafenvoy.mxt.data.Tribulation;
@@ -10,10 +9,7 @@ import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.data.cost.Cost;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.HolderHelper;
-import com.iafenvoy.mxt.util.codec.ContextNameCodec;
-import com.iafenvoy.mxt.util.codec.ContextNameListCodec;
 import com.iafenvoy.mxt.util.codec.MiscCodecs;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
@@ -23,7 +19,6 @@ import com.mojang.datafixers.util.Pair;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
-import net.minecraft.network.chat.Component;
 import net.minecraft.resources.RegistryFixedCodec;
 import net.minecraft.tags.TagKey;
 import org.jspecify.annotations.NonNull;
@@ -35,17 +30,21 @@ import java.util.Optional;
  * One named realm stage, belonging to one {@link Aura}: the chain it is a link of, what it costs, and what
  * happens when it gives way to the next. Conditions and outcomes are resolved by the cultivation runtime.
  */
-public record RealmStage(Component name, Component description, Holder<Aura> aura, NumberProvider auraShareWeight,
+public record RealmStage(Holder<Aura> aura, NumberProvider auraShareWeight,
                          EntityCondition cultivateCondition, Optional<Holder<RealmStage>> nextRealm,
-                         NumberProvider breakthroughExp, NumberProvider maxExperience, List<Component> minorStages,
+                         NumberProvider breakthroughExp, NumberProvider maxExperience, int minorStages,
                          CultivateConditions breakthrough, boolean autoBreakthrough,
                          List<AttributeEntry> passiveModifiers, Optional<NumberProvider> lifespan,
                          List<Cost> breakthroughCosts,
                          List<Either<Holder<Ability>, TagKey<Ability>>> abilityRequirements,
                          List<MinorStageAbilities> minorStageAbilities, Optional<Holder<Tribulation>> tribulation,
                          Optional<ParticleEffect> breakthroughParticle, EntityAction successAction,
-                         EntityAction failAction) implements NamedDefinition {
-    private static final String CATEGORY = DefinitionText.category(MxtResourceKeys.REALM_STAGE.identifier());
+                         EntityAction failAction)  {
+
+    /**
+     * The ceiling on {@code minor_stages}, which only decides how finely a realm's progress is divided.
+     */
+    public static final int MAX_MINOR_STAGES = 1024;
 
     /**
      * What standing on one minor stage of this realm unlocks: an entry is active from its own {@code stage}
@@ -68,31 +67,32 @@ public record RealmStage(Component name, Component description, Holder<Aura> aur
         if (lifespan.isPresent() && lifespan.get() instanceof Constant(double value)
                 && (!Double.isFinite(value) || value < 0.0D))
             throw new IllegalArgumentException("Realm stage lifespan must be finite and non-negative");
+        if (minorStages < 0 || minorStages > MAX_MINOR_STAGES)
+            throw new IllegalArgumentException("Realm minor_stages must be between 0 and " + MAX_MINOR_STAGES
+                    + ": " + minorStages);
         // An unlock whose stage is not one of this realm's minor stages could never be reached, and two entries
         // on one stage would be the same threshold written twice.
-        int count = minorStages.size();
         for (MinorStageAbilities entry : minorStageAbilities)
-            if (entry.stage() < 0 || entry.stage() >= count)
+            if (entry.stage() < 0 || entry.stage() >= minorStages)
                 throw new IllegalArgumentException("minor_stage_abilities names stage " + entry.stage()
-                        + " but this realm declares " + count + " minor stages");
+                        + " but this realm declares " + minorStages + " minor stages");
         if (minorStageAbilities.stream().map(MinorStageAbilities::stage).distinct().count() != minorStageAbilities.size())
             throw new IllegalArgumentException("minor_stage_abilities must not name the same stage twice");
     }
 
     public static final Codec<Holder<RealmStage>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.REALM_STAGE);
     public static final Codec<RealmStage> DIRECT_CODEC = RecordCodecBuilder.create(i -> i.group(
-            ContextNameCodec.name(CATEGORY).forGetter(RealmStage::name),
-            ContextNameCodec.description(CATEGORY).forGetter(RealmStage::description),
             Aura.CODEC.fieldOf("aura").forGetter(RealmStage::aura),
             NumberProvider.CODEC.optionalFieldOf("aura_share_weight", new Constant(1.0D)).forGetter(RealmStage::auraShareWeight),
             EntityCondition.optionalCodec("cultivate_condition").forGetter(RealmStage::cultivateCondition),
             RegistryFixedCodec.create(MxtResourceKeys.REALM_STAGE).optionalFieldOf("next_realm").forGetter(RealmStage::nextRealm),
             NumberProvider.CODEC.optionalFieldOf("breakthrough_exp", new Constant(0.0D)).forGetter(RealmStage::breakthroughExp),
             NumberProvider.CODEC.optionalFieldOf("max_experience", new Constant(Double.MAX_VALUE)).forGetter(RealmStage::maxExperience),
-            ContextNameListCodec.minorStages(CATEGORY).forGetter(RealmStage::minorStages),
+            // A count, not a list: the names of the stages are derived from this realm's own id.
+            Codec.INT.optionalFieldOf("minor_stages", 0).forGetter(RealmStage::minorStages),
             CultivateConditions.CODEC.optionalFieldOf("breakthrough", CultivateConditions.EMPTY).forGetter(RealmStage::breakthrough),
             Codec.BOOL.optionalFieldOf("auto_breakthrough", false).forGetter(RealmStage::autoBreakthrough),
-            // Eighteen components; three pairs keep the group at sixteen.
+            // Sixteen components; three pairs keep the group at sixteen.
             MiscCodecs.pair(
                             AttributeEntry.CODEC.listOf().optionalFieldOf("passive_modifiers", List.of()),
                             NumberProvider.CODEC.optionalFieldOf("lifespan"))
@@ -110,9 +110,9 @@ public record RealmStage(Component name, Component description, Holder<Aura> aur
                             EntityAction.optionalCodec("success_action"),
                             EntityAction.optionalCodec("fail_action"))
                     .forGetter(stage -> Pair.of(stage.successAction(), stage.failAction()))
-    ).apply(i, (name, description, aura, auraShareWeight, cultivateCondition, nextRealm, breakthroughExp,
+    ).apply(i, (aura, auraShareWeight, cultivateCondition, nextRealm, breakthroughExp,
                 maxExperience, minorStages, breakthrough, autoBreakthrough, passive, breakthroughCosts,
-                abilityRequirements, tribulation, actions) -> new RealmStage(name, description, aura,
+                abilityRequirements, tribulation, actions) -> new RealmStage(aura,
             auraShareWeight, cultivateCondition, nextRealm, breakthroughExp, maxExperience, minorStages, breakthrough,
             autoBreakthrough, passive.getFirst(), passive.getSecond(), breakthroughCosts,
             abilityRequirements.getFirst(), abilityRequirements.getSecond(),
@@ -123,7 +123,7 @@ public record RealmStage(Component name, Component description, Holder<Aura> aur
     public @NonNull String toString() {
         return "RealmStage[aura=" + HolderHelper.id(this.aura) + ", hasNextRealm=" + this.nextRealm.isPresent()
                 + ", breakthroughConditions=" + this.breakthrough.conditions().size() + ", costs=" + this.breakthroughCosts.size()
-                + ", minorStages=" + this.minorStages.size()
+                + ", minorStages=" + this.minorStages
                 + ", abilityRequirements=" + this.abilityRequirements.size()
                 + ", minorStageAbilities=" + this.minorStageAbilities.size()
                 + ", hasTribulation=" + this.tribulation.isPresent() + "]";

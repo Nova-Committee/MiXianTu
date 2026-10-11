@@ -61,7 +61,7 @@ public record AbilityWheelEntry(Holder<Ability> ability, @Nullable ItemStack car
 
     @Override
     public Component title() {
-        return this.ability.value().name();
+        return DefinitionText.name(this.ability);
     }
 
     @Override

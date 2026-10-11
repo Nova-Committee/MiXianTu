@@ -1,6 +1,5 @@
 {
   "type": "mxt:alchemy",
-  "name": "recipe.mxt.mxt_test.alchemy.balanced",
   "main_requirements": {
     "mxt_test:herb/main": 6,
     "mxt_test:alchemy/mark_balanced": 1

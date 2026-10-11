@@ -1,6 +1,5 @@
 {
   "type": "mxt:alchemy",
-  "name": "recipe.mxt.mxt_test.alchemy.twin",
   "main_requirements": {
     "mxt_test:herb/main": 6,
     "mxt_test:alchemy/fork": 1

@@ -8,6 +8,7 @@ import com.iafenvoy.mxt.registry.MxtMenus;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactService;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactStorageContainer;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactStorageService;
+import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.iafenvoy.mxt.util.formula.number.Constant;
 import com.mojang.serialization.MapCodec;
@@ -65,7 +66,7 @@ public record StorageAbilityType(NumberProvider slots,
         ServerPlayer player = (ServerPlayer) context.holder();
         ItemStack carrier = context.carrier();
         int capacity = ArtifactService.storageSlots(carrier, context.ability(), context.formula());
-        Component title = Component.translatable("screen.mxt.artifact_storage", context.ability().value().name());
+        Component title = Component.translatable("screen.mxt.artifact_storage", DefinitionText.name(context.ability()));
         ArtifactStorageContainer contents = new ArtifactStorageContainer(player, context.ability(), capacity);
         int rows = capacity / ArtifactService.STORAGE_COLUMNS;
         player.openMenu(new SimpleMenuProvider((id, inventory, opener) ->

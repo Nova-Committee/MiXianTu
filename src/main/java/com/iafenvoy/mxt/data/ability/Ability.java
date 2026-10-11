@@ -1,6 +1,5 @@
 package com.iafenvoy.mxt.data.ability;
 
-import com.iafenvoy.mxt.api.NamedDefinition;
 import com.iafenvoy.mxt.data.IconReference;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.data.cost.Cost;
@@ -10,8 +9,6 @@ import com.iafenvoy.mxt.data.storage.DataStorageCollector;
 import com.iafenvoy.mxt.data.storage.DataStorageDeclaration;
 import com.iafenvoy.mxt.data.storage.builtin.ChargesDataStorage;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.util.DefinitionText;
-import com.iafenvoy.mxt.util.codec.ContextNameCodec;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.iafenvoy.mxt.util.formula.number.Constant;
@@ -19,7 +16,6 @@ import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
-import net.minecraft.network.chat.Component;
 import net.minecraft.resources.RegistryFixedCodec;
 import net.minecraft.tags.TagKey;
 import org.jspecify.annotations.NonNull;
@@ -40,16 +36,13 @@ import java.util.Optional;
  * fields, the cooldown and the damage condition are declared and read by the types that use them, so this record
  * declares none of them.
  */
-public record Ability(Component name, Component description, AbilityType type, List<Cost> costs,
+public record Ability(AbilityType type, List<Cost> costs,
                       NumberProvider castTime, Optional<IconReference> icon,
                       Optional<ChargesDataStorage.Settings> charges, EntityCondition condition,
                       List<Either<Holder<Element>, TagKey<Element>>> elementAffinity, AffinityMode elementAffinityMode,
-                      boolean hidden) implements DataStorageDeclaration, NamedDefinition {
-    private static final String CATEGORY = DefinitionText.category(MxtResourceKeys.ABILITY.identifier());
+                      boolean hidden) implements DataStorageDeclaration {
     public static final Codec<Holder<Ability>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.ABILITY);
     public static final Codec<Ability> DIRECT_CODEC = RecordCodecBuilder.create(i -> i.group(
-            ContextNameCodec.name(CATEGORY).forGetter(Ability::name),
-            ContextNameCodec.description(CATEGORY).forGetter(Ability::description),
             AbilityType.CODEC.forGetter(Ability::type),
             Cost.LIST_CODEC.optionalFieldOf("costs", List.of()).forGetter(Ability::costs),
             NumberProvider.CODEC.optionalFieldOf("cast_time", new Constant(0.0D)).forGetter(Ability::castTime),

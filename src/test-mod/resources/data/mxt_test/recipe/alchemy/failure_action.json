@@ -1,7 +1,5 @@
 {
   "type": "mxt:alchemy",
-  "name": "recipe.mxt.mxt_test.alchemy.failure_action",
-  "description": "recipe.mxt.mxt_test.alchemy.failure_action.description",
   "main_requirements": {
     "mxt_test:herb/main": 6,
     "mxt_test:alchemy/mark_fail": 1

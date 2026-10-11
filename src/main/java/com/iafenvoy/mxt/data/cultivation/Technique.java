@@ -1,6 +1,5 @@
 package com.iafenvoy.mxt.data.cultivation;
 
-import com.iafenvoy.mxt.api.NamedDefinition;
 import com.iafenvoy.mxt.api.QualityProvider;
 import com.iafenvoy.mxt.data.AttributeEntry;
 import com.iafenvoy.mxt.data.IconReference;
@@ -12,8 +11,6 @@ import com.iafenvoy.mxt.data.progression.ProgressionOwner;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.util.DefinitionText;
-import com.iafenvoy.mxt.util.codec.ContextNameCodec;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.iafenvoy.mxt.util.formula.number.Constant;
@@ -22,7 +19,6 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
-import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.RegistryFixedCodec;
 import net.minecraft.tags.TagKey;
@@ -39,7 +35,7 @@ import java.util.Optional;
  * technique's own tier, which is what a manual made for it starts on. Manuals default to one shared built-in
  * carrier, so that item alone cannot say which tier applies.
  */
-public record Technique(Component name, Component description, Optional<Holder<ItemQuality>> quality,
+public record Technique(Optional<Holder<ItemQuality>> quality,
                         Optional<IconReference> icon,
                         EntityCondition learnCondition,
                         List<Identifier> exclusiveTags,
@@ -47,12 +43,9 @@ public record Technique(Component name, Component description, Optional<Holder<I
                         List<Either<Holder<Ability>, TagKey<Ability>>> grantedAbilities,
                         Optional<Holder<Progression>> defaultLevel,
                         Optional<Holder<Resource>> masteryResource,
-                        Map<Holder<Progression>, ProgressionConfig> configuration) implements NamedDefinition, ProgressionOwner, QualityProvider {
-    private static final String CATEGORY = DefinitionText.category(MxtResourceKeys.TECHNIQUE.identifier());
+                        Map<Holder<Progression>, ProgressionConfig> configuration) implements ProgressionOwner, QualityProvider {
     public static final Codec<Holder<Technique>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.TECHNIQUE);
     public static final Codec<Technique> DIRECT_CODEC = RecordCodecBuilder.<Technique>create(i -> i.group(
-            ContextNameCodec.name(CATEGORY).forGetter(Technique::name),
-            ContextNameCodec.description(CATEGORY).forGetter(Technique::description),
             ItemQuality.CODEC.optionalFieldOf("quality").forGetter(Technique::quality),
             IconReference.CODEC.optionalFieldOf("icon").forGetter(Technique::icon),
             EntityCondition.optionalCodec("learn_condition").forGetter(Technique::learnCondition),

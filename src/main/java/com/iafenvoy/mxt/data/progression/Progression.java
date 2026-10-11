@@ -1,16 +1,12 @@
 package com.iafenvoy.mxt.data.progression;
 
-import com.iafenvoy.mxt.api.NamedDefinition;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.util.DefinitionText;
-import com.iafenvoy.mxt.util.codec.ContextNameCodec;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.iafenvoy.mxt.util.formula.number.Constant;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
-import net.minecraft.network.chat.Component;
 import net.minecraft.resources.RegistryFixedCodec;
 import org.jspecify.annotations.NonNull;
 
@@ -23,14 +19,10 @@ import java.util.Optional;
  * so a broken chain is only detectable at runtime, and {@code damage_multiplier} belongs to the powers the chain
  * grants at that level rather than to everything the holder does.
  */
-public record Progression(Component name, Component description,
-                          Optional<Holder<Progression>> nextLevel, NumberProvider mastery,
-                          double damageMultiplier) implements NamedDefinition {
-    private static final String CATEGORY = DefinitionText.category(MxtResourceKeys.PROGRESSION.identifier());
+public record Progression(Optional<Holder<Progression>> nextLevel, NumberProvider mastery,
+                          double damageMultiplier)  {
     public static final Codec<Holder<Progression>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.PROGRESSION);
     public static final Codec<Progression> DIRECT_CODEC = RecordCodecBuilder.<Progression>create(i -> i.group(
-            ContextNameCodec.name(CATEGORY).forGetter(Progression::name),
-            ContextNameCodec.description(CATEGORY).forGetter(Progression::description),
             RegistryFixedCodec.create(MxtResourceKeys.PROGRESSION).optionalFieldOf("next_level").forGetter(Progression::nextLevel),
             NumberProvider.CODEC.optionalFieldOf("mastery", new Constant(0.0D)).forGetter(Progression::mastery),
             Codec.DOUBLE.optionalFieldOf("damage_multiplier", 1.0D).forGetter(Progression::damageMultiplier)

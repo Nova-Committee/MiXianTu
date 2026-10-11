@@ -5,7 +5,6 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import com.iafenvoy.mxt.accessor.ResourceLoadingOps;
 import com.iafenvoy.mxt.api.ItemAuraAccess;
 import com.iafenvoy.mxt.api.MountVehicle;
 import com.iafenvoy.mxt.MiXianTu;
@@ -1489,79 +1488,57 @@ public final class MxtTestCommands {
                 .orElseThrow(() -> new IllegalStateException("mxt:realm with min_minor_stage does not decode"));
     }
 
-    // The generated text of a definition comes from the id it was decoded as, which only the loader knows: an
-    // omitted name reads back as its own key, a counted minor_stages names every stage after that key, and a
-    // written component wins over both. The expected strings are the fixture files' own words, read on a server
-    // where no language file is loaded, so a translation key stays a key. The display path is asserted next to
-    // the field, because a definition that carries its own text must be shown with it.
+    // No definition stores text any more, so every name, description and minor-stage name is a key generated from
+    // the id the entry was decoded as - category, registry namespace, then the entry's own id - and the only way a
+    // pack gives one words is translating that key. This runs on a server with no language file loaded, so a
+    // generated name must read back as its key and must not count as drawn text.
     private static String verifyGeneratedNames(ServerPlayer player) {
         Holder<RealmStage> qiRefining = require(MxtResourceKeys.REALM_STAGE, QI_REFINING);
-        if (qiRefining.value().minorStages().size() != 9)
-            return "the counted qi_refining reads " + qiRefining.value().minorStages().size() + " minor stages instead of 9";
-        String counted = qiRefining.value().minorStages().getFirst().getString();
+        if (qiRefining.value().minorStages() != 9)
+            return "the counted qi_refining reads " + qiRefining.value().minorStages() + " minor stages instead of 9";
+        String counted = DefinitionText.minorStage(qiRefining, 0).getString();
         if (!counted.equals("realm_stage.mxt.mxt_test.qi_refining.minor_stage.0"))
             return "the counted first minor stage reads " + counted;
-        String last = qiRefining.value().minorStages().getLast().getString();
+        String last = DefinitionText.minorStage(qiRefining, 8).getString();
         if (!last.equals("realm_stage.mxt.mxt_test.qi_refining.minor_stage.8"))
             return "the counted last minor stage reads " + last;
-        List<Component> written = require(MxtResourceKeys.REALM_STAGE, CORE_FORMING).value().minorStages();
-        if (written.size() != 3 || !written.getFirst().getString().equals("realm_stage.mxt.mxt_test.core_forming.minor_stage.early"))
-            return "the written minor stages read " + written;
-        String poorName = require(MxtResourceKeys.ITEM_QUALITY, POOR_QUALITY).value().name().getString();
-        if (!poorName.equals("quality.mxt.mxt_test.poor")) return "the omitted name reads " + poorName;
-        String poorDescription = require(MxtResourceKeys.ITEM_QUALITY, POOR_QUALITY).value().description().getString();
-        if (!poorDescription.equals("quality.mxt.mxt_test.poor.description"))
-            return "the omitted description reads " + poorDescription;
-        // The fixture writes this one as its own key, so on a server without language files the field reads back as
-        // that key; that a written field beats the generated one is asserted on the element fixture's literal below.
-        String excellentName = require(MxtResourceKeys.ITEM_QUALITY, EXCELLENT_QUALITY).value().name().getString();
-        if (!excellentName.equals("quality.mxt.mxt_test.excellent")) return "the written name reads " + excellentName;
-        String normalDescription = require(MxtResourceKeys.ITEM_QUALITY, NORMAL_QUALITY).value().description().getString();
-        if (!normalDescription.equals("quality.mxt.mxt_test.normal.description"))
-            return "the written description reads " + normalDescription;
-        // The same pair on two of the definitions that gained the fields in this round: an aura writes neither,
-        // an element writes both.
+        // A realm whose fixture declared three named minor stages now declares the same count, so the third stage
+        // is still the last one it has.
+        Holder<RealmStage> coreForming = require(MxtResourceKeys.REALM_STAGE, CORE_FORMING);
+        if (coreForming.value().minorStages() != 3)
+            return "the counted core_forming reads " + coreForming.value().minorStages() + " minor stages instead of 3";
+        if (!DefinitionText.minorStage(coreForming, 2).getString()
+                .equals("realm_stage.mxt.mxt_test.core_forming.minor_stage.2"))
+            return "the counted core_forming last stage reads " + DefinitionText.minorStage(coreForming, 2).getString();
+        Holder<ItemQuality> poor = require(MxtResourceKeys.ITEM_QUALITY, POOR_QUALITY);
+        if (!DefinitionText.name(poor).getString().equals("quality.mxt.mxt_test.poor"))
+            return "the generated quality name reads " + DefinitionText.name(poor).getString();
+        if (!DefinitionText.description(poor).getString().equals("quality.mxt.mxt_test.poor.description"))
+            return "the generated quality description reads " + DefinitionText.description(poor).getString();
+        // The fixture that used to write its own words now writes none, so it is generated exactly like the rest:
+        // a definition cannot escape the id-derived key.
+        Holder<ItemQuality> excellent = require(MxtResourceKeys.ITEM_QUALITY, EXCELLENT_QUALITY);
+        if (!DefinitionText.name(excellent).getString().equals("quality.mxt.mxt_test.excellent"))
+            return "the generated excellent name reads " + DefinitionText.name(excellent).getString();
         Holder<Aura> qi = require(MxtResourceKeys.AURA, QI);
-        if (!qi.value().name().getString().equals("aura.mxt.mxt_test.qi"))
-            return "the omitted aura name reads " + qi.value().name().getString();
-        if (!qi.value().description().getString().equals("aura.mxt.mxt_test.qi.description"))
-            return "the omitted aura description reads " + qi.value().description().getString();
+        if (!DefinitionText.name(qi).getString().equals("aura.mxt.mxt_test.qi"))
+            return "the generated aura name reads " + DefinitionText.name(qi).getString();
+        if (!DefinitionText.description(qi).getString().equals("aura.mxt.mxt_test.qi.description"))
+            return "the generated aura description reads " + DefinitionText.description(qi).getString();
+        // The test pack's own namespace is part of the key, not the mod's: a definition shipped by a pack is
+        // translated under that pack's id.
         Holder<Element> metal = require(MxtResourceKeys.ELEMENT, PROBE_METAL_ELEMENT);
-        if (!metal.value().name().getString().equals("Metal probe"))
-            return "the written element name reads " + metal.value().name().getString();
-        if (!metal.value().description().getString().equals("The fixture's metal element."))
-            return "the written element description reads " + metal.value().description().getString();
-        if (!DefinitionText.name(qi).getString().equals(qi.value().name().getString())
-                || !DefinitionText.name(metal).getString().equals(metal.value().name().getString()))
-            return "the display path does not read the definition's own text";
-        // The description accessor reads the same field off the same holder, so a written description is what a
-        // tooltip draws and an omitted one still derives the key the codec defaulted from.
-        if (!DefinitionText.description(qi).getString().equals(qi.value().description().getString())
-                || !DefinitionText.description(metal).getString().equals(metal.value().description().getString()))
-            return "the description path does not read the definition's own text";
-        // No language file is loaded here, so a derived key must not count as drawn text while the fixture's literal
-        // must: that guard is what keeps an unwritten description out of a tooltip.
-        if (DefinitionText.resolved(DefinitionText.description(qi)))
-            return "an untranslated description key counts as drawn text";
-        if (!DefinitionText.resolved(DefinitionText.description(metal)))
-            return "a written description does not count as drawn text";
-        // The loader is the only thing that puts the id on the ops, so decoding a definition here proves the
-        // accessor is really mixed into RegistryOps; the fixtures above prove the loader itself sets it.
-        RegistryOps<JsonElement> ops = RegistryOps.create(JsonOps.INSTANCE, player.level().registryAccess());
-        if (!(ops instanceof ResourceLoadingOps loading)) return "the RegistryOps accessor is not applied";
-        ItemQuality decoded;
-        loading.mxt$setKey(ResourceKey.create(MxtResourceKeys.ITEM_QUALITY, id("probe_quality")));
-        try {
-            decoded = ItemQuality.DIRECT_CODEC.parse(ops, new JsonObject()).getOrThrow();
-        } catch (RuntimeException exception) {
-            return "decoding a definition that writes neither text field failed: " + exception.getMessage();
-        } finally {
-            loading.mxt$setKey(null);
-        }
-        if (!decoded.name().getString().equals("quality.mxt.mxt_test.probe_quality"))
-            return "the decoded name reads " + decoded.name().getString();
-        return decoded.description().getString().equals("quality.mxt.mxt_test.probe_quality.description") ? null
-                : "the decoded description reads " + decoded.description().getString();
+        if (!DefinitionText.name(metal).getString().equals("element.mxt.mxt_test.metal"))
+            return "the generated element name reads " + DefinitionText.name(metal).getString();
+        if (!DefinitionText.description(metal).getString().equals("element.mxt.mxt_test.metal.description"))
+            return "the generated element description reads " + DefinitionText.description(metal).getString();
+        // No language file is loaded here, so every one of those keys is untranslated and must stay out of a
+        // tooltip; that guard is the only thing standing between a pack and a row of raw keys.
+        for (Component generated : List.of(DefinitionText.name(metal), DefinitionText.description(metal),
+                DefinitionText.minorStage(coreForming, 2)))
+            if (DefinitionText.resolved(generated))
+                return "an untranslated generated key counts as drawn text: " + generated.getString();
+        return null;
     }
 
     // Drives both damage pipeline layers against throwaway probes whose element edges are fixture-known: fire

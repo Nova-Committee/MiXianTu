@@ -1,13 +1,9 @@
 package com.iafenvoy.mxt.data.secretrealm;
 
-import com.iafenvoy.mxt.api.NamedDefinition;
 import com.iafenvoy.mxt.api.QualityProvider;
 import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
-import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.util.DefinitionText;
-import com.iafenvoy.mxt.util.codec.ContextNameCodec;
 import com.iafenvoy.mxt.util.codec.MiscCodecs;
 import com.mojang.datafixers.util.Pair;
 import com.mojang.serialization.Codec;
@@ -31,7 +27,7 @@ import java.util.Optional;
  * keeping its terrain, while an unclaimed one is destroyed with its region data. {@code quality} is the tier a token
  * into it starts on, which several realms sharing one built-in token cannot state by item.
  */
-public record SecretRealm(Component name, Component description, Optional<Holder<ItemQuality>> quality,
+public record SecretRealm(Optional<Holder<ItemQuality>> quality,
                           SecretRealmGeneration generation, long seed,
                           Optional<Border> border, int maxInstances,
                           Optional<Integer> maxMembers, boolean owned, long durationTicks,
@@ -39,22 +35,15 @@ public record SecretRealm(Component name, Component description, Optional<Holder
                           EntityCondition enterCondition, EntityCondition exitCondition,
                           Optional<Component> enterDeniedMessage, Optional<Component> exitDeniedMessage,
                           EntityAction enterAction,
-                          EntityAction exitAction) implements NamedDefinition, QualityProvider {
+                          EntityAction exitAction) implements QualityProvider {
     // Written explicitly onto an instance without a border instead of inheriting the overworld border that derived
     // level data would otherwise hand to a runtime dimension.
     public static final double DEFAULT_BORDER_SIZE = 29999984.0D;
     public static final int MAX_INSTANCES = 256;
     public static final int MAX_MEMBERS = 100_000;
 
-    private static final String CATEGORY = DefinitionText.category(MxtResourceKeys.SECRET_REALM.identifier());
     public static final Codec<SecretRealm> CODEC = RecordCodecBuilder.<SecretRealm>create(i -> i.group(
-            ContextNameCodec.name(CATEGORY).forGetter(SecretRealm::name),
-            // The description and the tier share one group slot, which keeps the group inside
-            // RecordCodecBuilder's component limit; the JSON keys are unchanged by it.
-            MiscCodecs.pair(
-                            ContextNameCodec.description(CATEGORY),
-                            ItemQuality.CODEC.optionalFieldOf("quality"))
-                    .forGetter(realm -> Pair.of(realm.description(), realm.quality())),
+            ItemQuality.CODEC.optionalFieldOf("quality").forGetter(SecretRealm::quality),
             SecretRealmGeneration.CODEC.fieldOf("generation").forGetter(SecretRealm::generation),
             Codec.LONG.optionalFieldOf("seed", 0L).forGetter(SecretRealm::seed),
             Border.CODEC.optionalFieldOf("border").forGetter(SecretRealm::border),
@@ -73,9 +62,9 @@ public record SecretRealm(Component name, Component description, Optional<Holder
             MiscCodecs.TRANSLATABLE_COMPONENT.optionalFieldOf("exit_denied_message").forGetter(SecretRealm::exitDeniedMessage),
             EntityAction.optionalCodec("enter_action").forGetter(SecretRealm::enterAction),
             EntityAction.optionalCodec("exit_action").forGetter(SecretRealm::exitAction)
-    ).apply(i, (name, text, generation, seed, border, maxInstances, maxMembers, owned, durationTicks,
+    ).apply(i, (quality, generation, seed, border, maxInstances, maxMembers, owned, durationTicks,
                 structures, entry, conditions, enterDeniedMessage, exitDeniedMessage, enterAction, exitAction) ->
-            new SecretRealm(name, text.getFirst(), text.getSecond(), generation, seed, border, maxInstances, maxMembers,
+            new SecretRealm(quality, generation, seed, border, maxInstances, maxMembers,
                     owned, durationTicks, structures, entry, conditions.getFirst(), conditions.getSecond(),
                     enterDeniedMessage, exitDeniedMessage, enterAction, exitAction))).validate(SecretRealm::validate);
 

@@ -1,6 +1,5 @@
 package com.iafenvoy.mxt.data;
 
-import com.iafenvoy.mxt.api.NamedDefinition;
 import com.iafenvoy.mxt.api.QualityProvider;
 import com.iafenvoy.mxt.data.action.BlockAction;
 import com.iafenvoy.mxt.data.action.EntityAction;
@@ -9,9 +8,7 @@ import com.iafenvoy.mxt.data.cost.Cost;
 import com.iafenvoy.mxt.data.formation.FormationActionType;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.codec.CollectionCodecs;
-import com.iafenvoy.mxt.util.codec.ContextNameCodec;
 import com.iafenvoy.mxt.util.codec.MiscCodecs;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.mojang.datafixers.util.Either;
@@ -22,7 +19,6 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.RegistryFixedCodec;
 import net.minecraft.world.level.block.Block;
@@ -42,25 +38,18 @@ import java.util.function.Function;
  * those its owner does not recognise; what the array is for is its actions, not this field. {@code quality} is the
  * tier a plate carrying this array starts on, which several arrays sharing one built-in plate cannot state by item.
  */
-public record Formation(Component name, Component description, Optional<Holder<ItemQuality>> quality,
+public record Formation(Optional<Holder<ItemQuality>> quality,
                         Optional<Identifier> structureTemplate, StructureCheck structureCheck,
                         List<RequiredBlock> structure, NumberProvider radius, List<Cost> activationCosts,
                         List<Cost> maintenanceCosts, Optional<Storage> storage, List<FormationActionType> actions,
                         boolean spareFriends, BlockAction activateAction, BlockAction tickAction,
                         BlockAction deactivateAction, EntityAction entityTickAction, EntityAction entityEnterAction,
-                        EntityAction entityExitAction) implements NamedDefinition, QualityProvider {
-    private static final String CATEGORY = DefinitionText.category(MxtResourceKeys.FORMATION.identifier());
+                        EntityAction entityExitAction) implements QualityProvider {
     public static final Codec<Holder<Formation>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.FORMATION);
     // The template and the check policy share one group slot, which keeps the group inside RecordCodecBuilder's
     // component limit; the JSON keys are unchanged by it.
     public static final Codec<Formation> DIRECT_CODEC = RecordCodecBuilder.<Formation>create(i -> i.group(
-                    ContextNameCodec.name(CATEGORY).forGetter(Formation::name),
-                    // The description and the tier share one group slot, which keeps the group inside
-                    // RecordCodecBuilder's component limit; the JSON keys are unchanged by it.
-                    MiscCodecs.pair(
-                                    ContextNameCodec.description(CATEGORY),
-                                    ItemQuality.CODEC.optionalFieldOf("quality"))
-                            .forGetter(formation -> Pair.of(formation.description(), formation.quality())),
+                    ItemQuality.CODEC.optionalFieldOf("quality").forGetter(Formation::quality),
                     MiscCodecs.pair(
                                     Identifier.CODEC.optionalFieldOf("structure_template"),
                                     StructureCheck.CODEC.optionalFieldOf("structure_check", StructureCheck.STRUCTURE))
@@ -82,10 +71,10 @@ public record Formation(Component name, Component description, Optional<Holder<I
                     EntityAction.optionalCodec("entity_tick_action").forGetter(Formation::entityTickAction),
                     EntityAction.optionalCodec("entity_enter_action").forGetter(Formation::entityEnterAction),
                     EntityAction.optionalCodec("entity_exit_action").forGetter(Formation::entityExitAction)
-            ).apply(i, (name, text, structure, blocks, radius, activationCosts, maintenanceCosts, storage, actions,
+            ).apply(i, (quality, structure, blocks, radius, activationCosts, maintenanceCosts, storage, actions,
                         spareFriends, activateAction, tickAction, deactivateAction, entityTickAction, entityEnterAction,
                         entityExitAction) ->
-                    new Formation(name, text.getFirst(), text.getSecond(), structure.getFirst(), structure.getSecond(),
+                    new Formation(quality, structure.getFirst(), structure.getSecond(),
                             blocks, radius, activationCosts, maintenanceCosts, storage, actions, spareFriends,
                             activateAction, tickAction, deactivateAction, entityTickAction, entityEnterAction,
                             entityExitAction)))

@@ -42,7 +42,7 @@ public final class SpiritHerbTooltipAppender {
         if (registries == null) return;
         SpiritHerbService.find(registries, stack).ifPresent(found -> {
             SpiritHerb herb = found.value();
-            builder.accept(herb.name().copy().withStyle(ChatFormatting.GREEN));
+            builder.accept(DefinitionText.name(found).withStyle(ChatFormatting.GREEN));
             builder.accept(Component.translatable("tooltip.mxt.herb.age", SpiritHerbService.age(stack, herb))
                     .withStyle(ChatFormatting.GRAY));
             builder.accept(Component.translatable("tooltip.mxt.herb.thermal", herb.thermalBias())

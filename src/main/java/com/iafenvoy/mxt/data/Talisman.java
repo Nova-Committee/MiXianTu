@@ -1,16 +1,12 @@
 package com.iafenvoy.mxt.data;
 
-import com.iafenvoy.mxt.api.NamedDefinition;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.data.cost.Cost;
 import com.iafenvoy.mxt.data.talisman.TalismanType;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.util.DefinitionText;
-import com.iafenvoy.mxt.util.codec.ContextNameCodec;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
-import net.minecraft.network.chat.Component;
 import net.minecraft.resources.RegistryFixedCodec;
 
 import java.util.List;
@@ -29,13 +25,10 @@ import java.util.List;
  * before anything is paid for it. {@code type} is required: an inscription with no use at all is not something a
  * pack should be able to write by accident, and {@code mxt:empty} is there for one that means to do nothing.
  */
-public record Talisman(Component name, Component description, TalismanType type, double capacity,
-                       EntityCondition condition, List<Cost> costs) implements NamedDefinition {
-    private static final String CATEGORY = DefinitionText.category(MxtResourceKeys.TALISMAN.identifier());
+public record Talisman(TalismanType type, double capacity,
+                       EntityCondition condition, List<Cost> costs)  {
     public static final Codec<Holder<Talisman>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.TALISMAN);
     public static final Codec<Talisman> DIRECT_CODEC = RecordCodecBuilder.create(i -> i.group(
-            ContextNameCodec.name(CATEGORY).forGetter(Talisman::name),
-            ContextNameCodec.description(CATEGORY).forGetter(Talisman::description),
             TalismanType.CODEC.forGetter(Talisman::type),
             Codec.doubleRange(1.0D, Double.MAX_VALUE).optionalFieldOf("capacity", 1.0D).forGetter(Talisman::capacity),
             EntityCondition.optionalCodec("condition").forGetter(Talisman::condition),

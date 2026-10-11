@@ -222,7 +222,7 @@ public final class InformationManager {
         if (realm == null) return null;
         FormulaContext resourceContext = ResourceService.formulaContext(player, chain.value().resource(), context);
         double index = CultivationService.minorStage(realm.value(), progress, resourceContext);
-        return Double.isNaN(index) ? null : realm.value().minorStages().get((int) index);
+        return Double.isNaN(index) ? null : DefinitionText.minorStage(realm, (int) index);
     }
 
     // A curse whose display_condition fails leaves no row behind at all, not an empty one: that is the point

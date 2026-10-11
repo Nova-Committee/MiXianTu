@@ -1,6 +1,4 @@
 {
-  "name": "alchemy_furnace.mxt.mxt_test.alchemy/dual",
-  "description": "alchemy_furnace.mxt.mxt_test.alchemy/dual.description",
   "main_slots": 2,
   "auxiliary_slots": 2,
   "capacity": 64,

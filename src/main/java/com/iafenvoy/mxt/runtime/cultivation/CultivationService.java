@@ -249,7 +249,7 @@ public final class CultivationService {
     // banked past that requirement (up to max_experience) stays on the last segment, so the index never runs off
     // the declared names.
     public static double minorStage(RealmStage stage, double progress, FormulaContext context) {
-        int count = stage.minorStages().size();
+        int count = stage.minorStages();
         if (count == 0 || !Double.isFinite(progress) || progress < 0.0D) return Double.NaN;
         double requirement;
         if (RESOLVING_MINOR_STAGE.get()) return Double.NaN;

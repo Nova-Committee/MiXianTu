@@ -1,12 +1,9 @@
 package com.iafenvoy.mxt.data.cultivation;
 
-import com.iafenvoy.mxt.api.NamedDefinition;
 import com.iafenvoy.mxt.api.QualityProvider;
 import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.util.DefinitionText;
-import com.iafenvoy.mxt.util.codec.ContextNameCodec;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.iafenvoy.mxt.util.formula.number.Constant;
@@ -16,7 +13,6 @@ import com.mojang.serialization.DataResult;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
-import net.minecraft.network.chat.Component;
 import net.minecraft.resources.RegistryFixedCodec;
 import net.minecraft.tags.TagKey;
 
@@ -34,17 +30,14 @@ import java.util.function.Function;
  * {@code quality} is the tier a root's own stone starts on, and it is also what a roster line names beside the
  * root: the free-text {@code rarity} this field replaced was the same question answered twice.
  */
-public record SpiritRoot(Component name, Component description, List<ElementWeight> elements,
+public record SpiritRoot(List<ElementWeight> elements,
                          NumberProvider cultivationMultiplier,
                          NumberProvider elementAbilityModifier, Optional<Holder<ItemQuality>> quality,
                          List<Either<Holder<Ability>, TagKey<Ability>>> grantedAbilities,
                          List<Either<Holder<Element>, TagKey<Element>>> conflictingElements)
-        implements NamedDefinition, QualityProvider {
-    private static final String CATEGORY = DefinitionText.category(MxtResourceKeys.SPIRIT_ROOT.identifier());
+        implements QualityProvider {
     public static final Codec<Holder<SpiritRoot>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.SPIRIT_ROOT);
     public static final Codec<SpiritRoot> DIRECT_CODEC = RecordCodecBuilder.<SpiritRoot>create(i -> i.group(
-            ContextNameCodec.name(CATEGORY).forGetter(SpiritRoot::name),
-            ContextNameCodec.description(CATEGORY).forGetter(SpiritRoot::description),
             ElementWeight.CODEC.listOf().fieldOf("elements").forGetter(SpiritRoot::elements),
             NumberProvider.CODEC.optionalFieldOf("cultivation_multiplier", new Constant(1.0D)).forGetter(SpiritRoot::cultivationMultiplier),
             NumberProvider.CODEC.optionalFieldOf("element_ability_modifier", new Constant(1.0D)).forGetter(SpiritRoot::elementAbilityModifier),

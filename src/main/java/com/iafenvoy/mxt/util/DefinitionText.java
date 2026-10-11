@@ -1,7 +1,6 @@
 package com.iafenvoy.mxt.util;
 
 import com.iafenvoy.mxt.MiXianTu;
-import com.iafenvoy.mxt.api.NamedDefinition;
 import net.minecraft.core.Holder;
 import net.minecraft.locale.Language;
 import net.minecraft.network.chat.Component;
@@ -11,24 +10,18 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 
 /**
- * Localized names for datapack definitions, keyed {@code <category>.<registry namespace>.<id namespace>.<id path>}
- * off the registry the definition lives in, so {@code mxt:fire} in {@code mxt:aura} reads as
- * {@code aura.mxt.mxt.fire}; the category is always the registry's own path, which is why no caller passes one.
- * An untranslated key renders as the key itself. A definition implementing {@link NamedDefinition} carries its
- * texts itself, so the pack-written name and description are what get shown; only a holder that is bound can be
- * asked for them, since a held reference to an entry the current pack no longer provides has no value to read.
- * <p>
- * Which entry point a caller uses follows what it holds: {@link #name(Holder)} / {@link #description(Holder)} for
- * anything holding the reference, {@link #name(ResourceKey)} for a key whose registry is still known, and
- * {@link #name(Identifier, String)} only where nothing but the id survived - a ledger key, a command argument, a
- * network payload, or a definition reached through one of those.
- */
+* Generate language key: {@code <registry path>.<registry namespace>.<id namespace>.<id path>}
+* */
 public final class DefinitionText {
     /**
-     * What the description field appends to a definition's own key, so a reader that falls back to a key derives
-     * the same one the field was defaulted from.
+     * What a definition's description key appends to its name key.
      */
     public static final String DESCRIPTION_SUFFIX = ".description";
+
+    /**
+     * What one minor stage of a realm appends to that realm's name key, followed by the stage's 0-based index.
+     */
+    public static final String MINOR_STAGE_SUFFIX = ".minor_stage.";
 
     // The category a registry's keys are built with, for code that has to build a key by hand.
     public static String category(Identifier registry) {
@@ -43,19 +36,9 @@ public final class DefinitionText {
         return key(category(registry), registry.getNamespace(), id);
     }
 
-    // The one place a definition key is built; ContextNameCodec generates its defaults through it.
+    // The one place a definition key is built.
     public static String key(String category, String registryNamespace, Identifier id) {
         return category + "." + registryNamespace + "." + id.toLanguageKey();
-    }
-
-    /**
-     * The text a definition's own field falls back to when the pack omits it: the entry's key plus that field's
-     * own suffix ({@code ""} for the name, {@code .description} for a description). The single place the fallback
-     * is built, so a definition carrying the text and one deriving it can never disagree.
-     */
-    public static MutableComponent defaultText(String category, ResourceKey<?> entry, String suffix) {
-        Identifier registry = entry.registry();
-        return Component.translatable(key(category, registry.getNamespace(), entry.identifier()) + suffix);
     }
 
     public static MutableComponent name(ResourceKey<?> key) {
@@ -63,27 +46,41 @@ public final class DefinitionText {
     }
 
     public static MutableComponent name(Holder<?> holder) {
-        if (holder.isBound() && holder.value() instanceof NamedDefinition named) return named.name().copy();
         return holder.unwrapKey().map(DefinitionText::name).orElseGet(() -> Component.literal("?"));
     }
 
-    // A bare id names no registry, so this overload assumes the mod's own namespace, which every MiXianTu
-    // registry uses. Only for the paths that hold an id and nothing else: a ledger key, a command argument, a
-    // network payload, or a definition reached through one of those.
+    // A bare id names no registry, so this overload assumes the registry namespace this mod declares all of its
+    // registries under. Only for paths holding an id and nothing else: a ledger key, a command argument, a payload.
     public static MutableComponent name(Identifier id, String category) {
         return Component.translatable(key(category, MiXianTu.MOD_ID, id));
     }
 
     /**
-     * The text the definition wrote for its {@code description} field, falling back to that field's own key. Unlike
-     * a name this is optional prose, so callers printing it to a tooltip should skip it unless {@link #resolved}
-     * accepts it.
+     * Any other text belonging to a definition, keyed off its name key: the description, one minor stage of a
+     * realm. Nothing is stored, so a caller printing one of these to a tooltip should skip it unless
+     * {@link #resolved} accepts it.
      */
+    public static MutableComponent derived(ResourceKey<?> key, String suffix) {
+        return Component.translatable(key(key) + suffix);
+    }
+
+    public static MutableComponent derived(Holder<?> holder, String suffix) {
+        return holder.unwrapKey().map(key -> derived(key, suffix)).orElseGet(() -> Component.literal("?"));
+    }
+
+    /**
+     * The description of a definition, which is its name key plus {@link #DESCRIPTION_SUFFIX}.
+     */
+    public static MutableComponent description(ResourceKey<?> key) {
+        return derived(key, DESCRIPTION_SUFFIX);
+    }
+
     public static MutableComponent description(Holder<?> holder) {
-        if (holder.isBound() && holder.value() instanceof NamedDefinition named) return named.description().copy();
-        return holder.unwrapKey()
-                .map(key -> defaultText(category(key.registry()), key, DESCRIPTION_SUFFIX))
-                .orElseGet(() -> Component.literal("?"));
+        return derived(holder, DESCRIPTION_SUFFIX);
+    }
+
+    public static MutableComponent minorStage(Holder<?> holder, int index) {
+        return derived(holder, MINOR_STAGE_SUFFIX + index);
     }
 
     /**

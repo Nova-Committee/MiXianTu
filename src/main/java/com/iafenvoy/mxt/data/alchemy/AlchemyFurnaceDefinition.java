@@ -1,16 +1,12 @@
 package com.iafenvoy.mxt.data.alchemy;
 
-import com.iafenvoy.mxt.api.NamedDefinition;
 import com.iafenvoy.mxt.api.QualityProvider;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.util.DefinitionText;
-import com.iafenvoy.mxt.util.codec.ContextNameCodec;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
-import net.minecraft.network.chat.Component;
 import net.minecraft.resources.RegistryFixedCodec;
 import org.jspecify.annotations.Nullable;
 
@@ -23,18 +19,15 @@ import java.util.Optional;
  * the tier a furnace built to this specification starts on: every specification shares one block item, so the item
  * cannot say which tier applies.
  */
-public record AlchemyFurnaceDefinition(Component name, Component description, int mainSlots, int auxiliarySlots,
+public record AlchemyFurnaceDefinition(int mainSlots, int auxiliarySlots,
                                        Optional<Holder<ItemQuality>> quality, int capacity, double coolingPerTick,
                                        Optional<Double> maxTemperature)
-        implements NamedDefinition, QualityProvider {
+        implements QualityProvider {
     public static final int CATALYST_SLOTS = 1;
     public static final int MAX_CAPACITY = 320;
-    private static final String CATEGORY = DefinitionText.category(MxtResourceKeys.ALCHEMY_FURNACE.identifier());
     private static final Codec<Double> POSITIVE = Codec.DOUBLE.validate(AlchemyFurnaceDefinition::positive);
     public static final Codec<Holder<AlchemyFurnaceDefinition>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.ALCHEMY_FURNACE);
     public static final Codec<AlchemyFurnaceDefinition> DIRECT_CODEC = RecordCodecBuilder.create(i -> i.group(
-            ContextNameCodec.name(CATEGORY).forGetter(AlchemyFurnaceDefinition::name),
-            ContextNameCodec.description(CATEGORY).forGetter(AlchemyFurnaceDefinition::description),
             Codec.intRange(1, 2).fieldOf("main_slots").forGetter(AlchemyFurnaceDefinition::mainSlots),
             Codec.intRange(0, 2).optionalFieldOf("auxiliary_slots", 0).forGetter(AlchemyFurnaceDefinition::auxiliarySlots),
             ItemQuality.CODEC.optionalFieldOf("quality").forGetter(AlchemyFurnaceDefinition::quality),

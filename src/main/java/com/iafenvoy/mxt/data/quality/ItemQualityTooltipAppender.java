@@ -61,8 +61,9 @@ public final class ItemQualityTooltipAppender {
 
     private static void appendQuality(Consumer<Component> builder, Holder<ItemQuality> quality) {
         ItemQuality value = quality.value();
-        builder.accept(Component.translatable("tooltip.mxt.item.quality", QualityService.coloredName(quality, value.name())));
-        // The definition's own description, shown only when it reads as text rather than as an unwritten key.
+        builder.accept(Component.translatable("tooltip.mxt.item.quality", QualityService.displayName(quality)));
+        // The tier's generated description key, shown only when a pack translated it: an untranslated key is skipped
+        // rather than printed as its own key text.
         MutableComponent description = DefinitionText.description(quality);
         if (DefinitionText.resolved(description) && !description.getString().isBlank())
             builder.accept(description.withStyle(ChatFormatting.GRAY));

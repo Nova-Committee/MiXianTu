@@ -1,5 +1,3 @@
 {
-  "name": "quality.mxt.mxt_test.alchemy/sealed",
-  "description": "quality.mxt.mxt_test.alchemy/sealed.description",
   "condition": { "type": "mxt:never" }
 }

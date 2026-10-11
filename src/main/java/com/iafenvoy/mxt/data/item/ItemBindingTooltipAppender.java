@@ -60,7 +60,8 @@ public final class ItemBindingTooltipAppender {
         if (resolution.unbound())
             builder.accept(Component.translatable("tooltip.mxt.pill.unbound").withStyle(ChatFormatting.RED));
         else
-            resolution.effects().ifPresent(effects -> appendPill(builder, resolution.identity().orElse(null), effects, player));
+            resolution.effects().ifPresent(effects -> appendPill(builder, resolution.identity().orElse(null),
+                    resolution.definition().orElse(null), effects, player));
         bindings.technique().ifPresent(technique -> appendTechnique(builder, technique));
         for (EntityAction action : bindings.item().map(ItemBinding::actions).orElse(List.of())) {
             if (action instanceof GrantSpiritRootAction(
@@ -121,12 +122,16 @@ public final class ItemBindingTooltipAppender {
         }
     }
 
-    private static void appendPill(Consumer<Component> builder, @Nullable Holder<PillBinding> identity, Pill effects,
-                                   Player player) {
-        if (DefinitionText.resolved(effects.name()))
-            builder.accept(effects.name().copy().withStyle(ChatFormatting.LIGHT_PURPLE));
-        if (DefinitionText.resolved(effects.description()) && !effects.description().getString().isBlank())
-            builder.accept(effects.description().copy().withStyle(ChatFormatting.GRAY));
+    private static void appendPill(Consumer<Component> builder, @Nullable Holder<PillBinding> identity,
+                                   @Nullable Holder<Pill> definition, Pill effects, Player player) {
+        // A dose named by its own component over defaults has no definition to be named after, so it prints no
+        // heading rather than a made-up one.
+        if (definition != null) {
+            builder.accept(DefinitionText.name(definition).withStyle(ChatFormatting.LIGHT_PURPLE));
+            MutableComponent description = DefinitionText.description(definition);
+            if (DefinitionText.resolved(description) && !description.getString().isBlank())
+                builder.accept(description.withStyle(ChatFormatting.GRAY));
+        }
         double gain = effects.toxicityGain().evaluate(FormulaContext.EMPTY);
         double threshold = effects.toxicityThreshold().evaluate(FormulaContext.EMPTY);
         if (threshold >= Double.MAX_VALUE / 2.0D) {

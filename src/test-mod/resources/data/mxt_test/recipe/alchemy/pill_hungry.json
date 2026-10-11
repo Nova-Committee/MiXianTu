@@ -1,7 +1,5 @@
 {
   "type": "mxt:alchemy",
-  "name": "recipe.mxt.mxt_test.alchemy.pill_hungry",
-  "description": "recipe.mxt.mxt_test.alchemy.pill_hungry.description",
   "main_requirements": {
     "mxt_test:herb/main": 6,
     "mxt_test:alchemy/mark_pill_hungry": 1

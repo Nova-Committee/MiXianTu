@@ -308,7 +308,7 @@ public final class ForgingScreen extends AuiContainerScreen<ForgingMenu> {
             this.showQuality("", "#FFFFFF");
             return;
         }
-        Component name = QualityService.coloredName(quality, quality.value().name());
+        Component name = QualityService.displayName(quality);
         TextColor color = name.getStyle().getColor();
         this.showQuality(Component.translatable("screen.mxt.forging.quality", name).getString(),
                 color == null ? "#FFFFFF" : String.format("#%06X", color.getValue()));
@@ -444,7 +444,7 @@ public final class ForgingScreen extends AuiContainerScreen<ForgingMenu> {
         // run is committed to. Each row is named in its own tier's colour.
         lines.add(Component.translatable("tooltip.mxt.forging.quality_tiers").withStyle(ChatFormatting.GOLD));
         for (ForgingBlueprint.QualityThreshold tier : blueprint.qualityByExtraSteps()) {
-            Component name = QualityService.coloredName(tier.quality(), tier.quality().value().name());
+            Component name = QualityService.displayName(tier.quality());
             lines.add(tier.maxExtraSteps() == Integer.MAX_VALUE
                     ? Component.translatable("tooltip.mxt.forging.quality_tier.unbounded", name)
                     : Component.translatable("tooltip.mxt.forging.quality_tier", name, tier.maxExtraSteps()));

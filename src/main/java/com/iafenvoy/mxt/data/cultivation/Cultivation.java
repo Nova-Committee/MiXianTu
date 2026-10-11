@@ -1,6 +1,5 @@
 package com.iafenvoy.mxt.data.cultivation;
 
-import com.iafenvoy.mxt.api.NamedDefinition;
 import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.aura.AuraGain;
@@ -9,9 +8,7 @@ import com.iafenvoy.mxt.data.cost.Cost;
 import com.iafenvoy.mxt.data.cost.Costs;
 import com.iafenvoy.mxt.data.cost.builtin.AuraCost;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.codec.CollectionCodecs;
-import com.iafenvoy.mxt.util.codec.ContextNameCodec;
 import com.iafenvoy.mxt.util.codec.MiscCodecs;
 import com.iafenvoy.mxt.util.codec.TolerantListCodec;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
@@ -33,7 +30,7 @@ import java.util.Optional;
  * such a yielding tick runs. The environment is part of the condition context, so a pack asks for the place it wants
  * instead of naming a kind of aura; {@code abort_reason} names the upkeep abort alone.
  */
-public record Cultivation(Component name, Component description, int priority,
+public record Cultivation(int priority,
                           EntityCondition startCondition,
                           EntityCondition cultivateCondition, EntityAction cultivateAction,
                           EntityCondition tickCondition, EntityAction tickAction,
@@ -41,8 +38,7 @@ public record Cultivation(Component name, Component description, int priority,
                           List<Cost> costs, NumberProvider absorbAmount,
                           List<Cost> auraCosts, List<AuraGain> auraGains,
                           int cooldownTicks,
-                          Optional<Component> abortReason) implements NamedDefinition {
-    private static final String CATEGORY = DefinitionText.category(MxtResourceKeys.CULTIVATION.identifier());
+                          Optional<Component> abortReason)  {
     // The pre-Cost aura map is still read as a list of mxt:aura entries; writing always emits the list form.
     private static final Codec<List<Cost>> AURA_COSTS = Codec.either(
             CollectionCodecs.map(Aura.CODEC, NumberProvider.CODEC), Cost.LIST_CODEC).xmap(
@@ -51,8 +47,6 @@ public record Cultivation(Component name, Component description, int priority,
             Either::right).validate(Costs::validateAuras);
     public static final Codec<Holder<Cultivation>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.CULTIVATION);
     public static final Codec<Cultivation> DIRECT_CODEC = RecordCodecBuilder.create(i -> i.group(
-            ContextNameCodec.name(CATEGORY).forGetter(Cultivation::name),
-            ContextNameCodec.description(CATEGORY).forGetter(Cultivation::description),
             Codec.INT.optionalFieldOf("priority", 0).forGetter(Cultivation::priority),
             EntityCondition.optionalCodec("start_condition").forGetter(Cultivation::startCondition),
             EntityCondition.optionalCodec("cultivate_condition").forGetter(Cultivation::cultivateCondition),

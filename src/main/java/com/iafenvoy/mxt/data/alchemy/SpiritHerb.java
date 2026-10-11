@@ -1,14 +1,11 @@
 package com.iafenvoy.mxt.data.alchemy;
 
-import com.iafenvoy.mxt.api.NamedDefinition;
 import com.iafenvoy.mxt.data.condition.BlockCondition;
 import com.iafenvoy.mxt.data.cost.Cost;
 import com.iafenvoy.mxt.data.cost.Costs;
 import com.iafenvoy.mxt.data.cultivation.Element;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.util.DefinitionText;
-import com.iafenvoy.mxt.util.codec.ContextNameCodec;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.iafenvoy.mxt.util.formula.number.Constant;
@@ -18,7 +15,6 @@ import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.RegistryFixedCodec;
 import net.minecraft.tags.TagKey;
@@ -35,23 +31,20 @@ import java.util.Optional;
  * the herb unsowable and dropless but still usable in a furnace. Overlapping entries resolve by {@code priority}:
  * the highest wins, and a tie keeps registry order.
  */
-public record SpiritHerb(List<Either<Holder<Block>, TagKey<Block>>> blocks, Component name, Component description,
+public record SpiritHerb(List<Either<Holder<Block>, TagKey<Block>>> blocks,
                          int defaultAge, List<AgeQuality> qualityByAge,
                          List<Either<Holder<Element>, TagKey<Element>>> elementTags,
                          List<Identifier> materialTags, Map<Holder<MedicinalProperty>, NumberProvider> mainEffects,
                          Map<Holder<MedicinalProperty>, NumberProvider> auxiliaryEffects,
                          NumberProvider catalystPower, double thermalBias,
-                         Optional<Growth> growth, int priority) implements NamedDefinition {
+                         Optional<Growth> growth, int priority)  {
     public static final int DEFAULT_PRIORITY = 0;
-    private static final String CATEGORY = DefinitionText.category(MxtResourceKeys.SPIRIT_HERB.identifier());
     // A bad property reference fails the whole entry. The shared map codec would log it and keep going.
     private static final Codec<Map<Holder<MedicinalProperty>, NumberProvider>> EFFECTS =
             Codec.unboundedMap(MedicinalProperty.CODEC, NumberProvider.CODEC);
     public static final Codec<Holder<SpiritHerb>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.SPIRIT_HERB);
     public static final Codec<SpiritHerb> DIRECT_CODEC = RecordCodecBuilder.<SpiritHerb>create(i -> i.group(
             RegistryCodecs.holderOrTagList(Registries.BLOCK).fieldOf("blocks").forGetter(SpiritHerb::blocks),
-            ContextNameCodec.name(CATEGORY).forGetter(SpiritHerb::name),
-            ContextNameCodec.description(CATEGORY).forGetter(SpiritHerb::description),
             Codec.intRange(0, Integer.MAX_VALUE).optionalFieldOf("default_age", 0).forGetter(SpiritHerb::defaultAge),
             AgeQuality.CODEC.listOf().optionalFieldOf("quality_by_age", List.of()).forGetter(SpiritHerb::qualityByAge),
             RegistryCodecs.holderOrTagList(MxtResourceKeys.ELEMENT).optionalFieldOf("element_tags", List.of()).forGetter(SpiritHerb::elementTags),

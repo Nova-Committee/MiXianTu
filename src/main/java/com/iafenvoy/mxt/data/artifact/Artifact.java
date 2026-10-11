@@ -1,6 +1,5 @@
 package com.iafenvoy.mxt.data.artifact;
 
-import com.iafenvoy.mxt.api.NamedDefinition;
 import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.action.ItemAction;
 import com.iafenvoy.mxt.data.action.builtin.item.ConsumeHealthItemAction;
@@ -8,9 +7,7 @@ import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.data.cultivation.Element;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.codec.CollectionCodecs;
-import com.iafenvoy.mxt.util.codec.ContextNameCodec;
 import com.iafenvoy.mxt.util.codec.MiscCodecs;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
@@ -21,7 +18,6 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
-import net.minecraft.network.chat.Component;
 import net.minecraft.resources.RegistryFixedCodec;
 import net.minecraft.tags.TagKey;
 
@@ -38,13 +34,13 @@ import java.util.Map;
  * them. An artifact never holds an ability of its own, so every one it grants can also be granted by a book, a
  * command or a script, and the id it is granted under is the registry id in all four cases.
  */
-public record Artifact(Component name, Component description, List<Entry> items,
+public record Artifact(List<Entry> items,
                        Map<Holder<Aura>, NumberProvider> spiritCapacity,
                        List<Either<Holder<Ability>, TagKey<Ability>>> abilities, boolean curiosEquipable,
                        boolean requireOwner, ItemAction claimAction, EntityCondition claimCondition,
                        ItemAction pourAction, ItemAction useAction, NumberProvider holdTicks,
                        List<Either<Holder<Element>, TagKey<Element>>> element, double attachmentMultiplier,
-                       int priority) implements ItemMatcher, NamedDefinition {
+                       int priority) implements ItemMatcher {
     // Two hearts.
     public static final double DEFAULT_CLAIM_HEALTH = 4.0D;
     // One second.
@@ -53,10 +49,7 @@ public record Artifact(Component name, Component description, List<Entry> items,
     // (mxt:no_op) or charges something else.
     public static final ItemAction DEFAULT_CLAIM_ACTION = new ConsumeHealthItemAction(new Constant(DEFAULT_CLAIM_HEALTH));
     public static final Codec<Holder<Artifact>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.ARTIFACT);
-    private static final String CATEGORY = DefinitionText.category(MxtResourceKeys.ARTIFACT.identifier());
     private static final MapCodec<Artifact> RAW_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
-            ContextNameCodec.name(CATEGORY).forGetter(Artifact::name),
-            ContextNameCodec.description(CATEGORY).forGetter(Artifact::description),
             ENTRIES_CODEC.fieldOf("items").forGetter(Artifact::items),
             CollectionCodecs.map(Aura.CODEC, NumberProvider.CODEC).optionalFieldOf("spirit_capacity", Map.of()).forGetter(Artifact::spiritCapacity),
             RegistryCodecs.holderOrTagList(MxtResourceKeys.ABILITY).optionalFieldOf("abilities", List.of()).forGetter(Artifact::abilities),

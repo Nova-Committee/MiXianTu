@@ -139,7 +139,7 @@ public final class ArtifactDescription {
             }
             boolean pressable = ability.type() instanceof Togglable;
             lines.add(Component.translatable(pressable ? "tooltip.mxt.artifact.active" : "tooltip.mxt.artifact.passive",
-                            ability.name())
+                            DefinitionText.name(entry))
                     .withStyle(pressable ? ChatFormatting.AQUA : ChatFormatting.BLUE));
         }
     }

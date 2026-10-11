@@ -118,7 +118,7 @@ public final class ItemBindingService {
             return component == null ? PillResolution.none()
                     : PillResolution.componentOnly(component.applyTo(Pill.defaults()));
         Pill effects = component == null ? source.value() : component.applyTo(source.value());
-        return identity == null ? PillResolution.componentOnly(effects) : PillResolution.bound(identity, effects);
+        return identity == null ? PillResolution.componentOnly(source, effects) : PillResolution.bound(identity, source, effects);
     }
 
     // What a stack teaches is the stack's own mxt:technique component; the declaration for that technique only
@@ -325,24 +325,30 @@ public final class ItemBindingService {
 
     /**
      * One pill reading. {@code identity} is the matched binding that owns the counters; empty for a component-only
-     * dose. {@code effects} is the pill that actually runs, already overlaid. {@code unbound} is a named pill that
-     * is no longer in the registry: it must not fall back to another pill or to defaults.
+     * dose. {@code definition} is the pill the dose is named after, which a component-only dose over defaults has
+     * none of. {@code effects} is the pill that actually runs, already overlaid. {@code unbound} is a named pill
+     * that is no longer in the registry: it must not fall back to another pill or to defaults.
      */
-    public record PillResolution(Optional<Holder<PillBinding>> identity, Optional<Pill> effects, boolean unbound) {
+    public record PillResolution(Optional<Holder<PillBinding>> identity, Optional<Holder<Pill>> definition,
+                                 Optional<Pill> effects, boolean unbound) {
         public static PillResolution none() {
-            return new PillResolution(Optional.empty(), Optional.empty(), false);
+            return new PillResolution(Optional.empty(), Optional.empty(), Optional.empty(), false);
         }
 
         public static PillResolution unbound(Holder<Pill> pill) {
-            return new PillResolution(Optional.empty(), Optional.empty(), true);
+            return new PillResolution(Optional.empty(), Optional.of(pill), Optional.empty(), true);
         }
 
-        public static PillResolution bound(Holder<PillBinding> holder, Pill effects) {
-            return new PillResolution(Optional.of(holder), Optional.of(effects), false);
+        public static PillResolution bound(Holder<PillBinding> holder, Holder<Pill> definition, Pill effects) {
+            return new PillResolution(Optional.of(holder), Optional.of(definition), Optional.of(effects), false);
+        }
+
+        public static PillResolution componentOnly(Holder<Pill> definition, Pill effects) {
+            return new PillResolution(Optional.empty(), Optional.of(definition), Optional.of(effects), false);
         }
 
         public static PillResolution componentOnly(Pill effects) {
-            return new PillResolution(Optional.empty(), Optional.of(effects), false);
+            return new PillResolution(Optional.empty(), Optional.empty(), Optional.of(effects), false);
         }
 
         public boolean present() {

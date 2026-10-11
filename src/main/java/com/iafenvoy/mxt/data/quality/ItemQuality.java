@@ -1,11 +1,8 @@
 package com.iafenvoy.mxt.data.quality;
 
-import com.iafenvoy.mxt.api.NamedDefinition;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.data.cost.Cost;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.util.DefinitionText;
-import com.iafenvoy.mxt.util.codec.ContextNameCodec;
 import com.iafenvoy.mxt.util.codec.MiscCodecs;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.iafenvoy.mxt.util.formula.number.Constant;
@@ -26,22 +23,19 @@ import java.util.Optional;
  * {@code upgrade_condition} are the price of that one step. The order, the entry tier and the membership rule are
  * all derived from those links at runtime, so a pack writes each tier once.
  *
- * <p>{@code name} and {@code description} may be omitted, in which case they are the entry's own translation
- * keys; each modifier's own {@code description} is shown only when the pack writes one.
+ * <p>Each modifier's own {@code description} is a field of that modifier and is shown only when a pack writes one.
+ * The tier itself carries no text: its name and description are always the keys generated from its own id.
  *
  * <p>{@code color} is optional and is the pack's own answer to "what colour is this tier": every place that names
  * a quality tints with it, and a quality without one is drawn exactly as it always was.
  */
-public record ItemQuality(Component name, Component description, Optional<Integer> color, Modifier valueMultiplier,
+public record ItemQuality(Optional<Integer> color, Modifier valueMultiplier,
                           Modifier forgingModifier, Modifier alchemyModifier,
                           EntityCondition condition, Optional<Holder<ItemQuality>> next, List<Cost> upgradeCosts,
                           EntityCondition upgradeCondition,
-                          Optional<Identifier> quality) implements NamedDefinition {
-    private static final String CATEGORY = DefinitionText.category(MxtResourceKeys.ITEM_QUALITY.identifier());
+                          Optional<Identifier> quality)  {
     public static final Codec<Holder<ItemQuality>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.ITEM_QUALITY);
     public static final Codec<ItemQuality> DIRECT_CODEC = RecordCodecBuilder.create(i -> i.group(
-            ContextNameCodec.name(CATEGORY).forGetter(ItemQuality::name),
-            ContextNameCodec.description(CATEGORY).forGetter(ItemQuality::description),
             MiscCodecs.RGB_COLOR.optionalFieldOf("color").forGetter(ItemQuality::color),
             Modifier.CODEC.optionalFieldOf("value_multiplier", Modifier.DEFAULT).forGetter(ItemQuality::valueMultiplier),
             Modifier.CODEC.optionalFieldOf("forging_modifier", Modifier.DEFAULT).forGetter(ItemQuality::forgingModifier),

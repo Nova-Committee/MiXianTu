@@ -93,7 +93,7 @@ public final class ItemPickerManager {
             ItemStack stack = componentStack(MxtBlocks.ALCHEMY_FURNACE.toStack(), MxtDataComponents.ALCHEMY_FURNACE, holder);
             Component name = DefinitionText.name(holder);
             Component quality = QualityService.find(access, stack)
-                    .map(value -> QualityService.coloredName(value, value.value().name()))
+                    .map(QualityService::displayName)
                     .orElse(Component.translatable("screen.mxt.alchemy.no_quality"));
             return List.of(new PickerItem(stack, names(name, quality, idName(HolderHelper.idOrNull(holder)))));
         });
@@ -209,7 +209,7 @@ public final class ItemPickerManager {
                 Identifier id = HolderHelper.idOrNull(holder);
                 if (id == null || !filter.test(id)) continue;
                 items.add(described(MxtItems.IDENTIFICATION_MIRROR.toStack(), holder,
-                        QualityService.coloredName(holder, holder.value().name())));
+                        QualityService.displayName(holder)));
             }
             return List.copyOf(items);
         }));

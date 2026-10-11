@@ -1,7 +1,5 @@
 {
   "type": "mxt:alchemy",
-  "name": "recipe.mxt.mxt_test.alchemy.env_starved",
-  "description": "recipe.mxt.mxt_test.alchemy.env_starved.description",
   "main_requirements": {
     "mxt_test:herb/main": 6,
     "mxt_test:alchemy/mark_starved": 1
