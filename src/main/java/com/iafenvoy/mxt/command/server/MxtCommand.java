@@ -1,6 +1,7 @@
 package com.iafenvoy.mxt.command.server;
 
 import com.iafenvoy.mxt.attachment.*;
+import com.iafenvoy.mxt.command.RegistryReferences;
 import com.iafenvoy.mxt.command.ServerCommandManager;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.cultivation.Cultivation;
@@ -45,6 +46,7 @@ import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import net.minecraft.commands.CommandBuildContext;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.SharedSuggestionProvider;
+import net.minecraft.commands.arguments.DimensionArgument;
 import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.commands.arguments.IdentifierArgument;
 import net.minecraft.commands.arguments.ResourceArgument;
@@ -108,35 +110,32 @@ public final class MxtCommand {
                                 .executes(ctx -> attemptBreakthrough(ctx.getSource(), aura(ctx)))))
                 .then(literal("secret_realm").requires(ServerCommandManager::mayChange)
                         .then(literal("list").executes(ctx -> listSecretRealms(ctx.getSource())))
-                        .then(literal("info").then(argument("dimension", IdentifierArgument.id())
-                                .executes(ctx -> secretRealmInfo(ctx.getSource(), IdentifierArgument.getId(ctx, "dimension")))))
+                        .then(literal("info").then(argument("dimension", DimensionArgument.dimension())
+                                .executes(ctx -> secretRealmInfo(ctx.getSource(), RegistryReferences.dimension(ctx, "dimension")))))
                         .then(literal("enter").then(argument("definition", ResourceArgument.resource(context, MxtResourceKeys.SECRET_REALM))
                                 .executes(ctx -> enterSecretRealm(ctx.getSource(), secretRealm(ctx)))))
                         .then(literal("exit").executes(ctx -> exitSecretRealm(ctx.getSource())))
-                        .then(literal("destroy").then(argument("dimension", IdentifierArgument.id())
-                                .executes(ctx -> destroySecretRealm(ctx.getSource(), IdentifierArgument.getId(ctx, "dimension"))))))
+                        .then(literal("destroy").then(argument("dimension", DimensionArgument.dimension())
+                                .executes(ctx -> destroySecretRealm(ctx.getSource(), RegistryReferences.dimension(ctx, "dimension"))))))
                 .then(literal("rift").requires(ServerCommandManager::mayChange)
                         .then(literal("info").then(argument("pos", BlockPosArgument.blockPos())
                                 .executes(ctx -> riftInfo(ctx.getSource(), BlockPosArgument.getBlockPos(ctx, "pos")))))
                         .then(literal("target").then(argument("pos", BlockPosArgument.blockPos())
-                                .then(argument("dimension", IdentifierArgument.id())
-                                        .suggests(MxtCommand::suggestDimensions)
+                                .then(argument("dimension", DimensionArgument.dimension())
                                         .executes(ctx -> setRiftTarget(ctx.getSource(), BlockPosArgument.getBlockPos(ctx, "pos"),
-                                                IdentifierArgument.getId(ctx, "dimension"))))))
+                                                RegistryReferences.dimension(ctx, "dimension"))))))
                         .then(literal("color").then(argument("pos", BlockPosArgument.blockPos())
                                 .then(argument("color", StringArgumentType.word())
                                         .executes(ctx -> setRiftColor(ctx.getSource(), BlockPosArgument.getBlockPos(ctx, "pos"),
                                                 StringArgumentType.getString(ctx, "color"))))))
                         .then(literal("place").then(argument("pos", BlockPosArgument.blockPos())
-                                .then(argument("dimension", IdentifierArgument.id())
-                                        .suggests(MxtCommand::suggestDimensions)
+                                .then(argument("dimension", DimensionArgument.dimension())
                                         .executes(ctx -> placeRift(ctx.getSource(), BlockPosArgument.getBlockPos(ctx, "pos"),
-                                                IdentifierArgument.getId(ctx, "dimension"))))))
-                        .then(literal("bind").then(argument("dimension", IdentifierArgument.id())
-                                .suggests(MxtCommand::suggestDimensions)
-                                .executes(ctx -> bindRiftAnchor(ctx.getSource(), IdentifierArgument.getId(ctx, "dimension"), null))
+                                                RegistryReferences.dimension(ctx, "dimension"))))))
+                        .then(literal("bind").then(argument("dimension", DimensionArgument.dimension())
+                                .executes(ctx -> bindRiftAnchor(ctx.getSource(), RegistryReferences.dimension(ctx, "dimension"), null))
                                 .then(argument("color", StringArgumentType.word())
-                                        .executes(ctx -> bindRiftAnchor(ctx.getSource(), IdentifierArgument.getId(ctx, "dimension"),
+                                        .executes(ctx -> bindRiftAnchor(ctx.getSource(), RegistryReferences.dimension(ctx, "dimension"),
                                                 StringArgumentType.getString(ctx, "color")))))))
                 .then(literal("soul").then(literal("reclaim").requires(ServerCommandManager::mayChange)
                         .executes(ctx -> reclaimSoul(ctx.getSource()))))
@@ -240,7 +239,7 @@ public final class MxtCommand {
         ServerPlayer player = source.getPlayer();
         if (player == null) return 0;
         double value = player.getData(MxtAttachments.RESOURCE_HOLDER).get(resource);
-        source.sendSuccess(() -> Component.translatable("command.mxt.resource.query", DefinitionText.name(resource, "resource"), value), false);
+        source.sendSuccess(() -> Component.translatable("command.mxt.resource.query", DefinitionText.name(resource), value), false);
         return 1;
     }
 
@@ -248,7 +247,7 @@ public final class MxtCommand {
         ServerPlayer player = source.getPlayer();
         if (player == null) return 0;
         player.getData(MxtAttachments.RESOURCE_HOLDER).set(resource, value);
-        source.sendSuccess(() -> Component.translatable("command.mxt.resource.set", DefinitionText.name(resource, "resource"), value), true);
+        source.sendSuccess(() -> Component.translatable("command.mxt.resource.set", DefinitionText.name(resource), value), true);
         return 1;
     }
 
@@ -288,13 +287,12 @@ public final class MxtCommand {
 
     private static void sendResourceBar(CommandSourceStack source, ServerPlayer player, Reference<Resource> resource,
                                         int index, ResourceBar bar) {
-        Identifier resourceId = HolderHelper.id(resource);
         String contextId = String.valueOf(MxtRegistries.RESOURCE_BAR_CONTEXT.getKey(bar.context()));
-        Component displayName = bar.context().name(resourceId);
+        Component displayName = bar.context().name(resource);
         Optional<Values> extracted = extractResourceBarValues(player, resource, bar.context());
         if (extracted.isEmpty()) {
             source.sendSuccess(() -> Component.translatable("command.mxt.resourcebar.unavailable",
-                    DefinitionText.name(resourceId, "resource"), index, displayName, contextId), false);
+                    DefinitionText.name(resource), index, displayName, contextId), false);
             return;
         }
         Values values = extracted.get();
@@ -302,7 +300,7 @@ public final class MxtCommand {
         double percentage = maximum == values.minimum() ? 100.0D
                 : (values.current() - values.minimum()) / (maximum - values.minimum()) * 100.0D;
         source.sendSuccess(() -> Component.translatable("command.mxt.resourcebar.entry",
-                DefinitionText.name(resourceId, "resource"), index, displayName, contextId,
+                DefinitionText.name(resource), index, displayName, contextId,
                 formatRaw(values.current()), formatRaw(values.minimum()), formatRaw(maximum), formatRaw(percentage),
                 bar.anchor().getSerializedName(), bar.order()), false);
     }
@@ -339,10 +337,10 @@ public final class MxtCommand {
             return 0;
         }
         CultivationAttachment spirit = player.getData(MxtAttachments.CULTIVATION);
-        Component action = spirit.cultivation().<Component>map(id -> DefinitionText.name(id, "cultivation")).orElseGet(() -> Component.translatable("command.mxt.none"));
+        Component action = spirit.cultivation().<Component>map(DefinitionText::name).orElseGet(() -> Component.translatable("command.mxt.none"));
         Component progress = spirit.cultivationProgresses().isEmpty() ? Component.translatable("command.mxt.none")
                 : Component.literal(spirit.cultivationProgresses().object2DoubleEntrySet().stream()
-                .map(entry -> DefinitionText.name(entry.getKey(), "aura").getString() + "="
+                .map(entry -> DefinitionText.name(entry.getKey()).getString() + "="
                         + String.format(Locale.ROOT, "%.2f", entry.getDoubleValue()))
                 .collect(Collectors.joining(", ")));
         source.sendSuccess(() -> Component.translatable("command.mxt.cultivate.status", action, progress, spirit.nextCultivateTick()), false);
@@ -361,12 +359,12 @@ public final class MxtCommand {
         if (!result.started()) {
             String failure = result.failure() == null ? "not_applicable" : result.failure().name().toLowerCase(Locale.ROOT);
             source.sendFailure(Component.translatable("command.mxt.cultivate.select.failed",
-                    DefinitionText.name(action, "cultivation"),
+                    DefinitionText.name(action),
                     Component.translatable("actionbar.mxt.cultivation.failure." + failure)));
             return 0;
         }
         source.sendSuccess(() -> Component.translatable("command.mxt.cultivate.select.done",
-                DefinitionText.name(action, "cultivation")), true);
+                DefinitionText.name(action)), true);
         return 1;
     }
 
@@ -384,7 +382,7 @@ public final class MxtCommand {
             source.sendFailure(Component.translatable("command.mxt.breakthrough.failed", reason));
             return 0;
         }
-        source.sendSuccess(() -> Component.translatable("command.mxt.breakthrough.success", DefinitionText.name(aura, "aura")), true);
+        source.sendSuccess(() -> Component.translatable("command.mxt.breakthrough.success", DefinitionText.name(aura)), true);
         return 1;
     }
 
@@ -433,7 +431,7 @@ public final class MxtCommand {
                     result.failure().name())));
             return 0;
         }
-        source.sendSuccess(() -> Component.translatable("command.mxt.secret_realm.entered", DefinitionText.name(definition, "secret_realm")), true);
+        source.sendSuccess(() -> Component.translatable("command.mxt.secret_realm.entered", DefinitionText.name(definition)), true);
         return 1;
     }
 
@@ -465,11 +463,6 @@ public final class MxtCommand {
         }
         source.sendSuccess(() -> Component.translatable("command.mxt.secret_realm.destroyed", dimension.toString()), true);
         return 1;
-    }
-
-    private static CompletableFuture<Suggestions> suggestDimensions(CommandContext<CommandSourceStack> context, SuggestionsBuilder builder) {
-        return SharedSuggestionProvider.suggest(context.getSource().getServer().levelKeys().stream()
-                .map(key -> key.identifier().toString()).sorted().toList(), builder);
     }
 
     @Nullable

@@ -118,7 +118,7 @@ public final class ResourceBarOverlay {
                     continue;
                 result.add(new ResourceBarRenderState(
                         bar.context(), bar.anchor(), bar.order(), id, index, current, minimum, maximum, bar.renderer(),
-                        0, 0, Optional.of(bar.context().name(id)), bar.valueDisplay()));
+                        0, 0, Optional.of(bar.context().name(resource)), bar.valueDisplay()));
             }
         }
     }

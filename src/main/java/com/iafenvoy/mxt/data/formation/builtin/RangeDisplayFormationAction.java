@@ -1,6 +1,7 @@
 package com.iafenvoy.mxt.data.formation.builtin;
 
 import com.iafenvoy.mxt.data.formation.FormationActionType;
+import com.iafenvoy.mxt.data.formation.FormationIntervals;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -20,9 +21,7 @@ public record RangeDisplayFormationAction(ParticleOptions particle, int interval
                                           Shape shape) implements FormationActionType {
     public static final MapCodec<RangeDisplayFormationAction> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             ParticleTypes.CODEC.fieldOf("particle").forGetter(RangeDisplayFormationAction::particle),
-            // The upper bound is a courtesy, not a rule: one packet per point per nearby player per
-            // period is the real cost, so a definition can make itself expensive but not unreadable.
-            Codec.intRange(1, 1200).optionalFieldOf("interval_periods", 1).forGetter(RangeDisplayFormationAction::intervalPeriods),
+            FormationIntervals.CODEC.optionalFieldOf("interval_periods", 1).forGetter(RangeDisplayFormationAction::intervalPeriods),
             Codec.intRange(1, 512).optionalFieldOf("points", 32).forGetter(RangeDisplayFormationAction::points),
             Shape.CODEC.optionalFieldOf("shape", Shape.RING).forGetter(RangeDisplayFormationAction::shape)
     ).apply(i, RangeDisplayFormationAction::new));

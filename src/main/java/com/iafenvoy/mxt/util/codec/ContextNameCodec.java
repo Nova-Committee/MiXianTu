@@ -35,7 +35,7 @@ public class ContextNameCodec extends MapCodec<Component> {
      * The definition's own description, in the {@code description} field.
      */
     public static MapCodec<Component> description(String category) {
-        return new ContextNameCodec("description", category, ".description");
+        return new ContextNameCodec("description", category, DefinitionText.DESCRIPTION_SUFFIX);
     }
 
     @Override

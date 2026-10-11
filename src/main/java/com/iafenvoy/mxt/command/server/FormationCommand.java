@@ -93,7 +93,7 @@ public final class FormationCommand {
         Formation formation = definition.value();
         if (formation.structureCheck() == Formation.StructureCheck.ALWAYS) {
             source.sendFailure(Component.translatable("command.mxt.formation.show.none",
-                    DefinitionText.name(definition, "formation")));
+                    DefinitionText.name(definition)));
             return 0;
         }
         List<RequiredBlock> structure = FormationStructures.declared(source.getLevel(), formation);
@@ -108,9 +108,9 @@ public final class FormationCommand {
             return 0;
         }
         PacketDistributor.sendToPlayer(player, new FormationStructureS2CPayload(
-                DefinitionText.name(definition, "formation"), structure));
+                DefinitionText.name(definition), structure));
         source.sendSuccess(() -> Component.translatable("command.mxt.formation.show.done",
-                DefinitionText.name(definition, "formation"), structure.size()), false);
+                DefinitionText.name(definition), structure.size()), false);
         return structure.size();
     }
 
@@ -125,12 +125,12 @@ public final class FormationCommand {
         FormationPlateComponent plate = stack.getOrDefault(MxtDataComponents.FORMATION_PLATE, FormationPlateComponent.EMPTY);
         if (!plate.admits(definition)) {
             source.sendFailure(Component.translatable("command.mxt.formation.bind.denied",
-                    DefinitionText.name(definition, "formation")));
+                    DefinitionText.name(definition)));
             return 0;
         }
         stack.set(MxtDataComponents.FORMATION_PLATE, new FormationPlateComponent(plate.allowed(), Optional.of(definition)));
         source.sendSuccess(() -> Component.translatable("command.mxt.formation.bind.done",
-                DefinitionText.name(definition, "formation")), false);
+                DefinitionText.name(definition)), false);
         return 1;
     }
 

@@ -1532,8 +1532,19 @@ public final class MxtTestCommands {
         if (!metal.value().description().getString().equals("The fixture's metal element."))
             return "the written element description reads " + metal.value().description().getString();
         if (!DefinitionText.name(qi).getString().equals(qi.value().name().getString())
-                || !DefinitionText.name(metal, "element").getString().equals(metal.value().name().getString()))
+                || !DefinitionText.name(metal).getString().equals(metal.value().name().getString()))
             return "the display path does not read the definition's own text";
+        // The description accessor reads the same field off the same holder, so a written description is what a
+        // tooltip draws and an omitted one still derives the key the codec defaulted from.
+        if (!DefinitionText.description(qi).getString().equals(qi.value().description().getString())
+                || !DefinitionText.description(metal).getString().equals(metal.value().description().getString()))
+            return "the description path does not read the definition's own text";
+        // No language file is loaded here, so a derived key must not count as drawn text while the fixture's literal
+        // must: that guard is what keeps an unwritten description out of a tooltip.
+        if (DefinitionText.resolved(DefinitionText.description(qi)))
+            return "an untranslated description key counts as drawn text";
+        if (!DefinitionText.resolved(DefinitionText.description(metal)))
+            return "a written description does not count as drawn text";
         // The loader is the only thing that puts the id on the ops, so decoding a definition here proves the
         // accessor is really mixed into RegistryOps; the fixtures above prove the loader itself sets it.
         RegistryOps<JsonElement> ops = RegistryOps.create(JsonOps.INSTANCE, player.level().registryAccess());

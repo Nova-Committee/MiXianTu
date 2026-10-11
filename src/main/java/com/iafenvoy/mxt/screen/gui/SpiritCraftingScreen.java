@@ -98,7 +98,7 @@ public final class SpiritCraftingScreen extends AuiContainerScreen<SpiritCraftin
             // The aura's own particle colour, lifted so it stays readable on the dark skin.
             String color = AuiStyles.hex(AuiStyles.readableOnDark(aura.value().resource().value().particleColor()));
             int filled = required <= 0 ? 0 : Math.round(BAR_WIDTH * amount / (float) required);
-            row.show(AURA_PADDING + index * pitch, DefinitionText.name(aura, "aura").getString(),
+            row.show(AURA_PADDING + index * pitch, DefinitionText.name(aura).getString(),
                     amount + " / " + required, color, filled);
         }
     }

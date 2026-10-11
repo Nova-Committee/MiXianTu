@@ -19,5 +19,4 @@ public final class MxtLootConditions {
     public static final DeferredHolder<MapCodec<? extends LootItemCondition>, MapCodec<HasElementLootCondition>> HAS_ELEMENT = REGISTRY.register("has_element", () -> HasElementLootCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends LootItemCondition>, MapCodec<HasPhysiqueLootCondition>> HAS_PHYSIQUE = REGISTRY.register("has_physique", () -> HasPhysiqueLootCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends LootItemCondition>, MapCodec<HasTechniqueLootCondition>> TECHNIQUE = REGISTRY.register("technique", () -> HasTechniqueLootCondition.CODEC);
-    public static final DeferredHolder<MapCodec<? extends LootItemCondition>, MapCodec<JsLootCondition>> JS = REGISTRY.register("js", () -> JsLootCondition.CODEC);
 }

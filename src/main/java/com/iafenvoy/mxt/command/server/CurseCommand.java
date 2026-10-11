@@ -2,8 +2,8 @@ package com.iafenvoy.mxt.command.server;
 
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.attachment.CurseHolderAttachment.State;
+import com.iafenvoy.mxt.command.RegistryReferences;
 import com.iafenvoy.mxt.command.ServerCommandManager;
-import com.iafenvoy.mxt.command.Suggestions;
 import com.iafenvoy.mxt.data.curse.Curse;
 import com.iafenvoy.mxt.event.CurseRemoveEvent.Reason;
 import com.iafenvoy.mxt.registry.MxtAttachments;
@@ -24,6 +24,7 @@ import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.commands.arguments.IdentifierArgument;
 import net.minecraft.commands.arguments.ResourceArgument;
+import net.minecraft.commands.arguments.ResourceKeyArgument;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
 import net.minecraft.network.chat.Component;
@@ -65,12 +66,11 @@ public final class CurseCommand {
                                                         .executes(ctx -> apply(ctx,
                                                                 IntegerArgumentType.getInteger(ctx, "stacks"),
                                                                 OptionalLong.of(LongArgumentType.getLong(ctx, "duration_ticks")))))))))
-                // IdentifierArgument, not ResourceArgument: an instance whose definition is gone is still held, and
-                // naming it here is the only way to take it off.
+                // ResourceKeyArgument, not ResourceArgument: an instance whose definition is gone is still held, and
+                // naming it here is the only way to take it off; the key never has to resolve.
                 .then(literal("remove").requires(ServerCommandManager::mayChange)
                         .then(argument("targets", EntityArgument.entities())
-                                .then(argument("curse", IdentifierArgument.id())
-                                        .suggests(Suggestions.enabledIds(MxtResourceKeys.CURSE))
+                                .then(argument("curse", ResourceKeyArgument.key(MxtResourceKeys.CURSE))
                                         .executes(CurseCommand::remove))))
                 .then(literal("cleanse").requires(ServerCommandManager::mayChange)
                         .then(argument("targets", EntityArgument.entities())
@@ -91,7 +91,7 @@ public final class CurseCommand {
         }
         long gameTime = target.level().getGameTime();
         for (Entry<Holder<Curse>, State> entry : instances.entrySet()) {
-            Component name = DefinitionText.name(entry.getKey(), "curse");
+            Component name = DefinitionText.name(entry.getKey());
             int stacks = entry.getValue().stacks();
             Component life = entry.getValue().expiresAt() < 0L
                     ? Component.translatable("info.mxt.curse.permanent")
@@ -115,10 +115,10 @@ public final class CurseCommand {
             if (result.applied()) {
                 applied++;
                 source.sendSuccess(() -> Component.translatable("command.mxt.curse.applied",
-                        DefinitionText.name(curse, "curse"), stacks, target.getDisplayName()), true);
+                        DefinitionText.name(curse), stacks, target.getDisplayName()), true);
             } else {
                 source.sendFailure(Component.translatable("command.mxt.curse.apply_failed",
-                        DefinitionText.name(curse, "curse"), target.getDisplayName(), String.valueOf(result.failure())));
+                        DefinitionText.name(curse), target.getDisplayName(), String.valueOf(result.failure())));
             }
         }
         return applied;
@@ -126,7 +126,7 @@ public final class CurseCommand {
 
     private static int remove(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         CommandSourceStack source = ctx.getSource();
-        Identifier id = IdentifierArgument.getId(ctx, "curse");
+        Identifier id = RegistryReferences.key(ctx, "curse", MxtResourceKeys.CURSE).identifier();
         Collection<? extends Entity> targets = EntityArgument.getEntities(ctx, "targets");
         // A definition that is no longer loaded cannot be looked up, but it can still be held; finding it on a
         // holder is the only way such a curse can be taken off at all.
@@ -139,9 +139,9 @@ public final class CurseCommand {
         for (Entity target : targets) {
             if (CurseService.remove(target, curse, Reason.EXPLICIT, target.level().getGameTime()).isPresent()) {
                 removed++;
-                source.sendSuccess(() -> Component.translatable("command.mxt.curse.removed", DefinitionText.name(curse, "curse"), target.getDisplayName()), true);
+                source.sendSuccess(() -> Component.translatable("command.mxt.curse.removed", DefinitionText.name(curse), target.getDisplayName()), true);
             } else {
-                source.sendFailure(Component.translatable("command.mxt.curse.remove_failed", target.getDisplayName(), DefinitionText.name(curse, "curse")));
+                source.sendFailure(Component.translatable("command.mxt.curse.remove_failed", target.getDisplayName(), DefinitionText.name(curse)));
             }
         }
         return removed;

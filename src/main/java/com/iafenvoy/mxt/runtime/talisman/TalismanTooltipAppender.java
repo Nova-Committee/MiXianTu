@@ -64,7 +64,7 @@ public final class TalismanTooltipAppender {
         } else {
             Set<Identifier> explained = new HashSet<>();
             for (Holder<Talisman> talisman : inscribed) {
-                builder.accept(Component.translatable("tooltip.mxt.talisman.entry", DefinitionText.name(talisman, "talisman")));
+                builder.accept(Component.translatable("tooltip.mxt.talisman.entry", DefinitionText.name(talisman)));
                 usageLine(talisman.value().type(), explained).ifPresent(builder);
             }
         }

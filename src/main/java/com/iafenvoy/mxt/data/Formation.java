@@ -43,15 +43,11 @@ import java.util.function.Function;
  * tier a plate carrying this array starts on, which several arrays sharing one built-in plate cannot state by item.
  */
 public record Formation(Component name, Component description, Optional<Holder<ItemQuality>> quality,
-                        Optional<Identifier> structureTemplate,
-                        StructureCheck structureCheck,
-                        List<RequiredBlock> structure,
-                        NumberProvider radius, List<Cost> activationCosts,
-                        List<Cost> maintenanceCosts, Optional<Storage> storage,
-                        List<FormationActionType> actions,
-                        boolean spareFriends, BlockAction activateAction,
-                        BlockAction tickAction, BlockAction deactivateAction,
-                        EntityAction entityTickAction, EntityAction entityEnterAction,
+                        Optional<Identifier> structureTemplate, StructureCheck structureCheck,
+                        List<RequiredBlock> structure, NumberProvider radius, List<Cost> activationCosts,
+                        List<Cost> maintenanceCosts, Optional<Storage> storage, List<FormationActionType> actions,
+                        boolean spareFriends, BlockAction activateAction, BlockAction tickAction,
+                        BlockAction deactivateAction, EntityAction entityTickAction, EntityAction entityEnterAction,
                         EntityAction entityExitAction) implements NamedDefinition, QualityProvider {
     private static final String CATEGORY = DefinitionText.category(MxtResourceKeys.FORMATION.identifier());
     public static final Codec<Holder<Formation>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.FORMATION);

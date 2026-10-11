@@ -109,7 +109,7 @@ public final class ArtifactDescription {
             int percentage = capacity <= 0 ? 0 : Math.clamp(Math.round(stored * 100.0D / capacity), 0, 100);
             Component amount = Component.literal(TooltipText.number(stored) + " / " + TooltipText.number(capacity))
                     .withColor(SpiritChargeService.color(percentage));
-            lines.add(Component.translatable("tooltip.mxt.artifact.aura", DefinitionText.name(aura, "aura"), amount)
+            lines.add(Component.translatable("tooltip.mxt.artifact.aura", DefinitionText.name(aura), amount)
                     .withStyle(ChatFormatting.GRAY));
         });
         double nourishment = ArtifactService.state(stack).nourishment();
@@ -164,13 +164,13 @@ public final class ArtifactDescription {
             ))
                 parts.add(Component.translatable("tooltip.mxt.artifact.resource_cost",
                         TooltipText.number(amount1.evaluate(formula)),
-                        DefinitionText.name(resource, "resource")));
+                        DefinitionText.name(resource)));
             else if (cost instanceof AuraCost(
                     Holder<Aura> aura, NumberProvider amount
             ))
                 parts.add(Component.translatable("tooltip.mxt.artifact.resource_cost",
                         TooltipText.number(amount.evaluate(formula)),
-                        DefinitionText.name(aura, "aura")));
+                        DefinitionText.name(aura)));
             else other = true;
         }
         if (other) parts.add(Component.translatable("tooltip.mxt.artifact.resource_cost_other"));

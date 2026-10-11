@@ -5,7 +5,6 @@ import com.iafenvoy.mxt.data.resourcebar.ResourceBarContext;
 import com.iafenvoy.mxt.util.DefinitionText;
 import net.minecraft.core.Holder;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.LivingEntity;
 
 import java.util.Optional;
@@ -19,8 +18,8 @@ public enum TargetOverlayContext implements ResourceBarContext {
     }
 
     @Override
-    public Component name(Identifier resourceId) {
-        return Component.translatable("hud.mxt.resource_bar.target_overlay", DefinitionText.name(resourceId, "resource"));
+    public Component name(Holder<Resource> resource) {
+        return Component.translatable("hud.mxt.resource_bar.target_overlay", DefinitionText.name(resource));
     }
 
     @Override

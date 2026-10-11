@@ -1,8 +1,8 @@
 package com.iafenvoy.mxt.command.server;
 
 import com.iafenvoy.mxt.attachment.SpiritIdentityAttachment;
+import com.iafenvoy.mxt.command.RegistryReferences;
 import com.iafenvoy.mxt.command.ServerCommandManager;
-import com.iafenvoy.mxt.command.Suggestions;
 import com.iafenvoy.mxt.data.cultivation.SpiritRoot;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
@@ -20,13 +20,14 @@ import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import net.minecraft.commands.CommandBuildContext;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.arguments.EntityArgument;
-import net.minecraft.commands.arguments.IdentifierArgument;
 import net.minecraft.commands.arguments.ResourceArgument;
+import net.minecraft.commands.arguments.ResourceKeyArgument;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import org.jetbrains.annotations.Nullable;
@@ -59,22 +60,19 @@ public final class SpiritRootCommand {
                         .then(argument("targets", EntityArgument.entities())
                                 .then(argument("root", ResourceArgument.resource(context, MxtResourceKeys.SPIRIT_ROOT))
                                         .executes(SpiritRootCommand::grant))))
-                // remove, enable and disable all name a reference the body holds rather than one the pack
-                // still provides, so they stay IdentifierArgument.
+                // remove, enable and disable all name a reference the body holds rather than one the pack still
+                // provides, so they take a bare registry key: ResourceArgument would refuse that id while parsing.
                 .then(literal("remove").requires(ServerCommandManager::mayChange)
                         .then(argument("targets", EntityArgument.entities())
-                                .then(argument("root", IdentifierArgument.id())
-                                        .suggests(Suggestions.enabledIds(MxtResourceKeys.SPIRIT_ROOT))
+                                .then(argument("root", ResourceKeyArgument.key(MxtResourceKeys.SPIRIT_ROOT))
                                         .executes(SpiritRootCommand::remove))))
                 .then(literal("enable").requires(ServerCommandManager::mayChange)
                         .then(argument("targets", EntityArgument.entities())
-                                .then(argument("root", IdentifierArgument.id())
-                                        .suggests(Suggestions.enabledIds(MxtResourceKeys.SPIRIT_ROOT))
+                                .then(argument("root", ResourceKeyArgument.key(MxtResourceKeys.SPIRIT_ROOT))
                                         .executes(ctx -> toggle(ctx, true)))))
                 .then(literal("disable").requires(ServerCommandManager::mayChange)
                         .then(argument("targets", EntityArgument.entities())
-                                .then(argument("root", IdentifierArgument.id())
-                                        .suggests(Suggestions.enabledIds(MxtResourceKeys.SPIRIT_ROOT))
+                                .then(argument("root", ResourceKeyArgument.key(MxtResourceKeys.SPIRIT_ROOT))
                                         .executes(ctx -> toggle(ctx, false)))));
     }
 
@@ -99,7 +97,7 @@ public final class SpiritRootCommand {
                     ? "command.mxt.identity.on" : "command.mxt.identity.off");
             Component bound = elements == null ? Component.empty() : Component.literal(" · ").append(elements);
             source.sendSuccess(() -> Component.translatable("command.mxt.identity.line",
-                    DefinitionText.name(root, "spirit_root"), quality, bound, state), false);
+                    DefinitionText.name(root), quality, bound, state), false);
         }
         return distinct.size();
     }
@@ -116,7 +114,7 @@ public final class SpiritRootCommand {
     }
 
     private static MutableComponent elementName(SpiritRoot.ElementWeight entry) {
-        MutableComponent name = Component.empty().append(DefinitionText.name(entry.element(), "element"));
+        MutableComponent name = Component.empty().append(DefinitionText.name(entry.element()));
         return entry.weight() == 1.0D ? name : name.append(Component.literal(" " + TooltipText.number(entry.weight())));
     }
 
@@ -132,19 +130,20 @@ public final class SpiritRootCommand {
             Result result = CultivationIdentityService.grantSpiritRoot(living, HolderHelper.id(root), root.value());
             if (!result.changed()) {
                 source.sendFailure(Component.translatable("command.mxt.identity.grant_failed",
-                        DefinitionText.name(root, "spirit_root"), target.getDisplayName(), reason(result.failure())));
+                        DefinitionText.name(root), target.getDisplayName(), reason(result.failure())));
                 continue;
             }
             granted++;
             source.sendSuccess(() -> Component.translatable("command.mxt.identity.granted",
-                    DefinitionText.name(root, "spirit_root"), target.getDisplayName()), true);
+                    DefinitionText.name(root), target.getDisplayName()), true);
         }
         return granted;
     }
 
     private static int remove(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         CommandSourceStack source = ctx.getSource();
-        Identifier id = IdentifierArgument.getId(ctx, "root");
+        ResourceKey<SpiritRoot> root = RegistryReferences.key(ctx, "root", MxtResourceKeys.SPIRIT_ROOT);
+        Identifier id = root.identifier();
         int removed = 0;
         for (Entity target : EntityArgument.getEntities(ctx, "targets")) {
             if (!(target instanceof LivingEntity living)) {
@@ -158,7 +157,7 @@ public final class SpiritRootCommand {
             }
             removed++;
             source.sendSuccess(() -> Component.translatable("command.mxt.identity.removed",
-                    DefinitionText.name(id, "spirit_root"), target.getDisplayName()), true);
+                    DefinitionText.name(root), target.getDisplayName()), true);
         }
         return removed;
     }
@@ -167,7 +166,8 @@ public final class SpiritRootCommand {
     // current pack no longer provides can still be switched off: the state is about the body.
     private static int toggle(CommandContext<CommandSourceStack> ctx, boolean enabled) throws CommandSyntaxException {
         CommandSourceStack source = ctx.getSource();
-        Identifier id = IdentifierArgument.getId(ctx, "root");
+        ResourceKey<SpiritRoot> key = RegistryReferences.key(ctx, "root", MxtResourceKeys.SPIRIT_ROOT);
+        Identifier id = key.identifier();
         int changed = 0;
         for (Entity target : EntityArgument.getEntities(ctx, "targets")) {
             if (!(target instanceof LivingEntity living)) {
@@ -185,7 +185,7 @@ public final class SpiritRootCommand {
             }
             changed++;
             source.sendSuccess(() -> Component.translatable("command.mxt.identity.toggled",
-                    DefinitionText.name(id, "spirit_root"), Component.translatable(enabled
+                    DefinitionText.name(root), Component.translatable(enabled
                             ? "command.mxt.identity.on" : "command.mxt.identity.off"), target.getDisplayName()), true);
         }
         return changed;

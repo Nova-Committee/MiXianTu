@@ -1,5 +1,6 @@
 package com.iafenvoy.mxt.runtime.formation;
 
+import com.iafenvoy.mxt.data.formation.FormationIntervals;
 import com.iafenvoy.mxt.data.formation.builtin.RangeDisplayFormationAction;
 import com.iafenvoy.mxt.data.formation.builtin.RangeDisplayFormationAction.Shape;
 import net.minecraft.core.BlockPos;
@@ -48,7 +49,7 @@ public final class FormationRangeDisplay {
     // Counted in the array's periods, so an interval of one means every period: the ticker only reaches here on
     // a period boundary.
     public static boolean due(RangeDisplayFormationAction module, long gameTime, long period) {
-        return Math.floorDiv(gameTime, period) % module.intervalPeriods() == 0L;
+        return FormationIntervals.due(module.intervalPeriods(), gameTime, period);
     }
 
     // RING is a circle at the centre's own height; SPHERE spreads the same number of points over the whole

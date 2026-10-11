@@ -2,8 +2,8 @@ package com.iafenvoy.mxt.command.server;
 
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.attachment.AbilityAttachment;
+import com.iafenvoy.mxt.command.RegistryReferences;
 import com.iafenvoy.mxt.command.ServerCommandManager;
-import com.iafenvoy.mxt.command.Suggestions;
 import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
@@ -19,11 +19,12 @@ import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import net.minecraft.commands.CommandBuildContext;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.arguments.EntityArgument;
-import net.minecraft.commands.arguments.IdentifierArgument;
 import net.minecraft.commands.arguments.ResourceArgument;
+import net.minecraft.commands.arguments.ResourceKeyArgument;
 import net.minecraft.core.Holder.Reference;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
@@ -57,12 +58,11 @@ public final class AbilityCommand {
                         .then(argument("targets", EntityArgument.entities())
                                 .then(argument("ability", ResourceArgument.resource(context, MxtResourceKeys.ABILITY))
                                         .executes(AbilityCommand::grant))))
-                // IdentifierArgument, not ResourceArgument: a revoked ability only has to be held by the source
+                // ResourceKeyArgument, not ResourceArgument: a revoked ability only has to be held by the source
                 // ledger, so an id whose definition is gone is still exactly what has to be named here.
                 .then(literal("revoke").requires(ServerCommandManager::mayChange)
                         .then(argument("targets", EntityArgument.entities())
-                                .then(argument("ability", IdentifierArgument.id())
-                                        .suggests(Suggestions.enabledIds(MxtResourceKeys.ABILITY))
+                                .then(argument("ability", ResourceKeyArgument.key(MxtResourceKeys.ABILITY))
                                         .executes(AbilityCommand::revoke))));
     }
 
@@ -104,10 +104,10 @@ public final class AbilityCommand {
                 granted++;
                 rebuild(target);
                 source.sendSuccess(() -> Component.translatable("command.mxt.ability.granted",
-                        DefinitionText.name(ability, "ability"), target.getDisplayName()), true);
+                        DefinitionText.name(ability), target.getDisplayName()), true);
             } else {
                 source.sendFailure(Component.translatable("command.mxt.ability.grant_failed",
-                        target.getDisplayName(), DefinitionText.name(ability, "ability")));
+                        target.getDisplayName(), DefinitionText.name(ability)));
             }
         }
         return granted;
@@ -117,7 +117,8 @@ public final class AbilityCommand {
     // source is a failure rather than a silent success.
     private static int revoke(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         CommandSourceStack source = ctx.getSource();
-        Identifier id = IdentifierArgument.getId(ctx, "ability");
+        ResourceKey<Ability> ability = RegistryReferences.key(ctx, "ability", MxtResourceKeys.ABILITY);
+        Identifier id = ability.identifier();
         Collection<? extends Entity> targets = EntityArgument.getEntities(ctx, "targets");
         int revoked = 0;
         for (Entity target : targets) {
@@ -125,10 +126,10 @@ public final class AbilityCommand {
                 revoked++;
                 rebuild(target);
                 source.sendSuccess(() -> Component.translatable("command.mxt.ability.revoked",
-                        DefinitionText.name(id, "ability"), target.getDisplayName()), true);
+                        DefinitionText.name(ability), target.getDisplayName()), true);
             } else {
                 source.sendFailure(Component.translatable("command.mxt.ability.revoke_failed",
-                        target.getDisplayName(), DefinitionText.name(id, "ability")));
+                        target.getDisplayName(), DefinitionText.name(ability)));
             }
         }
         return revoked;
@@ -149,7 +150,7 @@ public final class AbilityCommand {
             source.sendFailure(Component.translatable("command.mxt.ability.cast_failed", result.failure().name()));
             return 0;
         }
-        source.sendSuccess(() -> Component.translatable("command.mxt.ability.cast_success", DefinitionText.name(ability, "ability")), true);
+        source.sendSuccess(() -> Component.translatable("command.mxt.ability.cast_success", DefinitionText.name(ability)), true);
         return 1;
     }
 }

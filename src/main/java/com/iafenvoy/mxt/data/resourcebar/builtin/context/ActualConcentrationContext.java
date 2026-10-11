@@ -9,7 +9,6 @@ import com.iafenvoy.mxt.runtime.world.AuraPool;
 import com.iafenvoy.mxt.util.DefinitionText;
 import net.minecraft.core.Holder;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.LivingEntity;
 
 import java.util.Optional;
@@ -32,9 +31,9 @@ public enum ActualConcentrationContext implements ResourceBarContext {
     }
 
     @Override
-    public Component name(Identifier resourceId) {
+    public Component name(Holder<Resource> resource) {
         return Component.translatable("hud.mxt.resource_bar.actual_concentration",
-                DefinitionText.name(resourceId, "resource"));
+                DefinitionText.name(resource));
     }
 
     @Override

@@ -13,8 +13,7 @@ import java.util.function.Function;
  */
 public interface FormationActionType {
     // A codec rather than a map codec, because a formation holds a list of these and only a codec can be listed.
-    Codec<FormationActionType> CODEC = MxtRegistries.FORMATION_ACTION_TYPE.byNameCodec()
-            .dispatch("type", FormationActionType::codec, Function.identity());
+    Codec<FormationActionType> CODEC = MxtRegistries.FORMATION_ACTION_TYPE.byNameCodec().dispatch("type", FormationActionType::codec, Function.identity());
 
     MapCodec<? extends FormationActionType> codec();
 }

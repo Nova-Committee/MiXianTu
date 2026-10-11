@@ -3,10 +3,12 @@ package com.iafenvoy.mxt.data.quality;
 import com.iafenvoy.mxt.config.MxtClientConfig;
 import com.iafenvoy.mxt.data.quality.ItemQuality.Modifier;
 import com.iafenvoy.mxt.runtime.item.QualityService;
+import com.iafenvoy.mxt.util.DefinitionText;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item.TooltipContext;
 import net.minecraft.world.item.ItemStack;
@@ -60,14 +62,17 @@ public final class ItemQualityTooltipAppender {
     private static void appendQuality(Consumer<Component> builder, Holder<ItemQuality> quality) {
         ItemQuality value = quality.value();
         builder.accept(Component.translatable("tooltip.mxt.item.quality", QualityService.coloredName(quality, value.name())));
-        if (!value.description().getString().isEmpty())
-            builder.accept(value.description().copy().withStyle(ChatFormatting.GRAY));
+        // The definition's own description, shown only when it reads as text rather than as an unwritten key.
+        MutableComponent description = DefinitionText.description(quality);
+        if (DefinitionText.resolved(description) && !description.getString().isBlank())
+            builder.accept(description.withStyle(ChatFormatting.GRAY));
         appendModifier(builder, value.valueMultiplier());
         appendModifier(builder, value.forgingModifier());
         appendModifier(builder, value.alchemyModifier());
     }
 
     private static void appendModifier(Consumer<Component> builder, Modifier modifier) {
-        if (!modifier.description().getString().isEmpty()) builder.accept(modifier.description());
+        if (DefinitionText.resolved(modifier.description()) && !modifier.description().getString().isBlank())
+            builder.accept(modifier.description());
     }
 }

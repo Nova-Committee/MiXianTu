@@ -73,7 +73,7 @@ public final class AuraCommand {
         aura.aura().forEach((holder, pool) -> {
             if (holder.value().auraType().filter(element::equals).isPresent()) pools.put(holder, pool);
         });
-        source.sendSuccess(() -> auraReport(aura, pools, DefinitionText.name(element, "element")), false);
+        source.sendSuccess(() -> auraReport(aura, pools, DefinitionText.name(element)), false);
         return pools.size();
     }
 
@@ -108,9 +108,9 @@ public final class AuraCommand {
     }
 
     private static Component resourceName(Holder<Aura> aura) {
-        MutableComponent base = DefinitionText.name(aura, "aura");
+        MutableComponent base = DefinitionText.name(aura);
         return aura.value().auraType()
-                .map(type -> base.copy().append(" (").append(DefinitionText.name(type, "element")).append(")")).orElse(base);
+                .map(type -> base.copy().append(" (").append(DefinitionText.name(type)).append(")")).orElse(base);
     }
 
     private static Component sourceName(AuraResult aura) {

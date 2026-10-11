@@ -1,6 +1,7 @@
 package com.iafenvoy.mxt.command.server;
 
 import com.iafenvoy.mxt.attachment.SpiritIdentityAttachment;
+import com.iafenvoy.mxt.command.RegistryReferences;
 import com.iafenvoy.mxt.command.ServerCommandManager;
 import com.iafenvoy.mxt.data.cultivation.Technique;
 import com.iafenvoy.mxt.data.item.TechniqueBinding;
@@ -21,7 +22,7 @@ import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import net.minecraft.commands.CommandSourceStack;
-import net.minecraft.commands.arguments.IdentifierArgument;
+import net.minecraft.commands.arguments.ResourceKeyArgument;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
@@ -47,16 +48,17 @@ public final class TechniqueCommand {
                         .requires(ServerCommandManager::mayChange)
                         .executes(ctx -> repair(ctx.getSource(), false))
                         .then(literal("dry-run").executes(ctx -> repair(ctx.getSource(), true))))
-                // IdentifierArgument, not ResourceArgument: the id named here is exactly the one that no longer resolves.
+                // ResourceKeyArgument, not ResourceArgument: the id named here is exactly the one that no longer
+                // resolves, so the key is never bound to a registry entry.
                 .then(literal("drop")
                         .requires(ServerCommandManager::mayChange)
-                        .then(argument("id", IdentifierArgument.id())
-                                .executes(ctx -> drop(ctx.getSource(), IdentifierArgument.getId(ctx, "id")))))
+                        .then(argument("id", ResourceKeyArgument.key(MxtResourceKeys.TECHNIQUE))
+                                .executes(ctx -> drop(ctx.getSource(), RegistryReferences.key(ctx, "id", MxtResourceKeys.TECHNIQUE).identifier()))))
                 // The same surgery under the name a player means: dropping a mistake, forgetting a technique.
                 .then(literal("forget")
                         .requires(ServerCommandManager::mayChange)
-                        .then(argument("id", IdentifierArgument.id())
-                                .executes(ctx -> forget(ctx.getSource(), IdentifierArgument.getId(ctx, "id")))))
+                        .then(argument("id", ResourceKeyArgument.key(MxtResourceKeys.TECHNIQUE))
+                                .executes(ctx -> forget(ctx.getSource(), RegistryReferences.key(ctx, "id", MxtResourceKeys.TECHNIQUE).identifier()))))
                 .then(literal("diagnose").executes(ctx -> diagnose(ctx.getSource())));
     }
 

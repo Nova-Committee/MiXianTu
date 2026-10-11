@@ -6,6 +6,7 @@ import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.action.builtin.entity.ApplyEffectAction;
 import com.iafenvoy.mxt.data.context.action.EntityActionContext;
 import com.iafenvoy.mxt.data.formation.FormationActionType;
+import com.iafenvoy.mxt.data.formation.FormationIntervals;
 import com.iafenvoy.mxt.data.formation.builtin.AttackFormationAction;
 import com.iafenvoy.mxt.data.formation.builtin.BuffFormationAction;
 import com.iafenvoy.mxt.data.formation.builtin.BuffFormationAction.TargetMode;
@@ -29,7 +30,8 @@ import org.jetbrains.annotations.Nullable;
 /**
  * Runs a formation's function modules against one entity, called from the periodic pass once per entity the
  * formation affects. Modules run before the definition's own {@code entity_tick_action}, so a hook sees the
- * state they left behind.
+ * state they left behind. A module that declares {@code interval_periods} is skipped on the periods it is not
+ * due for, and the phase is read from the level clock, so the whole array fires together.
  */
 public final class FormationActionRunner {
     private FormationActionRunner() {
@@ -51,18 +53,35 @@ public final class FormationActionRunner {
 
     public static void perEntity(Formation definition, FormationInstance instance,
                                  Entity entity, EntityActionContext context, FormationOwners owners) {
+        // The phase comes from the level clock rather than from a counter kept per module, so every entity covered
+        // by one formation, and every instance of one definition, throttle in step: a throttled message arrives for
+        // the whole array at once instead of trickling out per entity.
+        long gameTime = entity.level().getGameTime();
         for (FormationActionType module : definition.actions()) {
             switch (module) {
-                case AttackFormationAction attack ->
+                case AttackFormationAction attack -> {
+                    if (due(attack.intervalPeriods(), gameTime))
                         attack(attack, entity, context, owners.primaryEntity(entity.level()));
-                case BuffFormationAction buff -> buff(buff, entity, context, instance, owners);
-                case SendMessageFormationAction message -> message(message, entity, context);
+                }
+                // Re-applying the grant is idempotent and the grant outlives a skipped period - only leaving the
+                // formation releases it - so a throttle here only makes the array react more slowly to a target
+                // becoming eligible, never drops a gift it already handed out.
+                case BuffFormationAction buff -> {
+                    if (due(buff.intervalPeriods(), gameTime)) buff(buff, entity, context, instance, owners);
+                }
+                case SendMessageFormationAction message -> {
+                    if (due(message.intervalPeriods(), gameTime)) message(message, entity, context);
+                }
                 // The terrain ward is not per-entity work: it answers block events instead, and there is
                 // no entity to act on. The default module declares nothing at all.
                 case null, default -> {
                 }
             }
         }
+    }
+
+    private static boolean due(int intervalPeriods, long gameTime) {
+        return FormationIntervals.due(intervalPeriods, gameTime, FormationWorldTicker.PERIOD);
     }
 
     private static void attack(AttackFormationAction attack, Entity entity,

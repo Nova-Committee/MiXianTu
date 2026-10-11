@@ -1,8 +1,8 @@
 package com.iafenvoy.mxt.command.server;
 
 import com.iafenvoy.mxt.attachment.SpiritIdentityAttachment;
+import com.iafenvoy.mxt.command.RegistryReferences;
 import com.iafenvoy.mxt.command.ServerCommandManager;
-import com.iafenvoy.mxt.command.Suggestions;
 import com.iafenvoy.mxt.data.cultivation.Physique;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
@@ -20,12 +20,13 @@ import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import net.minecraft.commands.CommandBuildContext;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.arguments.EntityArgument;
-import net.minecraft.commands.arguments.IdentifierArgument;
 import net.minecraft.commands.arguments.ResourceArgument;
+import net.minecraft.commands.arguments.ResourceKeyArgument;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import org.jetbrains.annotations.Nullable;
@@ -60,22 +61,19 @@ public final class PhysiqueCommand {
                         .then(argument("targets", EntityArgument.entities())
                                 .then(argument("physique", ResourceArgument.resource(context, MxtResourceKeys.PHYSIQUE))
                                         .executes(PhysiqueCommand::grant))))
-                // remove, enable and disable all name a reference the body holds rather than one the pack
-                // still provides, so they stay IdentifierArgument.
+                // remove, enable and disable all name a reference the body holds rather than one the pack still
+                // provides, so they take a bare registry key: ResourceArgument would refuse that id while parsing.
                 .then(literal("remove").requires(ServerCommandManager::mayChange)
                         .then(argument("targets", EntityArgument.entities())
-                                .then(argument("physique", IdentifierArgument.id())
-                                        .suggests(Suggestions.enabledIds(MxtResourceKeys.PHYSIQUE))
+                                .then(argument("physique", ResourceKeyArgument.key(MxtResourceKeys.PHYSIQUE))
                                         .executes(PhysiqueCommand::remove))))
                 .then(literal("enable").requires(ServerCommandManager::mayChange)
                         .then(argument("targets", EntityArgument.entities())
-                                .then(argument("physique", IdentifierArgument.id())
-                                        .suggests(Suggestions.enabledIds(MxtResourceKeys.PHYSIQUE))
+                                .then(argument("physique", ResourceKeyArgument.key(MxtResourceKeys.PHYSIQUE))
                                         .executes(ctx -> toggle(ctx, true)))))
                 .then(literal("disable").requires(ServerCommandManager::mayChange)
                         .then(argument("targets", EntityArgument.entities())
-                                .then(argument("physique", IdentifierArgument.id())
-                                        .suggests(Suggestions.enabledIds(MxtResourceKeys.PHYSIQUE))
+                                .then(argument("physique", ResourceKeyArgument.key(MxtResourceKeys.PHYSIQUE))
                                         .executes(ctx -> toggle(ctx, false)))));
     }
 
@@ -98,7 +96,7 @@ public final class PhysiqueCommand {
                     ? "command.mxt.identity.on" : "command.mxt.identity.off");
             // A physique has no element to name, so the slot is empty rather than filled with a placeholder.
             source.sendSuccess(() -> Component.translatable("command.mxt.identity.line",
-                    DefinitionText.name(physique, "physique"), quality, Component.empty(), state), false);
+                    DefinitionText.name(physique), quality, Component.empty(), state), false);
         }
         return distinct.size();
     }
@@ -116,19 +114,20 @@ public final class PhysiqueCommand {
                     FormulaContext.of(living));
             if (!result.changed()) {
                 source.sendFailure(Component.translatable("command.mxt.identity.grant_failed",
-                        DefinitionText.name(physique, "physique"), target.getDisplayName(), reason(result.failure())));
+                        DefinitionText.name(physique), target.getDisplayName(), reason(result.failure())));
                 continue;
             }
             granted++;
             source.sendSuccess(() -> Component.translatable("command.mxt.identity.granted",
-                    DefinitionText.name(physique, "physique"), target.getDisplayName()), true);
+                    DefinitionText.name(physique), target.getDisplayName()), true);
         }
         return granted;
     }
 
     private static int remove(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         CommandSourceStack source = ctx.getSource();
-        Identifier id = IdentifierArgument.getId(ctx, "physique");
+        ResourceKey<Physique> key = RegistryReferences.key(ctx, "physique", MxtResourceKeys.PHYSIQUE);
+        Identifier id = key.identifier();
         int removed = 0;
         for (Entity target : EntityArgument.getEntities(ctx, "targets")) {
             if (!(target instanceof LivingEntity living)) {
@@ -142,7 +141,7 @@ public final class PhysiqueCommand {
             }
             removed++;
             source.sendSuccess(() -> Component.translatable("command.mxt.identity.removed",
-                    DefinitionText.name(id, "physique"), target.getDisplayName()), true);
+                    DefinitionText.name(key), target.getDisplayName()), true);
         }
         return removed;
     }
@@ -151,7 +150,8 @@ public final class PhysiqueCommand {
     // current pack no longer provides can still be switched off: the state is about the body.
     private static int toggle(CommandContext<CommandSourceStack> ctx, boolean enabled) throws CommandSyntaxException {
         CommandSourceStack source = ctx.getSource();
-        Identifier id = IdentifierArgument.getId(ctx, "physique");
+        ResourceKey<Physique> key = RegistryReferences.key(ctx, "physique", MxtResourceKeys.PHYSIQUE);
+        Identifier id = key.identifier();
         int changed = 0;
         for (Entity target : EntityArgument.getEntities(ctx, "targets")) {
             if (!(target instanceof LivingEntity living)) {
@@ -169,7 +169,7 @@ public final class PhysiqueCommand {
             }
             changed++;
             source.sendSuccess(() -> Component.translatable("command.mxt.identity.toggled",
-                    DefinitionText.name(id, "physique"), Component.translatable(enabled
+                    DefinitionText.name(physique), Component.translatable(enabled
                             ? "command.mxt.identity.on" : "command.mxt.identity.off"), target.getDisplayName()), true);
         }
         return changed;

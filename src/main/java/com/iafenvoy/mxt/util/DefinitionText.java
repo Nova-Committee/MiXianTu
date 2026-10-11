@@ -13,11 +13,23 @@ import net.minecraft.resources.ResourceKey;
 /**
  * Localized names for datapack definitions, keyed {@code <category>.<registry namespace>.<id namespace>.<id path>}
  * off the registry the definition lives in, so {@code mxt:fire} in {@code mxt:aura} reads as
- * {@code aura.mxt.mxt.fire}; the category is always the registry's own path. An untranslated key renders as the
- * key itself. A definition implementing {@link NamedDefinition} carries its texts itself, so the pack-written name
- * is what gets shown.
+ * {@code aura.mxt.mxt.fire}; the category is always the registry's own path, which is why no caller passes one.
+ * An untranslated key renders as the key itself. A definition implementing {@link NamedDefinition} carries its
+ * texts itself, so the pack-written name and description are what get shown; only a holder that is bound can be
+ * asked for them, since a held reference to an entry the current pack no longer provides has no value to read.
+ * <p>
+ * Which entry point a caller uses follows what it holds: {@link #name(Holder)} / {@link #description(Holder)} for
+ * anything holding the reference, {@link #name(ResourceKey)} for a key whose registry is still known, and
+ * {@link #name(Identifier, String)} only where nothing but the id survived - a ledger key, a command argument, a
+ * network payload, or a definition reached through one of those.
  */
 public final class DefinitionText {
+    /**
+     * What the description field appends to a definition's own key, so a reader that falls back to a key derives
+     * the same one the field was defaulted from.
+     */
+    public static final String DESCRIPTION_SUFFIX = ".description";
+
     // The category a registry's keys are built with, for code that has to build a key by hand.
     public static String category(Identifier registry) {
         return registry.getPath();
@@ -41,7 +53,7 @@ public final class DefinitionText {
      * own suffix ({@code ""} for the name, {@code .description} for a description). The single place the fallback
      * is built, so a definition carrying the text and one deriving it can never disagree.
      */
-    public static Component defaultText(String category, ResourceKey<?> entry, String suffix) {
+    public static MutableComponent defaultText(String category, ResourceKey<?> entry, String suffix) {
         Identifier registry = entry.registry();
         return Component.translatable(key(category, registry.getNamespace(), entry.identifier()) + suffix);
     }
@@ -51,20 +63,27 @@ public final class DefinitionText {
     }
 
     public static MutableComponent name(Holder<?> holder) {
-        if (holder.value() instanceof NamedDefinition named) return named.name().copy();
+        if (holder.isBound() && holder.value() instanceof NamedDefinition named) return named.name().copy();
         return holder.unwrapKey().map(DefinitionText::name).orElseGet(() -> Component.literal("?"));
     }
 
-    public static MutableComponent name(Holder<?> holder, String category) {
-        if (holder.value() instanceof NamedDefinition named) return named.name().copy();
-        Identifier id = HolderHelper.idOrNull(holder);
-        return id == null ? Component.literal("?") : Component.translatable(key(category, registryNamespace(holder), id));
-    }
-
     // A bare id names no registry, so this overload assumes the mod's own namespace, which every MiXianTu
-    // registry uses.
+    // registry uses. Only for the paths that hold an id and nothing else: a ledger key, a command argument, a
+    // network payload, or a definition reached through one of those.
     public static MutableComponent name(Identifier id, String category) {
         return Component.translatable(key(category, MiXianTu.MOD_ID, id));
+    }
+
+    /**
+     * The text the definition wrote for its {@code description} field, falling back to that field's own key. Unlike
+     * a name this is optional prose, so callers printing it to a tooltip should skip it unless {@link #resolved}
+     * accepts it.
+     */
+    public static MutableComponent description(Holder<?> holder) {
+        if (holder.isBound() && holder.value() instanceof NamedDefinition named) return named.description().copy();
+        return holder.unwrapKey()
+                .map(key -> defaultText(category(key.registry()), key, DESCRIPTION_SUFFIX))
+                .orElseGet(() -> Component.literal("?"));
     }
 
     /**
@@ -73,9 +92,5 @@ public final class DefinitionText {
     public static boolean resolved(Component text) {
         return !(text.getContents() instanceof TranslatableContents contents)
                 || Language.getInstance().has(contents.getKey());
-    }
-
-    private static String registryNamespace(Holder<?> holder) {
-        return holder.unwrapKey().map(key -> key.registry().getNamespace()).orElse(MiXianTu.MOD_ID);
     }
 }

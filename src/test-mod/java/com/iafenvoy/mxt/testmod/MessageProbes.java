@@ -1,18 +1,17 @@
 package com.iafenvoy.mxt.testmod;
 
 import com.iafenvoy.mxt.data.MessageChannel;
-import com.iafenvoy.mxt.data.action.BiEntityAction;
-import com.iafenvoy.mxt.data.action.BlockAction;
 import com.iafenvoy.mxt.data.action.EntityAction;
-import com.iafenvoy.mxt.data.action.ItemAction;
 import com.iafenvoy.mxt.data.action.builtin.SendMessageAction;
 import com.iafenvoy.mxt.data.context.action.BiEntityActionContext;
 import com.iafenvoy.mxt.data.context.action.BlockActionContext;
 import com.iafenvoy.mxt.data.context.action.EntityActionContext;
 import com.iafenvoy.mxt.data.context.action.ItemActionContext;
 import com.iafenvoy.mxt.data.formation.FormationActionType;
+import com.iafenvoy.mxt.data.formation.FormationIntervals;
 import com.iafenvoy.mxt.data.formation.builtin.SendMessageFormationAction;
 import com.iafenvoy.mxt.registry.MxtRegistries;
+import com.iafenvoy.mxt.runtime.formation.FormationWorldTicker;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -20,11 +19,9 @@ import com.google.gson.JsonParser;
 import com.mojang.serialization.JsonOps;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.commands.CommandSourceStack;
-import net.minecraft.core.Registry;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.RegistryOps;
-import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
@@ -57,6 +54,7 @@ public final class MessageProbes {
         ok &= registeredOnEveryAxis(source);
         ok &= dispatchesOnEveryAxis(source);
         ok &= formationModuleRegistered(source);
+        ok &= intervalGate(source);
         final boolean passed = ok;
         source.sendSuccess(() -> Component.literal(passed ? "message probe: all legs passed" : "message probe: FAILURES above"), false);
         return passed ? 1 : 0;
@@ -184,6 +182,8 @@ public final class MessageProbes {
                     message.channel(), MessageChannel.CHAT);
             ok &= check(source, "message probe: the formation module read its message",
                     message.message().getString(), "probe");
+            ok &= check(source, "message probe: the formation module defaults to every period",
+                    message.intervalPeriods(), 1);
             // An absent recipients condition must not filter anyone out.
             ok &= check(source, "message probe: the module's absent recipient condition passes everyone",
                     message.recipients().test(source.getPlayer(), FormulaContext.EMPTY), true);
@@ -192,6 +192,42 @@ public final class MessageProbes {
         ok &= check(source, "message probe: the formation module requires its message",
                 decodeModule(source, codec, new JsonObject()) == null, true);
         return ok;
+    }
+
+    // The throttle is the one part of the interval field that is pure logic, so it is pinned directly: the phase
+    // comes from the level clock, which makes two modules share a period and a module stateless across a reload.
+    private static boolean intervalGate(CommandSourceStack source) {
+        boolean ok = check(source, "message probe: an interval of one is due on every period",
+                due(1, 0L) && due(1, 20L) && due(1, 40L), true);
+        ok &= check(source, "message probe: an interval of three is due every third period",
+                due(3, 0L) && !due(3, 20L) && !due(3, 40L) && due(3, 60L), true);
+        // Two definitions with the same interval must agree on the phase rather than drift apart: the gate reads
+        // the clock and nothing else, so the same period gives the same answer however often it is asked.
+        ok &= check(source, "message probe: the phase is shared rather than counted per module",
+                due(3, 60L) && due(3, 60L) && !due(3, 80L), true);
+        // Floor division rather than a modulo on a positive clock: 600 is a multiple of the 20-tick period and 3
+        // divides it, so the gate must open there and stay shut one period later.
+        ok &= check(source, "message probe: the gate uses floor division on a late clock",
+                due(3, 600L) && !due(3, 620L), true);
+        // The field has to be reachable from JSON, or the assertions above would hold for a field nothing sets.
+        MapCodec<? extends FormationActionType> codec = MxtRegistries.FORMATION_ACTION_TYPE.getValue(id());
+        JsonObject body = new JsonObject();
+        body.addProperty("message", "probe");
+        body.addProperty("interval_periods", 5);
+        FormationActionType module = decodeModule(source, codec, body);
+        ok &= check(source, "message probe: a module reads interval_periods from JSON",
+                module instanceof SendMessageFormationAction message ? message.intervalPeriods() : -1, 5);
+        // A zero or negative interval would divide by zero in the gate, so the range must refuse it at decode.
+        JsonObject zero = new JsonObject();
+        zero.addProperty("message", "probe");
+        zero.addProperty("interval_periods", 0);
+        ok &= check(source, "message probe: interval_periods of zero is refused",
+                decodeModule(source, codec, zero) == null, true);
+        return ok;
+    }
+
+    private static boolean due(int intervalPeriods, long gameTime) {
+        return FormationIntervals.due(intervalPeriods, gameTime, FormationWorldTicker.PERIOD);
     }
 
     private static FormationActionType decodeModule(CommandSourceStack source,

@@ -225,7 +225,7 @@ public final class TechniqueItemService {
     private static void notifyLearned(LivingEntity entity, Holder<Technique> technique) {
         if (!(entity instanceof ServerPlayer player)) return;
         player.sendSystemMessage(Component.translatable("actionbar.mxt.technique.learned",
-                DefinitionText.name(technique, "technique")).withStyle(ChatFormatting.GREEN), true);
+                DefinitionText.name(technique)).withStyle(ChatFormatting.GREEN), true);
     }
 
     /**
@@ -241,7 +241,7 @@ public final class TechniqueItemService {
     private static void notifyLearnFailure(LivingEntity entity, Holder<Technique> technique, Result result) {
         if (!(entity instanceof ServerPlayer player) || result.failure() == null) return;
         player.sendSystemMessage(Component.translatable("actionbar.mxt.technique.failed",
-                        DefinitionText.name(technique, "technique"),
+                        DefinitionText.name(technique),
                         Component.translatable("actionbar.mxt.technique.failure." + result.failure().name().toLowerCase(Locale.ROOT)))
                 .withStyle(ChatFormatting.RED), true);
     }

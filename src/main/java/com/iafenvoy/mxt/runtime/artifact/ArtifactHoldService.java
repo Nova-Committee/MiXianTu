@@ -125,7 +125,7 @@ public final class ArtifactHoldService {
             Holder<Aura> blocked = blockedAura(holder, stack, artifact);
             if (blocked != null)
                 show(holder, Component.translatable("actionbar.mxt.charge.insufficient_aura",
-                        DefinitionText.name(blocked, "aura")), "blocked:" + HolderHelper.id(blocked));
+                        DefinitionText.name(blocked)), "blocked:" + HolderHelper.id(blocked));
             return;
         }
         long gameTime = holder.level().getGameTime();

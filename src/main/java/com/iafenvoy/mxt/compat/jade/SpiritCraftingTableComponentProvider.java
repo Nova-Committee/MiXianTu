@@ -1,5 +1,7 @@
 package com.iafenvoy.mxt.compat.jade;
 
+import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
+import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.TooltipText;
 import net.minecraft.nbt.CompoundTag;
@@ -31,12 +33,19 @@ public enum SpiritCraftingTableComponentProvider implements IBlockComponentProvi
         elements.addAll(stored.keySet());
         for (String idText : elements) {
             Identifier id = Identifier.tryParse(idText);
-            Component element = id == null ? Component.literal(idText) : DefinitionText.name(id, "resource");
+            Component element = id == null ? Component.literal(idText) : auraName(accessor, id);
             int current = stored.getIntOr(idText, 0);
             int needed = required.getIntOr(idText, 0);
             tooltip.add(Component.translatable("jade.mxt.spirit_crafting.aura", element,
                     TooltipText.number(current), TooltipText.number(needed)), SpiritCraftingTableDataProvider.ID);
         }
+    }
+
+    // The definition's own name when the client has the entry, the id-keyed name otherwise: a slot naming an aura
+    // the pack dropped still has to read as something.
+    private static Component auraName(BlockAccessor accessor, Identifier id) {
+        return MxtDatapackRegistries.holder(accessor.getLevel().registryAccess(), MxtResourceKeys.AURA, id)
+                .<Component>map(DefinitionText::name).orElseGet(() -> DefinitionText.name(id, "aura"));
     }
 
     @Override

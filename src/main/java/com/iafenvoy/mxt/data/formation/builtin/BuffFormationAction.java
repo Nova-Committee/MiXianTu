@@ -4,6 +4,7 @@ import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.aura.AuraZone;
 import com.iafenvoy.mxt.data.formation.FormationActionType;
+import com.iafenvoy.mxt.data.formation.FormationIntervals;
 import com.iafenvoy.mxt.util.codec.CollectionCodecs;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.mojang.serialization.Codec;
@@ -25,12 +26,14 @@ import java.util.Optional;
  */
 public record BuffFormationAction(List<Holder<Ability>> abilities, TargetMode target,
                                   Optional<Holder<AuraZone>> auraZone,
-                                  Map<Holder<Aura>, NumberProvider> maxBonus) implements FormationActionType {
+                                  Map<Holder<Aura>, NumberProvider> maxBonus,
+                                  int intervalPeriods) implements FormationActionType {
     public static final MapCodec<BuffFormationAction> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             Ability.CODEC.listOf().optionalFieldOf("abilities", List.of()).forGetter(BuffFormationAction::abilities),
             TargetMode.CODEC.optionalFieldOf("target", TargetMode.ALL).forGetter(BuffFormationAction::target),
             AuraZone.CODEC.optionalFieldOf("aura_zone").forGetter(BuffFormationAction::auraZone),
-            CollectionCodecs.map(Aura.CODEC, NumberProvider.CODEC).optionalFieldOf("max_bonus", Map.of()).forGetter(BuffFormationAction::maxBonus)
+            CollectionCodecs.map(Aura.CODEC, NumberProvider.CODEC).optionalFieldOf("max_bonus", Map.of()).forGetter(BuffFormationAction::maxBonus),
+            FormationIntervals.CODEC.optionalFieldOf("interval_periods", 1).forGetter(BuffFormationAction::intervalPeriods)
     ).apply(i, BuffFormationAction::new));
 
     @Override

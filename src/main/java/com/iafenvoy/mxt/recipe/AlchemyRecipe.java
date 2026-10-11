@@ -18,7 +18,6 @@ import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
 import net.minecraft.network.RegistryFriendlyByteBuf;
-import net.minecraft.network.chat.Component;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.world.item.ItemStack;
@@ -37,8 +36,7 @@ import java.util.Optional;
  * {@code input_quality} of every non-empty input slot. The core's tier position is readable in every formula here
  * as {@code furnace_rank}.
  */
-public record AlchemyRecipe(Component name, Component description,
-                            Map<Holder<MedicinalProperty>, NumberProvider> mainRequirements,
+public record AlchemyRecipe(Map<Holder<MedicinalProperty>, NumberProvider> mainRequirements,
                             Map<Holder<MedicinalProperty>, NumberProvider> auxiliaryRequirements,
                             NumberProvider catalystRequirement, NumberProvider balanceTolerance,
                             NumberProvider targetTemperature, NumberProvider temperatureTolerance,
@@ -70,10 +68,6 @@ public record AlchemyRecipe(Component name, Component description,
 
     private static final Codec<Map<Holder<MedicinalProperty>, NumberProvider>> PROPERTIES = Codec.unboundedMap(MedicinalProperty.CODEC, NumberProvider.CODEC);
     public static final MapCodec<AlchemyRecipe> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
-            MiscCodecs.pair(
-                            MiscCodecs.TRANSLATABLE_COMPONENT.optionalFieldOf("name", Component.empty()),
-                            MiscCodecs.TRANSLATABLE_COMPONENT.optionalFieldOf("description", Component.empty()))
-                    .forGetter(recipe -> Pair.of(recipe.name(), recipe.description())),
             PROPERTIES.validate(AlchemyRecipe::requirePositive).fieldOf("main_requirements").forGetter(AlchemyRecipe::mainRequirements),
             PROPERTIES.validate(AlchemyRecipe::optionalPositive).optionalFieldOf("auxiliary_requirements", Map.of()).forGetter(AlchemyRecipe::auxiliaryRequirements),
             NumberProvider.CODEC.validate(AlchemyRecipe::positiveProvider).fieldOf("catalyst_requirement").forGetter(AlchemyRecipe::catalystRequirement),
@@ -90,15 +84,14 @@ public record AlchemyRecipe(Component name, Component description,
             MiscCodecs.pair(BlockAction.optionalCodec("success_block_action"), BlockAction.optionalCodec("failure_block_action"))
                     .forGetter(recipe -> Pair.of(recipe.successBlockAction(), recipe.failureBlockAction())),
             // Both tier requirements read as one group: the third pair is what keeps the group at fifteen components.
-            MiscCodecs.pair(MiscCodecs.pair(FURNACE_QUALITY_FIELD, INPUT_QUALITY_FIELD), Guide.CODEC.optionalFieldOf("guide"))
-                    .forGetter(recipe -> Pair.of(Pair.of(recipe.furnaceQuality(), recipe.inputQuality()), recipe.guide()))
-    ).apply(i, (texts, main, auxiliary, catalyst, balance, target, tolerance, duration, badTicks, aura,
-                success, failure, actions, blocks, furnace) -> new AlchemyRecipe(
-            texts.getFirst(), texts.getSecond(), main, auxiliary, catalyst, balance, target, tolerance, duration, badTicks, aura,
+            MiscCodecs.pair(FURNACE_QUALITY_FIELD, INPUT_QUALITY_FIELD).forGetter(recipe -> Pair.of(recipe.furnaceQuality(), recipe.inputQuality())),
+            Guide.CODEC.optionalFieldOf("guide").forGetter(AlchemyRecipe::guide)
+    ).apply(i, (main, auxiliary, catalyst, balance, target, tolerance, duration, badTicks, aura,
+                success, failure, actions, blocks, qualities, furnace) -> new AlchemyRecipe(
+            main, auxiliary, catalyst, balance, target, tolerance, duration, badTicks, aura,
             success, failure, actions.getFirst(), actions.getSecond(), blocks.getFirst(), blocks.getSecond(),
-            furnace.getFirst().getFirst(), furnace.getFirst().getSecond(), furnace.getSecond())));
-    public static final StreamCodec<RegistryFriendlyByteBuf, AlchemyRecipe> PACKET_CODEC =
-            ByteBufCodecs.fromCodecWithRegistries(CODEC.codec());
+            qualities.getFirst(), qualities.getSecond(), furnace)));
+    public static final StreamCodec<RegistryFriendlyByteBuf, AlchemyRecipe> PACKET_CODEC = ByteBufCodecs.fromCodecWithRegistries(CODEC.codec());
 
     @Override
     public boolean matches(AlchemyRecipeInput input, @NonNull Level level) {

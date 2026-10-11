@@ -3,6 +3,7 @@ package com.iafenvoy.mxt.data.formation.builtin;
 import com.iafenvoy.mxt.data.action.builtin.entity.ApplyEffectAction;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.data.formation.FormationActionType;
+import com.iafenvoy.mxt.data.formation.FormationIntervals;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.iafenvoy.mxt.util.formula.number.Constant;
 import com.mojang.serialization.Codec;
@@ -22,13 +23,15 @@ import java.util.Optional;
  */
 public record AttackFormationAction(NumberProvider damage, Optional<Holder<DamageType>> damageType,
                                     boolean attributeToOwner, List<ApplyEffectAction> effects,
-                                    EntityCondition targetCondition) implements FormationActionType {
+                                    EntityCondition targetCondition,
+                                    int intervalPeriods) implements FormationActionType {
     public static final MapCodec<AttackFormationAction> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             NumberProvider.CODEC.optionalFieldOf("damage", new Constant(0.0D)).forGetter(AttackFormationAction::damage),
             DamageType.CODEC.optionalFieldOf("damage_type").forGetter(AttackFormationAction::damageType),
             Codec.BOOL.optionalFieldOf("attribute_to_owner", true).forGetter(AttackFormationAction::attributeToOwner),
             ApplyEffectAction.CODEC.codec().listOf().optionalFieldOf("effects", List.of()).forGetter(AttackFormationAction::effects),
-            EntityCondition.optionalCodec("target_condition").forGetter(AttackFormationAction::targetCondition)
+            EntityCondition.optionalCodec("target_condition").forGetter(AttackFormationAction::targetCondition),
+            FormationIntervals.CODEC.optionalFieldOf("interval_periods", 1).forGetter(AttackFormationAction::intervalPeriods)
     ).apply(i, AttackFormationAction::new));
 
     @Override

@@ -55,7 +55,7 @@ public final class InformationManager {
         register("cultivation_progress", Side.CULTIVATION, InformationManager::progressLines);
         register("spirit_roots", Side.CULTIVATION, InformationManager::spiritRootLines);
         register("physiques", Side.CULTIVATION, InformationManager::physiqueLines);
-        register("techniques", Side.CULTIVATION, c -> lineWithDefinitions(c, "info.mxt.techniques", c.getData(MxtAttachments.SPIRIT_IDENTITY).learnedTechniques(), "technique"));
+        register("techniques", Side.CULTIVATION, c -> lineWithDefinitions(c, "info.mxt.techniques", c.getData(MxtAttachments.SPIRIT_IDENTITY).learnedTechniques()));
         register("curses", Side.CULTIVATION, InformationManager::curseLines);
     }
 
@@ -114,7 +114,7 @@ public final class InformationManager {
                     : null;
             int color = status.conditionsMet() ? 0xFF55FF55 : 0xFFE0E4EC;
             collector.add(first ? Component.translatable("info.mxt.cultivation_progress") : null,
-                    Component.literal(DefinitionText.name(entry.getKey().value().resource(), "resource").getString() + ": " + String.format("%.2f", entry.getDoubleValue())),
+                    Component.literal(DefinitionText.name(entry.getKey().value().resource()).getString() + ": " + String.format("%.2f", entry.getDoubleValue())),
                     color, tooltip);
             first = false;
         }
@@ -131,21 +131,21 @@ public final class InformationManager {
             Holder<SpiritRoot> root = roots.get(index);
             if (index > 0) line.append(", ");
             boolean active = identity.isSpiritRootEnabled(root);
-            line.append(heldName(DefinitionText.name(root, "spirit_root"), active));
+            line.append(heldName(DefinitionText.name(root), active));
             List<SpiritRoot.ElementWeight> elements = root.value().elements();
             if (!elements.isEmpty()) {
                 MutableComponent names = Component.empty();
                 for (int elementIndex = 0; elementIndex < elements.size(); elementIndex++) {
                     SpiritRoot.ElementWeight entry = elements.get(elementIndex);
                     if (elementIndex > 0) names.append("/");
-                    names.append(Component.empty().append(DefinitionText.name(entry.element(), "element"))
+                    names.append(Component.empty().append(DefinitionText.name(entry.element()))
                             .append(entry.weight() == 1.0D ? Component.empty()
                                     : Component.literal(" " + TooltipText.number(entry.weight())))
                             .withColor(active ? entry.element().value().color() : SWITCHED_OFF_COLOR));
                 }
                 line.append(Component.literal("(").append(names).append(")"));
             }
-            notes.add(identityNote(root, "spirit_root", root.value().quality(), active));
+            notes.add(identityNote(root, root.value().quality(), active));
         }
         collector.add(Component.translatable("info.mxt.spirit_roots"), line, VALUE_COLOR, joined(notes));
     }
@@ -163,17 +163,17 @@ public final class InformationManager {
             Holder<Physique> physique = distinct.get(index);
             if (index > 0) line.append(", ");
             boolean active = identity.isPhysiqueEnabled(physique);
-            line.append(heldName(DefinitionText.name(physique, "physique"), active));
+            line.append(heldName(DefinitionText.name(physique), active));
             int stacks = Collections.frequency(held, physique);
             if (stacks > 1) line.append(" ×" + stacks);
-            notes.add(identityNote(physique, "physique", physique.value().quality(), active));
+            notes.add(identityNote(physique, physique.value().quality(), active));
         }
         collector.add(Component.translatable("info.mxt.physiques"), line, VALUE_COLOR, joined(notes));
     }
 
     // The tier is shown only here, in the row's tooltip: the panel is the one consumer every definition has.
-    private static Component identityNote(Holder<?> holder, String category, Optional<Holder<ItemQuality>> quality, boolean active) {
-        MutableComponent note = DefinitionText.name(holder, category);
+    private static Component identityNote(Holder<?> holder, Optional<Holder<ItemQuality>> quality, boolean active) {
+        MutableComponent note = DefinitionText.name(holder);
         quality.ifPresent(tier -> note.append(" · ").append(QualityService.displayName(tier)));
         if (!active) note.append(" · ").append(Component.translatable("info.mxt.switched_off"));
         return note.withStyle(ChatFormatting.GRAY);
@@ -205,11 +205,11 @@ public final class InformationManager {
         for (Holder<Aura> chain : chains) {
             if (!chain.value().showCultivationInfo()) continue;
             Holder<RealmStage> realm = cultivation.realmStage(chain);
-            Component realmName = realm == null ? Component.translatable("info.mxt.mortal") : DefinitionText.name(realm, "realm_stage");
+            Component realmName = realm == null ? Component.translatable("info.mxt.mortal") : DefinitionText.name(realm);
             Component minorStage = minorStageText(collector.getPlayer(), chain, realm, cultivation.cultivationProgress(chain), context);
             if (minorStage != null) realmName = realmName.copy().append(" ").append(minorStage);
             collector.add(first ? Component.translatable("info.mxt.realm") : null,
-                    DefinitionText.name(chain.value().resource(), "resource").copy().append(": ").append(realmName));
+                    DefinitionText.name(chain.value().resource()).copy().append(": ").append(realmName));
             first = false;
         }
     }
@@ -234,7 +234,7 @@ public final class InformationManager {
         boolean first = true;
         for (Map.Entry<Holder<Curse>, State> entry : player.getData(MxtAttachments.CURSE_HOLDER).instances().entrySet()) {
             if (!entry.getKey().value().displayCondition().test(player, context)) continue;
-            Component name = DefinitionText.name(entry.getKey(), "curse");
+            Component name = DefinitionText.name(entry.getKey());
             if (entry.getValue().stacks() > 1) name = name.copy().append(" ×" + entry.getValue().stacks());
             collector.add(first ? Component.translatable("info.mxt.curses") : null, name, CURSE_COLOR,
                     curseTooltip(player.getData(MxtAttachments.CURSE_HOLDER).sources().of(entry.getKey()), entry.getValue(), gameTime));

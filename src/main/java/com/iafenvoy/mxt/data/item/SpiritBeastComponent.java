@@ -84,7 +84,7 @@ public record SpiritBeastComponent(Optional<Identifier> entityType, Optional<Com
         if (!this.stored()) return;
         this.name.ifPresent(name -> consumer.accept(Component.translatable("tooltip.mxt.spirit_beast_bag.beast", name).withStyle(ChatFormatting.GRAY)));
         this.contractType.ifPresent(type -> consumer.accept(Component.translatable("tooltip.mxt.spirit_beast_bag.contract",
-                DefinitionText.name(type, "contract_type")).withStyle(ChatFormatting.GRAY)));
+                DefinitionText.name(type)).withStyle(ChatFormatting.GRAY)));
         // A nameless owner is a name nobody could answer, which is why nothing is shown rather than a blank line.
         if (!this.ownerName.isBlank())
             consumer.accept(Component.translatable("tooltip.mxt.spirit_beast_bag.owner", this.ownerName).withStyle(ChatFormatting.GRAY));

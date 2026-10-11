@@ -3,6 +3,7 @@ package com.iafenvoy.mxt.data.formation.builtin;
 import com.iafenvoy.mxt.data.MessageChannel;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.data.formation.FormationActionType;
+import com.iafenvoy.mxt.data.formation.FormationIntervals;
 import com.iafenvoy.mxt.util.codec.MiscCodecs;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -17,11 +18,13 @@ import net.minecraft.network.chat.Component;
  * hurt, or only the ones it is not helping.
  */
 public record SendMessageFormationAction(Component message, MessageChannel channel,
-                                         EntityCondition recipients) implements FormationActionType {
+                                         EntityCondition recipients,
+                                         int intervalPeriods) implements FormationActionType {
     public static final MapCodec<SendMessageFormationAction> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             MiscCodecs.TRANSLATABLE_COMPONENT.fieldOf("message").forGetter(SendMessageFormationAction::message),
             MessageChannel.CODEC.optionalFieldOf("channel", MessageChannel.CHAT).forGetter(SendMessageFormationAction::channel),
-            EntityCondition.optionalCodec("recipients").forGetter(SendMessageFormationAction::recipients)
+            EntityCondition.optionalCodec("recipients").forGetter(SendMessageFormationAction::recipients),
+            FormationIntervals.CODEC.optionalFieldOf("interval_periods", 1).forGetter(SendMessageFormationAction::intervalPeriods)
     ).apply(i, SendMessageFormationAction::new));
 
     @Override

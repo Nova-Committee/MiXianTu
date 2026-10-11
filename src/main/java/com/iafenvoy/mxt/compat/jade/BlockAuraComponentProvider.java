@@ -47,21 +47,21 @@ public enum BlockAuraComponentProvider implements IBlockComponentProvider {
     }
 
     private static final class Totals {
-        private final Map<Holder<Aura>, double[]> resources = new LinkedHashMap<>();
+        private final Map<Holder<Aura>, double[]> auras = new LinkedHashMap<>();
 
         private void add(BlockAura definition) {
-            definition.aura().forEach((resource, value) -> {
-                double[] totals = this.resources.computeIfAbsent(resource, ignored -> new double[2]);
+            definition.aura().forEach((aura, value) -> {
+                double[] totals = this.auras.computeIfAbsent(aura, ignored -> new double[2]);
                 totals[0] += value.amount();
                 totals[1] += value.regenPerTick();
             });
         }
 
         private void appendTo(ITooltip tooltip) {
-            this.resources.entrySet().stream()
+            this.auras.entrySet().stream()
                     .filter(entry -> entry.getValue()[0] != 0.0D || entry.getValue()[1] != 0.0D)
                     .forEach(entry -> tooltip.add(Component.translatable("jade.mxt.block_aura.element",
-                            DefinitionText.name(entry.getKey(), "resource"),
+                            DefinitionText.name(entry.getKey()),
                             TooltipText.signed(entry.getValue()[0])), ID));
         }
     }

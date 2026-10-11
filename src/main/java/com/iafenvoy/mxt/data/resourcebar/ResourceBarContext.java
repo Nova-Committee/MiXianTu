@@ -8,7 +8,6 @@ import com.iafenvoy.mxt.registry.MxtRegistries;
 import com.mojang.serialization.Codec;
 import net.minecraft.core.Holder;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.LivingEntity;
 
 import java.util.Optional;
@@ -22,7 +21,8 @@ public interface ResourceBarContext {
 
     Optional<Values> extract(LivingEntity entity, Holder<Resource> resource);
 
-    Component name(Identifier resourceId);
+    // The resource's own definition names it: a context may only frame that name, never derive a second one.
+    Component name(Holder<Resource> resource);
 
     Layout layout();
 
