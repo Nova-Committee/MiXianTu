@@ -4,6 +4,7 @@ import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.data.alchemy.MedicinalProperty;
 import com.iafenvoy.mxt.data.alchemy.SpiritHerb;
 import com.iafenvoy.mxt.data.alchemy.SpiritHerb.Growth;
+import com.iafenvoy.mxt.recipe.AlchemyRole;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
@@ -115,20 +116,20 @@ public final class SpiritHerbService {
      * Empty only when no loaded binding claims the stack. A matching herb with no power in this role is still
      * returned, so the furnace can refuse it as zero power rather than as an unknown item.
      */
-    public static Optional<HerbPotency> potency(Provider access, ItemStack stack, HerbRole role, FormulaContext context) {
+    public static Optional<HerbPotency> potency(Provider access, ItemStack stack, AlchemyRole role, FormulaContext context) {
         return find(access, stack).map(herb -> potency(herb, stack, role, context));
     }
 
-    public static HerbPotency potency(Holder<SpiritHerb> herb, ItemStack stack, HerbRole role, FormulaContext context) {
+    public static HerbPotency potency(Holder<SpiritHerb> herb, ItemStack stack, AlchemyRole role, FormulaContext context) {
         SpiritHerb value = herb.value();
         int years = age(stack, value);
         FormulaContext aged = context.with(HERB_AGE, years);
         double bias = value.thermalBias();
-        if (role == HerbRole.CATALYST) {
+        if (role == AlchemyRole.CATALYST) {
             double catalyst = positive(value.catalystPower().evaluate(aged));
             return new HerbPotency(herb, years, Map.of(), catalyst, bias, catalyst);
         }
-        Map<Holder<MedicinalProperty>, NumberProvider> source = role == HerbRole.MAIN
+        Map<Holder<MedicinalProperty>, NumberProvider> source = role == AlchemyRole.MAIN
                 ? value.mainEffects() : value.auxiliaryEffects();
         Map<Holder<MedicinalProperty>, Double> properties = new LinkedHashMap<>();
         double total = 0.0D;
@@ -192,10 +193,6 @@ public final class SpiritHerbService {
 
     private static double positive(double value) {
         return Double.isFinite(value) && value > 0.0D ? value : 0.0D;
-    }
-
-    public enum HerbRole {
-        MAIN, AUXILIARY, CATALYST
     }
 
     /**

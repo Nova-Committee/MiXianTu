@@ -1,6 +1,7 @@
 package com.iafenvoy.mxt.runtime.ability;
 
 import com.iafenvoy.mxt.MiXianTu;
+import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.util.DefinitionText;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
@@ -23,8 +24,7 @@ public final class AbilityFeedback {
     public static Component reason(Enum<?> failure, @Nullable Identifier failedResource) {
         String name = failure.name().toLowerCase(Locale.ROOT);
         if (failedResource != null && "insufficient_resource".equals(name))
-            return Component.translatable("actionbar.mxt.ability.failure.insufficient_resource_named",
-                    DefinitionText.name(failedResource, "resource"));
+            return Component.translatable("actionbar.mxt.ability.failure.insufficient_resource_named", DefinitionText.text(MxtResourceKeys.RESOURCE, failedResource));
         return Component.translatable("actionbar.mxt.ability.failure." + name);
     }
 

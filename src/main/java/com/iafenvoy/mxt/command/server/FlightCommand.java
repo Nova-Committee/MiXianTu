@@ -27,7 +27,7 @@ public final class FlightCommand {
     private static int fill(CommandSourceStack source) {
         ServerPlayer player = source.getPlayer();
         if (player == null) {
-            source.sendFailure(Component.translatable("command.mxt.requires_player"));
+            source.sendFailure(Component.translatable("command.mxt.message.requires_player"));
             return 0;
         }
         Entity body = player.getVehicle();

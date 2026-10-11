@@ -307,7 +307,7 @@ public final class QualityService {
 
     // How a tier reads wherever one is listed: the pack's name for it, in the colour that same tier gave itself.
     public static Component displayName(Holder<ItemQuality> quality) {
-        return coloredName(quality, DefinitionText.name(quality));
+        return coloredName(quality, DefinitionText.text(quality));
     }
 
     public static List<Holder<ItemQuality>> ordered() {

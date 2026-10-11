@@ -87,13 +87,13 @@ public final class FormationCommand {
     private static int show(CommandSourceStack source, Reference<Formation> definition) {
         ServerPlayer player = source.getPlayer();
         if (player == null) {
-            source.sendFailure(Component.translatable("command.mxt.requires_player"));
+            source.sendFailure(Component.translatable("command.mxt.message.requires_player"));
             return 0;
         }
         Formation formation = definition.value();
         if (formation.structureCheck() == Formation.StructureCheck.ALWAYS) {
             source.sendFailure(Component.translatable("command.mxt.formation.show.none",
-                    DefinitionText.name(definition)));
+                    DefinitionText.text(definition)));
             return 0;
         }
         List<RequiredBlock> structure = FormationStructures.declared(source.getLevel(), formation);
@@ -108,9 +108,9 @@ public final class FormationCommand {
             return 0;
         }
         PacketDistributor.sendToPlayer(player, new FormationStructureS2CPayload(
-                DefinitionText.name(definition), structure));
+                DefinitionText.text(definition), structure));
         source.sendSuccess(() -> Component.translatable("command.mxt.formation.show.done",
-                DefinitionText.name(definition), structure.size()), false);
+                DefinitionText.text(definition), structure.size()), false);
         return structure.size();
     }
 
@@ -125,12 +125,12 @@ public final class FormationCommand {
         FormationPlateComponent plate = stack.getOrDefault(MxtDataComponents.FORMATION_PLATE, FormationPlateComponent.EMPTY);
         if (!plate.admits(definition)) {
             source.sendFailure(Component.translatable("command.mxt.formation.bind.denied",
-                    DefinitionText.name(definition)));
+                    DefinitionText.text(definition)));
             return 0;
         }
         stack.set(MxtDataComponents.FORMATION_PLATE, new FormationPlateComponent(plate.allowed(), Optional.of(definition)));
         source.sendSuccess(() -> Component.translatable("command.mxt.formation.bind.done",
-                DefinitionText.name(definition)), false);
+                DefinitionText.text(definition)), false);
         return 1;
     }
 
@@ -152,7 +152,7 @@ public final class FormationCommand {
     private static int formationCoverage(CommandSourceStack source) {
         ServerPlayer player = source.getPlayer();
         if (player == null) {
-            source.sendFailure(Component.translatable("command.mxt.requires_player"));
+            source.sendFailure(Component.translatable("command.mxt.message.requires_player"));
             return 0;
         }
         BlockPos position = player.blockPosition();
@@ -208,7 +208,7 @@ public final class FormationCommand {
     private static int upkeepReport(CommandSourceStack source) {
         ServerPlayer player = source.getPlayer();
         if (player == null) {
-            source.sendFailure(Component.translatable("command.mxt.requires_player"));
+            source.sendFailure(Component.translatable("command.mxt.message.requires_player"));
             return 0;
         }
         ServerLevel level = source.getLevel();

@@ -99,7 +99,7 @@ public final class ContractCommand {
         source.sendSuccess(() -> Component.translatable("command.mxt.contract.list.header", owner, entries.size()), false);
         for (BoundBeastsAttachment.Entry entry : entries) {
             boolean loaded = BoundBeastService.resolve(server, entry).isPresent();
-            Component line = Component.translatable("command.mxt.contract.list.entry", DefinitionText.name(entry.type()),
+            Component line = Component.translatable("command.mxt.contract.list.entry", DefinitionText.text(entry.type()),
                     entry.beast().toString(), Component.translatable(loaded
                             ? "command.mxt.contract.list.loaded" : "command.mxt.contract.list.unloaded"));
             source.sendSuccess(() -> line, false);
@@ -121,7 +121,7 @@ public final class ContractCommand {
         }
         Holder<ContractType> type = contract.contractType().orElseThrow();
         String owner = Contracts.ownerOf(mob).map(id -> PlayerNames.knownToServer(source.getServer(), id).orElse(id.toString())).orElse("-");
-        source.sendSuccess(() -> Component.translatable("command.mxt.contract.info.type", DefinitionText.name(type)), false);
+        source.sendSuccess(() -> Component.translatable("command.mxt.contract.info.type", DefinitionText.text(type)), false);
         source.sendSuccess(() -> Component.translatable("command.mxt.contract.info.owner", owner), false);
         source.sendSuccess(() -> Component.translatable("command.mxt.contract.info.bound_at", contract.boundAt()), false);
         source.sendSuccess(() -> Component.translatable("command.mxt.contract.info.recalled", Component.translatable(
@@ -131,10 +131,10 @@ public final class ContractCommand {
         // nothing, so a plain stat block reads exactly as it did before.
         mob.getExistingData(MxtAttachments.CREATURE_SPIRIT).flatMap(CreatureSpiritAttachment::profile).map(HolderHelper::id)
                 .ifPresent(progressOwner -> ProgressionService.currentLevelOf(mob, progressOwner).ifPresent(current -> {
-                    Component next = ProgressionService.nextLevelOf(mob, progressOwner).map(DefinitionText::name)
+                    Component next = ProgressionService.nextLevelOf(mob, progressOwner).map(DefinitionText::text)
                             .orElseGet(() -> Component.translatable("command.mxt.contract.info.level.top"));
                     source.sendSuccess(() -> Component.translatable("command.mxt.contract.info.level",
-                            progressOwner.toString(), DefinitionText.name(current), next), false);
+                            progressOwner.toString(), DefinitionText.text(current), next), false);
                     ProgressionService.masteryOf(mob, progressOwner).ifPresent(mastery -> source.sendSuccess(
                             () -> Component.translatable("command.mxt.contract.info.mastery", mastery.have(),
                                     mastery.required(), mastery.resource().toString()), false));
@@ -165,7 +165,7 @@ public final class ContractCommand {
             return 0;
         }
         source.sendSuccess(() -> Component.translatable("command.mxt.contract.bind_success", mob.getDisplayName(),
-                DefinitionText.name(type), owner.getDisplayName()), true);
+                DefinitionText.text(type), owner.getDisplayName()), true);
         return 1;
     }
 
@@ -231,7 +231,7 @@ public final class ContractCommand {
         Entity target = EntityArgument.getEntity(ctx, "target");
         Reference<Progression> level = ResourceArgument.getResource(ctx, "level", MxtResourceKeys.PROGRESSION);
         if (!(target instanceof LivingEntity living)) {
-            source.sendFailure(Component.translatable("progression.mxt.failure.unknown_owner"));
+            source.sendFailure(Component.translatable("command.mxt.contract.failure.unknown_owner"));
             return 0;
         }
         Identifier owner = living.getExistingData(MxtAttachments.CREATURE_SPIRIT)
@@ -240,12 +240,12 @@ public final class ContractCommand {
                 ? ProgressionAdminService.Result.rejected(ProgressionAdminService.Failure.UNKNOWN_OWNER)
                 : ProgressionAdminService.setLevel(living, owner, level, force);
         if (!result.changed()) {
-            source.sendFailure(Component.translatable("progression.mxt.failure."
+            source.sendFailure(Component.translatable("command.mxt.contract.failure."
                     + result.failure().name().toLowerCase(Locale.ROOT)));
             return 0;
         }
         source.sendSuccess(() -> Component.translatable("command.mxt.contract.level.done", living.getDisplayName(),
-                DefinitionText.name(level)), true);
+                DefinitionText.text(level)), true);
         return 1;
     }
 }

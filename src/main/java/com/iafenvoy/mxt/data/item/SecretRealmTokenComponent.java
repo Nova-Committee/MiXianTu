@@ -40,6 +40,6 @@ public record SecretRealmTokenComponent(Optional<Holder<SecretRealm>> realm) imp
 
     @Override
     public void addToTooltip(@NonNull TooltipContext context, Consumer<Component> consumer, @NonNull TooltipFlag flag, @NonNull DataComponentGetter components) {
-        consumer.accept(Component.translatable("tooltip.mxt.secret_realm_token.realm", this.realm.map(value -> DefinitionText.name(value)).orElse(Component.literal("-"))));
+        consumer.accept(Component.translatable("tooltip.mxt.secret_realm_token.realm", this.realm.map(DefinitionText::text).orElse(Component.literal("-"))));
     }
 }

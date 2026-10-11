@@ -223,7 +223,7 @@ public final class MxtCommand {
     private static int attachmentStatus(CommandSourceStack source) {
         ServerPlayer player = source.getPlayer();
         if (player == null) {
-            source.sendFailure(Component.translatable("command.mxt.requires_player"));
+            source.sendFailure(Component.translatable("command.mxt.message.requires_player"));
             return 0;
         }
         AbilityAttachment abilities = player.getData(MxtAttachments.ABILITY_HOLDER);
@@ -239,7 +239,7 @@ public final class MxtCommand {
         ServerPlayer player = source.getPlayer();
         if (player == null) return 0;
         double value = player.getData(MxtAttachments.RESOURCE_HOLDER).get(resource);
-        source.sendSuccess(() -> Component.translatable("command.mxt.resource.query", DefinitionText.name(resource), value), false);
+        source.sendSuccess(() -> Component.translatable("command.mxt.resource.query", DefinitionText.text(resource), value), false);
         return 1;
     }
 
@@ -247,14 +247,14 @@ public final class MxtCommand {
         ServerPlayer player = source.getPlayer();
         if (player == null) return 0;
         player.getData(MxtAttachments.RESOURCE_HOLDER).set(resource, value);
-        source.sendSuccess(() -> Component.translatable("command.mxt.resource.set", DefinitionText.name(resource), value), true);
+        source.sendSuccess(() -> Component.translatable("command.mxt.resource.set", DefinitionText.text(resource), value), true);
         return 1;
     }
 
     private static int listResourceBars(CommandSourceStack source, @Nullable Reference<Resource> selection, Integer index) {
         ServerPlayer player = source.getPlayer();
         if (player == null) {
-            source.sendFailure(Component.translatable("command.mxt.requires_player"));
+            source.sendFailure(Component.translatable("command.mxt.message.requires_player"));
             return 0;
         }
         List<Reference<Resource>> resources = selection != null ? List.of(selection)
@@ -292,7 +292,7 @@ public final class MxtCommand {
         Optional<Values> extracted = extractResourceBarValues(player, resource, bar.context());
         if (extracted.isEmpty()) {
             source.sendSuccess(() -> Component.translatable("command.mxt.resourcebar.unavailable",
-                    DefinitionText.name(resource), index, displayName, contextId), false);
+                    DefinitionText.text(resource), index, displayName, contextId), false);
             return;
         }
         Values values = extracted.get();
@@ -300,7 +300,7 @@ public final class MxtCommand {
         double percentage = maximum == values.minimum() ? 100.0D
                 : (values.current() - values.minimum()) / (maximum - values.minimum()) * 100.0D;
         source.sendSuccess(() -> Component.translatable("command.mxt.resourcebar.entry",
-                DefinitionText.name(resource), index, displayName, contextId,
+                DefinitionText.text(resource), index, displayName, contextId,
                 formatRaw(values.current()), formatRaw(values.minimum()), formatRaw(maximum), formatRaw(percentage),
                 bar.anchor().getSerializedName(), bar.order()), false);
     }
@@ -333,14 +333,14 @@ public final class MxtCommand {
     private static int cultivateStatus(CommandSourceStack source) {
         ServerPlayer player = source.getPlayer();
         if (player == null) {
-            source.sendFailure(Component.translatable("command.mxt.requires_player"));
+            source.sendFailure(Component.translatable("command.mxt.message.requires_player"));
             return 0;
         }
         CultivationAttachment spirit = player.getData(MxtAttachments.CULTIVATION);
-        Component action = spirit.cultivation().<Component>map(DefinitionText::name).orElseGet(() -> Component.translatable("command.mxt.none"));
-        Component progress = spirit.cultivationProgresses().isEmpty() ? Component.translatable("command.mxt.none")
+        Component action = spirit.cultivation().<Component>map(DefinitionText::text).orElseGet(() -> Component.translatable("command.mxt.message.none"));
+        Component progress = spirit.cultivationProgresses().isEmpty() ? Component.translatable("command.mxt.message.none")
                 : Component.literal(spirit.cultivationProgresses().object2DoubleEntrySet().stream()
-                .map(entry -> DefinitionText.name(entry.getKey()).getString() + "="
+                .map(entry -> DefinitionText.text(entry.getKey()).getString() + "="
                         + String.format(Locale.ROOT, "%.2f", entry.getDoubleValue()))
                 .collect(Collectors.joining(", ")));
         source.sendSuccess(() -> Component.translatable("command.mxt.cultivate.status", action, progress, spirit.nextCultivateTick()), false);
@@ -352,19 +352,19 @@ public final class MxtCommand {
     private static int selectCultivation(CommandSourceStack source, Holder<Cultivation> action) {
         ServerPlayer player = source.getPlayer();
         if (player == null) {
-            source.sendFailure(Component.translatable("command.mxt.requires_player"));
+            source.sendFailure(Component.translatable("command.mxt.message.requires_player"));
             return 0;
         }
         CultivationMethodService.Result result = CultivationModeService.startNamed(player, action);
         if (!result.started()) {
             String failure = result.failure() == null ? "not_applicable" : result.failure().name().toLowerCase(Locale.ROOT);
             source.sendFailure(Component.translatable("command.mxt.cultivate.select.failed",
-                    DefinitionText.name(action),
+                    DefinitionText.text(action),
                     Component.translatable("actionbar.mxt.cultivation.failure." + failure)));
             return 0;
         }
         source.sendSuccess(() -> Component.translatable("command.mxt.cultivate.select.done",
-                DefinitionText.name(action)), true);
+                DefinitionText.text(action)), true);
         return 1;
     }
 
@@ -377,12 +377,12 @@ public final class MxtCommand {
                     ? Component.translatable("command.mxt.breakthrough.failure.unknown")
                     : result.failure() == Failure.INSUFFICIENT_RESOURCE && result.failedResource() != null
                     ? Component.translatable("command.mxt.breakthrough.failure.insufficient_resource",
-                    DefinitionText.name(result.failedResource(), "resource"))
+                    DefinitionText.text(MxtResourceKeys.RESOURCE, result.failedResource()))
                     : Component.translatable("command.mxt.breakthrough.failure." + result.failure().name().toLowerCase(Locale.ROOT));
             source.sendFailure(Component.translatable("command.mxt.breakthrough.failed", reason));
             return 0;
         }
-        source.sendSuccess(() -> Component.translatable("command.mxt.breakthrough.success", DefinitionText.name(aura)), true);
+        source.sendSuccess(() -> Component.translatable("command.mxt.breakthrough.success", DefinitionText.text(aura)), true);
         return 1;
     }
 
@@ -422,7 +422,7 @@ public final class MxtCommand {
     private static int enterSecretRealm(CommandSourceStack source, Reference<SecretRealm> definition) {
         ServerPlayer player = source.getPlayer();
         if (player == null) {
-            source.sendFailure(Component.translatable("command.mxt.requires_player"));
+            source.sendFailure(Component.translatable("command.mxt.message.requires_player"));
             return 0;
         }
         Result result = SecretRealmService.enter(player, source.getServer(), definition);
@@ -431,14 +431,14 @@ public final class MxtCommand {
                     result.failure().name())));
             return 0;
         }
-        source.sendSuccess(() -> Component.translatable("command.mxt.secret_realm.entered", DefinitionText.name(definition)), true);
+        source.sendSuccess(() -> Component.translatable("command.mxt.secret_realm.entered", DefinitionText.text(definition)), true);
         return 1;
     }
 
     private static int exitSecretRealm(CommandSourceStack source) {
         ServerPlayer player = source.getPlayer();
         if (player == null) {
-            source.sendFailure(Component.translatable("command.mxt.requires_player"));
+            source.sendFailure(Component.translatable("command.mxt.message.requires_player"));
             return 0;
         }
         Result result = SecretRealmService.exit(player);
@@ -533,7 +533,7 @@ public final class MxtCommand {
     private static int bindRiftAnchor(CommandSourceStack source, Identifier dimension, @Nullable String color) {
         ServerPlayer player = source.getPlayer();
         if (player == null) {
-            source.sendFailure(Component.translatable("command.mxt.requires_player"));
+            source.sendFailure(Component.translatable("command.mxt.message.requires_player"));
             return 0;
         }
         ItemStack stack = player.getMainHandItem();
@@ -571,7 +571,7 @@ public final class MxtCommand {
     private static int listTriggers(CommandSourceStack source, Entity target) {
         Entity entity = target == null ? source.getPlayer() : target;
         if (entity == null) {
-            source.sendFailure(Component.translatable("command.mxt.requires_player"));
+            source.sendFailure(Component.translatable("command.mxt.message.requires_player"));
             return 0;
         }
         List<TriggerSubscription> subscriptions = TriggerDispatcher.subscriptions(entity.getUUID());
@@ -595,7 +595,7 @@ public final class MxtCommand {
     private static int publishTrigger(CommandSourceStack source, Identifier signal, Entity target) {
         Entity entity = target == null ? source.getPlayer() : target;
         if (entity == null) {
-            source.sendFailure(Component.translatable("command.mxt.requires_player"));
+            source.sendFailure(Component.translatable("command.mxt.message.requires_player"));
             return 0;
         }
         boolean heard = TriggerDispatcher.hasListener(signal);

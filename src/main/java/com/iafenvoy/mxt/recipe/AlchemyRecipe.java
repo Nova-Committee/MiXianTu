@@ -140,10 +140,6 @@ public record AlchemyRecipe(Map<Holder<MedicinalProperty>, NumberProvider> mainR
         return new RecipeBookCategory();
     }
 
-    public enum Role {
-        MAIN, AUXILIARY, CATALYST
-    }
-
     public record Guide(List<ItemStackTemplate> main, List<ItemStackTemplate> auxiliary,
                         List<ItemStackTemplate> catalyst) {
         public static final Codec<Guide> CODEC = RecordCodecBuilder.create(i -> i.group(

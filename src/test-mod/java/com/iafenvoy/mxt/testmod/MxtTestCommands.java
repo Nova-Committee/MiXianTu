@@ -1489,7 +1489,7 @@ public final class MxtTestCommands {
     }
 
     // No definition stores text any more, so every name, description and minor-stage name is a key generated from
-    // the id the entry was decoded as - category, registry namespace, then the entry's own id - and the only way a
+    // the id the entry was decoded as - registry namespace, category, then the entry's own id - and the only way a
     // pack gives one words is translating that key. This runs on a server with no language file loaded, so a
     // generated name must read back as its key and must not count as drawn text.
     private static String verifyGeneratedNames(ServerPlayer player) {
@@ -1497,10 +1497,10 @@ public final class MxtTestCommands {
         if (qiRefining.value().minorStages() != 9)
             return "the counted qi_refining reads " + qiRefining.value().minorStages() + " minor stages instead of 9";
         String counted = DefinitionText.minorStage(qiRefining, 0).getString();
-        if (!counted.equals("realm_stage.mxt.mxt_test.qi_refining.minor_stage.0"))
+        if (!counted.equals("mxt.realm_stage.mxt_test.qi_refining.minor_stage.0"))
             return "the counted first minor stage reads " + counted;
         String last = DefinitionText.minorStage(qiRefining, 8).getString();
-        if (!last.equals("realm_stage.mxt.mxt_test.qi_refining.minor_stage.8"))
+        if (!last.equals("mxt.realm_stage.mxt_test.qi_refining.minor_stage.8"))
             return "the counted last minor stage reads " + last;
         // A realm whose fixture declared three named minor stages now declares the same count, so the third stage
         // is still the last one it has.
@@ -1508,33 +1508,33 @@ public final class MxtTestCommands {
         if (coreForming.value().minorStages() != 3)
             return "the counted core_forming reads " + coreForming.value().minorStages() + " minor stages instead of 3";
         if (!DefinitionText.minorStage(coreForming, 2).getString()
-                .equals("realm_stage.mxt.mxt_test.core_forming.minor_stage.2"))
+                .equals("mxt.realm_stage.mxt_test.core_forming.minor_stage.2"))
             return "the counted core_forming last stage reads " + DefinitionText.minorStage(coreForming, 2).getString();
         Holder<ItemQuality> poor = require(MxtResourceKeys.ITEM_QUALITY, POOR_QUALITY);
-        if (!DefinitionText.name(poor).getString().equals("quality.mxt.mxt_test.poor"))
-            return "the generated quality name reads " + DefinitionText.name(poor).getString();
-        if (!DefinitionText.description(poor).getString().equals("quality.mxt.mxt_test.poor.description"))
+        if (!DefinitionText.text(poor).getString().equals("mxt.quality.mxt_test.poor"))
+            return "the generated quality name reads " + DefinitionText.text(poor).getString();
+        if (!DefinitionText.description(poor).getString().equals("mxt.quality.mxt_test.poor.description"))
             return "the generated quality description reads " + DefinitionText.description(poor).getString();
         // The fixture that used to write its own words now writes none, so it is generated exactly like the rest:
         // a definition cannot escape the id-derived key.
         Holder<ItemQuality> excellent = require(MxtResourceKeys.ITEM_QUALITY, EXCELLENT_QUALITY);
-        if (!DefinitionText.name(excellent).getString().equals("quality.mxt.mxt_test.excellent"))
-            return "the generated excellent name reads " + DefinitionText.name(excellent).getString();
+        if (!DefinitionText.text(excellent).getString().equals("mxt.quality.mxt_test.excellent"))
+            return "the generated excellent name reads " + DefinitionText.text(excellent).getString();
         Holder<Aura> qi = require(MxtResourceKeys.AURA, QI);
-        if (!DefinitionText.name(qi).getString().equals("aura.mxt.mxt_test.qi"))
-            return "the generated aura name reads " + DefinitionText.name(qi).getString();
-        if (!DefinitionText.description(qi).getString().equals("aura.mxt.mxt_test.qi.description"))
+        if (!DefinitionText.text(qi).getString().equals("mxt.aura.mxt_test.qi"))
+            return "the generated aura name reads " + DefinitionText.text(qi).getString();
+        if (!DefinitionText.description(qi).getString().equals("mxt.aura.mxt_test.qi.description"))
             return "the generated aura description reads " + DefinitionText.description(qi).getString();
         // The test pack's own namespace is part of the key, not the mod's: a definition shipped by a pack is
         // translated under that pack's id.
         Holder<Element> metal = require(MxtResourceKeys.ELEMENT, PROBE_METAL_ELEMENT);
-        if (!DefinitionText.name(metal).getString().equals("element.mxt.mxt_test.metal"))
-            return "the generated element name reads " + DefinitionText.name(metal).getString();
-        if (!DefinitionText.description(metal).getString().equals("element.mxt.mxt_test.metal.description"))
+        if (!DefinitionText.text(metal).getString().equals("mxt.element.mxt_test.metal"))
+            return "the generated element name reads " + DefinitionText.text(metal).getString();
+        if (!DefinitionText.description(metal).getString().equals("mxt.element.mxt_test.metal.description"))
             return "the generated element description reads " + DefinitionText.description(metal).getString();
         // No language file is loaded here, so every one of those keys is untranslated and must stay out of a
         // tooltip; that guard is the only thing standing between a pack and a row of raw keys.
-        for (Component generated : List.of(DefinitionText.name(metal), DefinitionText.description(metal),
+        for (Component generated : List.of(DefinitionText.text(metal), DefinitionText.description(metal),
                 DefinitionText.minorStage(coreForming, 2)))
             if (DefinitionText.resolved(generated))
                 return "an untranslated generated key counts as drawn text: " + generated.getString();
@@ -5343,7 +5343,7 @@ public final class MxtTestCommands {
 
     private static ServerPlayer player(CommandSourceStack source) {
         ServerPlayer player = source.getPlayer();
-        if (player == null) source.sendFailure(Component.translatable("command.mxt.requires_player"));
+        if (player == null) source.sendFailure(Component.translatable("command.mxt.message.requires_player"));
         return player;
     }
 

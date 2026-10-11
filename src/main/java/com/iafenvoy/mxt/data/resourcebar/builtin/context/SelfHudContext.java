@@ -19,7 +19,7 @@ public enum SelfHudContext implements ResourceBarContext {
 
     @Override
     public Component name(Holder<Resource> resource) {
-        return Component.translatable("hud.mxt.resource_bar.self_hud", DefinitionText.name(resource));
+        return Component.translatable("hud.mxt.resource_bar.self_hud", DefinitionText.text(resource));
     }
 
     @Override

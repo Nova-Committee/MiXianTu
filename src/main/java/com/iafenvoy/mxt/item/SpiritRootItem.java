@@ -44,7 +44,7 @@ public final class SpiritRootItem extends Item {
         }
         // Only a root actually gained is spent, and a creative player keeps the stack so the picker can be used freely.
         if (!player.hasInfiniteMaterials()) stack.shrink(1);
-        ItemFeedback.send(player, Component.translatable("item.mxt.spirit_root.granted", DefinitionText.name(root)));
+        ItemFeedback.send(player, Component.translatable("item.mxt.spirit_root.granted", DefinitionText.text(root)));
         return InteractionResult.SUCCESS_SERVER;
     }
 

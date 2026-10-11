@@ -26,7 +26,7 @@ import java.util.List;
  * pack should be able to write by accident, and {@code mxt:empty} is there for one that means to do nothing.
  */
 public record Talisman(TalismanType type, double capacity,
-                       EntityCondition condition, List<Cost> costs)  {
+                       EntityCondition condition, List<Cost> costs) {
     public static final Codec<Holder<Talisman>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.TALISMAN);
     public static final Codec<Talisman> DIRECT_CODEC = RecordCodecBuilder.create(i -> i.group(
             TalismanType.CODEC.forGetter(Talisman::type),

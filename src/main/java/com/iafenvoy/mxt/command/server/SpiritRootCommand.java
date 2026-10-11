@@ -97,7 +97,7 @@ public final class SpiritRootCommand {
                     ? "command.mxt.identity.on" : "command.mxt.identity.off");
             Component bound = elements == null ? Component.empty() : Component.literal(" · ").append(elements);
             source.sendSuccess(() -> Component.translatable("command.mxt.identity.line",
-                    DefinitionText.name(root), quality, bound, state), false);
+                    DefinitionText.text(root), quality, bound, state), false);
         }
         return distinct.size();
     }
@@ -114,7 +114,7 @@ public final class SpiritRootCommand {
     }
 
     private static MutableComponent elementName(SpiritRoot.ElementWeight entry) {
-        MutableComponent name = Component.empty().append(DefinitionText.name(entry.element()));
+        MutableComponent name = Component.empty().append(DefinitionText.text(entry.element()));
         return entry.weight() == 1.0D ? name : name.append(Component.literal(" " + TooltipText.number(entry.weight())));
     }
 
@@ -130,12 +130,12 @@ public final class SpiritRootCommand {
             Result result = CultivationIdentityService.grantSpiritRoot(living, HolderHelper.id(root), root.value());
             if (!result.changed()) {
                 source.sendFailure(Component.translatable("command.mxt.identity.grant_failed",
-                        DefinitionText.name(root), target.getDisplayName(), reason(result.failure())));
+                        DefinitionText.text(root), target.getDisplayName(), reason(result.failure())));
                 continue;
             }
             granted++;
             source.sendSuccess(() -> Component.translatable("command.mxt.identity.granted",
-                    DefinitionText.name(root), target.getDisplayName()), true);
+                    DefinitionText.text(root), target.getDisplayName()), true);
         }
         return granted;
     }
@@ -157,7 +157,7 @@ public final class SpiritRootCommand {
             }
             removed++;
             source.sendSuccess(() -> Component.translatable("command.mxt.identity.removed",
-                    DefinitionText.name(root), target.getDisplayName()), true);
+                    DefinitionText.text(root), target.getDisplayName()), true);
         }
         return removed;
     }
@@ -185,7 +185,7 @@ public final class SpiritRootCommand {
             }
             changed++;
             source.sendSuccess(() -> Component.translatable("command.mxt.identity.toggled",
-                    DefinitionText.name(root), Component.translatable(enabled
+                    DefinitionText.text(root), Component.translatable(enabled
                             ? "command.mxt.identity.on" : "command.mxt.identity.off"), target.getDisplayName()), true);
         }
         return changed;
@@ -203,7 +203,7 @@ public final class SpiritRootCommand {
     }
 
     private static int noPlayer(CommandSourceStack source) {
-        source.sendFailure(Component.translatable("command.mxt.requires_player"));
+        source.sendFailure(Component.translatable("command.mxt.message.requires_player"));
         return 0;
     }
 

@@ -49,7 +49,7 @@ public final class LifeSpanCommand {
 
     private static int get(CommandSourceStack source, @Nullable Entity target) {
         if (target == null) {
-            source.sendFailure(Component.translatable("command.mxt.requires_player"));
+            source.sendFailure(Component.translatable("command.mxt.message.requires_player"));
             return 0;
         }
         source.sendSuccess(() -> Component.translatable("command.mxt.lifespan.get", target.getDisplayName(), read(target)), false);

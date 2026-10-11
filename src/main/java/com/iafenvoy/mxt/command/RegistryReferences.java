@@ -14,7 +14,7 @@ import net.minecraft.resources.ResourceKey;
 // ResourceKeyArgument node is deliberately never resolved to a registry entry; only its registry is checked.
 public final class RegistryReferences {
     private static final DynamicCommandExceptionType ERROR_INVALID_ID = new DynamicCommandExceptionType(
-            value -> Component.translatable("command.mxt.invalid_id", value));
+            value -> Component.translatable("command.mxt.message.invalid_id", value));
 
     private RegistryReferences() {
     }

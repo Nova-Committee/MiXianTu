@@ -33,7 +33,7 @@ public record ItemQuality(Optional<Integer> color, Modifier valueMultiplier,
                           Modifier forgingModifier, Modifier alchemyModifier,
                           EntityCondition condition, Optional<Holder<ItemQuality>> next, List<Cost> upgradeCosts,
                           EntityCondition upgradeCondition,
-                          Optional<Identifier> quality)  {
+                          Optional<Identifier> quality) {
     public static final Codec<Holder<ItemQuality>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.ITEM_QUALITY);
     public static final Codec<ItemQuality> DIRECT_CODEC = RecordCodecBuilder.create(i -> i.group(
             MiscCodecs.RGB_COLOR.optionalFieldOf("color").forGetter(ItemQuality::color),

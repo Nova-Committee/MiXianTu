@@ -38,10 +38,10 @@ import java.util.function.Consumer;
  */
 @EventBusSubscriber(Dist.CLIENT)
 public final class TalismanTooltipAppender {
-    // A use type's own line, keyed `talisman_type.mxt.mxt.<type path>` - the four-part shape every definition text
-    // uses, with the type registry's namespace in the middle. One line per distinct type on the carrier, so several
+    // A use type's own line, keyed `mxt.talisman_type.mxt.<type path>` - the four-part shape every definition text
+    // uses, with the type registry's namespace leading. One line per distinct type on the carrier, so several
     // inscriptions of the same kind are explained once.
-    private static final String USAGE_CATEGORY = DefinitionText.category(MxtResourceKeys.TALISMAN_TYPE.identifier());
+    private static final String USAGE_CATEGORY = MxtResourceKeys.TALISMAN_TYPE.identifier().getPath();
     private static final String TYPE_REGISTRY_NAMESPACE = MxtResourceKeys.TALISMAN_TYPE.identifier().getNamespace();
 
     @SubscribeEvent
@@ -64,7 +64,7 @@ public final class TalismanTooltipAppender {
         } else {
             Set<Identifier> explained = new HashSet<>();
             for (Holder<Talisman> talisman : inscribed) {
-                builder.accept(Component.translatable("tooltip.mxt.talisman.entry", DefinitionText.name(talisman)));
+                builder.accept(Component.translatable("tooltip.mxt.talisman.entry", DefinitionText.text(talisman)));
                 usageLine(talisman.value().type(), explained).ifPresent(builder);
             }
         }
@@ -79,8 +79,7 @@ public final class TalismanTooltipAppender {
         // first used, so the number is read off the definitions and says "full" until then.
         int durability = TalismanService.durability(stack);
         if (durability > 0)
-            builder.accept(Component.translatable("tooltip.mxt.talisman.durability",
-                    Math.max(0, durability - stack.getDamageValue()), durability).withStyle(ChatFormatting.GRAY));
+            builder.accept(Component.translatable("tooltip.mxt.talisman.durability", Math.max(0, durability - stack.getDamageValue()), durability).withStyle(ChatFormatting.GRAY));
         builder.accept(Component.translatable("tooltip.mxt.talisman.mode." + TalismanService.mode(stack).key()));
     }
 
@@ -90,7 +89,7 @@ public final class TalismanTooltipAppender {
     private static Optional<Component> usageLine(TalismanType type, Set<Identifier> explained) {
         Identifier id = MxtRegistries.TALISMAN_TYPE.getKey(type.codec());
         if (!explained.add(id)) return Optional.empty();
-        MutableComponent line = Component.translatable(DefinitionText.key(USAGE_CATEGORY, TYPE_REGISTRY_NAMESPACE, id));
+        MutableComponent line = DefinitionText.text(MxtResourceKeys.TALISMAN_TYPE, id);
         return DefinitionText.resolved(line) ? Optional.of(line.withStyle(ChatFormatting.GRAY)) : Optional.empty();
     }
 }

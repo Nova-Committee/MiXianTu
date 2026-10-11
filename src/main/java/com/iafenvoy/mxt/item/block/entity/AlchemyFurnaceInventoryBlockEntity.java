@@ -168,7 +168,7 @@ public final class AlchemyFurnaceInventoryBlockEntity extends BlockEntity implem
         }
         if (this.level == null) return false;
         int logical = this.kind == AlchemyInventoryKind.MAIN ? slot : AlchemySlots.AUX_START + slot;
-        return SpiritHerbService.potency(this.level.registryAccess(), stack, AlchemyResolver.herbRole(AlchemySlots.role(logical)), FormulaContext.of(this.level))
+        return SpiritHerbService.potency(this.level.registryAccess(), stack, AlchemySlots.role(logical), FormulaContext.of(this.level))
                 .filter(SpiritHerbService.HerbPotency::placeable).isPresent();
     }
 

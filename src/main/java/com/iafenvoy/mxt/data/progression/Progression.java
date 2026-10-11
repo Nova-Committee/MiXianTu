@@ -20,7 +20,7 @@ import java.util.Optional;
  * grants at that level rather than to everything the holder does.
  */
 public record Progression(Optional<Holder<Progression>> nextLevel, NumberProvider mastery,
-                          double damageMultiplier)  {
+                          double damageMultiplier) {
     public static final Codec<Holder<Progression>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.PROGRESSION);
     public static final Codec<Progression> DIRECT_CODEC = RecordCodecBuilder.<Progression>create(i -> i.group(
             RegistryFixedCodec.create(MxtResourceKeys.PROGRESSION).optionalFieldOf("next_level").forGetter(Progression::nextLevel),

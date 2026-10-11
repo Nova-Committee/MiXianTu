@@ -66,7 +66,7 @@ public record StorageAbilityType(NumberProvider slots,
         ServerPlayer player = (ServerPlayer) context.holder();
         ItemStack carrier = context.carrier();
         int capacity = ArtifactService.storageSlots(carrier, context.ability(), context.formula());
-        Component title = Component.translatable("screen.mxt.artifact_storage", DefinitionText.name(context.ability()));
+        Component title = Component.translatable("screen.mxt.artifact_storage", DefinitionText.text(context.ability()));
         ArtifactStorageContainer contents = new ArtifactStorageContainer(player, context.ability(), capacity);
         int rows = capacity / ArtifactService.STORAGE_COLUMNS;
         player.openMenu(new SimpleMenuProvider((id, inventory, opener) ->

@@ -71,14 +71,14 @@ public final class TribulationCommand {
         StartResult result = TribulationService.start(entity, data, tribulation, entity.level().getGameTime(),
                 FormulaContexts.forEntity(entity));
         if (!result.started()) {
-            source.sendFailure(Component.translatable("command.mxt.tribulation.failed", DefinitionText.name(tribulation),
+            source.sendFailure(Component.translatable("command.mxt.tribulation.failed", DefinitionText.text(tribulation),
                     Component.translatable("command.mxt.tribulation.failure." + name(result.failure()))));
             return 0;
         }
         source.sendSuccess(() -> data.windup() > 0L
-                ? Component.translatable("command.mxt.tribulation.started_windup", DefinitionText.name(tribulation),
+                ? Component.translatable("command.mxt.tribulation.started_windup", DefinitionText.text(tribulation),
                 data.remaining(), entity.getDisplayName(), data.windup())
-                : Component.translatable("command.mxt.tribulation.started", DefinitionText.name(tribulation),
+                : Component.translatable("command.mxt.tribulation.started", DefinitionText.text(tribulation),
                 data.remaining(), entity.getDisplayName()), true);
         return 1;
     }
@@ -91,7 +91,7 @@ public final class TribulationCommand {
             source.sendFailure(Component.translatable("command.mxt.tribulation.none", entity.getDisplayName()));
             return 0;
         }
-        Component running = DefinitionText.name(data.tribulation().get());
+        Component running = DefinitionText.text(data.tribulation().get());
         // Clearing is the same thing a finished run does, so a stopped run leaves nothing behind to resume.
         data.clear();
         source.sendSuccess(() -> Component.translatable("command.mxt.tribulation.stopped", running, entity.getDisplayName()), true);
@@ -110,13 +110,13 @@ public final class TribulationCommand {
         // timeline is under way when nothing has been consumed yet.
         if (data.windup() > 0L) {
             source.sendSuccess(() -> Component.translatable("command.mxt.tribulation.status_windup",
-                    DefinitionText.name(data.tribulation().get()), entity.getDisplayName(), data.windup()), false);
+                    DefinitionText.text(data.tribulation().get()), entity.getDisplayName(), data.windup()), false);
             return 1;
         }
         Component state = data.state().map(TribulationCommand::describeState)
                 .orElseGet(() -> Component.translatable("command.mxt.tribulation.state_not_begun"));
         source.sendSuccess(() -> Component.translatable("command.mxt.tribulation.status",
-                DefinitionText.name(data.tribulation().get()), entity.getDisplayName(),
+                DefinitionText.text(data.tribulation().get()), entity.getDisplayName(),
                 data.consumed() + 1, data.remaining(), state), false);
         return 1;
     }
@@ -124,7 +124,7 @@ public final class TribulationCommand {
     private static LivingEntity target(CommandSourceStack source, @Nullable Entity target) {
         Entity entity = target != null ? target : source.getPlayer();
         if (entity instanceof LivingEntity living) return living;
-        source.sendFailure(Component.translatable(entity == null ? "command.mxt.requires_player" : "command.mxt.tribulation.not_living"));
+        source.sendFailure(Component.translatable(entity == null ? "command.mxt.message.requires_player" : "command.mxt.tribulation.not_living"));
         return null;
     }
 

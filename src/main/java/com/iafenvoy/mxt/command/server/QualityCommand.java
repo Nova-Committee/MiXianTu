@@ -64,7 +64,7 @@ public final class QualityCommand {
 
     private static int get(CommandSourceStack source, @Nullable LivingEntity target) {
         if (target == null) {
-            source.sendFailure(Component.translatable("command.mxt.requires_player"));
+            source.sendFailure(Component.translatable("command.mxt.message.requires_player"));
             return 0;
         }
         ItemStack stack = target.getMainHandItem();
@@ -158,7 +158,7 @@ public final class QualityCommand {
             source.sendFailure(Component.translatable("command.mxt.quality.chain.none", HolderHelper.id(quality).toString()));
             return 0;
         }
-        Component line = ChainReport.line(ladder.nodes().stream().map(DefinitionText::name).toList(),
+        Component line = ChainReport.line(ladder.nodes().stream().map(DefinitionText::text).toList(),
                 ladder.indexOf(HolderHelper.id(quality)));
         source.sendSuccess(() -> Component.translatable("command.mxt.quality.chain",
                 String.valueOf(ladder.key()), line), false);

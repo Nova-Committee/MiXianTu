@@ -1,6 +1,5 @@
 package com.iafenvoy.mxt.recipe;
 
-import com.iafenvoy.mxt.recipe.AlchemyRecipe.Role;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.RecipeInput;
 import org.jspecify.annotations.NonNull;
@@ -28,6 +27,6 @@ public record AlchemyRecipeInput(List<Slot> slots) implements RecipeInput {
         return this.slots.size();
     }
 
-    public record Slot(Role role, ItemStack stack) {
+    public record Slot(AlchemyRole role, ItemStack stack) {
     }
 }

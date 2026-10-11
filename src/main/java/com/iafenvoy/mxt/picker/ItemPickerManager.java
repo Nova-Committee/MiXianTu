@@ -91,7 +91,7 @@ public final class ItemPickerManager {
         register(MxtResourceKeys.ALCHEMY_FURNACE, (holder, access) -> {
             if (!holder.isBound()) return List.of();
             ItemStack stack = componentStack(MxtBlocks.ALCHEMY_FURNACE.toStack(), MxtDataComponents.ALCHEMY_FURNACE, holder);
-            Component name = DefinitionText.name(holder);
+            Component name = DefinitionText.text(holder);
             Component quality = QualityService.find(access, stack)
                     .map(QualityService::displayName)
                     .orElse(Component.translatable("screen.mxt.alchemy.no_quality"));
@@ -223,7 +223,7 @@ public final class ItemPickerManager {
     private static void registerHerbs(ResourceKey<Registry<SpiritHerb>> key) {
         register(key, (holder, access) -> {
             Identifier id = HolderHelper.idOrNull(holder);
-            Component definition = DefinitionText.name(holder);
+            Component definition = DefinitionText.text(holder);
             SpiritHerb herb = holder.value();
             List<PickerItem> items = new ArrayList<>();
             Optional<Growth> growth = herb.growth();
@@ -251,7 +251,7 @@ public final class ItemPickerManager {
                                            Function<T, List<Either<Holder<Block>, TagKey<Block>>>> blocks) {
         register(key, (holder, access) -> {
             Identifier id = HolderHelper.idOrNull(holder);
-            Component definition = DefinitionText.name(holder);
+            Component definition = DefinitionText.text(holder);
             List<PickerItem> items = new ArrayList<>();
             for (Holder<Block> block : RegistryCodecs.resolve(blocks.apply(holder.value()), access, Registries.BLOCK).toList()) {
                 ItemStack stack = block.value().asItem().getDefaultInstance();
@@ -269,7 +269,7 @@ public final class ItemPickerManager {
     private static <T> void registerMatcher(ResourceKey<Registry<T>> key, Function<T, List<Entry>> entries) {
         register(key, holder -> {
             Identifier id = HolderHelper.idOrNull(holder);
-            Component definition = DefinitionText.name(holder);
+            Component definition = DefinitionText.text(holder);
             List<ItemStack> stacks = stackItems(entries.apply(holder.value()));
             List<PickerItem> items = new ArrayList<>(stacks.size());
             for (ItemStack stack : stacks)
@@ -283,7 +283,7 @@ public final class ItemPickerManager {
     }
 
     private static PickerItem described(ItemStack stack, Holder<?> holder) {
-        return described(stack, holder, DefinitionText.name(holder));
+        return described(stack, holder, DefinitionText.text(holder));
     }
 
     private static PickerItem described(ItemStack stack, Holder<?> holder, Component name) {

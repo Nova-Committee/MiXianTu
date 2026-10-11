@@ -74,7 +74,7 @@ public final class TalismanCommand {
     private static int blank(CommandContext<CommandSourceStack> ctx) {
         ServerPlayer player = ctx.getSource().getPlayer();
         if (player == null) {
-            ctx.getSource().sendFailure(Component.translatable("command.mxt.requires_player"));
+            ctx.getSource().sendFailure(Component.translatable("command.mxt.message.requires_player"));
             return 0;
         }
         ItemStack stack = MxtItems.TALISMAN.toStack(count(ctx));
@@ -87,7 +87,7 @@ public final class TalismanCommand {
         CommandSourceStack source = ctx.getSource();
         ServerPlayer player = source.getPlayer();
         if (player == null) {
-            source.sendFailure(Component.translatable("command.mxt.requires_player"));
+            source.sendFailure(Component.translatable("command.mxt.message.requires_player"));
             return 0;
         }
         Reference<Talisman> inscribed = ResourceArgument.getResource(ctx, "talisman", MxtResourceKeys.TALISMAN);
@@ -107,7 +107,7 @@ public final class TalismanCommand {
         }
         source.sendSuccess(() -> Component.translatable(
                 "command.mxt.talisman.given",
-                count, template.getDisplayName(), DefinitionText.name(inscribed),
+                count, template.getDisplayName(), DefinitionText.text(inscribed),
                 Component.translatable("tooltip.mxt.talisman.mode." + mode.key()),
                 Component.translatable(charged ? "command.mxt.talisman.charged"
                         : "command.mxt.talisman.not_charged")), true);

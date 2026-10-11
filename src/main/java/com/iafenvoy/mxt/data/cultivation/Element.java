@@ -26,8 +26,7 @@ import java.util.Set;
  */
 public record Element(List<Relation> overcomes, List<Relation> adaptedTo,
                       List<DamageTypeClaim> damageTypes,
-                      double attachmentDecay, double damageAttachment, int color, double conflictMultiplier)
-         {
+                      double attachmentDecay, double damageAttachment, int color, double conflictMultiplier) {
     public static final Codec<Holder<Element>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.ELEMENT);
     public static final Codec<Element> DIRECT_CODEC = RecordCodecBuilder.<Element>create(i -> i.group(
             Relation.CODEC.listOf().optionalFieldOf("overcomes", List.of()).forGetter(Element::overcomes),

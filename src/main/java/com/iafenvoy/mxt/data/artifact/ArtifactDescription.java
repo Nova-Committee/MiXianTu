@@ -51,7 +51,7 @@ public final class ArtifactDescription {
         Artifact artifact = holder.value();
         FormulaContext formula = player == null ? FormulaContext.EMPTY : FormulaContext.of(player);
         List<Component> lines = new ArrayList<>();
-        lines.add(Component.translatable("tooltip.mxt.artifact.header", DefinitionText.name(holder)).withStyle(ChatFormatting.GOLD));
+        lines.add(Component.translatable("tooltip.mxt.artifact.header", DefinitionText.text(holder)).withStyle(ChatFormatting.GOLD));
         if (advanced) lines.add(indented(HolderHelper.id(holder)));
         appendOwnership(lines, artifact, ArtifactService.state(stack), advanced);
         appendAuras(lines, registries, stack, artifact, formula);
@@ -109,7 +109,7 @@ public final class ArtifactDescription {
             int percentage = capacity <= 0 ? 0 : Math.clamp(Math.round(stored * 100.0D / capacity), 0, 100);
             Component amount = Component.literal(TooltipText.number(stored) + " / " + TooltipText.number(capacity))
                     .withColor(SpiritChargeService.color(percentage));
-            lines.add(Component.translatable("tooltip.mxt.artifact.aura", DefinitionText.name(aura), amount)
+            lines.add(Component.translatable("tooltip.mxt.artifact.aura", DefinitionText.text(aura), amount)
                     .withStyle(ChatFormatting.GRAY));
         });
         double nourishment = ArtifactService.state(stack).nourishment();
@@ -139,7 +139,7 @@ public final class ArtifactDescription {
             }
             boolean pressable = ability.type() instanceof Togglable;
             lines.add(Component.translatable(pressable ? "tooltip.mxt.artifact.active" : "tooltip.mxt.artifact.passive",
-                            DefinitionText.name(entry))
+                            DefinitionText.text(entry))
                     .withStyle(pressable ? ChatFormatting.AQUA : ChatFormatting.BLUE));
         }
     }
@@ -164,13 +164,13 @@ public final class ArtifactDescription {
             ))
                 parts.add(Component.translatable("tooltip.mxt.artifact.resource_cost",
                         TooltipText.number(amount1.evaluate(formula)),
-                        DefinitionText.name(resource)));
+                        DefinitionText.text(resource)));
             else if (cost instanceof AuraCost(
                     Holder<Aura> aura, NumberProvider amount
             ))
                 parts.add(Component.translatable("tooltip.mxt.artifact.resource_cost",
                         TooltipText.number(amount.evaluate(formula)),
-                        DefinitionText.name(aura)));
+                        DefinitionText.text(aura)));
             else other = true;
         }
         if (other) parts.add(Component.translatable("tooltip.mxt.artifact.resource_cost_other"));

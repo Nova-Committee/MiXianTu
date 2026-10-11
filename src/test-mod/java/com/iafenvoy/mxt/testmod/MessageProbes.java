@@ -1,8 +1,12 @@
 package com.iafenvoy.mxt.testmod;
 
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import com.iafenvoy.mxt.data.MessageChannel;
 import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.action.builtin.SendMessageAction;
+import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.data.context.action.BiEntityActionContext;
 import com.iafenvoy.mxt.data.context.action.BlockActionContext;
 import com.iafenvoy.mxt.data.context.action.EntityActionContext;
@@ -13,9 +17,6 @@ import com.iafenvoy.mxt.data.formation.builtin.SendMessageFormationAction;
 import com.iafenvoy.mxt.registry.MxtRegistries;
 import com.iafenvoy.mxt.runtime.formation.FormationWorldTicker;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import com.mojang.serialization.JsonOps;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.commands.CommandSourceStack;
@@ -31,6 +32,8 @@ import net.minecraft.world.entity.animal.cow.Cow;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+
+import java.util.Objects;
 
 /**
  * Checks the send_message action on every axis. Each leg prints actual and expected.
@@ -177,16 +180,19 @@ public final class MessageProbes {
         FormationActionType module = decodeModule(source, codec, body);
         ok &= check(source, "message probe: the formation module decodes to the message record",
                 module instanceof SendMessageFormationAction, true);
-        if (module instanceof SendMessageFormationAction message) {
+        if (module instanceof SendMessageFormationAction(
+                Component message1, MessageChannel channel, EntityCondition recipients,
+                int intervalPeriods
+        )) {
             ok &= check(source, "message probe: the formation module read its channel",
-                    message.channel(), MessageChannel.CHAT);
+                    channel, MessageChannel.CHAT);
             ok &= check(source, "message probe: the formation module read its message",
-                    message.message().getString(), "probe");
+                    message1.getString(), "probe");
             ok &= check(source, "message probe: the formation module defaults to every period",
-                    message.intervalPeriods(), 1);
+                    intervalPeriods, 1);
             // An absent recipients condition must not filter anyone out.
             ok &= check(source, "message probe: the module's absent recipient condition passes everyone",
-                    message.recipients().test(source.getPlayer(), FormulaContext.EMPTY), true);
+                    recipients.test(source.getPlayer(), FormulaContext.EMPTY), true);
         }
         // A definition that forgot its message must be refused rather than decoding to something silent.
         ok &= check(source, "message probe: the formation module requires its message",
@@ -204,7 +210,7 @@ public final class MessageProbes {
         // Two definitions with the same interval must agree on the phase rather than drift apart: the gate reads
         // the clock and nothing else, so the same period gives the same answer however often it is asked.
         ok &= check(source, "message probe: the phase is shared rather than counted per module",
-                due(3, 60L) && due(3, 60L) && !due(3, 80L), true);
+                due(3, 60L) && !due(3, 80L), true);
         // Floor division rather than a modulo on a positive clock: 600 is a multiple of the 20-tick period and 3
         // divides it, so the gate must open there and stay shut one period later.
         ok &= check(source, "message probe: the gate uses floor division on a late clock",
@@ -248,8 +254,7 @@ public final class MessageProbes {
     }
 
     private static boolean check(CommandSourceStack source, String label, Object actual, Object expected) {
-        boolean passed = actual == null ? expected == null : actual.equals(expected);
-        final boolean ok = passed;
+        boolean ok = Objects.equals(actual, expected);
         source.sendSuccess(() -> Component.literal(label + ": " + (ok ? "ok" : "expected " + expected + " but got " + actual)), false);
         return ok;
     }

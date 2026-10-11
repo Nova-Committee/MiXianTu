@@ -1,5 +1,6 @@
 package com.iafenvoy.mxt.command.server;
 
+import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.command.ServerCommandManager;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.cultivation.Element;
@@ -19,6 +20,7 @@ import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import org.jetbrains.annotations.Nullable;
 
@@ -73,7 +75,7 @@ public final class AuraCommand {
         aura.aura().forEach((holder, pool) -> {
             if (holder.value().auraType().filter(element::equals).isPresent()) pools.put(holder, pool);
         });
-        source.sendSuccess(() -> auraReport(aura, pools, DefinitionText.name(element)), false);
+        source.sendSuccess(() -> auraReport(aura, pools, DefinitionText.text(element)), false);
         return pools.size();
     }
 
@@ -108,19 +110,18 @@ public final class AuraCommand {
     }
 
     private static Component resourceName(Holder<Aura> aura) {
-        MutableComponent base = DefinitionText.name(aura);
+        MutableComponent base = DefinitionText.text(aura);
         return aura.value().auraType()
-                .map(type -> base.copy().append(" (").append(DefinitionText.name(type)).append(")")).orElse(base);
+                .map(type -> base.copy().append(" (").append(DefinitionText.text(type)).append(")")).orElse(base);
     }
 
     private static Component sourceName(AuraResult aura) {
-        String category = switch (aura.sourceKind()) {
+        return DefinitionText.text(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, switch (aura.sourceKind()) {
             case BIOME -> "biome";
             case DIMENSION -> "dimension";
             case FORMATION -> "formation";
             case CUSTOM, CHUNK -> "aura_zone";
-        };
-        return DefinitionText.name(aura.source(), category);
+        }), aura.source());
     }
 
     private static String auraNumber(double value) {

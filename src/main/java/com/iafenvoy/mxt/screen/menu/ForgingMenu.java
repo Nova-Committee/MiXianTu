@@ -379,7 +379,7 @@ public final class ForgingMenu extends ApricityContainerMenu {
 
         private Setup(Inventory inventory, ContainerLevelAccess access) {
             // A null from the access answers "no table here", which is how the client half gets its stand-in.
-            this.machine = access.evaluate((level, pos) -> level.getBlockEntity(pos) instanceof ForgingTableBlockEntity table ? table.forgingContainer() : null)
+            this.machine = access.evaluate((level, pos) -> level.getBlockEntity(pos) instanceof ForgingTableBlockEntity table ? table.forgingContainer() : new SimpleContainer(MACHINE_SLOTS))
                     .orElseGet(() -> new SimpleContainer(MACHINE_SLOTS));
             this.page = PageSlots.of(AuiPages.page(AuiPages.FORGING, "forging"))
                     .container("blueprints", this.machine, this::newMachineSlot)

@@ -43,9 +43,8 @@ public enum SpiritHerbComponentProvider implements IBlockComponentProvider {
     private static Component herbName(BlockAccessor accessor, String idText) {
         Identifier id = Identifier.tryParse(idText);
         if (id == null) return Component.literal(idText);
-        Holder<SpiritHerb> holder = MxtDatapackRegistries
-                .holder(accessor.getLevel().registryAccess(), MxtResourceKeys.SPIRIT_HERB, id).orElse(null);
-        return holder == null ? DefinitionText.name(id, "spirit_herb") : DefinitionText.name(holder);
+        Holder<SpiritHerb> holder = MxtDatapackRegistries.holder(accessor.getLevel().registryAccess(), MxtResourceKeys.SPIRIT_HERB, id).orElse(null);
+        return holder == null ? DefinitionText.text(MxtResourceKeys.SPIRIT_HERB, id) : DefinitionText.text(holder);
     }
 
     @Override

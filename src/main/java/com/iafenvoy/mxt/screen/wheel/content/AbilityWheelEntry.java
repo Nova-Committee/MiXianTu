@@ -61,7 +61,7 @@ public record AbilityWheelEntry(Holder<Ability> ability, @Nullable ItemStack car
 
     @Override
     public Component title() {
-        return DefinitionText.name(this.ability);
+        return DefinitionText.text(this.ability);
     }
 
     @Override
@@ -142,7 +142,7 @@ public record AbilityWheelEntry(Holder<Ability> ability, @Nullable ItemStack car
     private static Component itemName(Player player, ItemStack carrier) {
         RegistryAccess registries = player.level().registryAccess();
         Holder<Artifact> definition = ArtifactService.definition(registries, carrier).orElse(null);
-        Component name = definition == null ? carrier.getHoverName() : DefinitionText.name(definition);
+        Component name = definition == null ? carrier.getHoverName() : DefinitionText.text(definition);
         Holder<ItemQuality> quality = QualityService.find(registries, carrier)
                 .filter(holder -> holder.value().color().isPresent()).orElse(null);
         return quality == null ? name.copy().withStyle(ChatFormatting.GOLD) : QualityService.coloredName(quality, name);

@@ -38,7 +38,7 @@ public record Cultivation(int priority,
                           List<Cost> costs, NumberProvider absorbAmount,
                           List<Cost> auraCosts, List<AuraGain> auraGains,
                           int cooldownTicks,
-                          Optional<Component> abortReason)  {
+                          Optional<Component> abortReason) {
     // The pre-Cost aura map is still read as a list of mxt:aura entries; writing always emits the list form.
     private static final Codec<List<Cost>> AURA_COSTS = Codec.either(
             CollectionCodecs.map(Aura.CODEC, NumberProvider.CODEC), Cost.LIST_CODEC).xmap(

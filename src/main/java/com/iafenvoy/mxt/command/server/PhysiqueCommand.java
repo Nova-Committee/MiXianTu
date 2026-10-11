@@ -96,7 +96,7 @@ public final class PhysiqueCommand {
                     ? "command.mxt.identity.on" : "command.mxt.identity.off");
             // A physique has no element to name, so the slot is empty rather than filled with a placeholder.
             source.sendSuccess(() -> Component.translatable("command.mxt.identity.line",
-                    DefinitionText.name(physique), quality, Component.empty(), state), false);
+                    DefinitionText.text(physique), quality, Component.empty(), state), false);
         }
         return distinct.size();
     }
@@ -114,12 +114,12 @@ public final class PhysiqueCommand {
                     FormulaContext.of(living));
             if (!result.changed()) {
                 source.sendFailure(Component.translatable("command.mxt.identity.grant_failed",
-                        DefinitionText.name(physique), target.getDisplayName(), reason(result.failure())));
+                        DefinitionText.text(physique), target.getDisplayName(), reason(result.failure())));
                 continue;
             }
             granted++;
             source.sendSuccess(() -> Component.translatable("command.mxt.identity.granted",
-                    DefinitionText.name(physique), target.getDisplayName()), true);
+                    DefinitionText.text(physique), target.getDisplayName()), true);
         }
         return granted;
     }
@@ -141,7 +141,7 @@ public final class PhysiqueCommand {
             }
             removed++;
             source.sendSuccess(() -> Component.translatable("command.mxt.identity.removed",
-                    DefinitionText.name(key), target.getDisplayName()), true);
+                    DefinitionText.text(key), target.getDisplayName()), true);
         }
         return removed;
     }
@@ -169,7 +169,7 @@ public final class PhysiqueCommand {
             }
             changed++;
             source.sendSuccess(() -> Component.translatable("command.mxt.identity.toggled",
-                    DefinitionText.name(physique), Component.translatable(enabled
+                    DefinitionText.text(physique), Component.translatable(enabled
                             ? "command.mxt.identity.on" : "command.mxt.identity.off"), target.getDisplayName()), true);
         }
         return changed;
@@ -188,7 +188,7 @@ public final class PhysiqueCommand {
     }
 
     private static int noPlayer(CommandSourceStack source) {
-        source.sendFailure(Component.translatable("command.mxt.requires_player"));
+        source.sendFailure(Component.translatable("command.mxt.message.requires_player"));
         return 0;
     }
 

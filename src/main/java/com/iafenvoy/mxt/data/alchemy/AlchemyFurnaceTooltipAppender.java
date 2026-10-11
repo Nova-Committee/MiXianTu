@@ -45,7 +45,7 @@ public final class AlchemyFurnaceTooltipAppender {
             if (material == null)
                 builder.accept(Component.translatable("tooltip.mxt.alchemy.no_wall_material").withStyle(ChatFormatting.RED));
             else {
-                builder.accept(DefinitionText.name(material).withStyle(ChatFormatting.DARK_GREEN));
+                builder.accept(DefinitionText.text(material).withStyle(ChatFormatting.DARK_GREEN));
                 builder.accept(Component.translatable("tooltip.mxt.alchemy.wall_temperature",
                         TooltipText.number(material.value().maxTemperature())).withStyle(ChatFormatting.GRAY));
             }
@@ -69,7 +69,7 @@ public final class AlchemyFurnaceTooltipAppender {
         if (registries == null) return;
         AlchemyWorkstationService.furnaceDefinition(registries, stack).ifPresentOrElse(holder -> {
             AlchemyFurnaceDefinition spec = holder.value();
-            builder.accept(DefinitionText.name(holder).withStyle(ChatFormatting.DARK_GREEN));
+            builder.accept(DefinitionText.text(holder).withStyle(ChatFormatting.DARK_GREEN));
             builder.accept(Component.translatable("tooltip.mxt.alchemy.slots", spec.mainSlots(), spec.auxiliarySlots(), spec.catalystSlots())
                     .withStyle(ChatFormatting.GRAY));
             builder.accept(Component.translatable("tooltip.mxt.alchemy.capacity", spec.capacity()).withStyle(ChatFormatting.GRAY));

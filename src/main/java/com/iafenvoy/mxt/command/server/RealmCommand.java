@@ -51,14 +51,14 @@ public final class RealmCommand {
         ServerPlayer player = source.getPlayer();
         if (player == null) return 0;
         if (!CultivationService.setRealm(player.getData(MxtAttachments.CULTIVATION), HolderHelper.id(realm))) {
-            source.sendFailure(Component.translatable("command.mxt.realm.set_failed", DefinitionText.name(realm)));
+            source.sendFailure(Component.translatable("command.mxt.realm.set_failed", DefinitionText.text(realm)));
             return 0;
         }
         // Arriving by command is arriving: the new stage's first minor stage is recorded like any other, so its
         // own unlocks apply without waiting for the next point of progress.
         MinorStageService.refresh(player, realm.value().aura(),
                 ResourceService.formulaContext(player, realm.value().aura().value().resource(), FormulaContext.of(player)));
-        source.sendSuccess(() -> Component.translatable("command.mxt.realm.set_success", DefinitionText.name(realm)), true);
+        source.sendSuccess(() -> Component.translatable("command.mxt.realm.set_success", DefinitionText.text(realm)), true);
         return 1;
     }
 
@@ -85,7 +85,7 @@ public final class RealmCommand {
             source.sendFailure(Component.translatable("command.mxt.realm.chain.none", start.toString()));
             return 0;
         }
-        Component line = ChainReport.line(ids.stream().map(id -> DefinitionText.name(stages.get(id))).toList(), current);
+        Component line = ChainReport.line(ids.stream().map(id -> DefinitionText.text(stages.get(id))).toList(), current);
         source.sendSuccess(() -> Component.translatable("command.mxt.realm.chain", aura.toString(), line), false);
         return ids.size();
     }

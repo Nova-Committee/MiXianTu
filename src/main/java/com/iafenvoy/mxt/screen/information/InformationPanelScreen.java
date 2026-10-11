@@ -673,7 +673,7 @@ public final class InformationPanelScreen extends AuiScreen {
 
         // A technique has no tier of its own any more, so the name is drawn in the panel's own colour.
         private Component nameText(Entry row) {
-            return DefinitionText.name(row.technique());
+            return DefinitionText.text(row.technique());
         }
 
         // The level's own display name when the pack provides one, its rank otherwise.
@@ -681,7 +681,7 @@ public final class InformationPanelScreen extends AuiScreen {
             Holder<Progression> level = row.level();
             if (!row.hasLevel() || level == null)
                 return Component.translatable("screen.mxt.technique_panel.level_unknown");
-            Component name = DefinitionText.name(level);
+            Component name = DefinitionText.text(level);
             Component label = DefinitionText.resolved(name)
                     ? name : Component.literal(Integer.toString(row.rank() + 1));
             return Component.translatable("screen.mxt.technique_panel.level", label, row.rank() + 1, row.total());

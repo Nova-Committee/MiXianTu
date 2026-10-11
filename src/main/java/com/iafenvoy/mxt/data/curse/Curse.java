@@ -27,7 +27,7 @@ public record Curse(CurseType typedType, NumberProvider durationTicks,
                     NumberProvider tickInterval, int maxStacks,
                     StackingMode stackingMode, EntityCondition applicationCondition, EntityCondition displayCondition,
                     EntityAction onApply, EntityAction onTick, EntityAction onExpire,
-                    EntityAction onCleanse)  {
+                    EntityAction onCleanse) {
     public static final Codec<Holder<Curse>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.CURSE);
     public static final Codec<Curse> DIRECT_CODEC = RecordCodecBuilder.<Curse>create(i -> i.group(
             CurseType.MAP_CODEC.forGetter(Curse::typedType),

@@ -33,7 +33,7 @@ public class PillItem extends Item {
         PillComponent component = stack.get(MxtDataComponents.PILL.get());
         if (component != null) {
             Holder<Pill> pill = component.pill().orElse(null);
-            if (pill != null && pill.isBound()) return DefinitionText.name(pill);
+            if (pill != null && pill.isBound()) return DefinitionText.text(pill);
         }
         return Component.translatable(this.getDescriptionId());
     }

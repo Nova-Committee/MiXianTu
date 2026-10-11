@@ -59,7 +59,7 @@ public final class PickerCommand {
         List<Identifier> ids = categories.isEmpty()
                 ? ItemPickerManager.categories().stream().map(ResourceKey::identifier).toList()
                 : categories;
-        PacketDistributor.sendToPlayer(player, new ItemPickerS2CPayload(Component.translatable("command.mxt.picker"), ids));
+        PacketDistributor.sendToPlayer(player, new ItemPickerS2CPayload(Component.translatable("command.mxt.message.picker"), ids));
         return ids.size();
     }
 }

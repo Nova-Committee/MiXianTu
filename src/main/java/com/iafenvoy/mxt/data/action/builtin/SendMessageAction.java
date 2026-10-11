@@ -53,23 +53,23 @@ public record SendMessageAction(Component message, MessageChannel channel, Messa
 
     @Override
     public void execute(@NotNull EntityActionContext context) {
-        send(context, context.entity().level(), context.entity(), null);
+        this.send(context, context.entity().level(), context.entity(), null);
     }
 
     @Override
     public void execute(@NotNull ItemActionContext context) {
-        send(context, context.holder().level(), context.holder(), null);
+        this.send(context, context.holder().level(), context.holder(), null);
     }
 
     @Override
     public void execute(@NotNull BlockActionContext context) {
         // A place has no addressee of its own, so only ALL can find anyone.
-        send(context, context.level(), null, null);
+        this.send(context, context.level(), null, null);
     }
 
     @Override
     public void execute(@NotNull BiEntityActionContext context) {
-        send(context, context.actor().level(), context.actor(), context.target());
+        this.send(context, context.actor().level(), context.actor(), context.target());
     }
 
     private void send(Context context, Level level, @Nullable Entity actor, @Nullable Entity other) {
@@ -78,7 +78,7 @@ public record SendMessageAction(Component message, MessageChannel channel, Messa
         // must send nothing: falling back to the whole level would turn "tell the other side" into a broadcast.
         List<ServerPlayer> candidates;
         if (this.target == MessageTarget.ALL) candidates = server.players();
-        else candidates = this.target.player(actor, other).<List<ServerPlayer>>map(List::of).orElseGet(List::of);
+        else candidates = this.target.player(actor, other).map(List::of).orElseGet(List::of);
         for (ServerPlayer player : candidates)
             if (this.recipients.test(player, context)) player.sendSystemMessage(this.message, this.channel.actionBar());
     }
@@ -88,7 +88,9 @@ public record SendMessageAction(Component message, MessageChannel channel, Messa
         return CODEC;
     }
 
-    /** Who the message is addressed to. ALL resolves through the level, so it works even for a place. */
+    /**
+     * Who the message is addressed to. ALL resolves through the level, so it works even for a place.
+     */
     public enum MessageTarget implements StringRepresentable {
         SELF,
         OTHER,

@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.event;
 
 import com.iafenvoy.mxt.recipe.AlchemyRecipe;
-import com.iafenvoy.mxt.recipe.AlchemyRecipe.Role;
+import com.iafenvoy.mxt.recipe.AlchemyRole;
 import com.iafenvoy.mxt.runtime.alchemy.AlchemyFailure;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerPlayer;
@@ -105,6 +105,6 @@ public abstract class AlchemyCraftEvent extends Event {
         }
     }
 
-    public record InputCopy(Role role, ItemStack stack) {
+    public record InputCopy(AlchemyRole role, ItemStack stack) {
     }
 }

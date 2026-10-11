@@ -46,7 +46,7 @@ final class WheelTooltips {
         List<Component> parts = new ArrayList<>(costs.size());
         payment.resources().forEach((id, amount) -> MxtDatapackRegistries.holder(MxtResourceKeys.RESOURCE, id)
                 .ifPresent(resource -> parts.add(Component.translatable("wheel.mxt.tooltip.cost_part",
-                        DefinitionText.name(resource), number(amount)))));
+                        DefinitionText.text(resource), number(amount)))));
         if (other || payment.beyondResources()) parts.add(Component.translatable("wheel.mxt.tooltip.cost_other"));
         return TooltipText.join(parts);
     }
@@ -54,7 +54,7 @@ final class WheelTooltips {
     static Component elements(List<Either<Holder<Element>, TagKey<Element>>> affinity) {
         List<Component> parts = new ArrayList<>(affinity.size());
         for (Either<Holder<Element>, TagKey<Element>> entry : affinity) {
-            parts.add(entry.map(DefinitionText::name, tag -> Component.literal("#" + tag.location())));
+            parts.add(entry.map(DefinitionText::text, tag -> Component.literal("#" + tag.location())));
         }
         return TooltipText.join(parts);
     }

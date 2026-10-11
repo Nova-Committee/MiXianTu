@@ -191,14 +191,13 @@ public final class AlchemyWorkstationService {
         AlchemyPhase phase = state.phase();
         long remaining = session == null ? 0 : session.remainingTicks();
         int badTicks = session == null ? 0 : session.badTicks();
+        Optional<Holder<AlchemyFurnaceDefinition>> furnace = station.furnaceDefinition();
         if (state.active()) {
             AlchemyFurnaceStructure.Status structure = station.structureStatus();
             if (!structure.missing().isEmpty() || !structure.conflicts().isEmpty())
                 abort(level, pos, station, AlchemyFailure.STRUCTURE);
             else if (!structure.unloaded().isEmpty()) return;
-        }
-        Optional<Holder<AlchemyFurnaceDefinition>> furnace = station.furnaceDefinition();
-        if (state.active()) {
+
             if (furnace.isEmpty()) abort(level, pos, station, AlchemyFailure.DISABLED);
             else {
                 heat(level, station, furnace.get().value());

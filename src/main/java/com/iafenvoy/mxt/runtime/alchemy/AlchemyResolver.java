@@ -3,11 +3,10 @@ package com.iafenvoy.mxt.runtime.alchemy;
 import com.iafenvoy.mxt.data.alchemy.MedicinalProperty;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.recipe.AlchemyRecipe;
-import com.iafenvoy.mxt.recipe.AlchemyRecipe.Role;
 import com.iafenvoy.mxt.recipe.AlchemyRecipeInput;
 import com.iafenvoy.mxt.recipe.AlchemyRecipeInput.Slot;
+import com.iafenvoy.mxt.recipe.AlchemyRole;
 import com.iafenvoy.mxt.runtime.alchemy.SpiritHerbService.HerbPotency;
-import com.iafenvoy.mxt.runtime.alchemy.SpiritHerbService.HerbRole;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
@@ -34,14 +33,6 @@ public final class AlchemyResolver {
     private AlchemyResolver() {
     }
 
-    public static HerbRole herbRole(Role role) {
-        return switch (role) {
-            case MAIN -> HerbRole.MAIN;
-            case AUXILIARY -> HerbRole.AUXILIARY;
-            case CATALYST -> HerbRole.CATALYST;
-        };
-    }
-
     public static AlchemyMixture mixture(Provider access, List<Slot> slots, FormulaContext context) {
         Map<Identifier, Double> main = new LinkedHashMap<>();
         Map<Identifier, Double> auxiliary = new LinkedHashMap<>();
@@ -52,7 +43,7 @@ public final class AlchemyResolver {
         for (Slot slot : slots) {
             ItemStack stack = slot.stack();
             if (stack.isEmpty()) continue;
-            Optional<HerbPotency> found = SpiritHerbService.potency(access, stack, herbRole(slot.role()), context);
+            Optional<HerbPotency> found = SpiritHerbService.potency(access, stack, slot.role(), context);
             if (found.isEmpty()) {
                 failure = AlchemyFailure.NOT_HERB;
                 continue;
@@ -65,8 +56,8 @@ public final class AlchemyResolver {
             double contribution = stack.getCount() * potency.totalPower();
             weight += contribution;
             signed += contribution * potency.thermalBias();
-            if (slot.role() == Role.CATALYST) catalyst += stack.getCount() * potency.catalystPower();
-            else add(slot.role() == Role.MAIN ? main : auxiliary, potency.properties(), stack.getCount());
+            if (slot.role() == AlchemyRole.CATALYST) catalyst += stack.getCount() * potency.catalystPower();
+            else add(slot.role() == AlchemyRole.MAIN ? main : auxiliary, potency.properties(), stack.getCount());
         }
         double balance = weight > 0.0D ? signed / weight : 0.0D;
         if (!Double.isFinite(balance)) balance = 0.0D;
@@ -104,16 +95,16 @@ public final class AlchemyResolver {
         List<Gap> gaps = new ArrayList<>();
         evaluated.main().forEach((id, required) -> {
             double actual = mixture.main().getOrDefault(id, 0.0D);
-            if (actual + EPSILON < required) gaps.add(new Gap(Gap.Kind.MISSING, Role.MAIN, id, actual, required));
+            if (actual + EPSILON < required) gaps.add(new Gap(Gap.Kind.MISSING, AlchemyRole.MAIN, id, actual, required));
         });
         evaluated.auxiliary().forEach((id, required) -> {
             double actual = mixture.auxiliary().getOrDefault(id, 0.0D);
-            if (actual + EPSILON < required) gaps.add(new Gap(Gap.Kind.MISSING, Role.AUXILIARY, id, actual, required));
+            if (actual + EPSILON < required) gaps.add(new Gap(Gap.Kind.MISSING, AlchemyRole.AUXILIARY, id, actual, required));
         });
-        extra(mixture.main(), evaluated.main(), Role.MAIN, gaps);
-        extra(mixture.auxiliary(), evaluated.auxiliary(), Role.AUXILIARY, gaps);
+        extra(mixture.main(), evaluated.main(), AlchemyRole.MAIN, gaps);
+        extra(mixture.auxiliary(), evaluated.auxiliary(), AlchemyRole.AUXILIARY, gaps);
         if (mixture.catalyst() + EPSILON < evaluated.catalyst())
-            gaps.add(new Gap(Gap.Kind.CATALYST, Role.CATALYST, null, mixture.catalyst(), evaluated.catalyst()));
+            gaps.add(new Gap(Gap.Kind.CATALYST, AlchemyRole.CATALYST, null, mixture.catalyst(), evaluated.catalyst()));
         if (!mixture.defined() || Math.abs(mixture.balance()) > evaluated.balanceTolerance() + EPSILON)
             gaps.add(new Gap(Gap.Kind.BALANCE, null, null, mixture.balance(), evaluated.balanceTolerance()));
         return List.copyOf(gaps);
@@ -186,7 +177,7 @@ public final class AlchemyResolver {
         properties.forEach((property, amount) -> into.merge(HolderHelper.id(property), amount * count, Double::sum));
     }
 
-    private static void extra(Map<Identifier, Double> actual, Map<Identifier, Double> required, Role role, List<Gap> gaps) {
+    private static void extra(Map<Identifier, Double> actual, Map<Identifier, Double> required, AlchemyRole role, List<Gap> gaps) {
         actual.forEach((id, amount) -> {
             if (Math.abs(amount) > EPSILON && !required.containsKey(id))
                 gaps.add(new Gap(Gap.Kind.EXTRA, role, id, amount, 0.0D));
@@ -236,7 +227,7 @@ public final class AlchemyResolver {
     /**
      * {@code role} is null only for a balance gap.
      */
-    public record Gap(Kind kind, @Nullable Role role, @Nullable Identifier property, double actual, double required) {
+    public record Gap(Kind kind, @Nullable AlchemyRole role, @Nullable Identifier property, double actual, double required) {
         public enum Kind {MISSING, EXTRA, CATALYST, BALANCE}
     }
 

@@ -127,7 +127,7 @@ public final class ItemBindingTooltipAppender {
         // A dose named by its own component over defaults has no definition to be named after, so it prints no
         // heading rather than a made-up one.
         if (definition != null) {
-            builder.accept(DefinitionText.name(definition).withStyle(ChatFormatting.LIGHT_PURPLE));
+            builder.accept(DefinitionText.text(definition).withStyle(ChatFormatting.LIGHT_PURPLE));
             MutableComponent description = DefinitionText.description(definition);
             if (DefinitionText.resolved(description) && !description.getString().isBlank())
                 builder.accept(description.withStyle(ChatFormatting.GRAY));
@@ -164,6 +164,6 @@ public final class ItemBindingTooltipAppender {
 
     private static void appendTechnique(Consumer<Component> builder, TechniqueBinding technique) {
         builder.accept(Component.translatable("tooltip.mxt.item.technique",
-                DefinitionText.name(technique.technique())).withStyle(ChatFormatting.GREEN));
+                DefinitionText.text(technique.technique())).withStyle(ChatFormatting.GREEN));
     }
 }

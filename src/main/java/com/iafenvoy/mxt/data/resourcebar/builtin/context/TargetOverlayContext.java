@@ -19,7 +19,7 @@ public enum TargetOverlayContext implements ResourceBarContext {
 
     @Override
     public Component name(Holder<Resource> resource) {
-        return Component.translatable("hud.mxt.resource_bar.target_overlay", DefinitionText.name(resource));
+        return Component.translatable("hud.mxt.resource_bar.target_overlay", DefinitionText.text(resource));
     }
 
     @Override

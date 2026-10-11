@@ -33,7 +33,7 @@ public enum ActualConcentrationContext implements ResourceBarContext {
     @Override
     public Component name(Holder<Resource> resource) {
         return Component.translatable("hud.mxt.resource_bar.actual_concentration",
-                DefinitionText.name(resource));
+                DefinitionText.text(resource));
     }
 
     @Override

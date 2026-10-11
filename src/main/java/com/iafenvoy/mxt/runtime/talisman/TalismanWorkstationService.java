@@ -104,7 +104,7 @@ public final class TalismanWorkstationService {
         Container station = paperSlot.getItem(0).isEmpty() && !heldPaper.isEmpty() ? slotOf(heldPaper) : paperSlot;
         for (RecipeHolder<TalismanDrawingRecipe> holder : all(player.level().getServer().getRecipeManager())) {
             TalismanDrawingRecipe recipe = holder.value();
-            Component name = DefinitionText.name(recipe.talisman());
+            Component name = DefinitionText.text(recipe.talisman());
             boolean unlocked = recipe.unlockCondition().test(player, FormulaContext.of(player));
             boolean affordable = CostPayment.of(context(player, station)).loadAndTest(costs(recipe)).isEmpty();
             entries.add(new Entry(holder.id().identifier(), name, unlocked && affordable));

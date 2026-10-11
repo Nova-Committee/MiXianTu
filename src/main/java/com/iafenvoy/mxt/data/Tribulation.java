@@ -24,7 +24,7 @@ import java.util.List;
 public record Tribulation(EntityCondition condition,
                           List<TimelineEntry> timeline,
                           NumberProvider difficultyScale, NumberProvider windup, boolean darkenSky,
-                          EntityAction successAction, EntityAction failAction)  {
+                          EntityAction successAction, EntityAction failAction) {
     public static final Codec<Holder<Tribulation>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.TRIBULATION);
     public static final Codec<Tribulation> DIRECT_CODEC = RecordCodecBuilder.<Tribulation>create(i -> i.group(
             EntityCondition.optionalCodec("condition").forGetter(Tribulation::condition),

@@ -74,7 +74,7 @@ public final class AbilityCommand {
     // is still reported: it is still held, and revoking it by name is still what takes it off.
     private static int list(CommandSourceStack source, @Nullable Entity target) {
         if (target == null) {
-            source.sendFailure(Component.translatable("command.mxt.requires_player"));
+            source.sendFailure(Component.translatable("command.mxt.message.requires_player"));
             return 0;
         }
         AbilityAttachment abilities = target.getData(MxtAttachments.ABILITY_HOLDER);
@@ -84,7 +84,7 @@ public final class AbilityCommand {
             return 1;
         }
         for (Identifier ability : abilities.sources().keys()) {
-            Component name = DefinitionText.name(ability, "ability");
+            Component name = DefinitionText.text(MxtResourceKeys.ABILITY, ability);
             Component from = Component.literal(abilities.sources().of(ability).stream()
                     .map(Identifier::toString).sorted().reduce((a, b) -> a + ", " + b).orElse("-"));
             source.sendSuccess(() -> Component.translatable("command.mxt.ability.list.line", name, from), false);
@@ -104,10 +104,10 @@ public final class AbilityCommand {
                 granted++;
                 rebuild(target);
                 source.sendSuccess(() -> Component.translatable("command.mxt.ability.granted",
-                        DefinitionText.name(ability), target.getDisplayName()), true);
+                        DefinitionText.text(ability), target.getDisplayName()), true);
             } else {
                 source.sendFailure(Component.translatable("command.mxt.ability.grant_failed",
-                        target.getDisplayName(), DefinitionText.name(ability)));
+                        target.getDisplayName(), DefinitionText.text(ability)));
             }
         }
         return granted;
@@ -126,10 +126,10 @@ public final class AbilityCommand {
                 revoked++;
                 rebuild(target);
                 source.sendSuccess(() -> Component.translatable("command.mxt.ability.revoked",
-                        DefinitionText.name(ability), target.getDisplayName()), true);
+                        DefinitionText.text(ability), target.getDisplayName()), true);
             } else {
                 source.sendFailure(Component.translatable("command.mxt.ability.revoke_failed",
-                        target.getDisplayName(), DefinitionText.name(ability)));
+                        target.getDisplayName(), DefinitionText.text(ability)));
             }
         }
         return revoked;
@@ -150,7 +150,7 @@ public final class AbilityCommand {
             source.sendFailure(Component.translatable("command.mxt.ability.cast_failed", result.failure().name()));
             return 0;
         }
-        source.sendSuccess(() -> Component.translatable("command.mxt.ability.cast_success", DefinitionText.name(ability)), true);
+        source.sendSuccess(() -> Component.translatable("command.mxt.ability.cast_success", DefinitionText.text(ability)), true);
         return 1;
     }
 }

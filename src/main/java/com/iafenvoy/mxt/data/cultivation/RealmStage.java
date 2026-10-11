@@ -39,7 +39,7 @@ public record RealmStage(Holder<Aura> aura, NumberProvider auraShareWeight,
                          List<Either<Holder<Ability>, TagKey<Ability>>> abilityRequirements,
                          List<MinorStageAbilities> minorStageAbilities, Optional<Holder<Tribulation>> tribulation,
                          Optional<ParticleEffect> breakthroughParticle, EntityAction successAction,
-                         EntityAction failAction)  {
+                         EntityAction failAction) {
 
     /**
      * The ceiling on {@code minor_stages}, which only decides how finely a realm's progress is divided.

@@ -338,7 +338,7 @@ public final class AlchemyFurnaceMenu extends ApricityContainerMenu {
         AlchemyPreview preview = session == null ? AlchemyWorkstationService.preview(player, furnace) : null;
         Parameters parameters = session != null ? session.parameters() : preview.parameters().orElse(null);
         AlchemyFurnaceStructure.Status structure = furnace.structureStatus();
-        Component name = furnace.furnaceDefinition().<Component>map(DefinitionText::name).orElse(text("no_furnace"));
+        Component name = furnace.furnaceDefinition().<Component>map(DefinitionText::text).orElse(text("no_furnace"));
         Component quality = QualityService.find(player.registryAccess(), furnace.furnaceItem())
                 .map(QualityService::displayName).orElse(text("no_quality"));
         boolean canStart = session == null && spec != null && structure.complete() && preview.blocker().isEmpty() && parameters != null;

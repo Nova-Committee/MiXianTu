@@ -20,8 +20,7 @@ import java.util.Optional;
  * so one without a profile is simply a counter.
  */
 public record Resource(NumberProvider defaultValue, NumberProvider min,
-                       NumberProvider max, Optional<IconReference> icon, int particleColor, List<ResourceBar> bars)
-         {
+                       NumberProvider max, Optional<IconReference> icon, int particleColor, List<ResourceBar> bars) {
     public static final Codec<Holder<Resource>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.RESOURCE);
     public static final Codec<Resource> DIRECT_CODEC = RecordCodecBuilder.create(i -> i.group(
             NumberProvider.CODEC.fieldOf("default_value").forGetter(Resource::defaultValue),

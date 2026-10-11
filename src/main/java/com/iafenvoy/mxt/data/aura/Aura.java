@@ -32,7 +32,7 @@ public record Aura(Holder<Resource> resource,
                    NumberProvider startExp, CultivateConditions startCultivateConditions,
                    ResourceConversion cultivationToResource, ResourceConversion resourceToCultivation,
                    NumberProvider regen, Optional<Holder<Element>> auraType, NumberProvider burstAmount,
-                   EntityCondition useCondition, boolean showCultivationInfo)  {
+                   EntityCondition useCondition, boolean showCultivationInfo) {
     public static final Codec<Holder<Aura>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.AURA);
     public static final Codec<Aura> DIRECT_CODEC = RecordCodecBuilder.create(i -> i.group(
             Resource.CODEC.fieldOf("resource").forGetter(Aura::resource),
