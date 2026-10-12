@@ -1,0 +1,19 @@
+{
+  "items": "mxt_test:dynamic_blade",
+  "attributes": [
+    {
+      "attribute": "minecraft:attack_damage",
+      "id": "mxt_test:weapon/dynamic_blade/damage",
+      "amount": 2,
+      "operation": "add_value",
+      "value": "2 + caster_level"
+    },
+    {
+      "attribute": "minecraft:attack_speed",
+      "id": "mxt_test:weapon/dynamic_blade/speed",
+      "amount": 0,
+      "operation": "add_value",
+      "value": "caster_level * 0.05"
+    }
+  ]
+}

@@ -55,7 +55,10 @@ public final class ItemBindingTooltipAppender {
         Provider registries = context.registries();
         if (registries == null) return;
         ResolvedBindings bindings = ItemBindingService.resolve(registries, stack);
-        bindings.weapon().ifPresent(weapon -> appendWeapon(builder, weapon));
+        // The weapon line is evaluated with the holder: a dynamic value read without one resolves nothing, and
+        // the call happens on every frame the tooltip is drawn.
+        FormulaContext formula = player == null ? FormulaContext.EMPTY : FormulaContext.of(player);
+        bindings.weapon().ifPresent(weapon -> appendWeapon(builder, weapon, formula));
         ItemBindingService.PillResolution resolution = bindings.pill();
         if (resolution.unbound())
             builder.accept(Component.translatable("tooltip.mxt.pill.unbound").withStyle(ChatFormatting.RED));
@@ -74,7 +77,6 @@ public final class ItemBindingTooltipAppender {
                 appendGranted(builder, flag, "tooltip.mxt.item.physique", HolderHelper.id(physique1));
         }
         if (player != null) {
-            FormulaContext formula = FormulaContext.of(player);
             bindings.item().ifPresent(binding -> appendConditions(builder, binding.conditions(), player, formula));
             bindings.weapon().ifPresent(binding -> appendConditions(builder, binding.conditions(), player, formula));
             bindings.pill().effects().ifPresent(pill -> appendConditions(builder, pill.conditions(), player, formula));
@@ -102,11 +104,11 @@ public final class ItemBindingTooltipAppender {
             builder.accept(Component.literal("   " + id).withStyle(ChatFormatting.DARK_GRAY));
     }
 
-    private static void appendWeapon(Consumer<Component> builder, WeaponBinding weapon) {
+    private static void appendWeapon(Consumer<Component> builder, WeaponBinding weapon, FormulaContext formula) {
         builder.accept(Component.translatable("tooltip.mxt.item.weapon").withStyle(ChatFormatting.GOLD));
         for (AttributeEntry attribute : weapon.attributes()) {
             Attribute value = attribute.attribute().value();
-            double amount = attribute.amount(FormulaContext.EMPTY);
+            double amount = attribute.amount(formula);
             if (!Double.isFinite(amount) || amount == 0.0D) continue;
             Component name = Component.translatable(value.getDescriptionId());
             switch (attribute.modifier().operation()) {

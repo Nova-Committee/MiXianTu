@@ -1,0 +1,19 @@
+{
+  "items": "mxt_test:formula_blade",
+  "attributes": [
+    {
+      "attribute": "minecraft:attack_damage",
+      "id": "mxt_test:weapon/formula_blade/damage",
+      "amount": 1,
+      "operation": "add_value",
+      "value": "clamp(caster_level, 0, 10) * 2"
+    },
+    {
+      "attribute": "minecraft:attack_damage",
+      "id": "mxt_test:weapon/formula_blade/bonus",
+      "amount": 1,
+      "operation": "add_multiplied_base",
+      "value": "max(caster_level - 5, 0) * 0.1"
+    }
+  ]
+}

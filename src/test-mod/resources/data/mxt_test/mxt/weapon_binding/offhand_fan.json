@@ -1,0 +1,12 @@
+{
+  "items": "mxt_test:offhand_fan",
+  "attributes": [
+    {
+      "attribute": "minecraft:armor",
+      "id": "mxt_test:weapon/offhand_fan/armor",
+      "amount": 0,
+      "operation": "add_value",
+      "value": "3 + caster_level"
+    }
+  ]
+}

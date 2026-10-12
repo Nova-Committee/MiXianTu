@@ -30,6 +30,7 @@ public final class MxtTestMod {
         MxtTestItems.REGISTRY.register(modBus);
         MxtTestForgeItems.REGISTRY.register(modBus);
         MxtTestTechniqueItems.REGISTRY.register(modBus);
+        MxtTestWeaponItems.REGISTRY.register(modBus);
         AlchemyTestHeatBlocks.register(modBus);
         HerbTestBlocks.register(modBus);
         MxtTestEntities.REGISTRY.register(modBus);

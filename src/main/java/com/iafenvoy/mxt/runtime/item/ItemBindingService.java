@@ -188,10 +188,12 @@ public final class ItemBindingService {
                 technique(access, stack));
     }
 
+    // Both hands carry a weapon, and the group written has to be the hand the stack is in: vanilla looks the entry
+    // up per slot, so an offhand stack labelled mainhand is never applied.
     private static void refreshEquipped(LivingEntity entity) {
         if (entity.level().isClientSide()) return;
-        refreshWeapon(entity, entity.getItemBySlot(EquipmentSlot.MAINHAND));
-        refreshWeapon(entity, entity.getItemBySlot(EquipmentSlot.OFFHAND));
+        refreshWeapon(entity, EquipmentSlot.MAINHAND);
+        refreshWeapon(entity, EquipmentSlot.OFFHAND);
     }
 
     public static void tickMainHandWeapon(LivingEntity holder) {
@@ -251,12 +253,13 @@ public final class ItemBindingService {
                 .map(Reference::value), stack);
     }
 
-    private static void refreshWeapon(LivingEntity entity, ItemStack stack) {
+    private static void refreshWeapon(LivingEntity entity, EquipmentSlot slot) {
+        ItemStack stack = entity.getItemBySlot(slot);
         ResolvedBindings bindings = resolve(entity.level().registryAccess(), stack);
         bindings.weapon().ifPresent(weapon -> {
             ItemAttributeModifiers baseline = baselineModifiers(stack, weapon);
             ItemAttributeModifiers modifiers = QualityService.canUse(entity, stack, bindings)
-                    ? weaponModifiers(baseline, weapon, entity)
+                    ? weaponModifiers(baseline, weapon, entity, EquipmentSlotGroup.bySlot(slot))
                     : baseline;
             if (!modifiers.equals(stack.get(DataComponents.ATTRIBUTE_MODIFIERS))) {
                 stack.set(DataComponents.ATTRIBUTE_MODIFIERS, modifiers);
@@ -290,20 +293,21 @@ public final class ItemBindingService {
     // Only what the declaration writes is added, and what the item type itself ships with is left alone: a pack
     // that wants a different attack number rewrites the item's own modifiers instead of overlaying them.
     private static ItemAttributeModifiers weaponModifiers(ItemAttributeModifiers baseline, WeaponBinding weapon,
-                                                          LivingEntity entity) {
+                                                          LivingEntity entity, EquipmentSlotGroup slot) {
         Builder builder = ItemAttributeModifiers.builder();
         baseline.modifiers().forEach(entry -> builder.add(entry.attribute(), entry.modifier(), entry.slot(), entry.display()));
         FormulaContext context = FormulaContext.of(entity);
         for (AttributeEntry attribute : weapon.attributes()) {
             add(builder, attribute.attribute(), attribute.modifier().id(),
-                    attribute.amount(context), attribute.modifier().operation());
+                    attribute.amount(context), attribute.modifier().operation(), slot);
         }
         return builder.build();
     }
 
-    private static void add(Builder builder, Holder<Attribute> attribute, Identifier id, double value, Operation operation) {
+    private static void add(Builder builder, Holder<Attribute> attribute, Identifier id, double value,
+                            Operation operation, EquipmentSlotGroup slot) {
         if (Double.isFinite(value) && value != 0.0D) {
-            builder.add(attribute, new AttributeModifier(id, value, operation), EquipmentSlotGroup.MAINHAND);
+            builder.add(attribute, new AttributeModifier(id, value, operation), slot);
         }
     }
 
