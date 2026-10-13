@@ -1,6 +1,6 @@
 package com.iafenvoy.mxt.runtime.formation;
 
-import com.iafenvoy.mxt.data.Formation;
+import com.iafenvoy.mxt.data.formation.Formation;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.server.level.ServerLevel;

@@ -20,19 +20,4 @@ public interface Trigger {
     }
 
     Identifier signalType();
-
-    /**
-     * Built-in signals carry no additional JSON fields; the registry entry supplies the signal identifier.
-     */
-    record Builtin(Identifier signalType) implements Trigger {
-        @Override
-        public MapCodec<Builtin> codec() {
-            return MapCodec.unit(this);
-        }
-
-        @Override
-        public boolean matches(TriggerSignal signal) {
-            return this.signalType.equals(signal.type());
-        }
-    }
 }

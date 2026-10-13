@@ -24,11 +24,10 @@ import java.util.Optional;
  * {@code quality} is the tier a dose of it starts on: one built-in carrier item can serve several pills, so that
  * item alone cannot say which tier applies.
  */
-public record Pill(Optional<Holder<ItemQuality>> quality, int color,
-                   EntityAction onConsume,
+public record Pill(Optional<Holder<ItemQuality>> quality, int color, EntityAction onConsume,
                    NumberProvider toxicityGain, NumberProvider toxicityThreshold, EntityAction onOverdose,
-                   NumberProvider toxicityAfterOverdose, List<DescribedEntry<EntityCondition>> conditions)
-        implements QualityProvider {
+                   NumberProvider toxicityAfterOverdose,
+                   List<DescribedEntry<EntityCondition>> conditions) implements QualityProvider {
     // White is the carrier texture as authored: a pack that writes no colour gets the plain grey pill.
     public static final int DEFAULT_COLOR = 0xFFFFFF;
     public static final Codec<Holder<Pill>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.PILL);

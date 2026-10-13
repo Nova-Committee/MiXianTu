@@ -1,9 +1,10 @@
 package com.iafenvoy.mxt.testmod;
 
+import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.data.CreativeTabHelper;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.picker.ItemPickerManager;
-import com.iafenvoy.mxt.picker.ItemPickerManager.PickerItem;
+import com.iafenvoy.mxt.data.ItemPickerManager;
+import com.iafenvoy.mxt.data.ItemPickerManager.PickerItem;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.network.chat.Component;
@@ -31,16 +32,16 @@ public final class PickerProbes {
         boolean ok = true;
         try {
             List<PickerItem> rows = CreativeTabHelper.itemsOf(access, MxtResourceKeys.AURA);
-            List<PickerItem> mine = CreativeTabHelper.itemsOfMod(access, MxtResourceKeys.AURA, "mxt");
+            List<PickerItem> mine = CreativeTabHelper.itemsOfMod(access, MxtResourceKeys.AURA, MiXianTu.MOD_ID);
             List<PickerItem> test = CreativeTabHelper.itemsOfMod(access, MxtResourceKeys.AURA, MOD);
             List<PickerItem> absent = CreativeTabHelper.itemsOfMod(access, MxtResourceKeys.AURA, NO_SUCH_PACK);
             List<ItemStack> stacks = CreativeTabHelper.stacksOf(access, MxtResourceKeys.AURA);
 
             ok &= leg(source, "category",
                     ItemPickerManager.category(MxtResourceKeys.AURA.identifier()).isPresent()
-                            && ItemPickerManager.category(Identifier.fromNamespaceAndPath("mxt", "not_a_registry")).isEmpty(),
+                            && ItemPickerManager.category(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "not_a_registry")).isEmpty(),
                     "aura=" + ItemPickerManager.category(MxtResourceKeys.AURA.identifier()).isPresent()
-                            + " unknown=" + ItemPickerManager.category(Identifier.fromNamespaceAndPath("mxt", "not_a_registry")).isPresent(),
+                            + " unknown=" + ItemPickerManager.category(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "not_a_registry")).isPresent(),
                     "aura=true unknown=false");
 
             ok &= leg(source, "rows", rows.size() > 1 && rows.stream().noneMatch(row -> row.stack().isEmpty()),

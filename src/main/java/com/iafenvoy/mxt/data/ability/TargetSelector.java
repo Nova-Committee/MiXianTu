@@ -34,18 +34,15 @@ public interface TargetSelector {
     // Shared by every selector that can be capped: order the candidates (by distance from the activation's own
     // place, or at random) and keep the first `limit` of them. A limit of zero or less keeps everything, in the
     // order the level handed it over. Ties are broken by entity id so one moment always selects the same beings.
-    static Stream<Entity> limited(Stream<Entity> candidates, Entity actor, @Nullable Vec3 origin, int limit,
-                                  TargetOrder order) {
+    static Stream<Entity> limited(Stream<Entity> candidates, Entity actor, @Nullable Vec3 origin, int limit, TargetOrder order) {
         if (limit <= 0) return candidates;
         List<Entity> found = candidates.toList();
         if (order == TargetOrder.RANDOM) {
             RandomSource random = actor.level().getRandom();
-            found = found.stream().sorted(Comparator.comparingInt(entity -> random.nextInt())).toList();
+            found = found.stream().sorted(Comparator.comparingInt(_ -> random.nextInt())).toList();
         } else {
             Vec3 centre = origin == null ? actor.position() : origin;
-            Comparator<Entity> byDistance = Comparator
-                    .comparingDouble((Entity entity) -> centre.distanceToSqr(entity.position()))
-                    .thenComparingInt(Entity::getId);
+            Comparator<Entity> byDistance = Comparator.comparingDouble((Entity entity) -> centre.distanceToSqr(entity.position())).thenComparingInt(Entity::getId);
             found = found.stream().sorted(order == TargetOrder.FARTHEST ? byDistance.reversed() : byDistance).toList();
         }
         return found.stream().limit(limit);

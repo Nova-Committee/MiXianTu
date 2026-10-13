@@ -1,5 +1,6 @@
 package com.iafenvoy.mxt.compat.jade;
 
+import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.data.alchemy.SpiritHerb;
 import com.iafenvoy.mxt.runtime.alchemy.SpiritHerbGrowthService;
 import com.iafenvoy.mxt.runtime.alchemy.SpiritHerbService;
@@ -20,8 +21,7 @@ import snownee.jade.api.IServerDataProvider;
  */
 public enum SpiritHerbDataProvider implements IServerDataProvider<BlockAccessor> {
     INSTANCE;
-
-    public static final Identifier ID = Identifier.fromNamespaceAndPath("mxt", "spirit_herb");
+    public static final Identifier ID = Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "spirit_herb");
     static final String HERB = "mxt_herb";
     static final String AGE = "mxt_herb_age";
     static final String MATURE_AGE = "mxt_herb_mature_age";

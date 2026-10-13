@@ -1,8 +1,8 @@
 package com.iafenvoy.mxt.command.server;
 
 import com.iafenvoy.mxt.command.ServerCommandManager;
+import com.iafenvoy.mxt.data.ItemPickerManager;
 import com.iafenvoy.mxt.network.payload.ItemPickerS2CPayload;
-import com.iafenvoy.mxt.picker.ItemPickerManager;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;

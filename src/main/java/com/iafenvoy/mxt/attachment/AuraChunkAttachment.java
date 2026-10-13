@@ -1,9 +1,9 @@
 package com.iafenvoy.mxt.attachment;
 
 import com.iafenvoy.mxt.data.aura.Aura;
-import com.iafenvoy.mxt.data.aura.AuraMaximum.Fixed;
 import com.iafenvoy.mxt.data.aura.AuraValue;
 import com.iafenvoy.mxt.data.aura.AuraZone;
+import com.iafenvoy.mxt.data.aura.builtin.FixedAuraMaximum;
 import com.iafenvoy.mxt.runtime.world.AuraPool;
 import com.iafenvoy.mxt.runtime.world.BlockAuraContribution;
 import com.iafenvoy.mxt.runtime.world.BlockAuraSectionCache;
@@ -198,7 +198,7 @@ public final class AuraChunkAttachment {
         double secondWeight = Math.max(0.0D, second.amount());
         double totalWeight = firstWeight + secondWeight;
         int color = totalWeight <= 0.0D ? first.color() : weightedColor(first.color(), firstWeight, second.color(), secondWeight, totalWeight);
-        return new AuraValue(amount, new Fixed(maximum),
+        return new AuraValue(amount, new FixedAuraMaximum(maximum),
                 first.regenPerTick() + second.regenPerTick(), color);
     }
 

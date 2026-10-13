@@ -2,7 +2,6 @@ package com.iafenvoy.mxt.data.ability.type;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
-import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.world.phys.Vec3;
 
@@ -21,14 +20,11 @@ public record FlightDisplay(Vec3 translation, Vec3 rotation, Vec3 scale) {
     public static final FlightDisplay DEFAULT = new FlightDisplay(Vec3.ZERO, new Vec3(90.0D, 0.0D, -45.0D), new Vec3(2.0D, 2.0D, 2.0D));
     // What a model authored standing up (a GeckoLib one) wants: no rotation and its own size.
     public static final FlightDisplay IDENTITY = new FlightDisplay(Vec3.ZERO, Vec3.ZERO, new Vec3(1.0D, 1.0D, 1.0D));
-    private static final MapCodec<FlightDisplay> RAW_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+    public static final Codec<FlightDisplay> CODEC = RecordCodecBuilder.<FlightDisplay>create(i -> i.group(
             Vec3.CODEC.optionalFieldOf("translation", Vec3.ZERO).forGetter(FlightDisplay::translation),
             Vec3.CODEC.optionalFieldOf("rotation", DEFAULT.rotation()).forGetter(FlightDisplay::rotation),
             Vec3.CODEC.optionalFieldOf("scale", DEFAULT.scale()).forGetter(FlightDisplay::scale)
-    ).apply(i, FlightDisplay::new));
-    public static final MapCodec<FlightDisplay> MAP_CODEC = RAW_CODEC.validate(FlightDisplay::validate);
-    // What a field of this shape asks for: an object under one key, not a type-dispatched entry.
-    public static final Codec<FlightDisplay> CODEC = MAP_CODEC.codec();
+    ).apply(i, FlightDisplay::new)).validate(FlightDisplay::validate);
 
     public FlightDisplay {
         translation = translation.scale(1.0D / 16.0D);

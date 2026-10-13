@@ -19,8 +19,7 @@ import java.util.Optional;
  * so a broken chain is only detectable at runtime, and {@code damage_multiplier} belongs to the powers the chain
  * grants at that level rather than to everything the holder does.
  */
-public record Progression(Optional<Holder<Progression>> nextLevel, NumberProvider mastery,
-                          double damageMultiplier) {
+public record Progression(Optional<Holder<Progression>> nextLevel, NumberProvider mastery, double damageMultiplier) {
     public static final Codec<Holder<Progression>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.PROGRESSION);
     public static final Codec<Progression> DIRECT_CODEC = RecordCodecBuilder.<Progression>create(i -> i.group(
             RegistryFixedCodec.create(MxtResourceKeys.PROGRESSION).optionalFieldOf("next_level").forGetter(Progression::nextLevel),

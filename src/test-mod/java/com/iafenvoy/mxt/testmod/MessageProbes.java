@@ -3,6 +3,7 @@ package com.iafenvoy.mxt.testmod;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.data.MessageChannel;
 import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.action.builtin.SendMessageAction;
@@ -244,7 +245,7 @@ public final class MessageProbes {
     }
 
     private static Identifier id() {
-        return Identifier.fromNamespaceAndPath("mxt", "send_message");
+        return Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "send_message");
     }
 
     private static SendMessageAction decode(CommandSourceStack source, String json) {

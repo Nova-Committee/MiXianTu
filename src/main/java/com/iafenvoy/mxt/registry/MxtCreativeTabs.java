@@ -16,7 +16,7 @@ public final class MxtCreativeTabs {
     public static final DeferredHolder<CreativeModeTab, CreativeModeTab> MAIN = REGISTRY.register("main", () -> CreativeModeTab.builder()
             .title(Component.translatable("itemGroup.mxt.main")).icon(MxtItems.SPIRIT_STONE_BAG::toStack)
             .displayItems((params, output) -> {
-                MxtItems.registeredItems().forEach(item -> output.accept(item.get()));
+                MxtItems.REGISTRY.getEntries().forEach(item -> output.accept(item.get()));
                 MxtItems.spiritStones().forEach(item -> {
                     ItemStack empty = item.toStack();
                     // An empty map is a stone that was drained, which is what the creative entry offers: with no

@@ -4,7 +4,7 @@ import com.iafenvoy.mxt.attachment.CurseHolderAttachment;
 import com.iafenvoy.mxt.attachment.CurseHolderAttachment.State;
 import com.iafenvoy.mxt.data.curse.Curse;
 import com.iafenvoy.mxt.data.curse.CurseType;
-import com.iafenvoy.mxt.data.curse.CurseType.Triggered;
+import com.iafenvoy.mxt.data.curse.builtin.TriggeredCurseType;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.curse.CurseService.DefinitionState;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
@@ -74,7 +74,7 @@ public final class CurseScheduler {
             CurseType type = entry.getKey().value().typedType();
             // A triggered curse waits for its triggers and an inert one never acts, so neither is woken for a
             // periodic effect; both still wake for their expiry, which the branch above took into account.
-            if (type.inert() || type instanceof Triggered) continue;
+            if (type.inert() || type instanceof TriggeredCurseType) continue;
             double intervalValue = entry.getKey().value().tickInterval().evaluate(context);
             if (!Double.isFinite(intervalValue) || intervalValue <= 0.0D) continue;
             long interval = Math.max(1L, Math.round(intervalValue));

@@ -1,10 +1,10 @@
 package com.iafenvoy.mxt.runtime.formation;
 
 import com.iafenvoy.mxt.attachment.AbilityAttachment;
-import com.iafenvoy.mxt.data.Formation;
 import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.action.builtin.entity.ApplyEffectAction;
 import com.iafenvoy.mxt.data.context.action.EntityActionContext;
+import com.iafenvoy.mxt.data.formation.Formation;
 import com.iafenvoy.mxt.data.formation.FormationActionType;
 import com.iafenvoy.mxt.data.formation.FormationIntervals;
 import com.iafenvoy.mxt.data.formation.builtin.AttackFormationAction;

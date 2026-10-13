@@ -22,8 +22,7 @@ import java.util.List;
  */
 public record ItemBinding(List<Entry> entries, List<EntityAction> actions,
                           List<DescribedEntry<EntityCondition>> conditions,
-                          List<Either<Holder<Element>, TagKey<Element>>> element,
-                          int priority) implements ItemMatcher {
+                          List<Either<Holder<Element>, TagKey<Element>>> element, int priority) implements ItemMatcher {
     public static final Codec<ItemBinding> CODEC = RecordCodecBuilder.create(i -> i.group(
             ENTRIES_CODEC.fieldOf("items").forGetter(ItemBinding::entries),
             EntityAction.SINGLE_CODEC.listOf().optionalFieldOf("actions", List.of()).forGetter(ItemBinding::actions),

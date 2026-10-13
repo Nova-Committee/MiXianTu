@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.runtime.formation;
 
-import com.iafenvoy.mxt.data.Formation;
-import com.iafenvoy.mxt.data.Formation.RequiredBlock;
+import com.iafenvoy.mxt.data.formation.Formation;
+import com.iafenvoy.mxt.data.formation.Formation.RequiredBlock;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;

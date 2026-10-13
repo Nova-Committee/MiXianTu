@@ -2,10 +2,10 @@ package com.iafenvoy.mxt.registry;
 
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.data.curse.CurseType;
-import com.iafenvoy.mxt.data.curse.CurseType.Empty;
-import com.iafenvoy.mxt.data.curse.CurseType.Permanent;
-import com.iafenvoy.mxt.data.curse.CurseType.Timed;
-import com.iafenvoy.mxt.data.curse.CurseType.Triggered;
+import com.iafenvoy.mxt.data.curse.builtin.EmptyCurseType;
+import com.iafenvoy.mxt.data.curse.builtin.PermanentCurseType;
+import com.iafenvoy.mxt.data.curse.builtin.TimedCurseType;
+import com.iafenvoy.mxt.data.curse.builtin.TriggeredCurseType;
 import com.mojang.serialization.MapCodec;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
@@ -14,8 +14,8 @@ import net.neoforged.neoforge.registries.DeferredRegister;
 public final class MxtCurseTypes {
     public static final DeferredRegister<MapCodec<? extends CurseType>> REGISTRY = DeferredRegister.create(MxtRegistries.CURSE_TYPE, MiXianTu.MOD_ID);
 
-    public static final DeferredHolder<MapCodec<? extends CurseType>, MapCodec<Timed>> TIMED = REGISTRY.register("timed", () -> Timed.CODEC);
-    public static final DeferredHolder<MapCodec<? extends CurseType>, MapCodec<Permanent>> PERMANENT = REGISTRY.register("permanent", () -> Permanent.CODEC);
-    public static final DeferredHolder<MapCodec<? extends CurseType>, MapCodec<Triggered>> TRIGGERED = REGISTRY.register("triggered", () -> Triggered.CODEC);
-    public static final DeferredHolder<MapCodec<? extends CurseType>, MapCodec<Empty>> EMPTY = REGISTRY.register("empty", () -> Empty.CODEC);
+    public static final DeferredHolder<MapCodec<? extends CurseType>, MapCodec<TimedCurseType>> TIMED = REGISTRY.register("timed", () -> TimedCurseType.CODEC);
+    public static final DeferredHolder<MapCodec<? extends CurseType>, MapCodec<PermanentCurseType>> PERMANENT = REGISTRY.register("permanent", () -> PermanentCurseType.CODEC);
+    public static final DeferredHolder<MapCodec<? extends CurseType>, MapCodec<TriggeredCurseType>> TRIGGERED = REGISTRY.register("triggered", () -> TriggeredCurseType.CODEC);
+    public static final DeferredHolder<MapCodec<? extends CurseType>, MapCodec<EmptyCurseType>> EMPTY = REGISTRY.register("empty", () -> EmptyCurseType.CODEC);
 }

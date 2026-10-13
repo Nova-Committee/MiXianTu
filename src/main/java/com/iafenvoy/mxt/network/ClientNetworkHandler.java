@@ -2,11 +2,11 @@ package com.iafenvoy.mxt.network;
 
 import com.iafenvoy.mxt.network.payload.*;
 import com.iafenvoy.mxt.runtime.world.AuraClientState;
+import com.iafenvoy.mxt.screen.gui.ItemPickerScreen;
 import com.iafenvoy.mxt.screen.menu.AlchemyFurnaceMenu;
 import com.iafenvoy.mxt.screen.menu.TalismanWorkstationMenu;
 import com.iafenvoy.mxt.screen.multiblock.MultiblockStructure;
 import com.iafenvoy.mxt.screen.multiblock.MultiblockStructureScreen;
-import com.iafenvoy.mxt.screen.picker.ItemPickerScreen;
 import com.iafenvoy.mxt.util.ClientPlayerNames;
 import net.minecraft.client.Minecraft;
 import net.neoforged.neoforge.network.handling.IPayloadContext;

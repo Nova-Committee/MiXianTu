@@ -1,8 +1,8 @@
 package com.iafenvoy.mxt.data.condition.builtin.item;
 
-import com.iafenvoy.mxt.data.Talisman;
 import com.iafenvoy.mxt.data.condition.ItemCondition;
 import com.iafenvoy.mxt.data.context.condition.ItemConditionContext;
+import com.iafenvoy.mxt.data.talisman.Talisman;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.talisman.TalismanService;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;

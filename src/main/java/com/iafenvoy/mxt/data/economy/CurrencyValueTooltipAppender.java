@@ -1,6 +1,6 @@
 package com.iafenvoy.mxt.data.economy;
 
-import com.iafenvoy.mxt.data.CurrencyValue.UnavailableWhen;
+import com.iafenvoy.mxt.data.DescribedEntry;
 import com.iafenvoy.mxt.runtime.economy.CurrencyValueService;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.ChatFormatting;
@@ -38,14 +38,14 @@ public final class CurrencyValueTooltipAppender {
         if (registries == null) return;
         CurrencyValueService.definition(registries, stack).ifPresent(definition -> {
             boolean valid = definition.unavailableWhen().isEmpty() || player != null && definition.unavailableWhen().stream().noneMatch(entry ->
-                    entry.condition().test(player, stack, FormulaContext.EMPTY));
+                    entry.value().test(player, stack, FormulaContext.EMPTY));
             // The settled value rather than the declared denomination: an item's quality can change what a unit is
             // worth, so printing the raw value would disagree with what the currency actually pays out.
             long value = valid ? CurrencyValueService.unitValue(registries, player, stack, FormulaContext.EMPTY).orElse(0L) : 0L;
             builder.accept(Component.translatable("item.mxt.currency_value", value).withStyle(ChatFormatting.GOLD));
             if (!valid) {
                 CurrencyValueService.unavailableReason(registries, player, stack)
-                        .map(UnavailableWhen::reason)
+                        .flatMap(DescribedEntry::description)
                         .ifPresentOrElse(reason -> builder.accept(reason.copy().withStyle(ChatFormatting.RED)),
                                 () -> builder.accept(Component.translatable("tooltip.mxt.currency_invalid").withStyle(ChatFormatting.RED)));
             }

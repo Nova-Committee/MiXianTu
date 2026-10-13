@@ -50,8 +50,7 @@ public final class EntityVariable implements FormulaVariable {
         if (entity == null) return Double.NaN;
         return switch (suffix) {
             case "health" -> entity instanceof LivingEntity living ? (double) living.getHealth() : Double.NaN;
-            case "max_health" ->
-                    entity instanceof LivingEntity living ? (double) living.getMaxHealth() : Double.NaN;
+            case "max_health" -> entity instanceof LivingEntity living ? (double) living.getMaxHealth() : Double.NaN;
             case "level" -> entity instanceof ServerPlayer player ? (double) player.experienceLevel : 0.0D;
             case "element_count" -> (double) Elements.of(entity).size();
             default -> state(entity, suffix);

@@ -1,18 +1,17 @@
-package com.iafenvoy.mxt.data.resource;
+package com.iafenvoy.mxt.data.resource.builtin;
 
 import com.google.gson.JsonObject;
 import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.compat.kubejs.callback.MxtJsValueCallbacks;
 import com.iafenvoy.mxt.compat.kubejs.codec.MxtJsCodecs;
+import com.iafenvoy.mxt.data.resource.Resource;
+import com.iafenvoy.mxt.data.resource.ResourceValueProvider;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
 
-/**
- * Script-dispatched implementation kept here because ResourceValueProvider is sealed.
- */
 public record JsResourceValueProvider(String id, JsonObject params) implements ResourceValueProvider {
     public static final MapCodec<JsResourceValueProvider> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             Codec.STRING.fieldOf("id").forGetter(JsResourceValueProvider::id),

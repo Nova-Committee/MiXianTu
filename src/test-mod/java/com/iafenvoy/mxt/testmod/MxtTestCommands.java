@@ -5,8 +5,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import com.iafenvoy.mxt.api.ItemAuraAccess;
-import com.iafenvoy.mxt.api.MountVehicle;
+import com.iafenvoy.mxt.api.*;
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.attachment.AbilityAttachment;
 import com.iafenvoy.mxt.attachment.CreatureSpiritAttachment;
@@ -16,9 +15,9 @@ import com.iafenvoy.mxt.attachment.SpiritIdentityAttachment;
 import com.iafenvoy.mxt.attachment.TribulationAttachment;
 import com.iafenvoy.mxt.attachment.TriggerCooldownAttachment;
 import com.iafenvoy.mxt.compat.kubejs.MxtKubeJsApi;
-import com.iafenvoy.mxt.data.Formation;
+import com.iafenvoy.mxt.data.formation.Formation;
 import com.iafenvoy.mxt.data.SpriteIcon;
-import com.iafenvoy.mxt.data.Talisman;
+import com.iafenvoy.mxt.data.talisman.Talisman;
 import com.iafenvoy.mxt.data.Tribulation;
 import com.iafenvoy.mxt.data.ability.TargetSelector;
 import com.iafenvoy.mxt.data.ability.target.AreaTargetSelector;
@@ -28,7 +27,7 @@ import com.iafenvoy.mxt.data.ability.target.TargetOrder;
 import com.iafenvoy.mxt.data.condition.builtin.entity.ProgressionEntityCondition;
 import com.iafenvoy.mxt.data.condition.builtin.entity.RealmEntityCondition;
 import com.iafenvoy.mxt.data.progression.Progression;
-import com.iafenvoy.mxt.data.trigger.Trigger;
+import com.iafenvoy.mxt.data.trigger.builtin.BuiltinTrigger;
 import com.iafenvoy.mxt.network.payload.WheelActionC2SPayload;
 import com.iafenvoy.mxt.runtime.ability.AbilityGrantService;
 import com.iafenvoy.mxt.runtime.ability.PassiveAttributeService;
@@ -93,7 +92,6 @@ import com.iafenvoy.mxt.runtime.trigger.TriggerDispatcher;
 import com.iafenvoy.mxt.data.creature.ContractBehavior;
 import com.iafenvoy.mxt.data.creature.ContractBehaviors;
 import com.iafenvoy.mxt.data.creature.ContractContext;
-import com.iafenvoy.mxt.data.creature.ContractTags;
 import com.iafenvoy.mxt.data.creature.ContractType;
 import com.iafenvoy.mxt.data.creature.CreatureProfile;
 import com.iafenvoy.mxt.data.cost.Cost;
@@ -186,9 +184,7 @@ import com.iafenvoy.mxt.runtime.rift.RiftConnections;
 import com.iafenvoy.mxt.runtime.rift.RiftConnections.Loop;
 import com.iafenvoy.mxt.runtime.rift.RiftMesh;
 import com.iafenvoy.mxt.runtime.rift.RiftTeleportService;
-import com.iafenvoy.mxt.api.WheelEntryKind;
 import com.iafenvoy.mxt.runtime.wheel.WheelService;
-import com.iafenvoy.mxt.api.WheelSource;
 import com.iafenvoy.mxt.runtime.wheel.WheelSources;
 
 import java.util.stream.Collectors;
@@ -1987,8 +1983,8 @@ public final class MxtTestCommands {
             spawned.add(wolf);
             boolean vanillaRefused = ContractService.bind(tagged, player, wolf, false).failure()
                     == ContractService.Failure.NOT_CONTRACTABLE;
-            boolean tagNarrows = !ContractTags.accepts(context(wolf, player, tagged))
-                    && ContractTags.accepts(context(wolf, player, open));
+            boolean tagNarrows = !Contractable.acceptsContractByTag(context(wolf, player, tagged))
+                    && Contractable.acceptsContractByTag(context(wolf, player, open));
             boolean eligibility = vanillaRefused && tagNarrows;
             source.sendSuccess(() -> Component.literal("contract probe: vanilla_refused=" + vanillaRefused
                     + " tag_narrows=" + tagNarrows + (eligibility ? " OK" : " MISMATCH")), false);
@@ -2227,7 +2223,7 @@ public final class MxtTestCommands {
         Holder<Resource> growth = require(MxtResourceKeys.RESOURCE, BEAST_GROWTH);
         Identifier ability = HolderHelper.id(require(MxtResourceKeys.ABILITY, PROGRESSION_GROWTH));
         // The id a creature's grants are written under: one category, so ending the bond can revoke exactly them.
-        Identifier grantSource = Identifier.fromNamespaceAndPath("mxt", "grant/creature/"
+        Identifier grantSource = Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "grant/creature/"
                 + PROBE_BEAST_PROFILE.getNamespace() + "/" + PROBE_BEAST_PROFILE.getPath());
         List<ProbeBeast> spawned = new ArrayList<>();
         List<Long> signals = new ArrayList<>();
@@ -2237,7 +2233,7 @@ public final class MxtTestCommands {
             beast = spawnProbeBeast(level, origin.offset(4, 0, 0));
             spawned.add(beast);
             TriggerDispatcher.register(new TriggerSubscription(beast.getUUID(), "probe", identity,
-                    new Trigger.Builtin(TriggerSignals.PROGRESSION_LEVEL), signal -> true,
+                    new BuiltinTrigger(TriggerSignals.PROGRESSION_LEVEL), signal -> true,
                     signal -> signals.add(signal.gameTime()), false));
             ResourceHolderAttachment resources = beast.getData(MxtAttachments.RESOURCE_HOLDER);
             AbilityAttachment abilities = beast.getData(MxtAttachments.ABILITY_HOLDER);

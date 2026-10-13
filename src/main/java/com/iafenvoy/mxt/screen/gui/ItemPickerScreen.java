@@ -1,9 +1,9 @@
-package com.iafenvoy.mxt.screen.picker;
+package com.iafenvoy.mxt.screen.gui;
 
 import com.iafenvoy.mxt.data.CreativeTabHelper;
-import com.iafenvoy.mxt.picker.ItemPickerManager;
-import com.iafenvoy.mxt.picker.ItemPickerManager.PickerItem;
-import com.iafenvoy.mxt.screen.picker.ItemPickerScreen.PickerMenu;
+import com.iafenvoy.mxt.data.ItemPickerManager;
+import com.iafenvoy.mxt.data.ItemPickerManager.PickerItem;
+import com.iafenvoy.mxt.screen.gui.ItemPickerScreen.PickerMenu;
 import com.mojang.blaze3d.platform.cursor.CursorTypes;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -51,7 +51,6 @@ public final class ItemPickerScreen extends AbstractContainerScreen<PickerMenu> 
     private static final int COLUMNS = 9;
     private static final int ROWS = 5;
     private static final int SLOT_COUNT = COLUMNS * ROWS;
-    private static final int SLOT_SIZE = 18;
     private static final int GRID_LEFT = 9;
     private static final int GRID_TOP = 18;
     private static final int GRID_HEIGHT = 112;
@@ -93,11 +92,6 @@ public final class ItemPickerScreen extends AbstractContainerScreen<PickerMenu> 
     private boolean clickedOutside;
     // The tab's way of shipping the player's own inventory edits, so it is notified of the client's slot writes.
     private @Nullable CreativeInventoryListener listener;
-
-    // A factory rather than a constructor because the category path needs the same shape over another element type.
-    public static ItemPickerScreen over(Component title, List<ItemStack> items) {
-        return new ItemPickerScreen(title, toCandidates(items));
-    }
 
     private ItemPickerScreen(Component title, List<Candidate> entries) {
         super(new PickerMenu(player()), player().getInventory(), title, PANEL_WIDTH, PANEL_HEIGHT);

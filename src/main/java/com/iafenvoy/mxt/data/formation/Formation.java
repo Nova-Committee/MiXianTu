@@ -1,18 +1,15 @@
-package com.iafenvoy.mxt.data;
+package com.iafenvoy.mxt.data.formation;
 
 import com.iafenvoy.mxt.api.QualityProvider;
 import com.iafenvoy.mxt.data.action.BlockAction;
 import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.cost.Cost;
-import com.iafenvoy.mxt.data.formation.FormationActionType;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.util.codec.CollectionCodecs;
-import com.iafenvoy.mxt.util.codec.MiscCodecs;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.mojang.datafixers.util.Either;
-import com.mojang.datafixers.util.Pair;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -38,47 +35,34 @@ import java.util.function.Function;
  * those its owner does not recognise; what the array is for is its actions, not this field. {@code quality} is the
  * tier a plate carrying this array starts on, which several arrays sharing one built-in plate cannot state by item.
  */
-public record Formation(Optional<Holder<ItemQuality>> quality,
-                        Optional<Identifier> structureTemplate, StructureCheck structureCheck,
-                        List<RequiredBlock> structure, NumberProvider radius, List<Cost> activationCosts,
-                        List<Cost> maintenanceCosts, Optional<Storage> storage, List<FormationActionType> actions,
-                        boolean spareFriends, BlockAction activateAction, BlockAction tickAction,
-                        BlockAction deactivateAction, EntityAction entityTickAction, EntityAction entityEnterAction,
-                        EntityAction entityExitAction) implements QualityProvider {
+public record Formation(Optional<Holder<ItemQuality>> quality, Optional<Identifier> structureTemplate,
+                        StructureCheck structureCheck, List<RequiredBlock> structure, NumberProvider radius,
+                        List<Cost> activationCosts, List<Cost> maintenanceCosts, Optional<Storage> storage,
+                        List<FormationActionType> actions, boolean spareFriends, BlockAction activateAction,
+                        BlockAction tickAction, BlockAction deactivateAction, EntityAction entityTickAction,
+                        EntityAction entityEnterAction, EntityAction entityExitAction) implements QualityProvider {
     public static final Codec<Holder<Formation>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.FORMATION);
-    // The template and the check policy share one group slot, which keeps the group inside RecordCodecBuilder's
-    // component limit; the JSON keys are unchanged by it.
     public static final Codec<Formation> DIRECT_CODEC = RecordCodecBuilder.<Formation>create(i -> i.group(
-                    ItemQuality.CODEC.optionalFieldOf("quality").forGetter(Formation::quality),
-                    MiscCodecs.pair(
-                                    Identifier.CODEC.optionalFieldOf("structure_template"),
-                                    StructureCheck.CODEC.optionalFieldOf("structure_check", StructureCheck.STRUCTURE))
-                            .forGetter(formation -> Pair.of(formation.structureTemplate(), formation.structureCheck())),
-                    // Strict, unlike the action and cost lists: dropping a mistyped required block would quietly make
-                    // the structure easier to satisfy, and a formation standing on half its flags is worse.
-                    RequiredBlock.CODEC.listOf().optionalFieldOf("structure", List.of()).forGetter(Formation::structure),
-                    NumberProvider.CODEC.fieldOf("radius").forGetter(Formation::radius),
-                    Cost.LIST_CODEC.optionalFieldOf("activation_costs", List.of()).forGetter(Formation::activationCosts),
-                    Cost.LIST_CODEC.optionalFieldOf("maintenance_costs", List.of()).forGetter(Formation::maintenanceCosts),
-                    // A framework field rather than a module: what an array keeps is a question about its own upkeep,
-                    // and absent is the answer most arrays give, so this is one field rather than a module.
-                    Storage.CODEC.optionalFieldOf("storage").forGetter(Formation::storage),
-                    FormationActionType.CODEC.listOf().optionalFieldOf("actions", List.of()).forGetter(Formation::actions),
-                    Codec.BOOL.optionalFieldOf("spare_friends", false).forGetter(Formation::spareFriends),
-                    BlockAction.optionalCodec("activate_action").forGetter(Formation::activateAction),
-                    BlockAction.optionalCodec("tick_action").forGetter(Formation::tickAction),
-                    BlockAction.optionalCodec("deactivate_action").forGetter(Formation::deactivateAction),
-                    EntityAction.optionalCodec("entity_tick_action").forGetter(Formation::entityTickAction),
-                    EntityAction.optionalCodec("entity_enter_action").forGetter(Formation::entityEnterAction),
-                    EntityAction.optionalCodec("entity_exit_action").forGetter(Formation::entityExitAction)
-            ).apply(i, (quality, structure, blocks, radius, activationCosts, maintenanceCosts, storage, actions,
-                        spareFriends, activateAction, tickAction, deactivateAction, entityTickAction, entityEnterAction,
-                        entityExitAction) ->
-                    new Formation(quality, structure.getFirst(), structure.getSecond(),
-                            blocks, radius, activationCosts, maintenanceCosts, storage, actions, spareFriends,
-                            activateAction, tickAction, deactivateAction, entityTickAction, entityEnterAction,
-                            entityExitAction)))
-            .flatXmap(Formation::validate, Formation::validate);
+            ItemQuality.CODEC.optionalFieldOf("quality").forGetter(Formation::quality),
+            Identifier.CODEC.optionalFieldOf("structure_template").forGetter(Formation::structureTemplate),
+            StructureCheck.CODEC.optionalFieldOf("structure_check", StructureCheck.STRUCTURE).forGetter(Formation::structureCheck),
+            // the structure easier to satisfy, and a formation standing on half its flags is worse.
+            RequiredBlock.CODEC.listOf().optionalFieldOf("structure", List.of()).forGetter(Formation::structure),
+            NumberProvider.CODEC.fieldOf("radius").forGetter(Formation::radius),
+            Cost.LIST_CODEC.optionalFieldOf("activation_costs", List.of()).forGetter(Formation::activationCosts),
+            Cost.LIST_CODEC.optionalFieldOf("maintenance_costs", List.of()).forGetter(Formation::maintenanceCosts),
+            // A framework field rather than a module: what an array keeps is a question about its own upkeep,
+            // and absent is the answer most arrays give, so this is one field rather than a module.
+            Storage.CODEC.optionalFieldOf("storage").forGetter(Formation::storage),
+            FormationActionType.CODEC.listOf().optionalFieldOf("actions", List.of()).forGetter(Formation::actions),
+            Codec.BOOL.optionalFieldOf("spare_friends", false).forGetter(Formation::spareFriends),
+            BlockAction.optionalCodec("activate_action").forGetter(Formation::activateAction),
+            BlockAction.optionalCodec("tick_action").forGetter(Formation::tickAction),
+            BlockAction.optionalCodec("deactivate_action").forGetter(Formation::deactivateAction),
+            EntityAction.optionalCodec("entity_tick_action").forGetter(Formation::entityTickAction),
+            EntityAction.optionalCodec("entity_enter_action").forGetter(Formation::entityEnterAction),
+            EntityAction.optionalCodec("entity_exit_action").forGetter(Formation::entityExitAction)
+    ).apply(i, Formation::new)).flatXmap(Formation::validate, Formation::validate);
 
     @Override
     public Optional<Holder<ItemQuality>> defaultQuality() {
@@ -90,8 +74,7 @@ public record Formation(Optional<Holder<ItemQuality>> quality,
      * that is meant to stand anywhere, and it refuses a declared structure rather than ignoring one.
      */
     public enum StructureCheck {
-        STRUCTURE,
-        ALWAYS;
+        STRUCTURE, ALWAYS;
 
         public static final Codec<StructureCheck> CODEC = Codec.STRING.comapFlatMap(value -> {
             try {

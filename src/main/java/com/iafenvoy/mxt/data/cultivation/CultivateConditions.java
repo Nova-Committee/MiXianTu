@@ -17,8 +17,7 @@ import java.util.Optional;
  * Data-driven rules shared by cultivation start and breakthrough transitions. Conditions are evaluated
  * synchronously; trigger and action are optional extension points for event-driven and active entry points.
  */
-public record CultivateConditions(List<EntityCondition> conditions,
-                                  List<Trigger> triggers,
+public record CultivateConditions(List<EntityCondition> conditions, List<Trigger> triggers,
                                   Optional<EntityAction> action) {
     public static final Codec<CultivateConditions> CODEC = RecordCodecBuilder.create(i -> i.group(
             EntityCondition.CODEC.listOf().optionalFieldOf("conditions", List.of()).forGetter(CultivateConditions::conditions),

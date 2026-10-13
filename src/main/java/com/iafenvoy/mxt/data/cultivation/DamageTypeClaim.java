@@ -4,7 +4,6 @@ import com.iafenvoy.mxt.util.codec.MiscCodecs;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
-import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.Registries;
@@ -22,14 +21,13 @@ import java.util.function.Function;
  * {@code damage_attachment} - an explicitly written {@code 0} is a real answer, not "unset".
  */
 public record DamageTypeClaim(Either<Holder<DamageType>, TagKey<DamageType>> type, Optional<Double> damageAttachment) {
-    private static final MapCodec<DamageTypeClaim> OBJECT_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+    private static final Codec<DamageTypeClaim> OBJECT_CODEC = RecordCodecBuilder.create(i -> i.group(
             RegistryCodecs.holderOrTag(Registries.DAMAGE_TYPE).fieldOf("damage_type").forGetter(DamageTypeClaim::type),
             MiscCodecs.NON_NEGATIVE.optionalFieldOf("damage_attachment").forGetter(DamageTypeClaim::damageAttachment)
     ).apply(i, DamageTypeClaim::new));
 
     // Order matters: a bare string or #tag is tried as the plain form, an object as the form with its own number.
-    public static final Codec<DamageTypeClaim> CODEC = Codec
-            .either(RegistryCodecs.holderOrTag(Registries.DAMAGE_TYPE), OBJECT_CODEC.codec())
+    public static final Codec<DamageTypeClaim> CODEC = Codec.either(RegistryCodecs.holderOrTag(Registries.DAMAGE_TYPE), OBJECT_CODEC)
             .xmap(value -> value.map(type -> new DamageTypeClaim(type, Optional.empty()), Function.identity()),
                     claim -> claim.damageAttachment().isEmpty() ? Either.left(claim.type()) : Either.right(claim));
 

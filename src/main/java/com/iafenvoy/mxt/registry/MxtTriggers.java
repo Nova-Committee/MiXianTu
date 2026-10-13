@@ -2,8 +2,8 @@ package com.iafenvoy.mxt.registry;
 
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.data.trigger.Trigger;
-import com.iafenvoy.mxt.data.trigger.Trigger.Builtin;
 import com.iafenvoy.mxt.data.trigger.TriggerSignals;
+import com.iafenvoy.mxt.data.trigger.builtin.BuiltinTrigger;
 import com.iafenvoy.mxt.data.trigger.builtin.JsTrigger;
 import com.iafenvoy.mxt.data.trigger.builtin.VanillaTrigger;
 import com.iafenvoy.mxt.data.trigger.builtin.VanillaTrigger.Matcher;
@@ -26,17 +26,17 @@ import net.neoforged.neoforge.registries.DeferredRegister;
 public final class MxtTriggers {
     public static final DeferredRegister<MapCodec<? extends Trigger>> REGISTRY = DeferredRegister.create(MxtRegistries.TRIGGER_TYPE, MiXianTu.MOD_ID);
 
-    public static final DeferredHolder<MapCodec<? extends Trigger>, MapCodec<Builtin>> TICK = register("tick");
-    public static final DeferredHolder<MapCodec<? extends Trigger>, MapCodec<Builtin>> ATTACK = register("attack");
-    public static final DeferredHolder<MapCodec<? extends Trigger>, MapCodec<Builtin>> HURT = register("hurt");
-    public static final DeferredHolder<MapCodec<? extends Trigger>, MapCodec<Builtin>> KILL = register("kill");
-    public static final DeferredHolder<MapCodec<? extends Trigger>, MapCodec<Builtin>> BLOCK_BREAK = register("block_break");
-    public static final DeferredHolder<MapCodec<? extends Trigger>, MapCodec<Builtin>> BLOCK_USE = register("block_use");
-    public static final DeferredHolder<MapCodec<? extends Trigger>, MapCodec<Builtin>> ITEM_USE = register("item_use");
-    public static final DeferredHolder<MapCodec<? extends Trigger>, MapCodec<Builtin>> EQUIP = register("equip");
-    public static final DeferredHolder<MapCodec<? extends Trigger>, MapCodec<Builtin>> DEATH = register("death");
-    public static final DeferredHolder<MapCodec<? extends Trigger>, MapCodec<Builtin>> BREAKTHROUGH = register("breakthrough");
-    public static final DeferredHolder<MapCodec<? extends Trigger>, MapCodec<Builtin>> PROGRESSION_LEVEL = register("progression_level");
+    public static final DeferredHolder<MapCodec<? extends Trigger>, MapCodec<BuiltinTrigger>> TICK = register("tick");
+    public static final DeferredHolder<MapCodec<? extends Trigger>, MapCodec<BuiltinTrigger>> ATTACK = register("attack");
+    public static final DeferredHolder<MapCodec<? extends Trigger>, MapCodec<BuiltinTrigger>> HURT = register("hurt");
+    public static final DeferredHolder<MapCodec<? extends Trigger>, MapCodec<BuiltinTrigger>> KILL = register("kill");
+    public static final DeferredHolder<MapCodec<? extends Trigger>, MapCodec<BuiltinTrigger>> BLOCK_BREAK = register("block_break");
+    public static final DeferredHolder<MapCodec<? extends Trigger>, MapCodec<BuiltinTrigger>> BLOCK_USE = register("block_use");
+    public static final DeferredHolder<MapCodec<? extends Trigger>, MapCodec<BuiltinTrigger>> ITEM_USE = register("item_use");
+    public static final DeferredHolder<MapCodec<? extends Trigger>, MapCodec<BuiltinTrigger>> EQUIP = register("equip");
+    public static final DeferredHolder<MapCodec<? extends Trigger>, MapCodec<BuiltinTrigger>> DEATH = register("death");
+    public static final DeferredHolder<MapCodec<? extends Trigger>, MapCodec<BuiltinTrigger>> BREAKTHROUGH = register("breakthrough");
+    public static final DeferredHolder<MapCodec<? extends Trigger>, MapCodec<BuiltinTrigger>> PROGRESSION_LEVEL = register("progression_level");
     public static final DeferredHolder<MapCodec<? extends Trigger>, MapCodec<JsTrigger>> JS = REGISTRY.register("js", () -> JsTrigger.CODEC);
 
     static {
@@ -72,8 +72,8 @@ public final class MxtTriggers {
         port(TriggerSignals.ITEM_DURABILITY_CHANGED, TriggerInstance.CODEC, VanillaTriggerMatchers::itemDurabilityChanged);
     }
 
-    private static DeferredHolder<MapCodec<? extends Trigger>, MapCodec<Builtin>> register(String signal) {
-        return REGISTRY.register(signal, () -> MapCodec.unit(new Builtin(
+    private static DeferredHolder<MapCodec<? extends Trigger>, MapCodec<BuiltinTrigger>> register(String signal) {
+        return REGISTRY.register(signal, () -> MapCodec.unit(new BuiltinTrigger(
                 TriggerSignals.id(signal))));
     }
 

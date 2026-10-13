@@ -1,7 +1,6 @@
 package com.iafenvoy.mxt.data;
 
 import com.mojang.serialization.Codec;
-import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.util.RandomSource;
 
@@ -12,15 +11,11 @@ import java.util.List;
  * list whose total is 0 is picked from uniformly, so a table written wrong still runs instead of failing the load.
  */
 public record Weighted<T>(T value, int weight) {
-    public static <T> MapCodec<Weighted<T>> mapCodec(Codec<T> valueCodec) {
-        return RecordCodecBuilder.mapCodec(i -> i.group(
+    public static <T> Codec<Weighted<T>> codec(Codec<T> valueCodec) {
+        return RecordCodecBuilder.create(i -> i.group(
                 valueCodec.fieldOf("value").forGetter(Weighted::value),
                 Codec.INT.optionalFieldOf("weight", 1).forGetter(Weighted::weight)
         ).apply(i, Weighted::new));
-    }
-
-    public static <T> Codec<Weighted<T>> codec(Codec<T> valueCodec) {
-        return mapCodec(valueCodec).codec();
     }
 
     // Null only for an empty list, which an optional field may leave behind.

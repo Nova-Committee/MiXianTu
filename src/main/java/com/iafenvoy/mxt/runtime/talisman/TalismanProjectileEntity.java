@@ -1,13 +1,12 @@
 package com.iafenvoy.mxt.runtime.talisman;
 
-import com.iafenvoy.mxt.data.Talisman;
+import com.iafenvoy.mxt.data.talisman.Talisman;
 import com.iafenvoy.mxt.data.talisman.TalismanUse;
 import com.iafenvoy.mxt.registry.MxtEntityTypes;
 import com.iafenvoy.mxt.registry.MxtItems;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.Holder;
-import net.minecraft.core.Holder.Reference;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
@@ -26,8 +25,6 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.EntityHitResult;
 import org.jetbrains.annotations.Nullable;
 import org.jspecify.annotations.NonNull;
-
-import java.util.Optional;
 
 /**
  * A thrown carrier, in flight. It remembers the inscription's id rather than the definition, because only an id can
@@ -123,8 +120,8 @@ public final class TalismanProjectileEntity extends ThrowableItemProjectile {
     private @Nullable TalismanUse use() {
         if (this.level().isClientSide()) return null;
         Holder<Talisman> definition = this.talisman();
-        if (definition == null || !(this.getOwner() instanceof LivingEntity owner)) return null;
-        return new TalismanUse(owner, FormulaContext.of(owner), this.position(), definition);
+        if (definition == null || !(this.getOwner() instanceof LivingEntity living)) return null;
+        return new TalismanUse(living, FormulaContext.of(living), this.position(), definition);
     }
 
     // Requires a registry holder: only the id travels, so an inline value could not be rebuilt on arrival.
@@ -137,8 +134,6 @@ public final class TalismanProjectileEntity extends ThrowableItemProjectile {
     private @Nullable Holder<Talisman> talisman() {
         Identifier id = Identifier.tryParse(this.getEntityData().get(TALISMAN));
         if (id == null) return null;
-        Optional<Reference<Talisman>> found = this.level().registryAccess().lookupOrThrow(MxtResourceKeys.TALISMAN)
-                .get(ResourceKey.create(MxtResourceKeys.TALISMAN, id));
-        return found.orElse(null);
+        return this.level().registryAccess().get(ResourceKey.create(MxtResourceKeys.TALISMAN, id)).orElse(null);
     }
 }

@@ -1,8 +1,7 @@
-package com.iafenvoy.mxt.data;
+package com.iafenvoy.mxt.data.talisman;
 
 import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.data.cost.Cost;
-import com.iafenvoy.mxt.data.talisman.TalismanType;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -25,8 +24,7 @@ import java.util.List;
  * before anything is paid for it. {@code type} is required: an inscription with no use at all is not something a
  * pack should be able to write by accident, and {@code mxt:empty} is there for one that means to do nothing.
  */
-public record Talisman(TalismanType type, double capacity,
-                       EntityCondition condition, List<Cost> costs) {
+public record Talisman(TalismanType type, double capacity, EntityCondition condition, List<Cost> costs) {
     public static final Codec<Holder<Talisman>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.TALISMAN);
     public static final Codec<Talisman> DIRECT_CODEC = RecordCodecBuilder.create(i -> i.group(
             TalismanType.CODEC.forGetter(Talisman::type),

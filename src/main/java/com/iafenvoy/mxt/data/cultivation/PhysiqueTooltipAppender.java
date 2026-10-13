@@ -32,8 +32,7 @@ public final class PhysiqueTooltipAppender {
         event.registerAppender(TooltipLocation.POST_CUSTOM, PhysiqueTooltipAppender::appendPhysique);
     }
 
-    private static void appendPhysique(ItemStack stack, TooltipContext context, TooltipDisplay display,
-                                       Player player, TooltipFlag flag, Consumer<Component> builder) {
+    private static void appendPhysique(ItemStack stack, TooltipContext context, TooltipDisplay display, Player player, TooltipFlag flag, Consumer<Component> builder) {
         Holder<Physique> physique = stack.get(MxtDataComponents.PHYSIQUE);
         if (physique == null) return;
         builder.accept(Component.translatable("tooltip.mxt.physique.physique", DefinitionText.text(physique)).withStyle(ChatFormatting.AQUA));

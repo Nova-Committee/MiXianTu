@@ -58,8 +58,7 @@ public record AlchemyRecipe(Map<Holder<MedicinalProperty>, NumberProvider> mainR
     private static final MapCodec<Optional<QualityRequirement>> INPUT_QUALITY_FIELD = requirement("input_quality");
 
     private static MapCodec<Optional<QualityRequirement>> requirement(String field) {
-        return QualityRequirement.CODEC.flatXmap(
-                requirement -> requirement.isEmpty()
+        return QualityRequirement.CODEC.flatXmap(requirement -> requirement.isEmpty()
                         ? DataResult.error(() -> "mxt:alchemy " + field + " needs a quality list or a min_quality")
                         : DataResult.success(requirement),
                 DataResult::success

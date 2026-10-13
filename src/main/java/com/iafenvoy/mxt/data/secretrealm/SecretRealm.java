@@ -5,7 +5,6 @@ import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.util.codec.MiscCodecs;
-import com.mojang.datafixers.util.Pair;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -27,46 +26,34 @@ import java.util.Optional;
  * keeping its terrain, while an unclaimed one is destroyed with its region data. {@code quality} is the tier a token
  * into it starts on, which several realms sharing one built-in token cannot state by item.
  */
-public record SecretRealm(Optional<Holder<ItemQuality>> quality,
-                          SecretRealmGeneration generation, long seed,
-                          Optional<Border> border, int maxInstances,
-                          Optional<Integer> maxMembers, boolean owned, long durationTicks,
-                          List<StructurePlacement> structures, List<EntryPoint> entry,
-                          EntityCondition enterCondition, EntityCondition exitCondition,
-                          Optional<Component> enterDeniedMessage, Optional<Component> exitDeniedMessage,
-                          EntityAction enterAction,
+public record SecretRealm(Optional<Holder<ItemQuality>> quality, SecretRealmGeneration generation, long seed,
+                          Optional<Border> border, int maxInstances, int maxMembers, boolean owned, long durationTicks,
+                          List<StructurePlacement> structures, List<EntryPoint> entry, EntityCondition enterCondition,
+                          EntityCondition exitCondition, Optional<Component> enterDeniedMessage,
+                          Optional<Component> exitDeniedMessage, EntityAction enterAction,
                           EntityAction exitAction) implements QualityProvider {
     // Written explicitly onto an instance without a border instead of inheriting the overworld border that derived
     // level data would otherwise hand to a runtime dimension.
     public static final double DEFAULT_BORDER_SIZE = 29999984.0D;
-    public static final int MAX_INSTANCES = 256;
-    public static final int MAX_MEMBERS = 100_000;
-
+    public static final int MAX_INSTANCES = 256, MAX_MEMBERS = 100_000;
     public static final Codec<SecretRealm> CODEC = RecordCodecBuilder.<SecretRealm>create(i -> i.group(
             ItemQuality.CODEC.optionalFieldOf("quality").forGetter(SecretRealm::quality),
             SecretRealmGeneration.CODEC.fieldOf("generation").forGetter(SecretRealm::generation),
             Codec.LONG.optionalFieldOf("seed", 0L).forGetter(SecretRealm::seed),
             Border.CODEC.optionalFieldOf("border").forGetter(SecretRealm::border),
             Codec.intRange(1, MAX_INSTANCES).optionalFieldOf("max_instances", 1).forGetter(SecretRealm::maxInstances),
-            Codec.intRange(1, MAX_MEMBERS).optionalFieldOf("max_members").forGetter(SecretRealm::maxMembers),
+            Codec.intRange(1, MAX_MEMBERS).optionalFieldOf("max_members", MAX_MEMBERS).forGetter(SecretRealm::maxMembers),
             Codec.BOOL.optionalFieldOf("owned", false).forGetter(SecretRealm::owned),
             MiscCodecs.longRange(0L, Long.MAX_VALUE).optionalFieldOf("duration_ticks", 0L).forGetter(SecretRealm::durationTicks),
             StructurePlacement.CODEC.listOf().optionalFieldOf("structures", List.of()).forGetter(SecretRealm::structures),
             EntryPoint.LIST_CODEC.optionalFieldOf("entry", List.of()).forGetter(SecretRealm::entry),
-            // Eighteen components; two pairs keep the group at sixteen.
-            MiscCodecs.pair(
-                            EntityCondition.optionalCodec("enter_condition"),
-                            EntityCondition.optionalCodec("exit_condition"))
-                    .forGetter(realm -> Pair.of(realm.enterCondition(), realm.exitCondition())),
+            EntityCondition.optionalCodec("enter_condition").forGetter(SecretRealm::enterCondition),
+            EntityCondition.optionalCodec("exit_condition").forGetter(SecretRealm::exitCondition),
             MiscCodecs.TRANSLATABLE_COMPONENT.optionalFieldOf("enter_denied_message").forGetter(SecretRealm::enterDeniedMessage),
             MiscCodecs.TRANSLATABLE_COMPONENT.optionalFieldOf("exit_denied_message").forGetter(SecretRealm::exitDeniedMessage),
             EntityAction.optionalCodec("enter_action").forGetter(SecretRealm::enterAction),
             EntityAction.optionalCodec("exit_action").forGetter(SecretRealm::exitAction)
-    ).apply(i, (quality, generation, seed, border, maxInstances, maxMembers, owned, durationTicks,
-                structures, entry, conditions, enterDeniedMessage, exitDeniedMessage, enterAction, exitAction) ->
-            new SecretRealm(quality, generation, seed, border, maxInstances, maxMembers,
-                    owned, durationTicks, structures, entry, conditions.getFirst(), conditions.getSecond(),
-                    enterDeniedMessage, exitDeniedMessage, enterAction, exitAction))).validate(SecretRealm::validate);
+    ).apply(i, SecretRealm::new)).validate(SecretRealm::validate);
 
     @Override
     public Optional<Holder<ItemQuality>> defaultQuality() {
@@ -76,10 +63,6 @@ public record SecretRealm(Optional<Holder<ItemQuality>> quality,
     // Never "whatever the overworld uses": an omitted definition border still gets the vanilla default.
     public Border effectiveBorder() {
         return this.border.orElse(Border.VANILLA_DEFAULT);
-    }
-
-    public int memberLimit() {
-        return this.maxMembers.orElse(MAX_MEMBERS);
     }
 
     public EntryPoint pickEntry(RandomSource random) {

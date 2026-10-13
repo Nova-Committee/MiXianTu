@@ -37,15 +37,11 @@ import java.util.Optional;
  * carrier, so that item alone cannot say which tier applies. {@code primary_color} and {@code secondary_color} are
  * the two colours the built-in book is tinted with, one per texture layer.
  */
-public record Technique(Optional<Holder<ItemQuality>> quality,
-                        Optional<IconReference> icon,
-                        int primaryColor, int secondaryColor,
-                        EntityCondition learnCondition,
-                        List<Identifier> exclusiveTags,
+public record Technique(Optional<Holder<ItemQuality>> quality, Optional<IconReference> icon, int primaryColor,
+                        int secondaryColor, EntityCondition learnCondition, List<Identifier> exclusiveTags,
                         NumberProvider cultivationModifier, List<AttributeEntry> passiveModifiers,
                         List<Either<Holder<Ability>, TagKey<Ability>>> grantedAbilities,
-                        Optional<Holder<Progression>> defaultLevel,
-                        Optional<Holder<Resource>> masteryResource,
+                        Optional<Holder<Progression>> defaultLevel, Optional<Holder<Resource>> masteryResource,
                         Map<Holder<Progression>, ProgressionConfig> configuration) implements ProgressionOwner, QualityProvider {
     // The book texture as authored: a pack that names no colour keeps the blue cover and the white title mark.
     public static final int DEFAULT_PRIMARY_COLOR = 0x0E54A0;

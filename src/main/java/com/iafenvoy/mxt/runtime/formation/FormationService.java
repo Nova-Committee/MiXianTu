@@ -1,12 +1,12 @@
 package com.iafenvoy.mxt.runtime.formation;
 
 import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
-import com.iafenvoy.mxt.data.Formation;
-import com.iafenvoy.mxt.data.Formation.Storage;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.cost.CostPayment;
 import com.iafenvoy.mxt.data.cost.context.CostContext;
 import com.iafenvoy.mxt.data.cost.context.CostOrigin;
+import com.iafenvoy.mxt.data.formation.Formation;
+import com.iafenvoy.mxt.data.formation.Formation.Storage;
 import com.iafenvoy.mxt.runtime.formation.FormationService.MaintainRule.PaymentPlan;
 import com.iafenvoy.mxt.runtime.resource.ResourceTransactions;
 import com.iafenvoy.mxt.runtime.resource.ResourceTransactions.Evaluation;

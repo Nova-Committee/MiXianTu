@@ -17,11 +17,9 @@ import java.util.function.Function;
  * texture for the {@code boss_bar} sheet, a GUI sprite for the {@code textured_bar} pair - and a sprite cannot
  * stand in for the sheet the boss bar cuts its cells from.
  */
-public record SpriteIcon(Optional<Identifier> sprite, Optional<Identifier> texture, Optional<Region> region,
-                         int width, int height) {
-    // Both zero means "draw at the size the caller asks for".
-    public static final Codec<SpriteIcon> SPRITE_CODEC = bare(true);
-    public static final Codec<SpriteIcon> TEXTURE_CODEC = bare(false);
+public record SpriteIcon(Optional<Identifier> sprite, Optional<Identifier> texture, Optional<Region> region, int width,
+                         int height) {
+    public static final Codec<SpriteIcon> SPRITE_CODEC = bare(true), TEXTURE_CODEC = bare(false);
     // The middle ground every GUI texture is authored at, matching the renderers that came before this type.
     public static final int DEFAULT_TEXTURE_SIZE = 256;
 

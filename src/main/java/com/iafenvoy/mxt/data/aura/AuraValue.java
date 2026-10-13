@@ -1,6 +1,6 @@
 package com.iafenvoy.mxt.data.aura;
 
-import com.iafenvoy.mxt.data.aura.AuraMaximum.InitialMultiplier;
+import com.iafenvoy.mxt.data.aura.builtin.InitialMultiplierAuraMaximum;
 import com.iafenvoy.mxt.util.codec.CollectionCodecs;
 import com.iafenvoy.mxt.util.codec.MiscCodecs;
 import com.mojang.serialization.Codec;
@@ -15,10 +15,10 @@ import java.util.Map;
  * contribution, depending on its owner, and the color is used by environment rendering only.
  */
 public record AuraValue(double amount, AuraMaximum max, double regenPerTick, int color) {
-    public static final AuraValue ZERO = new AuraValue(0.0D, InitialMultiplier.ONE, 0.0D, 0xFFFFFF);
+    public static final AuraValue ZERO = new AuraValue(0.0D, InitialMultiplierAuraMaximum.ONE, 0.0D, 0xFFFFFF);
     public static final Codec<AuraValue> CODEC = RecordCodecBuilder.<AuraValue>create(i -> i.group(
             Codec.DOUBLE.optionalFieldOf("amount", 0.0D).forGetter(AuraValue::amount),
-            AuraMaximum.CODEC.optionalFieldOf("max", InitialMultiplier.ONE).forGetter(AuraValue::max),
+            AuraMaximum.CODEC.optionalFieldOf("max", InitialMultiplierAuraMaximum.ONE).forGetter(AuraValue::max),
             Codec.DOUBLE.optionalFieldOf("regen_per_tick", 0.0D).forGetter(AuraValue::regenPerTick),
             MiscCodecs.RGB_COLOR.optionalFieldOf("color", 0xFFFFFF).forGetter(AuraValue::color)
     ).apply(i, AuraValue::new)).validate(AuraValue::validate);

@@ -3,7 +3,7 @@ package com.iafenvoy.mxt.runtime.curse;
 import com.iafenvoy.mxt.attachment.CurseHolderAttachment;
 import com.iafenvoy.mxt.attachment.CurseHolderAttachment.State;
 import com.iafenvoy.mxt.data.curse.Curse;
-import com.iafenvoy.mxt.data.curse.CurseType.Triggered;
+import com.iafenvoy.mxt.data.curse.builtin.TriggeredCurseType;
 import com.iafenvoy.mxt.data.trigger.Trigger;
 import com.iafenvoy.mxt.data.trigger.TriggerSignal;
 import com.iafenvoy.mxt.registry.MxtAttachments;
@@ -56,7 +56,7 @@ public final class CurseTriggerSubscriptions {
         TriggerDispatcher.clearModule(entity.getUUID(), MODULE);
         CurseHolderAttachment holder = entity.getData(MxtAttachments.CURSE_HOLDER);
         for (Entry<Holder<Curse>, State> entry : holder.instances().entrySet()) {
-            if (!(entry.getKey().value().typedType() instanceof Triggered(List<Trigger> triggers))) continue;
+            if (!(entry.getKey().value().typedType() instanceof TriggeredCurseType(List<Trigger> triggers))) continue;
             Identifier curseId = HolderHelper.id(entry.getKey());
             int index = 0;
             for (Trigger trigger : triggers) {
@@ -71,7 +71,7 @@ public final class CurseTriggerSubscriptions {
     private static void run(Entity entity, Holder<Curse> curse, TriggerSignal signal) {
         if (!entity.getData(MxtAttachments.CURSE_HOLDER).instances().containsKey(curse)) return;
         Curse definition = curse.value();
-        if (!(definition.typedType() instanceof Triggered)) return;
+        if (!(definition.typedType() instanceof TriggeredCurseType)) return;
         if (CurseService.definitionState(curse) != DefinitionState.ACTIVE) return;
         definition.onTick().execute(entity, signal.context().formula());
     }

@@ -2,10 +2,10 @@ package com.iafenvoy.mxt.command.server;
 
 import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.command.ServerCommandManager;
-import com.iafenvoy.mxt.data.Formation;
-import com.iafenvoy.mxt.data.Formation.RequiredBlock;
 import com.iafenvoy.mxt.data.cost.context.CostContext;
 import com.iafenvoy.mxt.data.cost.context.CostOrigin;
+import com.iafenvoy.mxt.data.formation.Formation;
+import com.iafenvoy.mxt.data.formation.Formation.RequiredBlock;
 import com.iafenvoy.mxt.data.item.FormationPlateComponent;
 import com.iafenvoy.mxt.item.FormationPlateItem;
 import com.iafenvoy.mxt.network.payload.FormationStructureS2CPayload;

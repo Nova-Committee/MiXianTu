@@ -21,10 +21,9 @@ import java.util.List;
  * is resolved through the same rule as every other wait, so the countdown a player watches is the number of ticks
  * that will really pass.
  */
-public record Tribulation(EntityCondition condition,
-                          List<TimelineEntry> timeline,
-                          NumberProvider difficultyScale, NumberProvider windup, boolean darkenSky,
-                          EntityAction successAction, EntityAction failAction) {
+public record Tribulation(EntityCondition condition, List<TimelineEntry> timeline, NumberProvider difficultyScale,
+                          NumberProvider windup, boolean darkenSky, EntityAction successAction,
+                          EntityAction failAction) {
     public static final Codec<Holder<Tribulation>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.TRIBULATION);
     public static final Codec<Tribulation> DIRECT_CODEC = RecordCodecBuilder.<Tribulation>create(i -> i.group(
             EntityCondition.optionalCodec("condition").forGetter(Tribulation::condition),

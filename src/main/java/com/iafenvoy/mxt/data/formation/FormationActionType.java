@@ -8,7 +8,7 @@ import java.util.function.Function;
 
 /**
  * One functional module of a formation, selected by a datapack {@code type}. A formation's framework (structure,
- * radius, cost) is declared once on {@link com.iafenvoy.mxt.data.Formation}; what it does is a list of these.
+ * radius, cost) is declared once on {@link Formation}; what it does is a list of these.
  * Concrete behaviour lives in the runtime, which switches on the record type.
  */
 public interface FormationActionType {

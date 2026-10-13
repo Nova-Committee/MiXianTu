@@ -2,7 +2,6 @@ package com.iafenvoy.mxt.screen.hud;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
-import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.util.StringRepresentable;
 import org.jspecify.annotations.NonNull;
@@ -26,12 +25,12 @@ public enum HudAnchor {
     RIGHT_BOTTOM(Horizontal.RIGHT, Vertical.BOTTOM);
 
     // Held as an object rather than as one name, so a file says which of the two axes each half belongs to.
-    private static final MapCodec<Axes> AXES_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+    private static final Codec<Axes> AXES_CODEC = RecordCodecBuilder.create(i -> i.group(
             Horizontal.CODEC.fieldOf("horizontal").forGetter(Axes::horizontal),
             Vertical.CODEC.fieldOf("vertical").forGetter(Axes::vertical)
     ).apply(i, Axes::new));
 
-    public static final Codec<HudAnchor> CODEC = AXES_CODEC.codec().comapFlatMap(
+    public static final Codec<HudAnchor> CODEC = AXES_CODEC.comapFlatMap(
             axes -> of(axes.horizontal(), axes.vertical())
                     .map(DataResult::success)
                     .orElseGet(() -> DataResult.error(() -> "The middle of the window is not an anchor: "

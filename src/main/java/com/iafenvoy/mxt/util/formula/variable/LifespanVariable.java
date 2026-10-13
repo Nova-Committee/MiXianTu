@@ -22,8 +22,7 @@ public final class LifespanVariable implements FormulaVariable {
         if (!suffix.isEmpty()) return Double.NaN;
         Entity entity = context.caster() != null ? context.caster() : context.player();
         if (entity == null) return Double.NaN;
-        long value = key.equals("lifespan_remaining")
-                ? LifeSpanService.remaining(entity) : LifeSpanService.total(entity);
+        long value = key.equals("lifespan_remaining") ? LifeSpanService.remaining(entity) : LifeSpanService.total(entity);
         return value < 0L ? Double.NaN : value;
     }
 }

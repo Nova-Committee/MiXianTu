@@ -4,7 +4,7 @@ import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.compat.ftb.FtbChunksCompat;
 import com.iafenvoy.mxt.config.MxtServerConfig;
 import com.iafenvoy.mxt.config.MxtServerConfig.ClaimLinkage;
-import com.iafenvoy.mxt.data.Formation;
+import com.iafenvoy.mxt.data.formation.Formation;
 import com.iafenvoy.mxt.data.formation.FormationActionType;
 import com.iafenvoy.mxt.data.formation.builtin.ProtectionFormationAction;
 import com.iafenvoy.mxt.registry.MxtAttachments;

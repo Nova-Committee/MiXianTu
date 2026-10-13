@@ -2,8 +2,8 @@ package com.iafenvoy.mxt.data.curse;
 
 import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
-import com.iafenvoy.mxt.data.curse.CurseType.Timed;
-import com.iafenvoy.mxt.data.curse.CurseType.Triggered;
+import com.iafenvoy.mxt.data.curse.builtin.TimedCurseType;
+import com.iafenvoy.mxt.data.curse.builtin.TriggeredCurseType;
 import com.iafenvoy.mxt.data.trigger.Trigger;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
@@ -23,11 +23,9 @@ import java.util.Locale;
  * never decided here - the cure side names the curse tags it removes, and the tag file lists the curses in them.
  * {@code on_apply} runs only when an instance is created, not when one is stacked onto or refreshed.
  */
-public record Curse(CurseType typedType, NumberProvider durationTicks,
-                    NumberProvider tickInterval, int maxStacks,
+public record Curse(CurseType typedType, NumberProvider durationTicks, NumberProvider tickInterval, int maxStacks,
                     StackingMode stackingMode, EntityCondition applicationCondition, EntityCondition displayCondition,
-                    EntityAction onApply, EntityAction onTick, EntityAction onExpire,
-                    EntityAction onCleanse) {
+                    EntityAction onApply, EntityAction onTick, EntityAction onExpire, EntityAction onCleanse) {
     public static final Codec<Holder<Curse>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.CURSE);
     public static final Codec<Curse> DIRECT_CODEC = RecordCodecBuilder.<Curse>create(i -> i.group(
             CurseType.MAP_CODEC.forGetter(Curse::typedType),
@@ -46,10 +44,10 @@ public record Curse(CurseType typedType, NumberProvider durationTicks,
     // Rejects at load what would otherwise fail at the first application. Only constant durations are judged here;
     // an expression is judged when evaluated, where an unusable result rejects that one application.
     private static DataResult<Curse> validate(Curse curse) {
-        if (curse.typedType() == Timed.INSTANCE && curse.durationTicks() instanceof Constant(double value)
+        if (curse.typedType() == TimedCurseType.INSTANCE && curse.durationTicks() instanceof Constant(double value)
                 && value <= 0.0D)
             return DataResult.error(() -> "An mxt:timed curse needs a positive duration_ticks");
-        if (curse.typedType() instanceof Triggered(
+        if (curse.typedType() instanceof TriggeredCurseType(
                 List<Trigger> triggers
         ) && triggers.isEmpty())
             return DataResult.error(() -> "An mxt:triggered curse needs at least one entry in triggers");

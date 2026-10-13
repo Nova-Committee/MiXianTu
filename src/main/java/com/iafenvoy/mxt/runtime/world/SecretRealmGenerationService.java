@@ -3,11 +3,7 @@ package com.iafenvoy.mxt.runtime.world;
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.data.secretrealm.SecretRealm;
 import com.iafenvoy.mxt.data.secretrealm.SecretRealmGeneration;
-import com.iafenvoy.mxt.data.secretrealm.builtin.ExistingGeneration;
-import com.iafenvoy.mxt.data.secretrealm.builtin.FlatGeneration;
-import com.iafenvoy.mxt.data.secretrealm.builtin.StemGeneration;
-import com.iafenvoy.mxt.data.secretrealm.builtin.TemplateGeneration;
-import com.iafenvoy.mxt.data.secretrealm.builtin.VoidGeneration;
+import com.iafenvoy.mxt.data.secretrealm.builtin.*;
 import net.minecraft.core.*;
 import net.minecraft.core.Holder.Reference;
 import net.minecraft.core.registries.Registries;
@@ -97,7 +93,8 @@ public final class SecretRealmGenerationService {
         try {
             return switch (generation) {
                 case ExistingGeneration ignored -> null;
-                case StemGeneration stem -> registries.lookupOrThrow(Registries.LEVEL_STEM).getOrThrow(stem.stem()).value();
+                case StemGeneration stem ->
+                        registries.lookupOrThrow(Registries.LEVEL_STEM).getOrThrow(stem.stem()).value();
                 case TemplateGeneration template ->
                         registries.lookupOrThrow(Registries.LEVEL_STEM).getOrThrow(template.stem()).value();
                 case FlatGeneration flat -> {

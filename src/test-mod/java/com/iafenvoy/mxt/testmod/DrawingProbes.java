@@ -1,6 +1,6 @@
 package com.iafenvoy.mxt.testmod;
 
-import com.iafenvoy.mxt.data.Talisman;
+import com.iafenvoy.mxt.data.talisman.Talisman;
 import com.iafenvoy.mxt.data.aura.SpiritStorageComponent;
 import com.iafenvoy.mxt.data.item.TalismanComponent;
 import com.iafenvoy.mxt.item.block.TalismanWorkstationBlock;

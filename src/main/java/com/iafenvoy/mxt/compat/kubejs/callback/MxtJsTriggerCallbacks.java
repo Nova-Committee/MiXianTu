@@ -1,8 +1,8 @@
 package com.iafenvoy.mxt.compat.kubejs.callback;
 
 import com.iafenvoy.mxt.compat.kubejs.MxtJsWarnings;
-import com.iafenvoy.mxt.data.trigger.Trigger.Builtin;
 import com.iafenvoy.mxt.data.trigger.TriggerSignal;
+import com.iafenvoy.mxt.data.trigger.builtin.BuiltinTrigger;
 import com.iafenvoy.mxt.runtime.trigger.TriggerDispatcher;
 import com.iafenvoy.mxt.runtime.trigger.TriggerSubscription;
 import net.minecraft.resources.Identifier;
@@ -39,7 +39,7 @@ public final class MxtJsTriggerCallbacks {
             return false;
         }
         TriggerDispatcher.register(new TriggerSubscription(entity.getUUID(), MODULE, key,
-                new Builtin(signal), ignored -> true, callback, oneShot));
+                new BuiltinTrigger(signal), ignored -> true, callback, oneShot));
         OWNERS.add(entity.getUUID());
         return true;
     }

@@ -19,10 +19,9 @@ import java.util.Optional;
  * the tier a furnace built to this specification starts on: every specification shares one block item, so the item
  * cannot say which tier applies.
  */
-public record AlchemyFurnaceDefinition(int mainSlots, int auxiliarySlots,
-                                       Optional<Holder<ItemQuality>> quality, int capacity, double coolingPerTick,
-                                       Optional<Double> maxTemperature)
-        implements QualityProvider {
+public record AlchemyFurnaceDefinition(int mainSlots, int auxiliarySlots, Optional<Holder<ItemQuality>> quality,
+                                       int capacity, double coolingPerTick,
+                                       Optional<Double> maxTemperature) implements QualityProvider {
     public static final int CATALYST_SLOTS = 1;
     public static final int MAX_CAPACITY = 320;
     private static final Codec<Double> POSITIVE = Codec.DOUBLE.validate(AlchemyFurnaceDefinition::positive);

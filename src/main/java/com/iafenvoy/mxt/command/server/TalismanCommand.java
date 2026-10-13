@@ -2,10 +2,10 @@ package com.iafenvoy.mxt.command.server;
 
 import com.iafenvoy.mxt.api.ItemAuraAccess;
 import com.iafenvoy.mxt.command.ServerCommandManager;
-import com.iafenvoy.mxt.data.Talisman;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.item.TalismanComponent;
 import com.iafenvoy.mxt.data.item.TalismanComponent.TriggerMode;
+import com.iafenvoy.mxt.data.talisman.Talisman;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.registry.MxtItems;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;

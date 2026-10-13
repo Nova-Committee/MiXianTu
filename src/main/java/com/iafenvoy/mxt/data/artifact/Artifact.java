@@ -15,7 +15,6 @@ import com.iafenvoy.mxt.util.formula.number.Constant;
 import com.iafenvoy.mxt.util.matcher.ItemMatcher;
 import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
-import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.RegistryFixedCodec;
@@ -34,22 +33,16 @@ import java.util.Map;
  * them. An artifact never holds an ability of its own, so every one it grants can also be granted by a book, a
  * command or a script, and the id it is granted under is the registry id in all four cases.
  */
-public record Artifact(List<Entry> items,
-                       Map<Holder<Aura>, NumberProvider> spiritCapacity,
+public record Artifact(List<Entry> items, Map<Holder<Aura>, NumberProvider> spiritCapacity,
                        List<Either<Holder<Ability>, TagKey<Ability>>> abilities, boolean curiosEquipable,
                        boolean requireOwner, ItemAction claimAction, EntityCondition claimCondition,
                        ItemAction pourAction, ItemAction useAction, NumberProvider holdTicks,
                        List<Either<Holder<Element>, TagKey<Element>>> element, double attachmentMultiplier,
                        int priority) implements ItemMatcher {
-    // Two hearts.
-    public static final double DEFAULT_CLAIM_HEALTH = 4.0D;
-    // One second.
-    public static final double DEFAULT_HOLD_TICKS = 20.0D;
-    // The price of a claim has one shape everywhere: replacing this action is how a pack makes a claim free
-    // (mxt:no_op) or charges something else.
+    public static final double DEFAULT_CLAIM_HEALTH = 4.0D, DEFAULT_HOLD_TICKS = 20.0D;
     public static final ItemAction DEFAULT_CLAIM_ACTION = new ConsumeHealthItemAction(new Constant(DEFAULT_CLAIM_HEALTH));
     public static final Codec<Holder<Artifact>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.ARTIFACT);
-    private static final MapCodec<Artifact> RAW_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+    public static final Codec<Artifact> DIRECT_CODEC = RecordCodecBuilder.create(i -> i.group(
             ENTRIES_CODEC.fieldOf("items").forGetter(Artifact::items),
             CollectionCodecs.map(Aura.CODEC, NumberProvider.CODEC).optionalFieldOf("spirit_capacity", Map.of()).forGetter(Artifact::spiritCapacity),
             RegistryCodecs.holderOrTagList(MxtResourceKeys.ABILITY).optionalFieldOf("abilities", List.of()).forGetter(Artifact::abilities),
@@ -64,9 +57,6 @@ public record Artifact(List<Entry> items,
             MiscCodecs.NON_NEGATIVE.optionalFieldOf("attachment_multiplier", 1.0D).forGetter(Artifact::attachmentMultiplier),
             Codec.INT.optionalFieldOf("priority", DEFAULT_PRIORITY).forGetter(Artifact::priority)
     ).apply(i, Artifact::new));
-    // Unknown keys are dropped, so the keys this record used to carry are not read any more: a pack still writing
-    // item_type, or an ability written inside this file instead of named by id, loads and names nothing.
-    public static final Codec<Artifact> DIRECT_CODEC = RAW_CODEC.codec();
 
     public Artifact {
         if (items.isEmpty())

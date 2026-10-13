@@ -2,11 +2,7 @@ package com.iafenvoy.mxt.registry;
 
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.data.secretrealm.SecretRealmGeneration;
-import com.iafenvoy.mxt.data.secretrealm.builtin.ExistingGeneration;
-import com.iafenvoy.mxt.data.secretrealm.builtin.FlatGeneration;
-import com.iafenvoy.mxt.data.secretrealm.builtin.StemGeneration;
-import com.iafenvoy.mxt.data.secretrealm.builtin.TemplateGeneration;
-import com.iafenvoy.mxt.data.secretrealm.builtin.VoidGeneration;
+import com.iafenvoy.mxt.data.secretrealm.builtin.*;
 import com.mojang.serialization.MapCodec;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;

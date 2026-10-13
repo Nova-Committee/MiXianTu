@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.network.payload;
 
 import com.iafenvoy.mxt.MiXianTu;
-import com.iafenvoy.mxt.data.Formation.RequiredBlock;
+import com.iafenvoy.mxt.data.formation.Formation.RequiredBlock;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.ComponentSerialization;

@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.runtime.formation;
 
 import com.iafenvoy.mxt.config.MxtServerConfig;
-import com.iafenvoy.mxt.data.Formation;
+import com.iafenvoy.mxt.data.formation.Formation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.permissions.Permissions;
 import net.minecraft.util.TriState;

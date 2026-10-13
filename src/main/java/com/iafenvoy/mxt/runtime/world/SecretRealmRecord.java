@@ -56,7 +56,7 @@ public record SecretRealmRecord(Holder<SecretRealm> definition, int index, Resou
     }
 
     public boolean full() {
-        return this.members.size() >= this.instance().memberLimit();
+        return this.members.size() >= this.instance().maxMembers();
     }
 
     public boolean empty() {

@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.data.item;
 
 import com.iafenvoy.mxt.config.MxtServerConfig;
-import com.iafenvoy.mxt.data.Formation;
+import com.iafenvoy.mxt.data.formation.Formation;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.util.DefinitionText;
@@ -33,48 +33,27 @@ import java.util.function.Consumer;
 /**
  * What a portable formation controller is allowed to run, and which formation this copy runs. The allow list is
  * the same on every copy; the selection must be a member of it. An empty allow list means unrestricted unless
- * {@code formation_plate.empty_allows_all} turns it into "nothing".
+ * {@code config.mxt.server.formation.empty_plate_allows_all} turns it into "nothing".
  */
 @EventBusSubscriber(Dist.CLIENT)
-public record FormationPlateComponent(List<Allowed> allowed,
+public record FormationPlateComponent(List<Either<Identifier, TagKey<Formation>>> allowed,
                                       Optional<Holder<Formation>> formation) implements TooltipProvider {
     public static final FormationPlateComponent EMPTY = new FormationPlateComponent(List.of(), Optional.empty());
     public static final Codec<FormationPlateComponent> CODEC = RecordCodecBuilder.create(i -> i.group(
-            Allowed.CODEC.listOf().optionalFieldOf("allowed", List.of()).forGetter(FormationPlateComponent::allowed),
+            Codec.either(Identifier.CODEC, TagKey.codec(MxtResourceKeys.FORMATION)).listOf().optionalFieldOf("allowed", List.of()).forGetter(FormationPlateComponent::allowed),
             RegistryFixedCodec.create(MxtResourceKeys.FORMATION).optionalFieldOf("formation").forGetter(FormationPlateComponent::formation)
     ).apply(i, FormationPlateComponent::new));
 
-    // One entry is an id or, with a leading #, a tag: the two look identical in JSON apart from the prefix, and a
-    // tag has to be checked through Holder#is rather than by comparing keys.
-    public sealed interface Allowed {
-        Codec<Allowed> CODEC = Codec.either(Identifier.CODEC, TagKey.codec(MxtResourceKeys.FORMATION)).xmap(
-                either -> either.map(Id::new, Tag::new),
-                allowed -> switch (allowed) {
-                    case Id(Identifier id) -> Either.left(id);
-                    case Tag(TagKey<Formation> tag) -> Either.right(tag);
-                });
-
-        boolean matches(Holder<Formation> formation);
-
-        record Id(Identifier id) implements Allowed {
-            @Override
-            public boolean matches(Holder<Formation> formation) {
-                return formation.is(this.id);
-            }
-        }
-
-        record Tag(TagKey<Formation> tag) implements Allowed {
-            @Override
-            public boolean matches(Holder<Formation> formation) {
-                return formation.is(this.tag);
-            }
-        }
+    // An id or, with a leading #, a tag: the two look identical in JSON apart from the prefix, and a tag has to be
+    // checked through Holder#is rather than by comparing keys.
+    private static boolean matches(Either<Identifier, TagKey<Formation>> entry, Holder<Formation> candidate) {
+        return entry.map(candidate::is, candidate::is);
     }
 
     // An empty allow list follows the server option rather than meaning "nothing" by itself.
     public boolean admits(Holder<Formation> candidate) {
         if (this.allowed.isEmpty()) return MxtServerConfig.INSTANCE.formations.emptyAllowsAll.getValue();
-        return this.allowed.stream().anyMatch(entry -> entry.matches(candidate));
+        return this.allowed.stream().anyMatch(entry -> matches(entry, candidate));
     }
 
     // So binding and suggestions do not enumerate the registry themselves.

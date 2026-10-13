@@ -31,10 +31,9 @@ import java.util.Optional;
 public record AuraZone(Map<Holder<Aura>, AuraValue> aura,
                        List<Either<ResourceKey<LevelStem>, TagKey<LevelStem>>> dimensions,
                        List<Either<Holder<Biome>, TagKey<Biome>>> biomes, Fluctuation fluctuation, Rules rules,
-                       EntityCondition cultivateCondition, Distribution distribution,
-                       double elementFitBonus, double elementConflictPenalty, Noise noise,
-                       Optional<ParticleEffect> particle, ClientRender clientRender,
-                       ClientHud clientHud, int priority) {
+                       EntityCondition cultivateCondition, Distribution distribution, double elementFitBonus,
+                       double elementConflictPenalty, Noise noise, Optional<ParticleEffect> particle,
+                       ClientRender clientRender, ClientHud clientHud, int priority) {
     public static final Codec<Holder<AuraZone>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.AURA_ZONE);
     private static final MapCodec<Core> CORE_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             AuraValue.MAP_CODEC.optionalFieldOf("aura", Map.of()).forGetter(Core::aura),

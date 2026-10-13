@@ -22,7 +22,7 @@ import java.util.Optional;
  */
 public final class HudLayoutFile {
     private static final int VERSION = 3;
-    private static final Path PATH = FMLPaths.CONFIGDIR.get().resolve("mxt").resolve("mxt-hud.json");
+    private static final Path PATH = FMLPaths.CONFIGDIR.get().resolve(MiXianTu.MOD_ID).resolve("mxt-hud.json");
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 
     // The whole file in memory, loaded once: an element asks for its own key on the frame it is built, and every

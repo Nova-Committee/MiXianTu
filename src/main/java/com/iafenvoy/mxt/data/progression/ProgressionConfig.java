@@ -18,8 +18,7 @@ import java.util.List;
  * what entering it runs once. {@code condition} is required - a level that needs nothing writes {@code mxt:always}
  * - and {@code ability} is a minimum requirement, so its abilities stay active on that level and every later one.
  */
-public record ProgressionConfig(EntityCondition condition,
-                                List<Either<Holder<Ability>, TagKey<Ability>>> abilities,
+public record ProgressionConfig(EntityCondition condition, List<Either<Holder<Ability>, TagKey<Ability>>> abilities,
                                 EntityAction action) {
     public static final Codec<ProgressionConfig> CODEC = RecordCodecBuilder.create(i -> i.group(
             EntityCondition.CODEC.fieldOf("condition").forGetter(ProgressionConfig::condition),

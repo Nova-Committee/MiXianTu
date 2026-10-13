@@ -3,13 +3,7 @@ package com.iafenvoy.mxt.registry;
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.FormulaVariable;
-import com.iafenvoy.mxt.util.formula.variable.EntityVariable;
-import com.iafenvoy.mxt.util.formula.variable.LifespanVariable;
-import com.iafenvoy.mxt.util.formula.variable.PillToxicityVariable;
-import com.iafenvoy.mxt.util.formula.variable.RandomVariable;
-import com.iafenvoy.mxt.util.formula.variable.RealmVariable;
-import com.iafenvoy.mxt.util.formula.variable.SecretRealmVariable;
-import com.iafenvoy.mxt.util.formula.variable.ZeroVariable;
+import com.iafenvoy.mxt.util.formula.variable.*;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 

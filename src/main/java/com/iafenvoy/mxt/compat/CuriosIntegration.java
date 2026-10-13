@@ -1,5 +1,6 @@
 package com.iafenvoy.mxt.compat;
 
+import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.config.MxtServerConfig;
 import com.iafenvoy.mxt.config.MxtServerConfig.BackMode;
 import com.iafenvoy.mxt.config.MxtServerConfig.BeltMode;
@@ -21,9 +22,9 @@ import java.util.*;
 
 public final class CuriosIntegration {
     public static void registerPredicates() {
-        CuriosSlotTypes.registerPredicate(Identifier.fromNamespaceAndPath("mxt", "back_weapon_auto"), (context, stack) -> acceptsBack(MxtServerConfig.INSTANCE.curios.backMode.getValue(), context, stack));
-        CuriosSlotTypes.registerPredicate(Identifier.fromNamespaceAndPath("mxt", "belt_item_auto"), (context, stack) -> acceptsBelt(MxtServerConfig.INSTANCE.curios.beltMode.getValue(), context, stack));
-        CuriosSlotTypes.registerPredicate(Identifier.fromNamespaceAndPath("mxt", "charm_artifact_auto"), CuriosIntegration::acceptsCharm);
+        CuriosSlotTypes.registerPredicate(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "back_weapon_auto"), (context, stack) -> acceptsBack(MxtServerConfig.INSTANCE.curios.backMode.getValue(), context, stack));
+        CuriosSlotTypes.registerPredicate(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "belt_item_auto"), (context, stack) -> acceptsBelt(MxtServerConfig.INSTANCE.curios.beltMode.getValue(), context, stack));
+        CuriosSlotTypes.registerPredicate(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "charm_artifact_auto"), CuriosIntegration::acceptsCharm);
     }
 
     // Membership is the definition's answer, not the stack's; Curios' built-in curios:tag validator stays merged.

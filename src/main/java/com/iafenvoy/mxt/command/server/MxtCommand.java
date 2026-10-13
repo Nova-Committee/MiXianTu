@@ -562,7 +562,7 @@ public final class MxtCommand {
         return "%s #%d %s members=%d limit=%s owner=%s prepared=%s loaded=%s".formatted(
                 record.dimension().identifier(), record.index(),
                 record.definition().unwrapKey().map(key -> key.identifier().toString()).orElse("?"),
-                record.members().size(), record.instance().maxMembers().map(String::valueOf).orElse("unlimited"),
+                record.members().size(), record.instance().maxMembers(),
                 record.owner().map(UUID::toString).orElse("-"), record.prepared(),
                 server.getLevel(record.dimension()) != null);
     }

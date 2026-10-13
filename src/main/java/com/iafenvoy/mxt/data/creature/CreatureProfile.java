@@ -35,14 +35,12 @@ import java.util.Optional;
  * its entry level's abilities are what the creature is born with.
  */
 public record CreatureProfile(List<Either<Holder<EntityType<?>>, TagKey<EntityType<?>>>> entities,
-                              EntityAction spawnAction, NumberProvider intelligence,
-                              EntityCondition condition, Optional<ItemStackTemplate> innerCore,
+                              EntityAction spawnAction, NumberProvider intelligence, EntityCondition condition,
+                              Optional<ItemStackTemplate> innerCore,
                               List<Either<Holder<Element>, TagKey<Element>>> preferredAuraElements,
-                              Map<Holder<Aura>, NumberProvider> minimumAura,
-                              Optional<Holder<Progression>> defaultLevel,
+                              Map<Holder<Aura>, NumberProvider> minimumAura, Optional<Holder<Progression>> defaultLevel,
                               Optional<Holder<Resource>> masteryResource,
-                              Map<Holder<Progression>, ProgressionConfig> configuration)
-        implements ProgressionOwner {
+                              Map<Holder<Progression>, ProgressionConfig> configuration) implements ProgressionOwner {
     public static final Codec<CreatureProfile> CODEC = RecordCodecBuilder.<CreatureProfile>create(i -> i.group(
             RegistryCodecs.holderOrTagList(Registries.ENTITY_TYPE).optionalFieldOf("entities", List.of()).forGetter(CreatureProfile::entities),
             EntityAction.SINGLE_CODEC.optionalFieldOf("spawn_action", NoOpAction.INSTANCE).forGetter(CreatureProfile::spawnAction),

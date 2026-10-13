@@ -1,4 +1,4 @@
-package com.iafenvoy.mxt.picker;
+package com.iafenvoy.mxt.data;
 
 import com.iafenvoy.mxt.data.alchemy.HeatSource;
 import com.iafenvoy.mxt.data.alchemy.SpiritHerb;

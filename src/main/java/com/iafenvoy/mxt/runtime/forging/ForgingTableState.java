@@ -2,7 +2,6 @@ package com.iafenvoy.mxt.runtime.forging;
 
 import com.iafenvoy.mxt.runtime.forging.ForgingSession.Snapshot;
 import com.mojang.serialization.Codec;
-import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.UUIDUtil;
 import net.minecraft.resources.Identifier;
@@ -20,14 +19,13 @@ import java.util.UUID;
  * datapack reload would change the extra-step count of a session already in progress.
  */
 public final class ForgingTableState {
-    public static final MapCodec<ForgingTableState> MAP_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+    public static final Codec<ForgingTableState> CODEC = RecordCodecBuilder.create(i -> i.group(
             Identifier.CODEC.optionalFieldOf("blueprint").forGetter(ForgingTableState::blueprint),
             ForgingPlan.CODEC.optionalFieldOf("plan").forGetter(ForgingTableState::plan),
             Snapshot.CODEC.optionalFieldOf("session").forGetter(ForgingTableState::session),
             ItemStack.CODEC.listOf().optionalFieldOf("consumed", List.of()).forGetter(ForgingTableState::consumed),
             UUIDUtil.CODEC.optionalFieldOf("starter").forGetter(ForgingTableState::starter)
     ).apply(i, ForgingTableState::new));
-    public static final Codec<ForgingTableState> CODEC = MAP_CODEC.codec();
 
     private Identifier blueprint;
     private ForgingPlan plan;
@@ -39,8 +37,7 @@ public final class ForgingTableState {
         this(Optional.empty(), Optional.empty(), Optional.empty(), List.of(), Optional.empty());
     }
 
-    private ForgingTableState(Optional<Identifier> blueprint, Optional<ForgingPlan> plan, Optional<Snapshot> session,
-                              List<ItemStack> consumed, Optional<UUID> starter) {
+    private ForgingTableState(Optional<Identifier> blueprint, Optional<ForgingPlan> plan, Optional<Snapshot> session, List<ItemStack> consumed, Optional<UUID> starter) {
         this.blueprint = blueprint.orElse(null);
         this.plan = plan.orElse(null);
         this.session = session.orElse(null);

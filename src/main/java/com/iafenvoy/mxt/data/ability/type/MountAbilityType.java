@@ -101,13 +101,11 @@ public record MountAbilityType(NumberProvider speed, int seats, boolean sit, Opt
      */
     public record MountActions(EntityAction onMount, EntityAction onDismount, EntityAction tick) {
         public static final MountActions NONE = new MountActions(NoOpAction.INSTANCE, NoOpAction.INSTANCE, NoOpAction.INSTANCE);
-        private static final MapCodec<MountActions> RAW_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+        public static final Codec<MountActions> CODEC = RecordCodecBuilder.create(i -> i.group(
                 EntityAction.optionalCodec("on_mount").forGetter(MountActions::onMount),
                 EntityAction.optionalCodec("on_dismount").forGetter(MountActions::onDismount),
                 EntityAction.optionalCodec("tick").forGetter(MountActions::tick)
         ).apply(i, MountActions::new));
-        // A field of this shape is an object under one key, not a type-dispatched entry.
-        public static final Codec<MountActions> CODEC = RAW_CODEC.codec();
     }
 
     /**
@@ -118,7 +116,7 @@ public record MountAbilityType(NumberProvider speed, int seats, boolean sit, Opt
                              float offsetX, float offsetY, float offsetZ, boolean movingOnly) {
         public static final Vec3 DEFAULT_SPREAD = new Vec3(0.2D, 0.1D, 0.2D);
         public static final float DEFAULT_OFFSET_Y = 0.1F;
-        private static final MapCodec<MountTrail> RAW_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+        public static final Codec<MountTrail> CODEC = RecordCodecBuilder.<MountTrail>create(i -> i.group(
                 ParticleTypes.CODEC.fieldOf("particle").forGetter(MountTrail::particle),
                 Codec.intRange(1, 200).optionalFieldOf("interval", 1).forGetter(MountTrail::interval),
                 Codec.intRange(0, 256).optionalFieldOf("count", 1).forGetter(MountTrail::count),
@@ -128,9 +126,7 @@ public record MountAbilityType(NumberProvider speed, int seats, boolean sit, Opt
                 Codec.FLOAT.optionalFieldOf("offset_y", DEFAULT_OFFSET_Y).forGetter(MountTrail::offsetY),
                 Codec.FLOAT.optionalFieldOf("offset_z", 0.0F).forGetter(MountTrail::offsetZ),
                 Codec.BOOL.optionalFieldOf("moving_only", false).forGetter(MountTrail::movingOnly)
-        ).apply(i, MountTrail::new));
-        // A field of this shape is an object under one key, not a type-dispatched entry.
-        public static final Codec<MountTrail> CODEC = RAW_CODEC.validate(MountTrail::validate).codec();
+        ).apply(i, MountTrail::new)).validate(MountTrail::validate);
 
         private static DataResult<MountTrail> validate(MountTrail trail) {
             boolean finite = Double.isFinite(trail.spread().x) && Double.isFinite(trail.spread().y) && Double.isFinite(trail.spread().z)

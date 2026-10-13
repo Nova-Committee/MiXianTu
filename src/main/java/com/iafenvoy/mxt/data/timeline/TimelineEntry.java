@@ -14,8 +14,7 @@ import java.util.function.Function;
  */
 public interface TimelineEntry {
     // A codec rather than a map codec, because a timeline is a list of these and only a codec can be listed.
-    Codec<TimelineEntry> CODEC = MxtRegistries.TIMELINE_ENTRY_TYPE.byNameCodec()
-            .dispatch("type", TimelineEntry::codec, Function.identity());
+    Codec<TimelineEntry> CODEC = MxtRegistries.TIMELINE_ENTRY_TYPE.byNameCodec().dispatch("type", TimelineEntry::codec, Function.identity());
 
     MapCodec<? extends TimelineEntry> codec();
 

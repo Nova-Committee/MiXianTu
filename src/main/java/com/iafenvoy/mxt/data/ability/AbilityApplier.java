@@ -24,8 +24,7 @@ public interface AbilityApplier extends AbilityEffect {
     @Override
     default void execute(Entity actor, FormulaContext context, @Nullable Vec3 origin) {
         try {
-            this.reach(actor, context, origin).forEach(target ->
-                    AbilityEffect.runOn(this.payload().value().type(), actor, target, context, origin));
+            this.reach(actor, context, origin).forEach(target -> AbilityEffect.runOn(this.payload().value().type(), actor, target, context, origin));
         } catch (RuntimeException exception) {
             MiXianTu.LOGGER.error("Ability target selection failed", exception);
         }

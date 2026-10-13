@@ -1,6 +1,6 @@
 package com.iafenvoy.mxt.data.item;
 
-import com.iafenvoy.mxt.data.Talisman;
+import com.iafenvoy.mxt.data.talisman.Talisman;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;

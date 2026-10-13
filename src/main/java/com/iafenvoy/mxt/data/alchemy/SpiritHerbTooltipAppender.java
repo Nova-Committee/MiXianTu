@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.data.alchemy;
 
-import com.iafenvoy.mxt.runtime.alchemy.SpiritHerbService;
 import com.iafenvoy.mxt.recipe.AlchemyRole;
+import com.iafenvoy.mxt.runtime.alchemy.SpiritHerbService;
 import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.ChatFormatting;
@@ -36,17 +36,14 @@ public final class SpiritHerbTooltipAppender {
         event.registerAppender(TooltipLocation.POST_CUSTOM, SpiritHerbTooltipAppender::append);
     }
 
-    private static void append(ItemStack stack, TooltipContext context, TooltipDisplay display, Player player,
-                               TooltipFlag flag, Consumer<Component> builder) {
+    private static void append(ItemStack stack, TooltipContext context, TooltipDisplay display, Player player, TooltipFlag flag, Consumer<Component> builder) {
         Provider registries = context.registries();
         if (registries == null) return;
         SpiritHerbService.find(registries, stack).ifPresent(found -> {
             SpiritHerb herb = found.value();
             builder.accept(DefinitionText.text(found).withStyle(ChatFormatting.GREEN));
-            builder.accept(Component.translatable("tooltip.mxt.herb.age", SpiritHerbService.age(stack, herb))
-                    .withStyle(ChatFormatting.GRAY));
-            builder.accept(Component.translatable("tooltip.mxt.herb.thermal", herb.thermalBias())
-                    .withStyle(ChatFormatting.GRAY));
+            builder.accept(Component.translatable("tooltip.mxt.herb.age", SpiritHerbService.age(stack, herb)).withStyle(ChatFormatting.GRAY));
+            builder.accept(Component.translatable("tooltip.mxt.herb.thermal", herb.thermalBias()).withStyle(ChatFormatting.GRAY));
             FormulaContext formula = player == null ? FormulaContext.EMPTY : FormulaContext.of(player);
             role(builder, registries, stack, AlchemyRole.MAIN, "tooltip.mxt.herb.main", formula);
             role(builder, registries, stack, AlchemyRole.AUXILIARY, "tooltip.mxt.herb.auxiliary", formula);
@@ -54,8 +51,7 @@ public final class SpiritHerbTooltipAppender {
         });
     }
 
-    private static void role(Consumer<Component> builder, Provider registries, ItemStack stack, AlchemyRole role,
-                             String key, FormulaContext formula) {
+    private static void role(Consumer<Component> builder, Provider registries, ItemStack stack, AlchemyRole role, String key, FormulaContext formula) {
         SpiritHerbService.potency(registries, stack, role, formula).ifPresent(potency -> {
             if (potency.totalPower() <= 0.0D) return;
             builder.accept(Component.translatable(key, format(potency.totalPower())).withStyle(ChatFormatting.DARK_GREEN));

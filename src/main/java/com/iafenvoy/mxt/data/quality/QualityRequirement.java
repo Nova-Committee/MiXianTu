@@ -24,16 +24,12 @@ public record QualityRequirement(List<Either<Holder<ItemQuality>, TagKey<ItemQua
      * The membership field every adapter writes inline, so its JSON key is stated once. A tag has to be checked
      * through the holder, which is why this is a holder-or-tag list rather than a list of ids.
      */
-    public static final MapCodec<List<Either<Holder<ItemQuality>, TagKey<ItemQuality>>>> QUALITIES_FIELD =
-            RegistryCodecs.holderOrTagList(MxtResourceKeys.ITEM_QUALITY).optionalFieldOf("quality", List.of());
-
+    public static final MapCodec<List<Either<Holder<ItemQuality>, TagKey<ItemQuality>>>> QUALITIES_FIELD = RegistryCodecs.holderOrTagList(MxtResourceKeys.ITEM_QUALITY).optionalFieldOf("quality", List.of());
     /**
      * The minimum field, the same way. Optional rather than a maybe-null holder, because "no minimum" and "a
      * minimum that no longer resolves" have to read the same.
      */
-    public static final MapCodec<Optional<Holder<ItemQuality>>> MIN_QUALITY_FIELD =
-            ItemQuality.CODEC.optionalFieldOf("min_quality");
-
+    public static final MapCodec<Optional<Holder<ItemQuality>>> MIN_QUALITY_FIELD = ItemQuality.CODEC.optionalFieldOf("min_quality");
     public static final MapCodec<QualityRequirement> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             QUALITIES_FIELD.forGetter(QualityRequirement::qualities),
             MIN_QUALITY_FIELD.forGetter(QualityRequirement::minQuality)

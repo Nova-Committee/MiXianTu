@@ -15,10 +15,7 @@ import java.util.Optional;
  * reference is shared; {@link #CODEC} puts the texture branch first, so a bare string always means texture.
  */
 public record IconReference(Either<Identifier, ItemStackTemplate> value) {
-    public static final Codec<IconReference> CODEC = Codec.either(
-            Identifier.CODEC,
-            ItemStackTemplate.CODEC
-    ).xmap(IconReference::new, IconReference::value);
+    public static final Codec<IconReference> CODEC = Codec.either(Identifier.CODEC, ItemStackTemplate.CODEC).xmap(IconReference::new, IconReference::value);
 
     public static IconReference texture(Identifier texture) {
         return new IconReference(Either.left(texture));

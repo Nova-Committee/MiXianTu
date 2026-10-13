@@ -1,8 +1,5 @@
 package com.iafenvoy.mxt.registry;
 
-import com.iafenvoy.mxt.data.CurrencyValue;
-import com.iafenvoy.mxt.data.Formation;
-import com.iafenvoy.mxt.data.Talisman;
 import com.iafenvoy.mxt.data.Tribulation;
 import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.alchemy.*;
@@ -15,16 +12,19 @@ import com.iafenvoy.mxt.data.creature.ContractType;
 import com.iafenvoy.mxt.data.creature.CreatureProfile;
 import com.iafenvoy.mxt.data.cultivation.*;
 import com.iafenvoy.mxt.data.curse.Curse;
+import com.iafenvoy.mxt.data.economy.CurrencyValue;
 import com.iafenvoy.mxt.data.forging.BlueprintBinding;
 import com.iafenvoy.mxt.data.forging.ForgingBlueprint;
 import com.iafenvoy.mxt.data.forging.ForgingMethod;
 import com.iafenvoy.mxt.data.forging.ToolBinding;
+import com.iafenvoy.mxt.data.formation.Formation;
 import com.iafenvoy.mxt.data.item.*;
 import com.iafenvoy.mxt.data.progression.Progression;
 import com.iafenvoy.mxt.data.quality.DefaultQuality;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.data.secretrealm.SecretRealm;
+import com.iafenvoy.mxt.data.talisman.Talisman;
 import com.iafenvoy.mxt.data.trigger.TriggerRule;
 import com.mojang.serialization.Codec;
 import net.minecraft.core.Holder;
@@ -125,7 +125,7 @@ public final class MxtDatapackRegistries {
     public static <T> Optional<Reference<T>> holderOrEmpty(ResourceKey<? extends Registry<T>> key, Identifier id) {
         MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
         if (server == null) return Optional.empty();
-        return server.registryAccess().lookupOrThrow(key).get(ResourceKey.create(key, id));
+        return server.registryAccess().get(ResourceKey.create(key, id));
     }
 
     public static <T> Stream<Reference<T>> holders(Provider access, ResourceKey<? extends Registry<T>> key) {

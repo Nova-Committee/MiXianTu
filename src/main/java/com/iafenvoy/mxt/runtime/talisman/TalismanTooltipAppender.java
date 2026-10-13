@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.runtime.talisman;
 
-import com.iafenvoy.mxt.data.Talisman;
 import com.iafenvoy.mxt.data.aura.SpiritStorageTooltipAppender;
+import com.iafenvoy.mxt.data.talisman.Talisman;
 import com.iafenvoy.mxt.data.talisman.TalismanType;
 import com.iafenvoy.mxt.item.TalismanBrushItem;
 import com.iafenvoy.mxt.item.TalismanItem;

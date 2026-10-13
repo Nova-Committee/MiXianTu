@@ -38,8 +38,7 @@ public final class AlchemyFurnaceTooltipAppender {
         event.registerAppender(TooltipLocation.POST_CUSTOM, AlchemyFurnaceTooltipAppender::append);
     }
 
-    private static void append(ItemStack stack, TooltipContext context, TooltipDisplay display, Player player,
-                               TooltipFlag flag, Consumer<Component> builder) {
+    private static void append(ItemStack stack, TooltipContext context, TooltipDisplay display, Player player, TooltipFlag flag, Consumer<Component> builder) {
         if (stack.is(MxtBlocks.ALCHEMY_FURNACE_CASING.get().asItem())) {
             Holder<AlchemyWallMaterial> material = loadedWall(context.registries(), stack).orElse(null);
             if (material == null)

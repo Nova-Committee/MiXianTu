@@ -2,6 +2,7 @@ package com.iafenvoy.mxt.testmod;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
+import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.compat.kubejs.MxtKubeJsApi;
 import com.iafenvoy.mxt.compat.kubejs.codec.MxtKubeJsDataCodec;
 import com.iafenvoy.mxt.data.condition.ItemCondition;
@@ -12,7 +13,7 @@ import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.data.quality.QualityIngredient;
 import com.iafenvoy.mxt.data.quality.QualityLadders;
 import com.iafenvoy.mxt.data.quality.QualityRequirement;
-import com.iafenvoy.mxt.picker.ItemPickerManager;
+import com.iafenvoy.mxt.data.ItemPickerManager;
 import com.iafenvoy.mxt.recipe.AlchemyRecipe;
 import com.iafenvoy.mxt.recipe.TalismanDrawingRecipe;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
@@ -337,11 +338,11 @@ public final class QualityProbes {
                     "size=" + tiers + " first=mxt_test:excellent second=mxt_test:normal third=mxt_test:poor");
             ok &= leg(source, "picker_catalogue",
                     rows.size() == order.size() && firstRow.equals(order.getFirst())
-                            && ItemPickerManager.category(Identifier.fromNamespaceAndPath("mxt", "default_quality")).isPresent()
-                            && ItemPickerManager.category(Identifier.fromNamespaceAndPath("mxt", "heat_source")).isPresent(),
+                            && ItemPickerManager.category(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "default_quality")).isPresent()
+                            && ItemPickerManager.category(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "heat_source")).isPresent(),
                     "rows=" + rows.size() + " first=" + firstRow
-                            + " default_quality=" + ItemPickerManager.category(Identifier.fromNamespaceAndPath("mxt", "default_quality")).isPresent()
-                            + " heat_source=" + ItemPickerManager.category(Identifier.fromNamespaceAndPath("mxt", "heat_source")).isPresent(),
+                            + " default_quality=" + ItemPickerManager.category(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "default_quality")).isPresent()
+                            + " heat_source=" + ItemPickerManager.category(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "heat_source")).isPresent(),
                     "rows=" + order.size() + " first=" + order.getFirst() + " default_quality=true heat_source=true");
 
             // The script-side entry points, called the way a script's binding calls them: a requirement decoded from

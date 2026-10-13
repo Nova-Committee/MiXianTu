@@ -23,8 +23,8 @@ import java.util.Optional;
  * tags mean "a curse that carries both". A query naming no filter only asks whether the entity holds any curse;
  * use {@code mxt:or} for any-of.
  */
-public record CurseFilter(Optional<Holder<Curse>> curse, List<TagKey<Curse>> tags,
-                          Optional<NumberRange> stacks, Optional<NumberRange> remainingTicks) {
+public record CurseFilter(Optional<Holder<Curse>> curse, List<TagKey<Curse>> tags, Optional<NumberRange> stacks,
+                          Optional<NumberRange> remainingTicks) {
     public static final MapCodec<CurseFilter> MAP_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             Curse.CODEC.optionalFieldOf("curse").forGetter(CurseFilter::curse),
             TagKey.hashedCodec(MxtResourceKeys.CURSE).listOf().optionalFieldOf("tags", List.of()).forGetter(CurseFilter::tags),

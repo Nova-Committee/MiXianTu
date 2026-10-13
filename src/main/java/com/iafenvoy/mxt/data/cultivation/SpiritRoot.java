@@ -10,7 +10,6 @@ import com.iafenvoy.mxt.util.formula.number.Constant;
 import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
-import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.RegistryFixedCodec;
@@ -30,8 +29,7 @@ import java.util.function.Function;
  * {@code quality} is the tier a root's own stone starts on, and it is also what a roster line names beside the
  * root: the free-text {@code rarity} this field replaced was the same question answered twice.
  */
-public record SpiritRoot(List<ElementWeight> elements,
-                         NumberProvider cultivationMultiplier,
+public record SpiritRoot(List<ElementWeight> elements, NumberProvider cultivationMultiplier,
                          NumberProvider elementAbilityModifier, Optional<Holder<ItemQuality>> quality,
                          List<Either<Holder<Ability>, TagKey<Ability>>> grantedAbilities,
                          List<Either<Holder<Element>, TagKey<Element>>> conflictingElements)
@@ -57,15 +55,14 @@ public record SpiritRoot(List<ElementWeight> elements,
      * that binds one element is unaffected by the number written on it.
      */
     public record ElementWeight(Holder<Element> element, double weight) {
-        private static final MapCodec<ElementWeight> RAW_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+        private static final Codec<ElementWeight> RAW_CODEC = RecordCodecBuilder.create(i -> i.group(
                 Element.CODEC.fieldOf("element").forGetter(ElementWeight::element),
                 Codec.DOUBLE.optionalFieldOf("weight", 1.0D).forGetter(ElementWeight::weight)
         ).apply(i, ElementWeight::new));
 
         // A bare entry id is the whole share of one element, which is what every single-element root writes; the
         // object form adds a weight. A weight of exactly one is written back in the short form.
-        public static final Codec<ElementWeight> CODEC = Codec.either(Element.CODEC, RAW_CODEC.codec())
-                .xmap(ElementWeight::fromEither, ElementWeight::toEither).validate(ElementWeight::validate);
+        public static final Codec<ElementWeight> CODEC = Codec.either(Element.CODEC, RAW_CODEC).xmap(ElementWeight::fromEither, ElementWeight::toEither).validate(ElementWeight::validate);
 
         private static ElementWeight fromEither(Either<Holder<Element>, ElementWeight> value) {
             return value.map(ElementWeight::withoutWeight, Function.identity());

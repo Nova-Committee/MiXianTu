@@ -33,8 +33,7 @@ import java.util.Optional;
 // the two conditions, the actions, the price and the caps; ContractService, the type stored in
 // ContractAttachment and the /contract command would go with it if the creature ever declares that itself.
 // Marked, not scheduled.
-public record ContractType(Optional<Holder<ItemQuality>> quality,
-                           EntityCondition ownerCondition,
+public record ContractType(Optional<Holder<ItemQuality>> quality, EntityCondition ownerCondition,
                            EntityCondition creatureCondition, EntityAction followAction, BiEntityAction combatAction,
                            EntityAction releaseAction, EntityAction deathAction, EntityAction ownerBindAction,
                            EntityAction ownerReleaseAction, EntityAction ownerDeathAction,

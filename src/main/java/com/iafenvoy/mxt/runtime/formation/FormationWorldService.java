@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.runtime.formation;
 
 import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
-import com.iafenvoy.mxt.data.Formation;
+import com.iafenvoy.mxt.data.formation.Formation;
 import com.iafenvoy.mxt.event.FormationEvent.Activate;
 import com.iafenvoy.mxt.event.FormationEvent.Deactivate;
 import com.iafenvoy.mxt.registry.MxtAttachments;

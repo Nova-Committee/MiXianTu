@@ -1,9 +1,17 @@
 package com.iafenvoy.mxt.api;
 
 import com.iafenvoy.mxt.data.creature.ContractContext;
-import com.iafenvoy.mxt.data.creature.ContractTags;
+import com.iafenvoy.mxt.util.HolderHelper;
+import net.minecraft.core.HolderSet;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.Identifier;
+import net.minecraft.tags.TagKey;
+import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.OwnableEntity;
+
+import java.util.Optional;
 
 /**
  * A creature that may sign a contract. Implementing this interface is the whole of eligibility: no datapack
@@ -25,7 +33,7 @@ public interface Contractable extends OwnableEntity {
     // Whether this creature signs the given contract type. The default reads that contract type's own entity
     // type tag, which a datapack writes to narrow the list; a contract type without the tag is unrestricted.
     default boolean acceptsContract(ContractContext context) {
-        return ContractTags.accepts(context);
+        return acceptsContractByTag(context);
     }
 
     // After the owner is written, so both the creature and its owner answer with the new state here.
@@ -40,5 +48,15 @@ public interface Contractable extends OwnableEntity {
 
     // The creature died and the contract went with it.
     default void onContractDeath(ContractContext context) {
+    }
+
+    // Client-safe: the vanilla entity type registry is the same static registry on both sides. A tag that is
+    // absent - or written but empty - places no restriction, so an unwritten list can never lock a contract out.
+    static boolean acceptsContractByTag(ContractContext context) {
+        Identifier id = HolderHelper.idOrNull(context.type());
+        if (id == null) return true;
+        Optional<HolderSet.Named<EntityType<?>>> allowed = BuiltInRegistries.ENTITY_TYPE.get(TagKey.create(Registries.ENTITY_TYPE, id.withPath(path -> "contract/" + path)));
+        if (allowed.isEmpty() || allowed.get().size() == 0) return true;
+        return allowed.get().stream().anyMatch(holder -> holder.value() == context.self().getType());
     }
 }

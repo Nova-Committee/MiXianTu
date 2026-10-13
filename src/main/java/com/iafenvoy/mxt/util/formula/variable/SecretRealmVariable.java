@@ -29,9 +29,9 @@ public final class SecretRealmVariable implements FormulaVariable {
         if (record == null) return Double.NaN;
         return switch (key) {
             case "secret_realm_members" -> record.members().size();
-            case "secret_realm_limit" -> record.instance().maxMembers().orElse(-1);
-            case "secret_realm_elapsed" -> record.startedAt() < 0L ? 0.0D
-                    : Math.max(0.0D, entity.level().getGameTime() - record.startedAt());
+            case "secret_realm_limit" -> record.instance().maxMembers();
+            case "secret_realm_elapsed" ->
+                    record.startedAt() < 0L ? 0.0D : Math.max(0.0D, entity.level().getGameTime() - record.startedAt());
             case "secret_realm_duration" -> record.instance().durationTicks();
             case "secret_realm_index" -> record.index();
             case "secret_realm_is_owner" -> record.isOwner(entity.getUUID()) ? 1.0D : 0.0D;

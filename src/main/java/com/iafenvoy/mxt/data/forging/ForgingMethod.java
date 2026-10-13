@@ -24,8 +24,8 @@ import java.util.Optional;
  * A single datapack-defined forging operation. {@code sound} is played at the table when the method is used, for
  * everyone in range, and defaults to the noise the table stands in for.
  */
-public record ForgingMethod(int valueDelta, List<Cost> costs, EntityCondition condition,
-                            Optional<IconReference> icon, int cooldown, SoundEvent sound) {
+public record ForgingMethod(int valueDelta, List<Cost> costs, EntityCondition condition, Optional<IconReference> icon,
+                            int cooldown, SoundEvent sound) {
     public static final Codec<Holder<ForgingMethod>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.FORGING_METHOD);
     public static final Codec<ForgingMethod> DIRECT_CODEC = RecordCodecBuilder.<ForgingMethod>create(i -> i.group(
             Codec.INT.fieldOf("value_delta").forGetter(ForgingMethod::valueDelta),

@@ -4,10 +4,10 @@ import com.iafenvoy.mxt.api.QualityProvider;
 import com.iafenvoy.mxt.data.quality.DefaultQuality;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.data.quality.ItemQuality.Modifier;
-import com.iafenvoy.mxt.data.quality.ItemQualityTags;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.registry.tag.MxtQualityTags;
 import com.iafenvoy.mxt.runtime.item.ItemBindingService.ResolvedBindings;
 import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
@@ -323,7 +323,7 @@ public final class QualityService {
 
     private static List<Holder<ItemQuality>> ordered(RegistryLookup<ItemQuality> registry) {
         Set<Holder<ItemQuality>> values = new LinkedHashSet<>();
-        registry.get(ItemQualityTags.TOOLTIP_ORDER).ifPresent(tag -> tag.forEach(values::add));
+        registry.get(MxtQualityTags.TOOLTIP_ORDER).ifPresent(tag -> tag.forEach(values::add));
         registry.listElements().forEach(values::add);
         return List.copyOf(values);
     }

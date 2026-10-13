@@ -30,15 +30,10 @@ import java.util.Optional;
  * such a yielding tick runs. The environment is part of the condition context, so a pack asks for the place it wants
  * instead of naming a kind of aura; {@code abort_reason} names the upkeep abort alone.
  */
-public record Cultivation(int priority,
-                          EntityCondition startCondition,
-                          EntityCondition cultivateCondition, EntityAction cultivateAction,
-                          EntityCondition tickCondition, EntityAction tickAction,
-                          int tickInterval,
-                          List<Cost> costs, NumberProvider absorbAmount,
-                          List<Cost> auraCosts, List<AuraGain> auraGains,
-                          int cooldownTicks,
-                          Optional<Component> abortReason) {
+public record Cultivation(int priority, EntityCondition startCondition, EntityCondition cultivateCondition,
+                          EntityAction cultivateAction, EntityCondition tickCondition, EntityAction tickAction,
+                          int tickInterval, List<Cost> costs, NumberProvider absorbAmount, List<Cost> auraCosts,
+                          List<AuraGain> auraGains, int cooldownTicks, Optional<Component> abortReason) {
     // The pre-Cost aura map is still read as a list of mxt:aura entries; writing always emits the list form.
     private static final Codec<List<Cost>> AURA_COSTS = Codec.either(
             CollectionCodecs.map(Aura.CODEC, NumberProvider.CODEC), Cost.LIST_CODEC).xmap(

@@ -89,9 +89,8 @@ public final class ItemBindingTooltipAppender {
         for (DescribedEntry<EntityCondition> entry : conditions) {
             entry.description().ifPresent(description -> {
                 boolean met = entry.value().test(player, formula);
-                MutableComponent marker = Component.literal(met ? "✔ " : "✖ ")
-                        .withStyle(met ? ChatFormatting.GREEN : ChatFormatting.RED);
-                builder.accept(marker.append(Component.translatable(description)));
+                MutableComponent marker = Component.literal(met ? "✔ " : "✖ ").withStyle(met ? ChatFormatting.GREEN : ChatFormatting.RED);
+                builder.accept(marker.append(description));
             });
         }
     }

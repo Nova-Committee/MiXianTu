@@ -95,11 +95,13 @@ public final class AlchemyResolver {
         List<Gap> gaps = new ArrayList<>();
         evaluated.main().forEach((id, required) -> {
             double actual = mixture.main().getOrDefault(id, 0.0D);
-            if (actual + EPSILON < required) gaps.add(new Gap(Gap.Kind.MISSING, AlchemyRole.MAIN, id, actual, required));
+            if (actual + EPSILON < required)
+                gaps.add(new Gap(Gap.Kind.MISSING, AlchemyRole.MAIN, id, actual, required));
         });
         evaluated.auxiliary().forEach((id, required) -> {
             double actual = mixture.auxiliary().getOrDefault(id, 0.0D);
-            if (actual + EPSILON < required) gaps.add(new Gap(Gap.Kind.MISSING, AlchemyRole.AUXILIARY, id, actual, required));
+            if (actual + EPSILON < required)
+                gaps.add(new Gap(Gap.Kind.MISSING, AlchemyRole.AUXILIARY, id, actual, required));
         });
         extra(mixture.main(), evaluated.main(), AlchemyRole.MAIN, gaps);
         extra(mixture.auxiliary(), evaluated.auxiliary(), AlchemyRole.AUXILIARY, gaps);
@@ -227,7 +229,8 @@ public final class AlchemyResolver {
     /**
      * {@code role} is null only for a balance gap.
      */
-    public record Gap(Kind kind, @Nullable AlchemyRole role, @Nullable Identifier property, double actual, double required) {
+    public record Gap(Kind kind, @Nullable AlchemyRole role, @Nullable Identifier property, double actual,
+                      double required) {
         public enum Kind {MISSING, EXTRA, CATALYST, BALANCE}
     }
 

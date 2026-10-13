@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.item;
 
 import com.iafenvoy.mxt.config.MxtServerConfig;
-import com.iafenvoy.mxt.data.Formation;
+import com.iafenvoy.mxt.data.formation.Formation;
 import com.iafenvoy.mxt.data.item.FormationPlateComponent;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDataComponents;

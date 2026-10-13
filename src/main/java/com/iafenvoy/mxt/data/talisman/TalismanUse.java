@@ -1,6 +1,5 @@
 package com.iafenvoy.mxt.data.talisman;
 
-import com.iafenvoy.mxt.data.Talisman;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.Holder;
 import net.minecraft.world.entity.LivingEntity;

@@ -31,13 +31,11 @@ import java.util.Optional;
  * the herb unsowable and dropless but still usable in a furnace. Overlapping entries resolve by {@code priority}:
  * the highest wins, and a tie keeps registry order.
  */
-public record SpiritHerb(List<Either<Holder<Block>, TagKey<Block>>> blocks,
-                         int defaultAge, List<AgeQuality> qualityByAge,
-                         List<Either<Holder<Element>, TagKey<Element>>> elementTags,
+public record SpiritHerb(List<Either<Holder<Block>, TagKey<Block>>> blocks, int defaultAge,
+                         List<AgeQuality> qualityByAge, List<Either<Holder<Element>, TagKey<Element>>> elementTags,
                          List<Identifier> materialTags, Map<Holder<MedicinalProperty>, NumberProvider> mainEffects,
-                         Map<Holder<MedicinalProperty>, NumberProvider> auxiliaryEffects,
-                         NumberProvider catalystPower, double thermalBias,
-                         Optional<Growth> growth, int priority) {
+                         Map<Holder<MedicinalProperty>, NumberProvider> auxiliaryEffects, NumberProvider catalystPower,
+                         double thermalBias, Optional<Growth> growth, int priority) {
     public static final int DEFAULT_PRIORITY = 0;
     // A bad property reference fails the whole entry. The shared map codec would log it and keep going.
     private static final Codec<Map<Holder<MedicinalProperty>, NumberProvider>> EFFECTS =

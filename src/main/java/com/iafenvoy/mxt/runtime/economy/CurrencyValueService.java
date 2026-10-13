@@ -1,7 +1,8 @@
 package com.iafenvoy.mxt.runtime.economy;
 
-import com.iafenvoy.mxt.data.CurrencyValue;
-import com.iafenvoy.mxt.data.CurrencyValue.UnavailableWhen;
+import com.iafenvoy.mxt.data.DescribedEntry;
+import com.iafenvoy.mxt.data.condition.ItemCondition;
+import com.iafenvoy.mxt.data.economy.CurrencyValue;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
@@ -144,14 +145,14 @@ public final class CurrencyValueService {
         return ItemMatcher.find(MxtDatapackRegistries.holders(access, MxtResourceKeys.CURRENCY).map(Reference::value), stack);
     }
 
-    public static Optional<UnavailableWhen> unavailableReason(@NotNull Provider access, @Nullable Entity holder, @NotNull ItemStack stack) {
+    public static Optional<DescribedEntry<ItemCondition>> unavailableReason(@NotNull Provider access, @Nullable Entity holder, @NotNull ItemStack stack) {
         return definition(access, stack).flatMap(definition -> definition.unavailableWhen().stream()
-                .filter(entry -> holder != null && entry.condition().test(holder, stack, FormulaContext.EMPTY)).findFirst());
+                .filter(entry -> holder != null && entry.value().test(holder, stack, FormulaContext.EMPTY)).findFirst());
     }
 
     private static boolean isAvailable(CurrencyValue definition, @NotNull Entity holder, @NotNull ItemStack stack, @NotNull FormulaContext context) {
         return definition.unavailableWhen().stream()
-                .noneMatch(entry -> entry.condition().test(holder, stack, context));
+                .noneMatch(entry -> entry.value().test(holder, stack, context));
     }
 
     private static boolean isAvailable(CurrencyValue definition) {

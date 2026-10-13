@@ -1,5 +1,5 @@
 {
-  "items": "minecraft:emerald",
+  "item": "minecraft:emerald",
   "value": 100,
   "exchanges": []
 }

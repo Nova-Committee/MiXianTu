@@ -18,12 +18,8 @@ import java.util.Optional;
  * the binding's, not the pill's, so two bindings of the same pill keep separate counters. {@code pill} is required:
  * a binding that names no pill would bind items to nothing.
  */
-public record PillBinding(List<Entry> entries, Holder<Pill> pill,
-                          Optional<Integer> maxUses, NumberProvider cooldown, int priority)
-        implements ItemMatcher {
-    /**
-     * Holder identity. Usage counters key off this, and a component overlay never replaces it.
-     */
+public record PillBinding(List<Entry> entries, Holder<Pill> pill, Optional<Integer> maxUses, NumberProvider cooldown,
+                          int priority) implements ItemMatcher {
     public static final Codec<Holder<PillBinding>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.PILL_BINDING);
     public static final Codec<PillBinding> DIRECT_CODEC = RecordCodecBuilder.<PillBinding>create(i -> i.group(
             ENTRIES_CODEC.optionalFieldOf("items", List.of()).forGetter(PillBinding::entries),

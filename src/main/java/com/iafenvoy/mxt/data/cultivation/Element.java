@@ -24,8 +24,7 @@ import java.util.Set;
  * and {@code adapted_to} on the defending one; every matching relation multiplies, so a value below 1 weakens.
  * All numbers are validated finite and non-negative at load.
  */
-public record Element(List<Relation> overcomes, List<Relation> adaptedTo,
-                      List<DamageTypeClaim> damageTypes,
+public record Element(List<Relation> overcomes, List<Relation> adaptedTo, List<DamageTypeClaim> damageTypes,
                       double attachmentDecay, double damageAttachment, int color, double conflictMultiplier) {
     public static final Codec<Holder<Element>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.ELEMENT);
     public static final Codec<Element> DIRECT_CODEC = RecordCodecBuilder.<Element>create(i -> i.group(

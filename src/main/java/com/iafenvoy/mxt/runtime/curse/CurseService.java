@@ -5,7 +5,7 @@ import com.iafenvoy.mxt.attachment.CurseHolderAttachment.State;
 import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.curse.Curse;
 import com.iafenvoy.mxt.data.curse.Curse.StackingMode;
-import com.iafenvoy.mxt.data.curse.CurseType.Triggered;
+import com.iafenvoy.mxt.data.curse.builtin.TriggeredCurseType;
 import com.iafenvoy.mxt.event.CurseApplyEvent;
 import com.iafenvoy.mxt.event.CurseRemoveEvent.Post;
 import com.iafenvoy.mxt.event.CurseRemoveEvent.Pre;
@@ -279,7 +279,7 @@ public final class CurseService {
                 continue;
             }
             // A triggered curse waits for its triggers, so this loop never runs its effect.
-            if (definition.typedType() instanceof Triggered) continue;
+            if (definition.typedType() instanceof TriggeredCurseType) continue;
             double interval = definition.tickInterval().evaluate(context);
             if (Double.isFinite(interval) && interval > 0.0D
                     && gameTime >= state.appliedAt()

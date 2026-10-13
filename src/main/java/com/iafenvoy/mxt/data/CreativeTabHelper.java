@@ -1,8 +1,7 @@
 package com.iafenvoy.mxt.data;
 
-import com.iafenvoy.mxt.picker.ItemPickerManager;
-import com.iafenvoy.mxt.picker.ItemPickerManager.ItemProvider;
-import com.iafenvoy.mxt.picker.ItemPickerManager.PickerItem;
+import com.iafenvoy.mxt.data.ItemPickerManager.ItemProvider;
+import com.iafenvoy.mxt.data.ItemPickerManager.PickerItem;
 import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.core.Registry;
 import net.minecraft.resources.Identifier;

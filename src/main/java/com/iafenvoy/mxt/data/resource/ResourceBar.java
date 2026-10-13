@@ -16,9 +16,8 @@ import java.util.Optional;
 /**
  * A client-visible resource bar declaration. Renderer and visibility IDs select built-in typed implementations.
  */
-public record ResourceBar(ResourceBarContext context, Anchor anchor, int order,
-                          ResourceBarVisibility visibility, ResourceBarRenderData renderer, ValueDisplay valueDisplay,
-                          Optional<Double> maximum) {
+public record ResourceBar(ResourceBarContext context, Anchor anchor, int order, ResourceBarVisibility visibility,
+                          ResourceBarRenderData renderer, ValueDisplay valueDisplay, Optional<Double> maximum) {
     public static final Codec<ResourceBar> CODEC = RecordCodecBuilder.create(i -> i.group(
             ResourceBarContext.CODEC.optionalFieldOf("context", SelfHudContext.INSTANCE).forGetter(ResourceBar::context),
             Anchor.CODEC.fieldOf("anchor").forGetter(ResourceBar::anchor),
