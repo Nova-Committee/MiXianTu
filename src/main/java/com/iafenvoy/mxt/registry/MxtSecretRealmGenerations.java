@@ -2,10 +2,11 @@ package com.iafenvoy.mxt.registry;
 
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.data.secretrealm.SecretRealmGeneration;
-import com.iafenvoy.mxt.data.secretrealm.SecretRealmGeneration.Existing;
-import com.iafenvoy.mxt.data.secretrealm.SecretRealmGeneration.Flat;
-import com.iafenvoy.mxt.data.secretrealm.SecretRealmGeneration.Stem;
-import com.iafenvoy.mxt.data.secretrealm.SecretRealmGeneration.Template;
+import com.iafenvoy.mxt.data.secretrealm.builtin.ExistingGeneration;
+import com.iafenvoy.mxt.data.secretrealm.builtin.FlatGeneration;
+import com.iafenvoy.mxt.data.secretrealm.builtin.StemGeneration;
+import com.iafenvoy.mxt.data.secretrealm.builtin.TemplateGeneration;
+import com.iafenvoy.mxt.data.secretrealm.builtin.VoidGeneration;
 import com.mojang.serialization.MapCodec;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
@@ -17,9 +18,9 @@ import net.neoforged.neoforge.registries.DeferredRegister;
 public final class MxtSecretRealmGenerations {
     public static final DeferredRegister<MapCodec<? extends SecretRealmGeneration>> REGISTRY = DeferredRegister.create(MxtRegistries.SECRET_REALM_GENERATION_TYPE, MiXianTu.MOD_ID);
 
-    public static final DeferredHolder<MapCodec<? extends SecretRealmGeneration>, MapCodec<Stem>> STEM = REGISTRY.register("stem", () -> Stem.CODEC);
-    public static final DeferredHolder<MapCodec<? extends SecretRealmGeneration>, MapCodec<Flat>> FLAT = REGISTRY.register("flat", () -> Flat.CODEC);
-    public static final DeferredHolder<MapCodec<? extends SecretRealmGeneration>, MapCodec<SecretRealmGeneration.Void>> VOID = REGISTRY.register("void", () -> SecretRealmGeneration.Void.CODEC);
-    public static final DeferredHolder<MapCodec<? extends SecretRealmGeneration>, MapCodec<Template>> TEMPLATE = REGISTRY.register("template", () -> Template.CODEC);
-    public static final DeferredHolder<MapCodec<? extends SecretRealmGeneration>, MapCodec<Existing>> EXISTING = REGISTRY.register("existing", () -> Existing.CODEC);
+    public static final DeferredHolder<MapCodec<? extends SecretRealmGeneration>, MapCodec<StemGeneration>> STEM = REGISTRY.register("stem", () -> StemGeneration.CODEC);
+    public static final DeferredHolder<MapCodec<? extends SecretRealmGeneration>, MapCodec<FlatGeneration>> FLAT = REGISTRY.register("flat", () -> FlatGeneration.CODEC);
+    public static final DeferredHolder<MapCodec<? extends SecretRealmGeneration>, MapCodec<VoidGeneration>> VOID = REGISTRY.register("void", () -> VoidGeneration.CODEC);
+    public static final DeferredHolder<MapCodec<? extends SecretRealmGeneration>, MapCodec<TemplateGeneration>> TEMPLATE = REGISTRY.register("template", () -> TemplateGeneration.CODEC);
+    public static final DeferredHolder<MapCodec<? extends SecretRealmGeneration>, MapCodec<ExistingGeneration>> EXISTING = REGISTRY.register("existing", () -> ExistingGeneration.CODEC);
 }

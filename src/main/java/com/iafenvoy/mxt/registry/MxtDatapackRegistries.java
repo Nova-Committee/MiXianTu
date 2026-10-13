@@ -29,14 +29,11 @@ import com.iafenvoy.mxt.data.trigger.TriggerRule;
 import com.mojang.serialization.Codec;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
-import net.minecraft.core.HolderLookup;
 import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.core.Registry;
-import net.minecraft.core.RegistryAccess;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.tags.TagKey;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.registries.DataPackRegistryEvent.NewRegistry;
@@ -107,12 +104,6 @@ public final class MxtDatapackRegistries {
         KEYS.add(key);
     }
 
-    // The lookup a render path can use: this registry is synced, and a client draws frames before it has received
-    // it, where lookupOrThrow would throw inside the frame rather than answer "nothing is declared".
-    public static <T> Stream<Reference<T>> holdersOrEmpty(Provider access, ResourceKey<Registry<T>> key) {
-        return access.lookup(key).map(HolderLookup::listElements).orElseGet(Stream::empty);
-    }
-
     public static List<ResourceKey<? extends Registry<?>>> registries() {
         return KEYS;
     }
@@ -137,10 +128,6 @@ public final class MxtDatapackRegistries {
         return server.registryAccess().lookupOrThrow(key).get(ResourceKey.create(key, id));
     }
 
-    public static <T> Stream<Reference<T>> holders(RegistryAccess access, ResourceKey<? extends Registry<T>> key) {
-        return access.lookupOrThrow(key).listElements();
-    }
-
     public static <T> Stream<Reference<T>> holders(Provider access, ResourceKey<? extends Registry<T>> key) {
         return access.lookupOrThrow(key).listElements();
     }
@@ -152,16 +139,7 @@ public final class MxtDatapackRegistries {
     }
 
     public static <T> Optional<T> get(Provider access, ResourceKey<? extends Registry<T>> key, Identifier id) {
-        return access.lookupOrThrow(key).get(ResourceKey.create(key, id)).map(Holder::value);
-    }
-
-    public static <T> boolean isTagged(ResourceKey<? extends Registry<T>> key, Identifier id, Identifier tagId) {
-        TagKey<T> tag = TagKey.create(key, tagId);
-        return registry(key).get(ResourceKey.create(key, id)).map(holder -> holder.is(tag)).orElse(false);
-    }
-
-    public static <T> boolean isTagged(ResourceKey<? extends Registry<T>> key, Holder<T> holder, Identifier tagId) {
-        return holder.is(TagKey.create(key, tagId));
+        return holder(access, key, id).map(Holder::value);
     }
 
     public static int size(ResourceKey<? extends Registry<?>> key) {

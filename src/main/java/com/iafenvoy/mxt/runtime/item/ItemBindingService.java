@@ -133,14 +133,14 @@ public final class ItemBindingService {
     }
 
     // The carrier the mod offers for a technique: the item a declaration claims for it, the item that declaration
-    // generates a stack from, or the jade slip. A claimed item is a manual by matching, so only a generated stack
-    // needs the component written onto it.
+    // generates a stack from, or the technique book. A claimed item is a manual by matching, so only a generated
+    // stack needs the component written onto it.
     public static ItemStack techniqueCarrier(Provider access, Holder<Technique> technique) {
         TechniqueBinding declaration = declaration(access, technique);
         Item claimed = declaration == null ? null : claimedItem(declaration.entries());
         if (claimed != null) return new ItemStack(claimed);
-        Item carrier = declaration == null ? MxtItems.CULTIVATION_JADE_SLIP.get()
-                : declaration.carrierItem().orElse(MxtItems.CULTIVATION_JADE_SLIP.get());
+        Item carrier = declaration == null ? MxtItems.TECHNIQUE_BOOK.get()
+                : declaration.carrierItem().orElse(MxtItems.TECHNIQUE_BOOK.get());
         ItemStack stack = new ItemStack(carrier);
         stack.set(MxtDataComponents.TECHNIQUE.get(), technique);
         return stack;

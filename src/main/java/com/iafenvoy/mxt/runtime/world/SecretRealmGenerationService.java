@@ -3,10 +3,11 @@ package com.iafenvoy.mxt.runtime.world;
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.data.secretrealm.SecretRealm;
 import com.iafenvoy.mxt.data.secretrealm.SecretRealmGeneration;
-import com.iafenvoy.mxt.data.secretrealm.SecretRealmGeneration.Existing;
-import com.iafenvoy.mxt.data.secretrealm.SecretRealmGeneration.Flat;
-import com.iafenvoy.mxt.data.secretrealm.SecretRealmGeneration.Stem;
-import com.iafenvoy.mxt.data.secretrealm.SecretRealmGeneration.Template;
+import com.iafenvoy.mxt.data.secretrealm.builtin.ExistingGeneration;
+import com.iafenvoy.mxt.data.secretrealm.builtin.FlatGeneration;
+import com.iafenvoy.mxt.data.secretrealm.builtin.StemGeneration;
+import com.iafenvoy.mxt.data.secretrealm.builtin.TemplateGeneration;
+import com.iafenvoy.mxt.data.secretrealm.builtin.VoidGeneration;
 import net.minecraft.core.*;
 import net.minecraft.core.Holder.Reference;
 import net.minecraft.core.registries.Registries;
@@ -57,13 +58,13 @@ public final class SecretRealmGenerationService {
     // An existing secret realm has no dimension of its own, so the one it names is the instance's identity as well -
     // which is also what keeps it from being unloaded or deleted when it empties.
     public static ResourceKey<Level> dimensionKey(Identifier definition, SecretRealmGeneration generation, int index) {
-        if (generation instanceof Existing(ResourceKey<Level> dimension)) return dimension;
+        if (generation instanceof ExistingGeneration(ResourceKey<Level> dimension)) return dimension;
         return dimensionKey(definition, index);
     }
 
     public static Optional<ServerLevel> open(MinecraftServer server, SecretRealmRecord record) {
         SecretRealm definition = record.instance();
-        if (definition.generation() instanceof Existing(ResourceKey<Level> dimension)) {
+        if (definition.generation() instanceof ExistingGeneration(ResourceKey<Level> dimension)) {
             ServerLevel level = server.getLevel(dimension);
             if (level == null) return Optional.empty();
             SecretRealmBorderService.apply(level, definition, false);
@@ -74,7 +75,7 @@ public final class SecretRealmGenerationService {
             SecretRealmBorderService.apply(loaded, definition, true);
             return Optional.of(loaded);
         }
-        if (definition.generation() instanceof Template template && !record.prepared()
+        if (definition.generation() instanceof TemplateGeneration template && !record.prepared()
                 && !copyTemplate(server, record.dimension(), template.template())) return Optional.empty();
         LevelStem stem = buildStem(server, definition.generation());
         if (stem == null) return Optional.empty();
@@ -95,18 +96,20 @@ public final class SecretRealmGenerationService {
         RegistryAccess registries = server.registryAccess();
         try {
             return switch (generation) {
-                case Existing ignored -> null;
-                case Stem stem -> registries.lookupOrThrow(Registries.LEVEL_STEM).getOrThrow(stem.stem()).value();
-                case Template template ->
+                case ExistingGeneration ignored -> null;
+                case StemGeneration stem -> registries.lookupOrThrow(Registries.LEVEL_STEM).getOrThrow(stem.stem()).value();
+                case TemplateGeneration template ->
                         registries.lookupOrThrow(Registries.LEVEL_STEM).getOrThrow(template.stem()).value();
-                case Flat flat -> {
+                case FlatGeneration flat -> {
                     FlatPreset preset = parsePreset(registries.lookupOrThrow(Registries.BLOCK), flat.preset());
                     if (preset == null) yield null;
                     yield new LevelStem(dimensionType(registries, flat.dimensionType()),
                             new FlatLevelSource(flatSettings(registries, preset.layers(), preset.biome(), flat.structures())));
                 }
-                case SecretRealmGeneration.Void empty -> new LevelStem(dimensionType(registries, empty.dimensionType()),
+                case VoidGeneration empty -> new LevelStem(dimensionType(registries, empty.dimensionType()),
                         new FlatLevelSource(flatSettings(registries, List.of(), empty.biome().or(() -> Optional.of(Biomes.THE_VOID)), empty.structures())));
+                // Unreachable while every registered strategy is handled above; a new one has to be added here.
+                default -> null;
             };
         } catch (Exception exception) {
             MiXianTu.LOGGER.error("Invalid secret realm generation parameters {}", generation, exception);

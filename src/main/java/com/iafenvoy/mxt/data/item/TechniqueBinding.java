@@ -22,13 +22,15 @@ import java.util.Optional;
  * a technique with no declaration of its own still reads - it reads with the defaults {@link #defaults(Holder)}
  * builds. A declaration may also claim items itself through {@code items}, and those items teach the technique it
  * names without carrying any component. {@code carrier_item} names the item the mod generates for the picker and
- * the creative tab, and absent means the jade slip.
+ * the creative tab, and absent means the technique book.
  */
 public record TechniqueBinding(Holder<Technique> technique, List<Entry> entries, int priority,
-                               Optional<Item> carrierItem,
-                               List<DescribedEntry<EntityCondition>> conditions,
+                               Optional<Item> carrierItem, List<DescribedEntry<EntityCondition>> conditions,
                                int learnTime, ItemUseAnimation holdAnimation,
                                Holder<SoundEvent> holdSound) implements ItemMatcher {
+    // The pose a reading falls back to, and the one the built-in book is pinned to: the eating motion, whose
+    // first-person transform is what makes a reading look like one.
+    public static final ItemUseAnimation DEFAULT_HOLD_ANIMATION = ItemUseAnimation.BOW;
     public static final Codec<TechniqueBinding> CODEC = RecordCodecBuilder.<TechniqueBinding>create(i -> i.group(
             Technique.CODEC.fieldOf("technique").forGetter(TechniqueBinding::technique),
             ENTRIES_CODEC.optionalFieldOf("items", List.of()).forGetter(TechniqueBinding::entries),
@@ -38,13 +40,13 @@ public record TechniqueBinding(Holder<Technique> technique, List<Entry> entries,
             // Bounded because the value is handed to the use cycle, where an enormous duration would leave
             // the player holding the item forever with no way to tell it apart from a bug.
             Codec.intRange(0, 72_000).optionalFieldOf("learn_time", HoldBinding.NO_HOLD).forGetter(TechniqueBinding::learnTime),
-            ItemUseAnimation.CODEC.optionalFieldOf("hold_animation", HoldBinding.DEFAULT_HOLD_ANIMATION).forGetter(TechniqueBinding::holdAnimation),
+            ItemUseAnimation.CODEC.optionalFieldOf("hold_animation", DEFAULT_HOLD_ANIMATION).forGetter(TechniqueBinding::holdAnimation),
             SoundEvent.CODEC.optionalFieldOf("hold_sound", HoldBinding.DEFAULT_HOLD_SOUND).forGetter(TechniqueBinding::holdSound)
     ).apply(i, TechniqueBinding::new)).validate(TechniqueBinding::validate);
 
     public static TechniqueBinding defaults(Holder<Technique> technique) {
         return new TechniqueBinding(technique, List.of(), DEFAULT_PRIORITY, Optional.empty(), List.of(),
-                HoldBinding.NO_HOLD, HoldBinding.DEFAULT_HOLD_ANIMATION, HoldBinding.DEFAULT_HOLD_SOUND);
+                HoldBinding.NO_HOLD, DEFAULT_HOLD_ANIMATION, HoldBinding.DEFAULT_HOLD_SOUND);
     }
 
     private static DataResult<TechniqueBinding> validate(TechniqueBinding binding) {

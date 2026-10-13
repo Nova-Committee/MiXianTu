@@ -1,6 +1,8 @@
-package com.iafenvoy.mxt.util.formula;
+package com.iafenvoy.mxt.util.formula.variable;
 
 import com.iafenvoy.mxt.runtime.item.PillService;
+import com.iafenvoy.mxt.util.formula.FormulaContext;
+import com.iafenvoy.mxt.util.formula.FormulaVariable;
 import net.minecraft.world.entity.Entity;
 
 import java.util.Set;

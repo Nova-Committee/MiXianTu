@@ -1,4 +1,4 @@
-package com.iafenvoy.mxt.render;
+package com.iafenvoy.mxt.render.tint;
 
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.data.item.Pill;

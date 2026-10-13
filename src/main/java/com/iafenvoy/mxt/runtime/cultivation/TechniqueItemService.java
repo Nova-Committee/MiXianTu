@@ -5,6 +5,7 @@ import com.iafenvoy.mxt.config.MxtServerConfig;
 import com.iafenvoy.mxt.data.cultivation.Technique;
 import com.iafenvoy.mxt.data.item.HoldBinding;
 import com.iafenvoy.mxt.data.item.TechniqueBinding;
+import com.iafenvoy.mxt.item.ItemReading;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
@@ -23,6 +24,7 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.LivingEntity;
@@ -201,11 +203,23 @@ public final class TechniqueItemService {
             QualityService.notifyCannotUse(entity, refused.orElseThrow());
             return true;
         }
-        // A binding that asks for a hold must not also teach on the click that starts it, or the hold
-        // would be decoration on top of an instant learn.
+        // A hold manual must not also teach on the click that starts it, but it still says what it is on that click.
+        readOut(entity, stack, value.technique());
         if (value.requiresHold()) return false;
         learn(entity, stack, value);
         return true;
+    }
+
+    // What reading a manual prints: the text written on it, then the technique it names and, when the pack
+    // translated one, that technique's description. The chat log, not the action bar: this is the text itself.
+    private static void readOut(LivingEntity entity, ItemStack stack, Holder<Technique> technique) {
+        if (!(entity instanceof ServerPlayer player)) return;
+        ItemReading.readInscription(player, stack);
+        player.sendSystemMessage(Component.translatable("message.mxt.technique.read",
+                DefinitionText.text(technique)).withStyle(ChatFormatting.GREEN));
+        MutableComponent description = DefinitionText.description(technique);
+        if (DefinitionText.resolved(description) && !description.getString().isBlank())
+            player.sendSystemMessage(description.withStyle(ChatFormatting.GRAY));
     }
 
     private static void learn(LivingEntity entity, ItemStack stack, TechniqueBinding binding) {

@@ -11,6 +11,7 @@ import com.iafenvoy.mxt.data.progression.ProgressionOwner;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.util.codec.MiscCodecs;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.iafenvoy.mxt.util.formula.number.Constant;
@@ -33,10 +34,12 @@ import java.util.Optional;
  * {@link Progression} chain. {@code default_level} is the chain entry point and is mandatory as soon as any level
  * is configured; {@code mastery_resource} names the stored value that measures mastery. {@code quality} is the
  * technique's own tier, which is what a manual made for it starts on. Manuals default to one shared built-in
- * carrier, so that item alone cannot say which tier applies.
+ * carrier, so that item alone cannot say which tier applies. {@code primary_color} and {@code secondary_color} are
+ * the two colours the built-in book is tinted with, one per texture layer.
  */
 public record Technique(Optional<Holder<ItemQuality>> quality,
                         Optional<IconReference> icon,
+                        int primaryColor, int secondaryColor,
                         EntityCondition learnCondition,
                         List<Identifier> exclusiveTags,
                         NumberProvider cultivationModifier, List<AttributeEntry> passiveModifiers,
@@ -44,10 +47,15 @@ public record Technique(Optional<Holder<ItemQuality>> quality,
                         Optional<Holder<Progression>> defaultLevel,
                         Optional<Holder<Resource>> masteryResource,
                         Map<Holder<Progression>, ProgressionConfig> configuration) implements ProgressionOwner, QualityProvider {
+    // The book texture as authored: a pack that names no colour keeps the blue cover and the white title mark.
+    public static final int DEFAULT_PRIMARY_COLOR = 0x0E54A0;
+    public static final int DEFAULT_SECONDARY_COLOR = 0xE4E8EB;
     public static final Codec<Holder<Technique>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.TECHNIQUE);
     public static final Codec<Technique> DIRECT_CODEC = RecordCodecBuilder.<Technique>create(i -> i.group(
             ItemQuality.CODEC.optionalFieldOf("quality").forGetter(Technique::quality),
             IconReference.CODEC.optionalFieldOf("icon").forGetter(Technique::icon),
+            MiscCodecs.RGB_COLOR.optionalFieldOf("primary_color", DEFAULT_PRIMARY_COLOR).forGetter(Technique::primaryColor),
+            MiscCodecs.RGB_COLOR.optionalFieldOf("secondary_color", DEFAULT_SECONDARY_COLOR).forGetter(Technique::secondaryColor),
             EntityCondition.optionalCodec("learn_condition").forGetter(Technique::learnCondition),
             Identifier.CODEC.listOf().optionalFieldOf("exclusive_tags", List.of()).forGetter(Technique::exclusiveTags),
             NumberProvider.CODEC.optionalFieldOf("cultivation_modifier", new Constant(1.0D)).forGetter(Technique::cultivationModifier),

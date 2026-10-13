@@ -2,8 +2,8 @@ package com.iafenvoy.mxt.runtime.world;
 
 import com.iafenvoy.mxt.data.secretrealm.SecretRealm;
 import com.iafenvoy.mxt.data.secretrealm.SecretRealmGeneration;
-import com.iafenvoy.mxt.data.secretrealm.SecretRealmGeneration.Stem;
-import com.iafenvoy.mxt.data.secretrealm.SecretRealmGeneration.Template;
+import com.iafenvoy.mxt.data.secretrealm.builtin.StemGeneration;
+import com.iafenvoy.mxt.data.secretrealm.builtin.TemplateGeneration;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
@@ -125,10 +125,10 @@ public final class SecretRealmRegistry {
         List<Identifier> aliases = new ArrayList<>();
         record.definition().unwrapKey().ifPresent(key -> aliases.add(key.identifier()));
         SecretRealmGeneration generation = record.instance().generation();
-        if (generation instanceof Stem(
+        if (generation instanceof StemGeneration(
                 ResourceKey<LevelStem> stem1
         )) aliases.add(stem1.identifier());
-        if (generation instanceof Template template) aliases.add(template.stem().identifier());
+        if (generation instanceof TemplateGeneration template) aliases.add(template.stem().identifier());
         return aliases.stream();
     }
 

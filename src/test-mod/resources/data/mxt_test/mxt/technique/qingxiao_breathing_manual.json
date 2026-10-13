@@ -1,4 +1,6 @@
 {
+  "primary_color": "#1FA89B",
+  "secondary_color": "#DFF7F2",
   "learn_condition": { "type": "mxt:health", "comparison": ">=", "compare_to": 1 },
   "exclusive_tags": ["mxt_test:technique/qingxiao"],
   "cultivation_modifier": 1.2,

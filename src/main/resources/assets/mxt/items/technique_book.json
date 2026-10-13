@@ -1,0 +1,28 @@
+{
+  "model": {
+    "type": "minecraft:condition",
+    "property": "minecraft:using_item",
+    "on_false": {
+      "type": "minecraft:model",
+      "model": "mxt:item/technique_book"
+    },
+    "on_true": {
+      "type": "minecraft:model",
+      "model": "mxt:item/technique_book_reading"
+    },
+    "tints": [
+      {
+        "type": "mxt:technique",
+        "layer": "primary"
+      },
+      {
+        "type": "mxt:technique",
+        "layer": "secondary"
+      },
+      {
+        "type": "minecraft:constant",
+        "value": 16777215
+      }
+    ]
+  }
+}

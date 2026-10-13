@@ -30,8 +30,7 @@ import java.util.function.Supplier;
  * against it, because the AUI host is a whole-window screen and would otherwise never call a click
  * outside.
  */
-public abstract class AuiContainerScreen<T extends ApricityContainerMenu> extends ApricityContainerScreen
-        implements AuiWrappedScreen {
+public abstract class AuiContainerScreen<T extends ApricityContainerMenu> extends ApricityContainerScreen implements AuiWrappedScreen {
     /**
      * The page's own menu. {@code AbstractContainerScreen.menu} is typed as ApricityUI's base menu, and this
      * is the same object under the page's own type; a subclass reads {@code this.menu} as before.

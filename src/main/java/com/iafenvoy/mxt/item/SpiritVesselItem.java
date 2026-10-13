@@ -9,7 +9,6 @@ import com.iafenvoy.mxt.data.item.ResourceContainerComponent;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
-import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.resource.ResourceService;
 import com.iafenvoy.mxt.runtime.resource.ResourceService.Result;
@@ -132,7 +131,7 @@ public final class SpiritVesselItem extends Item implements ItemAuraAccess {
         // answers from the resource alone, and that is the one a stand asks.
         if (entity == null) return Object2IntMaps.emptyMap();
         Object2IntMap<Holder<Aura>> room = new Object2IntOpenHashMap<>();
-        MxtDatapackRegistries.holdersOrEmpty(entity.level().registryAccess(), MxtResourceKeys.AURA).forEach(aura -> {
+        entity.level().registryAccess().lookupOrThrow(MxtResourceKeys.AURA).listElements().forEach(aura -> {
             int fits = room(stack, aura.value().resource());
             if (fits > 0) room.put(aura, fits);
         });

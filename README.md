@@ -45,7 +45,7 @@ the changelog.**
   its four corners, so the five cells between them are not checked. **No herb block is among them**: a herb definition
   claims existing blocks with `blocks` and its own fruit with `growth.drops`, and the mod registers no herb block.
 - **Items**: materials such as Lesser to Supreme Spirit Stones, Spirit Iron, Spirit Wood and Cinnabar; generic items
-  such as Spirit Ring, Spirit Stone Bag, Spirit Vessel, Identification Mirror, Cultivation Jade Slip, Blank Talisman
+  such as Spirit Ring, Spirit Stone Bag, Spirit Vessel, Identification Mirror, Technique Book, Jade Slip, Blank Talisman
   Paper, Talisman Brush and Talisman (written with a sigil, poured full of aura, and spent the moment it
   fires), Contract Scroll, Beast Taming Bell, Spirit Beast Bag, Formation Plate, Wooden and Stone Tokens, Secret Realm
   Token and Recall Talisman.
@@ -102,7 +102,7 @@ datapacks or content packs; installing the mod alone does not give you a complet
 | Cultivation and Realms        |   ✅    | Players meditate to gather cultivation progress, faster where aura is dense, and break through to the next realm once the datapack requirements are met; realms and packs grant lifespan, and running out means death or rebirth as configured.           |
 | Elements                      |   ✅    | Defines elements and the overcoming and adaptation relations between them, read by spirit roots, aura and other gameplay.                                                                                                                                 |
 | Spirit Roots and Physiques    |   ✅    | Spirit roots and physiques can be granted to players, affecting cultivation, ability strength or passive attributes; exclusions are defined by datapacks, and a held one can be switched off without being given up.                                      |
-| Techniques                    |   ✅    | Learning a cultivation technique grants active moves or passive bonuses, and exclusion tags stop certain techniques from being learned together; a manual is an item with the `mxt:technique` component, and the mod generates a jade slip per technique. |
+| Techniques                    |   ✅    | Learning a cultivation technique grants active moves or passive bonuses, and exclusion tags stop certain techniques from being learned together; a manual is an item with the `mxt:technique` component, and the mod generates a technique book per technique. |
 | Abilities and Curses          |   ✅    | Abilities can be cast with a cost, cooldown, duration and target selection, and can also fire automatically on attacking, being hurt or killing; curses attach to a character, trigger periodically and can be removed by purification.                   |
 | Formations                    |   ✅    | Players build and activate formations; a formation keeps running by consuming resources, applies effects within its area and temporarily provides buffs/debuffs.                                                                                          |
 | Tribulations                  |   ✅    | A tribulation can be triggered on a realm breakthrough: it consumes a timeline of beats (an action, an idle wait, or a wait for a condition), gets harder with the realm and the local aura, and success or failure each run their own outcome.           |

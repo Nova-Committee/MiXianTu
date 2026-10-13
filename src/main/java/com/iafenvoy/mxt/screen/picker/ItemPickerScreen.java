@@ -252,17 +252,19 @@ public final class ItemPickerScreen extends AbstractContainerScreen<PickerMenu> 
         ContainerInput input = slotId == -999 && containerInput == ContainerInput.PICKUP ? ContainerInput.THROW : containerInput;
         if (input == ContainerInput.THROW && !player.canDropItems()) return;
 
-        if (slot == null) {
-            if (input != ContainerInput.QUICK_CRAFT) this.throwCarriedOutside(buttonNum);
+        // A quick craft drag frames itself with two slot-less calls, so those must still reach the menu; only the plain
+        // outside gesture is answered here.
+        if (slot == null && input != ContainerInput.QUICK_CRAFT) {
+            this.throwCarriedOutside(buttonNum);
             return;
         }
         // Nothing the grid will not give up - a locked or feature-disabled item - may be moved at all.
-        if (!slot.mayPickup(player)) return;
+        if (slot != null && !slot.mayPickup(player)) return;
 
         if (this.isGridSlot(slot) && input != ContainerInput.QUICK_CRAFT) {
             this.clickGridSlot(slot, buttonNum, quickKey, input);
         } else {
-            this.menu.clicked(slot.index, buttonNum, input, player);
+            this.menu.clicked(slot == null ? slotId : slot.index, buttonNum, input, player);
             player.inventoryMenu.broadcastChanges();
         }
     }

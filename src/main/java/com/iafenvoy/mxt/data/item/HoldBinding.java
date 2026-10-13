@@ -22,9 +22,12 @@ import java.util.List;
  */
 public interface HoldBinding extends ItemMatcher {
     int NO_HOLD = 0;
-    ItemUseAnimation DEFAULT_HOLD_ANIMATION = ItemUseAnimation.BLOCK;
     Holder<SoundEvent> DEFAULT_HOLD_SOUND = BuiltInRegistries.SOUND_EVENT.wrapAsHolder(SoundEvents.BOOK_PAGE_TURN);
-    List<ItemUseAnimation> ALLOWED_ANIMATIONS = List.of(ItemUseAnimation.BLOCK, ItemUseAnimation.BRUSH, ItemUseAnimation.BUNDLE, ItemUseAnimation.NONE, ItemUseAnimation.TOOT_HORN);
+    // The poses a reading may ask for. The charged ones are refused because a reading has no charge to scale by;
+    // eat and drink are here because the built-in book reads with the eating motion.
+    List<ItemUseAnimation> ALLOWED_ANIMATIONS = List.of(ItemUseAnimation.BLOCK, ItemUseAnimation.BRUSH,
+            ItemUseAnimation.BUNDLE, ItemUseAnimation.NONE, ItemUseAnimation.TOOT_HORN, ItemUseAnimation.EAT,
+            ItemUseAnimation.DRINK, ItemUseAnimation.BOW);
 
     // A declaration whose length depends on the stack answers NO_HOLD here and overrides requiresHold() to say
     // outright that it does ask for a hold; its real length is the stack-level holdTicks(Provider, ItemStack).

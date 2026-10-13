@@ -13,9 +13,7 @@ import net.neoforged.neoforge.registries.NeoForgeRegistries;
  */
 @SuppressWarnings("unused")
 public final class MxtIngredientTypes {
-    public static final DeferredRegister<IngredientType<?>> REGISTRY =
-            DeferredRegister.create(NeoForgeRegistries.Keys.INGREDIENT_TYPES, MiXianTu.MOD_ID);
+    public static final DeferredRegister<IngredientType<?>> REGISTRY = DeferredRegister.create(NeoForgeRegistries.INGREDIENT_TYPES, MiXianTu.MOD_ID);
 
-    public static final DeferredHolder<IngredientType<?>, IngredientType<QualityIngredient>> QUALITY =
-            REGISTRY.register("quality", () -> QualityIngredient.TYPE);
+    public static final DeferredHolder<IngredientType<?>, IngredientType<QualityIngredient>> QUALITY = REGISTRY.register("quality", () -> QualityIngredient.TYPE);
 }

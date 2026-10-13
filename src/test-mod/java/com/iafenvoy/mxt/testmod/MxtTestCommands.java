@@ -119,6 +119,7 @@ import com.iafenvoy.mxt.data.item.SecretRealmTokenComponent;
 import com.iafenvoy.mxt.data.item.SpiritBeastComponent;
 import com.iafenvoy.mxt.data.item.TalismanComponent;
 import com.iafenvoy.mxt.data.item.TalismanComponent.TriggerMode;
+import com.iafenvoy.mxt.data.item.TechniqueBinding;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.data.secretrealm.SecretRealm;
@@ -1637,26 +1638,30 @@ public final class MxtTestCommands {
                     + " advanced=" + advanced + " health_lost=" + masteryLost + " dispatched=" + dispatched[0]
                     + (mastery ? " OK" : " MISMATCH")), false);
 
-            // What makes a manual is the stack's own component: a jade slip out of the creative menu teaches
+            // What makes a manual is the stack's own component: a technique book out of the creative menu teaches
             // nothing, while the carrier the mod generates for a technique teaches exactly that technique - using
             // the item the declaration names when it names one.
-            ItemStack blankSlip = MxtItems.CULTIVATION_JADE_SLIP.toStack();
+            ItemStack blankBook = MxtItems.TECHNIQUE_BOOK.toStack();
             Holder<Technique> declaredTechnique = require(MxtResourceKeys.TECHNIQUE, TECHNIQUE);
             ItemStack generated = ItemBindingService.techniqueCarrier(level.registryAccess(), declaredTechnique);
             Holder<Technique> customTechnique = require(MxtResourceKeys.TECHNIQUE, id("azure_water_manual"));
             ItemStack customCarrier = ItemBindingService.techniqueCarrier(level.registryAccess(), customTechnique);
-            boolean blankless = ItemBindingService.technique(level.registryAccess(), blankSlip).isEmpty();
-            boolean carrier = generated.is(MxtItems.CULTIVATION_JADE_SLIP.get())
+            boolean blankless = ItemBindingService.technique(level.registryAccess(), blankBook).isEmpty();
+            boolean carrier = generated.is(MxtItems.TECHNIQUE_BOOK.get())
                     && customCarrier.is(MxtTestTechniqueItems.AZURE_WATER_MANUAL.get())
                     && blankless
                     && ItemBindingService.technique(level.registryAccess(), generated)
-                    .filter(binding -> HolderHelper.id(binding.technique()).equals(TECHNIQUE) && binding.learnTime() == 40)
+                    // This declaration asks for a pose of its own, which the built-in book ignores.
+                    .filter(binding -> HolderHelper.id(binding.technique()).equals(TECHNIQUE) && binding.learnTime() == 40
+                            && binding.holdAnimation() == ItemUseAnimation.BLOCK)
                     .isPresent()
                     && ItemBindingService.technique(level.registryAccess(), customCarrier)
-                    .filter(binding -> binding.holdAnimation() == ItemUseAnimation.BRUSH)
+                    // An item a declaration names itself keeps the pose that declaration asks for.
+                    .filter(binding -> binding.holdAnimation() == ItemUseAnimation.BUNDLE)
                     .isPresent()
-                    && HoldLookup.hold(generated) instanceof TechniqueHold
-                    && HoldLookup.hold(blankSlip) == null;
+                    && HoldLookup.hold(generated) instanceof TechniqueHold bookHold
+                    && bookHold.holdAnimation(level.registryAccess(), generated) == TechniqueBinding.DEFAULT_HOLD_ANIMATION
+                    && HoldLookup.hold(blankBook) == null;
             source.sendSuccess(() -> Component.literal("technique probe: blank_teaches=" + !blankless
                     + " generated=" + generated.getItem() + " custom=" + customCarrier.getItem()
                     + (carrier ? " OK" : " MISMATCH")), false);
@@ -4952,9 +4957,9 @@ public final class MxtTestCommands {
         Holder<Technique> sword = require(MxtResourceKeys.TECHNIQUE, SWORD_MANUAL);
         Holder<Resource> waterPower = require(MxtResourceKeys.RESOURCE, WATER_POWER);
         Holder<Resource> mastery = require(MxtResourceKeys.RESOURCE, SWORD_MASTERY);
-        // The manual the partner leg reads is the jade slip carrying the technique component: a declaration's
+        // The manual the partner leg reads is the technique book carrying the technique component: a declaration's
         // claimed item is a manual by matching and would carry no component at all.
-        ItemStack carrier = MxtItems.CULTIVATION_JADE_SLIP.toStack();
+        ItemStack carrier = MxtItems.TECHNIQUE_BOOK.toStack();
         carrier.set(MxtDataComponents.TECHNIQUE.get(), breathing);
 
         // The source's own position, so the probe runs both from a client and from the server console, whose

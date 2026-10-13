@@ -16,6 +16,7 @@ import java.util.function.Function;
  * The bridge from a data pack to storage: a data pack can only name a registry, so one line per family connects
  * that registry to the attachment that holds an entity's values for it. Only {@code mxt:ability} is registered.
  */
+//FIXME::What is this
 public final class MxtDataStorageHosts {
     private static final Map<Identifier, Function<Entity, DataStorageHolder>> BY_REGISTRY = new LinkedHashMap<>();
 

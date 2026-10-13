@@ -2,6 +2,7 @@ package com.iafenvoy.mxt.runtime.cultivation;
 
 import com.iafenvoy.mxt.data.item.HoldBinding;
 import com.iafenvoy.mxt.data.item.TechniqueBinding;
+import com.iafenvoy.mxt.registry.MxtItems;
 import com.iafenvoy.mxt.runtime.item.ItemBindingService;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup.Provider;
@@ -43,7 +44,10 @@ public record TechniqueHold(List<Entry> entries) implements HoldBinding {
 
     @Override
     public ItemUseAnimation holdAnimation(Provider registries, ItemStack stack) {
-        return ItemBindingService.technique(registries, stack).map(TechniqueBinding::holdAnimation).orElse(DEFAULT_HOLD_ANIMATION);
+        // The built-in book always reads the same way: the pose belongs to that shared item, not to a technique, so
+        // a declaration's own pose only reaches the items the declaration names.
+        if (stack.is(MxtItems.TECHNIQUE_BOOK)) return TechniqueBinding.DEFAULT_HOLD_ANIMATION;
+        return ItemBindingService.technique(registries, stack).map(TechniqueBinding::holdAnimation).orElse(TechniqueBinding.DEFAULT_HOLD_ANIMATION);
     }
 
     @Override
@@ -54,7 +58,7 @@ public record TechniqueHold(List<Entry> entries) implements HoldBinding {
     // Asked only where no stack exists, which is the question whether this declaration is a hold at all.
     @Override
     public ItemUseAnimation holdAnimation() {
-        return DEFAULT_HOLD_ANIMATION;
+        return TechniqueBinding.DEFAULT_HOLD_ANIMATION;
     }
 
     @Override

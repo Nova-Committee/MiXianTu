@@ -1,8 +1,9 @@
 package com.iafenvoy.mxt.render;
 
 import com.iafenvoy.mxt.MiXianTu;
-import com.iafenvoy.mxt.runtime.item.IncompleteMarkerService;
+import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.util.ClientLevelAccess;
+import com.iafenvoy.mxt.util.matcher.ItemMatcher;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.renderer.RenderPipelines;
@@ -48,7 +49,8 @@ public final class IncompleteMarkerRenderer implements IItemDecorator {
     public boolean render(@NonNull GuiGraphicsExtractor graphics, @NonNull Font font, @NonNull ItemStack stack, int x, int y) {
         Provider access = ClientLevelAccess.level();
         // No level is no registries: a stack in a screen drawn before one is loaded carries no declaration.
-        if (access == null || !IncompleteMarkerService.marked(access, stack)) return false;
+        if (access == null || stack.isEmpty() || access.lookupOrThrow(MxtResourceKeys.INCOMPLETE).listElements().noneMatch(holder -> ItemMatcher.matches(holder.value(), stack)))
+            return false;
         graphics.blit(RenderPipelines.GUI_TEXTURED, BADGE, x, y, 0.0F, 0.0F, BADGE_SIZE, BADGE_SIZE, BADGE_SIZE, BADGE_SIZE);
         // Nothing of the shared render state is touched, so the decorators after this one are unaffected.
         return false;

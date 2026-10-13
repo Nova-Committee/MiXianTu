@@ -50,10 +50,13 @@ public final class MxtItems {
     public static final DeferredItem<Item> SPIRIT_WOOD = register("spirit_wood", Item::new);
     public static final DeferredItem<Item> SPIRIT_WOOD_CORE = register("spirit_wood_core", Item::new);
 
-    // Spirit root, physique and technique
+    // Spirit root and physique
     public static final DeferredItem<SpiritRootItem> SPIRIT_ROOT = register("spirit_root", SpiritRootItem::new);
     public static final DeferredItem<PhysiqueItem> PHYSIQUE = register("physique", PhysiqueItem::new);
-    public static final DeferredItem<Item> CULTIVATION_JADE_SLIP = register("cultivation_jade_slip", Item::new);
+
+    // Technique and the jade slip
+    public static final DeferredItem<Item> TECHNIQUE_BOOK = register("technique_book", TechniqueBookItem::new);
+    public static final DeferredItem<Item> JADE_SLIP = register("jade_slip", JadeSlipItem::new);
 
     // Containers and tools
     public static final DeferredItem<Item> SPIRIT_RING = register("spirit_ring", Item::new);

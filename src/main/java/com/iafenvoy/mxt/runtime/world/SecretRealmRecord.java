@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.runtime.world;
 
 import com.iafenvoy.mxt.data.secretrealm.SecretRealm;
-import com.iafenvoy.mxt.data.secretrealm.SecretRealmGeneration.Existing;
+import com.iafenvoy.mxt.data.secretrealm.builtin.ExistingGeneration;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -66,7 +66,7 @@ public record SecretRealmRecord(Holder<SecretRealm> definition, int index, Resou
     // A claimed secret realm keeps the terrain its owner will come back to, and a secret realm built on an existing
     // dimension has terrain that was never ours to discard.
     public boolean persists() {
-        return this.instance().owned() || this.instance().generation() instanceof Existing;
+        return this.instance().owned() || this.instance().generation() instanceof ExistingGeneration;
     }
 
     // Nobody inside: the clock stops until the next arrival, and the claim and terrain stay.

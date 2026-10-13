@@ -1,4 +1,6 @@
 {
+  "primary_color": "#B23A34",
+  "secondary_color": "#FFD9A0",
   "icon": "mxt_test:textures/item/qingxiao_spirit_crystal.png",
   "learn_condition": { "type": "mxt:health", "comparison": ">=", "compare_to": 1 },
   "exclusive_tags": ["mxt_test:technique/sword"],

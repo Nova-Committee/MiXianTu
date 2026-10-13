@@ -1,6 +1,7 @@
 {
   "technique": "mxt_test:qingxiao_breathing_manual",
   "learn_time": 40,
+  "hold_animation": "block",
   "conditions": [
     {"type": "mxt:always"}
   ]

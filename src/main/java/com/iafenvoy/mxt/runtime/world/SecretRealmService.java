@@ -2,7 +2,7 @@ package com.iafenvoy.mxt.runtime.world;
 
 import com.iafenvoy.mxt.attachment.SecretRealmTravelAttachment;
 import com.iafenvoy.mxt.data.secretrealm.SecretRealm;
-import com.iafenvoy.mxt.data.secretrealm.SecretRealmGeneration.Existing;
+import com.iafenvoy.mxt.data.secretrealm.builtin.ExistingGeneration;
 import com.iafenvoy.mxt.event.SecretRealmEvent.*;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
@@ -207,7 +207,7 @@ public final class SecretRealmService {
         }
         SecretRealmRecord current = SecretRealmRegistry.at(record.dimension()).orElse(null);
         if (current == null) return false;
-        boolean deleted = current.instance().generation() instanceof Existing
+        boolean deleted = current.instance().generation() instanceof ExistingGeneration
                 || RuntimeDimensionService.delete(server, current.dimension());
         SecretRealmRegistry.remove(current.dimension());
         NeoForge.EVENT_BUS.post(new Destroy(server, current.definition(), current.dimension(), current.index(), current.owner()));
@@ -266,7 +266,7 @@ public final class SecretRealmService {
         boolean keep = record.persists();
         if (keep) {
             SecretRealmRegistry.replace(record.idle());
-            if (!(record.instance().generation() instanceof Existing))
+            if (!(record.instance().generation() instanceof ExistingGeneration))
                 RuntimeDimensionService.unload(server, record.dimension());
         } else {
             SecretRealmRegistry.remove(record.dimension());
