@@ -43,12 +43,6 @@ public final class ItemElements {
         return declared.isEmpty() ? fromAura(access, stack) : declared;
     }
 
-    // A caller with no server (a client-side script) gets no element rather than an exception.
-    public static Set<Holder<Element>> of(ItemStack stack) {
-        MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
-        return server == null ? Set.of() : of(server.registryAccess(), stack);
-    }
-
     private static Set<Holder<Element>> declared(RegistryAccess access, ItemStack stack) {
         Registry<Element> registry = access.lookupOrThrow(MxtResourceKeys.ELEMENT);
         Set<Holder<Element>> result = new LinkedHashSet<>();

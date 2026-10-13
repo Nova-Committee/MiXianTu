@@ -80,22 +80,23 @@ public final class MxtDatapackRegistries {
         register(event, MxtResourceKeys.HEAT_SOURCE, HeatSource.DIRECT_CODEC);
         register(event, MxtResourceKeys.FORMATION, Formation.DIRECT_CODEC);
         register(event, MxtResourceKeys.TRIBULATION, Tribulation.DIRECT_CODEC);
+        register(event, MxtResourceKeys.PILL, Pill.DIRECT_CODEC);
+        register(event, MxtResourceKeys.PILL_BINDING, PillBinding.DIRECT_CODEC);
+        register(event, MxtResourceKeys.AURA_ZONE, AuraZone.DIRECT_CODEC);
+        register(event, MxtResourceKeys.ITEM_AURA, ItemAura.DIRECT_CODEC);
+        register(event, MxtResourceKeys.ITEM_QUALITY, ItemQuality.DIRECT_CODEC);
+        register(event, MxtResourceKeys.DEFAULT_QUALITY, DefaultQuality.DIRECT_CODEC);
+        register(event, MxtResourceKeys.TRIGGER, TriggerRule.DIRECT_CODEC);
+        register(event, MxtResourceKeys.TALISMAN, Talisman.DIRECT_CODEC);
+
+        register(event, MxtResourceKeys.BLOCK_AURA, BlockAura.CODEC);
         register(event, MxtResourceKeys.CREATURE_PROFILE, CreatureProfile.CODEC);
         register(event, MxtResourceKeys.CONTRACT_TYPE, ContractType.CODEC);
         register(event, MxtResourceKeys.SECRET_REALM, SecretRealm.CODEC);
         register(event, MxtResourceKeys.CURRENCY, CurrencyValue.CODEC);
         register(event, MxtResourceKeys.ITEM_BINDING, ItemBinding.CODEC);
         register(event, MxtResourceKeys.WEAPON_BINDING, WeaponBinding.CODEC);
-        register(event, MxtResourceKeys.PILL, Pill.DIRECT_CODEC);
-        register(event, MxtResourceKeys.PILL_BINDING, PillBinding.DIRECT_CODEC);
         register(event, MxtResourceKeys.TECHNIQUE_BINDING, TechniqueBinding.CODEC);
-        register(event, MxtResourceKeys.AURA_ZONE, AuraZone.DIRECT_CODEC);
-        register(event, MxtResourceKeys.BLOCK_AURA, BlockAura.CODEC);
-        register(event, MxtResourceKeys.ITEM_AURA, ItemAura.DIRECT_CODEC);
-        register(event, MxtResourceKeys.ITEM_QUALITY, ItemQuality.DIRECT_CODEC);
-        register(event, MxtResourceKeys.DEFAULT_QUALITY, DefaultQuality.DIRECT_CODEC);
-        register(event, MxtResourceKeys.TRIGGER, TriggerRule.DIRECT_CODEC);
-        register(event, MxtResourceKeys.TALISMAN, Talisman.DIRECT_CODEC);
         register(event, MxtResourceKeys.INCOMPLETE, IncompleteMarker.CODEC);
     }
 
@@ -120,14 +121,6 @@ public final class MxtDatapackRegistries {
         return registry(key).listElements();
     }
 
-    // The same lookup without the "a server has to be running" trap, for readers that also run on a client; empty
-    // when no server is running, since there is no registry then.
-    public static <T> Optional<Reference<T>> holderOrEmpty(ResourceKey<? extends Registry<T>> key, Identifier id) {
-        MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
-        if (server == null) return Optional.empty();
-        return server.registryAccess().get(ResourceKey.create(key, id));
-    }
-
     public static <T> Stream<Reference<T>> holders(Provider access, ResourceKey<? extends Registry<T>> key) {
         return access.lookupOrThrow(key).listElements();
     }
@@ -135,19 +128,11 @@ public final class MxtDatapackRegistries {
     // Client code must use this rather than holder(ResourceKey, Identifier): that one reads the server's
     // registries, which exist on a client only while it runs an integrated server.
     public static <T> Optional<Reference<T>> holder(Provider access, ResourceKey<? extends Registry<T>> key, Identifier id) {
-        return access.lookupOrThrow(key).get(ResourceKey.create(key, id));
+        return access.get(ResourceKey.create(key, id));
     }
 
     public static <T> Optional<T> get(Provider access, ResourceKey<? extends Registry<T>> key, Identifier id) {
         return holder(access, key, id).map(Holder::value);
-    }
-
-    public static int size(ResourceKey<? extends Registry<?>> key) {
-        MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
-        if (server == null) {
-            throw new IllegalStateException("Native datapack registries are only available while a server is running");
-        }
-        return server.registryAccess().lookupOrThrow(key).size();
     }
 
     public static <T> Registry<T> registry(ResourceKey<? extends Registry<T>> key) {

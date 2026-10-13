@@ -10,6 +10,7 @@ import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntMaps;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.protocol.Packet;
@@ -21,6 +22,7 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jspecify.annotations.NonNull;
 
@@ -50,20 +52,20 @@ public final class DisplayStandBlockEntity extends BlockEntity implements AuraAc
     }
 
     @Override
-    public Object2IntMap<Holder<Aura>> getCapacity(@Nullable LivingEntity entity) {
+    public Object2IntMap<Holder<Aura>> getCapacity(@Nullable LivingEntity entity, @NotNull HolderLookup.Provider registries) {
         if (this.displayedItem.getItem() instanceof ItemAuraAccess access)
-            return access.getCapacity(entity, this.displayedItem);
+            return access.getCapacity(entity, registries, this.displayedItem);
         return Object2IntMaps.emptyMap();
     }
 
     @Override
-    public int insert(@Nullable LivingEntity entity, Holder<Aura> aura, int amount, boolean simulate) {
+    public int insert(@Nullable LivingEntity entity, @NotNull HolderLookup.Provider registries, Holder<Aura> aura, int amount, boolean simulate) {
         AuraAccess.requireNonNegative(amount);
         // Only a store that asked to be poured into is filled here: the reading is the storing interface, the
         // report is the manual one.
         if (!(this.displayedItem.getItem() instanceof ItemAuraAccess access)) return amount;
         if (this.level == null) return amount;
-        int remaining = access.insert(entity, this.displayedItem, aura, amount, simulate);
+        int remaining = access.insert(entity, registries, this.displayedItem, aura, amount, simulate);
         if (!simulate && remaining != amount) {
             if (access instanceof UseItemAuraAccess manual) {
                 // The store is in nobody's hands, so the place it is at travels with the report instead of being read
@@ -78,7 +80,7 @@ public final class DisplayStandBlockEntity extends BlockEntity implements AuraAc
     }
 
     @Override
-    public int extract(@Nullable LivingEntity entity, Holder<Aura> aura, int amount, boolean simulate) {
+    public int extract(@Nullable LivingEntity entity, @NotNull HolderLookup.Provider registries, Holder<Aura> aura, int amount, boolean simulate) {
         return AuraAccess.requireNonNegative(amount);
     }
 

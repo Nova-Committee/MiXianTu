@@ -34,13 +34,12 @@ public final class DamageEventBridge {
         // Nothing to answer for: the shaping layer skipped this strike for the same reason, and reading its
         // elements here would leave a mark on the target that the number never asked for.
         if (DamageCalculationService.bypasses(source)) return;
-        DamageElements.Strike strike = DamageElements.reading(source);
+        DamageElements.Strike strike = DamageElements.reading(source, target.registryAccess());
         double reduced = DamageCalculationService.incoming(target, strike.elements(), incoming);
         if (reduced != incoming) event.setAmount((float) reduced);
         // Only a strike that declared what it was made of rubs off. The amounts come from the same reading, and
         // what the target carries decides how much gets through.
         if (strike.origin().attaches())
-            ElementReactionService.applyFromStrike(target, strike.attachment(), FormulaContext.of(target),
-                    DamageCalculationService.attachmentMultiplier(target));
+            ElementReactionService.applyFromStrike(target, strike.attachment(), FormulaContext.of(target), DamageCalculationService.attachmentMultiplier(target));
     }
 }

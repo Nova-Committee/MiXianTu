@@ -36,14 +36,16 @@ public final class ItemAuraTooltipAppender {
                                        Player player, TooltipFlag flag, Consumer<Component> builder) {
         Provider registries = context.registries();
         if (registries == null) return;
-        ItemAuraService.find(registries, stack).ifPresent(itemAura -> appendItemAura(builder, stack, itemAura.value()));
+        // The access is carried so that a value written as a registry-backed formula still resolves here.
+        FormulaContext formula = FormulaContext.of(registries);
+        ItemAuraService.find(registries, stack).ifPresent(itemAura -> appendItemAura(builder, stack, itemAura.value(), formula));
     }
 
-    private static void appendItemAura(Consumer<Component> builder, ItemStack stack, ItemAura itemAura) {
+    private static void appendItemAura(Consumer<Component> builder, ItemStack stack, ItemAura itemAura, FormulaContext formula) {
         int count = Math.max(1, stack.getCount());
-        double total = scale(itemAura.aura().evaluate(FormulaContext.EMPTY), count);
-        double speed = scale(itemAura.consumeSpeed().evaluate(FormulaContext.EMPTY), count);
-        double releaseSpeed = scale(itemAura.releaseSpeed().evaluate(FormulaContext.EMPTY), count);
+        double total = scale(itemAura.aura().evaluate(formula), count);
+        double speed = scale(itemAura.consumeSpeed().evaluate(formula), count);
+        double releaseSpeed = scale(itemAura.releaseSpeed().evaluate(formula), count);
         builder.accept(Component.translatable("tooltip.mxt.item.item_aura").withStyle(ChatFormatting.AQUA));
         builder.accept(Component.translatable("tooltip.mxt.item_aura.total", TooltipText.number(total)).withStyle(ChatFormatting.BLUE));
         builder.accept(Component.translatable("tooltip.mxt.item_aura.speed", TooltipText.number(speed)).withStyle(ChatFormatting.BLUE));

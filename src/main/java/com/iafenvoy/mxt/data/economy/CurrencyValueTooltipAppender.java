@@ -37,11 +37,14 @@ public final class CurrencyValueTooltipAppender {
         Provider registries = context.registries();
         if (registries == null) return;
         CurrencyValueService.definition(registries, stack).ifPresent(definition -> {
+            // The player when there is one, since a condition may read them; the access alone otherwise, so a
+            // registry-backed value still resolves on a client that has no holder.
+            FormulaContext formula = player == null ? FormulaContext.of(registries) : FormulaContext.of(player);
             boolean valid = definition.unavailableWhen().isEmpty() || player != null && definition.unavailableWhen().stream().noneMatch(entry ->
-                    entry.value().test(player, stack, FormulaContext.EMPTY));
+                    entry.value().test(player, stack, formula));
             // The settled value rather than the declared denomination: an item's quality can change what a unit is
             // worth, so printing the raw value would disagree with what the currency actually pays out.
-            long value = valid ? CurrencyValueService.unitValue(registries, player, stack, FormulaContext.EMPTY).orElse(0L) : 0L;
+            long value = valid ? CurrencyValueService.unitValue(registries, player, stack, formula).orElse(0L) : 0L;
             builder.accept(Component.translatable("item.mxt.currency_value", value).withStyle(ChatFormatting.GOLD));
             if (!valid) {
                 CurrencyValueService.unavailableReason(registries, player, stack)

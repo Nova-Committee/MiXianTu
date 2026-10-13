@@ -4,6 +4,7 @@ import com.iafenvoy.mxt.api.MountVehicle;
 import com.iafenvoy.mxt.command.ServerCommandManager;
 import com.iafenvoy.mxt.runtime.artifact.FlightService;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
+import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
@@ -24,12 +25,8 @@ public final class FlightCommand {
 
     // A seat offset is a number nobody can judge from the JSON, so this fills every seat still open with a body and
     // lets the operator look at where they landed. The markers leave with the flight (see the mount's removal path).
-    private static int fill(CommandSourceStack source) {
-        ServerPlayer player = source.getPlayer();
-        if (player == null) {
-            source.sendFailure(Component.translatable("command.mxt.message.requires_player"));
-            return 0;
-        }
+    private static int fill(CommandSourceStack source) throws CommandSyntaxException {
+        ServerPlayer player = source.getPlayerOrException();
         Entity body = player.getVehicle();
         if (!(body instanceof MountVehicle vehicle)) {
             source.sendFailure(Component.translatable("command.mxt.flight.not_flying"));

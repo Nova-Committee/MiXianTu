@@ -4,14 +4,11 @@ import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.runtime.ServerCache;
 import com.iafenvoy.mxt.util.HolderHelper;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
 import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.resources.Identifier;
-import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.Nullable;
@@ -68,42 +65,10 @@ public final class AuraLookup {
     }
 
     public static Optional<Aura> find(LivingEntity entity, Holder<Resource> resource) {
-        return find(entity.level().registryAccess(), resource);
+        return find(entity.registryAccess(), resource);
     }
 
     public static Optional<Aura> find(@Nullable Level level, Holder<Resource> resource) {
         return level == null ? Optional.empty() : find(level.registryAccess(), resource);
-    }
-
-    // Server-only, for callers holding no entity: it reads the server registry directly, so it stays valid
-    // while the server cache is still being built.
-    public static Optional<Reference<Aura>> holderServer(Identifier resource) {
-        return MxtDatapackRegistries.holders(MxtResourceKeys.AURA)
-                .filter(aura -> HolderHelper.id(aura.value().resource()).equals(resource)).findFirst();
-    }
-
-    public static Optional<Reference<Aura>> holderServer(Holder<Resource> resource) {
-        return holderServer(HolderHelper.id(resource));
-    }
-
-    public static Optional<Aura> findServer(Holder<Resource> resource) {
-        return holderServer(resource).map(Reference::value);
-    }
-
-    public static Optional<Aura> findServer(Identifier resource) {
-        return holderServer(resource).map(Reference::value);
-    }
-
-    // Null when no server is up.
-    public static @Nullable Provider serverAccess() {
-        return ServerCache.get().map(cache -> (Provider) cache.server().registryAccess()).orElse(null);
-    }
-
-    public static @Nullable Provider access(FormulaContext context) {
-        Entity caster = context.caster();
-        if (caster != null) return caster.level().registryAccess();
-        Entity target = context.target();
-        if (target != null) return target.level().registryAccess();
-        return serverAccess();
     }
 }

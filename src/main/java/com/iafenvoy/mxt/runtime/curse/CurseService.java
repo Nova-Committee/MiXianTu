@@ -11,8 +11,6 @@ import com.iafenvoy.mxt.event.CurseRemoveEvent.Post;
 import com.iafenvoy.mxt.event.CurseRemoveEvent.Pre;
 import com.iafenvoy.mxt.event.CurseRemoveEvent.Reason;
 import com.iafenvoy.mxt.registry.MxtAttachments;
-import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
-import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.Holder;
@@ -20,7 +18,6 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Entity;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.server.ServerLifecycleHooks;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
@@ -41,48 +38,23 @@ public final class CurseService {
     private CurseService() {
     }
 
-    // Where one held instance stands relative to the definitions loaded now.
-    public enum DefinitionState {
-        /**
-         * The definition is loaded.
-         */
-        ACTIVE,
-        /**
-         * The definition is not in the registry at all any more.
-         */
-        UNKNOWN
-    }
-
-    // Without a running server there are no datapack registries to judge against, and no curse transaction is
-    // server-authoritative anyway, so the instance reads as active.
-    public static DefinitionState definitionState(Holder<Curse> curse) {
-        if (ServerLifecycleHooks.getCurrentServer() == null) return DefinitionState.ACTIVE;
-        return MxtDatapackRegistries.holderOrEmpty(MxtResourceKeys.CURSE, HolderHelper.id(curse)).isPresent()
-                ? DefinitionState.ACTIVE : DefinitionState.UNKNOWN;
-    }
-
-    public static ApplyResult apply(CurseHolderAttachment data, Holder<Curse> curse, int stacks,
-                                    long gameTime, FormulaContext context, Identifier source) {
+    public static ApplyResult apply(CurseHolderAttachment data, Holder<Curse> curse, int stacks, long gameTime, FormulaContext context, Identifier source) {
         return apply(data, curse, stacks, gameTime, context, source, NeoForge.EVENT_BUS);
     }
 
     /**
      * Variant for integrations that own a dedicated event bus.
      */
-    public static ApplyResult apply(CurseHolderAttachment data, Holder<Curse> curse, int stacks,
-                                    long gameTime, FormulaContext context, Identifier source, @NotNull IEventBus eventBus) {
+    public static ApplyResult apply(CurseHolderAttachment data, Holder<Curse> curse, int stacks, long gameTime, FormulaContext context, Identifier source, @NotNull IEventBus eventBus) {
         return apply(data, curse, stacks, gameTime, context, source, eventBus, Optional.empty());
     }
 
-    public static ApplyResult apply(CurseHolderAttachment data, Holder<Curse> curse, int stacks,
-                                    long gameTime, FormulaContext context, Identifier source, IEventBus eventBus,
-                                    Optional<Long> durationOverride) {
-        Curse definition = curse.value();
+    public static ApplyResult apply(CurseHolderAttachment data, Holder<Curse> curse, int stacks, long gameTime, FormulaContext context, Identifier source, IEventBus eventBus, Optional<Long> durationOverride) {
         CurseApplyEvent.Pre event = new CurseApplyEvent.Pre(data, curse, stacks, gameTime, context, source);
         if (eventBus.post(event).isCanceled()) return ApplyResult.cancelledResult();
         // A replacement discards an existing instance and reports the displaced one as a removal, so listeners
         // still learn it disappeared; it runs no action of its own, being an outside decision.
-        State displaced = definition.stackingMode() == StackingMode.REPLACE ? data.instances().get(curse) : null;
+        State displaced = curse.value().stackingMode() == StackingMode.REPLACE ? data.instances().get(curse) : null;
         Set<Identifier> displacedFrom = data.sources().of(curse);
         CurseLedger ledger = read(data);
         Optional<CurseInstance> applied = ledger.apply(curse, event.stacks(), gameTime, context, durationOverride);
@@ -119,9 +91,6 @@ public final class CurseService {
     private static ApplyResult apply(Entity target, Holder<Curse> curse, int stacks, long gameTime,
                                      FormulaContext context, Identifier source, IEventBus eventBus, Optional<Long> durationOverride) {
         Curse definition = curse.value();
-        DefinitionState state = definitionState(curse);
-        if (state != DefinitionState.ACTIVE)
-            return ApplyResult.rejected(ApplyFailure.UNKNOWN);
         if (!definition.applicationCondition().test(target, context))
             return ApplyResult.rejected(ApplyFailure.CONDITION);
         String key = transactionKey(target, curse);
@@ -162,7 +131,6 @@ public final class CurseService {
         if (state == null) return Optional.empty();
         // A frozen instance - its definition is gone from the pack - runs nothing and only ever leaves by an
         // explicit removal, so neither an expiry nor a cure can quietly turn it into a default effect.
-        if (definitionState(curse) != DefinitionState.ACTIVE && reason != Reason.EXPLICIT) return Optional.empty();
         if (eventBus.post(new Pre(data, curse, state, sources, reason, gameTime)).isCanceled()) return Optional.empty();
         CurseLedger ledger = read(data);
         Optional<CurseInstance> result = ledger.remove(curse);
@@ -265,12 +233,6 @@ public final class CurseService {
         for (Entry<Holder<Curse>, State> entry : List.copyOf(data.instances().entrySet())) {
             Holder<Curse> curse = entry.getKey();
             State state = entry.getValue();
-            DefinitionState resolved = definitionState(curse);
-            if (resolved != DefinitionState.ACTIVE) {
-                // Frozen: no periodic effect and no expiry, while the instance itself stays exactly as it is.
-                if (resolved == DefinitionState.UNKNOWN) changed |= data.markUnknown(curse);
-                continue;
-            }
             changed |= data.markKnown(curse);
             Curse definition = curse.value();
             if (definition.typedType().inert()) continue;

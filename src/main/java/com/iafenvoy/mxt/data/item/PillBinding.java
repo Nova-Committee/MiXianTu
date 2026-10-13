@@ -27,7 +27,7 @@ public record PillBinding(List<Entry> entries, Holder<Pill> pill, Optional<Integ
             Codec.intRange(1, Integer.MAX_VALUE).optionalFieldOf("max_uses").forGetter(PillBinding::maxUses),
             NumberProvider.CODEC.optionalFieldOf("cooldown", new Constant(0.0D)).forGetter(PillBinding::cooldown),
             Codec.INT.optionalFieldOf("priority", DEFAULT_PRIORITY).forGetter(PillBinding::priority)
-    ).apply(i, PillBinding::new)).flatXmap(PillBinding::validate, PillBinding::validate);
+    ).apply(i, PillBinding::new)).validate(PillBinding::validate);
 
     // A constant cooldown can be rejected at load. A formula is checked when the dose is taken.
     private static DataResult<PillBinding> validate(PillBinding binding) {

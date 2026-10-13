@@ -28,7 +28,8 @@ public record ModifyAbilityStorageAction(Identifier id, DataStorage value) imple
     public void execute(@NonNull EntityActionContext ctx) {
         Entity entity = ctx.entity();
         if (entity.level().isClientSide()) return;
-        Ability definition = MxtDatapackRegistries.get(MxtResourceKeys.ABILITY, this.id).orElse(null);
+        Ability definition = MxtDatapackRegistries.get(entity.level().registryAccess(), MxtResourceKeys.ABILITY, this.id)
+                .orElse(null);
         if (definition == null) {
             MiXianTu.LOGGER.warn("{} is not an ability; nothing was written", this.id);
             return;

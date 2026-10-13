@@ -1,56 +1,31 @@
 package com.iafenvoy.mxt.testmod;
 
-import com.iafenvoy.jupiter.config.entry.BooleanEntry;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import com.iafenvoy.mxt.api.*;
+import com.iafenvoy.jupiter.config.entry.BooleanEntry;
 import com.iafenvoy.mxt.MiXianTu;
-import com.iafenvoy.mxt.attachment.AbilityAttachment;
-import com.iafenvoy.mxt.attachment.CreatureSpiritAttachment;
-import com.iafenvoy.mxt.attachment.CultivationAttachment;
-import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
-import com.iafenvoy.mxt.attachment.SpiritIdentityAttachment;
-import com.iafenvoy.mxt.attachment.TribulationAttachment;
-import com.iafenvoy.mxt.attachment.TriggerCooldownAttachment;
+import com.iafenvoy.mxt.api.*;
+import com.iafenvoy.mxt.attachment.*;
 import com.iafenvoy.mxt.compat.kubejs.MxtKubeJsApi;
-import com.iafenvoy.mxt.data.formation.Formation;
+import com.iafenvoy.mxt.config.MxtServerConfig;
+import com.iafenvoy.mxt.config.MxtServerConfig.LifespanOutcome;
 import com.iafenvoy.mxt.data.SpriteIcon;
-import com.iafenvoy.mxt.data.talisman.Talisman;
 import com.iafenvoy.mxt.data.Tribulation;
-import com.iafenvoy.mxt.data.ability.TargetSelector;
-import com.iafenvoy.mxt.data.ability.target.AreaTargetSelector;
-import com.iafenvoy.mxt.data.ability.target.ConeTargetSelector;
-import com.iafenvoy.mxt.data.ability.target.RayTargetSelector;
-import com.iafenvoy.mxt.data.ability.target.TargetOrder;
-import com.iafenvoy.mxt.data.condition.builtin.entity.ProgressionEntityCondition;
-import com.iafenvoy.mxt.data.condition.builtin.entity.RealmEntityCondition;
-import com.iafenvoy.mxt.data.progression.Progression;
-import com.iafenvoy.mxt.data.trigger.builtin.BuiltinTrigger;
-import com.iafenvoy.mxt.network.payload.WheelActionC2SPayload;
-import com.iafenvoy.mxt.runtime.ability.AbilityGrantService;
-import com.iafenvoy.mxt.runtime.ability.PassiveAttributeService;
-import com.iafenvoy.mxt.runtime.progression.ProgressionAdminService;
-import com.iafenvoy.mxt.runtime.progression.ProgressionDamageMultiplier;
-import com.iafenvoy.mxt.runtime.progression.ProgressionDriver;
-import com.iafenvoy.mxt.runtime.progression.ProgressionService;
-import com.iafenvoy.mxt.runtime.talisman.BrushPigmentService;
-import com.iafenvoy.mxt.runtime.trigger.TriggerSubscription;
-import com.iafenvoy.mxt.runtime.wheel.WheelEntryKinds;
-import com.iafenvoy.mxt.runtime.wheel.WheelSourceTypes;
 import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.ability.AbilityEffect;
+import com.iafenvoy.mxt.data.ability.TargetSelector;
 import com.iafenvoy.mxt.data.ability.Togglable;
 import com.iafenvoy.mxt.data.ability.render.MountPose;
 import com.iafenvoy.mxt.data.ability.render.MountRender;
 import com.iafenvoy.mxt.data.ability.render.builtin.GeckoLibMountRender;
 import com.iafenvoy.mxt.data.ability.render.builtin.ItemMountRender;
-import com.iafenvoy.mxt.data.ability.type.ActiveAbilityType;
-import com.iafenvoy.mxt.data.ability.type.FlightControlAbilityType;
-import com.iafenvoy.mxt.data.ability.type.FlightDisplay;
-import com.iafenvoy.mxt.data.ability.type.MountAbilityType;
-import com.iafenvoy.mxt.data.ability.type.StorageAbilityType;
+import com.iafenvoy.mxt.data.ability.target.AreaTargetSelector;
+import com.iafenvoy.mxt.data.ability.target.ConeTargetSelector;
+import com.iafenvoy.mxt.data.ability.target.RayTargetSelector;
+import com.iafenvoy.mxt.data.ability.target.TargetOrder;
+import com.iafenvoy.mxt.data.ability.type.*;
 import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.action.NoOpAction;
 import com.iafenvoy.mxt.data.action.builtin.entity.ModifyLifespanAction;
@@ -67,33 +42,10 @@ import com.iafenvoy.mxt.data.aura.SpiritStorageComponent;
 import com.iafenvoy.mxt.data.condition.AlwaysCondition;
 import com.iafenvoy.mxt.data.condition.BiEntityCondition;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
-import com.iafenvoy.mxt.data.condition.builtin.entity.AuraElementEntityCondition;
-import com.iafenvoy.mxt.data.condition.builtin.entity.CultivatingEntityCondition;
-import com.iafenvoy.mxt.data.condition.builtin.entity.ContractEntityCondition;
-import com.iafenvoy.mxt.data.condition.builtin.entity.ElementAttachmentEntityCondition;
-import com.iafenvoy.mxt.data.condition.builtin.entity.HasElementEntityCondition;
-import com.iafenvoy.mxt.data.condition.builtin.entity.InSecretRealmEntityCondition;
+import com.iafenvoy.mxt.data.condition.builtin.entity.*;
 import com.iafenvoy.mxt.data.condition.builtin.entity.InSecretRealmEntityCondition.Role;
 import com.iafenvoy.mxt.data.condition.builtin.item.ItemElementCondition;
 import com.iafenvoy.mxt.data.context.action.ItemActionContext;
-import com.iafenvoy.mxt.data.resourcebar.builtin.renderdata.OriginsRenderData;
-import com.iafenvoy.mxt.data.resourcebar.builtin.renderdata.TexturedRenderData;
-import com.iafenvoy.mxt.data.storage.DataStorageHolder;
-import com.iafenvoy.mxt.data.storage.builtin.ChargesDataStorage;
-import com.iafenvoy.mxt.data.storage.builtin.ContainerDataStorage;
-import com.iafenvoy.mxt.data.storage.builtin.CooldownDataStorage;
-import com.iafenvoy.mxt.data.trigger.TriggerContext;
-import com.iafenvoy.mxt.data.trigger.TriggerSignals;
-import com.iafenvoy.mxt.runtime.formation.FormationInstance;
-import com.iafenvoy.mxt.runtime.formation.FormationOwners;
-import com.iafenvoy.mxt.runtime.formation.FormationService;
-import com.iafenvoy.mxt.runtime.tribulation.TribulationService;
-import com.iafenvoy.mxt.runtime.trigger.TriggerDispatcher;
-import com.iafenvoy.mxt.data.creature.ContractBehavior;
-import com.iafenvoy.mxt.data.creature.ContractBehaviors;
-import com.iafenvoy.mxt.data.creature.ContractContext;
-import com.iafenvoy.mxt.data.creature.ContractType;
-import com.iafenvoy.mxt.data.creature.CreatureProfile;
 import com.iafenvoy.mxt.data.cost.Cost;
 import com.iafenvoy.mxt.data.cost.CostPayment;
 import com.iafenvoy.mxt.data.cost.Costs;
@@ -102,102 +54,81 @@ import com.iafenvoy.mxt.data.cost.builtin.ResourceCost;
 import com.iafenvoy.mxt.data.cost.context.CostContext;
 import com.iafenvoy.mxt.data.cost.context.CostFailure;
 import com.iafenvoy.mxt.data.cost.context.CostOrigin;
-import com.iafenvoy.mxt.data.cultivation.Cultivation;
-import com.iafenvoy.mxt.data.cultivation.Element;
-import com.iafenvoy.mxt.data.cultivation.Physique;
-import com.iafenvoy.mxt.config.MxtServerConfig;
-import com.iafenvoy.mxt.config.MxtServerConfig.LifespanOutcome;
-import com.iafenvoy.mxt.data.cultivation.RealmStage;
-import com.iafenvoy.mxt.data.cultivation.SpiritRoot;
-import com.iafenvoy.mxt.data.cultivation.Technique;
-import com.iafenvoy.mxt.data.item.ContractBellComponent;
-import com.iafenvoy.mxt.data.item.ContractScrollComponent;
-import com.iafenvoy.mxt.data.item.FormationPlateComponent;
-import com.iafenvoy.mxt.data.item.SecretRealmTokenComponent;
-import com.iafenvoy.mxt.data.item.SpiritBeastComponent;
-import com.iafenvoy.mxt.data.item.TalismanComponent;
+import com.iafenvoy.mxt.data.creature.*;
+import com.iafenvoy.mxt.data.cultivation.*;
+import com.iafenvoy.mxt.data.formation.Formation;
+import com.iafenvoy.mxt.data.item.*;
 import com.iafenvoy.mxt.data.item.TalismanComponent.TriggerMode;
-import com.iafenvoy.mxt.data.item.TechniqueBinding;
+import com.iafenvoy.mxt.data.progression.Progression;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.data.resource.Resource;
+import com.iafenvoy.mxt.data.resourcebar.builtin.renderdata.OriginsRenderData;
+import com.iafenvoy.mxt.data.resourcebar.builtin.renderdata.TexturedRenderData;
 import com.iafenvoy.mxt.data.secretrealm.SecretRealm;
+import com.iafenvoy.mxt.data.storage.DataStorageHolder;
+import com.iafenvoy.mxt.data.storage.builtin.ChargesDataStorage;
+import com.iafenvoy.mxt.data.storage.builtin.ContainerDataStorage;
+import com.iafenvoy.mxt.data.storage.builtin.CooldownDataStorage;
+import com.iafenvoy.mxt.data.talisman.Talisman;
+import com.iafenvoy.mxt.data.trigger.TriggerContext;
+import com.iafenvoy.mxt.data.trigger.TriggerSignals;
+import com.iafenvoy.mxt.data.trigger.builtin.BuiltinTrigger;
 import com.iafenvoy.mxt.event.AbilityUseEvent.Pre;
 import com.iafenvoy.mxt.event.FriendEvent;
 import com.iafenvoy.mxt.event.LifeSpanEndEvent;
 import com.iafenvoy.mxt.event.LifeSpanRebirthEvent;
 import com.iafenvoy.mxt.item.block.entity.RiftBlockEntity;
+import com.iafenvoy.mxt.network.payload.WheelActionC2SPayload;
 import com.iafenvoy.mxt.recipe.SpiritRecipe;
 import com.iafenvoy.mxt.registry.*;
-import com.iafenvoy.mxt.runtime.ServerCache;
-import com.iafenvoy.mxt.runtime.ability.AbilityActivationService;
-import com.iafenvoy.mxt.runtime.ability.AbilityEventBridge;
-import com.iafenvoy.mxt.runtime.ability.AbilityService;
-import com.iafenvoy.mxt.runtime.ability.AbilityStorage;
-import com.iafenvoy.mxt.runtime.artifact.ArtifactHold;
-import com.iafenvoy.mxt.runtime.artifact.ArtifactHoldService;
+import com.iafenvoy.mxt.runtime.DatapackCache;
+import com.iafenvoy.mxt.runtime.ability.*;
+import com.iafenvoy.mxt.runtime.artifact.*;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactHoldService.ClaimResult;
-import com.iafenvoy.mxt.runtime.artifact.ArtifactService;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactService.RefineResult;
-import com.iafenvoy.mxt.runtime.artifact.ArtifactStorageService;
-import com.iafenvoy.mxt.runtime.artifact.ArtifactUpkeepService;
-import com.iafenvoy.mxt.runtime.artifact.FlightService;
-import com.iafenvoy.mxt.runtime.artifact.FlyingSwordEntity;
-import com.iafenvoy.mxt.runtime.aura.AuraLookup;
-import com.iafenvoy.mxt.runtime.cultivation.CultivationMethodService;
+import com.iafenvoy.mxt.runtime.creature.*;
+import com.iafenvoy.mxt.runtime.cultivation.*;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationMethodService.Result;
-import com.iafenvoy.mxt.runtime.cultivation.CultivationAffinity;
-import com.iafenvoy.mxt.runtime.cultivation.CultivationIdentityService;
-import com.iafenvoy.mxt.runtime.cultivation.CultivationModeService;
-import com.iafenvoy.mxt.runtime.cultivation.CultivationService;
-import com.iafenvoy.mxt.runtime.cultivation.CultivationToggleService;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationToggleService.Failure;
-import com.iafenvoy.mxt.runtime.cultivation.Elements;
-import com.iafenvoy.mxt.runtime.cultivation.ItemElements;
-import com.iafenvoy.mxt.runtime.cultivation.LifeSpanService;
-import com.iafenvoy.mxt.runtime.cultivation.MinorStageService;
-import com.iafenvoy.mxt.runtime.creature.BoundBeastService;
-import com.iafenvoy.mxt.runtime.creature.ContractBehaviorService;
-import com.iafenvoy.mxt.runtime.creature.ContractEventBridge;
-import com.iafenvoy.mxt.runtime.creature.ContractService;
-import com.iafenvoy.mxt.runtime.creature.Contracts;
-import com.iafenvoy.mxt.runtime.cultivation.TechniqueHold;
-import com.iafenvoy.mxt.runtime.cultivation.TechniqueService;
 import com.iafenvoy.mxt.runtime.damage.DamageCalculationService;
 import com.iafenvoy.mxt.runtime.damage.DamageElements;
 import com.iafenvoy.mxt.runtime.element.ElementReactionService;
+import com.iafenvoy.mxt.runtime.formation.FormationInstance;
+import com.iafenvoy.mxt.runtime.formation.FormationOwners;
+import com.iafenvoy.mxt.runtime.formation.FormationService;
 import com.iafenvoy.mxt.runtime.hold.HoldLookup;
 import com.iafenvoy.mxt.runtime.item.ItemBindingService;
 import com.iafenvoy.mxt.runtime.item.ItemStorageService;
 import com.iafenvoy.mxt.runtime.perch.PerchEventBridge;
 import com.iafenvoy.mxt.runtime.perch.PerchService;
+import com.iafenvoy.mxt.runtime.progression.ProgressionAdminService;
+import com.iafenvoy.mxt.runtime.progression.ProgressionDamageMultiplier;
+import com.iafenvoy.mxt.runtime.progression.ProgressionDriver;
+import com.iafenvoy.mxt.runtime.progression.ProgressionService;
 import com.iafenvoy.mxt.runtime.resource.ResourceService;
+import com.iafenvoy.mxt.runtime.rift.RiftColors;
+import com.iafenvoy.mxt.runtime.rift.RiftConnections;
+import com.iafenvoy.mxt.runtime.rift.RiftConnections.Loop;
+import com.iafenvoy.mxt.runtime.rift.RiftMesh;
+import com.iafenvoy.mxt.runtime.rift.RiftTeleportService;
 import com.iafenvoy.mxt.runtime.spirit.SpiritBurstService;
 import com.iafenvoy.mxt.runtime.spirit.SpiritSource;
+import com.iafenvoy.mxt.runtime.talisman.BrushPigmentService;
 import com.iafenvoy.mxt.runtime.talisman.TalismanDrawingScorer;
 import com.iafenvoy.mxt.runtime.talisman.TalismanDrawingScorer.Judgement;
 import com.iafenvoy.mxt.runtime.talisman.TalismanDrawingScorer.Point;
 import com.iafenvoy.mxt.runtime.talisman.TalismanDrawingScorer.Score;
 import com.iafenvoy.mxt.runtime.talisman.TalismanDrawingScorer.Stroke;
 import com.iafenvoy.mxt.runtime.talisman.TalismanService;
-import com.iafenvoy.mxt.runtime.rift.RiftColors;
-import com.iafenvoy.mxt.runtime.rift.RiftConnections;
-import com.iafenvoy.mxt.runtime.rift.RiftConnections.Loop;
-import com.iafenvoy.mxt.runtime.rift.RiftMesh;
-import com.iafenvoy.mxt.runtime.rift.RiftTeleportService;
+import com.iafenvoy.mxt.runtime.tribulation.TribulationService;
+import com.iafenvoy.mxt.runtime.trigger.TriggerDispatcher;
+import com.iafenvoy.mxt.runtime.trigger.TriggerSubscription;
+import com.iafenvoy.mxt.runtime.wheel.WheelEntryKinds;
 import com.iafenvoy.mxt.runtime.wheel.WheelService;
+import com.iafenvoy.mxt.runtime.wheel.WheelSourceTypes;
 import com.iafenvoy.mxt.runtime.wheel.WheelSources;
-
-import java.util.stream.Collectors;
-
-import com.iafenvoy.mxt.runtime.world.AuraResult;
+import com.iafenvoy.mxt.runtime.world.*;
 import com.iafenvoy.mxt.runtime.world.AuraResult.SourceKind;
-import com.iafenvoy.mxt.runtime.world.AuraPool;
-import com.iafenvoy.mxt.runtime.world.AuraService;
-import com.iafenvoy.mxt.runtime.world.AuraZonePriorityProbe;
-import com.iafenvoy.mxt.runtime.world.SecretRealmRecord;
-import com.iafenvoy.mxt.runtime.world.SecretRealmRegistry;
-import com.iafenvoy.mxt.runtime.world.SecretRealmService;
-import com.iafenvoy.mxt.runtime.world.SecretRealmStructurePlacer;
 import com.iafenvoy.mxt.screen.information.InformationCollector.InformationEntry;
 import com.iafenvoy.mxt.screen.information.InformationManager;
 import com.iafenvoy.mxt.screen.information.InformationManager.Side;
@@ -210,19 +141,14 @@ import com.iafenvoy.mxt.util.formula.FormulaContexts;
 import com.iafenvoy.mxt.util.formula.number.Constant;
 import com.mojang.authlib.GameProfile;
 import com.mojang.brigadier.CommandDispatcher;
+import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.JsonOps;
 import io.netty.buffer.Unpooled;
 import net.minecraft.commands.CommandSourceStack;
-import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
-import net.minecraft.core.Holder;
+import net.minecraft.core.*;
 import net.minecraft.core.Holder.Reference;
 import net.minecraft.core.HolderLookup.Provider;
-import net.minecraft.core.Registry;
-import net.minecraft.core.RegistryAccess;
-import net.minecraft.core.UUIDUtil;
-import net.minecraft.core.Vec3i;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.particles.ParticleTypes;
@@ -248,13 +174,7 @@ import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.damagesource.DamageType;
 import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.effect.MobEffects;
-import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.EntitySpawnReason;
-import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.Mob;
-import net.minecraft.world.entity.MoverType;
-import net.minecraft.world.entity.Pose;
+import net.minecraft.world.entity.*;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.animal.chicken.Chicken;
 import net.minecraft.world.entity.animal.pig.Pig;
@@ -284,9 +204,6 @@ import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import net.neoforged.neoforge.event.tick.EntityTickEvent;
 import net.neoforged.neoforge.network.connection.ConnectionType;
 import org.jetbrains.annotations.Nullable;
-
-import static net.minecraft.commands.Commands.literal;
-
 import org.jspecify.annotations.NonNull;
 import top.theillusivec4.curios.api.CuriosApi;
 import top.theillusivec4.curios.api.CuriosSlotTypes;
@@ -294,17 +211,11 @@ import top.theillusivec4.curios.api.SlotContext;
 import top.theillusivec4.curios.api.type.ISlotType;
 
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
+
+import static net.minecraft.commands.Commands.literal;
 
 /**
  * Development-only {@code /mxt_test} commands that assemble a playable Qingxiao scenario.
@@ -493,9 +404,8 @@ public final class MxtTestCommands {
 
     // Re-checks the behaviours with no other observable entry point: aura zone priority selection, and the
     // minor-stage cut, which nothing else reports as a number.
-    private static int verify(CommandSourceStack source) {
-        ServerPlayer player = player(source);
-        if (player == null) return 0;
+    private static int verify(CommandSourceStack source) throws CommandSyntaxException {
+        ServerPlayer player = source.getPlayerOrException();
         String auraFailure = verifyAuraPriority(player);
         if (auraFailure != null) {
             source.sendFailure(Component.translatable("command.mxt_test.verify.aura_failed", auraFailure));
@@ -1101,7 +1011,7 @@ public final class MxtTestCommands {
             if (capacity.getOrDefault(aura, 0) != 9)
                 return "a carrier written for five invocations over three of wear read " + capacity + " instead of 9";
             if (TalismanService.ready(stack)) return "an empty carrier was ready to fire";
-            access.insert(actor, stack, aura, 9, false);
+            access.insert(actor, level.registryAccess(), stack, aura, 9, false);
             if (!TalismanService.ready(stack)) return "a filled carrier was not ready to fire";
             SpiritSource placed = SpiritSource.placed(level, actor.position(), actor);
             for (int shot = 1; shot <= 3; shot++) {
@@ -1135,7 +1045,7 @@ public final class MxtTestCommands {
         try {
             resources.set(resource, 0.0D, 0.0D, 100_000.0D, -1L, "closure");
             SpiritSource placed = SpiritSource.placed(level, actor.position(), actor);
-            access.insert(actor, stack, aura, 8, false);
+            access.insert(actor, level.registryAccess(), stack, aura, 8, false);
             if (!close(stored(stack, aura), 8.0D)) return "a full carrier of four invocations did not hold eight units";
             // Wear the carrier down without firing it: what it can still spend decides what it may hold, so being
             // damaged past the point the store was sized for is what leaves aura behind when it finally breaks.
@@ -1275,7 +1185,7 @@ public final class MxtTestCommands {
         Holder<Resource> qi = require(MxtResourceKeys.RESOURCE, id("qi"));
         ResourceHolderAttachment account = new ResourceHolderAttachment();
         account.set(probe, 100.0D, 0.0D, 10_000.0D, -1L, "probe");
-        CostContext context = CostContext.account(account, null, FormulaContext.EMPTY, CostOrigin.SCRIPT);
+        CostContext context = CostContext.account(account, null, FormulaContext.of(player), CostOrigin.SCRIPT);
 
         CostPayment.Result plain = CostPayment.pay(decodeCosts(registries,
                 "[{\"id\": \"mxt_test:trigger_probe\", \"amount\": 3}]"), context);
@@ -1401,6 +1311,7 @@ public final class MxtTestCommands {
     // index is the segment the progress falls into; progress banked past the requirement stays on the ninth. The
     // last legs prove minor_stage is registered as a formula variable rather than merely computed in here.
     private static String verifyMinorStages(ServerPlayer player) {
+        RegistryAccess access = player.registryAccess();
         Holder<RealmStage> qiRefining = require(MxtResourceKeys.REALM_STAGE, QI_REFINING);
         double[][] cuts = {{0.0D, 0.0D}, {11.0D, 0.0D}, {12.0D, 1.0D}, {50.0D, 4.0D},
                 {99.0D, 8.0D}, {100.0D, 8.0D}, {150.0D, 8.0D}};
@@ -1416,7 +1327,7 @@ public final class MxtTestCommands {
         CultivationAttachment spirit = player.getData(MxtAttachments.CULTIVATION);
         if (!CultivationService.setRealm(spirit, QI_REFINING))
             return "the realm cache could not resolve " + QI_REFINING;
-        spirit.setCultivationProgress(requireProfile(QI), 80.0D);
+        spirit.setCultivationProgress(requireProfile(access, QI), 80.0D);
         FormulaContext context = ResourceService.formulaContext(player, require(MxtResourceKeys.RESOURCE, QI), FormulaContext.of(player));
         double read = context.value("minor_stage");
         if (!close(read, 7.0D)) return "the minor_stage variable reads " + read + " at 80/100 instead of 7";
@@ -1424,10 +1335,10 @@ public final class MxtTestCommands {
         double mortal = context.value("minor_stage");
         if (!Double.isNaN(mortal)) return "a mortal reads minor_stage as " + mortal + " instead of NaN";
         spirit.setRealmStage(qiRefining);
-        spirit.setCultivationProgress(requireProfile(QI), 80.0D);
+        spirit.setCultivationProgress(requireProfile(access, QI), 80.0D);
         // The record only grows and the refresh writes what the progress says, so at 80/100 of a nine-stage realm
         // the body stands on stage 7; a realm that declares no minor stages can never be recorded by the runtime.
-        MinorStageService.refresh(player, requireProfile(QI), context);
+        MinorStageService.refresh(player, requireProfile(access, QI), context);
         SpiritIdentityAttachment identity = player.getData(MxtAttachments.SPIRIT_IDENTITY);
         int reached = identity.minorStageRecord(qiRefining);
         if (reached != 7) return "the minor stage record reads " + reached + " at 80/100 instead of 7";
@@ -1438,15 +1349,15 @@ public final class MxtTestCommands {
             return "a realm without minor stages did not keep its own record";
         // The two thresholds the fixture writes: stage 2 grants the first, stage 5 adds the second, and a body
         // that never stood in the realm unlocks nothing from it.
-        List<Identifier> atOne = unlockedMinorStageAbilities(qiRefining, 1);
-        List<Identifier> atTwo = unlockedMinorStageAbilities(qiRefining, 2);
-        List<Identifier> atFive = unlockedMinorStageAbilities(qiRefining, 5);
+        List<Identifier> atOne = unlockedMinorStageAbilities(qiRefining, 1, player.level().registryAccess());
+        List<Identifier> atTwo = unlockedMinorStageAbilities(qiRefining, 2, player.level().registryAccess());
+        List<Identifier> atFive = unlockedMinorStageAbilities(qiRefining, 5, player.level().registryAccess());
         if (!atOne.isEmpty()) return "minor stage 1 unlocks " + atOne;
         if (atTwo.size() != 1 || !atTwo.contains(id("awaken_divine_sense")))
             return "minor stage 2 unlocks " + atTwo + " instead of only the first threshold";
         if (atFive.size() != 2 || !atFive.containsAll(List.of(id("awaken_divine_sense"), id("sword_focus"))))
             return "minor stage 5 unlocks " + atFive + " instead of both thresholds";
-        if (!unlockedMinorStageAbilities(qiRefining, -1).isEmpty())
+        if (!unlockedMinorStageAbilities(qiRefining, -1, player.level().registryAccess()).isEmpty())
             return "a realm the body never entered unlocks something";
         // The condition reads that record rather than live progress, so a threshold above it is not met even
         // while the realm itself matches.
@@ -1471,8 +1382,8 @@ public final class MxtTestCommands {
         return null;
     }
 
-    private static List<Identifier> unlockedMinorStageAbilities(Holder<RealmStage> stage, int reached) {
-        return MinorStageService.unlockedAbilities(stage, reached).stream().map(HolderHelper::id).toList();
+    private static List<Identifier> unlockedMinorStageAbilities(Holder<RealmStage> stage, int reached, Provider access) {
+        return MinorStageService.unlockedAbilities(stage, reached, access).stream().map(HolderHelper::id).toList();
     }
 
     // Built through the codec the loader uses, so the field is proven to decode as well as to judge.
@@ -1954,10 +1865,10 @@ public final class MxtTestCommands {
     // content mod uses. Every leg here is synchronous: the recall landing and the following tick happen between
     // ticks inside the event bridge, so this leg asserts the state the bridge reads rather than the movement it
     // performs with it.
-    private static int probeContract(CommandSourceStack source) {
+    private static int probeContract(CommandSourceStack source) throws CommandSyntaxException {
         // This leg stays client-only: its price leg pays through a context that reads the payer's own cultivation
         // state (the qi ceiling is a formula), and the bell/wheel legs need a real session's held item.
-        ServerPlayer player = player(source);
+        ServerPlayer player = source.getPlayerOrException();
         if (player == null) return 0;
         ServerLevel level = source.getLevel();
         MinecraftServer server = source.getServer();
@@ -2600,11 +2511,11 @@ public final class MxtTestCommands {
     // uses. The rows cover item matching by id, by list and by item tag, per-aura ceilings (one a formula),
     // storage slots from a formula, abilities named by id and by ability tag, the charm gate, the require_owner
     // gate, a refine action that charges on the way in, and the flight entry's own numbers.
-    // One fixture is wrong on purpose, because the check it trips lives in ServerCache and is observable no other
+    // One fixture is wrong on purpose, because the check it trips lives in DatapackCache and is observable no other
     // way: claim_conflict_probe claims an item misdeclared_grant_probe also claims - and registry order decides
     // which the claim problem names, so that assertion accepts either.
-    private static int probeArtifactRoster(CommandSourceStack source) {
-        ServerPlayer player = player(source);
+    private static int probeArtifactRoster(CommandSourceStack source) throws CommandSyntaxException {
+        ServerPlayer player = source.getPlayerOrException();
         if (player == null) return 0;
         Provider access = source.getLevel().registryAccess();
         FormulaContext context = FormulaContext.of(player);
@@ -3219,9 +3130,9 @@ public final class MxtTestCommands {
         // The name behind an id is answerable on demand, which is what a client holding a stack claimed before
         // names were kept asks for: the server answers from its player list and admits when it has never seen
         // the player rather than making something up.
-        boolean ownerLookup = PlayerNames.knownToServer(source.getServer(), player.getUUID())
+        boolean ownerLookup = PlayerNames.knownToServer(player.getUUID())
                 .filter(player.getGameProfile().name()::equals).isPresent()
-                && PlayerNames.knownToServer(source.getServer(), UUID.randomUUID()).isEmpty();
+                && PlayerNames.knownToServer(UUID.randomUUID()).isEmpty();
         ok &= check(source, "artifact owner shown by name=" + ownerNamed + " lookup=" + ownerLookup,
                 ownerNamed && ownerLookup);
 
@@ -3301,7 +3212,7 @@ public final class MxtTestCommands {
         ok &= check(source, "artifact pour feedback full=" + fullSilent + " named=" + namedShortfall,
                 fullSilent && namedShortfall);
 
-        List<String> problems = ServerCache.get().map(cache -> cache.problems().stream()
+        List<String> problems = DatapackCache.get().map(cache -> cache.problems().stream()
                 .filter(problem -> problem.contains("/mxt/artifact/")).toList()).orElse(List.of());
         // The merge deleted the "granted as mxt:passive but the ability itself is active" check: there is no second
         // intent left to disagree with. What remains is the claim conflict between the two echo-shard fixtures.
@@ -4170,7 +4081,9 @@ public final class MxtTestCommands {
         return result;
     }
 
-    /** Runs a hand path past both of its ends, because nobody lifts the brush exactly on the endpoint. */
+    /**
+     * Runs a hand path past both of its ends, because nobody lifts the brush exactly on the endpoint.
+     */
     private static void extend(List<Point> points, List<Point> dense, double overshoot) {
         if (overshoot <= 0.0D) return;
         Point first = dense.get(0);
@@ -4189,7 +4102,9 @@ public final class MxtTestCommands {
         return new Point(from.x() + dx / norm * distance, from.y() + dy / norm * distance);
     }
 
-    /** Even sampling of a polyline at a fixed spacing, endpoints included. */
+    /**
+     * Even sampling of a polyline at a fixed spacing, endpoints included.
+     */
     private static List<Point> densify(List<Point> points, double step) {
         List<Point> out = new ArrayList<>();
         if (points.size() < 2) return new ArrayList<>(points);
@@ -4215,7 +4130,9 @@ public final class MxtTestCommands {
         return total;
     }
 
-    /** One stroke of {@code index} cut in two at its middle, as a player who lifts the brush halfway would. */
+    /**
+     * One stroke of {@code index} cut in two at its middle, as a player who lifts the brush halfway would.
+     */
     private static List<Stroke> splitMiddle(List<Stroke> strokes, int index) {
         List<Stroke> result = new ArrayList<>();
         for (int position = 0; position < strokes.size(); position++) {
@@ -4399,7 +4316,7 @@ public final class MxtTestCommands {
             SpiritIdentityAttachment rebornIdentity = reborn.getData(MxtAttachments.SPIRIT_IDENTITY);
             AbilityAttachment rebornAbilities = reborn.getData(MxtAttachments.ABILITY_HOLDER);
             rebornSpirit.setRealmStage(qiRefining);
-            rebornSpirit.setCultivationProgress(requireProfile(QI), 80.0D);
+            rebornSpirit.setCultivationProgress(requireProfile(source.registryAccess(), QI), 80.0D);
             rebornIdentity.raiseMinorStageRecord(qiRefining, 2);
             rebornIdentity.addLearnedTechnique(require(MxtResourceKeys.TECHNIQUE, TECHNIQUE));
             AbilityGrantService.recalculate(reborn);
@@ -4430,7 +4347,7 @@ public final class MxtTestCommands {
             climbSpirit.setRealmStage(require(MxtResourceKeys.REALM_STAGE, SPIRIT_POWER_REFINING));
             Holder<Resource> climbPayment = require(MxtResourceKeys.RESOURCE, SPIRIT_POWER);
             ensureResource(climber, climbResources, climbPayment, 100.0D);
-            climbSpirit.setCultivationProgress(requireProfile(QI), 100.0D);
+            climbSpirit.setCultivationProgress(requireProfile(source.registryAccess(), QI), 100.0D);
             CultivationService.BreakthroughResult breakthrough = CultivationService.attempt(climber, climbSpirit,
                     climbResources, QI, FormulaContext.of(climber), () -> true);
             boolean declared = qiRefining.value().lifespan().isPresent();
@@ -4850,8 +4767,8 @@ public final class MxtTestCommands {
         return record;
     }
 
-    private static int giveKit(CommandSourceStack source) {
-        ServerPlayer player = player(source);
+    private static int giveKit(CommandSourceStack source) throws CommandSyntaxException {
+        ServerPlayer player = source.getPlayerOrException();
         if (player == null) return 0;
         CultivationAttachment spirit = player.getData(MxtAttachments.CULTIVATION);
         SpiritIdentityAttachment identity = player.getData(MxtAttachments.SPIRIT_IDENTITY);
@@ -4864,7 +4781,7 @@ public final class MxtTestCommands {
             source.sendFailure(Component.translatable("command.mxt_test.kit.realm_failed"));
             return 0;
         }
-        spirit.setCultivationProgress(requireProfile(QI), 80.0D);
+        spirit.setCultivationProgress(requireProfile(source.registryAccess(), QI), 80.0D);
         ensureResource(player, resources, require(MxtResourceKeys.RESOURCE, QI), 200.0D);
         ensureResource(player, resources, require(MxtResourceKeys.RESOURCE, SPIRIT_POWER), 80.0D);
         ensureResource(player, resources, require(MxtResourceKeys.RESOURCE, WATER_POWER), 80.0D);
@@ -4922,8 +4839,8 @@ public final class MxtTestCommands {
         AbilityEventBridge.rebuildTriggerSubscriptions(player);
     }
 
-    private static int startCultivation(CommandSourceStack source) {
-        ServerPlayer player = player(source);
+    private static int startCultivation(CommandSourceStack source) throws CommandSyntaxException {
+        ServerPlayer player = source.getPlayerOrException();
         if (player == null) return 0;
         Cultivation action = require(MxtResourceKeys.CULTIVATION, CULTIVATE).value();
         Result result = CultivationMethodService.start(player, player.getData(MxtAttachments.CULTIVATION),
@@ -5280,8 +5197,8 @@ public final class MxtTestCommands {
 
     // Prints the character panel's own line model, so what the panel would show is readable from the server
     // instead of a screenshot. It calls the very same InformationManager.collectEntries the screen does.
-    private static int showInformation(CommandSourceStack source) {
-        ServerPlayer player = player(source);
+    private static int showInformation(CommandSourceStack source) throws CommandSyntaxException {
+        ServerPlayer player = source.getPlayerOrException();
         if (player == null) return 0;
         for (Side side : Side.values()) {
             List<InformationEntry> entries = InformationManager.collectEntries(player, side);
@@ -5295,8 +5212,7 @@ public final class MxtTestCommands {
         return 1;
     }
 
-    private static int showGuide(CommandSourceStack source) {
-        if (player(source) == null) return 0;
+    private static int showGuide(CommandSourceStack source) throws CommandSyntaxException {
         source.sendSuccess(() -> Component.translatable("command.mxt_test.guide.1"), false);
         source.sendSuccess(() -> Component.translatable("command.mxt_test.guide.2"), false);
         source.sendSuccess(() -> Component.translatable("command.mxt_test.guide.3"), false);
@@ -5343,12 +5259,6 @@ public final class MxtTestCommands {
         player.getInventory().placeItemBackInInventory(stack);
     }
 
-    private static ServerPlayer player(CommandSourceStack source) {
-        ServerPlayer player = source.getPlayer();
-        if (player == null) source.sendFailure(Component.translatable("command.mxt.message.requires_player"));
-        return player;
-    }
-
     private static Identifier id(String path) {
         return Identifier.fromNamespaceAndPath(MxtTestMod.MOD_ID, path);
     }
@@ -5359,8 +5269,8 @@ public final class MxtTestCommands {
                 .orElseThrow(() -> new IllegalStateException("Missing Qingxiao test definition " + id));
     }
 
-    private static Reference<Aura> requireProfile(Identifier resource) {
-        return AuraLookup.holderServer(resource)
+    private static Reference<Aura> requireProfile(RegistryAccess access, Identifier resource) {
+        return MxtDatapackRegistries.holder(access, MxtResourceKeys.AURA, resource)
                 .orElseThrow(() -> new IllegalStateException("Missing Qingxiao cultivation profile " + resource));
     }
 

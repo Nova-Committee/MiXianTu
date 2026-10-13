@@ -6,12 +6,12 @@ import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.cultivation.RealmStage;
 import com.iafenvoy.mxt.registry.MxtAttachments;
-import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.ability.AbilityGrantService;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.Holder;
+import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.world.entity.LivingEntity;
 
 import java.util.List;
@@ -46,11 +46,11 @@ public final class MinorStageService {
 
     // An entry is a minimum: its abilities are active on that minor stage or any later one, the same reading a
     // technique's configured levels get.
-    public static List<Holder<Ability>> unlockedAbilities(Holder<RealmStage> stage, int reached) {
+    public static List<Holder<Ability>> unlockedAbilities(Holder<RealmStage> stage, int reached, Provider access) {
         if (reached < 0) return List.of();
         return stage.value().minorStageAbilities().stream()
                 .filter(entry -> entry.stage() <= reached)
-                .flatMap(entry -> RegistryCodecs.resolve(entry.abilities(), MxtDatapackRegistries.registry(MxtResourceKeys.ABILITY)))
+                .flatMap(entry -> RegistryCodecs.resolve(entry.abilities(), access, MxtResourceKeys.ABILITY))
                 .distinct()
                 .toList();
     }

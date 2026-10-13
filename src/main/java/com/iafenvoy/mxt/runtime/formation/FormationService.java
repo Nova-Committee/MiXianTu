@@ -60,7 +60,7 @@ public final class FormationService {
         CostContext costContext = CostContext.account(resources, null, context, CostOrigin.FORMATION_MAINTENANCE);
         PaymentPlan plan = MaintainRule.plan(definition, costContext, supplied, instance.stored(), capacity);
         if (plan == null) return MaintainResult.unpaid(null);
-        Result payment = ResourceTransactions.tryConsume(resources, Evaluation.of(plan.fromOwner()));
+        Result payment = ResourceTransactions.tryConsume(context.registries(), resources, Evaluation.of(plan.fromOwner()));
         if (!payment.committed()) return MaintainResult.unpaid(payment.failedResource());
         plan.applyTo(instance);
         instance.maintained();

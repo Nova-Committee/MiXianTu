@@ -35,7 +35,7 @@ public record ElementDamageCondition(
 
     @Override
     public boolean test(@NonNull DamageConditionContext ctx) {
-        return DamageElements.strike(ctx.source()).stream().anyMatch(element -> RegistryCodecs.matches(this.elements, element));
+        return DamageElements.strike(ctx.source(), ctx.registries()).stream().anyMatch(element -> RegistryCodecs.matches(this.elements, element));
     }
 
     @Override

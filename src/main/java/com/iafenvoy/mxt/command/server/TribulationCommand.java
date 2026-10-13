@@ -64,7 +64,7 @@ public final class TribulationCommand {
         return argument("target", EntityArgument.entity()).executes(verb);
     }
 
-    private static int start(CommandSourceStack source, Reference<Tribulation> tribulation, @Nullable Entity target) {
+    private static int start(CommandSourceStack source, Reference<Tribulation> tribulation, @Nullable Entity target) throws CommandSyntaxException {
         LivingEntity entity = target(source, target);
         if (entity == null) return 0;
         TribulationAttachment data = entity.getData(MxtAttachments.TRIBULATION);
@@ -83,7 +83,7 @@ public final class TribulationCommand {
         return 1;
     }
 
-    private static int stop(CommandSourceStack source, @Nullable Entity target) {
+    private static int stop(CommandSourceStack source, @Nullable Entity target) throws CommandSyntaxException {
         LivingEntity entity = target(source, target);
         if (entity == null) return 0;
         TribulationAttachment data = entity.getData(MxtAttachments.TRIBULATION);
@@ -98,7 +98,7 @@ public final class TribulationCommand {
         return 1;
     }
 
-    private static int status(CommandSourceStack source, @Nullable Entity target) {
+    private static int status(CommandSourceStack source, @Nullable Entity target) throws CommandSyntaxException {
         LivingEntity entity = target(source, target);
         if (entity == null) return 0;
         TribulationAttachment data = entity.getData(MxtAttachments.TRIBULATION);
@@ -113,18 +113,17 @@ public final class TribulationCommand {
                     DefinitionText.text(data.tribulation().get()), entity.getDisplayName(), data.windup()), false);
             return 1;
         }
-        Component state = data.state().map(TribulationCommand::describeState)
-                .orElseGet(() -> Component.translatable("command.mxt.tribulation.state_not_begun"));
+        Component state = data.state().map(TribulationCommand::describeState).orElseGet(() -> Component.translatable("command.mxt.tribulation.state_not_begun"));
         source.sendSuccess(() -> Component.translatable("command.mxt.tribulation.status",
                 DefinitionText.text(data.tribulation().get()), entity.getDisplayName(),
                 data.consumed() + 1, data.remaining(), state), false);
         return 1;
     }
 
-    private static LivingEntity target(CommandSourceStack source, @Nullable Entity target) {
-        Entity entity = target != null ? target : source.getPlayer();
+    private static LivingEntity target(CommandSourceStack source, @Nullable Entity target) throws CommandSyntaxException {
+        Entity entity = target != null ? target : source.getPlayerOrException();
         if (entity instanceof LivingEntity living) return living;
-        source.sendFailure(Component.translatable(entity == null ? "command.mxt.message.requires_player" : "command.mxt.tribulation.not_living"));
+        source.sendFailure(Component.translatable("command.mxt.tribulation.not_living"));
         return null;
     }
 

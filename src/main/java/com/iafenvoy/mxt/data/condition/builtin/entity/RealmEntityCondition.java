@@ -6,7 +6,7 @@ import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.data.context.condition.EntityConditionContext;
 import com.iafenvoy.mxt.data.cultivation.RealmStage;
 import com.iafenvoy.mxt.registry.MxtAttachments;
-import com.iafenvoy.mxt.runtime.ServerCache;
+import com.iafenvoy.mxt.runtime.DatapackCache;
 import com.iafenvoy.mxt.runtime.aura.AuraLookup;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.mojang.serialization.Codec;
@@ -51,9 +51,9 @@ public record RealmEntityCondition(Holder<RealmStage> realm,
         boolean inRealm = stages.anyMatch(current -> switch (this.comparison) {
             case EXACT -> current.equals(this.realm);
             case AT_LEAST ->
-                    ServerCache.get().map(cache -> cache.isRealmAtLeast(HolderHelper.id(current), required)).orElse(false);
+                    DatapackCache.get().map(cache -> cache.isRealmAtLeast(HolderHelper.id(current), required)).orElse(false);
             case AT_MOST ->
-                    ServerCache.get().map(cache -> cache.isRealmAtLeast(required, HolderHelper.id(current))).orElse(false);
+                    DatapackCache.get().map(cache -> cache.isRealmAtLeast(required, HolderHelper.id(current))).orElse(false);
         });
         if (!inRealm || this.minMinorStage.isEmpty()) return inRealm;
         // -1 for a realm the body never entered, so a threshold is never met by a realm it has not stood in.

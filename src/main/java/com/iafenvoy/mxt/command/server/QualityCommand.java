@@ -23,6 +23,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
@@ -42,9 +43,9 @@ import static net.minecraft.commands.Commands.literal;
 public final class QualityCommand {
     public static LiteralArgumentBuilder<CommandSourceStack> build(CommandBuildContext context) {
         return literal("quality")
-                .executes(ctx -> get(ctx.getSource(), ctx.getSource().getPlayer()))
+                .executes(ctx -> get(ctx.getSource(), ctx.getSource().getPlayerOrException()))
                 .then(literal("get")
-                        .executes(ctx -> get(ctx.getSource(), ctx.getSource().getPlayer()))
+                        .executes(ctx -> get(ctx.getSource(), ctx.getSource().getPlayerOrException()))
                         .then(argument("target", EntityArgument.player()).requires(ServerCommandManager::mayChange)
                                 .executes(ctx -> get(ctx.getSource(), EntityArgument.getPlayer(ctx, "target")))))
                 .then(literal("set").requires(ServerCommandManager::mayChange)
@@ -62,11 +63,7 @@ public final class QualityCommand {
                                 .executes(QualityCommand::chain)));
     }
 
-    private static int get(CommandSourceStack source, @Nullable LivingEntity target) {
-        if (target == null) {
-            source.sendFailure(Component.translatable("command.mxt.message.requires_player"));
-            return 0;
-        }
+    private static int get(CommandSourceStack source, @NotNull LivingEntity target) {
         ItemStack stack = target.getMainHandItem();
         if (stack.isEmpty()) {
             source.sendFailure(Component.translatable("command.mxt.quality.no_item"));

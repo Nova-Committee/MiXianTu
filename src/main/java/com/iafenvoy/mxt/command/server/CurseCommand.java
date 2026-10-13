@@ -24,14 +24,13 @@ import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.commands.arguments.IdentifierArgument;
 import net.minecraft.commands.arguments.ResourceArgument;
-import net.minecraft.commands.arguments.ResourceKeyArgument;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.entity.Entity;
-import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
 import java.util.Map.Entry;
@@ -51,9 +50,9 @@ public final class CurseCommand {
 
     public static LiteralArgumentBuilder<CommandSourceStack> build(CommandBuildContext context) {
         return literal("curse")
-                .executes(ctx -> list(ctx.getSource(), ctx.getSource().getPlayer()))
+                .executes(ctx -> list(ctx.getSource(), ctx.getSource().getPlayerOrException()))
                 .then(literal("list")
-                        .executes(ctx -> list(ctx.getSource(), ctx.getSource().getPlayer()))
+                        .executes(ctx -> list(ctx.getSource(), ctx.getSource().getPlayerOrException()))
                         .then(argument("target", EntityArgument.entity())
                                 .executes(ctx -> list(ctx.getSource(), EntityArgument.getEntity(ctx, "target")))))
                 .then(literal("apply").requires(ServerCommandManager::mayChange)
@@ -70,7 +69,7 @@ public final class CurseCommand {
                 // naming it here is the only way to take it off; the key never has to resolve.
                 .then(literal("remove").requires(ServerCommandManager::mayChange)
                         .then(argument("targets", EntityArgument.entities())
-                                .then(argument("curse", ResourceKeyArgument.key(MxtResourceKeys.CURSE))
+                                .then(argument("curse", ResourceArgument.resource(context, MxtResourceKeys.CURSE))
                                         .executes(CurseCommand::remove))))
                 .then(literal("cleanse").requires(ServerCommandManager::mayChange)
                         .then(argument("targets", EntityArgument.entities())
@@ -78,11 +77,7 @@ public final class CurseCommand {
                                         .executes(CurseCommand::cleanse))));
     }
 
-    private static int list(CommandSourceStack source, @Nullable Entity target) {
-        if (target == null) {
-            source.sendFailure(Component.translatable("command.mxt.message.requires_player"));
-            return 0;
-        }
+    private static int list(CommandSourceStack source, @NotNull Entity target) {
         Map<Holder<Curse>, State> instances = target.getData(MxtAttachments.CURSE_HOLDER).instances();
         source.sendSuccess(() -> Component.translatable("command.mxt.curse.list.header", target.getDisplayName()), false);
         if (instances.isEmpty()) {
@@ -126,15 +121,8 @@ public final class CurseCommand {
 
     private static int remove(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         CommandSourceStack source = ctx.getSource();
-        Identifier id = RegistryReferences.key(ctx, "curse", MxtResourceKeys.CURSE).identifier();
         Collection<? extends Entity> targets = EntityArgument.getEntities(ctx, "targets");
-        // A definition that is no longer loaded cannot be looked up, but it can still be held; finding it on a
-        // holder is the only way such a curse can be taken off at all.
-        Holder<Curse> curse = resolve(targets, id).orElse(null);
-        if (curse == null) {
-            source.sendFailure(Component.translatable("command.mxt.curse.unknown", id.toString()));
-            return 0;
-        }
+        Holder<Curse> curse = ResourceArgument.getResource(ctx, "curse", MxtResourceKeys.CURSE);
         int removed = 0;
         for (Entity target : targets) {
             if (CurseService.remove(target, curse, Reason.EXPLICIT, target.level().getGameTime()).isPresent()) {
@@ -176,10 +164,6 @@ public final class CurseCommand {
 
     // The registry entry the pack loads now, or failing that an instance already held - the only trace a definition
     // the pack no longer provides leaves behind.
-    private static Optional<Holder<Curse>> resolve(Collection<? extends Entity> targets, Identifier id) {
-        Optional<Holder<Curse>> registered = MxtDatapackRegistries.holderOrEmpty(MxtResourceKeys.CURSE, id).map(holder -> holder);
-        return registered.isPresent() ? registered : heldByName(targets, id);
-    }
 
     private static Optional<Holder<Curse>> heldByName(Collection<? extends Entity> targets, Identifier id) {
         for (Entity target : targets) {

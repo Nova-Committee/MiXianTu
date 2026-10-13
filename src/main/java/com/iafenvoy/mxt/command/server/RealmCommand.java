@@ -6,7 +6,7 @@ import com.iafenvoy.mxt.data.cultivation.RealmStage;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.runtime.ServerCache;
+import com.iafenvoy.mxt.runtime.DatapackCache;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService;
 import com.iafenvoy.mxt.runtime.cultivation.MinorStageService;
 import com.iafenvoy.mxt.runtime.resource.ResourceService;
@@ -78,7 +78,7 @@ public final class RealmCommand {
         }
         // A chain the cache validated is read straight from it. One it refused to index whole is still walked here
         // from the loaded stages, so an author sees what is written rather than only "no chain".
-        List<Identifier> ids = ServerCache.get().map(cache -> cache.realmsOf(aura))
+        List<Identifier> ids = DatapackCache.get().map(cache -> cache.realmsOf(aura))
                 .filter(chain -> chain.contains(start)).orElseGet(() -> walkChain(stages, start, aura));
         int current = ids.indexOf(start);
         if (current < 0) {

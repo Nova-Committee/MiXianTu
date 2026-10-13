@@ -33,17 +33,16 @@ public final class PlayerNames {
     public static Optional<String> resolve(String ownerUuid) {
         UUID id = parse(ownerUuid);
         if (id == null) return Optional.empty();
-        MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
-        if (server != null) {
-            Optional<String> known = knownToServer(server, id);
-            if (known.isPresent()) return known;
-        }
+        Optional<String> known = knownToServer(id);
+        if (known.isPresent()) return known;
         return FMLEnvironment.getDist() == Dist.CLIENT ? ClientPlayerNames.lookup(id) : Optional.empty();
     }
 
     // The session service is deliberately not asked: it would answer for a player this server has never seen,
     // but that lookup is a web request and both callers run where waiting on one is not acceptable.
-    public static Optional<String> knownToServer(MinecraftServer server, UUID id) {
+    public static Optional<String> knownToServer(UUID id) {
+        MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
+        if (server == null) return Optional.empty();
         ServerPlayer online = server.getPlayerList().getPlayer(id);
         if (online != null) return Optional.of(online.getGameProfile().name());
         return server.services().nameToIdCache().get(id).map(NameAndId::name);

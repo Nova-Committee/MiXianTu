@@ -44,7 +44,7 @@ public final class SpiritStorageTooltipAppender {
 
     // The one spelling of the line, shared with the carrier that prints it in its own place.
     public static Optional<Component> chargeLine(Provider registries, ItemStack stack) {
-        return resolveCharge(registries, stack, FormulaContext.EMPTY).map(charge -> {
+        return resolveCharge(registries, stack, FormulaContext.of(registries)).map(charge -> {
             int percentage = charge.percentage();
             Component percent = Component.literal(percentage + "%").withColor(colorValue(percentage));
             return Component.translatable("tooltip.mxt.spirit_storage", TooltipText.number(charge.stored()), TooltipText.number(charge.capacity()), percent);

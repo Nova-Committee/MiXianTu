@@ -14,6 +14,7 @@ import com.iafenvoy.mxt.runtime.Sources;
 import com.iafenvoy.mxt.runtime.progression.ProgressionService;
 import com.iafenvoy.mxt.util.HolderHelper;
 import net.minecraft.core.Holder;
+import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
@@ -42,24 +43,25 @@ public final class CultivationHooks implements EntitySources.Grants, EntitySourc
     public void collect(LivingEntity entity, ProgressionAttachment progress, EntitySources.GrantSink sink) {
         SpiritIdentityAttachment spirit = entity.getExistingData(MxtAttachments.SPIRIT_IDENTITY).orElse(null);
         if (spirit == null) return;
+        Provider access = entity.level().registryAccess();
         for (Holder<SpiritRoot> root : spirit.activeSpiritRoots())
-            sink.want(Sources.granted(Sources.Grant.SPIRIT_ROOT, HolderHelper.id(root)), root.value().grantedAbilities());
+            sink.want(Sources.granted(Sources.Grant.SPIRIT_ROOT, HolderHelper.id(root)), root.value().grantedAbilities(), access);
         for (Holder<Physique> physique : spirit.activePhysiques())
-            sink.want(Sources.granted(Sources.Grant.PHYSIQUE, HolderHelper.id(physique)), physique.value().grantedAbilities());
+            sink.want(Sources.granted(Sources.Grant.PHYSIQUE, HolderHelper.id(physique)), physique.value().grantedAbilities(), access);
         for (Holder<Technique> technique : spirit.learnedTechniques()) {
             Identifier id = HolderHelper.id(technique);
             Identifier source = Sources.granted(Sources.Grant.TECHNIQUE, id);
-            sink.want(source, technique.value().grantedAbilities());
+            sink.want(source, technique.value().grantedAbilities(), access);
             // Mastery adds to the same source, so a promotion only has to change the level: a technique's grants
             // are one contribution, not one per level it passed.
             ProgressionService.currentLevel(progress, id, technique.value()).ifPresent(current ->
-                    sink.wantResolved(source, ProgressionService.grantedAbilities(technique.value(), current)));
+                    sink.wantResolved(source, ProgressionService.grantedAbilities(technique.value(), current, access)));
         }
         // A realm stage's unlocks are keyed by how far the body got inside it, so the record is the whole answer:
         // no record means the body never stood in that realm, and a realm it has left keeps granting.
         for (Map.Entry<Holder<RealmStage>, Integer> record : spirit.minorStageRecords().entrySet())
             sink.wantResolved(Sources.granted(Sources.Grant.REALM_STAGE, HolderHelper.id(record.getKey())),
-                    MinorStageService.unlockedAbilities(record.getKey(), record.getValue()));
+                    MinorStageService.unlockedAbilities(record.getKey(), record.getValue(), access));
     }
 
     // Both attachments are read without being created, so a body that never cultivated costs nothing here.

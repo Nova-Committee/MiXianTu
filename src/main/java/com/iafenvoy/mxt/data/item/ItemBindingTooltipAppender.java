@@ -56,15 +56,15 @@ public final class ItemBindingTooltipAppender {
         if (registries == null) return;
         ResolvedBindings bindings = ItemBindingService.resolve(registries, stack);
         // The weapon line is evaluated with the holder: a dynamic value read without one resolves nothing, and
-        // the call happens on every frame the tooltip is drawn.
-        FormulaContext formula = player == null ? FormulaContext.EMPTY : FormulaContext.of(player);
+        // the call happens on every frame the tooltip is drawn. Without a holder the access alone is carried.
+        FormulaContext formula = player == null ? FormulaContext.of(registries) : FormulaContext.of(player);
         bindings.weapon().ifPresent(weapon -> appendWeapon(builder, weapon, formula));
         ItemBindingService.PillResolution resolution = bindings.pill();
         if (resolution.unbound())
             builder.accept(Component.translatable("tooltip.mxt.pill.unbound").withStyle(ChatFormatting.RED));
         else
             resolution.effects().ifPresent(effects -> appendPill(builder, resolution.identity().orElse(null),
-                    resolution.definition().orElse(null), effects, player));
+                    resolution.definition().orElse(null), effects, player, formula));
         bindings.technique().ifPresent(technique -> appendTechnique(builder, technique));
         for (EntityAction action : bindings.item().map(ItemBinding::actions).orElse(List.of())) {
             if (action instanceof GrantSpiritRootAction(
@@ -124,7 +124,7 @@ public final class ItemBindingTooltipAppender {
     }
 
     private static void appendPill(Consumer<Component> builder, @Nullable Holder<PillBinding> identity,
-                                   @Nullable Holder<Pill> definition, Pill effects, Player player) {
+                                   @Nullable Holder<Pill> definition, Pill effects, Player player, FormulaContext formula) {
         // A dose named by its own component over defaults has no definition to be named after, so it prints no
         // heading rather than a made-up one.
         if (definition != null) {
@@ -133,8 +133,8 @@ public final class ItemBindingTooltipAppender {
             if (DefinitionText.resolved(description) && !description.getString().isBlank())
                 builder.accept(description.withStyle(ChatFormatting.GRAY));
         }
-        double gain = effects.toxicityGain().evaluate(FormulaContext.EMPTY);
-        double threshold = effects.toxicityThreshold().evaluate(FormulaContext.EMPTY);
+        double gain = effects.toxicityGain().evaluate(formula);
+        double threshold = effects.toxicityThreshold().evaluate(formula);
         if (threshold >= Double.MAX_VALUE / 2.0D) {
             builder.accept(Component.translatable("tooltip.mxt.pill.toxicity_no_threshold", TooltipText.signed(gain))
                     .withStyle(ChatFormatting.DARK_PURPLE));
@@ -152,7 +152,7 @@ public final class ItemBindingTooltipAppender {
         } else if (taken > 0) {
             builder.accept(Component.translatable("tooltip.mxt.pill.uses", taken).withStyle(ChatFormatting.DARK_PURPLE));
         }
-        double cooldown = limits.cooldown().evaluate(FormulaContext.EMPTY);
+        double cooldown = limits.cooldown().evaluate(formula);
         if (Double.isFinite(cooldown) && cooldown > 0.0D)
             builder.accept(Component.translatable("tooltip.mxt.pill.cooldown", TooltipText.number(cooldown))
                     .withStyle(ChatFormatting.DARK_PURPLE));

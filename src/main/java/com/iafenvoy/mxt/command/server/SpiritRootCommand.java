@@ -30,6 +30,7 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
@@ -53,7 +54,7 @@ public final class SpiritRootCommand {
     public static LiteralArgumentBuilder<CommandSourceStack> build(CommandBuildContext context) {
         return literal("spirit_root")
                 .then(literal("list")
-                        .executes(ctx -> list(ctx.getSource(), ctx.getSource().getPlayer()))
+                        .executes(ctx -> list(ctx.getSource(), ctx.getSource().getPlayerOrException()))
                         .then(argument("target", EntityArgument.entity())
                                 .executes(ctx -> list(ctx.getSource(), EntityArgument.getEntity(ctx, "target")))))
                 .then(literal("grant").requires(ServerCommandManager::mayChange)
@@ -78,8 +79,7 @@ public final class SpiritRootCommand {
 
     // A definition whose entry a pack removed still appears, because the body holds a reference to it - exactly
     // the state an operator has to be able to see in order to clean it up.
-    private static int list(CommandSourceStack source, @Nullable Entity target) {
-        if (target == null) return noPlayer(source);
+    private static int list(CommandSourceStack source, @NotNull Entity target) {
         SpiritIdentityAttachment identity = target.getData(MxtAttachments.SPIRIT_IDENTITY);
         source.sendSuccess(() -> Component.translatable("command.mxt.identity.header.spirit_root", target.getDisplayName()), false);
         List<Holder<SpiritRoot>> distinct = new ArrayList<>(new LinkedHashSet<>(identity.spiritRoots()));
@@ -88,14 +88,12 @@ public final class SpiritRootCommand {
             return 1;
         }
         for (Holder<SpiritRoot> root : distinct) {
-            SpiritRoot definition = definition(root).orElse(null);
+            SpiritRoot definition = root.value();
             // A root whose definition is gone has neither elements to name nor a tier to read.
-            Component elements = definition == null ? null : elements(definition);
-            Component quality = definition == null || definition.quality().isEmpty()
-                    ? Component.literal("-") : QualityService.displayName(definition.quality().orElseThrow());
-            Component state = Component.translatable(identity.isSpiritRootEnabled(root)
-                    ? "command.mxt.identity.on" : "command.mxt.identity.off");
-            Component bound = elements == null ? Component.empty() : Component.literal(" · ").append(elements);
+            Component elements = elements(definition);
+            Component quality = definition.quality().isEmpty() ? Component.literal("-") : QualityService.displayName(definition.quality().orElseThrow());
+            Component state = Component.translatable(identity.isSpiritRootEnabled(root) ? "command.mxt.identity.on" : "command.mxt.identity.off");
+            Component bound = Component.literal(" · ").append(elements);
             source.sendSuccess(() -> Component.translatable("command.mxt.identity.line",
                     DefinitionText.text(root), quality, bound, state), false);
         }
@@ -194,17 +192,6 @@ public final class SpiritRootCommand {
     private static Holder<SpiritRoot> find(SpiritIdentityAttachment identity, Identifier id) {
         for (Holder<SpiritRoot> root : identity.spiritRoots()) if (HolderHelper.id(root).equals(id)) return root;
         return null;
-    }
-
-    // Resolved by id rather than through value(): the body can hold a reference to a definition the current pack
-    // no longer provides. Present counts even then; a definition that is gone answers empty and reads as unknown.
-    private static Optional<SpiritRoot> definition(Holder<SpiritRoot> root) {
-        return MxtDatapackRegistries.holderOrEmpty(MxtResourceKeys.SPIRIT_ROOT, HolderHelper.id(root)).map(Holder::value);
-    }
-
-    private static int noPlayer(CommandSourceStack source) {
-        source.sendFailure(Component.translatable("command.mxt.message.requires_player"));
-        return 0;
     }
 
     // Printed as its own name rather than as a sentence: the values are a fixed vocabulary shared with the

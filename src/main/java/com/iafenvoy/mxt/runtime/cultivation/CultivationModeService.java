@@ -44,7 +44,7 @@ public final class CultivationModeService {
 
     // Applicability is the filter, priority is the order: an equal priority keeps registry order.
     public static Optional<Holder<Cultivation>> select(LivingEntity entity, FormulaContext context) {
-        return MxtDatapackRegistries.holders(MxtResourceKeys.CULTIVATION)
+        return MxtDatapackRegistries.holders(entity.registryAccess(), MxtResourceKeys.CULTIVATION)
                 .filter(action -> applicable(entity, action, context))
                 .max(Comparator.comparingInt(action -> action.value().priority()))
                 .map(action -> action);

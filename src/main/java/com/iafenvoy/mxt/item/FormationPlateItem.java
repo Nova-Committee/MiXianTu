@@ -5,7 +5,6 @@ import com.iafenvoy.mxt.data.formation.Formation;
 import com.iafenvoy.mxt.data.item.FormationPlateComponent;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
-import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.formation.FormationCenters;
 import com.iafenvoy.mxt.runtime.formation.FormationCenters.Match;
@@ -19,6 +18,7 @@ import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContexts;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
+import net.minecraft.core.RegistryAccess;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -65,7 +65,7 @@ public final class FormationPlateItem extends Item {
             return InteractionResult.FAIL;
         }
         // Sorted, so two definitions describing the same structure resolve to the same one every time.
-        List<Holder<Formation>> admissible = admissibleCandidates(plate);
+        List<Holder<Formation>> admissible = admissibleCandidates(plate, level.registryAccess());
         if (admissible.isEmpty()) {
             ItemFeedback.send(player, Component.translatable("item.mxt.formation_plate.not_allowed"));
             return InteractionResult.FAIL;
@@ -81,8 +81,8 @@ public final class FormationPlateItem extends Item {
     }
 
     // Public because the ordering decides what the plate raises, and the audit asserts it.
-    public static List<Holder<Formation>> admissibleCandidates(FormationPlateComponent plate) {
-        return plate.admissible(MxtDatapackRegistries.registry(MxtResourceKeys.FORMATION)).stream()
+    public static List<Holder<Formation>> admissibleCandidates(FormationPlateComponent plate, RegistryAccess access) {
+        return plate.admissible(access.lookupOrThrow(MxtResourceKeys.FORMATION)).stream()
                 .sorted(Comparator.comparing(HolderHelper::id))
                 .map(formation -> (Holder<Formation>) formation)
                 .toList();

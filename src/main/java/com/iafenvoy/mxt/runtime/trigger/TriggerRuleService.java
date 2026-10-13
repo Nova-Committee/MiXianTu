@@ -5,7 +5,7 @@ import com.iafenvoy.mxt.attachment.TriggerCooldownAttachment;
 import com.iafenvoy.mxt.data.trigger.TriggerRule;
 import com.iafenvoy.mxt.data.trigger.TriggerSignal;
 import com.iafenvoy.mxt.registry.MxtAttachments;
-import com.iafenvoy.mxt.runtime.ServerCache;
+import com.iafenvoy.mxt.runtime.DatapackCache;
 import com.iafenvoy.mxt.util.HolderHelper;
 import net.minecraft.core.Holder.Reference;
 import net.minecraft.resources.Identifier;
@@ -31,7 +31,7 @@ public final class TriggerRuleService {
     }
 
     public static void dispatch(TriggerSignal signal) {
-        ServerCache cache = ServerCache.get().orElse(null);
+        DatapackCache cache = DatapackCache.get().orElse(null);
         if (cache == null) return;
         Entity actor = signal.context().actor();
         if (actor == null) return;

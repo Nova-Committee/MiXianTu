@@ -12,6 +12,7 @@ import net.minecraft.resources.ResourceKey;
 
 // Reads the ids named by the argument types that may name something the current pack no longer provides. A
 // ResourceKeyArgument node is deliberately never resolved to a registry entry; only its registry is checked.
+//FIXME::Remove
 public final class RegistryReferences {
     private static final DynamicCommandExceptionType ERROR_INVALID_ID = new DynamicCommandExceptionType(
             value -> Component.translatable("command.mxt.message.invalid_id", value));
@@ -19,8 +20,7 @@ public final class RegistryReferences {
     private RegistryReferences() {
     }
 
-    public static <T> ResourceKey<T> key(CommandContext<CommandSourceStack> ctx, String name,
-                                         ResourceKey<Registry<T>> registry) throws CommandSyntaxException {
+    public static <T> ResourceKey<T> key(CommandContext<CommandSourceStack> ctx, String name, ResourceKey<Registry<T>> registry) throws CommandSyntaxException {
         return ResourceKeyArgument.getRegistryKey(ctx, name, registry, ERROR_INVALID_ID);
     }
 

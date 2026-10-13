@@ -51,7 +51,7 @@ public final class CurrencyValueService {
     public static OptionalLong unitValue(@NotNull Provider access, @NotNull ItemStack stack) {
         if (stack.isEmpty()) return OptionalLong.of(0L);
         return find(access, stack)
-                .map(definition -> unitValue(access, stack, definition, isAvailable(definition), FormulaContext.EMPTY))
+                .map(definition -> unitValue(access, stack, definition, isAvailable(definition), FormulaContext.of(access)))
                 .orElseGet(OptionalLong::empty);
     }
 
@@ -67,7 +67,7 @@ public final class CurrencyValueService {
         if (holder == null) return unitValue(access, stack);
         if (stack.isEmpty()) return OptionalLong.of(0L);
         return find(access, stack)
-                .map(definition -> unitValue(access, stack, definition, isAvailable(definition, holder, stack, FormulaContext.EMPTY), FormulaContext.EMPTY))
+                .map(definition -> unitValue(access, stack, definition, isAvailable(definition, holder, stack, FormulaContext.of(access)), FormulaContext.of(access)))
                 .orElseGet(OptionalLong::empty);
     }
 
@@ -100,12 +100,6 @@ public final class CurrencyValueService {
         return OptionalLong.of(unit.getAsLong() * stack.getCount());
     }
 
-    public static List<ExchangeOffer> exchangeOffers(ItemStack input) {
-        if (input.isEmpty()) return List.of();
-        MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
-        return server == null ? List.of() : exchangeOffers(server.registryAccess(), input);
-    }
-
     public static List<ExchangeOffer> exchangeOffers(RegistryAccess registryAccess, ItemStack input) {
         if (input.isEmpty()) return List.of();
         return matching(registryAccess, input)
@@ -119,7 +113,7 @@ public final class CurrencyValueService {
         if (holder == null) return exchangeOffers(registryAccess, input);
         if (input.isEmpty()) return List.of();
         return matching(registryAccess, input)
-                .filter(definition -> isAvailable(definition, holder, input, FormulaContext.EMPTY))
+                .filter(definition -> isAvailable(definition, holder, input, FormulaContext.of(registryAccess)))
                 .flatMap(definition -> definition.exchanges().stream())
                 .map(exchange -> new ExchangeOffer(exchange.result().create(), exchange.cost()))
                 .toList();
@@ -135,7 +129,7 @@ public final class CurrencyValueService {
         if (holder == null) return isExchangeInput(registryAccess, input);
         if (input.isEmpty()) return false;
         return matching(registryAccess, input)
-                .anyMatch(definition -> isAvailable(definition, holder, input, FormulaContext.EMPTY)
+                .anyMatch(definition -> isAvailable(definition, holder, input, FormulaContext.of(registryAccess))
                         && !definition.exchanges().isEmpty());
     }
 
@@ -147,7 +141,7 @@ public final class CurrencyValueService {
 
     public static Optional<DescribedEntry<ItemCondition>> unavailableReason(@NotNull Provider access, @Nullable Entity holder, @NotNull ItemStack stack) {
         return definition(access, stack).flatMap(definition -> definition.unavailableWhen().stream()
-                .filter(entry -> holder != null && entry.value().test(holder, stack, FormulaContext.EMPTY)).findFirst());
+                .filter(entry -> holder != null && entry.value().test(holder, stack, FormulaContext.of(access))).findFirst());
     }
 
     private static boolean isAvailable(CurrencyValue definition, @NotNull Entity holder, @NotNull ItemStack stack, @NotNull FormulaContext context) {

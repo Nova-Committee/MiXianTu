@@ -29,6 +29,7 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
@@ -54,7 +55,7 @@ public final class PhysiqueCommand {
     public static LiteralArgumentBuilder<CommandSourceStack> build(CommandBuildContext context) {
         return literal("physique")
                 .then(literal("list")
-                        .executes(ctx -> list(ctx.getSource(), ctx.getSource().getPlayer()))
+                        .executes(ctx -> list(ctx.getSource(), ctx.getSource().getPlayerOrException()))
                         .then(argument("target", EntityArgument.entity())
                                 .executes(ctx -> list(ctx.getSource(), EntityArgument.getEntity(ctx, "target")))))
                 .then(literal("grant").requires(ServerCommandManager::mayChange)
@@ -79,8 +80,7 @@ public final class PhysiqueCommand {
 
     // A definition whose entry a pack removed still appears, because the body holds a reference to it - exactly
     // the state an operator has to be able to see in order to clean it up.
-    private static int list(CommandSourceStack source, @Nullable Entity target) {
-        if (target == null) return noPlayer(source);
+    private static int list(CommandSourceStack source, @NotNull Entity target) {
         SpiritIdentityAttachment identity = target.getData(MxtAttachments.SPIRIT_IDENTITY);
         source.sendSuccess(() -> Component.translatable("command.mxt.identity.header.physique", target.getDisplayName()), false);
         List<Holder<Physique>> distinct = new ArrayList<>(new LinkedHashSet<>(identity.physiques()));
@@ -89,11 +89,9 @@ public final class PhysiqueCommand {
             return 1;
         }
         for (Holder<Physique> physique : distinct) {
-            Physique definition = definition(physique).orElse(null);
-            Component quality = definition == null || definition.quality().isEmpty()
-                    ? Component.literal("-") : QualityService.displayName(definition.quality().orElseThrow());
-            Component state = Component.translatable(identity.isPhysiqueEnabled(physique)
-                    ? "command.mxt.identity.on" : "command.mxt.identity.off");
+            Physique definition = physique.value();
+            Component quality = definition.quality().isEmpty() ? Component.literal("-") : QualityService.displayName(definition.quality().orElseThrow());
+            Component state = Component.translatable(identity.isPhysiqueEnabled(physique) ? "command.mxt.identity.on" : "command.mxt.identity.off");
             // A physique has no element to name, so the slot is empty rather than filled with a placeholder.
             source.sendSuccess(() -> Component.translatable("command.mxt.identity.line",
                     DefinitionText.text(physique), quality, Component.empty(), state), false);
@@ -179,17 +177,6 @@ public final class PhysiqueCommand {
         for (Holder<Physique> physique : identity.physiques())
             if (HolderHelper.id(physique).equals(id)) return physique;
         return null;
-    }
-
-    // Resolved by id rather than through value(): the body can hold a reference to a definition the current pack
-    // no longer provides. Present counts even then; a definition that is gone answers empty and reads as unknown.
-    private static Optional<Physique> definition(Holder<Physique> physique) {
-        return MxtDatapackRegistries.holderOrEmpty(MxtResourceKeys.PHYSIQUE, HolderHelper.id(physique)).map(Holder::value);
-    }
-
-    private static int noPlayer(CommandSourceStack source) {
-        source.sendFailure(Component.translatable("command.mxt.message.requires_player"));
-        return 0;
     }
 
     // Printed as its own name rather than as a sentence: the values are a fixed vocabulary shared with the

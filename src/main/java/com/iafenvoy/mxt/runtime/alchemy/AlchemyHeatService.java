@@ -25,7 +25,7 @@ import java.util.Map;
 public final class AlchemyHeatService {
     private static final int MAX_CACHED_REGISTRIES = 4;
     private static final Object LOCK = new Object();
-    // Keyed on the block registry instance, and dropped on every datapack load by ServerCache: a reloaded pack may
+    // Keyed on the block registry instance, and dropped on every datapack load by DatapackCache: a reloaded pack may
     // keep the same registry instance, so the key alone cannot be trusted to notice one. The index expands block
     // tags, so it never outlives the pack that built it. MAX_CACHED_REGISTRIES bounds the map.
     private static Map<Registry<Block>, Map<Block, HeatSource>> indexes = Map.of();

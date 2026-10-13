@@ -34,7 +34,8 @@ public enum DisplayStandComponentProvider implements IComponentProvider<BlockAcc
         if (item.isEmpty()) return;
 
         tooltip.add(new DisplayedItemElement(item));
-        SpiritStorageTooltipAppender.resolveCharge(accessor.getLevel().registryAccess(), item, FormulaContext.EMPTY)
+        SpiritStorageTooltipAppender.resolveCharge(accessor.getLevel().registryAccess(), item,
+                FormulaContext.of(accessor.getLevel().registryAccess()))
                 .ifPresent(charge -> tooltip.add(new ChargeBarElement(charge)));
     }
 

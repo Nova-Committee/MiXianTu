@@ -21,7 +21,7 @@ import java.util.Map;
  * Turns registry ids into the flat identifiers a formula can name, and keeps the indexes behind
  * {@code caster_<resource>}, {@code caster_<attribute>} and {@code caster_<element>}. The attribute registry is
  * static so its index is built once; the other two are keyed by registry instance and hold registry keys, and
- * ServerCache drops them on every datapack load, so a reloaded pack is never answered out of the old index.
+ * DatapackCache drops them on every datapack load, so a reloaded pack is never answered out of the old index.
  */
 public final class FormulaNames {
     private static final int MAX_CACHED_REGISTRIES = 4;

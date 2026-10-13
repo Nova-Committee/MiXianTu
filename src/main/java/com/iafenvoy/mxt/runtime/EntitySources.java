@@ -4,11 +4,11 @@ import com.iafenvoy.mxt.attachment.ProgressionAttachment;
 import com.iafenvoy.mxt.data.AttributeEntry;
 import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.progression.ProgressionOwner;
-import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import com.mojang.datafixers.util.Either;
 import net.minecraft.core.Holder;
+import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.resources.Identifier;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.entity.Entity;
@@ -51,9 +51,10 @@ public final class EntitySources {
     public interface GrantSink {
         void want(Identifier source, Holder<Ability> ability);
 
-        // A definition's own list, which may name ids or tags.
-        default void want(Identifier source, List<Either<Holder<Ability>, TagKey<Ability>>> values) {
-            RegistryCodecs.resolve(values, MxtDatapackRegistries.registry(MxtResourceKeys.ABILITY))
+        // A definition's own list, which may name ids or tags. The access is the caller's because the caller is the
+        // one that holds it: a grant is rebuilt from inside collect(), which already has the body being asked about.
+        default void want(Identifier source, List<Either<Holder<Ability>, TagKey<Ability>>> values, Provider access) {
+            RegistryCodecs.resolve(values, access, MxtResourceKeys.ABILITY)
                     .forEach(ability -> this.want(source, ability));
         }
 

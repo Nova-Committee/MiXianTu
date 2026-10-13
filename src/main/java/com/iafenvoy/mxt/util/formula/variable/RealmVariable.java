@@ -28,8 +28,7 @@ public final class RealmVariable implements FormulaVariable {
         if (!suffix.isEmpty()) return Double.NaN;
         ResourceSubject subject = context.resource();
         if (subject == null) return Double.NaN;
-        Holder<Aura> aura = AuraLookup
-                .holder(AuraLookup.access(context), subject.resource()).orElse(null);
+        Holder<Aura> aura = AuraLookup.holder(context.registries(), subject.resource()).orElse(null);
         if (key.equals("minor_stage"))
             return aura == null ? Double.NaN : CultivationService.minorStage(aura, subject.cultivation(), context);
         int rank = aura == null ? -1 : CultivationRanks.realmRank(subject.cultivation(), aura);

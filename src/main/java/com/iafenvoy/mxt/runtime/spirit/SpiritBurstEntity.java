@@ -91,7 +91,7 @@ public final class SpiritBurstEntity extends ThrowableProjectile {
             BlockPos pos = hit.getBlockPos();
             BlockEntity blockEntity = this.level().getBlockEntity(pos);
             if (blockEntity instanceof AuraAccess accessor) {
-                this.aura().ifPresent(type -> accessor.insert(this.ownerLivingEntity(), type, this.amount(), false));
+                this.aura().ifPresent(type -> accessor.insert(this.ownerLivingEntity(), this.registryAccess(), type, this.amount(), false));
             }
             this.discard();
         }
@@ -220,7 +220,7 @@ public final class SpiritBurstEntity extends ThrowableProjectile {
 
         BlockEntity blockEntity = this.level().getBlockEntity(closestPos);
         if (!(blockEntity instanceof AuraAccess accessor)) return false;
-        this.aura().ifPresent(type -> accessor.insert(this.ownerLivingEntity(), type, this.amount(), false));
+        this.aura().ifPresent(type -> accessor.insert(this.ownerLivingEntity(), this.registryAccess(), type, this.amount(), false));
         this.discard();
         return true;
     }

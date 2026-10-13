@@ -1,6 +1,7 @@
 package com.iafenvoy.mxt.data.context;
 
 import com.iafenvoy.mxt.util.formula.FormulaContext;
+import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
@@ -8,7 +9,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
 
-public class Context {
+public abstract class Context {
     // Read it through origin(), never directly: the extension map is untyped.
     public static final String ORIGIN = "mxt:origin";
 
@@ -18,8 +19,13 @@ public class Context {
         this.data = new LinkedHashMap<>();
     }
 
-    public FormulaContext formula() {
-        return FormulaContext.EMPTY;
+    public abstract FormulaContext formula();
+
+    // The one place a context exposes where its datapack content is read from, so an action or a condition reads
+    // the same registries the formula it was handed does.
+    @Nullable
+    public Provider registries() {
+        return this.formula().registries();
     }
 
     @SuppressWarnings("unchecked")

@@ -6,6 +6,7 @@ import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.EntitySources;
 import com.iafenvoy.mxt.util.HolderHelper;
 import net.minecraft.core.Holder;
+import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.LivingEntity;
 
@@ -22,11 +23,12 @@ public final class ProgressionDamageMultiplier {
     // A body with no record still stands on its entry level, so the attachment may be absent here.
     public static double of(LivingEntity holder, Identifier ability) {
         ProgressionAttachment progress = holder.getExistingData(MxtAttachments.PROGRESSION).orElse(null);
+        Provider access = holder.level().registryAccess();
         double best = 1.0D;
         for (EntitySources.Owner owner : EntitySources.heldBy(holder)) {
             Holder<Progression> current = ProgressionService.currentLevel(progress, owner.id(), owner.definition()).orElse(null);
             if (current == null) continue;
-            boolean grants = ProgressionService.grantedAbilities(owner.definition(), current).stream()
+            boolean grants = ProgressionService.grantedAbilities(owner.definition(), current, access).stream()
                     .anyMatch(unlocked -> HolderHelper.id(unlocked).equals(ability));
             if (!grants) continue;
             double multiplier = current.value().damageMultiplier();

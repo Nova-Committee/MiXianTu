@@ -16,12 +16,10 @@ import com.iafenvoy.mxt.screen.menu.*;
 import com.iafenvoy.mxt.util.PlayerNames;
 import com.mojang.logging.LogUtils;
 import net.minecraft.resources.Identifier;
-import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
-import net.neoforged.neoforge.server.ServerLifecycleHooks;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import top.theillusivec4.curios.api.CuriosApi;
@@ -173,8 +171,6 @@ public final class ServerNetworkHandler {
     // Answered out of what the server already knows - the online player, or the name its profile cache kept from a
     // previous login. Nothing is fetched (see PlayerNames#knownToServer), so an unknown id answers with nothing.
     static void onOwnerNameRequest(OwnerNameC2SPayload payload, IPayloadContext context) {
-        MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
-        Optional<String> name = server == null ? Optional.empty() : PlayerNames.knownToServer(server, payload.owner());
-        context.reply(new OwnerNameS2CPayload(payload.owner(), name));
+        context.reply(new OwnerNameS2CPayload(payload.owner(), PlayerNames.knownToServer(payload.owner())));
     }
 }

@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.runtime.progression;
 
-import com.iafenvoy.mxt.runtime.ServerCache;
 import com.iafenvoy.mxt.runtime.ability.AbilityGrantService;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
@@ -12,6 +12,7 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.TagsUpdatedEvent.ServerDataLoad;
 import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerLoggedInEvent;
+import net.neoforged.neoforge.server.ServerLifecycleHooks;
 
 /**
  * Re-checks the stored levels when the definitions may have moved: when a body joins the world, and once per
@@ -33,18 +34,19 @@ public final class ProgressionEventBridge {
         if (event.getEntity() instanceof LivingEntity living) prune(living);
     }
 
-    // LOWEST so ServerCache has already rebuilt: clearing a record changes where its owner stands, and the grant
+    // LOWEST so DatapackCache has already rebuilt: clearing a record changes where its owner stands, and the grant
     // rebuild that follows reads that index.
     @SubscribeEvent(priority = EventPriority.LOWEST)
     public static void onDatapackLoaded(ServerDataLoad event) {
-        ServerCache.get().map(ServerCache::server).ifPresent(server -> {
-            for (ServerPlayer player : server.getPlayerList().getPlayers()) prune(player);
-            // Creatures never log in, so the loaded ones are visited here; the walk only looks at bodies that
-            // already carry a record.
-            for (ServerLevel level : server.getAllLevels())
-                for (Entity entity : level.getEntities().getAll())
-                    if (entity instanceof LivingEntity living) prune(living);
-        });
+        // Null while a world loads: the first datapack load of a session happens before the server object exists.
+        MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
+        if (server == null) return;
+        for (ServerPlayer player : server.getPlayerList().getPlayers()) prune(player);
+        // Creatures never log in, so the loaded ones are visited here; the walk only looks at bodies that
+        // already carry a record.
+        for (ServerLevel level : server.getAllLevels())
+            for (Entity entity : level.getEntities().getAll())
+                if (entity instanceof LivingEntity living) prune(living);
     }
 
     private static void prune(LivingEntity entity) {

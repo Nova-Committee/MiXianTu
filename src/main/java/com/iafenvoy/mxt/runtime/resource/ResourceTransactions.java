@@ -8,8 +8,10 @@ import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.aura.AuraLookup;
 import net.minecraft.core.Holder;
+import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.LivingEntity;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -23,17 +25,19 @@ public final class ResourceTransactions {
     private ResourceTransactions() {
     }
 
-    public static Result tryConsume(ResourceHolderAttachment holder, Evaluation evaluation) {
-        return tryConsume(null, holder, evaluation);
+    public static Result tryConsume(@Nullable Provider access, ResourceHolderAttachment holder, Evaluation evaluation) {
+        return tryConsume(access, null, holder, evaluation);
     }
 
     // The optional entity enables a resource's use gate; server systems without an entity retain value-only
-    // accounting.
-    public static Result tryConsume(LivingEntity entity, ResourceHolderAttachment holder, Evaluation evaluation) {
+    // accounting. The access is where the ids are resolved, so a caller with no server to reach for answers
+    // "rejected" rather than throwing.
+    public static Result tryConsume(@Nullable Provider access, @Nullable LivingEntity entity,
+                                    ResourceHolderAttachment holder, Evaluation evaluation) {
         // The holder is intentionally a value-only attachment, so a cost may never create a negative balance even
         // when a caller has not resolved the optional datapack bounds.
         for (Entry<Identifier, Double> entry : evaluation.amounts.entrySet()) {
-            Holder<Resource> resource = MxtDatapackRegistries.holder(MxtResourceKeys.RESOURCE, entry.getKey()).orElse(null);
+            Holder<Resource> resource = resource(access, entry.getKey());
             if (resource == null) return Result.rejected(entry.getKey(), evaluation.amounts);
             // The gate belongs to the aura a value carries; a value without one has no gate to ask, and a
             // server system without an entity has nobody to ask.
@@ -49,11 +53,19 @@ public final class ResourceTransactions {
                 return Result.rejected(entry.getKey(), evaluation.amounts);
             }
         }
-        evaluation.amounts.forEach((id, amount) -> MxtDatapackRegistries.holder(MxtResourceKeys.RESOURCE, id).ifPresent(resource -> {
+        evaluation.amounts.forEach((id, amount) -> {
+            Holder<Resource> resource = resource(access, id);
+            if (resource == null) return;
             Audit previous = holder.audit(resource);
             holder.set(resource, holder.get(resource) - amount, previous.minSnapshot(), previous.maxSnapshot(), previous.lastChangedTick(), "cost");
-        }));
+        });
         return Result.committed(evaluation.amounts);
+    }
+
+    // An id is resolved through the caller's access, never through a running server: a payment made off the
+    // server-side path has no server to reach for, and one handed no access resolves nothing.
+    private static @Nullable Holder<Resource> resource(@Nullable Provider access, Identifier id) {
+        return access == null ? null : MxtDatapackRegistries.holder(access, MxtResourceKeys.RESOURCE, id).orElse(null);
     }
 
     public record Evaluation(Map<Identifier, Double> amounts) {

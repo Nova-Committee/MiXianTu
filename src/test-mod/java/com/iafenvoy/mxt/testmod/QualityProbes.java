@@ -20,7 +20,7 @@ import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtItems;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.runtime.ServerCache;
+import com.iafenvoy.mxt.runtime.DatapackCache;
 import com.iafenvoy.mxt.runtime.forging.ForgingSurface;
 import com.iafenvoy.mxt.runtime.forging.ForgingWorkstationService;
 import com.iafenvoy.mxt.runtime.item.QualityRequirements;
@@ -155,7 +155,7 @@ public final class QualityProbes {
             Holder<ItemQuality> refusedTier = tier(access, "mxt_test:refused_probe");
             ItemStack refused = named(Items.DIRT, refusedTier);
             QualityRequirement refusedFloor = new QualityRequirement(List.of(), Optional.of(refusedTier));
-            List<String> qualityProblems = ServerCache.get().map(cache -> cache.problems().stream()
+            List<String> qualityProblems = DatapackCache.get().map(cache -> cache.problems().stream()
                     .filter(problem -> problem.contains("/mxt/quality/")).toList()).orElse(List.of());
             ok &= leg(source, "compare_refused_ladder",
                     QualityLadders.rank(access, refusedTier).isEmpty()

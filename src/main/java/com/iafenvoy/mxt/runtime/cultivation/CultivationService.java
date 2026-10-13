@@ -17,7 +17,7 @@ import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtCriteriaTriggers;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.runtime.ServerCache;
+import com.iafenvoy.mxt.runtime.DatapackCache;
 import com.iafenvoy.mxt.runtime.ability.AbilityEventBridge;
 import com.iafenvoy.mxt.runtime.resource.ResourceService;
 import com.iafenvoy.mxt.runtime.tribulation.TribulationService;
@@ -87,7 +87,8 @@ public final class CultivationService {
         double progress = spirit.cultivationProgress(transition.aura());
         if (progress < minimum) return BreakthroughResult.rejected(Failure.INSUFFICIENT_PROGRESS, null);
         boolean configuredConditions = transition.conditions().test(entity, context);
-        boolean requiredAbilities = RegistryCodecs.resolve(target.abilityRequirements(), MxtDatapackRegistries.registry(MxtResourceKeys.ABILITY))
+        boolean requiredAbilities = RegistryCodecs.resolve(target.abilityRequirements(),
+                        entity.level().registryAccess(), MxtResourceKeys.ABILITY)
                 .allMatch(ability -> entity.getData(MxtAttachments.ABILITY_HOLDER).has(HolderHelper.id(ability)));
         BreakthroughResult result = commit(entity, spirit, resources, transition, resourceContext,
                 () -> configuredConditions && requiredAbilities && conditionsMet.getAsBoolean(), NeoForge.EVENT_BUS);
@@ -169,7 +170,7 @@ public final class CultivationService {
             // The validated chain answers one rung at a time in either direction. Without one - no server, or
             // before a world is loaded - the realm's own next_realm answers instead; a chain the walk refused does
             // not, because advancing along a line nobody validated is what the refusal is about.
-            ServerCache cache = ServerCache.get().orElse(null);
+            DatapackCache cache = DatapackCache.get().orElse(null);
             Identifier nextId = cache != null ? cache.nextRealm(HolderHelper.id(current)).orElse(null)
                     : current.value().nextRealm()
                     .filter(value -> HolderHelper.id(value.value().aura()).equals(cultivationId))
@@ -285,7 +286,7 @@ public final class CultivationService {
 
     // Administrative, validated through the server cache rather than by traversing the registry here.
     public static boolean setRealm(CultivationAttachment spirit, Identifier target) {
-        ServerCache cache = ServerCache.get().orElse(null);
+        DatapackCache cache = DatapackCache.get().orElse(null);
         Identifier cultivationId = cache == null ? null : cache.cultivationForRealm(target).orElse(null);
         if (cultivationId == null) return false;
         Reference<Aura> aura = MxtDatapackRegistries.holder(MxtResourceKeys.AURA, cultivationId).orElse(null);

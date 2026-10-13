@@ -5,6 +5,7 @@ import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.world.Container;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
@@ -25,6 +26,10 @@ public record CostContext(@Nullable LivingEntity payer, FormulaContext formula, 
                           @Nullable Level level, @Nullable BlockPos pos, @Nullable AuraAccess bank,
                           @Nullable ResourceHolderAttachment account, AuraTarget auraTarget,
                           @Nullable Container itemTarget) {
+    public HolderLookup.Provider registries() {
+        return this.formula.registries();
+    }
+
     /**
      * Where an {@code mxt:aura} entry takes its aura from.
      */

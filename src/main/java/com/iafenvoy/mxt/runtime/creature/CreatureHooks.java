@@ -10,6 +10,7 @@ import com.iafenvoy.mxt.runtime.Sources;
 import com.iafenvoy.mxt.runtime.progression.ProgressionService;
 import com.iafenvoy.mxt.util.HolderHelper;
 import net.minecraft.core.Holder;
+import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 
@@ -36,9 +37,10 @@ public final class CreatureHooks implements EntitySources.Grants, EntitySources.
     public void collect(LivingEntity entity, ProgressionAttachment progress, EntitySources.GrantSink sink) {
         CreatureSpiritAttachment spirit = entity.getExistingData(MxtAttachments.CREATURE_SPIRIT).orElse(null);
         if (spirit == null) return;
+        Provider access = entity.level().registryAccess();
         spirit.profile().ifPresent(profile -> ProgressionService.currentLevel(progress, HolderHelper.id(profile), profile.value())
                 .ifPresent(current -> sink.wantResolved(Sources.granted(Sources.Grant.CREATURE, HolderHelper.id(profile)),
-                        ProgressionService.grantedAbilities(profile.value(), current))));
+                        ProgressionService.grantedAbilities(profile.value(), current, access))));
     }
 
     // A profile only counts as an owner once it names a chain: a profile that stays a pure stat block keeps every
@@ -60,7 +62,8 @@ public final class CreatureHooks implements EntitySources.Grants, EntitySources.
         @Override
         public void collect(LivingEntity entity, ProgressionAttachment progress, EntitySources.GrantSink sink) {
             for (Holder<ContractType> type : ContractGrantService.heldTypes(entity))
-                sink.want(Sources.granted(Sources.Grant.CONTRACT, HolderHelper.id(type)), type.value().ownerAbilities());
+                sink.want(Sources.granted(Sources.Grant.CONTRACT, HolderHelper.id(type)), type.value().ownerAbilities(),
+                        entity.level().registryAccess());
         }
     }
 }

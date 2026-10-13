@@ -34,7 +34,7 @@ public final class FormationInstance {
             // bug worth seeing, not a row to drop silently.
             Codec.unboundedMap(Aura.CODEC, Codec.DOUBLE).lenientOptionalFieldOf("stored")
                     .forGetter(instance -> instance.stored.isEmpty() ? Optional.empty() : Optional.of(instance.stored))
-    ).apply(i, FormationInstance::new)).flatXmap(FormationInstance::validate, FormationInstance::validate);
+    ).apply(i, FormationInstance::new)).validate(FormationInstance::validate);
 
     // Reports the problem instead of throwing it, so one malformed row does not fail the whole attachment by
     // escaping the tolerant list decoder that is supposed to skip bad rows.

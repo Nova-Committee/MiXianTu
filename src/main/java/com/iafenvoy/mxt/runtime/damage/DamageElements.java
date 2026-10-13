@@ -9,6 +9,8 @@ import com.iafenvoy.mxt.util.HolderHelper;
 import com.mojang.datafixers.util.Either;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.core.HolderLookup.RegistryLookup;
 import net.minecraft.core.Registry;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.core.registries.Registries;
@@ -38,22 +40,15 @@ public final class DamageElements {
     private static final int REPORT_LIMIT = 128;
     private static final Object LOCK = new Object();
     private static final Set<String> REPORTED = ConcurrentHashMap.newKeySet();
-    private static volatile Map<Registry<DamageType>, Map<Holder<DamageType>, List<Claim>>> indexes = Map.of();
+    //FIXME::Registry Map?
+    private static volatile Map<RegistryLookup<DamageType>, Map<Holder<DamageType>, List<Claim>>> indexes = Map.of();
 
     private DamageElements() {
     }
 
     // Empty when no element claims the type.
-    public static Set<Holder<Element>> of(RegistryAccess access, Holder<DamageType> type) {
+    public static Set<Holder<Element>> of(HolderLookup.Provider access, Holder<DamageType> type) {
         return of(access.lookupOrThrow(MxtResourceKeys.ELEMENT), access.lookupOrThrow(Registries.DAMAGE_TYPE), type);
-    }
-
-    // A caller with no running server (a client-side script) gets no element rather than an exception: a
-    // harmless query must not be able to bring down a client.
-    public static Set<Holder<Element>> of(DamageSource source) {
-        MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
-        if (server == null) return Set.of();
-        return of(server.registryAccess(), source.typeHolder());
     }
 
     // The single rule the pipeline and the damage condition both read, so a condition can never disagree with
@@ -72,12 +67,9 @@ public final class DamageElements {
     }
 
     // What the reduction and attachment steps of the incoming event read.
-    public static Strike reading(DamageSource source) {
-        MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
-        if (server != null) {
-            RegistryAccess access = server.registryAccess();
-            List<Claim> claimed = claims(access.lookupOrThrow(MxtResourceKeys.ELEMENT),
-                    access.lookupOrThrow(Registries.DAMAGE_TYPE), source.typeHolder());
+    public static Strike reading(DamageSource source, HolderLookup.Provider provider) {
+        if (provider instanceof RegistryAccess access) {
+            List<Claim> claimed = claims(access.lookupOrThrow(MxtResourceKeys.ELEMENT), access.lookupOrThrow(Registries.DAMAGE_TYPE), source.typeHolder());
             if (!claimed.isEmpty()) return of(claimed);
         }
         return roots(source.getEntity());
@@ -109,8 +101,8 @@ public final class DamageElements {
 
     // What the reduction layer is handed. The causing entity is the attacker a source is credited with, so a
     // plain mob swing claiming no damage type still reads the mob's own elements.
-    public static Set<Holder<Element>> strike(DamageSource source) {
-        return reading(source).elements();
+    public static Set<Holder<Element>> strike(DamageSource source, HolderLookup.Provider provider) {
+        return reading(source, provider).elements();
     }
 
     // Only two answers are observable from a DamageSource: the type was claimed, or nobody claimed it and the
@@ -208,12 +200,12 @@ public final class DamageElements {
         }
     }
 
-    private static List<Claim> claims(Registry<Element> elements, Registry<DamageType> types, Holder<DamageType> type) {
+    private static List<Claim> claims(RegistryLookup<Element> elements, RegistryLookup<DamageType> types, Holder<DamageType> type) {
         List<Claim> claimed = index(elements, types).get(type);
         return claimed == null ? List.of() : claimed;
     }
 
-    private static Set<Holder<Element>> of(Registry<Element> elements, Registry<DamageType> types, Holder<DamageType> type) {
+    private static Set<Holder<Element>> of(RegistryLookup<Element> elements, RegistryLookup<DamageType> types, Holder<DamageType> type) {
         List<Claim> claimed = claims(elements, types, type);
         if (claimed.isEmpty()) return Set.of();
         Set<Holder<Element>> result = new LinkedHashSet<>();
@@ -221,10 +213,10 @@ public final class DamageElements {
         return Set.copyOf(result);
     }
 
-    // Keyed on the damage type registry instance, and dropped on every datapack load by ServerCache: a reloaded
+    // Keyed on the damage type registry instance, and dropped on every datapack load by DatapackCache: a reloaded
     // pack may keep the same registry instance, so the key alone cannot be trusted to notice one. The index
     // reads element definitions, so it never outlives the pack that built it. MAX_CACHED_REGISTRIES bounds the map.
-    private static Map<Holder<DamageType>, List<Claim>> index(Registry<Element> elements, Registry<DamageType> types) {
+    private static Map<Holder<DamageType>, List<Claim>> index(RegistryLookup<Element> elements, RegistryLookup<DamageType> types) {
         Map<Holder<DamageType>, List<Claim>> cached = indexes.get(types);
         if (cached != null) return cached;
         synchronized (LOCK) {
@@ -236,15 +228,14 @@ public final class DamageElements {
             }
             Map<Holder<DamageType>, List<Claim>> frozen = new HashMap<>();
             built.forEach((type, claimants) -> frozen.put(type, List.copyOf(claimants)));
-            Map<Registry<DamageType>, Map<Holder<DamageType>, List<Claim>>> updated =
-                    indexes.size() + 1 > MAX_CACHED_REGISTRIES ? new HashMap<>() : new HashMap<>(indexes);
+            Map<RegistryLookup<DamageType>, Map<Holder<DamageType>, List<Claim>>> updated = indexes.size() + 1 > MAX_CACHED_REGISTRIES ? new HashMap<>() : new HashMap<>(indexes);
             updated.put(types, Map.copyOf(frozen));
             indexes = Map.copyOf(updated);
             return updated.get(types);
         }
     }
 
-    private static void claimAll(Map<Holder<DamageType>, List<Claim>> index, Registry<DamageType> types, Holder<Element> element) {
+    private static void claimAll(Map<Holder<DamageType>, List<Claim>> index, RegistryLookup<DamageType> types, Holder<Element> element) {
         for (DamageTypeClaim claim : element.value().damageTypes()) {
             // The claim's own number when it wrote one, the element's own default otherwise.
             double attachment = claim.attachment(element.value().damageAttachment());

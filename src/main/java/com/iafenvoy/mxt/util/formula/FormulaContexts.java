@@ -3,6 +3,7 @@ package com.iafenvoy.mxt.util.formula;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -21,11 +22,11 @@ public final class FormulaContexts {
     }
 
     public static FormulaContext forEntity(@NotNull Entity entity, @NotNull Map<String, Double> extra) {
-        return new FormulaContext(finite(extra), entity.getRandom(), playerOf(entity, null), entity, null, null, false);
+        return new FormulaContext(finite(extra), entity.getRandom(), entity.registryAccess(), playerOf(entity, null), entity, null, null, false);
     }
 
     public static FormulaContext forEntities(@NotNull Entity caster, @NotNull Entity target, @NotNull Map<String, Double> extra) {
-        return new FormulaContext(finite(extra), caster.getRandom(), playerOf(caster, target), caster, target, null, false);
+        return new FormulaContext(finite(extra), caster.getRandom(), caster.registryAccess(), playerOf(caster, target), caster, target, null, false);
     }
 
     public static FormulaContext forEntity(@NotNull Entity entity, @NotNull FormulaContext base) {
@@ -55,6 +56,7 @@ public final class FormulaContexts {
         return Map.copyOf(values);
     }
 
+    @Nullable
     private static Player playerOf(Entity caster, Entity target) {
         if (caster instanceof Player player) return player;
         return target instanceof Player player ? player : null;

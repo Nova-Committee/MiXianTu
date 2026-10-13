@@ -42,7 +42,7 @@ public final class SpiritBurstService {
             if (!firing) ACTIVE_AURAS.remove(holderId);
             return;
         }
-        Optional<Holder<Aura>> valid = auraId.flatMap(id -> MxtDatapackRegistries.holder(MxtResourceKeys.AURA, id))
+        Optional<Holder<Aura>> valid = auraId.flatMap(id -> MxtDatapackRegistries.holder(holder.level().registryAccess(), MxtResourceKeys.AURA, id))
                 .map(aura -> (Holder<Aura>) aura)
                 .filter(aura -> aura.value().auraType().isPresent() && ResourceUseService.canUse(holder, aura));
         if (valid.isEmpty()) return;
@@ -79,7 +79,7 @@ public final class SpiritBurstService {
     // a held key would have refused it. Returns whether a burst was actually fired.
     public static boolean fireOnce(LivingEntity holder, Identifier auraId) {
         if (auraId == null) return false;
-        Holder<Aura> aura = MxtDatapackRegistries.holder(MxtResourceKeys.AURA, auraId)
+        Holder<Aura> aura = MxtDatapackRegistries.holder(holder.level().registryAccess(), MxtResourceKeys.AURA, auraId)
                 .map(value -> (Holder<Aura>) value)
                 .filter(value -> value.value().auraType().isPresent() && ResourceUseService.canUse(holder, value))
                 .orElse(null);
@@ -119,7 +119,7 @@ public final class SpiritBurstService {
         if (!ResourceService.change(resources, resource, -amount, context).valid()) return false;
         if (vessel != null) {
             ItemStack stack = holder.getMainHandItem();
-            vessel.insert(holder, stack, aura, amount, false);
+            vessel.insert(holder, holder.registryAccess(), stack, aura, amount, false);
             SpiritVesselItem.showCharge(holder, stack, resource);
             return true;
         }
@@ -132,7 +132,7 @@ public final class SpiritBurstService {
     private static @Nullable SpiritVesselItem heldVessel(LivingEntity holder, Holder<Aura> aura, int amount) {
         ItemStack stack = holder.getMainHandItem();
         if (!(stack.getItem() instanceof SpiritVesselItem vessel)) return null;
-        return vessel.insert(holder, stack, aura, amount, true) < amount ? vessel : null;
+        return vessel.insert(holder, holder.registryAccess(), stack, aura, amount, true) < amount ? vessel : null;
     }
 
     private static int asWholeAmount(double value) {

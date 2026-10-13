@@ -10,9 +10,11 @@ import com.iafenvoy.mxt.runtime.cultivation.ItemAuraService;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import net.minecraft.core.Holder;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Optional;
@@ -30,16 +32,16 @@ public class SpiritStoneItem extends Item implements UseItemAuraAccess {
     }
 
     @Override
-    public Object2IntMap<Holder<Aura>> getCapacity(@Nullable LivingEntity entity, ItemStack stack) {
+    public Object2IntMap<Holder<Aura>> getCapacity(@Nullable LivingEntity entity, @NotNull HolderLookup.Provider registries, ItemStack stack) {
         Object2IntMap<Holder<Aura>> result = new Object2IntOpenHashMap<>();
         Holder<Aura> aura = this.contentType(stack);
-        if (aura != null) result.put(aura, ItemAuraService.capacity(stack));
+        if (aura != null) result.put(aura, ItemAuraService.capacity(registries, stack));
         return result;
     }
 
     @Override
-    public int insert(@Nullable LivingEntity entity, ItemStack stack, Holder<Aura> aura, int amount, boolean simulate) {
-        int capacity = this.getCapacity(entity, stack, aura);
+    public int insert(@Nullable LivingEntity entity, @NotNull HolderLookup.Provider registries, ItemStack stack, Holder<Aura> aura, int amount, boolean simulate) {
+        int capacity = this.getCapacity(entity, registries, stack, aura);
         AuraAccess.requireNonNegative(capacity);
         AuraAccess.requireNonNegative(amount);
         if (stack.getItem() != this || !aura.equals(this.contentType(stack))) return amount;
@@ -55,8 +57,8 @@ public class SpiritStoneItem extends Item implements UseItemAuraAccess {
     }
 
     @Override
-    public int extract(@Nullable LivingEntity entity, ItemStack stack, Holder<Aura> aura, int amount, boolean simulate) {
-        int capacity = this.getCapacity(entity, stack, aura);
+    public int extract(@Nullable LivingEntity entity, @NotNull HolderLookup.Provider registries, ItemStack stack, Holder<Aura> aura, int amount, boolean simulate) {
+        int capacity = this.getCapacity(entity, registries, stack, aura);
         AuraAccess.requireNonNegative(capacity);
         AuraAccess.requireNonNegative(amount);
         if (stack.getItem() != this || !aura.equals(this.contentType(stack))) return amount;

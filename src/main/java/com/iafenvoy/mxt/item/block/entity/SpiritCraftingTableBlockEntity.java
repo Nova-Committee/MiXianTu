@@ -18,6 +18,7 @@ import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Holder;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.SimpleContainer;
@@ -35,6 +36,7 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jspecify.annotations.NonNull;
 
@@ -133,7 +135,7 @@ public final class SpiritCraftingTableBlockEntity extends BlockEntity implements
     }
 
     @Override
-    public Object2IntMap<Holder<Aura>> getCapacity(@Nullable LivingEntity entity) {
+    public Object2IntMap<Holder<Aura>> getCapacity(@Nullable LivingEntity entity, @NotNull HolderLookup.Provider registries) {
         Object2IntMap<Holder<Aura>> result = new Object2IntOpenHashMap<>();
         this.requiredAura.forEach((aura, amount) -> result.put(aura,
                 (int) Math.clamp((long) amount * 99L, 0L, Integer.MAX_VALUE)));
@@ -215,7 +217,7 @@ public final class SpiritCraftingTableBlockEntity extends BlockEntity implements
     }
 
     @Override
-    public int insert(@Nullable LivingEntity entity, Holder<Aura> aura, int amount, boolean simulate) {
+    public int insert(@Nullable LivingEntity entity, @NotNull HolderLookup.Provider registries, Holder<Aura> aura, int amount, boolean simulate) {
         AuraAccess.requireNonNegative(amount);
         int required = (int) Math.clamp((long) this.requiredAura.getOrDefault(aura, 0) * 99L,
                 0L, Integer.MAX_VALUE);
@@ -228,7 +230,7 @@ public final class SpiritCraftingTableBlockEntity extends BlockEntity implements
     }
 
     @Override
-    public int extract(@Nullable LivingEntity entity, Holder<Aura> aura, int amount, boolean simulate) {
+    public int extract(@Nullable LivingEntity entity, @NotNull HolderLookup.Provider registries, Holder<Aura> aura, int amount, boolean simulate) {
         AuraAccess.requireNonNegative(amount);
         int extracted = Math.min(amount, this.aura(aura));
         if (!simulate && extracted > 0) {

@@ -32,6 +32,7 @@ import com.iafenvoy.mxt.util.matcher.ItemMatcher;
 import com.iafenvoy.mxt.util.matcher.builtin.IngredientEntry;
 import com.iafenvoy.mxt.util.matcher.builtin.TagEntry;
 import net.minecraft.core.Holder;
+import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.core.NonNullList;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.core.component.DataComponents;
@@ -266,9 +267,10 @@ public final class TalismanWorkstationService {
     // One pour, the same shape the command uses: every aura the inscriptions make room for, scaled by the ratio.
     private static void pour(ServerPlayer player, ItemStack stack, double ratio) {
         if (!(stack.getItem() instanceof ItemAuraAccess access)) return;
+        Provider registries = player.registryAccess();
         for (Map.Entry<Holder<Aura>, Integer> entry : TalismanService.capacity(stack).entrySet()) {
             int units = (int) Math.ceil(entry.getValue() * Math.min(1.0D, ratio));
-            if (units > 0) access.insert(player, stack, entry.getKey(), units, false);
+            if (units > 0) access.insert(player, registries, stack, entry.getKey(), units, false);
         }
     }
 
@@ -371,9 +373,11 @@ public final class TalismanWorkstationService {
     private static List<Runnable> snapshotResources(CostContext context, CostPayment planning) {
         ResourceHolderAttachment target = context.resourceTarget();
         if (target == null || planning.resources().isEmpty()) return List.of();
+        Provider registries = context.formula().registries();
+        if (registries == null) return List.of();
         List<Runnable> refunds = new ArrayList<>();
         for (Identifier id : planning.resources().keySet())
-            MxtDatapackRegistries.holder(MxtResourceKeys.RESOURCE, id).ifPresent(resource -> {
+            MxtDatapackRegistries.holder(registries, MxtResourceKeys.RESOURCE, id).ifPresent(resource -> {
                 double value = target.get(resource);
                 Audit audit = target.audit(resource);
                 refunds.add(() -> target.set(resource, value, audit.minSnapshot(), audit.maxSnapshot(), audit.lastChangedTick(), audit.source()));

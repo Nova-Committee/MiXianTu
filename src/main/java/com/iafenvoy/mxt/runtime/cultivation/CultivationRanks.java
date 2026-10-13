@@ -3,7 +3,7 @@ package com.iafenvoy.mxt.runtime.cultivation;
 import com.iafenvoy.mxt.attachment.CultivationAttachment;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.cultivation.RealmStage;
-import com.iafenvoy.mxt.runtime.ServerCache;
+import com.iafenvoy.mxt.runtime.DatapackCache;
 import com.iafenvoy.mxt.util.HolderHelper;
 import net.minecraft.core.Holder;
 
@@ -20,7 +20,7 @@ public final class CultivationRanks {
     }
 
     public static int realmRank(CultivationAttachment spirit, Holder<Aura> aura) {
-        ServerCache cache = ServerCache.get().orElse(null);
+        DatapackCache cache = DatapackCache.get().orElse(null);
         Holder<RealmStage> current = spirit.realmStage(aura);
         if (current == null) {
             // A null realm stage represents a mortal, whose formulas still use the

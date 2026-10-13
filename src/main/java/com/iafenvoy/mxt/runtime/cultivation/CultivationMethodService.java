@@ -153,7 +153,7 @@ public final class CultivationMethodService {
         gains.replaceAll((id, amount) -> amount * speed);
         if (!Double.isFinite(speed) || speed < 0.0D)
             return stop(entity, spirit, action, definition, gameTime, Failure.INVALID_FORMULA);
-        ResourceTransactions.Result preview = ResourceTransactions.tryConsume(copyOf(resources), costs);
+        ResourceTransactions.Result preview = ResourceTransactions.tryConsume(context.registries(), copyOf(resources), costs);
         if (!preview.committed()) return Result.rejected(Failure.INSUFFICIENT_RESOURCE, preview.failedResource());
         if (!canApplyGains(entity, copyOf(resources), gains, context))
             return stop(entity, spirit, action, definition, gameTime, Failure.INVALID_FORMULA);

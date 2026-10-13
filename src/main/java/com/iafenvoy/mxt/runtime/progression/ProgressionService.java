@@ -12,16 +12,16 @@ import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.data.trigger.TriggerContext;
 import com.iafenvoy.mxt.data.trigger.TriggerSignals;
 import com.iafenvoy.mxt.registry.MxtAttachments;
-import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.EntitySources;
-import com.iafenvoy.mxt.runtime.ServerCache;
+import com.iafenvoy.mxt.runtime.DatapackCache;
 import com.iafenvoy.mxt.runtime.trigger.TriggerDispatcher;
 import com.iafenvoy.mxt.util.ChainCache;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.Holder;
+import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
@@ -32,7 +32,7 @@ import java.util.Optional;
 /**
  * The owner-agnostic half of every progression: where a holder stands, what the next level is, what each level
  * grants and whether it may be entered. Which owners a body holds, when it advances and what happens then belong
- * to the owning module. Ordering comes from {@link ServerCache}.
+ * to the owning module. Ordering comes from {@link DatapackCache}.
  */
 public final class ProgressionService {
     // Bound on the ownership walk, so a chain that escaped validation cannot stall a login.
@@ -98,13 +98,13 @@ public final class ProgressionService {
 
     // Cumulative: what a level grants stays active on every later level, so everything at or below the current
     // one is the answer.
-    public static List<Holder<Ability>> grantedAbilities(ProgressionOwner owner, Holder<Progression> current) {
-        ServerCache cache = ServerCache.get().orElse(null);
+    public static List<Holder<Ability>> grantedAbilities(ProgressionOwner owner, Holder<Progression> current, Provider access) {
+        DatapackCache cache = DatapackCache.get().orElse(null);
         if (cache == null || current == null) return List.of();
         Identifier currentId = HolderHelper.id(current);
         return owner.levels().entrySet().stream()
                 .filter(entry -> cache.isLevelAtLeast(currentId, HolderHelper.id(entry.getKey())))
-                .flatMap(entry -> RegistryCodecs.resolve(entry.getValue().abilities(), MxtDatapackRegistries.registry(MxtResourceKeys.ABILITY)))
+                .flatMap(entry -> RegistryCodecs.resolve(entry.getValue().abilities(), access, MxtResourceKeys.ABILITY))
                 .distinct()
                 .toList();
     }
@@ -120,7 +120,7 @@ public final class ProgressionService {
                                   Holder<Progression> reached) {
         FormulaContext formula = FormulaContext.of(entity);
         definition.config(reached).ifPresent(config -> config.action().execute(entity, formula));
-        int rank = ServerCache.get().flatMap(cache -> cache.rankForLevel(HolderHelper.id(reached))).orElse(0);
+        int rank = DatapackCache.get().flatMap(cache -> cache.rankForLevel(HolderHelper.id(reached))).orElse(0);
         TriggerContext triggerContext = new TriggerContext().actor(entity).level(entity.level())
                 .formula(formula.with("level", rank));
         triggerContext.set("owner", owner.toString());
@@ -163,7 +163,7 @@ public final class ProgressionService {
         if (entry == null) return -1;
         Identifier entryId = HolderHelper.id(entry);
         Identifier wanted = HolderHelper.id(level);
-        ServerCache cache = ServerCache.get().orElse(null);
+        DatapackCache cache = DatapackCache.get().orElse(null);
         if (cache != null) {
             ChainCache.Chain<Progression> chain = cache.progressionChains().chainOf(entryId).orElse(null);
             if (chain == null) return -1;
@@ -187,7 +187,7 @@ public final class ProgressionService {
         Holder<Progression> entry = owner.entryLevel().orElse(null);
         if (entry == null) return 0;
         Identifier entryId = HolderHelper.id(entry);
-        ServerCache cache = ServerCache.get().orElse(null);
+        DatapackCache cache = DatapackCache.get().orElse(null);
         if (cache != null)
             return cache.progressionChains().chainOf(entryId)
                     .map(chain -> chain.size() - chain.indexOf(entryId)).orElse(0);

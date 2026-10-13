@@ -24,6 +24,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jspecify.annotations.NonNull;
 
@@ -66,7 +67,7 @@ public class TalismanItem extends Item implements UseItemAuraAccess {
     }
 
     @Override
-    public Object2IntMap<Holder<Aura>> getCapacity(@Nullable LivingEntity entity, ItemStack stack) {
+    public Object2IntMap<Holder<Aura>> getCapacity(@Nullable LivingEntity entity, @NotNull Provider registries, ItemStack stack) {
         Object2IntMap<Holder<Aura>> capacities = new Object2IntOpenHashMap<>();
         for (Map.Entry<Holder<Aura>, Integer> entry : TalismanService.capacity(stack).entrySet())
             capacities.put(entry.getKey(), entry.getValue().intValue());
@@ -74,9 +75,9 @@ public class TalismanItem extends Item implements UseItemAuraAccess {
     }
 
     @Override
-    public int insert(@Nullable LivingEntity entity, ItemStack stack, Holder<Aura> aura, int amount, boolean simulate) {
+    public int insert(@Nullable LivingEntity entity, @NotNull Provider registries, ItemStack stack, Holder<Aura> aura, int amount, boolean simulate) {
         AuraAccess.requireNonNegative(amount);
-        int capacity = this.getCapacity(entity, stack, aura);
+        int capacity = this.getCapacity(entity, registries, stack, aura);
         if (capacity <= 0) return amount;
         SpiritStorageComponent charge = this.store(stack);
         int stored = (int) Math.clamp(Math.floor(charge.get(aura)), 0.0D, capacity);
@@ -87,9 +88,9 @@ public class TalismanItem extends Item implements UseItemAuraAccess {
     }
 
     @Override
-    public int extract(@Nullable LivingEntity entity, ItemStack stack, Holder<Aura> aura, int amount, boolean simulate) {
+    public int extract(@Nullable LivingEntity entity, @NotNull Provider registries, ItemStack stack, Holder<Aura> aura, int amount, boolean simulate) {
         AuraAccess.requireNonNegative(amount);
-        int capacity = this.getCapacity(entity, stack, aura);
+        int capacity = this.getCapacity(entity, registries, stack, aura);
         if (capacity <= 0) return amount;
         SpiritStorageComponent charge = this.store(stack);
         int stored = (int) Math.clamp(Math.floor(charge.get(aura)), 0.0D, capacity);

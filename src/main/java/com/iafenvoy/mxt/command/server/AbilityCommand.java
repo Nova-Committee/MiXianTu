@@ -28,6 +28,7 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
@@ -48,7 +49,7 @@ public final class AbilityCommand {
     public static LiteralArgumentBuilder<CommandSourceStack> build(CommandBuildContext context) {
         return literal("ability")
                 .then(literal("list")
-                        .executes(ctx -> list(ctx.getSource(), ctx.getSource().getPlayer()))
+                        .executes(ctx -> list(ctx.getSource(), ctx.getSource().getPlayerOrException()))
                         .then(argument("target", EntityArgument.entity())
                                 .executes(ctx -> list(ctx.getSource(), EntityArgument.getEntity(ctx, "target")))))
                 .then(literal("cast").requires(ServerCommandManager::mayChange)
@@ -72,11 +73,7 @@ public final class AbilityCommand {
 
     // Read from the attachment rather than the registry, so an ability whose definition the pack no longer provides
     // is still reported: it is still held, and revoking it by name is still what takes it off.
-    private static int list(CommandSourceStack source, @Nullable Entity target) {
-        if (target == null) {
-            source.sendFailure(Component.translatable("command.mxt.message.requires_player"));
-            return 0;
-        }
+    private static int list(CommandSourceStack source, @NotNull Entity target) {
         AbilityAttachment abilities = target.getData(MxtAttachments.ABILITY_HOLDER);
         source.sendSuccess(() -> Component.translatable("command.mxt.ability.list.header", target.getDisplayName()), false);
         if (abilities.sources().keys().isEmpty()) {

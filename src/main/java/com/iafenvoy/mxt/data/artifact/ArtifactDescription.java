@@ -49,7 +49,9 @@ public final class ArtifactDescription {
         Reference<Artifact> holder = ArtifactService.definition(registries, stack).orElse(null);
         if (holder == null) return List.of();
         Artifact artifact = holder.value();
-        FormulaContext formula = player == null ? FormulaContext.EMPTY : FormulaContext.of(player);
+        // The holder when there is one, since a value may read them; the access alone otherwise, so a
+        // registry-backed value still resolves without a holder in scope.
+        FormulaContext formula = player == null ? FormulaContext.of(registries) : FormulaContext.of(player);
         List<Component> lines = new ArrayList<>();
         lines.add(Component.translatable("tooltip.mxt.artifact.header", DefinitionText.text(holder)).withStyle(ChatFormatting.GOLD));
         if (advanced) lines.add(indented(HolderHelper.id(holder)));

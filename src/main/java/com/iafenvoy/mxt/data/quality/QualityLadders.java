@@ -1,6 +1,7 @@
 package com.iafenvoy.mxt.data.quality;
 
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.runtime.DatapackCache;
 import com.iafenvoy.mxt.util.ChainCache;
 import com.iafenvoy.mxt.util.HolderHelper;
 import net.minecraft.core.Holder;
@@ -26,11 +27,11 @@ public final class QualityLadders {
     }
 
     /**
-     * The whole index, for a caller that reads a tier's neighbours rather than the ladder itself. Empty rather
-     * than absent when no registry is loaded, so a read never has to distinguish the two.
+     * The whole index, for a caller that reads a tier's neighbours rather than the ladder itself. The walk is the one
+     * DatapackCache keeps; the fallback answers before a tag update has built it, and reads empty with no registry.
      */
     public static ChainCache<ItemQuality> cache(Provider access) {
-        return lookup(access).map(QualityLadders::index).orElseGet(ChainCache::empty);
+        return DatapackCache.get().map(DatapackCache::qualityChains).orElseGet(() -> fallback(access));
     }
 
     /**
@@ -70,56 +71,77 @@ public final class QualityLadders {
         return distance.isPresent() && distance.getAsInt() >= 0;
     }
 
-    private static ChainCache<ItemQuality> index(RegistryLookup<ItemQuality> registry) {
-        return ChainCache.cached(registry, () -> diagnose(registry));
+    // Only reached while no tag update has built the cache: memoised per registry instance, the key a reload may keep,
+    // which is what ChainCache.invalidate drops.
+    private static ChainCache<ItemQuality> fallback(Provider access) {
+        return lookup(access).map(registry -> ChainCache.cached(registry, () -> diagnose(access)))
+                .orElseGet(ChainCache::empty);
     }
 
     /**
-     * The whole registry walked once. The problems ride on the result, so a report can never describe a different
-     * registry than the one the runtime reads.
+     * The whole registry walked once, with every problem the ladder rules found riding on the result, so a report can
+     * never describe a different registry than the one the runtime reads.
      */
-    public static ChainCache<ItemQuality> diagnose(RegistryLookup<ItemQuality> registry) {
-        Map<Identifier, Holder<ItemQuality>> tiers = new LinkedHashMap<>();
-        registry.listElements().forEach(holder -> tiers.put(holder.key().identifier(), holder));
-        Map<Identifier, Identifier> inherited = inherit(tiers);
-        // What each tier hands over to, and which tier cannot be walked at all: a name contradicting the one that
-        // reaches it refuses that tier's whole ladder rather than cutting the ladder in two.
-        ChainCache.Builder<ItemQuality> ladders = ChainCache.builder(tiers);
-        Set<Identifier> pointedAt = new LinkedHashSet<>();
-        for (Map.Entry<Identifier, Holder<ItemQuality>> entry : tiers.entrySet()) {
-            Identifier id = entry.getKey();
-            ItemQuality tier = entry.getValue().value();
-            Identifier declared = tier.quality().orElse(null);
-            if (declared != null && !Objects.equals(declared, inherited.get(id)))
-                ladders.refuse(id, "names quality " + declared + " inside " + inherited.get(id));
-            tier.next().map(HolderHelper::id).ifPresent(next -> {
-                pointedAt.add(next);
-                ladders.link(id, next);
-            });
+    public static ChainCache<ItemQuality> diagnose(Provider access) {
+        return ChainCache.walk(new Ladders(access));
+    }
+
+    // The ladder rules: a tier hands over to its next, and one carrying a name that contradicts the name reaching it
+    // refuses its whole ladder - the tiers below it are still linked, so they cannot stand as a second ladder.
+    private static final class Ladders implements ChainCache.Rules<ItemQuality> {
+        private final Map<Identifier, Holder<ItemQuality>> tiers = new LinkedHashMap<>();
+        private final Map<Identifier, Identifier> inherited = new LinkedHashMap<>();
+        private final List<Identifier> entries = new ArrayList<>();
+
+        private Ladders(Provider access) {
+            lookup(access).ifPresent(registry -> registry.listElements()
+                    .forEach(holder -> this.tiers.put(holder.key().identifier(), holder)));
+            this.inherited.putAll(inherit(this.tiers));
         }
+
+        @Override
+        public Map<Identifier, Holder<ItemQuality>> nodes() {
+            return this.tiers;
+        }
+
+        @Override
+        public void link(Identifier node, Holder<ItemQuality> value, Map<Identifier, Holder<ItemQuality>> nodes,
+                         ChainCache.Builder<ItemQuality> lines) {
+            Identifier declared = value.value().quality().orElse(null);
+            if (declared != null && !Objects.equals(declared, this.inherited.get(node)))
+                lines.refuse(node, "names quality " + declared + " inside " + this.inherited.get(node));
+            value.value().next().map(HolderHelper::id).ifPresent(next -> lines.link(node, next));
+        }
+
         // The entry is the tier nothing points at, and the name reaching it is what the ladder is known by.
-        List<Identifier> heads = new ArrayList<>();
-        tiers.keySet().stream().filter(id -> !pointedAt.contains(id)).forEach(head -> {
-            heads.add(head);
-            ladders.head(head, inherited.get(head));
-        });
-        ChainCache<ItemQuality> built = ladders.build();
-        // Two entries naming one ladder would leave "where does this climb to" unanswered.
-        List<ChainCache.Report> problems = new ArrayList<>();
-        Set<Identifier> named = new LinkedHashSet<>();
-        for (Identifier head : heads) {
-            Identifier quality = inherited.get(head);
-            if (quality == null || named.add(quality)) continue;
-            problems.add(new ChainCache.Report(head,
-                    "starts a second ladder named " + quality + ", which another tier already names"));
+        @Override
+        public void heads(Map<Identifier, Holder<ItemQuality>> nodes, Set<Identifier> pointedAt,
+                          ChainCache.Builder<ItemQuality> lines) {
+            for (Identifier node : nodes.keySet()) {
+                if (pointedAt.contains(node)) continue;
+                this.entries.add(node);
+                lines.head(node, this.inherited.get(node));
+            }
         }
-        // A tier that names a ladder has to end up on it, whether the walk failed or it was never an entry.
-        for (Map.Entry<Identifier, Holder<ItemQuality>> entry : tiers.entrySet())
-            if (entry.getValue().value().quality().isPresent() && !built.contains(entry.getKey()))
-                problems.add(new ChainCache.Report(entry.getKey(),
-                        "cannot be reached from the start of its ladder: it is cyclic, points into another, "
-                                + "or names a quality that is already taken"));
-        return built.with(problems);
+
+        @Override
+        public void after(ChainCache<ItemQuality> lines, Map<Identifier, Holder<ItemQuality>> nodes,
+                          List<ChainCache.Report> reports) {
+            // Two entries naming one ladder would leave "where does this climb to" unanswered.
+            Set<Identifier> named = new LinkedHashSet<>();
+            for (Identifier entry : this.entries) {
+                Identifier quality = this.inherited.get(entry);
+                if (quality == null || named.add(quality)) continue;
+                reports.add(new ChainCache.Report(entry,
+                        "starts a second ladder named " + quality + ", which another tier already names"));
+            }
+            // A tier that names a ladder has to end up on it, whether the walk failed or it was never an entry.
+            for (Map.Entry<Identifier, Holder<ItemQuality>> tier : nodes.entrySet())
+                if (tier.getValue().value().quality().isPresent() && !lines.contains(tier.getKey()))
+                    reports.add(new ChainCache.Report(tier.getKey(),
+                            "cannot be reached from the start of its ladder: it is cyclic, points into another, "
+                                    + "or names a quality that is already taken"));
+        }
     }
 
     // A ladder is named on one tier and reaches every tier below it, so a pack writes it once. A tier carrying two

@@ -21,11 +21,8 @@ import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap.Entry;
-import net.minecraft.core.BlockPos;
-import net.minecraft.core.Holder;
+import net.minecraft.core.*;
 import net.minecraft.core.Holder.Reference;
-import net.minecraft.core.Registry;
-import net.minecraft.core.SectionPos;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
@@ -442,9 +439,9 @@ public final class AuraService {
     }
 
     // The raw holder scan behind the memo; package visible so the memo stays its only caller.
-    static Optional<Holder<AuraZone>> findHolder(AuraZone zone) {
+    static Optional<Holder<AuraZone>> findHolder(RegistryAccess access, AuraZone zone) {
         if (zone == EMPTY_ZONE) return Optional.empty();
-        return MxtDatapackRegistries.holders(MxtResourceKeys.AURA_ZONE).filter(holder -> holder.value() == zone).findFirst().map(holder -> holder);
+        return MxtDatapackRegistries.holders(access, MxtResourceKeys.AURA_ZONE).filter(holder -> holder.value() == zone).findFirst().map(holder -> holder);
     }
 
     private static Map<Holder<Aura>, AuraPool> computePools(AuraZone zone, BlockPos pos, long gameTime) {

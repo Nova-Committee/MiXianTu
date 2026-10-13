@@ -59,7 +59,7 @@ public final class ArtifactService {
     }
 
     // Highest priority wins, registry order breaks ties. Two definitions claiming one item on the same priority is
-    // reported by ServerCache while the pack loads.
+    // reported by DatapackCache while the pack loads.
     public static Optional<Reference<Artifact>> definition(Provider access, ItemStack stack) {
         if (stack.isEmpty()) return Optional.empty();
         return ItemMatcher.find(MxtDatapackRegistries.holders(access, MxtResourceKeys.ARTIFACT),

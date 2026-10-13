@@ -15,6 +15,7 @@ import com.iafenvoy.mxt.runtime.resource.ResourceService;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.matcher.ItemMatcher;
 import net.minecraft.core.Holder;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
@@ -65,9 +66,8 @@ public final class ItemAuraService {
                 .orElse(0);
     }
 
-    public static int capacity(ItemStack stack) {
-        MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
-        return server == null ? 0 : capacity(server.registryAccess(), stack, FormulaContext.EMPTY);
+    public static int capacity(HolderLookup.Provider registries, ItemStack stack) {
+        return capacity(registries, stack, FormulaContext.of(registries));
     }
 
     private static int capacity(ItemAura definition, FormulaContext context) {
@@ -156,8 +156,9 @@ public final class ItemAuraService {
                 return ItemStack.EMPTY;
             }
             if (item.getItem() instanceof ItemAuraAccess access) {
-                int capacity = Math.max(0, access.getCapacity(entity, item).getInt(definition.value().type()));
-                int unavailable = access.extract(entity, item, definition.value().type(), capacity, true);
+                Provider registries = entity.registryAccess();
+                int capacity = Math.max(0, access.getCapacity(entity, registries, item).getInt(definition.value().type()));
+                int unavailable = access.extract(entity, registries, item, definition.value().type(), capacity, true);
                 int available = Math.max(0, capacity - unavailable);
                 if (available == 0) {
                     holding.clear();
@@ -247,7 +248,7 @@ public final class ItemAuraService {
     private static void exhaust(LivingEntity entity, ItemStack item, Holder<ItemAura> active, FormulaContext context) {
         entity.getData(MxtAttachments.FLOAT_HOLDING_ITEM).clear();
         if (item.getItem() instanceof ItemAuraAccess access) {
-            access.extract(entity, item, active.value().type(), Integer.MAX_VALUE, false);
+            access.extract(entity, entity.registryAccess(), item, active.value().type(), Integer.MAX_VALUE, false);
             item.remove(MxtDataComponents.ITEM_AURA);
             giveItem(entity, item);
         } else {

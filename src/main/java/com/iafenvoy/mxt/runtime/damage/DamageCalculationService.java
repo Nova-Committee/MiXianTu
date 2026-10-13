@@ -139,14 +139,6 @@ public final class DamageCalculationService {
         return outgoing(attacker, target, amount, context, attacker == null ? Set.of() : Elements.of(attacker));
     }
 
-    // Reading the source is what makes this layer cover a lava tick or another mod's sword as readily as one of
-    // our hits: no attacker and no claimed type means no element. A target with a physique is answered for all
-    // the same - "what this body takes" does not depend on where the blow came from.
-    public static double incoming(LivingEntity target, DamageSource source, double amount) {
-        if (bypasses(source)) return Double.isFinite(amount) && amount > 0.0D ? amount : 0.0D;
-        return incoming(target, DamageElements.reading(source).elements(), amount);
-    }
-
     // For a caller that holds only the attacker: the strike's elements are that attacker's roots.
     public static double incoming(LivingEntity target, @Nullable Entity attacker, double amount) {
         return incoming(target, attacker == null ? Set.of() : Elements.of(attacker), amount);

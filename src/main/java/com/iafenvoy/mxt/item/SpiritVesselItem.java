@@ -18,6 +18,7 @@ import com.iafenvoy.mxt.util.formula.FormulaContext;
 import it.unimi.dsi.fastutil.objects.*;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.Holder;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
@@ -80,7 +81,7 @@ public final class SpiritVesselItem extends Item implements ItemAuraAccess {
             double wanted = Math.min(entry.getDoubleValue(), POUR_PER_TICK);
             double before = account.get(entry.getKey());
             Result result = ResourceService.change(account, entry.getKey(), wanted,
-                    ResourceService.formulaContext(holder, entry.getKey(), FormulaContext.EMPTY));
+                    ResourceService.formulaContext(holder, entry.getKey(), FormulaContext.of(holder)));
             if (!result.valid()) continue;
             double accepted = result.value() - before;
             if (accepted <= 0.0D) continue;
@@ -126,7 +127,7 @@ public final class SpiritVesselItem extends Item implements ItemAuraAccess {
     }
 
     @Override
-    public Object2IntMap<Holder<Aura>> getCapacity(@Nullable LivingEntity entity, ItemStack stack) {
+    public Object2IntMap<Holder<Aura>> getCapacity(@Nullable LivingEntity entity, HolderLookup.@NotNull Provider registries, ItemStack stack) {
         // Naming auras takes a registry, so a caller without one gets nothing here; the aura-scoped question below
         // answers from the resource alone, and that is the one a stand asks.
         if (entity == null) return Object2IntMaps.emptyMap();
@@ -139,12 +140,12 @@ public final class SpiritVesselItem extends Item implements ItemAuraAccess {
     }
 
     @Override
-    public int getCapacity(@Nullable LivingEntity entity, ItemStack stack, Holder<Aura> aura) {
+    public int getCapacity(@Nullable LivingEntity entity, @NotNull HolderLookup.Provider registries, ItemStack stack, Holder<Aura> aura) {
         return room(stack, aura.value().resource());
     }
 
     @Override
-    public int insert(@Nullable LivingEntity entity, ItemStack stack, Holder<Aura> aura, int amount, boolean simulate) {
+    public int insert(@Nullable LivingEntity entity, @NotNull HolderLookup.Provider registries, ItemStack stack, Holder<Aura> aura, int amount, boolean simulate) {
         AuraAccess.requireNonNegative(amount);
         int moved = Math.min(amount, room(stack, aura.value().resource()));
         if (!simulate && moved > 0) {
@@ -156,7 +157,7 @@ public final class SpiritVesselItem extends Item implements ItemAuraAccess {
     }
 
     @Override
-    public int extract(@Nullable LivingEntity entity, ItemStack stack, Holder<Aura> aura, int amount, boolean simulate) {
+    public int extract(@Nullable LivingEntity entity, @NotNull HolderLookup.Provider registries, ItemStack stack, Holder<Aura> aura, int amount, boolean simulate) {
         // A vessel is poured into, never drained through the store protocol: what leaves it leaves through the hold,
         // where the holder's own account is on the other side.
         AuraAccess.requireNonNegative(amount);

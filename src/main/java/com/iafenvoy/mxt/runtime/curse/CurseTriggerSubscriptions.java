@@ -8,7 +8,6 @@ import com.iafenvoy.mxt.data.trigger.Trigger;
 import com.iafenvoy.mxt.data.trigger.TriggerSignal;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.ModuleHooks;
-import com.iafenvoy.mxt.runtime.curse.CurseService.DefinitionState;
 import com.iafenvoy.mxt.runtime.trigger.TriggerDispatcher;
 import com.iafenvoy.mxt.runtime.trigger.TriggerRehydrator;
 import com.iafenvoy.mxt.runtime.trigger.TriggerSubscription;
@@ -72,7 +71,6 @@ public final class CurseTriggerSubscriptions {
         if (!entity.getData(MxtAttachments.CURSE_HOLDER).instances().containsKey(curse)) return;
         Curse definition = curse.value();
         if (!(definition.typedType() instanceof TriggeredCurseType)) return;
-        if (CurseService.definitionState(curse) != DefinitionState.ACTIVE) return;
         definition.onTick().execute(entity, signal.context().formula());
     }
 }

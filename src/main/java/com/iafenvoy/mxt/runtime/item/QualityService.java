@@ -310,13 +310,8 @@ public final class QualityService {
         return coloredName(quality, DefinitionText.text(quality));
     }
 
-    public static List<Holder<ItemQuality>> ordered() {
-        return ordered(MxtDatapackRegistries.registry(MxtResourceKeys.ITEM_QUALITY));
-    }
-
-    /**
-     * Client-safe counterpart of {@link #ordered()}.
-     */
+    // The registry comes from the caller, because every caller holds one: ItemPickerManager is handed the
+    // provider it is browsing under, and a bare server lookup would be wrong on a client.
     public static List<Holder<ItemQuality>> ordered(Provider access) {
         return ordered(access.lookupOrThrow(MxtResourceKeys.ITEM_QUALITY));
     }

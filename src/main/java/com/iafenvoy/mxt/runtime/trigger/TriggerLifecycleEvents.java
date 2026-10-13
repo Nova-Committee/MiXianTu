@@ -1,7 +1,6 @@
 package com.iafenvoy.mxt.runtime.trigger;
 
 import com.iafenvoy.mxt.MiXianTu;
-import com.iafenvoy.mxt.runtime.ServerCache;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.entity.LivingEntity;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -11,6 +10,7 @@ import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
 import net.neoforged.neoforge.event.entity.EntityLeaveLevelEvent;
 import net.neoforged.neoforge.event.server.ServerStartedEvent;
 import net.neoforged.neoforge.event.server.ServerStoppedEvent;
+import net.neoforged.neoforge.server.ServerLifecycleHooks;
 
 /**
  * Common lifecycle for the runtime-only trigger subscriptions: rebuilt on server start, on a datapack reload and
@@ -29,7 +29,9 @@ public final class TriggerLifecycleEvents {
     @SubscribeEvent
     public static void onDatapackReload(ServerDataLoad event) {
         TriggerRehydrators.clearAll();
-        ServerCache.get().ifPresent(cache -> rehydrateServer(cache.server(), "datapack reload"));
+        // Null while a world loads: the server object does not exist yet, and onServerStarted rehydrates right after.
+        MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
+        if (server != null) rehydrateServer(server, "datapack reload");
     }
 
     @SubscribeEvent

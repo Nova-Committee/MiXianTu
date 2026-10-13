@@ -164,7 +164,7 @@ public final class AuraQueryCache {
             }
         }
         HOLDER_MISSES.incrementAndGet();
-        Optional<Holder<AuraZone>> found = AuraService.findHolder(zone);
+        Optional<Holder<AuraZone>> found = AuraService.findHolder(level.registryAccess(), zone);
         if (cache == null || cache.size() >= MAX_ENTRIES) {
             cache = new IdentityHashMap<>();
             HOLDER.put(level, cache);

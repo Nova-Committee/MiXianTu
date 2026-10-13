@@ -71,12 +71,8 @@ public final class TalismanCommand {
         return literal("charged").executes(ctx -> give(ctx, true, TriggerMode.FIRE));
     }
 
-    private static int blank(CommandContext<CommandSourceStack> ctx) {
-        ServerPlayer player = ctx.getSource().getPlayer();
-        if (player == null) {
-            ctx.getSource().sendFailure(Component.translatable("command.mxt.message.requires_player"));
-            return 0;
-        }
+    private static int blank(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        ServerPlayer player = ctx.getSource().getPlayerOrException();
         ItemStack stack = MxtItems.TALISMAN.toStack(count(ctx));
         player.getInventory().placeItemBackInInventory(stack);
         ctx.getSource().sendSuccess(() -> Component.translatable("command.mxt.talisman.blank", stack.getCount()), true);
@@ -85,11 +81,7 @@ public final class TalismanCommand {
 
     private static int give(CommandContext<CommandSourceStack> ctx, boolean charged, TriggerMode mode) throws CommandSyntaxException {
         CommandSourceStack source = ctx.getSource();
-        ServerPlayer player = source.getPlayer();
-        if (player == null) {
-            source.sendFailure(Component.translatable("command.mxt.message.requires_player"));
-            return 0;
-        }
+        ServerPlayer player = source.getPlayerOrException();
         Reference<Talisman> inscribed = ResourceArgument.getResource(ctx, "talisman", MxtResourceKeys.TALISMAN);
         int count = count(ctx);
         ItemStack template = MxtItems.TALISMAN.toStack();
@@ -125,7 +117,7 @@ public final class TalismanCommand {
         if (!(stack.getItem() instanceof ItemAuraAccess access)) return;
         for (Entry<Holder<Aura>, Integer> entry : TalismanService.capacity(stack).entrySet()) {
             int units = entry.getValue();
-            if (units > 0) access.insert(player, stack, entry.getKey(), units, false);
+            if (units > 0) access.insert(player, player.registryAccess(), stack, entry.getKey(), units, false);
         }
     }
 

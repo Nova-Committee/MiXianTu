@@ -14,12 +14,13 @@ import java.util.function.Supplier;
  * reported, because "what follows this" then has no single answer; nothing is ever indexed partially, since a line
  * whose entry refuses, repeats, or runs into another line is left out whole.
  *
- * <p>The caller owns the vocabulary: it says which entries start a line, what each entry hands over to, why one
- * cannot be walked, what a line is known by, and how the problem reads.
+ * <p>The caller owns the vocabulary: it hands {@link #walk} a {@link Rules} saying which entries exist, what each
+ * hands over to, why one cannot be walked, where lines start and what they are known by, and what a finished line has
+ * to satisfy. Everything the walk finds - forks, refusals, entries nothing reaches - comes back as {@link #reports}.
  *
- * <p>An index is expensive enough to keep: {@link #cached} memoises one per key, which for both chains in this mod
- * is the registry instance they were read from, so {@link #invalidate} has to be called when a data pack replaces
- * it (a reload may keep the same instance).
+ * <p>An index is expensive enough to keep: {@link #cached} memoises one per key, which for the chains in this mod is
+ * the registry instance they were read from, so {@link #invalidate} has to be called when a data pack replaces it (a
+ * reload may keep the same instance).
  */
 public final class ChainCache<T> {
     private static final int MAX_CACHED_REGISTRIES = 4;
@@ -241,6 +242,14 @@ public final class ChainCache<T> {
             return this;
         }
 
+        /**
+         * Every entry some entry hands over to, for the heads a caller still has to pick; a refused entry's link is
+         * in here too, since the shape the pack wrote is what says which entries stand beside each other.
+         */
+        public Set<Identifier> pointedAt() {
+            return Set.copyOf(this.links.values());
+        }
+
         // A rule about a whole walked line - the kind only the domain can state. Non-null refuses that line, so a
         // caller never has to walk the chains a second time to check them.
         public Builder<T> check(ChainCheck<T> check) {
@@ -311,6 +320,64 @@ public final class ChainCache<T> {
      */
     public static <T> Builder<T> builder(Map<Identifier, Holder<T>> nodes) {
         return new Builder<>(Map.copyOf(nodes));
+    }
+
+    /**
+     * What one domain answers for the walk: its registry's entries, what each entry hands over to and why one cannot
+     * be walked, where lines start and what they are known by, and what a finished line has to satisfy. A domain that
+     * does not answer the last three takes the plain reading: every entry nothing hands over to starts an unnamed line.
+     */
+    public interface Rules<T> {
+        /**
+         * Every entry of the registry, in registry order.
+         */
+        Map<Identifier, Holder<T>> nodes();
+
+        /**
+         * Reads one entry's link into the walk: the entry it hands over to, and why its own line cannot be walked. An
+         * entry may do both, since a line refused whole still has to keep the shape the pack wrote - a domain that
+         * refuses one is the one that knows whether the entries below it belong to it or stand on their own.
+         */
+        void link(Identifier node, Holder<T> value, Map<Identifier, Holder<T>> nodes, Builder<T> lines);
+
+        /**
+         * Where lines start and what each is known by; by default every entry nothing hands over to, unnamed.
+         */
+        default void heads(Map<Identifier, Holder<T>> nodes, Set<Identifier> pointedAt, Builder<T> lines) {
+            for (Identifier node : nodes.keySet())
+                if (!pointedAt.contains(node)) lines.head(node, null);
+        }
+
+        /**
+         * A rule about one whole line, or null to keep it; see {@link Builder#check}.
+         */
+        default @Nullable String refuseLine(List<Holder<T>> line) {
+            return null;
+        }
+
+        /**
+         * What the domain can only say once the lines are indexed; every report names the entry to open, and belongs
+         * to the registry this walk read.
+         */
+        default void after(ChainCache<T> lines, Map<Identifier, Holder<T>> nodes, List<Report> reports) {
+        }
+    }
+
+    /**
+     * The one walk: reads every entry's link, starts the lines the domain names, refuses the ones it cannot walk, and
+     * answers with everything the walk and the domain's own checks found.
+     */
+    public static <T> ChainCache<T> walk(Rules<T> rules) {
+        Map<Identifier, Holder<T>> nodes = rules.nodes();
+        Builder<T> lines = builder(nodes);
+        for (Map.Entry<Identifier, Holder<T>> entry : nodes.entrySet())
+            rules.link(entry.getKey(), entry.getValue(), nodes, lines);
+        rules.heads(nodes, lines.pointedAt(), lines);
+        lines.check(rules::refuseLine);
+        ChainCache<T> built = lines.build();
+        List<Report> extra = new ArrayList<>();
+        rules.after(built, nodes, extra);
+        return built.with(extra);
     }
 
     // Two entries naming one successor: the successor is a fork, so it is reported and nothing that runs into it

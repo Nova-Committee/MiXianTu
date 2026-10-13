@@ -14,9 +14,7 @@ import java.util.List;
  * is computed here instead of on every evaluation.
  */
 public final class WeightedList implements NumberProvider {
-    public static final MapCodec<WeightedList> MAP_CODEC = Weighted.codec(CODEC).listOf().fieldOf("distribution")
-            .flatXmap(WeightedList::decode, list -> DataResult.success(list.distribution()));
-
+    public static final MapCodec<WeightedList> MAP_CODEC = Weighted.codec(CODEC).listOf().comapFlatMap(WeightedList::decode, WeightedList::distribution).fieldOf("distribution");
     private final List<Weighted<NumberProvider>> distribution;
     // Sum of all weights, or non-positive when every weight is 0 or the list overflows an int total.
     private final long total;

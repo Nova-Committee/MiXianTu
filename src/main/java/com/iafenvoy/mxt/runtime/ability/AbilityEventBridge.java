@@ -232,14 +232,14 @@ public final class AbilityEventBridge {
     // ability happens to spend or restore them.
     private static boolean initializeHudResources(LivingEntity entity, ResourceHolderAttachment holder) {
         if (!(entity instanceof Player)) return false;
-        return MxtDatapackRegistries.holders(MxtResourceKeys.RESOURCE)
+        return MxtDatapackRegistries.holders(entity.registryAccess(), MxtResourceKeys.RESOURCE)
                 .filter(resource -> !resource.value().bars().isEmpty())
                 .anyMatch(resource -> initializeResource(entity, holder, resource));
     }
 
     private static boolean initializeResource(LivingEntity entity, ResourceHolderAttachment holder, Reference<Resource> resource) {
         return HolderHelper.idOptional(resource).map(id -> ResourceService.initialize(holder, id,
-                ResourceService.formulaContext(entity, id, FormulaContext.EMPTY)).changed()).orElse(false);
+                ResourceService.formulaContext(entity, id, FormulaContext.of(entity))).changed()).orElse(false);
     }
 
     // One pass for every granted ability. Every stored value ticks itself first and reports what it changed, then the

@@ -6,7 +6,6 @@ import com.iafenvoy.mxt.data.curse.Curse;
 import com.iafenvoy.mxt.data.curse.CurseType;
 import com.iafenvoy.mxt.data.curse.builtin.TriggeredCurseType;
 import com.iafenvoy.mxt.registry.MxtAttachments;
-import com.iafenvoy.mxt.runtime.curse.CurseService.DefinitionState;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.Holder;
 import net.minecraft.server.level.ServerLevel;
@@ -67,10 +66,7 @@ public final class CurseScheduler {
             State state = entry.getValue();
             // A frozen instance neither expires nor acts, so it is not scheduled at all: its expiry is in the past,
             // and scheduling it would fire the due queue for that entity every tick forever.
-            if (CurseService.definitionState(entry.getKey()) == DefinitionState.ACTIVE
-                    && state.expiresAt() >= 0L) {
-                result = Math.min(result, state.expiresAt());
-            }
+            if (state.expiresAt() >= 0L) result = Math.min(result, state.expiresAt());
             CurseType type = entry.getKey().value().typedType();
             // A triggered curse waits for its triggers and an inert one never acts, so neither is woken for a
             // periodic effect; both still wake for their expiry, which the branch above took into account.

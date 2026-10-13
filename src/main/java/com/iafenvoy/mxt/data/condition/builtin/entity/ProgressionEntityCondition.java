@@ -6,7 +6,7 @@ import com.iafenvoy.mxt.data.context.condition.EntityConditionContext;
 import com.iafenvoy.mxt.data.progression.Progression;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.EntitySources;
-import com.iafenvoy.mxt.runtime.ServerCache;
+import com.iafenvoy.mxt.runtime.DatapackCache;
 import com.iafenvoy.mxt.runtime.progression.ProgressionService;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.mojang.datafixers.util.Either;
@@ -52,8 +52,8 @@ public record ProgressionEntityCondition(Holder<Progression> level, RealmEntityC
         Identifier required = HolderHelper.id(this.level);
         return switch (this.comparison) {
             case EXACT -> currentId.equals(required);
-            case AT_LEAST -> ServerCache.get().map(cache -> cache.isLevelAtLeast(currentId, required)).orElse(false);
-            case AT_MOST -> ServerCache.get().map(cache -> cache.isLevelAtLeast(required, currentId)).orElse(false);
+            case AT_LEAST -> DatapackCache.get().map(cache -> cache.isLevelAtLeast(currentId, required)).orElse(false);
+            case AT_MOST -> DatapackCache.get().map(cache -> cache.isLevelAtLeast(required, currentId)).orElse(false);
         };
     }
 

@@ -28,5 +28,4 @@ public record BlockAura(List<Either<Holder<Block>, TagKey<Block>>> blocks, Map<H
         if (definition.blocks().isEmpty()) return DataResult.error(() -> "blocks must not be empty");
         return DataResult.success(definition);
     }
-
 }

@@ -44,7 +44,7 @@ public final class SpiritHerbTooltipAppender {
             builder.accept(DefinitionText.text(found).withStyle(ChatFormatting.GREEN));
             builder.accept(Component.translatable("tooltip.mxt.herb.age", SpiritHerbService.age(stack, herb)).withStyle(ChatFormatting.GRAY));
             builder.accept(Component.translatable("tooltip.mxt.herb.thermal", herb.thermalBias()).withStyle(ChatFormatting.GRAY));
-            FormulaContext formula = player == null ? FormulaContext.EMPTY : FormulaContext.of(player);
+            FormulaContext formula = player == null ? FormulaContext.of(registries) : FormulaContext.of(player);
             role(builder, registries, stack, AlchemyRole.MAIN, "tooltip.mxt.herb.main", formula);
             role(builder, registries, stack, AlchemyRole.AUXILIARY, "tooltip.mxt.herb.auxiliary", formula);
             role(builder, registries, stack, AlchemyRole.CATALYST, "tooltip.mxt.herb.catalyst", formula);

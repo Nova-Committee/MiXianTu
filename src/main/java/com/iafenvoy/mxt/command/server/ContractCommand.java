@@ -95,7 +95,7 @@ public final class ContractCommand {
             source.sendSuccess(() -> Component.translatable("command.mxt.contract.list.empty", target.getDisplayName()), false);
             return 0;
         }
-        String owner = PlayerNames.knownToServer(server, target.getUUID()).orElse(target.getUUID().toString());
+        String owner = PlayerNames.knownToServer(target.getUUID()).orElse(target.getUUID().toString());
         source.sendSuccess(() -> Component.translatable("command.mxt.contract.list.header", owner, entries.size()), false);
         for (BoundBeastsAttachment.Entry entry : entries) {
             boolean loaded = BoundBeastService.resolve(server, entry).isPresent();
@@ -120,7 +120,7 @@ public final class ContractCommand {
             return 0;
         }
         Holder<ContractType> type = contract.contractType().orElseThrow();
-        String owner = Contracts.ownerOf(mob).map(id -> PlayerNames.knownToServer(source.getServer(), id).orElse(id.toString())).orElse("-");
+        String owner = Contracts.ownerOf(mob).map(id -> PlayerNames.knownToServer(id).orElse(id.toString())).orElse("-");
         source.sendSuccess(() -> Component.translatable("command.mxt.contract.info.type", DefinitionText.text(type)), false);
         source.sendSuccess(() -> Component.translatable("command.mxt.contract.info.owner", owner), false);
         source.sendSuccess(() -> Component.translatable("command.mxt.contract.info.bound_at", contract.boundAt()), false);

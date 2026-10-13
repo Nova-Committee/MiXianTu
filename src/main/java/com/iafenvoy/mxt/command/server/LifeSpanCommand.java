@@ -13,6 +13,7 @@ import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Locale;
@@ -29,9 +30,9 @@ import static net.minecraft.commands.Commands.literal;
 public final class LifeSpanCommand {
     public static LiteralArgumentBuilder<CommandSourceStack> build(CommandBuildContext context) {
         return literal("lifespan")
-                .executes(ctx -> get(ctx.getSource(), ctx.getSource().getPlayer()))
+                .executes(ctx -> get(ctx.getSource(), ctx.getSource().getPlayerOrException()))
                 .then(literal("get")
-                        .executes(ctx -> get(ctx.getSource(), ctx.getSource().getPlayer()))
+                        .executes(ctx -> get(ctx.getSource(), ctx.getSource().getPlayerOrException()))
                         .then(argument("targets", EntityArgument.entities()).requires(ServerCommandManager::mayChange)
                                 .executes(ctx -> get(ctx.getSource(), EntityArgument.getEntities(ctx, "targets")))))
                 .then(literal("set").requires(ServerCommandManager::mayChange)
@@ -47,11 +48,7 @@ public final class LifeSpanCommand {
                                 .executes(LifeSpanCommand::reincarnate)));
     }
 
-    private static int get(CommandSourceStack source, @Nullable Entity target) {
-        if (target == null) {
-            source.sendFailure(Component.translatable("command.mxt.message.requires_player"));
-            return 0;
-        }
+    private static int get(CommandSourceStack source, @NotNull Entity target) {
         source.sendSuccess(() -> Component.translatable("command.mxt.lifespan.get", target.getDisplayName(), read(target)), false);
         return 1;
     }

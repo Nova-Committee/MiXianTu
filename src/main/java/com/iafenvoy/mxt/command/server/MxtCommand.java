@@ -19,7 +19,7 @@ import com.iafenvoy.mxt.data.trigger.TriggerRule;
 import com.iafenvoy.mxt.item.RiftAnchorItem;
 import com.iafenvoy.mxt.item.block.entity.RiftBlockEntity;
 import com.iafenvoy.mxt.registry.*;
-import com.iafenvoy.mxt.runtime.ServerCache;
+import com.iafenvoy.mxt.runtime.DatapackCache;
 import com.iafenvoy.mxt.runtime.aura.AuraLookup;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationMethodService;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationModeService;
@@ -54,6 +54,8 @@ import net.minecraft.commands.arguments.coordinates.BlockPosArgument;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
+import net.minecraft.core.IdMap;
+import net.minecraft.core.RegistryAccess;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
@@ -158,8 +160,9 @@ public final class MxtCommand {
     }
 
     private static int listRegistries(CommandSourceStack source) {
+        RegistryAccess access = source.registryAccess();
         String text = MxtDatapackRegistries.registries().stream()
-                .map(key -> key.identifier() + "=" + MxtDatapackRegistries.size(key))
+                .map(key -> key.identifier() + "=" + access.lookupOrThrow(key).size())
                 .collect(Collectors.joining(", "));
         source.sendSuccess(() -> Component.translatable("command.mxt.registries.list", text), false);
         return MxtDatapackRegistries.registries().size();
@@ -184,12 +187,12 @@ public final class MxtCommand {
     }
 
     private static int validationStatus(CommandSourceStack source) {
+        RegistryAccess access = source.registryAccess();
         int registryCount = MxtDatapackRegistries.registries().size();
-        int entryCount = MxtDatapackRegistries.registries().stream()
-                .mapToInt(MxtDatapackRegistries::size).sum();
+        int entryCount = MxtDatapackRegistries.registries().stream().map(access::lookupOrThrow).mapToInt(IdMap::size).sum();
         // The cache collects every problem it finds while it builds its indexes, so this reports the whole
         // list instead of the first thing that failed.
-        List<String> problems = ServerCache.get().map(ServerCache::problems).orElse(List.of());
+        List<String> problems = DatapackCache.get().map(DatapackCache::problems).orElse(List.of());
         if (problems.isEmpty()) {
             source.sendSuccess(() -> Component.translatable("command.mxt.registries.validation_passed", registryCount, entryCount,
                     Component.translatable("command.mxt.registries.no_problems")), false);
@@ -207,7 +210,7 @@ public final class MxtCommand {
     }
 
     private static CompletableFuture<Suggestions> suggestRuleSignals(SuggestionsBuilder builder) {
-        return SharedSuggestionProvider.suggest(ServerCache.get()
+        return SharedSuggestionProvider.suggest(DatapackCache.get()
                 .map(cache -> cache.triggerSignals().stream().map(Identifier::toString).toList())
                 .orElse(List.of()), builder);
     }
@@ -215,17 +218,13 @@ public final class MxtCommand {
     // Every signal a rule reacts to or a subscription listens to: the two sets a signal can be published against.
     private static CompletableFuture<Suggestions> suggestPublishedSignals(SuggestionsBuilder builder) {
         Set<String> ids = new LinkedHashSet<>();
-        ServerCache.get().ifPresent(cache -> cache.triggerSignals().forEach(signal -> ids.add(signal.toString())));
+        DatapackCache.get().ifPresent(cache -> cache.triggerSignals().forEach(signal -> ids.add(signal.toString())));
         TriggerDispatcher.signals().forEach(signal -> ids.add(signal.toString()));
         return SharedSuggestionProvider.suggest(ids, builder);
     }
 
-    private static int attachmentStatus(CommandSourceStack source) {
-        ServerPlayer player = source.getPlayer();
-        if (player == null) {
-            source.sendFailure(Component.translatable("command.mxt.message.requires_player"));
-            return 0;
-        }
+    private static int attachmentStatus(CommandSourceStack source) throws CommandSyntaxException {
+        ServerPlayer player = source.getPlayerOrException();
         AbilityAttachment abilities = player.getData(MxtAttachments.ABILITY_HOLDER);
         CurseHolderAttachment curses = player.getData(MxtAttachments.CURSE_HOLDER);
         ResourceHolderAttachment resources = player.getData(MxtAttachments.RESOURCE_HOLDER);
@@ -251,12 +250,8 @@ public final class MxtCommand {
         return 1;
     }
 
-    private static int listResourceBars(CommandSourceStack source, @Nullable Reference<Resource> selection, Integer index) {
-        ServerPlayer player = source.getPlayer();
-        if (player == null) {
-            source.sendFailure(Component.translatable("command.mxt.message.requires_player"));
-            return 0;
-        }
+    private static int listResourceBars(CommandSourceStack source, @Nullable Reference<Resource> selection, Integer index) throws CommandSyntaxException {
+        ServerPlayer player = source.getPlayerOrException();
         List<Reference<Resource>> resources = selection != null ? List.of(selection)
                 : MxtDatapackRegistries.holders(player.level().registryAccess(), MxtResourceKeys.RESOURCE).toList();
         if (resources.isEmpty()) {
@@ -330,12 +325,8 @@ public final class MxtCommand {
         return Double.toString(value);
     }
 
-    private static int cultivateStatus(CommandSourceStack source) {
-        ServerPlayer player = source.getPlayer();
-        if (player == null) {
-            source.sendFailure(Component.translatable("command.mxt.message.requires_player"));
-            return 0;
-        }
+    private static int cultivateStatus(CommandSourceStack source) throws CommandSyntaxException {
+        ServerPlayer player = source.getPlayerOrException();
         CultivationAttachment spirit = player.getData(MxtAttachments.CULTIVATION);
         Component action = spirit.cultivation().<Component>map(DefinitionText::text).orElseGet(() -> Component.translatable("command.mxt.message.none"));
         Component progress = spirit.cultivationProgresses().isEmpty() ? Component.translatable("command.mxt.message.none")
@@ -349,12 +340,8 @@ public final class MxtCommand {
 
     // The one-shot explicit pick: the named method runs now even when priority would choose another, and that
     // body's own conditions still decide whether it runs at all.
-    private static int selectCultivation(CommandSourceStack source, Holder<Cultivation> action) {
-        ServerPlayer player = source.getPlayer();
-        if (player == null) {
-            source.sendFailure(Component.translatable("command.mxt.message.requires_player"));
-            return 0;
-        }
+    private static int selectCultivation(CommandSourceStack source, Holder<Cultivation> action) throws CommandSyntaxException {
+        ServerPlayer player = source.getPlayerOrException();
         CultivationMethodService.Result result = CultivationModeService.startNamed(player, action);
         if (!result.started()) {
             String failure = result.failure() == null ? "not_applicable" : result.failure().name().toLowerCase(Locale.ROOT);
@@ -419,12 +406,8 @@ public final class MxtCommand {
         return 1;
     }
 
-    private static int enterSecretRealm(CommandSourceStack source, Reference<SecretRealm> definition) {
-        ServerPlayer player = source.getPlayer();
-        if (player == null) {
-            source.sendFailure(Component.translatable("command.mxt.message.requires_player"));
-            return 0;
-        }
+    private static int enterSecretRealm(CommandSourceStack source, Reference<SecretRealm> definition) throws CommandSyntaxException {
+        ServerPlayer player = source.getPlayerOrException();
         Result result = SecretRealmService.enter(player, source.getServer(), definition);
         if (!result.changed()) {
             source.sendFailure(result.message().orElseGet(() -> Component.translatable("command.mxt.secret_realm.enter_failed",
@@ -435,12 +418,8 @@ public final class MxtCommand {
         return 1;
     }
 
-    private static int exitSecretRealm(CommandSourceStack source) {
-        ServerPlayer player = source.getPlayer();
-        if (player == null) {
-            source.sendFailure(Component.translatable("command.mxt.message.requires_player"));
-            return 0;
-        }
+    private static int exitSecretRealm(CommandSourceStack source) throws CommandSyntaxException {
+        ServerPlayer player = source.getPlayerOrException();
         Result result = SecretRealmService.exit(player);
         if (!result.changed()) {
             source.sendFailure(result.message().orElseGet(() -> Component.translatable("command.mxt.secret_realm.exit_failed",
@@ -530,12 +509,8 @@ public final class MxtCommand {
         return 1;
     }
 
-    private static int bindRiftAnchor(CommandSourceStack source, Identifier dimension, @Nullable String color) {
-        ServerPlayer player = source.getPlayer();
-        if (player == null) {
-            source.sendFailure(Component.translatable("command.mxt.message.requires_player"));
-            return 0;
-        }
+    private static int bindRiftAnchor(CommandSourceStack source, Identifier dimension, @Nullable String color) throws CommandSyntaxException {
+        ServerPlayer player = source.getPlayerOrException();
         ItemStack stack = player.getMainHandItem();
         if (!(stack.getItem() instanceof RiftAnchorItem)) {
             source.sendFailure(Component.translatable("command.mxt.rift.bind.missing"));
@@ -568,12 +543,8 @@ public final class MxtCommand {
     }
 
     // Subscriptions are never persisted, so this is the only way to see what a running server has armed.
-    private static int listTriggers(CommandSourceStack source, Entity target) {
-        Entity entity = target == null ? source.getPlayer() : target;
-        if (entity == null) {
-            source.sendFailure(Component.translatable("command.mxt.message.requires_player"));
-            return 0;
-        }
+    private static int listTriggers(CommandSourceStack source, Entity target) throws CommandSyntaxException {
+        Entity entity = target == null ? source.getEntityOrException() : target;
         List<TriggerSubscription> subscriptions = TriggerDispatcher.subscriptions(entity.getUUID());
         source.sendSuccess(() -> Component.translatable("command.mxt.trigger.list.header",
                 entity.getDisplayName(), subscriptions.size()), false);
@@ -584,7 +555,7 @@ public final class MxtCommand {
     }
 
     private static int listTriggerRules(CommandSourceStack source, Identifier signal) {
-        List<Reference<TriggerRule>> rules = ServerCache.get().map(cache -> cache.triggerRules(signal)).orElse(List.of());
+        List<Reference<TriggerRule>> rules = DatapackCache.get().map(cache -> cache.triggerRules(signal)).orElse(List.of());
         source.sendSuccess(() -> Component.translatable("command.mxt.trigger.rules.header", signal.toString(), rules.size()), false);
         rules.forEach(rule -> source.sendSuccess(() -> Component.translatable("command.mxt.trigger.rules.entry",
                 HolderHelper.id(rule).toString(),
@@ -592,12 +563,8 @@ public final class MxtCommand {
         return rules.size();
     }
 
-    private static int publishTrigger(CommandSourceStack source, Identifier signal, Entity target) {
-        Entity entity = target == null ? source.getPlayer() : target;
-        if (entity == null) {
-            source.sendFailure(Component.translatable("command.mxt.message.requires_player"));
-            return 0;
-        }
+    private static int publishTrigger(CommandSourceStack source, Identifier signal, Entity target) throws CommandSyntaxException {
+        Entity entity = target == null ? source.getEntityOrException() : target;
         boolean heard = TriggerDispatcher.hasListener(signal);
         TriggerDispatcher.publish(signal, new TriggerContext().actor(entity).level(entity.level())
                 .formula(FormulaContext.of(entity)), entity.level().getGameTime());

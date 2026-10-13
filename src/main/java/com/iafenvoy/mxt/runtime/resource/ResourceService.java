@@ -10,8 +10,10 @@ import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.FormulaContexts;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import net.minecraft.core.Holder;
+import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.LivingEntity;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Optional;
 
@@ -35,7 +37,7 @@ public final class ResourceService {
     }
 
     public static Result initialize(ResourceHolderAttachment holder, Identifier id, FormulaContext context) {
-        return MxtDatapackRegistries.holder(MxtResourceKeys.RESOURCE, id)
+        return resource(context.registries(), id)
                 .map(resource -> initialize(holder, resource, context)).orElse(Result.invalid());
     }
 
@@ -53,8 +55,14 @@ public final class ResourceService {
     }
 
     public static Result change(ResourceHolderAttachment holder, Identifier id, double amount, FormulaContext context) {
-        return MxtDatapackRegistries.holder(MxtResourceKeys.RESOURCE, id)
+        return resource(context.registries(), id)
                 .map(resource -> change(holder, resource, amount, context)).orElse(Result.invalid());
+    }
+
+    // An id is resolved through the same access the formula reads, never through a running server: a context
+    // built off a client has no server to reach for, and one that carries none resolves nothing.
+    private static Optional<Holder.Reference<Resource>> resource(@Nullable Provider access, Identifier id) {
+        return access == null ? Optional.empty() : MxtDatapackRegistries.holder(access, MxtResourceKeys.RESOURCE, id);
     }
 
     public static Result regenerate(ResourceHolderAttachment holder, Holder<Resource> resource, NumberProvider regen,
@@ -71,7 +79,7 @@ public final class ResourceService {
     }
 
     public static FormulaContext formulaContext(CultivationAttachment spirit, Identifier resource, FormulaContext base) {
-        return MxtDatapackRegistries.holder(MxtResourceKeys.RESOURCE, resource)
+        return resource(base.registries(), resource)
                 .map(value -> formulaContext(spirit, value, base)).orElse(base);
     }
 
@@ -81,7 +89,7 @@ public final class ResourceService {
     }
 
     public static FormulaContext formulaContext(LivingEntity entity, Identifier resource, FormulaContext base) {
-        return MxtDatapackRegistries.holder(MxtResourceKeys.RESOURCE, resource)
+        return resource(entity.level().registryAccess(), resource)
                 .map(value -> formulaContext(entity, value, base)).orElse(base);
     }
 

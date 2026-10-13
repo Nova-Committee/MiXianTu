@@ -84,12 +84,8 @@ public final class FormationCommand {
 
     // The shape is resolved on the server and sent, because a structure_template is server-side data: the client
     // may not hold the packs that define it. Read-only, so it asks for no permission beyond being a player.
-    private static int show(CommandSourceStack source, Reference<Formation> definition) {
-        ServerPlayer player = source.getPlayer();
-        if (player == null) {
-            source.sendFailure(Component.translatable("command.mxt.message.requires_player"));
-            return 0;
-        }
+    private static int show(CommandSourceStack source, Reference<Formation> definition) throws CommandSyntaxException {
+        ServerPlayer player = source.getPlayerOrException();
         Formation formation = definition.value();
         if (formation.structureCheck() == Formation.StructureCheck.ALWAYS) {
             source.sendFailure(Component.translatable("command.mxt.formation.show.none",
@@ -149,12 +145,8 @@ public final class FormationCommand {
     }
 
     // Every match is reported rather than a single winner: overlapping formations are what an operator wants to see.
-    private static int formationCoverage(CommandSourceStack source) {
-        ServerPlayer player = source.getPlayer();
-        if (player == null) {
-            source.sendFailure(Component.translatable("command.mxt.message.requires_player"));
-            return 0;
-        }
+    private static int formationCoverage(CommandSourceStack source) throws CommandSyntaxException {
+        ServerPlayer player = source.getPlayerOrException();
         BlockPos position = player.blockPosition();
         List<String> covering = player.level().getData(MxtAttachments.FORMATION_WORLD).formations().entrySet().stream()
                 .filter(entry -> entry.getKey().distSqr(position) <= entry.getValue().radius() * entry.getValue().radius())
@@ -205,12 +197,8 @@ public final class FormationCommand {
 
     // What the next period will ask of the payer once the formation's own ground and its stock are counted: the
     // same plan the ticker pays with, so the number shown is the number that will be charged.
-    private static int upkeepReport(CommandSourceStack source) {
-        ServerPlayer player = source.getPlayer();
-        if (player == null) {
-            source.sendFailure(Component.translatable("command.mxt.message.requires_player"));
-            return 0;
-        }
+    private static int upkeepReport(CommandSourceStack source) throws CommandSyntaxException {
+        ServerPlayer player = source.getPlayerOrException();
         ServerLevel level = source.getLevel();
         BlockPos position = player.blockPosition();
         List<BlockPos> covering = level.getData(MxtAttachments.FORMATION_WORLD).formations().entrySet().stream()
@@ -226,7 +214,7 @@ public final class FormationCommand {
         for (BlockPos controller : covering) {
             FormationInstance instance = level.getData(MxtAttachments.FORMATION_WORLD).get(controller).orElse(null);
             if (instance == null) continue;
-            Formation definition = MxtDatapackRegistries.get(MxtResourceKeys.FORMATION, instance.formation()).orElse(null);
+            Formation definition = MxtDatapackRegistries.get(source.registryAccess(), MxtResourceKeys.FORMATION, instance.formation()).orElse(null);
             if (definition == null) continue;
             CostContext context = CostContext.account(new ResourceHolderAttachment(), null,
                     FormulaContext.of(player), CostOrigin.FORMATION_MAINTENANCE);

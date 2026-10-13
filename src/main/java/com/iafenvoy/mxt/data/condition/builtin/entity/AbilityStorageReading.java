@@ -17,13 +17,10 @@ import java.util.Optional;
  */
 record AbilityStorageReading(Identifier id, Optional<DataStorageHolder> holder, Ability definition) {
     static Optional<AbilityStorageReading> of(Entity entity, Identifier id) {
-        final Ability definition;
-        try {
-            definition = MxtDatapackRegistries.get(MxtResourceKeys.ABILITY, id).orElse(null);
-        } catch (IllegalStateException exception) {
-            // No server means no data-pack registries, which is the one case this lookup can fail in.
-            return Optional.empty();
-        }
+        // Read off the entity's own level rather than a running server, so a client-side evaluation answers from
+        // the registries it actually has and a missing definition is simply "nothing written".
+        Ability definition = MxtDatapackRegistries.get(entity.level().registryAccess(), MxtResourceKeys.ABILITY, id)
+                .orElse(null);
         if (definition == null) return Optional.empty();
         // Read-only, so an entity that never had ability state is not given an empty attachment to carry around.
         // Missing state is not a failure: every kind reads as "nothing written yet" instead.

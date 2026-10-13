@@ -14,6 +14,7 @@ import com.iafenvoy.mxt.runtime.forging.ForgingWorkstationService;
 import com.iafenvoy.mxt.screen.aui.AuiPages;
 import com.sighs.apricityui.screen.ApricityContainerMenu;
 import net.minecraft.core.Registry;
+import net.minecraft.core.RegistryAccess;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.Container;
@@ -294,35 +295,36 @@ public final class ForgingMenu extends ApricityContainerMenu {
         List<Identifier> pattern = plan == null ? List.of() : plan.finishPattern();
         int required = plan == null ? 0 : plan.requiredSuffixSteps();
         List<Identifier> history = snapshot == null ? List.of() : snapshot.history();
+        RegistryAccess access = this.player.level().registryAccess();
         this.synced[IDX_REQUIRED].set(required);
         for (int index = 0; index < SUFFIX_STEPS; index++) {
             // Both rows are right-aligned over the same six positions, so position five is the newest step
             // in both.
-            this.synced[IDX_TARGET_START + index].set(requiredStep(pattern, index, required));
-            this.synced[IDX_HISTORY_START + index].set(historyStep(history, index));
+            this.synced[IDX_TARGET_START + index].set(requiredStep(pattern, index, required, access));
+            this.synced[IDX_HISTORY_START + index].set(historyStep(history, index, access));
         }
     }
 
     // The last `required` entries of the six-step pattern, right-aligned; not the window historyStep uses.
-    static int requiredStep(List<Identifier> pattern, int position, int required) {
+    static int requiredStep(List<Identifier> pattern, int position, int required, RegistryAccess access) {
         if (required <= 0 || pattern.size() != SUFFIX_STEPS) return NONE;
         int first = SUFFIX_STEPS - required;
-        return position < first ? NONE : registryId(pattern.get(position));
+        return position < first ? NONE : registryId(pattern.get(position), access);
     }
 
     // Right-aligned window over the last history.size() entries, so a short session shows its steps against
     // the right-hand end.
-    static int historyStep(List<Identifier> history, int position) {
+    static int historyStep(List<Identifier> history, int position, RegistryAccess access) {
         int source = position - (SUFFIX_STEPS - history.size());
         if (source < 0 || source >= history.size()) return NONE;
-        return registryId(history.get(source));
+        return registryId(history.get(source), access);
     }
 
     // Sent as an int because a data slot carries only a signed short on the wire, which is why a registry id
     // is safe here.
-    private static int registryId(Identifier id) {
+    private static int registryId(Identifier id, RegistryAccess access) {
         if (id == null) return NONE;
-        Registry<ForgingMethod> registry = MxtDatapackRegistries.registry(MxtResourceKeys.FORGING_METHOD);
+        Registry<ForgingMethod> registry = access.lookupOrThrow(MxtResourceKeys.FORGING_METHOD);
         return registry.get(id).map(holder -> registry.getId(holder.value())).orElse(NONE);
     }
 

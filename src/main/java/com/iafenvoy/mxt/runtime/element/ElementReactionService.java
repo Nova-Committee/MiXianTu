@@ -4,13 +4,13 @@ import com.iafenvoy.mxt.attachment.ElementAttachment;
 import com.iafenvoy.mxt.data.cultivation.Element;
 import com.iafenvoy.mxt.data.cultivation.ElementReaction;
 import com.iafenvoy.mxt.registry.MxtAttachments;
-import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
 import net.minecraft.core.Registry;
+import net.minecraft.core.RegistryAccess;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
@@ -41,7 +41,7 @@ public final class ElementReactionService {
     private static final ThreadLocal<Set<Entity>> IN_CHAIN =
             ThreadLocal.withInitial(() -> Collections.newSetFromMap(new IdentityHashMap<>()));
 
-    // The walk order is cached per reaction registry instance, which a reloaded pack may keep: ServerCache drops
+    // The walk order is cached per reaction registry instance, which a reloaded pack may keep: DatapackCache drops
     // it on every datapack load, so an edited priority is never served from the previous pack.
     private static final int MAX_CACHED_REGISTRIES = 4;
     private static final Object LOCK = new Object();
@@ -98,21 +98,21 @@ public final class ElementReactionService {
     public static Holder<ElementReaction> match(Entity entity, FormulaContext context) {
         ElementAttachment attachment = entity.getExistingData(MxtAttachments.ELEMENT_ATTACHMENT).orElse(null);
         if (attachment == null || attachment.isEmpty()) return null;
-        return ordered().stream()
+        return ordered(entity.level().registryAccess()).stream()
                 .filter(holder -> satisfied(holder.value(), attachment, entity, context))
                 .findFirst().orElse(null);
     }
 
     // Asked once per element per strike and once per link of a chain, and the answer only changes when the
     // registry does, so the registry instance is the cache key.
-    private static List<Reference<ElementReaction>> ordered() {
-        Registry<ElementReaction> registry = MxtDatapackRegistries.registry(MxtResourceKeys.ELEMENT_REACTION);
+    private static List<Reference<ElementReaction>> ordered(RegistryAccess access) {
+        Registry<ElementReaction> registry = access.lookupOrThrow(MxtResourceKeys.ELEMENT_REACTION);
         List<Reference<ElementReaction>> cached = orders.get(registry);
         if (cached != null) return cached;
         synchronized (LOCK) {
             cached = orders.get(registry);
             if (cached != null) return cached;
-            List<Reference<ElementReaction>> built = MxtDatapackRegistries.holders(MxtResourceKeys.ELEMENT_REACTION)
+            List<Reference<ElementReaction>> built = registry.listElements()
                     .sorted(Comparator.comparingInt((Reference<ElementReaction> holder) -> holder.value().priority()).reversed()
                             .thenComparing(holder -> holder.key().identifier()))
                     .toList();

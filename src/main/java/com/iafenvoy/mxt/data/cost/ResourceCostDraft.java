@@ -14,6 +14,7 @@ import com.iafenvoy.mxt.runtime.resource.ResourceTransactions.Evaluation;
 import com.iafenvoy.mxt.runtime.resource.ResourceTransactions.Result;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.Holder;
+import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.resources.Identifier;
 import org.jetbrains.annotations.Nullable;
 
@@ -74,12 +75,16 @@ public final class ResourceCostDraft implements CostDraft<ResourceCost> {
         // because a draft can wait - a cast pays at the end of its cast time - and putting an older value back
         // would undo whatever else the account gained in between.
         this.written.clear();
-        for (Identifier id : this.account.keySet())
-            MxtDatapackRegistries.holder(MxtResourceKeys.RESOURCE, id).ifPresent(resource -> {
-                Audit audit = this.target.audit(resource);
-                this.written.put(resource, new Value(resource, this.target.get(resource), audit.minSnapshot(),
-                        audit.maxSnapshot(), audit.lastChangedTick(), audit.source()));
-            });
+        // Without an access the ids resolve to nothing, and the payment below refuses for the same reason: the
+        // snapshot is skipped rather than taken against a registry this context never had.
+        Provider access = this.context.formula().registries();
+        if (access != null)
+            for (Identifier id : this.account.keySet())
+                MxtDatapackRegistries.holder(access, MxtResourceKeys.RESOURCE, id).ifPresent(resource -> {
+                    Audit audit = this.target.audit(resource);
+                    this.written.put(resource, new Value(resource, this.target.get(resource), audit.minSnapshot(),
+                            audit.maxSnapshot(), audit.lastChangedTick(), audit.source()));
+                });
         return this.consume(this.target) ? Optional.empty() : Optional.of(CostFailure.INSUFFICIENT_RESOURCE);
     }
 
@@ -99,7 +104,7 @@ public final class ResourceCostDraft implements CostDraft<ResourceCost> {
     // The write itself, all-or-nothing: tryConsume validates every entry before it touches any, so a store that
     // cannot pay for the whole price is left exactly as it was.
     private boolean consume(ResourceHolderAttachment holder) {
-        Result result = ResourceTransactions.tryConsume(this.context.payer(), holder, new Evaluation(this.account));
+        Result result = ResourceTransactions.tryConsume(this.context.formula().registries(), this.context.payer(), holder, new Evaluation(this.account));
         this.failedResource = result.failedResource();
         return result.committed();
     }

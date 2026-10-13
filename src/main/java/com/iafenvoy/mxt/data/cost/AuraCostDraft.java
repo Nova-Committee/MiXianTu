@@ -11,6 +11,7 @@ import com.iafenvoy.mxt.runtime.world.AuraService;
 import com.iafenvoy.mxt.util.HolderHelper;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.Level;
 
@@ -84,7 +85,7 @@ public final class AuraCostDraft implements CostDraft<AuraCost> {
         if (!this.taken.isEmpty()) {
             AuraAccess bank = this.context.bank();
             if (bank != null)
-                this.taken.forEach((aura, units) -> bank.insert(this.context.payer(), aura, units, false));
+                this.taken.forEach((aura, units) -> bank.insert(this.context.payer(), this.context.registries(), aura, units, false));
             this.taken.clear();
         }
         if (!this.refund.isEmpty()) {
@@ -96,10 +97,11 @@ public final class AuraCostDraft implements CostDraft<AuraCost> {
     private Optional<CostFailure> bankTest() {
         AuraAccess bank = this.context.bank();
         if (bank == null) return Optional.of(CostFailure.NO_CHANNEL);
+        HolderLookup.Provider registries = this.context.registries();
         for (Map.Entry<Holder<Aura>, Double> entry : this.auras.entrySet()) {
             int units = units(entry.getValue());
             if (units <= 0) return Optional.of(CostFailure.INVALID_AMOUNT);
-            if (bank.extract(this.context.payer(), entry.getKey(), units, true) != 0)
+            if (bank.extract(this.context.payer(), registries, entry.getKey(), units, true) != 0)
                 return Optional.of(CostFailure.INSUFFICIENT_AURA);
         }
         return Optional.empty();
@@ -108,14 +110,15 @@ public final class AuraCostDraft implements CostDraft<AuraCost> {
     private Optional<CostFailure> bankCommit() {
         AuraAccess bank = this.context.bank();
         if (bank == null) return Optional.of(CostFailure.NO_CHANNEL);
+        HolderLookup.Provider registries = this.context.registries();
         for (Map.Entry<Holder<Aura>, Double> entry : this.auras.entrySet()) {
             int units = units(entry.getValue());
             if (units <= 0) return Optional.of(CostFailure.INVALID_AMOUNT);
             // A bank is the one store another system can empty between test() and here, so every extraction asks
             // again, and what was already taken is handed back by reset().
-            if (bank.extract(this.context.payer(), entry.getKey(), units, true) != 0)
+            if (bank.extract(this.context.payer(), registries, entry.getKey(), units, true) != 0)
                 return Optional.of(CostFailure.INSUFFICIENT_AURA);
-            bank.extract(this.context.payer(), entry.getKey(), units, false);
+            bank.extract(this.context.payer(), registries, entry.getKey(), units, false);
             this.taken.merge(entry.getKey(), units, Integer::sum);
         }
         return Optional.empty();
