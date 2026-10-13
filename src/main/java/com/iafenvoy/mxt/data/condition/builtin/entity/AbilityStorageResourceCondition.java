@@ -12,20 +12,19 @@ import org.jspecify.annotations.NonNull;
 import java.util.Optional;
 
 /**
- * Reads the {@code amount} of the {@code mxt:resource} of a named host, counting an unwritten one as 0; a host
- * that declares no such kind is simply false.
+ * Reads the {@code amount} of the {@code mxt:resource} of a named ability, counting an unwritten one as 0; an
+ * ability that declares no such kind is simply false.
  */
-public record StorageResourceEntityCondition(Identifier family, Identifier id,
-                                             Optional<NumberRange> amount) implements EntityCondition {
-    public static final MapCodec<StorageResourceEntityCondition> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
-            Identifier.CODEC.fieldOf("family").forGetter(StorageResourceEntityCondition::family),
-            Identifier.CODEC.fieldOf("id").forGetter(StorageResourceEntityCondition::id),
-            NumberRange.CODEC.optionalFieldOf("amount").forGetter(StorageResourceEntityCondition::amount)
-    ).apply(i, StorageResourceEntityCondition::new));
+public record AbilityStorageResourceCondition(Identifier id,
+                                              Optional<NumberRange> amount) implements EntityCondition {
+    public static final MapCodec<AbilityStorageResourceCondition> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+            Identifier.CODEC.fieldOf("id").forGetter(AbilityStorageResourceCondition::id),
+            NumberRange.CODEC.optionalFieldOf("amount").forGetter(AbilityStorageResourceCondition::amount)
+    ).apply(i, AbilityStorageResourceCondition::new));
 
     @Override
     public boolean test(@NonNull EntityConditionContext ctx) {
-        StorageConditionReading reading = StorageConditionReading.of(ctx.entity(), this.family, this.id).orElse(null);
+        AbilityStorageReading reading = AbilityStorageReading.of(ctx.entity(), this.id).orElse(null);
         if (reading == null) return false;
         if (reading.declared(ResourceDataStorage.class).isEmpty()) return false;
         Optional<ResourceDataStorage> stored = reading.stored(ResourceDataStorage.class);
@@ -33,7 +32,7 @@ public record StorageResourceEntityCondition(Identifier family, Identifier id,
     }
 
     @Override
-    public @NonNull MapCodec<StorageResourceEntityCondition> codec() {
+    public @NonNull MapCodec<AbilityStorageResourceCondition> codec() {
         return CODEC;
     }
 }

@@ -12,20 +12,19 @@ import org.jspecify.annotations.NonNull;
 import java.util.Optional;
 
 /**
- * Reads how many uses the {@code mxt:charges} of a named host have left. A host that was never spent keeps no
+ * Reads how many uses the {@code mxt:charges} of a named ability have left. An ability that was never spent keeps no
  * count and reads as full (the declaration's {@code maximum}); one that declares no charge pool is false.
  */
-public record StorageChargesEntityCondition(Identifier family, Identifier id,
-                                            Optional<NumberRange> remaining) implements EntityCondition {
-    public static final MapCodec<StorageChargesEntityCondition> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
-            Identifier.CODEC.fieldOf("family").forGetter(StorageChargesEntityCondition::family),
-            Identifier.CODEC.fieldOf("id").forGetter(StorageChargesEntityCondition::id),
-            NumberRange.CODEC.optionalFieldOf("remaining").forGetter(StorageChargesEntityCondition::remaining)
-    ).apply(i, StorageChargesEntityCondition::new));
+public record AbilityStorageChargesCondition(Identifier id,
+                                             Optional<NumberRange> remaining) implements EntityCondition {
+    public static final MapCodec<AbilityStorageChargesCondition> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+            Identifier.CODEC.fieldOf("id").forGetter(AbilityStorageChargesCondition::id),
+            NumberRange.CODEC.optionalFieldOf("remaining").forGetter(AbilityStorageChargesCondition::remaining)
+    ).apply(i, AbilityStorageChargesCondition::new));
 
     @Override
     public boolean test(@NonNull EntityConditionContext ctx) {
-        StorageConditionReading reading = StorageConditionReading.of(ctx.entity(), this.family, this.id).orElse(null);
+        AbilityStorageReading reading = AbilityStorageReading.of(ctx.entity(), this.id).orElse(null);
         if (reading == null) return false;
         ChargesDataStorage declaration = reading.declared(ChargesDataStorage.class).orElse(null);
         if (declaration == null) return false;
@@ -36,7 +35,7 @@ public record StorageChargesEntityCondition(Identifier family, Identifier id,
     }
 
     @Override
-    public @NonNull MapCodec<StorageChargesEntityCondition> codec() {
+    public @NonNull MapCodec<AbilityStorageChargesCondition> codec() {
         return CODEC;
     }
 }

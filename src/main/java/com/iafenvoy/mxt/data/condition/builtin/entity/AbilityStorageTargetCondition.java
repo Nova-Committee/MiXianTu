@@ -16,21 +16,20 @@ import java.util.Optional;
 import java.util.UUID;
 
 /**
- * Reads the {@code target} of the {@code mxt:target_lock} of a named host, optionally requiring that entity to
- * still be in the actor's level within {@code max_distance}; a host that declares no such kind is false.
+ * Reads the {@code target} of the {@code mxt:target_lock} of a named ability, optionally requiring that entity to
+ * still be in the actor's level within {@code max_distance}; an ability that declares no such kind is false.
  */
-public record StorageTargetEntityCondition(Identifier family, Identifier id, boolean locked,
-                                           Optional<NumberProvider> maxDistance) implements EntityCondition {
-    public static final MapCodec<StorageTargetEntityCondition> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
-            Identifier.CODEC.fieldOf("family").forGetter(StorageTargetEntityCondition::family),
-            Identifier.CODEC.fieldOf("id").forGetter(StorageTargetEntityCondition::id),
-            Codec.BOOL.optionalFieldOf("locked", true).forGetter(StorageTargetEntityCondition::locked),
-            NumberProvider.CODEC.optionalFieldOf("max_distance").forGetter(StorageTargetEntityCondition::maxDistance)
-    ).apply(i, StorageTargetEntityCondition::new));
+public record AbilityStorageTargetCondition(Identifier id, boolean locked,
+                                            Optional<NumberProvider> maxDistance) implements EntityCondition {
+    public static final MapCodec<AbilityStorageTargetCondition> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+            Identifier.CODEC.fieldOf("id").forGetter(AbilityStorageTargetCondition::id),
+            Codec.BOOL.optionalFieldOf("locked", true).forGetter(AbilityStorageTargetCondition::locked),
+            NumberProvider.CODEC.optionalFieldOf("max_distance").forGetter(AbilityStorageTargetCondition::maxDistance)
+    ).apply(i, AbilityStorageTargetCondition::new));
 
     @Override
     public boolean test(@NonNull EntityConditionContext ctx) {
-        StorageConditionReading reading = StorageConditionReading.of(ctx.entity(), this.family, this.id).orElse(null);
+        AbilityStorageReading reading = AbilityStorageReading.of(ctx.entity(), this.id).orElse(null);
         if (reading == null) return false;
         if (reading.declared(TargetLockDataStorage.class).isEmpty()) return false;
         Optional<String> target = reading.stored(TargetLockDataStorage.class).flatMap(TargetLockDataStorage::target);
@@ -56,7 +55,7 @@ public record StorageTargetEntityCondition(Identifier family, Identifier id, boo
     }
 
     @Override
-    public @NonNull MapCodec<StorageTargetEntityCondition> codec() {
+    public @NonNull MapCodec<AbilityStorageTargetCondition> codec() {
         return CODEC;
     }
 }

@@ -8,7 +8,7 @@ import java.util.Set;
 /**
  * Content that declares storage: a definition lists the kinds it keeps, and each kind's class is the value it
  * fills. The values themselves live with the instance that owns them, in a {@link DataStorageHolder} carried by
- * that family's attachment.
+ * that module's attachment.
  */
 public interface DataStorageDeclaration {
     List<DataStorage> storages();

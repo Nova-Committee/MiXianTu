@@ -10,10 +10,10 @@ import java.util.*;
 import java.util.function.Consumer;
 
 /**
- * The state one family keeps for the content its owner holds, addressed by the holder's id and the kind's class
+ * The state one module keeps for the content its owner holds, addressed by the holder's id and the kind's class
  * (the host is the attachment this lives in). One pair addresses exactly one value, so a second value of a kind
  * already there replaces it instead of joining it. Values are mutable and are stored as the kind instance itself,
- * so the holder hands back exactly what was written and never has to know any family's shape. Nothing here reaches
+ * so the holder hands back exactly what was written and never has to know any module's shape. Nothing here reaches
  * the attachment that holds it: each value records its own change, and whoever wants to save and sync reads that.
  */
 public final class DataStorageHolder {

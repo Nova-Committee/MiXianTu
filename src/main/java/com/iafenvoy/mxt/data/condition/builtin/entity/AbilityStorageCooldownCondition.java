@@ -13,24 +13,23 @@ import org.jspecify.annotations.NonNull;
 import java.util.Optional;
 
 /**
- * Reads how much of the {@code mxt:cooldown} of a named host is left, anchored at the tick the value was written -
+ * Reads how much of the {@code mxt:cooldown} of a named ability is left, anchored at the tick the value was written -
  * the same anchor the runtime reads. Nothing written means nothing is running: ready, with no time left.
  *
- * <p>A host does not have to declare {@code mxt:cooldown} for this to answer: every payment writes the value and
+ * <p>An ability does not have to declare {@code mxt:cooldown} for this to answer: every payment writes the value and
  * its length, so a pack that states a cooldown once in the ability's own field can read it back here.
  */
-public record StorageCooldownEntityCondition(Identifier family, Identifier id, Optional<NumberRange> remaining,
-                                             Optional<Boolean> ready) implements EntityCondition {
-    public static final MapCodec<StorageCooldownEntityCondition> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
-            Identifier.CODEC.fieldOf("family").forGetter(StorageCooldownEntityCondition::family),
-            Identifier.CODEC.fieldOf("id").forGetter(StorageCooldownEntityCondition::id),
-            NumberRange.CODEC.optionalFieldOf("remaining").forGetter(StorageCooldownEntityCondition::remaining),
-            Codec.BOOL.optionalFieldOf("ready").forGetter(StorageCooldownEntityCondition::ready)
-    ).apply(i, StorageCooldownEntityCondition::new));
+public record AbilityStorageCooldownCondition(Identifier id, Optional<NumberRange> remaining,
+                                               Optional<Boolean> ready) implements EntityCondition {
+    public static final MapCodec<AbilityStorageCooldownCondition> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+            Identifier.CODEC.fieldOf("id").forGetter(AbilityStorageCooldownCondition::id),
+            NumberRange.CODEC.optionalFieldOf("remaining").forGetter(AbilityStorageCooldownCondition::remaining),
+            Codec.BOOL.optionalFieldOf("ready").forGetter(AbilityStorageCooldownCondition::ready)
+    ).apply(i, AbilityStorageCooldownCondition::new));
 
     @Override
     public boolean test(@NonNull EntityConditionContext ctx) {
-        StorageConditionReading reading = StorageConditionReading.of(ctx.entity(), this.family, this.id).orElse(null);
+        AbilityStorageReading reading = AbilityStorageReading.of(ctx.entity(), this.id).orElse(null);
         if (reading == null) return false;
         double left = 0.0D;
         Optional<CooldownDataStorage> stored = reading.stored(CooldownDataStorage.class);
@@ -45,7 +44,7 @@ public record StorageCooldownEntityCondition(Identifier family, Identifier id, O
     }
 
     @Override
-    public @NonNull MapCodec<StorageCooldownEntityCondition> codec() {
+    public @NonNull MapCodec<AbilityStorageCooldownCondition> codec() {
         return CODEC;
     }
 }

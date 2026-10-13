@@ -2,8 +2,7 @@
   "type": "mxt:active",
   "cooldown": 0,
   "entity_action": {
-    "type": "mxt:modify_storage",
-    "family": "mxt:ability",
+    "type": "mxt:modify_ability_storage",
     "id": "probe:storage_probe",
     "value": {
       "type": "mxt:timer",

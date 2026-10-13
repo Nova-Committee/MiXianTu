@@ -13,21 +13,20 @@ import org.jspecify.annotations.NonNull;
 import java.util.Optional;
 
 /**
- * Reads how much of the {@code mxt:timer} of a named host is left as ticks until its stored {@code ends_at}, and
+ * Reads how much of the {@code mxt:timer} of a named ability is left as ticks until its stored {@code ends_at}, and
  * whether that end has passed. A timer with no {@code ends_at} is not running, so it counts as ended.
  */
-public record StorageTimerEntityCondition(Identifier family, Identifier id, Optional<NumberRange> remaining,
-                                          Optional<Boolean> ended) implements EntityCondition {
-    public static final MapCodec<StorageTimerEntityCondition> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
-            Identifier.CODEC.fieldOf("family").forGetter(StorageTimerEntityCondition::family),
-            Identifier.CODEC.fieldOf("id").forGetter(StorageTimerEntityCondition::id),
-            NumberRange.CODEC.optionalFieldOf("remaining").forGetter(StorageTimerEntityCondition::remaining),
-            Codec.BOOL.optionalFieldOf("ended").forGetter(StorageTimerEntityCondition::ended)
-    ).apply(i, StorageTimerEntityCondition::new));
+public record AbilityStorageTimerCondition(Identifier id, Optional<NumberRange> remaining,
+                                           Optional<Boolean> ended) implements EntityCondition {
+    public static final MapCodec<AbilityStorageTimerCondition> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+            Identifier.CODEC.fieldOf("id").forGetter(AbilityStorageTimerCondition::id),
+            NumberRange.CODEC.optionalFieldOf("remaining").forGetter(AbilityStorageTimerCondition::remaining),
+            Codec.BOOL.optionalFieldOf("ended").forGetter(AbilityStorageTimerCondition::ended)
+    ).apply(i, AbilityStorageTimerCondition::new));
 
     @Override
     public boolean test(@NonNull EntityConditionContext ctx) {
-        StorageConditionReading reading = StorageConditionReading.of(ctx.entity(), this.family, this.id).orElse(null);
+        AbilityStorageReading reading = AbilityStorageReading.of(ctx.entity(), this.id).orElse(null);
         if (reading == null) return false;
         if (reading.declared(TimerDataStorage.class).isEmpty()) return false;
         Optional<Double> endsAt = reading.stored(TimerDataStorage.class).flatMap(TimerDataStorage::endsAt);
@@ -40,7 +39,7 @@ public record StorageTimerEntityCondition(Identifier family, Identifier id, Opti
     }
 
     @Override
-    public @NonNull MapCodec<StorageTimerEntityCondition> codec() {
+    public @NonNull MapCodec<AbilityStorageTimerCondition> codec() {
         return CODEC;
     }
 }

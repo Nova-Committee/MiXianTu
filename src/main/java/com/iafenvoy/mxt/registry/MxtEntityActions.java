@@ -45,7 +45,7 @@ public final class MxtEntityActions {
     public static final DeferredHolder<MapCodec<? extends EntityAction>, MapCodec<ApplyEffectAction>> APPLY_EFFECT = REGISTRY.register("apply_effect", () -> ApplyEffectAction.CODEC);
     public static final DeferredHolder<MapCodec<? extends EntityAction>, MapCodec<TeleportAction>> TELEPORT = REGISTRY.register("teleport", () -> TeleportAction.CODEC);
     public static final DeferredHolder<MapCodec<? extends EntityAction>, MapCodec<KnockbackAction>> KNOCKBACK = REGISTRY.register("knockback", () -> KnockbackAction.CODEC);
-    public static final DeferredHolder<MapCodec<? extends EntityAction>, MapCodec<ModifyStorageAction>> MODIFY_STORAGE = REGISTRY.register("modify_storage", () -> ModifyStorageAction.CODEC);
+    public static final DeferredHolder<MapCodec<? extends EntityAction>, MapCodec<ModifyAbilityStorageAction>> MODIFY_ABILITY_STORAGE = REGISTRY.register("modify_ability_storage", () -> ModifyAbilityStorageAction.CODEC);
     public static final DeferredHolder<MapCodec<? extends EntityAction>, MapCodec<SpawnEntityAction>> SPAWN_ENTITY = REGISTRY.register("spawn_entity", () -> SpawnEntityAction.CODEC);
     public static final DeferredHolder<MapCodec<? extends EntityAction>, MapCodec<SpawnProjectileAction>> SPAWN_PROJECTILE = REGISTRY.register("spawn_projectile", () -> SpawnProjectileAction.CODEC);
     public static final DeferredHolder<MapCodec<? extends EntityAction>, MapCodec<SpawnSwordAuraAction>> SPAWN_SWORD_AURA = REGISTRY.register("spawn_sword_aura", () -> SpawnSwordAuraAction.CODEC);
