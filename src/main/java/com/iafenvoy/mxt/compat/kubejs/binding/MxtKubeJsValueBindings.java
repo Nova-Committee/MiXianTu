@@ -44,7 +44,7 @@ public final class MxtKubeJsValueBindings {
     public double evaluateResource(LivingEntity entity, String resource, JsonObject definition) {
         Identifier id = Identifier.tryParse(resource);
         if (id == null) throw new IllegalArgumentException("Invalid MXT identifier: " + resource);
-        Holder<Resource> holder = MxtDatapackRegistries.holder(MxtResourceKeys.RESOURCE, id)
+        Holder<Resource> holder = MxtDatapackRegistries.holder(entity.level().registryAccess(), MxtResourceKeys.RESOURCE, id)
                 .orElseThrow(() -> new IllegalArgumentException("Unknown MXT resource: " + resource));
         ResourceValueProvider provider = MxtKubeJsDataCodec.decodeCached(ResourceValueProvider.CODEC, definition, entity.level().registryAccess());
         return provider.resolve(entity, holder, FormulaContext.of(entity));

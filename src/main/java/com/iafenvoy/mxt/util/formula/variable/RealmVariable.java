@@ -13,8 +13,9 @@ import java.util.Set;
 
 // The cultivation state of the resource the formula is evaluated for. These names exist only in a resource
 // context, which is why {@code level} means a realm rank here while {@code caster_level} stays the vanilla
-// experience level. {@code minor_stage} is the 0-based position inside the current stage's own minor stages,
-// and unlike {@code realm} it answers NaN for a mortal, who stands on no stage there is to cut.
+// experience level. {@code minor_stage} is the 0-based position inside the standing stage's own minor stages,
+// cut by the requirement that reaches the next one; unlike {@code realm} it answers NaN for a mortal, who stands
+// on no stage there is to cut, and for a chain with nothing left to climb.
 public final class RealmVariable implements FormulaVariable {
     private static final Set<String> NAMES = Set.of("realm", "realm_rank", "level", "absorbed_aura", "cultivation_progress", "minor_stage");
 

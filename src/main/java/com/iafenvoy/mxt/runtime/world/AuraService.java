@@ -98,7 +98,7 @@ public final class AuraService {
     // cannot appear to fluctuate with the environment.
     public static AuraResult getSensedAura(Level level, BlockPos pos) {
         AuraResult resolved = getPositionAura(level, pos);
-        AuraZone zone = MxtDatapackRegistries.get(MxtResourceKeys.AURA_ZONE, resolved.source()).orElse(null);
+        AuraZone zone = MxtDatapackRegistries.get(level.registryAccess(), MxtResourceKeys.AURA_ZONE, resolved.source()).orElse(null);
         if (zone == null) return new AuraResult(Map.of(), resolved.rules(),
                 resolved.elementFitBonus(), resolved.elementConflictPenalty(), resolved.cultivateCondition(),
                 resolved.distribution(), resolved.source(), resolved.sourceKind());
@@ -190,7 +190,7 @@ public final class AuraService {
     private static Optional<Resolved> customZone(Level level, BlockPos pos) {
         if (!(level instanceof ServerLevel server)) return Optional.empty();
         return server.getData(MxtAttachments.AURA_WORLD).bestAt(pos)
-                .flatMap(entry -> MxtDatapackRegistries.holder(MxtResourceKeys.AURA_ZONE, entry.getValue().zone())
+                .flatMap(entry -> MxtDatapackRegistries.holder(server.registryAccess(), MxtResourceKeys.AURA_ZONE, entry.getValue().zone())
                         .map(zone -> new Resolved(Optional.of(zone), zone.value(), SourceKind.CUSTOM, Map.of())));
     }
 
@@ -205,7 +205,7 @@ public final class AuraService {
                 // Nearest first, then resolved in that order until one answers: asking only the nearest array
                 // would let a terrain ward inside a cultivating array hide the zone it stands in.
                 .sorted(Comparator.comparingDouble(entry -> entry.getKey().distSqr(pos)))
-                .map(entry -> MxtDatapackRegistries.get(MxtResourceKeys.FORMATION, entry.getValue().formation())
+                .map(entry -> MxtDatapackRegistries.get(server.registryAccess(), MxtResourceKeys.FORMATION, entry.getValue().formation())
                         .flatMap(formation -> auraZone(formation).map(zone -> new Resolved(Optional.of(zone), zone.value(),
                                 SourceKind.FORMATION, maximumBonus(formation, FormulaContext.of(level))))))
                 .flatMap(Optional::stream)

@@ -58,7 +58,7 @@ public final class FormationWorldTicker {
     public static void dispatch(ServerLevel level) {
         FormationWorldAttachment world = level.getData(MxtAttachments.FORMATION_WORLD);
         for (Entry<BlockPos, FormationInstance> entry : world.formations().entrySet()) {
-            Optional<Formation> definition = MxtDatapackRegistries.get(MxtResourceKeys.FORMATION, entry.getValue().formation());
+            Optional<Formation> definition = MxtDatapackRegistries.get(level.registryAccess(), MxtResourceKeys.FORMATION, entry.getValue().formation());
             if (definition.isEmpty() || !FormationStructureValidator.of(definition.get()).matches(level, entry.getKey(), definition.get())) {
                 FormationWorldService.deactivate(level, entry.getKey());
                 continue;
@@ -176,8 +176,7 @@ public final class FormationWorldTicker {
         Map<BlockPos, FormationInstance> formations = level.getData(MxtAttachments.FORMATION_WORLD).formations();
         // One source per definition: only a definition none of its instances still covers is released, so two
         // instances of one definition cannot take each other's grant away.
-        Set<Identifier> present = new LinkedHashSet<>();
-        Set<Identifier> covered = new LinkedHashSet<>();
+        Set<Identifier> present = new LinkedHashSet<>(), covered = new LinkedHashSet<>();
         for (Entry<BlockPos, FormationInstance> entry : formations.entrySet()) {
             Identifier definition = entry.getValue().formation();
             present.add(definition);

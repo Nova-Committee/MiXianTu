@@ -1,7 +1,6 @@
 {
   "resource": "mxt_test:qi",
   "first_realm": "mxt_test:qi_refining",
-  "start_exp": 100,
   "cultivation_to_resource": {
     "multiplier": 0.25,
     "max_per_tick": 0.5

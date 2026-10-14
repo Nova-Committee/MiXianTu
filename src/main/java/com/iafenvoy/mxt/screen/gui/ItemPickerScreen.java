@@ -151,8 +151,7 @@ public final class ItemPickerScreen extends AbstractContainerScreen<PickerMenu> 
     @Override
     protected void init() {
         super.init();
-        this.searchBox = new EditBox(this.font, this.leftPos + SEARCH_LEFT, this.topPos + SEARCH_TOP,
-                SEARCH_WIDTH, SEARCH_HEIGHT, SEARCH_NARRATION);
+        this.searchBox = new EditBox(this.font, this.leftPos + SEARCH_LEFT, this.topPos + SEARCH_TOP, SEARCH_WIDTH, SEARCH_HEIGHT, SEARCH_NARRATION);
         this.searchBox.setMaxLength(50);
         // The well in the tab texture is the frame and the background, so the field draws neither.
         this.searchBox.setBordered(false);

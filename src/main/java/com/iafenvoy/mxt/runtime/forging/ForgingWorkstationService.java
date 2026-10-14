@@ -127,7 +127,7 @@ public final class ForgingWorkstationService {
         if (!canUse(player, surface)) return new StartOutcome(Failure.OUT_OF_RANGE, false);
         ForgingTableState state = surface.forgingState();
         if (state.active()) return new StartOutcome(Failure.ALREADY_ACTIVE, false);
-        Holder<ForgingBlueprint> holder = MxtDatapackRegistries.holder(MxtResourceKeys.FORGING_BLUEPRINT, blueprintId).orElse(null);
+        Holder<ForgingBlueprint> holder = MxtDatapackRegistries.holder(player.level().registryAccess(), MxtResourceKeys.FORGING_BLUEPRINT, blueprintId).orElse(null);
         if (holder == null) return new StartOutcome(Failure.DISABLED, false);
         ForgingBlueprint blueprint = holder.value();
         if (!selectableBlueprintIds(surface.forgingContainer(), player.level().registryAccess()).contains(blueprintId))
@@ -154,7 +154,7 @@ public final class ForgingWorkstationService {
         ForgingTableState state = surface.forgingState();
         if (!state.active()) return new StrikeOutcome(Failure.NO_SESSION, false, 0);
         if (!outputEmpty(surface)) return new StrikeOutcome(Failure.OUTPUT_BLOCKED, false, 0);
-        Holder<ForgingMethod> method = MxtDatapackRegistries.holder(MxtResourceKeys.FORGING_METHOD, methodId).orElse(null);
+        Holder<ForgingMethod> method = MxtDatapackRegistries.holder(player.level().registryAccess(), MxtResourceKeys.FORGING_METHOD, methodId).orElse(null);
         if (method == null) return new StrikeOutcome(Failure.DISABLED, false, 0);
         Identifier blueprintId = state.blueprint().orElse(null);
         if (!availableMethodIds(surface.forgingContainer(), player.level().registryAccess(), blueprintId).contains(methodId))
@@ -217,7 +217,7 @@ public final class ForgingWorkstationService {
     // share this body rather than agreeing by hand.
     private static FinishOutcome settle(ServerPlayer player, ForgingSurface surface, ForgingTableState state) {
         Identifier blueprintId = state.blueprint().orElse(null);
-        Holder<ForgingBlueprint> holder = MxtDatapackRegistries.holder(MxtResourceKeys.FORGING_BLUEPRINT, blueprintId).orElse(null);
+        Holder<ForgingBlueprint> holder = MxtDatapackRegistries.holder(player.level().registryAccess(), MxtResourceKeys.FORGING_BLUEPRINT, blueprintId).orElse(null);
         ForgingPlan plan = state.plan().orElse(null);
         ForgingSession session = state.session().map(snapshot -> ForgingSession.restore(plan, snapshot)).orElse(null);
         if (holder == null || session == null) return new FinishOutcome(Failure.DISABLED, false);
@@ -258,7 +258,7 @@ public final class ForgingWorkstationService {
         // session exactly as it was, materials and all.
         Failure refusal = session == null ? Failure.NO_SESSION : ForgingService.cancel(player, surface, session);
         if (refusal != null) return new CancelOutcome(refusal, false);
-        ForgingBlueprint blueprint = state.blueprint().flatMap(id -> MxtDatapackRegistries.get(MxtResourceKeys.FORGING_BLUEPRINT, id)).orElse(null);
+        ForgingBlueprint blueprint = state.blueprint().flatMap(id -> MxtDatapackRegistries.get(player.level().registryAccess(), MxtResourceKeys.FORGING_BLUEPRINT, id)).orElse(null);
         if (blueprint != null) blueprint.failAction().execute(player, FormulaContext.of(player));
         // After the policy, because its whole input is what the session took; and a full clear rather than
         // dropping just the session - see ForgingTableState#clear.
@@ -269,7 +269,7 @@ public final class ForgingWorkstationService {
     }
 
     private static void fail(ServerPlayer player, ForgingSurface surface, ForgingTableState state, ForgingSession session) {
-        ForgingBlueprint blueprint = state.blueprint().flatMap(id -> MxtDatapackRegistries.get(MxtResourceKeys.FORGING_BLUEPRINT, id)).orElse(null);
+        ForgingBlueprint blueprint = state.blueprint().flatMap(id -> MxtDatapackRegistries.get(player.level().registryAccess(), MxtResourceKeys.FORGING_BLUEPRINT, id)).orElse(null);
         if (blueprint == null) {
             returnLocked(player, surface, state);
         } else {

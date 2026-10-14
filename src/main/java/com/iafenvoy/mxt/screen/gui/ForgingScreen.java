@@ -110,6 +110,7 @@ public final class ForgingScreen extends AuiContainerScreen<ForgingMenu> {
         this.useBlueprint = this.getOrThrow("use_blueprint");
         this.useMethod = this.getOrThrow("use_method");
         this.cancel = this.getOrThrow("cancel");
+
         // The page's slot containers - blueprints, tools, inputs, output and the player inventory - are declared
         // by ForgingMenu's layout, which is what ApricityUI binds these cells against.
         this.bindGrid("bp", GRID_CELLS, this.blueprintCells);
@@ -365,8 +366,7 @@ public final class ForgingScreen extends AuiContainerScreen<ForgingMenu> {
         if (this.minecraft.level == null) return List.of();
         List<Entry> entries = new ArrayList<>();
         for (Identifier id : this.menu.blueprints()) {
-            IconReference icon = MxtDatapackRegistries.get(this.minecraft.level.registryAccess(),
-                            MxtResourceKeys.FORGING_BLUEPRINT, id)
+            IconReference icon = MxtDatapackRegistries.get(this.minecraft.level.registryAccess(), MxtResourceKeys.FORGING_BLUEPRINT, id)
                     .flatMap(blueprint -> BuiltInRegistries.ITEM.getOptional(blueprint.result()))
                     .map(ItemStack::new).flatMap(IconReference::of).orElse(null);
             entries.add(new Entry(id, icon));
@@ -399,8 +399,7 @@ public final class ForgingScreen extends AuiContainerScreen<ForgingMenu> {
                 continue;
             }
             int id = target ? this.menu.targetStep(position) : this.menu.historyStep(position);
-            icons.add(ForgingMenu.isNone(id) ? null
-                    : registry.get(id).flatMap(holder -> holder.value().icon()).orElse(null));
+            icons.add(ForgingMenu.isNone(id) ? null : registry.get(id).flatMap(holder -> holder.value().icon()).orElse(null));
         }
         return icons;
     }

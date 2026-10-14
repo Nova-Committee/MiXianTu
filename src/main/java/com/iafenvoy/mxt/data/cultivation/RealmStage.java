@@ -28,8 +28,8 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * One named realm stage, belonging to one {@link Aura}: the chain it is a link of, what it costs, and what
- * happens when it gives way to the next. Conditions and outcomes are resolved by the cultivation runtime.
+ * One named realm stage, belonging to one {@link Aura}: the chain it is a link of, what it costs, and what it
+ * takes to arrive here from the stage below. Conditions and outcomes are resolved by the cultivation runtime.
  */
 public record RealmStage(Holder<Aura> aura, NumberProvider auraShareWeight,
                          EntityCondition cultivateCondition, Optional<Holder<RealmStage>> nextRealm,

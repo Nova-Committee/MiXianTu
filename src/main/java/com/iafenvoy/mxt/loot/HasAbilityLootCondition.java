@@ -28,7 +28,7 @@ public record HasAbilityLootCondition(EntityTarget target,
     @Override
     public boolean test(LootContext context) {
         Entity entity = this.target.get(context);
-        return entity != null && MxtDatapackRegistries.holder(MxtResourceKeys.ABILITY, this.ability)
+        return entity != null && MxtDatapackRegistries.holder(entity.registryAccess(), MxtResourceKeys.ABILITY, this.ability)
                 .map(ability -> entity.getData(MxtAttachments.ABILITY_HOLDER).has(HolderHelper.id(ability))).orElse(false);
     }
 }

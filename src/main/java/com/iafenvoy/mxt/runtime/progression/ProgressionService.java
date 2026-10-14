@@ -20,6 +20,7 @@ import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.chain.Chain;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
+import com.iafenvoy.mxt.util.math.CompareOperation;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.resources.Identifier;
@@ -102,7 +103,7 @@ public final class ProgressionService {
         DatapackCache cache = DatapackCache.get();
         if (current == null) return List.of();
         return owner.levels().entrySet().stream()
-                .filter(entry -> cache.isLevelAtLeast(current, entry.getKey()))
+                .filter(entry -> cache.progressionChains().compare(CompareOperation.GREATER_THAN_OR_EQUAL, current, entry.getKey()))
                 .flatMap(entry -> RegistryCodecs.resolve(entry.getValue().abilities(), access, MxtResourceKeys.ABILITY))
                 .distinct()
                 .toList();

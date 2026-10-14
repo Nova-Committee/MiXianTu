@@ -11,6 +11,7 @@ import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
+import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.item.ItemStack;
@@ -28,8 +29,9 @@ public final class CreatureProfileService {
     }
 
     public static Optional<Identifier> select(Mob creature) {
-        return MxtDatapackRegistries.holders(MxtResourceKeys.CREATURE_PROFILE).map(holder -> holder.key().identifier())
-                .filter(id -> MxtDatapackRegistries.get(MxtResourceKeys.CREATURE_PROFILE, id).filter(value -> matchesType(creature, value)).isPresent())
+        Provider access = creature.level().registryAccess();
+        return MxtDatapackRegistries.holders(access, MxtResourceKeys.CREATURE_PROFILE).map(holder -> holder.key().identifier())
+                .filter(id -> MxtDatapackRegistries.get(access, MxtResourceKeys.CREATURE_PROFILE, id).filter(value -> matchesType(creature, value)).isPresent())
                 .min(Comparator.naturalOrder());
     }
 
@@ -52,7 +54,7 @@ public final class CreatureProfileService {
             return false;
         }
         if (!Double.isFinite(intelligence) || intelligence < 0.0D) return false;
-        MxtDatapackRegistries.holder(MxtResourceKeys.CREATURE_PROFILE, id)
+        MxtDatapackRegistries.holder(creature.level().registryAccess(), MxtResourceKeys.CREATURE_PROFILE, id)
                 .ifPresent(profile -> {
                     creature.getData(MxtAttachments.CREATURE_SPIRIT)
                             .apply(profile, intelligence, definition.innerCore().map(ItemStackTemplate::create).orElse(ItemStack.EMPTY));
@@ -74,6 +76,6 @@ public final class CreatureProfileService {
     public static boolean applySelected(Mob creature) {
         if (creature.getData(MxtAttachments.CREATURE_SPIRIT).profile().isPresent()) return false;
         Identifier id = select(creature).orElse(null);
-        return id != null && MxtDatapackRegistries.get(MxtResourceKeys.CREATURE_PROFILE, id).map(definition -> apply(creature, id, definition, FormulaContext.of(creature))).orElse(false);
+        return id != null && MxtDatapackRegistries.get(creature.level().registryAccess(), MxtResourceKeys.CREATURE_PROFILE, id).map(definition -> apply(creature, id, definition, FormulaContext.of(creature))).orElse(false);
     }
 }

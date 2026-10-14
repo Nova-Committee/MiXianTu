@@ -2,7 +2,6 @@ package com.iafenvoy.mxt.runtime.alchemy;
 
 import com.iafenvoy.mxt.data.alchemy.SpiritHerb;
 import com.iafenvoy.mxt.data.cultivation.Element;
-import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.cultivation.Elements;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
@@ -13,9 +12,12 @@ import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Registry;
+import net.minecraft.core.RegistryAccess;
 import net.minecraft.resources.Identifier;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.ItemStack;
+import net.neoforged.neoforge.server.ServerLifecycleHooks;
 
 import java.util.Optional;
 
@@ -44,18 +46,16 @@ public record HerbTagEntry(Optional<Either<Holder<Element>, TagKey<Element>>> el
 
     @Override
     public boolean matches(ItemStack stack) {
-        if (stack.isEmpty() || (this.element.isEmpty() && this.material.isEmpty())) return false;
+        if (stack.isEmpty() || this.element.isEmpty() && this.material.isEmpty()) return false;
         try {
-            // The element registry only exists while a server runs, and a matcher is also evaluated on a client,
-            // where the honest answer is "not known to be that herb" - hence the fetch inside this block.
-            Registry<Element> registry = MxtDatapackRegistries.registry(MxtResourceKeys.ELEMENT);
-            SpiritHerb herb = MxtDatapackRegistries.holders(MxtResourceKeys.SPIRIT_HERB)
-                    .map(Holder::value)
-                    .filter(candidate -> SpiritHerbService.claims(candidate, stack))
-                    .findFirst().orElse(null);
+            MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
+            if (server == null) return false;
+            RegistryAccess access = server.registryAccess();
+            Registry<Element> registry = access.lookupOrThrow(MxtResourceKeys.ELEMENT);
+            SpiritHerb herb = access.lookupOrThrow(MxtResourceKeys.SPIRIT_HERB).listElements().map(Holder::value)
+                    .filter(candidate -> SpiritHerbService.claims(candidate, stack)).findFirst().orElse(null);
             if (herb == null) return false;
-            return this.element.map(query -> Elements.aligned(registry, herb.elementTags(), query)).orElse(true)
-                    && this.material.map(herb.materialTags()::contains).orElse(true);
+            return this.element.map(query -> Elements.aligned(registry, herb.elementTags(), query)).orElse(true) && this.material.map(herb.materialTags()::contains).orElse(true);
         } catch (IllegalStateException exception) {
             return false;
         }

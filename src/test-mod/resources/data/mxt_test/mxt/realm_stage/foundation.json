@@ -10,7 +10,7 @@
       {
         "type": "mxt:realm",
         "realm": "mxt_test:foundation",
-        "comparison": "at_least"
+        "comparison": ">="
       }
     ]
   },

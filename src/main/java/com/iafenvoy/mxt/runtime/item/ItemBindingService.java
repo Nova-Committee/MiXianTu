@@ -124,10 +124,6 @@ public final class ItemBindingService {
     // What a stack teaches is the stack's own mxt:technique component; the declaration for that technique only
     // says how reading one feels, and a technique with no declaration is still read, with the defaults. A stack
     // carrying no component is read as whatever a declaration claiming it names.
-    public static Optional<TechniqueBinding> technique(ItemStack stack) {
-        return technique(MxtDatapackRegistries.holders(MxtResourceKeys.TECHNIQUE_BINDING), stack);
-    }
-
     public static Optional<TechniqueBinding> technique(Provider access, ItemStack stack) {
         return technique(MxtDatapackRegistries.holders(access, MxtResourceKeys.TECHNIQUE_BINDING), stack);
     }

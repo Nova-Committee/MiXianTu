@@ -3,7 +3,6 @@ package com.iafenvoy.mxt.api;
 import com.iafenvoy.mxt.data.aura.Aura;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import net.minecraft.core.Holder;
-import net.minecraft.core.HolderLookup;
 import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.world.entity.LivingEntity;
 import org.jetbrains.annotations.NotNull;

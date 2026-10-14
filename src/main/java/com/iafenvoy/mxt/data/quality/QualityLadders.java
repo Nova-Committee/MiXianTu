@@ -1,7 +1,6 @@
 package com.iafenvoy.mxt.data.quality;
 
 import com.iafenvoy.mxt.runtime.DatapackCache;
-import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.chain.Chain;
 import com.iafenvoy.mxt.util.chain.ChainCache;
 import net.minecraft.core.Holder;

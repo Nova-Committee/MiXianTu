@@ -55,7 +55,7 @@ public final class CultivationService {
 
     public static BreakthroughResult attempt(LivingEntity entity, CultivationAttachment spirit, ResourceHolderAttachment resources,
                                              Identifier auraId, FormulaContext context, BooleanSupplier conditionsMet) {
-        Reference<Aura> aura = MxtDatapackRegistries.holder(MxtResourceKeys.AURA, auraId).orElse(null);
+        Reference<Aura> aura = MxtDatapackRegistries.holder(entity.level().registryAccess(), MxtResourceKeys.AURA, auraId).orElse(null);
         return aura == null ? BreakthroughResult.rejected(Failure.NO_NEXT_REALM, null)
                 : attempt(entity, spirit, resources, aura, context, conditionsMet);
     }
@@ -63,34 +63,33 @@ public final class CultivationService {
     public static BreakthroughResult attempt(LivingEntity entity, CultivationAttachment spirit, ResourceHolderAttachment resources,
                                              Holder<Aura> aura, FormulaContext context, BooleanSupplier conditionsMet) {
         if (entity.level().isClientSide()) return BreakthroughResult.rejected(Failure.SERVER_ONLY, null);
-        Transition transition = next(aura, spirit).orElse(null);
-        if (transition == null) return BreakthroughResult.rejected(Failure.NO_NEXT_REALM, null);
-        return attempt(entity, spirit, resources, transition, context, conditionsMet);
+        Holder<RealmStage> target = next(aura, spirit);
+        if (target == null) return BreakthroughResult.rejected(Failure.NO_NEXT_REALM, null);
+        return attempt(entity, spirit, resources, aura, target, context, conditionsMet);
     }
 
     // Triggered abilities are dispatched only after the realm state has committed.
-    private static BreakthroughResult attempt(LivingEntity entity, CultivationAttachment spirit, ResourceHolderAttachment resources, Transition transition,
+    private static BreakthroughResult attempt(LivingEntity entity, CultivationAttachment spirit, ResourceHolderAttachment resources,
+                                              Holder<Aura> aura, Holder<RealmStage> targetHolder,
                                               FormulaContext context, BooleanSupplier conditionsMet) {
-        Holder<RealmStage> targetHolder = transition.target();
         Identifier targetId = HolderHelper.id(targetHolder);
         RealmStage target = targetHolder.value();
-        if (!HolderHelper.id(target.aura()).equals(HolderHelper.id(transition.aura())))
+        if (!HolderHelper.id(target.aura()).equals(HolderHelper.id(aura)))
             return BreakthroughResult.rejected(Failure.WRONG_AURA, null);
-        Holder<Resource> targetValue = transition.value();
-        FormulaContext resourceContext = ResourceService.formulaContext(entity, targetValue, context);
-        Threshold threshold = threshold(transition, resourceContext);
+        FormulaContext resourceContext = ResourceService.formulaContext(entity, aura.value().resource(), context);
+        Threshold threshold = threshold(targetHolder, resourceContext);
         if (threshold == null) return BreakthroughResult.rejected(Failure.INVALID_FORMULA, null);
         double minimum = threshold.breakthroughExp();
         double maximum = threshold.maxExperience();
         if (!Double.isFinite(minimum) || !Double.isFinite(maximum) || minimum < 0.0D || maximum < 0.0D || minimum > maximum)
             return BreakthroughResult.rejected(Failure.INVALID_FORMULA, null);
-        double progress = spirit.cultivationProgress(transition.aura());
+        double progress = spirit.cultivationProgress(aura);
         if (progress < minimum) return BreakthroughResult.rejected(Failure.INSUFFICIENT_PROGRESS, null);
-        boolean configuredConditions = transition.conditions().test(entity, context);
+        boolean configuredConditions = target.breakthrough().test(entity, context);
         boolean requiredAbilities = RegistryCodecs.resolve(target.abilityRequirements(),
                         entity.level().registryAccess(), MxtResourceKeys.ABILITY)
                 .allMatch(ability -> entity.getData(MxtAttachments.ABILITY_HOLDER).has(HolderHelper.id(ability)));
-        BreakthroughResult result = commit(entity, spirit, resources, transition, resourceContext,
+        BreakthroughResult result = commit(entity, spirit, resources, aura, targetHolder, resourceContext,
                 () -> configuredConditions && requiredAbilities && conditionsMet.getAsBoolean(), NeoForge.EVENT_BUS);
         if (result.advanced()) {
             if (entity instanceof ServerPlayer player) MxtCriteriaTriggers.BREAKTHROUGH.get().trigger(player, targetId);
@@ -105,7 +104,7 @@ public final class CultivationService {
             target.tribulation().ifPresent(tribulation -> TribulationService.start(entity, entity.getData(MxtAttachments.TRIBULATION), tribulation, entity.level().getGameTime(), context));
             AbilityEventBridge.onBreakthrough(entity, targetId, context);
             // The new realm starts on its own first minor stage, which is itself an unlock threshold.
-            MinorStageService.refresh(entity, transition.aura(), resourceContext);
+            MinorStageService.refresh(entity, aura, resourceContext);
         } else {
             target.failAction().execute(entity, context);
         }
@@ -125,15 +124,14 @@ public final class CultivationService {
         LifeSpanService.add(entity, Math.round(value));
     }
 
-    private static BreakthroughResult commit(LivingEntity entity, CultivationAttachment spirit, ResourceHolderAttachment resources, @NotNull Transition transition,
+    private static BreakthroughResult commit(LivingEntity entity, CultivationAttachment spirit, ResourceHolderAttachment resources,
+                                             @NotNull Holder<Aura> aura, @NotNull Holder<RealmStage> targetHolder,
                                              FormulaContext context, BooleanSupplier conditionsMet, @NotNull IEventBus eventBus) {
-        Holder<RealmStage> targetHolder = transition.target();
         RealmStage target = targetHolder.value();
-        Threshold threshold = threshold(transition, context);
+        Threshold threshold = threshold(targetHolder, context);
         if (threshold == null)
             return BreakthroughResult.rejected(Failure.INVALID_FORMULA, null);
         double minimum = threshold.breakthroughExp();
-        Holder<Aura> aura = transition.aura();
         double progress = spirit.cultivationProgress(aura);
         if (progress < minimum)
             return BreakthroughResult.rejected(Failure.INSUFFICIENT_PROGRESS, null);
@@ -161,23 +159,23 @@ public final class CultivationService {
         return failure == CostFailure.INSUFFICIENT_RESOURCE ? Failure.INSUFFICIENT_RESOURCE : Failure.INVALID_FORMULA;
     }
 
-    // Resolves the pending transition of one cultivation chain, keyed by the profile itself.
-    private static Optional<Transition> next(@Nullable Holder<Aura> aura, CultivationAttachment spirit) {
-        if (aura == null) return Optional.empty();
-        Identifier cultivationId = HolderHelper.id(aura);
+    // The stage this chain climbs towards: the next rung when the body already stands in the chain, and the aura's
+    // own first realm for a mortal. Every threshold - requirement, cap, conditions, auto flag and minor stages -
+    // is read from this one stage, so a breakthrough is fully described by the stage it reaches.
+    @Nullable
+    private static Holder<RealmStage> next(@Nullable Holder<Aura> aura, CultivationAttachment spirit) {
+        if (aura == null) return null;
         Holder<RealmStage> current = spirit.realmStage(aura);
         if (current != null) {
             // The validated chain answers one rung at a time in either direction. Without one - no server, or
             // before a world is loaded - the realm's own next_realm answers instead; a chain the walk refused does
             // not, because advancing along a line nobody validated is what the refusal is about.
-            Identifier nextId = DatapackCache.get().nextRealm(current).orElse(null);
-            return nextId == null ? Optional.empty()
-                    : MxtDatapackRegistries.holder(MxtResourceKeys.REALM_STAGE, nextId)
-                    .map(value -> Transition.realm(current, value, aura));
+            return DatapackCache.get().nextRealm(current).orElse(null);
         }
+        Identifier cultivationId = HolderHelper.id(aura);
         return aura.value().firstRealm()
                 .filter(value -> HolderHelper.id(value.value().aura()).equals(cultivationId))
-                .map(value -> Transition.mortal(aura, value));
+                .orElse(null);
     }
 
     public static double addProgress(LivingEntity entity, Holder<Aura> aura, double amount, FormulaContext context) {
@@ -187,10 +185,10 @@ public final class CultivationService {
     public static double addProgressForChain(LivingEntity entity, Holder<Aura> aura, double amount, FormulaContext context) {
         if (!Double.isFinite(amount) || amount <= 0.0D) return 0.0D;
         CultivationAttachment spirit = entity.getData(MxtAttachments.CULTIVATION);
-        Transition transition = next(aura, spirit).orElse(null);
-        if (transition == null) return 0.0D;
+        Holder<RealmStage> target = next(aura, spirit);
+        if (target == null) return 0.0D;
         FormulaContext resourceContext = ResourceService.formulaContext(entity, aura.value().resource(), context);
-        double accepted = addProgress(spirit, aura, amount, transition, resourceContext);
+        double accepted = addProgress(spirit, aura, amount, target, resourceContext);
         // Crossing into a new minor stage is what unlocks that stage's abilities, so the record is refreshed with
         // the progress that moved it; nothing is rebuilt unless the record actually grew.
         if (accepted > 0.0D) MinorStageService.refresh(entity, aura, resourceContext);
@@ -199,13 +197,13 @@ public final class CultivationService {
 
     public static double addProgressForChain(CultivationAttachment spirit, Holder<Aura> aura, double amount, FormulaContext context) {
         if (!Double.isFinite(amount) || amount <= 0.0D) return 0.0D;
-        Transition transition = next(aura, spirit).orElse(null);
-        return transition == null ? 0.0D : addProgress(spirit, aura, amount, transition, context);
+        Holder<RealmStage> target = next(aura, spirit);
+        return target == null ? 0.0D : addProgress(spirit, aura, amount, target, context);
     }
 
     private static double addProgress(CultivationAttachment spirit, Holder<Aura> aura, double amount,
-                                      Transition transition, FormulaContext context) {
-        Threshold threshold = threshold(transition, context);
+                                      Holder<RealmStage> target, FormulaContext context) {
+        Threshold threshold = threshold(target, context);
         if (threshold == null) return 0.0D;
         double maximum = threshold.maxExperience();
         double before = spirit.cultivationProgress(aura);
@@ -220,9 +218,9 @@ public final class CultivationService {
     }
 
     public static double remainingProgressForChain(CultivationAttachment spirit, Holder<Aura> aura, FormulaContext context) {
-        Transition transition = next(aura, spirit).orElse(null);
-        if (transition == null) return 0.0D;
-        Threshold threshold = threshold(transition, context);
+        Holder<RealmStage> target = next(aura, spirit);
+        if (target == null) return 0.0D;
+        Threshold threshold = threshold(target, context);
         if (threshold == null) return 0.0D;
         double maximum = threshold.maxExperience();
         double current = spirit.cultivationProgress(aura);
@@ -235,48 +233,59 @@ public final class CultivationService {
     }
 
     // 0-based index of the minor stage this chain's progress sits in, or NaN when there is nothing to cut: a
-    // mortal stands on no stage, and a stage that declares no minor stages has none. This is the one place the
-    // segment arithmetic lives; the panel and the {@code minor_stage} formula variable both read it.
+    // mortal stands on no stage, a stage that declares no minor stages has none, and a chain with nothing left to
+    // climb has no segment to name. The count and the names belong to the stage the body stands in - its
+    // minor_stage_abilities are indexed into them - while the cuts are made of the requirement that reaches the
+    // next stage, because that is the number this progress is climbing towards.
+    // This is the one place the segment arithmetic lives; the panel and the {@code minor_stage} formula variable
+    // both read it.
     public static double minorStage(Holder<Aura> aura, CultivationAttachment spirit, FormulaContext context) {
         Holder<RealmStage> current = spirit.realmStage(aura);
-        return current == null ? Double.NaN : minorStage(current.value(), spirit.cultivationProgress(aura), context);
+        if (current == null) return Double.NaN;
+        Holder<RealmStage> target = next(aura, spirit);
+        if (target == null) return Double.NaN;
+        return minorStage(current.value().minorStages(), target.value().breakthroughExp(),
+                spirit.cultivationProgress(aura), context);
     }
 
-    // Even cuts of the stage's own breakthrough requirement, which is the number its progress climbs to. Progress
-    // banked past that requirement (up to max_experience) stays on the last segment, so the index never runs off
-    // the declared names.
+    // Even cuts of the stage's own breakthrough requirement, for a caller holding one stage and no chain.
     public static double minorStage(RealmStage stage, double progress, FormulaContext context) {
-        int count = stage.minorStages();
+        return minorStage(stage.minorStages(), stage.breakthroughExp(), progress, context);
+    }
+
+    // Progress banked past the requirement (up to max_experience) stays on the last segment, so the index never
+    // runs off the declared names.
+    private static double minorStage(int count, NumberProvider requirement, double progress, FormulaContext context) {
         if (count == 0 || !Double.isFinite(progress) || progress < 0.0D) return Double.NaN;
-        double requirement;
         if (RESOLVING_MINOR_STAGE.get()) return Double.NaN;
         RESOLVING_MINOR_STAGE.set(Boolean.TRUE);
+        double total;
         try {
-            requirement = stage.breakthroughExp().evaluate(context);
+            total = requirement.evaluate(context);
         } finally {
             RESOLVING_MINOR_STAGE.set(Boolean.FALSE);
         }
-        if (!Double.isFinite(requirement) || requirement <= 0.0D) return Double.NaN;
-        return Math.min(count - 1, Math.floor(progress * count / requirement));
+        if (!Double.isFinite(total) || total <= 0.0D) return Double.NaN;
+        return Math.min(count - 1, Math.floor(progress * count / total));
     }
 
     // Read-only, shared by the automatic breakthrough tick and the information screen.
     public static BreakthroughStatus breakthroughStatusForChain(LivingEntity entity, Holder<Aura> aura, FormulaContext context) {
         CultivationAttachment spirit = entity.getData(MxtAttachments.CULTIVATION);
-        Transition transition = next(aura, spirit).orElse(null);
-        if (transition == null) return BreakthroughStatus.UNAVAILABLE;
-        Threshold threshold = threshold(transition, ResourceService.formulaContext(entity, transition.value(), context));
+        Holder<RealmStage> target = next(aura, spirit);
+        if (target == null) return BreakthroughStatus.UNAVAILABLE;
+        Threshold threshold = threshold(target, ResourceService.formulaContext(entity, aura.value().resource(), context));
         if (threshold == null) return BreakthroughStatus.UNAVAILABLE;
         double progress = spirit.cultivationProgress(aura);
         boolean reached = progress + PROGRESS_EPSILON >= threshold.breakthroughExp();
-        boolean conditions = reached && transition.conditions().test(entity, context);
-        return new BreakthroughStatus(reached, conditions, transition.autoBreakthrough(), threshold.breakthroughExp(), threshold.maxExperience());
+        boolean conditions = reached && target.value().breakthrough().test(entity, context);
+        return new BreakthroughStatus(reached, conditions, target.value().autoBreakthrough(), threshold.breakthroughExp(), threshold.maxExperience());
     }
 
     // Runtime trigger subscriptions are rebuilt separately and never stored in the attachment.
     public static Optional<CultivateConditions> pendingConditionsForChain(LivingEntity entity, Holder<Aura> aura) {
-        Transition transition = next(aura, entity.getData(MxtAttachments.CULTIVATION)).orElse(null);
-        return transition == null ? Optional.empty() : Optional.of(transition.conditions());
+        Holder<RealmStage> target = next(aura, entity.getData(MxtAttachments.CULTIVATION));
+        return target == null ? Optional.empty() : Optional.of(target.value().breakthrough());
     }
 
     // Administrative, validated through the server cache rather than by traversing the registry here.
@@ -288,48 +297,19 @@ public final class CultivationService {
         return true;
     }
 
-    private static Threshold threshold(Transition transition, FormulaContext context) {
-        double breakthroughExp;
-        double maxExperience;
-        if (transition.mortal()) {
-            breakthroughExp = transition.profile().startExp().evaluate(context);
-            maxExperience = breakthroughExp;
-        } else {
-            RealmStage stage = transition.current().value();
-            breakthroughExp = stage.breakthroughExp().evaluate(context);
-            maxExperience = stage.maxExperience().evaluate(context);
-        }
+    // The whole cost of reaching a stage is written on that stage: how much progress it takes and how much may be
+    // banked while waiting. A mortal climbing to a chain's first realm reads the same two numbers there, so no
+    // aura carries a breakthrough threshold of its own.
+    private static Threshold threshold(Holder<RealmStage> target, FormulaContext context) {
+        RealmStage stage = target.value();
+        double breakthroughExp = stage.breakthroughExp().evaluate(context);
+        double maxExperience = stage.maxExperience().evaluate(context);
         return Double.isFinite(breakthroughExp) && Double.isFinite(maxExperience)
                 && breakthroughExp >= 0.0D && maxExperience >= breakthroughExp
                 ? new Threshold(breakthroughExp, maxExperience) : null;
     }
 
     private record Threshold(double breakthroughExp, double maxExperience) {
-    }
-
-    private record Transition(@NotNull Holder<RealmStage> current, @NotNull Holder<RealmStage> target,
-                              @NotNull Holder<Aura> aura, @Nullable Aura profile,
-                              boolean mortal) {
-        private static Transition realm(Holder<RealmStage> current, Holder<RealmStage> target, Holder<Aura> aura) {
-            return new Transition(current, target, aura, null, false);
-        }
-
-        private static Transition mortal(Holder<Aura> aura, Holder<RealmStage> target) {
-            return new Transition(target, target, aura, aura.value(), true);
-        }
-
-        private Holder<Resource> value() {
-            return this.aura.value().resource();
-        }
-
-        private CultivateConditions conditions() {
-            return this.mortal ? this.target.value().breakthrough() : this.current.value().breakthrough();
-        }
-
-        private boolean autoBreakthrough() {
-            return this.mortal ? this.target.value().autoBreakthrough() : this.current.value().autoBreakthrough();
-        }
-
     }
 
     public record BreakthroughStatus(boolean reached, boolean conditionsMet, boolean automatic,

@@ -72,7 +72,7 @@ public final class CultivationModeService {
     }
 
     public static Result stop(LivingEntity entity, CultivationAttachment spirit, Holder<Cultivation> action) {
-        Result result = CultivationMethodService.stop(entity, spirit, HolderHelper.id(action), action.value(),
+        Result result = CultivationMethodService.stop(entity, spirit, action, action.value(),
                 entity.level().getGameTime());
         if (result.stopped()) {
             if (entity instanceof ServerPlayer player) CultivationMovementService.clear(player);

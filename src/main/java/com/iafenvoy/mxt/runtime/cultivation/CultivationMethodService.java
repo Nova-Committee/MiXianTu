@@ -51,13 +51,6 @@ public final class CultivationMethodService {
     private CultivationMethodService() {
     }
 
-    public static Result start(CultivationAttachment spirit, @NotNull Identifier actionId, Cultivation definition,
-                               long gameTime, BooleanSupplier conditionsMet) {
-        Holder<Cultivation> action = MxtDatapackRegistries.holder(MxtResourceKeys.CULTIVATION, actionId).orElse(null);
-        if (action == null) return Result.rejected(Failure.DISABLED, null);
-        return start(spirit, action, definition, gameTime, conditionsMet);
-    }
-
     public static Result start(CultivationAttachment spirit, @NotNull Holder<Cultivation> action, Cultivation definition,
                                long gameTime, BooleanSupplier conditionsMet) {
         if (spirit.cultivating()) return Result.rejected(Failure.ALREADY_ACTIVE, null);
@@ -69,22 +62,16 @@ public final class CultivationMethodService {
 
     public static Result start(LivingEntity entity, CultivationAttachment spirit, Identifier actionId, Cultivation definition,
                                long gameTime, FormulaContext context) {
+        Holder<Cultivation> action = MxtDatapackRegistries.holder(entity.level().registryAccess(), MxtResourceKeys.CULTIVATION, actionId).orElse(null);
+        if (action == null) return Result.rejected(Failure.DISABLED, null);
         boolean conditions = definition.startCondition().test(entity, context) && canStartCultivation(entity, context);
-        return start(spirit, actionId, definition, gameTime, () -> conditions);
+        return start(spirit, action, definition, gameTime, () -> conditions);
     }
 
     public static boolean canStartCultivation(LivingEntity entity, FormulaContext context) {
         return AuraLookup.all(entity).map(Reference::value)
                 .filter(aura -> aura.firstRealm().isPresent())
                 .allMatch(aura -> aura.startCultivateConditions().test(entity, context));
-    }
-
-    public static Result tick(LivingEntity entity, CultivationAttachment spirit, ResourceHolderAttachment resources, AuraResult aura, Identifier actionId,
-                              Cultivation definition, long gameTime, FormulaContext context,
-                              BooleanSupplier conditionsMet) {
-        Holder<Cultivation> action = MxtDatapackRegistries.holder(MxtResourceKeys.CULTIVATION, actionId).orElse(null);
-        if (action == null) return Result.rejected(Failure.DISABLED, null);
-        return tick(entity, spirit, resources, aura, action, definition, gameTime, context, conditionsMet);
     }
 
     public static Result tick(LivingEntity entity, CultivationAttachment spirit, ResourceHolderAttachment resources, AuraResult aura, Holder<Cultivation> action,
@@ -172,18 +159,8 @@ public final class CultivationMethodService {
         return Result.progressed(recovery.cultivation(), payment.resources());
     }
 
-    public static Result stop(CultivationAttachment spirit, Identifier actionId, Cultivation definition, long gameTime) {
-        return stop(spirit, actionId, definition, gameTime, null);
-    }
-
-    public static Result stop(LivingEntity entity, CultivationAttachment spirit, Identifier actionId, Cultivation definition, long gameTime) {
-        Holder<Cultivation> action = MxtDatapackRegistries.holder(MxtResourceKeys.CULTIVATION, actionId).orElse(null);
-        return action == null ? Result.rejected(Failure.DISABLED, null) : stop(entity, spirit, action, definition, gameTime, null);
-    }
-
-    private static Result stop(CultivationAttachment spirit, Identifier actionId, Cultivation definition, long gameTime, Failure reason) {
-        Holder<Cultivation> action = MxtDatapackRegistries.holder(MxtResourceKeys.CULTIVATION, actionId).orElse(null);
-        return action == null ? Result.rejected(Failure.DISABLED, null) : stop(spirit, action, definition, gameTime, reason);
+    public static Result stop(LivingEntity entity, CultivationAttachment spirit, Holder<Cultivation> action, Cultivation definition, long gameTime) {
+        return stop(entity, spirit, action, definition, gameTime, null);
     }
 
     private static Result stop(CultivationAttachment spirit, Holder<Cultivation> action, Cultivation definition, long gameTime, Failure reason) {

@@ -201,6 +201,7 @@ public final class AlchemyWorkstationService {
             if (furnace.isEmpty()) abort(level, pos, station, AlchemyFailure.DISABLED);
             else {
                 heat(level, station, furnace.get().value());
+                assert session != null;
                 if (session.phase() == AlchemyPhase.WARMING && session.inRange(state.temperature()))
                     session.enterRunning();
                 if (session.phase() == AlchemyPhase.RUNNING) session.tickRunning(state.temperature());

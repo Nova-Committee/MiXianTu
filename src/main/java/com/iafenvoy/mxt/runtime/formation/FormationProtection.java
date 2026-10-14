@@ -55,7 +55,7 @@ public final class FormationProtection {
             FormationInstance instance = entry.getValue();
             double radius = instance.radius();
             if (!inside(entry.getKey(), radius, target) && !inside(entry.getKey(), radius, actorPosition)) continue;
-            Optional<Formation> definition = MxtDatapackRegistries.get(MxtResourceKeys.FORMATION, instance.formation());
+            Optional<Formation> definition = MxtDatapackRegistries.get(level.registryAccess(), MxtResourceKeys.FORMATION, instance.formation());
             if (definition.isEmpty()) continue;
             for (FormationActionType module : definition.get().actions()) {
                 if (!(module instanceof ProtectionFormationAction ward)) continue;

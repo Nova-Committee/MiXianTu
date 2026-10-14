@@ -4,6 +4,7 @@ import com.iafenvoy.mxt.attachment.PillToxicityAttachment;
 import com.google.gson.JsonParser;
 import com.iafenvoy.mxt.data.item.Pill;
 import com.iafenvoy.mxt.data.item.PillComponent;
+import com.iafenvoy.mxt.util.math.CompareOperation;
 import com.mojang.serialization.JsonOps;
 import com.iafenvoy.mxt.attachment.PillUsageAttachment;
 import com.iafenvoy.mxt.config.MxtServerConfig;
@@ -243,7 +244,7 @@ public final class PillProbes {
             }
             double afterFour = PillService.toxicity(player);
             new ModifyPillToxicityAction(ModifyMode.ADD, new Constant(-30.0D)).execute(player, FormulaContext.of(player));
-            boolean cleared = new PillToxicityCondition(new Comparison(Comparison.Operation.EQUAL, 0.0D)).test(player, FormulaContext.of(player));
+            boolean cleared = new PillToxicityCondition(new Comparison(CompareOperation.EQUAL, 0.0D)).test(player, FormulaContext.of(player));
             ok &= leg(source, "overdose_detox", doses && close(afterFour, 20.0D) && close(PillService.toxicity(player), 0.0D)
                             && PillService.uses(player, toxicity) == 4 && cleared,
                     "doses=" + doses + " reason=" + stopReason + " after4=" + afterFour + " afterDetox=" + PillService.toxicity(player)

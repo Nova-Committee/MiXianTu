@@ -57,6 +57,7 @@ public final class SpiritCraftingScreen extends AuiContainerScreen<SpiritCraftin
     public void bindPage() {
         this.panel = this.getOrThrow("panel");
         this.auraPanel = this.getOrThrow("aura_panel");
+
         Element prototype = this.getOrThrow("aura_row");
         this.auraRow = prototype;
         // The page's own row is the first one; every further row is a copy of it, made when a recipe asks for it.

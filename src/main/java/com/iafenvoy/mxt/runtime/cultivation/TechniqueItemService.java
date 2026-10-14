@@ -112,7 +112,7 @@ public final class TechniqueItemService {
         HOLD_TIMING.merge(entity.getUUID(), HoldTiming.started(remaining),
                 (existing, added) -> existing.ticked(remaining));
         if (!(entity instanceof ServerPlayer player)) return;
-        int percent = HoldService.displayPercent(learnTime(event.getItem()), remaining);
+        int percent = HoldService.displayPercent(learnTime(entity, event.getItem()), remaining);
         if (LAST_PROGRESS.getOrDefault(player.getUUID(), -1) == percent) return;
         LAST_PROGRESS.put(player.getUUID(), percent);
         player.sendSystemMessage(Component.translatable("actionbar.mxt.technique.holding", bar(percent), percent)
@@ -133,7 +133,7 @@ public final class TechniqueItemService {
         reportTiming(entity, "finished");
         ItemStack stack = entity.getItemInHand(entity.getUsedItemHand());
         if (stack.isEmpty()) stack = event.getItem();
-        Optional<TechniqueBinding> binding = ItemBindingService.technique(stack);
+        Optional<TechniqueBinding> binding = ItemBindingService.technique(entity.level().registryAccess(), stack);
         if (binding.isEmpty()) {
             record(entity, "Finish, but no technique binding resolves for " + stack.getItem());
             return;
@@ -162,12 +162,12 @@ public final class TechniqueItemService {
         // The declaration's own duration rather than the stack's use state: the component carrying the cycle was
         // taken off when the read started, so asking the stack here would report a total of zero.
         record(entity, "Released early with " + entity.getUseItemRemainingTicks() + " of "
-                + learnTime(event.getItem()) + " ticks left");
+                + learnTime(entity, event.getItem()) + " ticks left");
     }
 
     // How long a read of this stack lasts, which the progress bar and the diagnostic both report.
-    private static int learnTime(ItemStack stack) {
-        return ItemBindingService.technique(stack).map(TechniqueBinding::learnTime).orElse(0);
+    private static int learnTime(LivingEntity entity, ItemStack stack) {
+        return ItemBindingService.technique(entity.level().registryAccess(), stack).map(TechniqueBinding::learnTime).orElse(0);
     }
 
     // Wider than a player because {@link #record} keys any entity that reads, and the audit drives a hold on
@@ -195,7 +195,7 @@ public final class TechniqueItemService {
     // that asks for a hold answers false so the click falls through to the hold module.
     public static boolean use(LivingEntity entity, ItemStack stack) {
         if (entity.level().isClientSide()) return false;
-        Optional<TechniqueBinding> binding = ItemBindingService.technique(stack);
+        Optional<TechniqueBinding> binding = ItemBindingService.technique(entity.level().registryAccess(), stack);
         if (binding.isEmpty()) return false;
         TechniqueBinding value = binding.orElseThrow();
         Optional<Failure> refused = QualityService.check(entity, stack);

@@ -26,7 +26,7 @@ public final class TechniqueBookItem extends Item {
         ItemStack stack = player.getItemInHand(hand);
         // A binding that claims this book has already printed what it has to say, and the hold it armed is started
         // by the vanilla use; only a book nothing claims is answered here.
-        if (ItemBindingService.technique(stack).isPresent()) return super.use(level, player, hand);
+        if (ItemBindingService.technique(level.registryAccess(), stack).isPresent()) return super.use(level, player, hand);
         if (ItemReading.readInscription(serverPlayer, stack)) return InteractionResult.SUCCESS_SERVER;
         ItemFeedback.send(player, Component.translatable("item.mxt.technique_book.unbound"));
         return InteractionResult.FAIL;

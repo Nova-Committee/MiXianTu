@@ -150,34 +150,30 @@ public final class InformationPanelScreen extends AuiScreen {
         this.tabInfo = this.getOrThrow("tab_info");
         this.tabTechnique = this.getOrThrow("tab_technique");
         this.techniquesEmpty = this.getOrThrow("techniques_empty");
+        this.cultivation = this.scrollList("cult", "cultivation", 14, new InfoBinding());
+        this.basic = this.scrollList("basic", "basic", 8, new InfoBinding());
+        this.techniqueBinding = new TechniqueBinding();
+        this.techniques = this.scrollList("tech", "techniques", TECHNIQUE_ROWS, this.techniqueBinding);
+        this.shownGeometry = Long.MIN_VALUE;
+        this.shownPage = null;
 
-        AuiScrollList<InformationEntry> cultivation = this.scrollList("cult", "cultivation", 14, new InfoBinding());
-        AuiScrollList<InformationEntry> basic = this.scrollList("basic", "basic", 8, new InfoBinding());
-        TechniqueBinding techniqueBinding = new TechniqueBinding();
-        AuiScrollList<TechniqueRow> techniques =
-                this.scrollList("tech", "techniques", TECHNIQUE_ROWS, techniqueBinding);
-        for (int index = 0; index < EQUIPMENT_SLOT_COUNT; index++) {
+        for (int index = 0; index < EQUIPMENT_SLOT_COUNT; index++)
             this.equipment.add(this.getOrThrow("equip-" + index, Item.class));
-        }
-        this.cultivation = cultivation;
-        this.basic = basic;
-        this.techniques = techniques;
-        this.techniqueBinding = techniqueBinding;
         this.text(this.cultivationCaption, Component.translatable("info.mxt.cultivation"));
         this.text(this.basicCaption, Component.translatable("info.mxt.basic"));
         this.text(this.tabInfo, Component.translatable("screen.mxt.information_panel.tab.info"));
         this.text(this.tabTechnique, Component.translatable("screen.mxt.technique_panel"));
         this.text(this.techniquesEmpty, Component.translatable("screen.mxt.technique_panel.empty"));
-        this.tabInfo.addEventListener("click", event -> this.setPage(Page.INFO));
-        this.tabTechnique.addEventListener("click", event -> this.setPage(Page.TECHNIQUES));
+        assert this.tabInfo != null;
+        this.tabInfo.addEventListener("click", _ -> this.setPage(Page.INFO));
+        assert this.tabTechnique != null;
+        this.tabTechnique.addEventListener("click", _ -> this.setPage(Page.TECHNIQUES));
         // A row click is a local pick, as the old list's selection was.
-        for (AuiScrollList<InformationEntry> list : List.of(cultivation, basic)) {
-            for (Cell cell : list.cells) {
+        assert this.cultivation != null;
+        assert this.basic != null;
+        for (AuiScrollList<InformationEntry> list : List.of(this.cultivation, this.basic))
+            for (Cell cell : list.cells)
                 cell.click(() -> this.select(list, cell));
-            }
-        }
-        this.shownGeometry = Long.MIN_VALUE;
-        this.shownPage = null;
     }
 
     @Override
@@ -200,9 +196,9 @@ public final class InformationPanelScreen extends AuiScreen {
 
     private void select(AuiScrollList<InformationEntry> list, Cell cell) {
         if (cell.key() == null) return;
-        for (AuiScrollList<InformationEntry> other : List.of(list, list == this.cultivation ? this.basic : this.cultivation))
-            if (other != null)
-                other.markSelected(cell.key());
+        if (list != null) list.markSelected(cell.key());
+        AuiScrollList<InformationEntry> current = list == this.cultivation ? this.basic : this.cultivation;
+        if (current != null) current.markSelected(cell.key());
     }
 
     private void setPage(Page next) {
@@ -638,7 +634,7 @@ public final class InformationPanelScreen extends AuiScreen {
             AuiElements.setText(cell.part(2), name.getString());
             AuiElements.setText(cell.part(3), levelWidth > 0 ? level.getString() : "");
             AuiElements.setText(cell.part(4), value.getString());
-            AuiElements.style(cell.part(2), "color", styleColor(full, LABEL_COLOR));
+            AuiElements.style(cell.part(2), "color", styleColor(full));
             AuiElements.style(cell.part(3), "left", (textX + nameWidth + TECHNIQUE_NAME_GAP) + "px");
             AuiElements.style(cell.part(3), "color", AuiStyles.hex(row.hasLevel() ? MUTED_COLOR : UNKNOWN_COLOR));
             AuiElements.style(cell.part(4), "left", valueLeft + "px");
@@ -715,8 +711,8 @@ public final class InformationPanelScreen extends AuiScreen {
         }
     }
 
-    private static String styleColor(Component component, int fallback) {
+    private static String styleColor(Component component) {
         TextColor style = component.getStyle().getColor();
-        return AuiStyles.hex(style == null ? fallback : style.getValue());
+        return AuiStyles.hex(style == null ? LABEL_COLOR : style.getValue());
     }
 }

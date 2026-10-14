@@ -8,7 +8,7 @@ import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.DatapackCache;
 import com.iafenvoy.mxt.runtime.EntitySources;
 import com.iafenvoy.mxt.runtime.progression.ProgressionService;
-import com.iafenvoy.mxt.util.HolderHelper;
+import com.iafenvoy.mxt.util.math.CompareOperation;
 import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
@@ -24,14 +24,14 @@ import java.util.List;
  * server indexed, so the comparison names one level and asks where the body stands; {@code owner} narrows the
  * question to some owners instead of every progression the body holds.
  */
-public record ProgressionEntityCondition(Holder<Progression> level, RealmEntityCondition.Comparison comparison,
+public record ProgressionEntityCondition(Holder<Progression> level, CompareOperation comparison,
                                          List<Identifier> owner) implements EntityCondition {
     private static final Codec<List<Identifier>> OWNERS = Codec.either(Identifier.CODEC, Identifier.CODEC.listOf())
             .xmap(either -> either.map(List::of, list -> list),
                     list -> list.size() == 1 ? Either.left(list.getFirst()) : Either.right(list));
     public static final MapCodec<ProgressionEntityCondition> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             Progression.CODEC.fieldOf("level").forGetter(ProgressionEntityCondition::level),
-            RealmEntityCondition.Comparison.CODEC.optionalFieldOf("comparison", RealmEntityCondition.Comparison.EXACT).forGetter(ProgressionEntityCondition::comparison),
+            CompareOperation.CODEC.optionalFieldOf("comparison", CompareOperation.EQUAL).forGetter(ProgressionEntityCondition::comparison),
             OWNERS.optionalFieldOf("owner", List.of()).forGetter(ProgressionEntityCondition::owner)
     ).apply(i, ProgressionEntityCondition::new));
 
@@ -48,11 +48,7 @@ public record ProgressionEntityCondition(Holder<Progression> level, RealmEntityC
 
     // Both bounds come from the indexed chain, so a level of another chain satisfies neither.
     private boolean reached(Holder<Progression> current) {
-        return switch (this.comparison) {
-            case EXACT -> current == this.level;
-            case AT_LEAST -> DatapackCache.get().isLevelAtLeast(current, this.level);
-            case AT_MOST -> DatapackCache.get().isLevelAtLeast(this.level, current);
-        };
+        return DatapackCache.get().progressionChains().compare(this.comparison, current, this.level);
     }
 
     @Override

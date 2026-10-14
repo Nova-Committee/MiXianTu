@@ -27,7 +27,7 @@ public final class CultivationIdentityService {
 
     public static Result grantSpiritRoot(LivingEntity entity, Identifier id, SpiritRoot definition) {
         SpiritIdentityAttachment spirit = entity.getData(MxtAttachments.SPIRIT_IDENTITY);
-        Holder<SpiritRoot> root = MxtDatapackRegistries.holder(MxtResourceKeys.SPIRIT_ROOT, id).orElse(null);
+        Holder<SpiritRoot> root = MxtDatapackRegistries.holder(entity.level().registryAccess(), MxtResourceKeys.SPIRIT_ROOT, id).orElse(null);
         if (root == null) return Result.rejected(Failure.DISABLED);
         if (spirit.spiritRoots().contains(root)) return Result.rejected(Failure.ALREADY_HELD);
         // A root may rule out another root's element, in either direction: the rule is written once, on
@@ -44,7 +44,7 @@ public final class CultivationIdentityService {
 
     public static Result grantPhysique(LivingEntity entity, Identifier id, Physique definition, FormulaContext context) {
         SpiritIdentityAttachment spirit = entity.getData(MxtAttachments.SPIRIT_IDENTITY);
-        Holder<Physique> physique = MxtDatapackRegistries.holder(MxtResourceKeys.PHYSIQUE, id).orElse(null);
+        Holder<Physique> physique = MxtDatapackRegistries.holder(entity.level().registryAccess(), MxtResourceKeys.PHYSIQUE, id).orElse(null);
         if (physique == null) return Result.rejected(Failure.DISABLED);
         if (!definition.allowStacking() && spirit.physiques().contains(physique))
             return Result.rejected(Failure.ALREADY_HELD);

@@ -50,7 +50,7 @@ public final class HoldLookup {
     // Only declarations that ask for a hold are captured, so any answer means the item is used by holding it.
     public static @Nullable HoldBinding hold(ItemStack stack) {
         if (stack.isEmpty() || holds.isEmpty()) return null;
-        List<HoldBinding> byItem = ITEM_MATCHED.computeIfAbsent(stack.getItem(), item -> holds.stream()
+        List<HoldBinding> byItem = ITEM_MATCHED.computeIfAbsent(stack.getItem(), _ -> holds.stream()
                 .filter(hold -> hold.entries().stream().anyMatch(entry -> entry.itemLevel() && entry.matches(stack)))
                 .toList());
         for (HoldBinding hold : holds)

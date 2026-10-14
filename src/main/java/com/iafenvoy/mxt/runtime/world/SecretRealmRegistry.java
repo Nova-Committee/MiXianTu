@@ -41,7 +41,7 @@ public final class SecretRealmRegistry {
         SecretRealmWorldAttachment attachment = value.overworld().getData(MxtAttachments.SECRET_REALM_WORLD);
         for (SecretRealmRecord record : attachment.records()) {
             Optional<ResourceKey<SecretRealm>> key = record.definition().unwrapKey();
-            if (key.isEmpty() || MxtDatapackRegistries.holder(MxtResourceKeys.SECRET_REALM, key.get().identifier()).isEmpty()) {
+            if (key.isEmpty() || MxtDatapackRegistries.holder(value.registryAccess(), MxtResourceKeys.SECRET_REALM, key.get().identifier()).isEmpty()) {
                 SecretRealmGenerationService.clearData(value, record.dimension());
                 continue;
             }

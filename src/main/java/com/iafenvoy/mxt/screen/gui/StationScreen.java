@@ -20,6 +20,7 @@ public final class StationScreen extends AuiContainerScreen<StationMenu> {
     @Override
     public void bindPage() {
         this.panel = this.getOrThrow("panel");
+
         // Only the customer page has the trade key; the owner page has no such button.
         if (this.menu.mode() != Mode.TRADE_OWNER)
             this.click(this.getOrThrow("trade"), () -> ClientPacketDistributor.sendToServer(StationTradeC2SPayload.INSTANCE));

@@ -45,7 +45,7 @@ public final class GrantAbilityLootFunction extends LootItemConditionalFunction 
     @Override
     public @NonNull ItemStack run(@NonNull ItemStack stack, @NonNull LootContext context) {
         Entity entity = this.target.get(context);
-        if (entity != null) MxtDatapackRegistries.holder(MxtResourceKeys.ABILITY, this.ability)
+        if (entity != null) MxtDatapackRegistries.holder(entity.registryAccess(), MxtResourceKeys.ABILITY, this.ability)
                 .ifPresent(ability -> {
                     if (entity.getData(MxtAttachments.ABILITY_HOLDER).grant(HolderHelper.id(ability), this.source)
                             && entity instanceof LivingEntity living)

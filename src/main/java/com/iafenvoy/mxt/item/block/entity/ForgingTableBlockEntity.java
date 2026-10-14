@@ -79,9 +79,11 @@ public final class ForgingTableBlockEntity extends BlockEntity implements Forgin
             this.level.sendBlockUpdated(this.worldPosition, this.getBlockState(), this.getBlockState(), 3);
     }
 
-    // Resolved live, so a datapack reload is picked up outside a session. Null when no session is running.
+    // Resolved live, so a datapack reload is picked up outside a session. Null when no session is running, and
+    // also while the block entity is detached from a level, where no registry answers.
     public ForgingBlueprint selectedBlueprint() {
-        return this.forging.blueprint().flatMap(id -> MxtDatapackRegistries.get(MxtResourceKeys.FORGING_BLUEPRINT, id)).orElse(null);
+        return this.level == null ? null
+                : this.forging.blueprint().flatMap(id -> MxtDatapackRegistries.get(this.level.registryAccess(), MxtResourceKeys.FORGING_BLUEPRINT, id)).orElse(null);
     }
 
     public List<Identifier> selectableBlueprintIds() {

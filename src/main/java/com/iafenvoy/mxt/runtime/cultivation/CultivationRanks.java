@@ -4,13 +4,12 @@ import com.iafenvoy.mxt.attachment.CultivationAttachment;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.cultivation.RealmStage;
 import com.iafenvoy.mxt.runtime.DatapackCache;
-import com.iafenvoy.mxt.util.HolderHelper;
 import net.minecraft.core.Holder;
 
 /**
- * Where a body stands in a realm chain. The server cache is the only walk of the chain: with no cache (a client, or
- * before a world is loaded) the definitions' own {@code next_realm} links answer instead, which is a different
- * question from a chain the cache refused - a stage the cache does not hold has no rank, not a re-walked one.
+ * Where a body stands in a realm chain. Every answer is the shared index's, so a stage that index does not hold has
+ * no rank rather than a re-walked one.
+ * The number counts the mortal state as zero, so the first realm is one and every stage above it follows suit.
  */
 public final class CultivationRanks {
     private CultivationRanks() {
@@ -20,12 +19,12 @@ public final class CultivationRanks {
         DatapackCache cache = DatapackCache.get();
         Holder<RealmStage> current = spirit.realmStage(aura);
         if (current == null) {
-            // A null realm stage represents a mortal, whose formulas still use the
-            // chain's first realm as the pending cultivation stage.
-            return aura.value().firstRealm()
-                    .map(first -> cache.rankForRealm(first).orElse(0))
-                    .orElse(-1);
+            // The mortal state sits one rank below the chain's first realm, and an aura that declares no first
+            // realm is off every chain. This does not consult the cache: whether the chain got indexed has no
+            // bearing on a body that never entered it, and the progress variables need a usable rank even where
+            // no index exists.
+            return aura.value().firstRealm().isPresent() ? 0 : -1;
         }
-        return cache.rankForRealm(current).orElse(-1);
+        return cache.rankForRealm(current).map(rank -> rank + 1).orElse(-1);
     }
 }

@@ -201,16 +201,18 @@ public final class DatapackCache {
     }
 
     /**
-     * The realm one step above this one: empty at the top of its chain, and for a realm the walk did not index.
+     * The validated realm chains, for a caller that asks where two stages stand against each other.
      */
-    public Optional<Identifier> nextRealm(Holder<RealmStage> realm) {
-        return this.realmChains.next(realm).map(HolderHelper::id);
+    public ChainCache<RealmStage> realmChains() {
+        return this.realmChains;
     }
 
-    public boolean isRealmAtLeast(Holder<RealmStage> current, Holder<RealmStage> required) {
-        Optional<Holder<Aura>> cultivation = this.cultivationForRealm(current);
-        return cultivation.isPresent() && cultivation.equals(this.cultivationForRealm(required))
-                && this.rankForRealm(current).orElse(-1) >= this.rankForRealm(required).orElse(Integer.MAX_VALUE);
+    /**
+     * The realm one step above this one: empty at the top of its chain, and for a realm the walk did not index.
+     * The holder is the chain's own, so no caller has to resolve an id back through a registry.
+     */
+    public Optional<Holder<RealmStage>> nextRealm(Holder<RealmStage> realm) {
+        return this.realmChains.next(realm);
     }
 
     public Optional<Integer> rankForLevel(Holder<Progression> level) {
@@ -230,16 +232,6 @@ public final class DatapackCache {
      */
     public ChainCache<ItemQuality> qualityChains() {
         return this.qualityChains;
-    }
-
-    /**
-     * The comparison every level-gated rule uses.
-     */
-    public boolean isLevelAtLeast(Holder<Progression> current, Holder<Progression> required) {
-        return this.progressionChains.chainOf(current)
-                .filter(chain -> chain.contains(required))
-                .map(chain -> chain.indexOf(current) >= chain.indexOf(required))
-                .orElse(false);
     }
 
     @SubscribeEvent

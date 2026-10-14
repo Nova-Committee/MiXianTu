@@ -16,6 +16,7 @@ import java.util.UUID;
 /**
  * Death-to-soul transition, manifestation and explicit recovery service.
  */
+// TODO: Soul system
 public final class SoulService {
     private SoulService() {
     }

@@ -27,7 +27,7 @@ import java.util.Optional;
  * a plain counter or an aura. The ambient aura of the world ({@code mxt:aura_zone}, {@code mxt:block_aura}) is a
  * separate thing that happens to share the word.
  */
-public record Aura(Holder<Resource> resource, Optional<Holder<RealmStage>> firstRealm, NumberProvider startExp,
+public record Aura(Holder<Resource> resource, Optional<Holder<RealmStage>> firstRealm,
                    CultivateConditions startCultivateConditions, ResourceConversion cultivationToResource,
                    ResourceConversion resourceToCultivation, NumberProvider regen, Optional<Holder<Element>> auraType,
                    NumberProvider burstAmount, EntityCondition useCondition, boolean showCultivationInfo) {
@@ -35,7 +35,6 @@ public record Aura(Holder<Resource> resource, Optional<Holder<RealmStage>> first
     public static final Codec<Aura> DIRECT_CODEC = RecordCodecBuilder.create(i -> i.group(
             Resource.CODEC.fieldOf("resource").forGetter(Aura::resource),
             RealmStage.CODEC.optionalFieldOf("first_realm").forGetter(Aura::firstRealm),
-            NumberProvider.CODEC.optionalFieldOf("start_exp", new Constant(0.0D)).forGetter(Aura::startExp),
             CultivateConditions.CODEC.optionalFieldOf("start_cultivate_conditions", CultivateConditions.EMPTY).forGetter(Aura::startCultivateConditions),
             ResourceConversion.CODEC.optionalFieldOf("cultivation_to_resource", ResourceConversion.DEFAULT).forGetter(Aura::cultivationToResource),
             ResourceConversion.CODEC.optionalFieldOf("resource_to_cultivation", ResourceConversion.DEFAULT).forGetter(Aura::resourceToCultivation),

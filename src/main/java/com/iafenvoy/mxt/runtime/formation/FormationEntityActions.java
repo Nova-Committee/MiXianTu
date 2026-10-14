@@ -82,7 +82,7 @@ final class FormationEntityActions {
         double radius = instance.radius();
         FormationCarrier carrier = new FormationCarrier(instance.formation(), controller, radius, instance.owners());
         Identifier source = Sources.formation(instance.formation());
-        EntityAction exit = MxtDatapackRegistries.get(MxtResourceKeys.FORMATION, instance.formation())
+        EntityAction exit = MxtDatapackRegistries.get(level.registryAccess(), MxtResourceKeys.FORMATION, instance.formation())
                 .map(Formation::entityExitAction).orElse(NoOpAction.INSTANCE);
         for (UUID id : tracked) {
             // An entity the level can no longer resolve has no attachments left to release, and counts as

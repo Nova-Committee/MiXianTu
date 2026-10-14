@@ -1,5 +1,6 @@
 package com.iafenvoy.mxt.data.condition.builtin.entity;
 
+import com.iafenvoy.mxt.attachment.AbilityAttachment;
 import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.storage.DataStorage;
 import com.iafenvoy.mxt.data.storage.DataStorageHolder;
@@ -25,7 +26,7 @@ record AbilityStorageReading(Identifier id, Optional<DataStorageHolder> holder, 
         // Read-only, so an entity that never had ability state is not given an empty attachment to carry around.
         // Missing state is not a failure: every kind reads as "nothing written yet" instead.
         return Optional.of(new AbilityStorageReading(id,
-                entity.getExistingData(MxtAttachments.ABILITY_HOLDER).map(attachment -> attachment.storage()),
+                entity.getExistingData(MxtAttachments.ABILITY_HOLDER).map(AbilityAttachment::storage),
                 definition));
     }
 

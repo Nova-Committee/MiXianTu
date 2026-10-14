@@ -81,7 +81,6 @@ import com.iafenvoy.mxt.item.block.entity.RiftBlockEntity;
 import com.iafenvoy.mxt.network.payload.WheelActionC2SPayload;
 import com.iafenvoy.mxt.recipe.SpiritRecipe;
 import com.iafenvoy.mxt.registry.*;
-import com.iafenvoy.mxt.runtime.DatapackCache;
 import com.iafenvoy.mxt.runtime.ability.*;
 import com.iafenvoy.mxt.runtime.artifact.*;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactHoldService.ClaimResult;
@@ -139,6 +138,7 @@ import com.iafenvoy.mxt.util.PlayerNames;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.FormulaContexts;
 import com.iafenvoy.mxt.util.formula.number.Constant;
+import com.iafenvoy.mxt.util.math.CompareOperation;
 import com.mojang.authlib.GameProfile;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
@@ -203,6 +203,7 @@ import net.neoforged.neoforge.common.util.FakePlayer;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import net.neoforged.neoforge.event.tick.EntityTickEvent;
 import net.neoforged.neoforge.network.connection.ConnectionType;
+import net.neoforged.neoforge.server.ServerLifecycleHooks;
 import org.jetbrains.annotations.Nullable;
 import org.jspecify.annotations.NonNull;
 import top.theillusivec4.curios.api.CuriosApi;
@@ -1924,11 +1925,11 @@ public final class MxtTestCommands {
             ItemStack probeCore = beast.getData(MxtAttachments.CREATURE_SPIRIT).innerCore();
             // A profile's spawn action is one action, and the profile is written once, so it runs once: the probe
             // beast is left weightless by its own definition rather than by probe code.
-            CreatureProfile beastProfile = MxtDatapackRegistries.get(MxtResourceKeys.CREATURE_PROFILE, id("probe_beast")).orElse(null);
+            CreatureProfile beastProfile = MxtDatapackRegistries.get(player.level().registryAccess(), MxtResourceKeys.CREATURE_PROFILE, id("probe_beast")).orElse(null);
             boolean spawnAction = beastProfile != null && beastProfile.spawnAction() instanceof SetNoGravityAction
                     && beast.isNoGravity();
             // Declaring no action writes the no-op in, which is the same as running nothing at all.
-            CreatureProfile wolfProfile = MxtDatapackRegistries.get(MxtResourceKeys.CREATURE_PROFILE, id("spirit_wolf")).orElse(null);
+            CreatureProfile wolfProfile = MxtDatapackRegistries.get(player.level().registryAccess(), MxtResourceKeys.CREATURE_PROFILE, id("spirit_wolf")).orElse(null);
             boolean idleAction = wolfProfile != null && wolfProfile.spawnAction() == NoOpAction.INSTANCE;
             boolean profiled = beast.getData(MxtAttachments.CREATURE_SPIRIT).profile().isPresent()
                     && close(beast.getData(MxtAttachments.CREATURE_SPIRIT).intelligence(), 20.0D)
@@ -1936,7 +1937,7 @@ public final class MxtTestCommands {
             // Writing a profile onto an attachment that already exists has to mark it for sync too, not only its
             // construction: the flag is consumed here first, the same way the server tick consumes it.
             CreatureSpiritAttachment spirit = beast.getData(MxtAttachments.CREATURE_SPIRIT);
-            Holder<CreatureProfile> beastHolder = MxtDatapackRegistries.holder(MxtResourceKeys.CREATURE_PROFILE, id("probe_beast")).orElse(null);
+            Holder<CreatureProfile> beastHolder = MxtDatapackRegistries.holder(player.level().registryAccess(), MxtResourceKeys.CREATURE_PROFILE, id("probe_beast")).orElse(null);
             if (beastHolder != null) {
                 spirit.checkDirty();
                 spirit.apply(beastHolder, 20.0D, probeCore.copy());
@@ -2188,11 +2189,11 @@ public final class MxtTestCommands {
             // read side is the same owner-agnostic condition a data pack writes.
             resources.set(growth, 25.0D, 0.0D, 1000.0D, -1L, "probe");
             boolean gated = !ProgressionDriver.tick(beast) && stoodOn(beast, BEAST_2) && signals.size() == 1;
-            boolean reads = new ProgressionEntityCondition(second, RealmEntityCondition.Comparison.AT_LEAST,
+            boolean reads = new ProgressionEntityCondition(second, CompareOperation.GREATER_THAN_OR_EQUAL,
                     List.of(PROBE_BEAST_PROFILE)).test(beast, FormulaContext.of(beast))
-                    && new ProgressionEntityCondition(second, RealmEntityCondition.Comparison.EXACT,
+                    && new ProgressionEntityCondition(second, CompareOperation.EQUAL,
                     List.of(PROBE_BEAST_PROFILE)).test(beast, FormulaContext.of(beast))
-                    && !new ProgressionEntityCondition(third, RealmEntityCondition.Comparison.AT_LEAST,
+                    && !new ProgressionEntityCondition(third, CompareOperation.GREATER_THAN_OR_EQUAL,
                     List.of(PROBE_BEAST_PROFILE)).test(beast, FormulaContext.of(beast))
                     && close(ProgressionDamageMultiplier.of(beast, ability), 1.5D);
             boolean reading = gated && reads;
@@ -3347,8 +3348,8 @@ public final class MxtTestCommands {
             //    a typo in the id. This is what replaced the mxt:disabled tag.
             boolean gatedFile = level.getServer().getResourceManager()
                     .getResource(Identifier.fromNamespaceAndPath("mxt_test", "mxt/element/condition_gated.json")).isPresent();
-            boolean gated = MxtDatapackRegistries.holder(MxtResourceKeys.ELEMENT, PROBE_GATED_ELEMENT).isEmpty();
-            boolean plain = MxtDatapackRegistries.holder(MxtResourceKeys.ELEMENT, PROBE_INERT_ELEMENT).isPresent();
+            boolean gated = MxtDatapackRegistries.holder(level.registryAccess(), MxtResourceKeys.ELEMENT, PROBE_GATED_ELEMENT).isEmpty();
+            boolean plain = MxtDatapackRegistries.holder(level.registryAccess(), MxtResourceKeys.ELEMENT, PROBE_INERT_ELEMENT).isPresent();
             boolean gatedOut = gatedFile && gated && plain;
             source.sendSuccess(() -> Component.literal("element probe: condition-gated file=" + gatedFile
                     + " element absent=" + gated + " plain element present=" + plain
@@ -4762,7 +4763,6 @@ public final class MxtTestCommands {
 
     private static int giveKit(CommandSourceStack source) throws CommandSyntaxException {
         ServerPlayer player = source.getPlayerOrException();
-        if (player == null) return 0;
         CultivationAttachment spirit = player.getData(MxtAttachments.CULTIVATION);
         SpiritIdentityAttachment identity = player.getData(MxtAttachments.SPIRIT_IDENTITY);
         ResourceHolderAttachment resources = player.getData(MxtAttachments.RESOURCE_HOLDER);
@@ -4834,7 +4834,6 @@ public final class MxtTestCommands {
 
     private static int startCultivation(CommandSourceStack source) throws CommandSyntaxException {
         ServerPlayer player = source.getPlayerOrException();
-        if (player == null) return 0;
         Cultivation action = require(MxtResourceKeys.CULTIVATION, CULTIVATE).value();
         Result result = CultivationMethodService.start(player, player.getData(MxtAttachments.CULTIVATION),
                 CULTIVATE, action, player.level().getGameTime(), FormulaContext.of(player));
@@ -5192,7 +5191,6 @@ public final class MxtTestCommands {
     // instead of a screenshot. It calls the very same InformationManager.collectEntries the screen does.
     private static int showInformation(CommandSourceStack source) throws CommandSyntaxException {
         ServerPlayer player = source.getPlayerOrException();
-        if (player == null) return 0;
         for (Side side : Side.values()) {
             List<InformationEntry> entries = InformationManager.collectEntries(player, side);
             source.sendSuccess(() -> Component.literal("[" + side + "] " + entries.size() + " entries"), false);
@@ -5205,7 +5203,7 @@ public final class MxtTestCommands {
         return 1;
     }
 
-    private static int showGuide(CommandSourceStack source) throws CommandSyntaxException {
+    private static int showGuide(CommandSourceStack source) {
         source.sendSuccess(() -> Component.translatable("command.mxt_test.guide.1"), false);
         source.sendSuccess(() -> Component.translatable("command.mxt_test.guide.2"), false);
         source.sendSuccess(() -> Component.translatable("command.mxt_test.guide.3"), false);
@@ -5256,9 +5254,11 @@ public final class MxtTestCommands {
         return Identifier.fromNamespaceAndPath(MxtTestMod.MOD_ID, path);
     }
 
-    private static <T> Holder<T> require(ResourceKey<? extends Registry<T>> registry,
-                                         Identifier id) {
-        return MxtDatapackRegistries.holder(registry, id)
+    private static <T> Holder<T> require(ResourceKey<? extends Registry<T>> registry, Identifier id) {
+        return Optional.ofNullable(ServerLifecycleHooks.getCurrentServer())
+                .map(MinecraftServer::registryAccess)
+                .map(x -> x.lookupOrThrow(registry))
+                .flatMap(x -> x.get(id))
                 .orElseThrow(() -> new IllegalStateException("Missing Qingxiao test definition " + id));
     }
 

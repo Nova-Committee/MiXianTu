@@ -1,9 +1,9 @@
 package com.iafenvoy.mxt.util.chain;
 
 import com.google.common.collect.ImmutableMap;
+import com.iafenvoy.mxt.util.math.CompareOperation;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup;
-import net.minecraft.resources.Identifier;
 
 import java.util.List;
 import java.util.Map;
@@ -51,6 +51,17 @@ public final class ChainCache<T> {
 
     public Optional<Integer> rankOf(Holder<T> node) {
         return this.chainOf(node).map(chain -> chain.indexOf(node));
+    }
+
+    /**
+     * Whether both entries sit on one line and their ranks satisfy the operation. A rank only means something
+     * inside its own line, so a pair spanning two lines answers false instead of comparing unrelated indices.
+     */
+    public boolean compare(CompareOperation operation, Holder<T> current, Holder<T> required) {
+        return this.chainOf(required)
+                .filter(chain -> chain.contains(current))
+                .map(chain -> operation.compare(chain.indexOf(current), chain.indexOf(required)))
+                .orElse(false);
     }
 
     public boolean contains(Holder<T> node) {

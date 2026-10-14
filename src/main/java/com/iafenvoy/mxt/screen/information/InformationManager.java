@@ -206,7 +206,7 @@ public final class InformationManager {
             if (!chain.value().showCultivationInfo()) continue;
             Holder<RealmStage> realm = cultivation.realmStage(chain);
             Component realmName = realm == null ? Component.translatable("info.mxt.mortal") : DefinitionText.text(realm);
-            Component minorStage = minorStageText(collector.getPlayer(), chain, realm, cultivation.cultivationProgress(chain), context);
+            Component minorStage = minorStageText(collector.getPlayer(), chain, cultivation, realm, context);
             if (minorStage != null) realmName = realmName.copy().append(" ").append(minorStage);
             collector.add(first ? Component.translatable("info.mxt.realm") : null,
                     DefinitionText.text(chain.value().resource()).copy().append(": ").append(realmName));
@@ -214,14 +214,15 @@ public final class InformationManager {
         }
     }
 
-    // A mortal, and a stage that declares no minor stages, add nothing to the row. The segment total has to be
-    // read in the same resource context the breakthrough runtime uses, or a formula would be evaluated twice
-    // with different variables.
-    private static Component minorStageText(Player player, Holder<Aura> chain, @Nullable Holder<RealmStage> realm,
-                                            double progress, FormulaContext context) {
+    // A mortal, and a stage that declares no minor stages, add nothing to the row. The segment arithmetic goes
+    // through the same chain entry point the breakthrough runtime uses, so the row cannot disagree with what the
+    // body actually needs - and that call has to read the total in the same resource context, or a formula would
+    // be evaluated twice with different variables.
+    private static Component minorStageText(Player player, Holder<Aura> chain, CultivationAttachment cultivation,
+                                            @Nullable Holder<RealmStage> realm, FormulaContext context) {
         if (realm == null) return null;
         FormulaContext resourceContext = ResourceService.formulaContext(player, chain.value().resource(), context);
-        double index = CultivationService.minorStage(realm.value(), progress, resourceContext);
+        double index = CultivationService.minorStage(chain, cultivation, resourceContext);
         return Double.isNaN(index) ? null : DefinitionText.minorStage(realm, (int) index);
     }
 

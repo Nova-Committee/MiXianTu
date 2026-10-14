@@ -8,8 +8,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.TextColor;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.Locale;
-import java.util.NoSuchElementException;
+import java.util.*;
 
 /**
  * What every page host in this mod adds on top of ApricityUI's own hosts: the bind of the page contract it names,
@@ -225,6 +224,12 @@ public interface AuiWrappedScreen extends AuiLinkedScreen {
         this.auiClearBindings();
         state.boundGeneration = generation;
         MiXianTu.LOGGER.warn("Page does not match its contract: {}", missing);
+    }
+
+    // Just used to avoid null warning in idea lol
+    @SafeVarargs
+    static <T> List<T> list(@Nullable T... elements) {
+        return Arrays.stream(elements).filter(Objects::nonNull).toList();
     }
 
     /**

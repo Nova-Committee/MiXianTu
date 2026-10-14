@@ -74,7 +74,7 @@ public final class FormationWorldService {
         // have to rebuild their block aura.
         invalidateAura(level, controller, instance.radius());
         FormationEntityActions.releaseTracked(level, controller, instance);
-        MxtDatapackRegistries.get(MxtResourceKeys.FORMATION, instance.formation())
+        MxtDatapackRegistries.get(level.registryAccess(), MxtResourceKeys.FORMATION, instance.formation())
                 .ifPresent(definition -> definition.deactivateAction().execute(level, controller, FormulaContext.of(level)));
         NeoForge.EVENT_BUS.post(new Deactivate(level, controller, instance));
         return true;

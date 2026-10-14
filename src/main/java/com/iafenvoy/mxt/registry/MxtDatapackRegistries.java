@@ -33,11 +33,9 @@ import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.core.Registry;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.server.MinecraftServer;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.registries.DataPackRegistryEvent.NewRegistry;
-import net.neoforged.neoforge.server.ServerLifecycleHooks;
 
 import java.util.LinkedList;
 import java.util.List;
@@ -45,7 +43,7 @@ import java.util.Optional;
 import java.util.stream.Stream;
 
 /**
- * Native Minecraft datapack registries. Reloading and client synchronisation belong to the vanilla registry
+ * Native Minecraft datapack registries. Reloading and client synchronization belong to the vanilla registry
  * system, so this class never stores a registry snapshot; a definition a pack wants out of the world is kept out
  * of the pack (or gated by a {@code neoforge:conditions} block, see {@code docs/数据包格式.md}), so an entry that
  * did load is always live and nothing here filters.
@@ -109,37 +107,15 @@ public final class MxtDatapackRegistries {
         return KEYS;
     }
 
-    public static <T> Optional<T> get(ResourceKey<? extends Registry<T>> key, Identifier id) {
-        return registry(key).getOptional(id);
-    }
-
-    public static <T> Optional<Reference<T>> holder(ResourceKey<? extends Registry<T>> key, Identifier id) {
-        return registry(key).get(ResourceKey.create(key, id));
-    }
-
-    public static <T> Stream<Reference<T>> holders(ResourceKey<? extends Registry<T>> key) {
-        return registry(key).listElements();
-    }
-
     public static <T> Stream<Reference<T>> holders(Provider access, ResourceKey<? extends Registry<T>> key) {
         return access.lookupOrThrow(key).listElements();
     }
 
-    // Client code must use this rather than holder(ResourceKey, Identifier): that one reads the server's
-    // registries, which exist on a client only while it runs an integrated server.
     public static <T> Optional<Reference<T>> holder(Provider access, ResourceKey<? extends Registry<T>> key, Identifier id) {
         return access.get(ResourceKey.create(key, id));
     }
 
     public static <T> Optional<T> get(Provider access, ResourceKey<? extends Registry<T>> key, Identifier id) {
         return holder(access, key, id).map(Holder::value);
-    }
-
-    public static <T> Registry<T> registry(ResourceKey<? extends Registry<T>> key) {
-        MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
-        if (server == null) {
-            throw new IllegalStateException("Native datapack registries are only available while a server is running");
-        }
-        return server.registryAccess().lookupOrThrow(key);
     }
 }
