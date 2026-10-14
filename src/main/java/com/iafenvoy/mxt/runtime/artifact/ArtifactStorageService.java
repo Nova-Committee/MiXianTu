@@ -3,7 +3,6 @@ package com.iafenvoy.mxt.runtime.artifact;
 import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.storage.builtin.ContainerDataStorage;
 import com.iafenvoy.mxt.runtime.item.ItemStorageService;
-import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.FormulaContexts;
 import net.minecraft.core.Holder;
@@ -64,11 +63,11 @@ public final class ArtifactStorageService implements ISpiritStorage {
     }
 
     private static void write(ItemStack stack, Holder<Ability> ability, ContainerDataStorage contents, Player viewer) {
-        ItemStorageService.set(stack, HolderHelper.id(ability), contents);
+        ItemStorageService.set(stack, ability, contents);
     }
 
     private static ContainerDataStorage storage(ItemStack stack, Holder<Ability> ability) {
-        return ItemStorageService.get(stack, HolderHelper.id(ability), ContainerDataStorage.class)
+        return ItemStorageService.get(stack, ability, ContainerDataStorage.class)
                 .orElseGet(() -> ContainerDataStorage.of(0, List.of()));
     }
 }

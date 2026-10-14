@@ -224,7 +224,7 @@ public final class WheelSourceTypes {
 
         @Override
         public boolean offers(LivingEntity entity, WheelEntryKind kind, Identifier id) {
-            return kind == WheelEntryKinds.BEHAVIOR
+            return kind.is(WheelEntryKinds.BEHAVIOR)
                     && ContractBells.selection(entity).map(selection -> selection.offers(id)).orElse(false);
         }
     }

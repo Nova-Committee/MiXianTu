@@ -5,6 +5,7 @@ import com.iafenvoy.mxt.data.talisman.TalismanUse;
 import com.iafenvoy.mxt.registry.MxtEntityTypes;
 import com.iafenvoy.mxt.registry.MxtItems;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.Holder;
 import net.minecraft.network.syncher.EntityDataAccessor;
@@ -35,6 +36,7 @@ import org.jspecify.annotations.NonNull;
  */
 public final class TalismanProjectileEntity extends ThrowableItemProjectile {
     private static final int MAX_LIFETIME_TICKS = 200;
+    //FIXME::Holder?
     private static final EntityDataAccessor<String> TALISMAN = SynchedEntityData.defineId(TalismanProjectileEntity.class, EntityDataSerializers.STRING);
 
     public TalismanProjectileEntity(EntityType<? extends TalismanProjectileEntity> type, Level level) {
@@ -124,11 +126,8 @@ public final class TalismanProjectileEntity extends ThrowableItemProjectile {
         return new TalismanUse(living, FormulaContext.of(living), this.position(), definition);
     }
 
-    // Requires a registry holder: only the id travels, so an inline value could not be rebuilt on arrival.
     private void setTalisman(Holder<Talisman> definition) {
-        Identifier id = definition.unwrapKey().map(ResourceKey::identifier)
-                .orElseThrow(() -> new IllegalArgumentException("A thrown talisman must be a registry holder"));
-        this.getEntityData().set(TALISMAN, id.toString());
+        this.getEntityData().set(TALISMAN, HolderHelper.id(definition).toString());
     }
 
     private @Nullable Holder<Talisman> talisman() {

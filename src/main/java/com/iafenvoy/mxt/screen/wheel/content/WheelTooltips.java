@@ -5,14 +5,11 @@ import com.iafenvoy.mxt.data.cost.CostPayment;
 import com.iafenvoy.mxt.data.cost.context.CostContext;
 import com.iafenvoy.mxt.data.cost.context.CostOrigin;
 import com.iafenvoy.mxt.data.cultivation.Element;
-import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
-import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.screen.wheel.WheelDuration;
 import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.TooltipText;
 import com.mojang.datafixers.util.Either;
 import net.minecraft.core.Holder;
-import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.network.chat.Component;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.entity.player.Player;
@@ -45,13 +42,9 @@ final class WheelTooltips {
         boolean other = false;
         for (Cost cost : costs) if (payment.load(cost).isPresent()) other = true;
         List<Component> parts = new ArrayList<>(costs.size());
-        // A player is always in a level, so this access is present: the null case is only "no player", which the
-        // caller already refused.
-        Provider registries = context.formula().registries();
-        if (registries != null)
-            payment.resources().forEach((id, amount) -> MxtDatapackRegistries.holder(registries, MxtResourceKeys.RESOURCE, id)
-                    .ifPresent(resource -> parts.add(Component.translatable("wheel.mxt.tooltip.cost_part",
-                            DefinitionText.text(resource), number(amount)))));
+        // The price is keyed by the resource itself, so naming one needs no registry at all.
+        payment.account().forEach((resource, amount) -> parts.add(Component.translatable("wheel.mxt.tooltip.cost_part",
+                DefinitionText.text(resource), number(amount))));
         if (other || payment.beyondResources()) parts.add(Component.translatable("wheel.mxt.tooltip.cost_other"));
         return TooltipText.join(parts);
     }

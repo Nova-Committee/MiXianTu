@@ -10,7 +10,6 @@ public enum AlchemyFailure implements StringRepresentable {
     INPUT_TIER,
     QUALITY_CONDITIONS,
     BINDING_CONDITIONS,
-    UNBOUND,
     MAX_USES,
     COOLDOWN,
     NO_FURNACE,

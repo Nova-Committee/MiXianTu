@@ -4,7 +4,6 @@ import com.iafenvoy.mxt.data.progression.Progression;
 import com.iafenvoy.mxt.data.progression.ProgressionOwner;
 import com.iafenvoy.mxt.runtime.EntitySources;
 import com.iafenvoy.mxt.runtime.ability.AbilityGrantService;
-import com.iafenvoy.mxt.util.HolderHelper;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.LivingEntity;
@@ -30,7 +29,7 @@ public final class ProgressionAdminService {
         // A level from another chain compares against nothing, so the stored order would refuse both bounds.
         if (!force && !ProgressionService.follows(owner, level)) return Result.rejected(Failure.FOREIGN_LEVEL);
         Holder<Progression> current = ProgressionService.recorded(owner).orElse(null);
-        if (current != null && HolderHelper.id(current).equals(HolderHelper.id(level)))
+        if (current != null && current.is(level))
             return Result.rejected(Failure.SAME_LEVEL);
         ProgressionService.set(owner, level);
         // The same order a promotion takes: record, then what entering the level means, then the grants it owes.

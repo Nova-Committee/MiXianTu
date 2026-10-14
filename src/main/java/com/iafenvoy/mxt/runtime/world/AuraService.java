@@ -1,6 +1,5 @@
 package com.iafenvoy.mxt.runtime.world;
 
-import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.attachment.AuraChunkAttachment;
 import com.iafenvoy.mxt.config.MxtServerConfig;
 import com.iafenvoy.mxt.data.aura.Aura;
@@ -17,12 +16,14 @@ import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.world.AuraQueryCache.AuraLocation;
 import com.iafenvoy.mxt.runtime.world.AuraQueryCache.AvailabilityKey;
 import com.iafenvoy.mxt.runtime.world.AuraResult.SourceKind;
-import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap.Entry;
-import net.minecraft.core.*;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
+import net.minecraft.core.Registry;
+import net.minecraft.core.SectionPos;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
@@ -31,6 +32,7 @@ import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.level.dimension.LevelStem;
 import net.neoforged.neoforge.common.NeoForge;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.function.Predicate;
@@ -40,8 +42,6 @@ import java.util.stream.Stream;
  * Central aura resolver: the precedence is biome, dimension, custom area, then active formation.
  */
 public final class AuraService {
-    private static final Identifier EMPTY = Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "empty");
-
     private AuraService() {
     }
 
@@ -70,49 +70,48 @@ public final class AuraService {
     private static AuraResult resolveAura(Level level, BlockPos pos) {
         AuraChunkAttachment chunk = level.getChunkAt(pos).getData(MxtAttachments.AURA_CHUNK);
         Resolved staticResolved = staticZone(level, pos);
-        if (!chunk.initialized() || !chunk.template().equals(staticResolved.holder()))
+        Holder<AuraZone> template = staticResolved == null ? null : staticResolved.zone;
+        if (!chunk.initialized() || !Objects.equals(chunk.template(), template))
             initialize(chunk, staticResolved, pos);
-        Resolved resolved = staticResolved;
-        Resolved lower = resolved;
-        resolved = customZone(level, pos).orElse(resolved);
+        Resolved resolved = customZone(level, pos).orElse(staticResolved);
         // A formation's override is announced before it is applied, so a listener can refuse it; and it is only
         // announced when there is a zone holder to name, so a nameless one falls through silently.
         Optional<Resolved> formation = formationZone(level, pos);
         if (formation.isPresent() && level instanceof ServerLevel server
-                && formation.get().holder().isPresent()
-                && !NeoForge.EVENT_BUS.post(new AuraZoneEvent.Override(server, pos, preview(lower, level, pos),
-                formation.get().holder().get())).isCanceled()) {
-            resolved = formation.get();
-        }
+                && !NeoForge.EVENT_BUS.post(new AuraZoneEvent.Override(server, pos, preview(staticResolved, level, pos),
+                formation.get().zone)).isCanceled()) resolved = formation.get();
         Map<Holder<Aura>, AuraPool> pools = new LinkedHashMap<>(chunk.auras());
+        // Neither this position's own zone nor an override names one, so the chunk's stock and the nearby block
+        // emitters are the whole answer: there is no environment to add on top of them.
+        Holder<AuraZone> zoneHolder = resolved == null ? null : resolved.zone;
         if (pools.isEmpty())
-            pools.putAll(pools(level, resolved.holder().orElse(null), resolved.definition(), pos, level.getGameTime()));
-        applyBlockDistance(level, pools, chunk, resolved.definition(), pos, level.getGameTime());
+            pools.putAll(pools(level, zoneHolder, pos, level.getGameTime()));
+        applyBlockDistance(level, pools, chunk, zoneHolder, pos, level.getGameTime());
+        if (resolved == null) return zoneless(pools);
         applyMaximumBonus(pools, resolved.maxBonus());
-        return new AuraResult(pools,
-                resolved.definition().rules(), resolved.definition().elementFitBonus(), resolved.definition().elementConflictPenalty(),
-                resolved.definition().cultivateCondition(), resolved.definition().distribution(), resolved.id(), resolved.kind());
+        return new AuraResult(pools, resolved);
     }
 
     // Environmental concentration only: the mutable chunk stock is deliberately excluded, so stored aura
     // cannot appear to fluctuate with the environment.
     public static AuraResult getSensedAura(Level level, BlockPos pos) {
         AuraResult resolved = getPositionAura(level, pos);
-        AuraZone zone = MxtDatapackRegistries.get(level.registryAccess(), MxtResourceKeys.AURA_ZONE, resolved.source()).orElse(null);
-        if (zone == null) return new AuraResult(Map.of(), resolved.rules(),
-                resolved.elementFitBonus(), resolved.elementConflictPenalty(), resolved.cultivateCondition(),
-                resolved.distribution(), resolved.source(), resolved.sourceKind());
-        Map<Holder<Aura>, AuraPool> pools = pools(level, holderOf(level, zone), zone, pos, level.getGameTime());
-        return new AuraResult(pools, resolved.rules(), resolved.elementFitBonus(),
-                resolved.elementConflictPenalty(), resolved.cultivateCondition(), resolved.distribution(),
-                resolved.source(), resolved.sourceKind());
+        Holder<AuraZone> zone = resolved.source();
+        if (zone == null) return resolved.copy(Map.of());
+        return resolved.copy(pools(level, zone, pos, level.getGameTime()));
     }
 
-    private static AuraResult preview(Resolved resolved, Level level, BlockPos pos) {
-        return new AuraResult(pools(level, resolved.holder().orElse(null), resolved.definition(), pos, level.getGameTime()),
-                resolved.definition().rules(),
-                resolved.definition().elementFitBonus(), resolved.definition().elementConflictPenalty(),
-                resolved.definition().cultivateCondition(), resolved.definition().distribution(), resolved.id(), resolved.kind());
+    private static AuraResult preview(@Nullable Resolved resolved, Level level, BlockPos pos) {
+        return resolved == null ? zoneless(Map.of())
+                : new AuraResult(pools(level, resolved.zone, pos, level.getGameTime()), resolved);
+    }
+
+    // The answer for a position no zone covers: the default rules, no source holder to name, and only the pools
+    // the caller passes in. EMPTY_ZONE supplies exactly those defaults, so it remains the one place they live.
+    private static AuraResult zoneless(Map<Holder<Aura>, AuraPool> pools) {
+        return new AuraResult(pools, EMPTY_ZONE.rules(), EMPTY_ZONE.elementFitBonus(),
+                EMPTY_ZONE.elementConflictPenalty(), EMPTY_ZONE.cultivateCondition(), EMPTY_ZONE.distribution(),
+                null, SourceKind.CHUNK);
     }
 
     // All-or-nothing: nothing is consumed unless every requested amount is available.
@@ -127,16 +126,26 @@ public final class AuraService {
         level.getChunkAt(pos).getData(MxtAttachments.AURA_CHUNK).change(amounts);
     }
 
-    public static void initialize(AuraChunkAttachment chunk, Resolved resolved, BlockPos pos) {
-        AuraZone zone = resolved.definition();
+    public static void initialize(AuraChunkAttachment chunk, @Nullable Resolved resolved, BlockPos pos) {
+        // A position no zone covers keeps no template, so its chunk holds only what its own block emitters
+        // contribute; initializeAuras applies those and marks the chunk initialized either way.
+        if (resolved == null) {
+            chunk.initializeAuras(Map.of());
+            chunk.clearTemplate();
+            chunk.setInitialized(true);
+            return;
+        }
+        AuraZone zone = resolved.zone.value();
         Map<Holder<Aura>, AuraPool> pools = computePools(zone, pos, 0L);
         chunk.initializeAuras(pools);
-        chunk.setTemplate(resolved.holder());
+        chunk.setTemplate(resolved.zone);
         chunk.setInitialized(true);
     }
 
     // A dimension binding replaces a biome binding and is never outranked by a biome entry; within one
-    // tier the highest priority wins.
+    // tier the highest priority wins. Null means no zone covers this position, which is a real state rather
+    // than a failure: a pack that describes no zone for a biome leaves those chunks with only their own stock.
+    @Nullable
     private static Resolved staticZone(Level level, BlockPos pos) {
         ServerLevel server = level instanceof ServerLevel value ? value : null;
         AuraLocation location = server == null ? null : AuraQueryCache.location(server, pos);
@@ -144,21 +153,19 @@ public final class AuraService {
         if (cached.isPresent()) return cached.get();
         long started = AuraQueryCache.timing() ? System.nanoTime() : 0L;
         Identifier dimension = level.dimension().identifier();
-        Identifier memoised = location == null ? null : AuraQueryCache.biome(server, location);
+        Holder<Biome> memoised = location == null ? null : AuraQueryCache.biome(server, location);
         if (memoised == null) {
-            memoised = HolderHelper.id(level.getBiome(pos));
+            memoised = level.getBiome(pos);
             if (started != 0L) AuraQueryCache.countBiome(System.nanoTime() - started);
             if (location != null) AuraQueryCache.cacheBiome(server, location, memoised);
         }
-        Identifier biome = memoised;
-        Registry<Biome> biomeRegistry = level.registryAccess().lookupOrThrow(Registries.BIOME);
-        Resolved biomeResult = best(level, holder -> RegistryCodecs.matches(holder.value().biomes(), biomeRegistry, Registries.BIOME, biome))
-                .map(holder -> resolved(holder, SourceKind.BIOME)).orElseGet(AuraService::fallbackZone);
-        Resolved dimensionResult = best(level, holder -> matchesDimension(level, holder.value(), dimension))
-                .map(holder -> resolved(holder, SourceKind.DIMENSION)).orElse(biomeResult);
-        if (location != null) AuraQueryCache.cacheStaticZone(server, location, dimensionResult);
+        Holder<Biome> biome = memoised;
+        Optional<Resolved> dimensionResult = best(level, holder -> matchesDimension(level, holder.value(), dimension)).map(holder -> new Resolved(holder, SourceKind.DIMENSION, Map.of()))
+                .or(() -> best(level, holder1 -> RegistryCodecs.matches(holder1.value().biomes(), biome)).map(holder1 -> new Resolved(holder1, SourceKind.BIOME, Map.of())));
+        if (location != null && dimensionResult.isPresent())
+            AuraQueryCache.cacheStaticZone(server, location, dimensionResult.get());
         if (started != 0L) AuraQueryCache.countStatic(System.nanoTime() - started);
-        return dimensionResult;
+        return dimensionResult.orElse(null);
     }
 
     private static Optional<Reference<AuraZone>> best(Level level, Predicate<Reference<AuraZone>> matches) {
@@ -171,10 +178,6 @@ public final class AuraService {
     static Optional<Reference<AuraZone>> pickHighestPriority(Stream<Reference<AuraZone>> candidates) {
         return candidates.max(Comparator.<Reference<AuraZone>>comparingInt(holder -> holder.value().priority())
                 .thenComparing(holder -> holder.key().identifier(), Comparator.reverseOrder()));
-    }
-
-    private static Resolved fallbackZone() {
-        return new Resolved(Optional.empty(), EMPTY_ZONE, SourceKind.CHUNK, Map.of());
     }
 
     // Dimension stems are a writable registry that is not synced to clients, so only the server may expand a
@@ -191,7 +194,7 @@ public final class AuraService {
         if (!(level instanceof ServerLevel server)) return Optional.empty();
         return server.getData(MxtAttachments.AURA_WORLD).bestAt(pos)
                 .flatMap(entry -> MxtDatapackRegistries.holder(server.registryAccess(), MxtResourceKeys.AURA_ZONE, entry.getValue().zone())
-                        .map(zone -> new Resolved(Optional.of(zone), zone.value(), SourceKind.CUSTOM, Map.of())));
+                        .map(zone -> new Resolved(zone, SourceKind.CUSTOM, Map.of())));
     }
 
     private static Optional<Resolved> formationZone(Level level, BlockPos pos) {
@@ -206,14 +209,9 @@ public final class AuraService {
                 // would let a terrain ward inside a cultivating array hide the zone it stands in.
                 .sorted(Comparator.comparingDouble(entry -> entry.getKey().distSqr(pos)))
                 .map(entry -> MxtDatapackRegistries.get(server.registryAccess(), MxtResourceKeys.FORMATION, entry.getValue().formation())
-                        .flatMap(formation -> auraZone(formation).map(zone -> new Resolved(Optional.of(zone), zone.value(),
-                                SourceKind.FORMATION, maximumBonus(formation, FormulaContext.of(level))))))
+                        .flatMap(formation -> auraZone(formation).map(zone -> new Resolved(zone, SourceKind.FORMATION, maximumBonus(formation, FormulaContext.of(level))))))
                 .flatMap(Optional::stream)
                 .findFirst());
-    }
-
-    private static Resolved resolved(Reference<AuraZone> holder, SourceKind kind) {
-        return new Resolved(Optional.of(holder), holder.value(), kind, Map.of());
     }
 
     // A formation's aura zone is a module parameter; one without such a module declares no override.
@@ -247,7 +245,7 @@ public final class AuraService {
     // Nearby (3x3x3) sections use real source positions, the rest their centre with inverse-square falloff,
     // and a source section is only read when its chunk is already loaded.
     private static void applyBlockDistance(Level level, Map<Holder<Aura>, AuraPool> pools,
-                                           AuraChunkAttachment currentChunk, AuraZone zone,
+                                           AuraChunkAttachment currentChunk, Holder<AuraZone> zone,
                                            BlockPos query, long gameTime) {
         SectionPos querySection = SectionPos.of(query);
         Map<Holder<Aura>, double[]> weighted = new LinkedHashMap<>();
@@ -299,7 +297,7 @@ public final class AuraService {
         Set<Holder<Aura>> auras = new LinkedHashSet<>(currentBlock.keySet());
         auras.addAll(weighted.keySet());
         if (auras.isEmpty()) return;
-        Map<Holder<Aura>, AuraPool> environment = pools(level, holderOf(level, zone), zone, query, gameTime);
+        Map<Holder<Aura>, AuraPool> environment = pools(level, zone, query, gameTime);
         for (Holder<Aura> aura : auras) {
             AuraPool shared = pools.get(aura);
             AuraValue aggregate = currentBlock.getOrDefault(aura, AuraValue.ZERO);
@@ -375,8 +373,7 @@ public final class AuraService {
                 if (cached.isPresent()) return availability(attachment, aura, cached.get(), sourcePosition);
             }
             Resolved zone = staticZone(level, sourcePosition);
-            double environmental = pools(level, zone.holder().orElse(null), zone.definition(), sourcePosition, gameTime)
-                    .getOrDefault(aura, zeroPool()).amount();
+            double environmental = zone == null ? 0 : pools(level, zone.zone, sourcePosition, gameTime).getOrDefault(aura, zeroPool()).amount();
             if (key != null) AuraQueryCache.cacheAvailability(server, key, environmental);
             return availability(attachment, aura, environmental, sourcePosition);
         } finally {
@@ -415,9 +412,12 @@ public final class AuraService {
 
     // A pure function of the zone, the position and the tick, but one block-emitter query asks for it once per
     // contributing source, so it is memoised per tick under the zone's registry holder; the fallback is not.
-    private static Map<Holder<Aura>, AuraPool> pools(Level level, Holder<AuraZone> holder, AuraZone zone,
-                                                     BlockPos pos, long gameTime) {
-        if (!(level instanceof ServerLevel server) || holder == null) return computePools(zone, pos, gameTime);
+    // A null holder is "no zone covers this position", which has no environmental template to read: the empty map
+    // is the answer, not a lookup that would throw.
+    private static Map<Holder<Aura>, AuraPool> pools(Level level, @Nullable Holder<AuraZone> holder, BlockPos pos, long gameTime) {
+        if (holder == null) return Map.of();
+        AuraZone zone = holder.value();
+        if (!(level instanceof ServerLevel server)) return computePools(zone, pos, gameTime);
         long started = AuraQueryCache.timing() ? System.nanoTime() : 0L;
         try {
             AuraLocation location = AuraQueryCache.location(server, pos);
@@ -429,19 +429,6 @@ public final class AuraService {
         } finally {
             if (started != 0L) AuraQueryCache.countPools(System.nanoTime() - started);
         }
-    }
-
-    // The selected zone travels as an inline codec value that does not retain its own holder, so the holder
-    // is recovered by identity and memoised per level; the scan would otherwise repeat per block source.
-    static Holder<AuraZone> holderOf(Level level, AuraZone zone) {
-        if (zone == EMPTY_ZONE || !(level instanceof ServerLevel server)) return null;
-        return AuraQueryCache.holder(server, zone).orElse(null);
-    }
-
-    // The raw holder scan behind the memo; package visible so the memo stays its only caller.
-    static Optional<Holder<AuraZone>> findHolder(RegistryAccess access, AuraZone zone) {
-        if (zone == EMPTY_ZONE) return Optional.empty();
-        return MxtDatapackRegistries.holders(access, MxtResourceKeys.AURA_ZONE).filter(holder -> holder.value() == zone).findFirst().map(holder -> holder);
     }
 
     private static Map<Holder<Aura>, AuraPool> computePools(AuraZone zone, BlockPos pos, long gameTime) {
@@ -472,13 +459,11 @@ public final class AuraService {
         return Double.isFinite(value) && value > 0.0D ? value : 0.0D;
     }
 
-    public record Resolved(Optional<Holder<AuraZone>> holder, AuraZone definition, SourceKind kind,
-                           Map<Holder<Aura>, Double> maxBonus) {
-        public Identifier id() {
-            return this.holder.map(HolderHelper::id).orElse(EMPTY);
-        }
+    public record Resolved(Holder<AuraZone> zone, SourceKind kind, Map<Holder<Aura>, Double> maxBonus) {
     }
 
+    // The defaults a position no zone covers reports: no aura of its own, no fluctuation, no noise, the default
+    // rules and no client rendering. Kept as one value so every such position answers identically.
     private static final AuraZone EMPTY_ZONE = new AuraZone(Map.of(),
             List.of(), List.of(),
             Fluctuation.NONE, Rules.DEFAULT, AlwaysCondition.INSTANCE, Distribution.EQUAL,

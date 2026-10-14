@@ -11,6 +11,7 @@ import net.minecraft.resources.Identifier;
 import org.slf4j.Logger;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.function.BiPredicate;
 
@@ -41,10 +42,10 @@ public record Chain<T>(List<Holder<T>> nodes) {
         return index < 0 || index >= this.nodes.size() ? Optional.empty() : Optional.of(this.nodes.get(index));
     }
 
-    // -1 when the entry is not on this line. Compared by id because a holder is not stable across reloads.
+    // -1 when the entry is not on this line.
     public int indexOf(Holder<T> node) {
         for (int index = 0; index < this.nodes.size(); index++)
-            if (this.nodes.get(index) == node)
+            if (Objects.equals(this.nodes.get(index), node))
                 return index;
         return -1;
     }

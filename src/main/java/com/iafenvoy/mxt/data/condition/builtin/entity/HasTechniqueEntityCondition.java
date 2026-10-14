@@ -49,7 +49,7 @@ public record HasTechniqueEntityCondition(List<Either<Holder<Technique>, TagKey<
 
     // Asked one written entry at a time, because a tag stands for several techniques and all is about that list.
     private static boolean holds(List<Holder<Technique>> known, Either<Holder<Technique>, TagKey<Technique>> asked) {
-        return asked.map(entry -> known.stream().anyMatch(learned -> learned.value() == entry.value()),
+        return asked.map(entry -> known.stream().anyMatch(entry::equals),
                 tag -> known.stream().anyMatch(learned -> learned.is(tag)));
     }
 

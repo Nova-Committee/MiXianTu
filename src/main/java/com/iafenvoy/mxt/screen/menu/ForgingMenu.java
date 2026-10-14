@@ -12,7 +12,9 @@ import com.iafenvoy.mxt.runtime.forging.ForgingSession.Snapshot;
 import com.iafenvoy.mxt.runtime.forging.ForgingSurface;
 import com.iafenvoy.mxt.runtime.forging.ForgingWorkstationService;
 import com.iafenvoy.mxt.screen.aui.AuiPages;
+import com.iafenvoy.mxt.util.HolderHelper;
 import com.sighs.apricityui.screen.ApricityContainerMenu;
+import net.minecraft.core.Holder;
 import net.minecraft.core.Registry;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.resources.Identifier;
@@ -186,7 +188,9 @@ public final class ForgingMenu extends ApricityContainerMenu {
 
     // The blueprint is passed in so the list exists before a session does.
     public List<Identifier> methods(Identifier blueprintId) {
-        return ForgingWorkstationService.availableMethodIds(this.machine, this.player.level().registryAccess(), blueprintId);
+        Holder<ForgingBlueprint> blueprint = blueprintId == null ? null
+                : MxtDatapackRegistries.holder(this.player.level().registryAccess(), MxtResourceKeys.FORGING_BLUEPRINT, blueprintId).orElse(null);
+        return ForgingWorkstationService.availableMethodIds(this.machine, this.player.level().registryAccess(), blueprint);
     }
 
     public int inputCount(SizedIngredient entry) {
@@ -292,9 +296,9 @@ public final class ForgingMenu extends ApricityContainerMenu {
         this.synced[IDX_TARGET_MIN].set(plan == null ? 0 : plan.targetMin());
         this.synced[IDX_TARGET_MAX].set(plan == null ? 0 : plan.targetMax());
 
-        List<Identifier> pattern = plan == null ? List.of() : plan.finishPattern();
+        List<Identifier> pattern = plan == null ? List.of() : plan.finishPattern().stream().map(HolderHelper::id).toList();
         int required = plan == null ? 0 : plan.requiredSuffixSteps();
-        List<Identifier> history = snapshot == null ? List.of() : snapshot.history();
+        List<Identifier> history = snapshot == null ? List.of() : snapshot.history().stream().map(HolderHelper::id).toList();
         RegistryAccess access = this.player.level().registryAccess();
         this.synced[IDX_REQUIRED].set(required);
         for (int index = 0; index < SUFFIX_STEPS; index++) {

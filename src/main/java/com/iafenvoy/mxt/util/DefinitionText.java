@@ -16,7 +16,7 @@ public final class DefinitionText {
     public static final String DESCRIPTION_SUFFIX = "description", MINOR_STAGE_SUFFIX = "minor_stage";
 
     public static String key(Holder<?> holder) {
-        return holder.unwrapKey().map(DefinitionText::key).orElse("?");
+        return key(keyOf(holder));
     }
 
     public static String key(ResourceKey<?> key) {
@@ -32,7 +32,13 @@ public final class DefinitionText {
     }
 
     public static String key(Holder<?> holder, String suffix) {
-        return holder.unwrapKey().map(key -> key(key, suffix)).orElse("?");
+        return key(keyOf(holder), suffix);
+    }
+
+    // Every definition text is generated from the entry's own key, so a holder that names no entry has no text and
+    // nothing to fall back to: the only such holder is an inline definition, and it is never a registered one.
+    private static ResourceKey<?> keyOf(Holder<?> holder) {
+        return holder.unwrapKey().orElseThrow(() -> new IllegalArgumentException("A holder that names no registry entry has no definition text"));
     }
 
     public static String key(ResourceKey<?> key, String suffix) {

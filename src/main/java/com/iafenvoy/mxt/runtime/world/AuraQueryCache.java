@@ -8,6 +8,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.biome.Biome;
 import org.slf4j.Logger;
 
 import java.util.*;
@@ -44,9 +45,7 @@ public final class AuraQueryCache {
     // requested hundreds of times.
     private static final Map<ServerLevel, Map<AvailabilityKey, Double>> AVAILABILITY = new IdentityHashMap<>();
     // Each biome read is far more expensive than a map lookup, and one query asks for every nearby source.
-    private static final Map<ServerLevel, Map<LevelPosition, Identifier>> BIOME = new IdentityHashMap<>();
-    // Locating a holder needs a registry scan, so without this it would run once per contributing source.
-    private static final Map<ServerLevel, Map<AuraZone, Optional<Holder<AuraZone>>>> HOLDER = new IdentityHashMap<>();
+    private static final Map<ServerLevel, Map<LevelPosition, Holder<Biome>>> BIOME = new IdentityHashMap<>();
 
     // Unconditional: one increment is far cheaper than the two System.nanoTime() calls the timer needs.
     private static final AtomicLong QUERIES = new AtomicLong();
@@ -60,8 +59,6 @@ public final class AuraQueryCache {
     private static final AtomicLong RESULT_HITS = new AtomicLong();
     private static final AtomicLong FORMATION_HITS = new AtomicLong();
     private static final AtomicLong FORMATION_MISSES = new AtomicLong();
-    private static final AtomicLong HOLDER_HITS = new AtomicLong();
-    private static final AtomicLong HOLDER_MISSES = new AtomicLong();
     private static final AtomicLong AVAILABILITY_HITS = new AtomicLong();
     private static final AtomicLong AVAILABILITY_MISSES = new AtomicLong();
     private static final AtomicLong BIOME_HITS = new AtomicLong();
@@ -77,12 +74,11 @@ public final class AuraQueryCache {
         if (ticks == 0L) return;
         LOGGER.info("[mxt] aura resolver over {} level ticks: {} queries ({} us each); "
                         + "biome {} hit / {} miss, static {} hit / {} miss, pools {} hit / {} miss, result {} hit, "
-                        + "formation {} hit / {} miss, holder {} hit / {} miss, availability {} hit / {} miss",
+                        + "formation {} hit / {} miss, availability {} hit / {} miss",
                 ticks, QUERIES.get(), usPerQuery(), BIOME_HITS.get(), BIOME_MISSES.get(),
                 STATIC_HITS.get(), STATIC_MISSES.get(),
                 POOLS_HITS.get(), POOLS_MISSES.get(), RESULT_HITS.get(), FORMATION_HITS.get(),
-                FORMATION_MISSES.get(), HOLDER_HITS.get(), HOLDER_MISSES.get(),
-                AVAILABILITY_HITS.get(), AVAILABILITY_MISSES.get());
+                FORMATION_MISSES.get(), AVAILABILITY_HITS.get(), AVAILABILITY_MISSES.get());
     }
 
     // Returns -1 when the diagnostic timer never ran.
@@ -90,17 +86,6 @@ public final class AuraQueryCache {
         long queries = QUERIES.get();
         if (queries == 0L) return -1.0D;
         return NANOS.get() / 1000.0D / queries;
-    }
-
-    public record Stats(long availabilityHits, long availabilityMisses, long staticHits, long staticMisses,
-                        long poolsHits, long poolsMisses, long resultHits, long formationHits, long formationMisses,
-                        long holderHits, long holderMisses) {
-    }
-
-    public static Stats stats() {
-        return new Stats(AVAILABILITY_HITS.get(), AVAILABILITY_MISSES.get(), STATIC_HITS.get(), STATIC_MISSES.get(),
-                POOLS_HITS.get(), POOLS_MISSES.get(), RESULT_HITS.get(), FORMATION_HITS.get(), FORMATION_MISSES.get(),
-                HOLDER_HITS.get(), HOLDER_MISSES.get());
     }
 
     private static final AtomicLong BIOME_NANOS = new AtomicLong();
@@ -151,28 +136,6 @@ public final class AuraQueryCache {
         TICKS.incrementAndGet();
     }
 
-    // An empty optional is a real answer, so only a missing map entry misses; a null scan result is stored
-    // as empty so a caller's .orElse(null) sees a miss rather than an NPE.
-    static Optional<Holder<AuraZone>> holder(ServerLevel level, AuraZone zone) {
-        if (!enabled) return Optional.empty();
-        Map<AuraZone, Optional<Holder<AuraZone>>> cache = HOLDER.get(level);
-        if (cache != null) {
-            Optional<Holder<AuraZone>> cached = cache.get(zone);
-            if (cached != null) {
-                HOLDER_HITS.incrementAndGet();
-                return cached;
-            }
-        }
-        HOLDER_MISSES.incrementAndGet();
-        Optional<Holder<AuraZone>> found = AuraService.findHolder(level.registryAccess(), zone);
-        if (cache == null || cache.size() >= MAX_ENTRIES) {
-            cache = new IdentityHashMap<>();
-            HOLDER.put(level, cache);
-        }
-        cache.put(zone, found);
-        return found;
-    }
-
     public static void setEnabled(boolean value) {
         enabled = value;
         if (!value) clear();
@@ -186,7 +149,6 @@ public final class AuraQueryCache {
         POOLS.clear();
         AVAILABILITY.clear();
         BIOME.clear();
-        HOLDER.clear();
         LAST_QUERY.clear();
     }
 
@@ -255,10 +217,10 @@ public final class AuraQueryCache {
     }
 
     // Returns null on a miss so the caller can do the expensive read itself.
-    static Identifier biome(ServerLevel level, AuraLocation location) {
+    static Holder<Biome> biome(ServerLevel level, AuraLocation location) {
         if (!enabled || !current(level, location)) return null;
-        Map<LevelPosition, Identifier> cache = BIOME.get(level);
-        Identifier cached = cache == null ? null : cache.get(new LevelPosition(location.pos(), location.gameTime()));
+        Map<LevelPosition, Holder<Biome>> cache = BIOME.get(level);
+        Holder<Biome> cached = cache == null ? null : cache.get(new LevelPosition(location.pos(), location.gameTime()));
         if (cached == null) {
             BIOME_MISSES.incrementAndGet();
             return null;
@@ -267,9 +229,9 @@ public final class AuraQueryCache {
         return cached;
     }
 
-    static void cacheBiome(ServerLevel level, AuraLocation location, Identifier biome) {
+    static void cacheBiome(ServerLevel level, AuraLocation location, Holder<Biome> biome) {
         if (!enabled || !current(level, location)) return;
-        Map<LevelPosition, Identifier> cache = BIOME.get(level);
+        Map<LevelPosition, Holder<Biome>> cache = BIOME.get(level);
         if (cache == null || cache.size() >= MAX_ENTRIES) {
             cache = new HashMap<>();
             BIOME.put(level, cache);
@@ -360,7 +322,7 @@ public final class AuraQueryCache {
             zones = new HashMap<>();
             POOLS.put(level, zones);
         }
-        zones.computeIfAbsent(location, ignored -> new IdentityHashMap<>()).put(zone, pools);
+        zones.computeIfAbsent(location, ignored -> new HashMap<>()).put(zone, pools);
     }
 
     // True when the key still belongs to the level's current tick window.

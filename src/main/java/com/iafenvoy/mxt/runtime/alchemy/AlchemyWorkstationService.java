@@ -2,6 +2,7 @@ package com.iafenvoy.mxt.runtime.alchemy;
 
 import com.iafenvoy.mxt.api.AlchemyWorkstation;
 import com.iafenvoy.mxt.data.alchemy.AlchemyFurnaceDefinition;
+import com.iafenvoy.mxt.data.alchemy.MedicinalProperty;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.data.quality.QualityLadders;
@@ -10,9 +11,6 @@ import com.iafenvoy.mxt.event.AlchemyCraftEvent;
 import com.iafenvoy.mxt.recipe.AlchemyRecipe;
 import com.iafenvoy.mxt.recipe.AlchemyRecipeInput.Slot;
 import com.iafenvoy.mxt.registry.MxtCriteriaTriggers;
-import com.iafenvoy.mxt.registry.MxtDataComponents;
-import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
-import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.alchemy.AlchemyResolver.Candidate;
 import com.iafenvoy.mxt.runtime.alchemy.AlchemyResolver.Evaluated;
 import com.iafenvoy.mxt.runtime.alchemy.AlchemyResolver.Gap;
@@ -20,7 +18,7 @@ import com.iafenvoy.mxt.runtime.item.QualityRequirements;
 import com.iafenvoy.mxt.runtime.item.QualityService;
 import com.iafenvoy.mxt.runtime.world.AuraResult;
 import com.iafenvoy.mxt.runtime.world.AuraService;
-import com.iafenvoy.mxt.util.HolderHelper;
+import com.iafenvoy.mxt.util.codec.CollectionCodecs;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
@@ -29,7 +27,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -53,15 +50,6 @@ public final class AlchemyWorkstationService {
     private static final ThreadLocal<Set<AlchemyWorkstationState>> IN_TRANSACTION = ThreadLocal.withInitial(HashSet::new);
 
     private AlchemyWorkstationService() {
-    }
-
-    public static Optional<Holder<AlchemyFurnaceDefinition>> furnaceDefinition(Provider access, ItemStack stack) {
-        if (stack.isEmpty()) return Optional.empty();
-        Holder<AlchemyFurnaceDefinition> stored = stack.get(MxtDataComponents.ALCHEMY_FURNACE.get());
-        if (stored == null) return Optional.empty();
-        Identifier id = HolderHelper.id(stored);
-        if (id.equals(HolderHelper.EMPTY)) return Optional.empty();
-        return MxtDatapackRegistries.holder(access, MxtResourceKeys.ALCHEMY_FURNACE, id).map(holder -> holder);
     }
 
     private static Optional<Parameters> parameters(ServerPlayer player, AlchemyWorkstation station, AlchemyRecipe recipe, Evaluated evaluated, FormulaContext context) {
@@ -280,9 +268,8 @@ public final class AlchemyWorkstationService {
     private static boolean environment(Level level, BlockPos pos, Parameters numbers) {
         AuraResult aura = AuraService.getPositionAura(level, pos);
         if (aura.rules().alchemyEnvBonus()) return true;
-        for (Map.Entry<Identifier, Double> entry : numbers.minimumAura().entrySet()) {
-            Optional<Holder<Aura>> holder = MxtDatapackRegistries.holder(level.registryAccess(), MxtResourceKeys.AURA, entry.getKey()).map(found -> found);
-            if (holder.isEmpty() || aura.pool(holder.get()).amount() + 1.0E-6D < entry.getValue()) return false;
+        for (Map.Entry<Holder<Aura>, Double> entry : numbers.minimumAura().entrySet()) {
+            if (aura.pool(entry.getKey()).amount() + 1.0E-6D < entry.getValue()) return false;
         }
         return true;
     }
@@ -487,7 +474,6 @@ public final class AlchemyWorkstationService {
         return switch (failure) {
             case BINDING_CONDITIONS -> AlchemyFailure.BINDING_CONDITIONS;
             case QUALITY_CONDITIONS -> AlchemyFailure.QUALITY_CONDITIONS;
-            case UNBOUND -> AlchemyFailure.UNBOUND;
             case MAX_USES -> AlchemyFailure.MAX_USES;
             case COOLDOWN -> AlchemyFailure.COOLDOWN;
         };
@@ -495,8 +481,11 @@ public final class AlchemyWorkstationService {
 
     public record Parameters(double targetTemperature, double temperatureTolerance, double balanceTolerance,
                              double catalystRequirement, long durationTicks, int maxBadTicks,
-                             Map<Identifier, Double> mainRequirements, Map<Identifier, Double> auxiliaryRequirements,
-                             Map<Identifier, Double> minimumAura) {
+                             Map<Holder<MedicinalProperty>, Double> mainRequirements,
+                             Map<Holder<MedicinalProperty>, Double> auxiliaryRequirements,
+                             Map<Holder<Aura>, Double> minimumAura) {
+        // Holder keys encode to the same id-keyed object an Identifier-keyed map does, so an in-flight batch still
+        // reads after this change; only a property or aura the pack has since removed is now dropped with a log.
         public static final Codec<Parameters> CODEC = RecordCodecBuilder.create(i -> i.group(
                 Codec.doubleRange(0, Double.MAX_VALUE).fieldOf("target_temperature").forGetter(Parameters::targetTemperature),
                 Codec.doubleRange(0, Double.MAX_VALUE).fieldOf("temperature_tolerance").forGetter(Parameters::temperatureTolerance),
@@ -505,9 +494,9 @@ public final class AlchemyWorkstationService {
                 Codec.LONG.validate(value -> value > 0 ? DataResult.success(value) : DataResult.error(() -> "Alchemy duration must be positive"))
                         .fieldOf("duration").forGetter(Parameters::durationTicks),
                 Codec.intRange(0, Integer.MAX_VALUE).fieldOf("max_bad_ticks").forGetter(Parameters::maxBadTicks),
-                Codec.unboundedMap(Identifier.CODEC, Codec.DOUBLE).fieldOf("main_requirements").forGetter(Parameters::mainRequirements),
-                Codec.unboundedMap(Identifier.CODEC, Codec.DOUBLE).fieldOf("auxiliary_requirements").forGetter(Parameters::auxiliaryRequirements),
-                Codec.unboundedMap(Identifier.CODEC, Codec.DOUBLE).fieldOf("minimum_aura").forGetter(Parameters::minimumAura)
+                CollectionCodecs.map(MedicinalProperty.CODEC, Codec.DOUBLE).fieldOf("main_requirements").forGetter(Parameters::mainRequirements),
+                CollectionCodecs.map(MedicinalProperty.CODEC, Codec.DOUBLE).fieldOf("auxiliary_requirements").forGetter(Parameters::auxiliaryRequirements),
+                CollectionCodecs.map(Aura.CODEC, Codec.DOUBLE).fieldOf("minimum_aura").forGetter(Parameters::minimumAura)
         ).apply(i, Parameters::new));
     }
 

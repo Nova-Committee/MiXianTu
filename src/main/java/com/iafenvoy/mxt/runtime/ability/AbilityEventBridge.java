@@ -3,7 +3,10 @@ package com.iafenvoy.mxt.runtime.ability;
 import com.iafenvoy.mxt.attachment.AbilityAttachment;
 import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.compat.CuriosIntegration;
-import com.iafenvoy.mxt.data.ability.*;
+import com.iafenvoy.mxt.data.ability.Ability;
+import com.iafenvoy.mxt.data.ability.AbilityContext;
+import com.iafenvoy.mxt.data.ability.AbilityType;
+import com.iafenvoy.mxt.data.ability.TriggerSource;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.data.storage.runtime.ActiveState;
 import com.iafenvoy.mxt.data.trigger.Trigger;
@@ -206,14 +209,14 @@ public final class AbilityEventBridge {
 
     // The artifact definition is resolved here rather than where the stack was made, so an artifact grants its
     // skills by being held.
-    private static List<Identifier> itemAbilities(LivingEntity entity, ItemStack stack) {
+    private static List<Holder<Ability>> itemAbilities(LivingEntity entity, ItemStack stack) {
         if (stack.isEmpty()) return List.of();
-        return ArtifactService.abilityIds(entity.level().registryAccess(), stack);
+        return ArtifactService.abilities(entity.level().registryAccess(), stack);
     }
 
     // Curios gear counts in the same source-counted ability model.
     private static boolean syncCuriosAbilities(LivingEntity entity, AbilityAttachment holder) {
-        Set<Identifier> current = new LinkedHashSet<>();
+        Set<Holder<Ability>> current = new LinkedHashSet<>();
         for (ItemStack stack : CuriosIntegration.equipped(entity))
             current.addAll(itemAbilities(entity, stack));
         return holder.reconcileSource(Sources.CURIOS, current);
@@ -238,7 +241,7 @@ public final class AbilityEventBridge {
     }
 
     private static boolean initializeResource(LivingEntity entity, ResourceHolderAttachment holder, Reference<Resource> resource) {
-        return HolderHelper.idOptional(resource).map(id -> ResourceService.initialize(holder, id, ResourceService.formulaContext(entity, id, FormulaContext.of(entity))).changed()).orElse(false);
+        return ResourceService.initialize(holder, resource, ResourceService.formulaContext(entity, resource, FormulaContext.of(entity))).changed();
     }
 
     // One pass for every granted ability. Every stored value ticks itself first and reports what it changed, then the
@@ -247,23 +250,21 @@ public final class AbilityEventBridge {
     private static void tickAbilities(LivingEntity entity, AbilityAttachment abilities,
                                       ResourceHolderAttachment resources, long gameTime) {
         FormulaContext formula = FormulaContext.of(entity);
-        for (Identifier id : abilities.sources().keys()) {
-            Holder<Ability> ability = Abilities.resolve(entity.level().registryAccess(), id).orElse(null);
-            if (ability == null) continue;
+        for (Holder<Ability> ability : abilities.sources().keys()) {
             AbilityContext context = new AbilityContext(entity, ability, abilities, resources, formula, gameTime);
             AbilityType type = ability.value().type();
-            abilities.storage().tick(id, context);
+            abilities.storage().tick(ability, context);
             // A value that changed while ticking only recorded it: that flag, not a callback, is what decides
             // whether this attachment has to be synced.
-            if (abilities.storage().isDirty(id)) abilities.markDirty();
+            if (abilities.storage().isDirty(ability)) abilities.markDirty();
             int interval = type.tickInterval(context);
             if (interval <= 0 || gameTime % interval != 0L) continue;
             type.tick(context);
             boolean active = type.isActive(context);
             // Only an edge is written, so an ability that never becomes active keeps no entry at all.
-            boolean was = AbilityStorage.get(abilities, id, ActiveState.class).map(ActiveState::active).orElse(false);
+            boolean was = AbilityStorage.get(abilities, ability, ActiveState.class).map(ActiveState::active).orElse(false);
             if (active != was) {
-                AbilityStorage.value(abilities, id, ActiveState.class, ActiveState.NONE, gameTime).set(active);
+                AbilityStorage.value(abilities, ability, ActiveState.class, ActiveState.NONE, gameTime).set(active);
                 if (active) type.active(context);
                 else type.inactive(context);
             }
@@ -274,12 +275,10 @@ public final class AbilityEventBridge {
     private static boolean finishDueCasts(LivingEntity actor, AbilityAttachment abilities,
                                           ResourceHolderAttachment resources, long gameTime) {
         boolean changed = false;
-        for (Identifier id : abilities.sources().keys()) {
-            if (!AbilityStorage.castDue(abilities, id, gameTime)) continue;
-            Abilities.resolve(actor.level().registryAccess(), id).ifPresent(ability -> {
-                UseResult result = AbilityService.finishCast(ability, actor, abilities, resources, gameTime, FormulaContext.of(actor));
-                AbilityFeedback.reportFailedCast(actor, result.failure(), result.failedResource());
-            });
+        for (Holder<Ability> ability : abilities.sources().keys()) {
+            if (!AbilityStorage.castDue(abilities, ability, gameTime)) continue;
+            UseResult result = AbilityService.finishCast(ability, actor, abilities, resources, gameTime, FormulaContext.of(actor));
+            AbilityFeedback.reportFailedCast(actor, result.failure(), result.failedResource());
             changed = true;
         }
         return changed;
@@ -305,11 +304,11 @@ public final class AbilityEventBridge {
         AbilityAttachment abilities = entity.getData(MxtAttachments.ABILITY_HOLDER);
         ResourceHolderAttachment resources = entity.getData(MxtAttachments.RESOURCE_HOLDER);
         TriggerDispatcher.clearModule(entity.getUUID(), "ability");
-        for (Identifier abilityId : abilities.sources().keys()) {
-            Holder<Ability> ability = Abilities.resolve(entity.level().registryAccess(), abilityId).orElse(null);
-            if (ability == null) continue;
+        for (Holder<Ability> ability : abilities.sources().keys()) {
             Ability definition = ability.value();
             if (!(definition.type() instanceof TriggerSource source)) continue;
+            // The subscription identity is this module's own index key, so it stays the ability's id.
+            Identifier abilityId = HolderHelper.id(ability);
             int triggerIndex = 0;
             for (Trigger trigger : source.triggers()) {
                 String identity = abilityId + "/" + triggerIndex++;

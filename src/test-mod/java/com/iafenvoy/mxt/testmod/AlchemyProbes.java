@@ -1,6 +1,7 @@
 package com.iafenvoy.mxt.testmod;
 
 import com.iafenvoy.mxt.data.alchemy.AlchemyFurnaceDefinition;
+import com.iafenvoy.mxt.data.alchemy.MedicinalProperty;
 import com.google.gson.JsonElement;
 import com.iafenvoy.mxt.data.item.PillComponent;
 import com.iafenvoy.mxt.util.HolderHelper;
@@ -179,6 +180,7 @@ public final class AlchemyProbes {
 
     private static void mixture(CommandSourceStack source, ServerLevel level, BlockPos at, List<BlockPos> touched) {
         AlchemyFurnaceBlockEntity furnace = place(level, at, Direction.NORTH, item(level, WIDE), touched);
+        Holder<MedicinalProperty> mainProperty = property(level, MAIN);
         furnace.refreshStructure();
         check(source, "structure", furnace.structureStatus().complete(), true);
         furnace.setTargetTemperature(50);
@@ -189,25 +191,25 @@ public final class AlchemyProbes {
         furnace.container().setItem(0, new ItemStack(Items.ALLIUM));
         furnace.container().setItem(1, new ItemStack(Items.ALLIUM));
         AlchemyPreview split = AlchemyWorkstationService.preview(playerOf(source), furnace);
-        check(source, "split-main", split.mixture().main().getOrDefault(MAIN, -1.0D), together.mixture().main().getOrDefault(MAIN, -2.0D));
+        check(source, "split-main", main(split, mainProperty, -1.0D), main(together, mainProperty, -2.0D));
         check(source, "split-same-recipe", resolvedId(split), resolvedId(together));
         furnace.container().setItem(0, ItemStack.EMPTY);
         furnace.container().setItem(1, ItemStack.EMPTY);
         furnace.container().setItem(2, new ItemStack(Items.ALLIUM, 2));
         AlchemyPreview asAux = AlchemyWorkstationService.preview(playerOf(source), furnace);
-        check(source, "aux-role", asAux.mixture().main().getOrDefault(MAIN, 0.0D), 0.0D);
+        check(source, "aux-role", main(asAux, mainProperty, 0.0D), 0.0D);
         furnace.container().setItem(0, new ItemStack(Items.AZURE_BLUET));
         furnace.container().setItem(1, ItemStack.EMPTY);
         furnace.container().setItem(2, new ItemStack(Items.CORNFLOWER, 2));
         AlchemyPreview single = AlchemyWorkstationService.preview(playerOf(source), furnace);
-        check(source, "substitute-main", single.mixture().main().getOrDefault(MAIN, -1.0D), 6.0D);
+        check(source, "substitute-main", main(single, mainProperty, -1.0D), 6.0D);
         check(source, "substitute-balance", single.mixture().balance(), 0.0D);
         check(source, "substitute-resolved", resolvedId(single), PRACTICE);
         ItemStack aged = new ItemStack(Items.ALLIUM);
         aged.set(MxtDataComponents.HERB_AGE.get(), 100);
         furnace.container().setItem(0, aged);
         AlchemyPreview century = AlchemyWorkstationService.preview(playerOf(source), furnace);
-        check(source, "century-main", century.mixture().main().getOrDefault(MAIN, -1.0D), 6.0D);
+        check(source, "century-main", main(century, mainProperty, -1.0D), 6.0D);
         check(source, "century-resolved", resolvedId(century), PRACTICE);
         check(source, "century-only", matchedCount(century), 1);
         check(source, "century-edible", ediblePractice(level.registryAccess(), century.successOutputs()), true);
@@ -825,6 +827,14 @@ public final class AlchemyProbes {
 
     private static Holder<Aura> aura(ServerLevel level, Identifier id) {
         return MxtDatapackRegistries.holder(level.registryAccess(), MxtResourceKeys.AURA, id).orElseThrow();
+    }
+
+    private static Holder<MedicinalProperty> property(ServerLevel level, Identifier id) {
+        return MxtDatapackRegistries.holder(level.registryAccess(), MxtResourceKeys.MEDICINAL_PROPERTY, id).orElseThrow();
+    }
+
+    private static double main(AlchemyPreview preview, Holder<MedicinalProperty> property, double fallback) {
+        return preview.mixture().main().getOrDefault(property, fallback);
     }
 
     private static void fill(AlchemyFurnaceBlockEntity furnace) {

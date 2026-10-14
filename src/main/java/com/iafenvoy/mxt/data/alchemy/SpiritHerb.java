@@ -88,16 +88,13 @@ public record SpiritHerb(List<Either<Holder<Block>, TagKey<Block>>> blocks, int 
 
     /**
      * The tier this age earns, empty below the lowest rung. Rungs ascend by {@code min_age}, so the last one at or
-     * below the age wins; a rung whose tier is unbound is skipped, and no mapping leaves the stack to default_quality.
+     * below the age wins, and no mapping leaves the stack to default_quality.
      */
     public Optional<Holder<ItemQuality>> qualityFor(int age) {
         if (age < 0) throw new IllegalArgumentException("age must be non-negative");
-        Holder<ItemQuality> earned = null;
-        for (AgeQuality entry : this.qualityByAge) {
-            if (entry.minAge() > age) break;
-            if (entry.quality().isBound()) earned = entry.quality();
-        }
-        return earned == null ? Optional.empty() : Optional.of(earned);
+        return this.qualityByAge.stream().filter(entry -> entry.minAge() <= age)
+                .map(AgeQuality::quality)
+                .reduce((_, second) -> second);
     }
 
     /**

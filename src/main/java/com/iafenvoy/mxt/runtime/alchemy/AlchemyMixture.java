@@ -1,8 +1,10 @@
 package com.iafenvoy.mxt.runtime.alchemy;
 
+import com.iafenvoy.mxt.data.alchemy.MedicinalProperty;
+import com.iafenvoy.mxt.util.codec.CollectionCodecs;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import net.minecraft.resources.Identifier;
+import net.minecraft.core.Holder;
 
 import java.util.Map;
 import java.util.Optional;
@@ -10,11 +12,14 @@ import java.util.Optional;
 /**
  * Quantity-weighted mixture. {@code balance} is 0 when {@code weight} is 0; it is never NaN.
  */
-public record AlchemyMixture(Map<Identifier, Double> main, Map<Identifier, Double> auxiliary, double catalyst,
-                             double balance, double weight, Optional<AlchemyFailure> inputFailure) {
+public record AlchemyMixture(Map<Holder<MedicinalProperty>, Double> main,
+                             Map<Holder<MedicinalProperty>, Double> auxiliary,
+                             double catalyst, double balance, double weight, Optional<AlchemyFailure> inputFailure) {
+    // Holder keys encode to the same id-keyed object an Identifier-keyed map does, so a saved mixture still reads;
+    // a property that a pack has since removed is the one case that differs, and it is dropped with a log.
     public static final Codec<AlchemyMixture> CODEC = RecordCodecBuilder.create(i -> i.group(
-            Codec.unboundedMap(Identifier.CODEC, Codec.DOUBLE).fieldOf("main").forGetter(AlchemyMixture::main),
-            Codec.unboundedMap(Identifier.CODEC, Codec.DOUBLE).fieldOf("auxiliary").forGetter(AlchemyMixture::auxiliary),
+            CollectionCodecs.map(MedicinalProperty.CODEC, Codec.DOUBLE).fieldOf("main").forGetter(AlchemyMixture::main),
+            CollectionCodecs.map(MedicinalProperty.CODEC, Codec.DOUBLE).fieldOf("auxiliary").forGetter(AlchemyMixture::auxiliary),
             Codec.DOUBLE.fieldOf("catalyst").forGetter(AlchemyMixture::catalyst),
             Codec.DOUBLE.fieldOf("balance").forGetter(AlchemyMixture::balance),
             Codec.DOUBLE.fieldOf("weight").forGetter(AlchemyMixture::weight),

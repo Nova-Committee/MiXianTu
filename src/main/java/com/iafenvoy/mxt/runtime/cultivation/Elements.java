@@ -3,12 +3,8 @@ package com.iafenvoy.mxt.runtime.cultivation;
 import com.iafenvoy.mxt.attachment.SpiritIdentityAttachment;
 import com.iafenvoy.mxt.data.cultivation.Element;
 import com.iafenvoy.mxt.registry.MxtAttachments;
-import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
-import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.util.HolderHelper;
 import com.mojang.datafixers.util.Either;
 import net.minecraft.core.Holder;
-import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.core.Registry;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.entity.Entity;
@@ -28,13 +24,11 @@ public final class Elements {
     private Elements() {
     }
 
-    // The registry is passed in rather than reached for: this is asked on both sides, and a client (an item
-    // tooltip evaluates conditions) has only the synchronised copies, so the server-only accessor would throw.
-    // The lookup is also what leaves out a root whose definition the current pack no longer provides.
-    public static Set<Holder<Element>> of(SpiritIdentityAttachment spirit, Provider access) {
+    // A root that is switched on contributes the elements it names; an entity with no roots has no elements, which
+    // callers read as "no element relation applies" rather than as an error.
+    public static Set<Holder<Element>> of(SpiritIdentityAttachment spirit) {
         return spirit.activeSpiritRoots().stream()
-                .flatMap(root -> MxtDatapackRegistries.get(access, MxtResourceKeys.SPIRIT_ROOT, HolderHelper.id(root)).stream())
-                .flatMap(root -> root.elementHolders().stream())
+                .flatMap(root -> root.value().elementHolders().stream())
                 .collect(Collectors.toUnmodifiableSet());
     }
 
@@ -42,7 +36,7 @@ public final class Elements {
         // Read, never create: an entity that carries no roots must not come away holding an empty spirit
         // identity (and, with it, a save entry) because something merely asked what elements it has.
         SpiritIdentityAttachment spirit = entity.getExistingData(MxtAttachments.SPIRIT_IDENTITY).orElse(null);
-        return spirit == null ? Set.of() : of(spirit, entity.level().registryAccess());
+        return spirit == null ? Set.of() : of(spirit);
     }
 
     // A caller with no registry gets an empty set, because a tag cannot be expanded without one.

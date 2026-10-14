@@ -60,20 +60,12 @@ public final class ItemBindingTooltipAppender {
         FormulaContext formula = player == null ? FormulaContext.of(registries) : FormulaContext.of(player);
         bindings.weapon().ifPresent(weapon -> appendWeapon(builder, weapon, formula));
         ItemBindingService.PillResolution resolution = bindings.pill();
-        if (resolution.unbound())
-            builder.accept(Component.translatable("tooltip.mxt.pill.unbound").withStyle(ChatFormatting.RED));
-        else
-            resolution.effects().ifPresent(effects -> appendPill(builder, resolution.identity().orElse(null),
-                    resolution.definition().orElse(null), effects, player, formula));
+        resolution.effects().ifPresent(effects -> appendPill(builder, resolution.identity().orElse(null), resolution.definition().orElse(null), effects, player, formula));
         bindings.technique().ifPresent(technique -> appendTechnique(builder, technique));
         for (EntityAction action : bindings.item().map(ItemBinding::actions).orElse(List.of())) {
-            if (action instanceof GrantSpiritRootAction(
-                    Holder<SpiritRoot> spiritRoot
-            ))
+            if (action instanceof GrantSpiritRootAction(Holder<SpiritRoot> spiritRoot))
                 appendGranted(builder, flag, "tooltip.mxt.item.spirit_root", HolderHelper.id(spiritRoot));
-            else if (action instanceof GrantPhysiqueAction(
-                    Holder<Physique> physique1
-            ))
+            else if (action instanceof GrantPhysiqueAction(Holder<Physique> physique1))
                 appendGranted(builder, flag, "tooltip.mxt.item.physique", HolderHelper.id(physique1));
         }
         if (player != null) {
@@ -123,8 +115,7 @@ public final class ItemBindingTooltipAppender {
         }
     }
 
-    private static void appendPill(Consumer<Component> builder, @Nullable Holder<PillBinding> identity,
-                                   @Nullable Holder<Pill> definition, Pill effects, Player player, FormulaContext formula) {
+    private static void appendPill(Consumer<Component> builder, @Nullable Holder<PillBinding> identity, @Nullable Holder<Pill> definition, Pill effects, Player player, FormulaContext formula) {
         // A dose named by its own component over defaults has no definition to be named after, so it prints no
         // heading rather than a made-up one.
         if (definition != null) {
@@ -135,15 +126,12 @@ public final class ItemBindingTooltipAppender {
         }
         double gain = effects.toxicityGain().evaluate(formula);
         double threshold = effects.toxicityThreshold().evaluate(formula);
-        if (threshold >= Double.MAX_VALUE / 2.0D) {
-            builder.accept(Component.translatable("tooltip.mxt.pill.toxicity_no_threshold", TooltipText.signed(gain))
-                    .withStyle(ChatFormatting.DARK_PURPLE));
-        } else {
-            builder.accept(Component.translatable("tooltip.mxt.pill.toxicity", TooltipText.signed(gain), TooltipText.number(threshold))
-                    .withStyle(ChatFormatting.DARK_PURPLE));
-        }
+        if (threshold >= Double.MAX_VALUE / 2.0D)
+            builder.accept(Component.translatable("tooltip.mxt.pill.toxicity_no_threshold", TooltipText.signed(gain)).withStyle(ChatFormatting.DARK_PURPLE));
+        else
+            builder.accept(Component.translatable("tooltip.mxt.pill.toxicity", TooltipText.signed(gain), TooltipText.number(threshold)).withStyle(ChatFormatting.DARK_PURPLE));
         // Limits stay on the bound definition. An overlay must not hide or replace them.
-        if (identity == null || !identity.isBound()) return;
+        if (identity == null) return;
         PillBinding limits = identity.value();
         int taken = player == null ? 0 : PillService.uses(player, identity);
         if (limits.maxUses().isPresent()) {

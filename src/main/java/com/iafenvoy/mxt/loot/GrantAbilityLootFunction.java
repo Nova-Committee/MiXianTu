@@ -5,7 +5,6 @@ import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.ability.AbilityEventBridge;
-import com.iafenvoy.mxt.util.HolderHelper;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.resources.Identifier;
@@ -47,7 +46,7 @@ public final class GrantAbilityLootFunction extends LootItemConditionalFunction 
         Entity entity = this.target.get(context);
         if (entity != null) MxtDatapackRegistries.holder(entity.registryAccess(), MxtResourceKeys.ABILITY, this.ability)
                 .ifPresent(ability -> {
-                    if (entity.getData(MxtAttachments.ABILITY_HOLDER).grant(HolderHelper.id(ability), this.source)
+                    if (entity.getData(MxtAttachments.ABILITY_HOLDER).grant(ability, this.source)
                             && entity instanceof LivingEntity living)
                         AbilityEventBridge.rebuildTriggerSubscriptions(living);
                 });

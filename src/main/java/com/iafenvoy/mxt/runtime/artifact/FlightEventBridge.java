@@ -1,7 +1,6 @@
 package com.iafenvoy.mxt.runtime.artifact;
 
 import com.iafenvoy.mxt.attachment.FlightAttachment;
-import com.iafenvoy.mxt.data.ability.Abilities;
 import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.ability.type.FlightControlAbilityType;
 import com.iafenvoy.mxt.data.ability.type.MountAbilityType;
@@ -30,15 +29,14 @@ public final class FlightEventBridge {
         if (!(event.getEntity() instanceof LivingEntity holder) || holder.level().isClientSide()) return;
         FlightAttachment data = holder.getExistingData(MxtAttachments.FLIGHT).orElse(null);
         if (data == null || !data.active()) return;
-        // A stored holder cannot notice its own definition leaving the pack, so the type is re-read every tick.
+        // Both halves are the holders the flight was started with, and a stored holder keeps the definition it was
+        // written with, so these are type checks rather than a way to notice a definition leaving the pack.
         Holder<Ability> skill = data.archetype().filter(archetype -> archetype.value().type() instanceof FlightControlAbilityType).orElse(null);
         if (skill == null) {
             FlightService.dismount(holder, Failure.NOT_FLYABLE);
             return;
         }
-        // Resolved by id rather than kept as a holder, so a mount whose definition is gone mid-flight lands.
         Holder<Ability> vehicle = data.vehicle()
-                .flatMap(id -> Abilities.resolve(holder.level().registryAccess(), id))
                 .filter(mount -> mount.value().type() instanceof MountAbilityType)
                 .orElse(null);
         if (vehicle == null) {

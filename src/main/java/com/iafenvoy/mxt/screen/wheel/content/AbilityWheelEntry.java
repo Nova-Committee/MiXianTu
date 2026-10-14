@@ -80,7 +80,7 @@ public record AbilityWheelEntry(Holder<Ability> ability, @Nullable ItemStack car
         if (player == null) return 0L;
         AbilityAttachment holder = player.getExistingData(MxtAttachments.ABILITY_HOLDER).orElse(null);
         if (holder == null) return 0L;
-        return AbilityStorage.cooldownRemaining(holder, HolderHelper.id(this.ability), player.level().getGameTime());
+        return AbilityStorage.cooldownRemaining(holder, this.ability, player.level().getGameTime());
     }
 
     // The length the last use actually got: the declared cooldown field can be overridden by a stored
@@ -90,7 +90,7 @@ public record AbilityWheelEntry(Holder<Ability> ability, @Nullable ItemStack car
         if (player == null) return 0L;
         AbilityAttachment holder = player.getExistingData(MxtAttachments.ABILITY_HOLDER).orElse(null);
         if (holder == null) return 0L;
-        return AbilityStorage.get(holder, HolderHelper.id(this.ability), CooldownDataStorage.class)
+        return AbilityStorage.get(holder, this.ability, CooldownDataStorage.class)
                 .flatMap(CooldownDataStorage::duration)
                 .map(Math::round)
                 .orElse(0L);
@@ -127,7 +127,7 @@ public record AbilityWheelEntry(Holder<Ability> ability, @Nullable ItemStack car
     // A taught skill says so even when a carried item declares it too, since learning is what survives putting the
     // item down. An item's own page then reads as that item, and anything else stays unclaimed rather than guessed.
     private @Nullable Component origin(Player player) {
-        Set<Identifier> sources = WheelSources.sources(player, HolderHelper.id(this.ability));
+        Set<Identifier> sources = WheelSources.sources(player, this.ability);
         if (sources.stream().anyMatch(Sources::isGranted))
             return Component.translatable("wheel.mxt.tooltip.source.learned");
         ItemStack carrier = this.carrier;

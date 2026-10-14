@@ -16,6 +16,7 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.SectionPos;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.Map.Entry;
@@ -27,7 +28,7 @@ import java.util.Map.Entry;
 public final class AuraChunkAttachment {
     public static final MapCodec<AuraChunkAttachment> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             Codec.BOOL.lenientOptionalFieldOf("initialized", false).forGetter(AuraChunkAttachment::initialized),
-            AuraZone.CODEC.lenientOptionalFieldOf("template").forGetter(AuraChunkAttachment::template),
+            AuraZone.CODEC.lenientOptionalFieldOf("template").forGetter(x -> x.template),
             CollectionCodecs.intObjectMap(BlockAuraSectionCache.CODEC).lenientOptionalFieldOf("block_aura_sections", new Int2ObjectOpenHashMap<>()).forGetter(AuraChunkAttachment::blockAuraSections),
             AuraPool.GROUPED_CODEC.lenientOptionalFieldOf("aura", Map.of()).forGetter(AuraChunkAttachment::auras)
     ).apply(i, AuraChunkAttachment::new));
@@ -62,12 +63,17 @@ public final class AuraChunkAttachment {
         this.initialized = initialized;
     }
 
-    public Optional<Holder<AuraZone>> template() {
-        return this.template;
+    @Nullable
+    public Holder<AuraZone> template() {
+        return this.template.orElse(null);
     }
 
-    public void setTemplate(Optional<Holder<AuraZone>> template) {
-        this.template = template;
+    public void setTemplate(Holder<AuraZone> template) {
+        this.template = Optional.of(template);
+    }
+
+    public void clearTemplate() {
+        this.template = Optional.empty();
     }
 
     public Map<Holder<Aura>, AuraValue> blockAura() {

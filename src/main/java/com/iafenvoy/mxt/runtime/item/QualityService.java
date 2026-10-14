@@ -33,7 +33,6 @@ import net.neoforged.neoforge.event.entity.living.LivingEntityUseItemEvent.Tick;
 import net.neoforged.neoforge.event.entity.player.AttackEntityEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent.RightClickBlock;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent.RightClickItem;
-import org.jspecify.annotations.Nullable;
 
 import java.util.*;
 import java.util.function.Function;
@@ -72,14 +71,7 @@ public final class QualityService {
      * Registers a carrier component that keeps the definition inside a record of its own.
      */
     public static <C, T extends QualityProvider> void carry(Supplier<? extends DataComponentType<C>> type, Function<C, Optional<Holder<T>>> extract) {
-        CARRIERS.add(stack -> {
-            C value = stack.get(type.get());
-            if (value == null) return Optional.empty();
-            Holder<T> holder = extract.apply(value).orElse(null);
-            // A holder naming a definition the current pack no longer provides answers nothing rather than a dead
-            // tier, so the stack falls through to the table.
-            return holder == null || !holder.isBound() ? Optional.empty() : holder.value().defaultQuality();
-        });
+        CARRIERS.add(stack -> Optional.ofNullable(stack.get(type)).flatMap(extract).map(Holder::value).flatMap(QualityProvider::defaultQuality));
     }
 
     @SubscribeEvent(priority = EventPriority.HIGHEST)
@@ -156,20 +148,12 @@ public final class QualityService {
         return check(user.level().registryAccess(), user, stack);
     }
 
-    // The one resolution order, and it is three steps deep: what the stack carries as an explicit tier, else the
-    // tier of the definition it carries, else what the table says about that item. Read with a Provider because the
-    // component is re-resolved through the registry the caller has.
-    public static Optional<Holder<ItemQuality>> find(Provider access, ItemStack stack) {
-        return find(registry(access).orElse(null), access, stack);
-    }
-
     // The same read for a caller that already looked the registry up (the use gate does).
-    static Optional<Holder<ItemQuality>> find(@Nullable RegistryLookup<ItemQuality> registry, Provider access, ItemStack stack) {
+    public static Optional<Holder<ItemQuality>> find(Provider access, ItemStack stack) {
         if (stack.isEmpty()) return Optional.empty();
-        return intrinsic(registry, stack)
+        return Optional.ofNullable(stack.get(MxtDataComponents.QUALITY.get()))
                 .or(() -> carried(stack))
-                .or(() -> ItemMatcher.find(MxtDatapackRegistries.holders(access, MxtResourceKeys.DEFAULT_QUALITY)
-                        .map(Reference::value), stack).map(DefaultQuality::quality));
+                .or(() -> ItemMatcher.find(MxtDatapackRegistries.holders(access, MxtResourceKeys.DEFAULT_QUALITY).map(Reference::value), stack).map(DefaultQuality::quality));
     }
 
     // The carried source needs no registry: a carrier answers from the holder already on the stack.
@@ -181,14 +165,8 @@ public final class QualityService {
         return Optional.empty();
     }
 
-    // A registry the client has not been sent is not an error here: the stack simply resolves to whatever the
-    // remaining slots answer.
-    static Optional<RegistryLookup<ItemQuality>> registry(Provider access) {
-        return access.lookup(MxtResourceKeys.ITEM_QUALITY).map(lookup -> (RegistryLookup<ItemQuality>) lookup);
-    }
-
     // Why an entity may not use an item. Furnace quality is one of the checks above; pill caps are extra and
-    // never replace them. A named pill that is missing refuses instead of matching another pill.
+    // never replace them.
     public enum Failure {
         /**
          * A matching binding's own conditions did not all pass.
@@ -205,11 +183,7 @@ public final class QualityService {
         /**
          * The pill binding is still on cooldown.
          */
-        COOLDOWN,
-        /**
-         * The stack names a pill that is no longer in the registry, and must not fall back to another pill.
-         */
-        UNBOUND
+        COOLDOWN
     }
 
     public static boolean canUse(LivingEntity user, ItemStack stack) {
@@ -235,24 +209,18 @@ public final class QualityService {
 
     static Optional<Failure> check(Provider access, LivingEntity user, ItemStack stack, ResolvedBindings bindings) {
         if (stack.isEmpty()) return Optional.empty();
-        // A stack naming a pill whose reference lost its value refuses: falling through would eat the item for
-        // nothing instead of reporting UNBOUND, which is the one outcome this state must never produce.
-        if (bindings.pill().unbound()) return Optional.of(Failure.UNBOUND);
         FormulaContext context = FormulaContext.of(user);
         if (!bindings.conditionsMet(user, context)) return Optional.of(Failure.BINDING_CONDITIONS);
-        Optional<RegistryLookup<ItemQuality>> registry = registry(access);
-        Optional<Holder<ItemQuality>> quality = find(registry.orElse(null), access, stack);
+        Optional<Holder<ItemQuality>> quality = find(access, stack);
         if (quality.isPresent() && !quality.orElseThrow().value().condition().test(user, context))
             return Optional.of(Failure.QUALITY_CONDITIONS);
-        return bindings.pill().identity().flatMap(holder -> PillService.usageFailure(user, holder))
-                .map(QualityService::fromPill);
+        return bindings.pill().identity().flatMap(holder -> PillService.usageFailure(user, holder)).map(QualityService::fromPill);
     }
 
     private static Failure fromPill(PillService.Failure failure) {
         return switch (failure) {
             case MAX_USES -> Failure.MAX_USES;
             case COOLDOWN -> Failure.COOLDOWN;
-            case UNBOUND -> Failure.UNBOUND;
             case CONDITIONS -> Failure.BINDING_CONDITIONS;
         };
     }
@@ -321,15 +289,5 @@ public final class QualityService {
         registry.get(MxtQualityTags.TOOLTIP_ORDER).ifPresent(tag -> tag.forEach(values::add));
         registry.listElements().forEach(values::add);
         return List.copyOf(values);
-    }
-
-    // The tier the stack itself carries. With a registry the id is re-resolved, so an id the current pack does not
-    // provide answers nothing rather than a dead holder; without one the held holder is the whole answer, which is
-    // the same rule attachments follow - a holder outlives the pack that wrote it until the stack is decoded again.
-    private static Optional<Holder<ItemQuality>> intrinsic(@Nullable RegistryLookup<ItemQuality> registry, ItemStack stack) {
-        Holder<ItemQuality> direct = stack.get(MxtDataComponents.QUALITY.get());
-        if (direct == null) return Optional.empty();
-        if (registry == null) return direct.isBound() ? Optional.of(direct) : Optional.empty();
-        return direct.unwrapKey().flatMap(registry::get).map(holder -> holder);
     }
 }

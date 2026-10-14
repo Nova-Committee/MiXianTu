@@ -117,7 +117,7 @@ public final class SecretRealmCommand {
     private static String describe(SecretRealmRecord record, MinecraftServer server) {
         return "%s #%d %s members=%d limit=%s owner=%s prepared=%s loaded=%s".formatted(
                 record.dimension().identifier(), record.index(),
-                record.definition().unwrapKey().map(key -> key.identifier().toString()).orElse("?"),
+                record.definition().unwrapKey().orElseThrow().identifier(),
                 record.members().size(), record.instance().maxMembers(),
                 record.owner().map(UUID::toString).orElse("-"), record.prepared(),
                 server.getLevel(record.dimension()) != null);

@@ -358,7 +358,7 @@ public final class WheelConfigurationScreen extends AuiScreen {
     // Resolved the same way the wheel does, so a cell shows what that sector will actually draw.
     private @Nullable WheelMenuEntry entryOf(WheelSlot slot) {
         if (slot.isEmpty()) return null;
-        for (WheelMenuEntry entry : this.pool(slot.kind() == WheelEntryKinds.AURA ? AURA_POOL : ABILITY_POOL))
+        for (WheelMenuEntry entry : this.pool(slot.kind().is(WheelEntryKinds.AURA) ? AURA_POOL : ABILITY_POOL))
             if (entry.id().equals(slot.id())) return entry;
         return null;
     }

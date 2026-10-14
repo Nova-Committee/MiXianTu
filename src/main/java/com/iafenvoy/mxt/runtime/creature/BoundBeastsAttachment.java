@@ -2,7 +2,6 @@ package com.iafenvoy.mxt.runtime.creature;
 
 import com.iafenvoy.mxt.data.creature.ContractType;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.codec.CollectionCodecs;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
@@ -16,6 +15,7 @@ import net.minecraft.world.level.Level;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
 /**
@@ -43,7 +43,7 @@ public final class BoundBeastsAttachment {
     }
 
     public long count(UUID owner, Holder<ContractType> type) {
-        return this.entries.stream().filter(entry -> entry.owner().equals(owner) && sameType(entry.type(), type)).count();
+        return this.entries.stream().filter(entry -> entry.owner().equals(owner) && Objects.equals(entry.type(), type)).count();
     }
 
     // One row per beast: binding the same creature again replaces its row instead of doubling the count.
@@ -66,9 +66,6 @@ public final class BoundBeastsAttachment {
 
     // Ids, not holders: the index is read after a world reload, and a holder from another registry instance is
     // not the same object even when it names the same definition.
-    private static boolean sameType(Holder<ContractType> left, Holder<ContractType> right) {
-        return HolderHelper.id(left).equals(HolderHelper.id(right));
-    }
 
     public record Entry(UUID owner, UUID beast, Holder<ContractType> type, ResourceKey<Level> dimension, long boundAt) {
         public static final Codec<Entry> CODEC = RecordCodecBuilder.create(i -> i.group(

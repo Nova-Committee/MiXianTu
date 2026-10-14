@@ -4,7 +4,8 @@ import com.iafenvoy.mxt.data.cost.builtin.AuraCost;
 import com.iafenvoy.mxt.data.cost.builtin.ItemCost;
 import com.iafenvoy.mxt.data.cost.builtin.ResourceCost;
 import com.iafenvoy.mxt.data.cost.context.CostContext;
-import net.minecraft.resources.Identifier;
+import com.iafenvoy.mxt.data.resource.Resource;
+import net.minecraft.core.Holder;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.LinkedHashMap;
@@ -44,7 +45,7 @@ public final class CostDraftManager {
      */
     @FunctionalInterface
     public interface CostDraftFactory<T extends Cost> {
-        CostDraft<T> create(CostContext context, Map<Identifier, Double> account);
+        CostDraft<T> create(CostContext context, Map<Holder<Resource>, Double> account);
     }
 
     /**
@@ -53,7 +54,7 @@ public final class CostDraftManager {
      */
     @SuppressWarnings("unchecked")
     public static <T extends Cost> @Nullable CostDraft<T> create(Class<T> type, CostContext context,
-                                                                 Map<Identifier, Double> account) {
+                                                                 Map<Holder<Resource>, Double> account) {
         CostDraftFactory<T> factory = (CostDraftFactory<T>) FACTORIES.get(type);
         return factory == null ? null : factory.create(context, account);
     }

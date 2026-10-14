@@ -34,7 +34,7 @@ public final class ContractBehaviorService {
             return ContractService.Result.rejected(ContractService.Failure.UNSUPPORTED_BEHAVIOR);
         // A recall is the one order whose state the framework owns: the latch and the cooldown live on the record,
         // so it goes through the same request the command always used instead of becoming the order in force.
-        if (behavior == ContractBehaviors.RECALL)
+        if (ContractBehaviors.RECALL.equals(behavior))
             return ContractService.requestRecall(creature, requester, force);
         ContractContext context = Contracts.context(creature, type);
         if (!operations.onBehaviorSelected(context, behavior))

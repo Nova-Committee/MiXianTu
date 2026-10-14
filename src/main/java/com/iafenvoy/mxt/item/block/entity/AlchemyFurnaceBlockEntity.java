@@ -5,6 +5,7 @@ import com.iafenvoy.mxt.data.alchemy.AlchemyFurnaceDefinition;
 import com.iafenvoy.mxt.data.alchemy.AlchemyWallMaterial;
 import com.iafenvoy.mxt.item.block.AlchemyFurnaceBlock;
 import com.iafenvoy.mxt.registry.MxtBlockEntities;
+import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.runtime.alchemy.*;
 import com.iafenvoy.mxt.runtime.alchemy.AlchemyFurnaceStructure.Status;
 import net.minecraft.core.BlockPos;
@@ -101,7 +102,7 @@ public final class AlchemyFurnaceBlockEntity extends BlockEntity implements Alch
 
     @Override
     public Optional<Holder<AlchemyFurnaceDefinition>> furnaceDefinition() {
-        return this.level == null ? Optional.empty() : AlchemyWorkstationService.furnaceDefinition(this.level.registryAccess(), this.furnaceItem);
+        return Optional.ofNullable(this.furnaceItem.get(MxtDataComponents.ALCHEMY_FURNACE.get()));
     }
 
     // The loot table hands the core back, so its specification travels as a component instead of being popped here.

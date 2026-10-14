@@ -24,6 +24,15 @@ public interface WheelSource {
     Identifier id();
 
     /**
+     * Whether this page is the one another names. A page is its id: the registry hands out one instance per id, but
+     * nothing here compares instances, so a content mod's object and the framework's own are the same page whenever
+     * they name the same id.
+     */
+    default boolean is(WheelSource other) {
+        return other != null && this.id().equals(other.id());
+    }
+
+    /**
      * The page's name on the wheel. A built-in page returns its own translation key; a content mod may return
      * whatever component it likes.
      */

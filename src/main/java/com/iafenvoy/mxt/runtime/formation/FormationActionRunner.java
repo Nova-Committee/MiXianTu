@@ -16,7 +16,6 @@ import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.Sources;
 import com.iafenvoy.mxt.runtime.ability.AbilityEventBridge;
 import com.iafenvoy.mxt.runtime.damage.DamageCalculationService;
-import com.iafenvoy.mxt.util.HolderHelper;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
@@ -115,7 +114,7 @@ public final class FormationActionRunner {
         }
         for (Holder<Ability> ability : buff.abilities()) {
             AbilityAttachment granted = entity.getData(MxtAttachments.ABILITY_HOLDER);
-            if (granted.grant(HolderHelper.id(ability), source) && entity instanceof LivingEntity living)
+            if (granted.grant(ability, source) && entity instanceof LivingEntity living)
                 AbilityEventBridge.rebuildTriggerSubscriptions(living);
         }
     }

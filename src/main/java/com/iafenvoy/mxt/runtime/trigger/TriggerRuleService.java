@@ -43,7 +43,7 @@ public final class TriggerRuleService {
             TriggerRule rule = holder.value();
             if (!rule.trigger().matches(signal)) continue;
             Identifier ruleId = HolderHelper.id(holder);
-            if (cooldowns != null && cooldowns.isOnCooldown(ruleId, gameTime)) continue;
+            if (cooldowns != null && cooldowns.isOnCooldown(holder, gameTime)) continue;
             if (!rolls(rule, signal)) continue;
             String key = ruleId + ":" + signal.type();
             if (!DISPATCHING.get().add(key)) continue;
@@ -60,7 +60,7 @@ public final class TriggerRuleService {
             double cooldown = rule.cooldown().evaluate(signal.context().formula());
             if (Double.isFinite(cooldown) && cooldown > 0.0D) {
                 if (cooldowns == null) cooldowns = actor.getData(MxtAttachments.TRIGGER_COOLDOWNS);
-                cooldowns.setCooldownUntil(ruleId, gameTime + Math.max(1L, Math.round(cooldown)));
+                cooldowns.setCooldownUntil(holder, gameTime + Math.max(1L, Math.round(cooldown)));
             }
         }
         if (DISPATCHING.get().isEmpty()) DISPATCHING.remove();

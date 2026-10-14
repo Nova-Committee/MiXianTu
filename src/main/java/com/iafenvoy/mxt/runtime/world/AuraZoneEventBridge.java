@@ -1,16 +1,13 @@
 package com.iafenvoy.mxt.runtime.world;
 
 import com.iafenvoy.mxt.config.MxtServerConfig;
-import com.iafenvoy.mxt.data.aura.AuraZone;
 import com.iafenvoy.mxt.event.AuraZoneEvent.Enter;
 import com.iafenvoy.mxt.event.AuraZoneEvent.Leave;
 import com.iafenvoy.mxt.event.AuraZoneEvent.Tick;
 import com.iafenvoy.mxt.network.payload.AuraStateS2CPayload;
 import com.iafenvoy.mxt.registry.MxtAttachments;
-import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.world.AuraQueryCache.AuraLocation;
 import com.mojang.logging.LogUtils;
-import net.minecraft.core.Registry;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
@@ -24,9 +21,7 @@ import net.neoforged.neoforge.event.tick.LevelTickEvent.Post;
 import net.neoforged.neoforge.network.PacketDistributor;
 import org.slf4j.Logger;
 
-import java.util.Locale;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -52,7 +47,8 @@ public final class AuraZoneEventBridge {
         AuraResult current = AuraService.getPositionAura(level, entity.blockPosition());
         AuraQueryCache.recordQuery(level, entity.getUUID(), position);
         AuraResult previous = LAST.put(new Key(level.dimension().identifier(), entity.getUUID()), current);
-        if (previous == null || !previous.source().equals(current.source()) || previous.sourceKind() != current.sourceKind()) {
+        // Both sides can be absent, so an entity that walks out of every zone still reports the change once.
+        if (previous == null || !Objects.equals(previous.source(), current.source()) || previous.sourceKind() != current.sourceKind()) {
             if (previous != null) NeoForge.EVENT_BUS.post(new Leave(entity, previous));
             NeoForge.EVENT_BUS.post(new Enter(entity, current));
         }
@@ -79,19 +75,19 @@ public final class AuraZoneEventBridge {
             AuraQueryCache.reportDiagnostics();
             AuraQueryCache.reportStageCosts();
         }
-        Registry<AuraZone> zones = level.registryAccess().lookupOrThrow(MxtResourceKeys.AURA_ZONE);
         level.players().forEach(player -> {
             AuraResult aura = AuraService.getPositionAura(level, player.blockPosition());
             long syncInterval = MxtServerConfig.INSTANCE.aura.auraSyncInterval.getValue();
             if (level.getGameTime() % syncInterval == 0L) {
                 NeoForge.EVENT_BUS.post(new Tick(level, player.blockPosition(), aura));
                 AuraResult sensed = AuraService.getSensedAura(level, player.blockPosition());
-                PacketDistributor.sendToPlayer(player, new AuraStateS2CPayload(aura.source(), aura.aura(), sensed.aura()));
+                PacketDistributor.sendToPlayer(player, new AuraStateS2CPayload(Optional.ofNullable(aura.source()), aura.aura(), sensed.aura()));
             }
             boolean cultivating = player.getData(MxtAttachments.CULTIVATION).cultivating();
             boolean emitParticle = cultivating ? level.getGameTime() % 5L < 3L : level.getGameTime() % 5L == 0L;
-            if (emitParticle) zones.getOptional(aura.source()).flatMap(AuraZone::particle)
-                    .ifPresent(effect -> effect.sendTo(level, player, player.position()));
+            // A position no zone covers has no definition to take a particle from.
+            if (emitParticle && aura.source() != null)
+                aura.source().value().particle().ifPresent(effect -> effect.sendTo(level, player, player.position()));
         });
     }
 

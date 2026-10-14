@@ -7,18 +7,16 @@ import com.iafenvoy.mxt.data.forging.ToolBinding;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.matcher.ItemMatcher;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
 import net.minecraft.core.HolderLookup.Provider;
-import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
 
-import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * What one stack unlocks at the forge table: the declaration claiming it, plus whatever it carries itself through
@@ -42,21 +40,19 @@ public final class ForgingBindingService {
     }
 
     public static List<Holder<ForgingMethod>> methods(Provider access, ItemStack stack) {
-        Map<Identifier, Holder<ForgingMethod>> unlocked = new LinkedHashMap<>();
-        tool(access, stack).ifPresent(binding -> binding.methods()
-                .forEach(method -> unlocked.putIfAbsent(HolderHelper.id(method), method)));
+        Set<Holder<ForgingMethod>> unlocked = new LinkedHashSet<>();
+        tool(access, stack).ifPresent(binding -> unlocked.addAll(binding.methods()));
         List<Holder<ForgingMethod>> carried = stack.get(MxtDataComponents.FORGING_METHODS.get());
-        if (carried != null) carried.forEach(method -> unlocked.putIfAbsent(HolderHelper.id(method), method));
-        return List.copyOf(unlocked.values());
+        if (carried != null) unlocked.addAll(carried);
+        return List.copyOf(unlocked);
     }
 
     public static List<Holder<ForgingBlueprint>> blueprints(Provider access, ItemStack stack) {
-        Map<Identifier, Holder<ForgingBlueprint>> offered = new LinkedHashMap<>();
-        blueprint(access, stack).ifPresent(binding -> binding.blueprints()
-                .forEach(blueprint -> offered.putIfAbsent(HolderHelper.id(blueprint), blueprint)));
+        Set<Holder<ForgingBlueprint>> offered = new LinkedHashSet<>();
+        blueprint(access, stack).ifPresent(binding -> offered.addAll(binding.blueprints()));
         List<Holder<ForgingBlueprint>> carried = stack.get(MxtDataComponents.FORGING_BLUEPRINTS.get());
-        if (carried != null) carried.forEach(blueprint -> offered.putIfAbsent(HolderHelper.id(blueprint), blueprint));
-        return List.copyOf(offered.values());
+        if (carried != null) offered.addAll(carried);
+        return List.copyOf(offered);
     }
 
     // The slot rule asks this, so it answers the same question the two lists do rather than looking for a

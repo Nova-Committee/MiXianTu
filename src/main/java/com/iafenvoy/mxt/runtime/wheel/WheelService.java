@@ -100,7 +100,7 @@ public final class WheelService {
         if (state.isEmpty())
             return refuse(player, id, Togglable.Failure.UNAVAILABLE, null, "directed", "actionbar.mxt.wheel.use_failed");
         if (state.get() == wanted) return true;
-        ItemStack carrier = WheelSources.carrier(player, source, id).orElse(null);
+        ItemStack carrier = WheelSources.carrier(player, source, ability).orElse(null);
         return activate(player, ability, carrier, id, "directed");
     }
 
@@ -129,7 +129,7 @@ public final class WheelService {
             return false;
         }
         if (!AbilityActivationService.togglable(ability)) return use(player, ability);
-        return activate(player, ability, WheelSources.carrier(player, source, id).orElse(null), id, "press");
+        return activate(player, ability, WheelSources.carrier(player, source, ability).orElse(null), id, "press");
     }
 
     private static boolean activate(ServerPlayer player, Holder<Ability> ability, @Nullable ItemStack carrier,

@@ -54,9 +54,9 @@ public final class AbilityService {
                                          FormulaContext context, LivingEntity payer, boolean requiresGrant,
                                          @Nullable CostPayment payment) {
         Ability definition = ability.value();
-        if (requiresGrant && !abilities.has(HolderHelper.id(ability)))
+        if (requiresGrant && !abilities.has(ability))
             return PrepareResult.rejected(Failure.NOT_GRANTED, null);
-        if (AbilityStorage.onCooldown(abilities, HolderHelper.id(ability), gameTime))
+        if (AbilityStorage.onCooldown(abilities, ability, gameTime))
             return PrepareResult.rejected(Failure.COOLDOWN, null);
         double castTime = definition.castTime().evaluate(context);
         double cooldown = cooldownOf(ability, context);
@@ -75,7 +75,7 @@ public final class AbilityService {
         double chargeBefore = Double.NaN;
         if (charges.isPresent()) {
             double maximum = charges.get().maximum().evaluate(context);
-            double available = AbilityStorage.get(abilities, HolderHelper.id(ability), ChargesDataStorage.class).flatMap(ChargesDataStorage::remaining).orElse(maximum);
+            double available = AbilityStorage.get(abilities, ability, ChargesDataStorage.class).flatMap(ChargesDataStorage::remaining).orElse(maximum);
             if (!Double.isFinite(maximum) || maximum < 1.0D || !Double.isFinite(available) || available < 1.0D) {
                 return PrepareResult.rejected(Failure.NO_CHARGES, null);
             }
@@ -92,7 +92,7 @@ public final class AbilityService {
     }
 
     private static CommitResult commit(PreparedUse use, AbilityAttachment abilities, long gameTime) {
-        if (AbilityStorage.onCooldown(abilities, HolderHelper.id(use.ability()), gameTime))
+        if (AbilityStorage.onCooldown(abilities, use.ability(), gameTime))
             return CommitResult.rejected(Failure.COOLDOWN, null);
         CostPayment.Result payment = use.payment().commit();
         if (!payment.paid()) return CommitResult.rejected(costFailure(payment.failure()), payment.failedResource());
@@ -171,7 +171,7 @@ public final class AbilityService {
                 actor instanceof LivingEntity living ? living : null, requiresGrant, null);
         if (!prepared.approved()) return UseResult.rejected(prepared.failure(), prepared.failedResource());
         if (prepared.use().castTimeTicks() > 0L) {
-            AbilityStorage.value(abilities, HolderHelper.id(ability), CastDeadline.class, new CastDeadline(CastDeadline.NO_CAST), gameTime)
+            AbilityStorage.value(abilities, ability, CastDeadline.class, new CastDeadline(CastDeadline.NO_CAST), gameTime)
                     .start(Math.addExact(gameTime, prepared.use().castTimeTicks()));
             return UseResult.castingResult();
         }
@@ -189,10 +189,10 @@ public final class AbilityService {
             if (!definition.elementAffinity().isEmpty() && context.value(DamageCalculationService.ELEMENT_MODIFIER) <= 0.0D)
                 return UseResult.rejected(Failure.ELEMENT_AFFINITY, null);
         }
-        if (!AbilityStorage.castDue(abilities, HolderHelper.id(ability), gameTime)) {
+        if (!AbilityStorage.castDue(abilities, ability, gameTime)) {
             return UseResult.castingResult();
         }
-        AbilityStorage.clearCast(abilities, HolderHelper.id(ability), gameTime);
+        AbilityStorage.clearCast(abilities, ability, gameTime);
         if (!definition.condition().test(actor, context)) return UseResult.rejected(Failure.CONDITION_FAILED, null);
         if (!validateWord(definition, actor, context)) return UseResult.rejected(Failure.PERMISSION_DENIED, null);
         // Already started by something that could start one, so the grant it was approved under is not asked for
@@ -212,13 +212,12 @@ public final class AbilityService {
         Pre resourceEvent = new Pre(resources, preparedUse.payment().resources());
         if (NeoForge.EVENT_BUS.post(resourceEvent).isCanceled()) return UseResult.rejected(Failure.CANCELLED, null);
         // The event owns the amounts from here on: the payment being made is the one it handed back.
-        preparedUse.payment().resources().clear();
-        preparedUse.payment().resources().putAll(resourceEvent.amounts());
+        preparedUse.payment().reprice(resourceEvent.amounts());
         CommitResult committed = commit(preparedUse, abilities, gameTime);
         if (!committed.committed()) return UseResult.rejected(committed.failure(), committed.failedResource());
         if (definition.type() instanceof ChannelSource) {
             abilities.setChannelledAbility(preparedUse.ability());
-            AbilityStorage.value(abilities, HolderHelper.id(preparedUse.ability()), ChannelPulse.class, new ChannelPulse(0.0D), gameTime)
+            AbilityStorage.value(abilities, preparedUse.ability(), ChannelPulse.class, new ChannelPulse(0.0D), gameTime)
                     .set(Math.addExact(gameTime, preparedUse.channelIntervalTicks()));
         }
         // A channel owns the ability until released, so it never runs the one-shot entity action; its
@@ -242,8 +241,8 @@ public final class AbilityService {
         long gameTime = holder.level().getGameTime();
         FormulaContext formula = context.formula();
         Ability definition = ability.value();
-        if (!abilities.has(HolderHelper.id(ability))) return GateResult.rejected(Failure.NOT_GRANTED, null);
-        if (AbilityStorage.onCooldown(abilities, HolderHelper.id(ability), gameTime))
+        if (!abilities.has(ability)) return GateResult.rejected(Failure.NOT_GRANTED, null);
+        if (AbilityStorage.onCooldown(abilities, ability, gameTime))
             return GateResult.rejected(Failure.COOLDOWN, null);
         if (!definition.condition().test(holder, formula)) return GateResult.rejected(Failure.CONDITION_FAILED, null);
         double cooldown = cooldownOf(ability, formula);
@@ -254,7 +253,7 @@ public final class AbilityService {
         CostPayment.Result payment = plan.commit();
         if (!payment.paid()) return GateResult.rejected(costFailure(payment.failure()), payment.failedResource());
         if (cooldown > 0.0D)
-            AbilityStorage.startCooldown(abilities, HolderHelper.id(ability), cooldown, gameTime);
+            AbilityStorage.startCooldown(abilities, ability, cooldown, gameTime);
         return GateResult.ok();
     }
 
@@ -276,13 +275,13 @@ public final class AbilityService {
                 return ChannelResult.stopped(Failure.ELEMENT_AFFINITY);
             }
         }
-        if (abilities.channelledAbility().filter(channelled -> channelled.is(HolderHelper.id(ability))).isEmpty())
+        if (abilities.channelledAbility().filter(ability::equals).isEmpty())
             return ChannelResult.inactive();
-        if (!abilities.has(HolderHelper.id(ability)) || !(definition.type() instanceof ChannelSource channel)) {
+        if (!abilities.has(ability) || !(definition.type() instanceof ChannelSource channel)) {
             stopChannel(abilities);
             return ChannelResult.stopped(Failure.NOT_GRANTED);
         }
-        long nextTick = Math.round(AbilityStorage.get(abilities, HolderHelper.id(ability), ChannelPulse.class)
+        long nextTick = Math.round(AbilityStorage.get(abilities, ability, ChannelPulse.class)
                 .map(ChannelPulse::nextTick).orElse((double) gameTime));
         if (gameTime < nextTick) return ChannelResult.waiting(nextTick);
         if (!definition.condition().test(actor, context)) {
@@ -306,8 +305,7 @@ public final class AbilityService {
             stopChannel(abilities);
             return ChannelResult.stopped(Failure.CANCELLED);
         }
-        upkeep.resources().clear();
-        upkeep.resources().putAll(resourceEvent.amounts());
+        upkeep.reprice(resourceEvent.amounts());
         CostPayment.Result payment = upkeep.commit();
         if (!payment.paid()) {
             stopChannel(abilities);
@@ -318,7 +316,7 @@ public final class AbilityService {
         NeoForge.EVENT_BUS.post(new Post(resources, payment.resources()));
         long intervalTicks = Math.max(1L, Math.round(interval));
         long followingTick = Math.addExact(gameTime, intervalTicks);
-        AbilityStorage.value(abilities, HolderHelper.id(ability), ChannelPulse.class, new ChannelPulse(0.0D), gameTime).set(followingTick);
+        AbilityStorage.value(abilities, ability, ChannelPulse.class, new ChannelPulse(0.0D), gameTime).set(followingTick);
         return ChannelResult.pulsed(followingTick, payment.resources());
     }
 
@@ -330,8 +328,8 @@ public final class AbilityService {
 
     // Clears a pending cast without touching resources, cooldowns or unrelated stored state.
     public static boolean cancelCast(Holder<Ability> ability, AbilityAttachment abilities, long gameTime) {
-        if (!AbilityStorage.hasCast(abilities, HolderHelper.id(ability))) return false;
-        AbilityStorage.clearCast(abilities, HolderHelper.id(ability), gameTime);
+        if (!AbilityStorage.hasCast(abilities, ability)) return false;
+        AbilityStorage.clearCast(abilities, ability, gameTime);
         return true;
     }
 
@@ -413,8 +411,7 @@ public final class AbilityService {
             if (unreached != null) return UseResult.rejected(unreached, null);
             Pre resourceEvent = new Pre(resources, prepared.use().payment().resources());
             if (NeoForge.EVENT_BUS.post(resourceEvent).isCanceled()) return UseResult.rejected(Failure.CANCELLED, null);
-            prepared.use().payment().resources().clear();
-            prepared.use().payment().resources().putAll(resourceEvent.amounts());
+            prepared.use().payment().reprice(resourceEvent.amounts());
             applyAbilityState(prepared.use(), abilityDraft, gameTime);
             resourceEvent.amounts().forEach((id, amount) -> paid.merge(id, amount, Double::sum));
             steps.add(new CompositeStep(childHolder, prepared.use(), childContext, Map.copyOf(resourceEvent.amounts())));
@@ -424,7 +421,7 @@ public final class AbilityService {
         // is paid for.
         List<CostPayment> payments = new ArrayList<>();
         for (CompositeStep step : steps) {
-            if (AbilityStorage.onCooldown(abilities, HolderHelper.id(step.use().ability()), gameTime))
+            if (AbilityStorage.onCooldown(abilities, step.use().ability(), gameTime))
                 return UseResult.rejected(Failure.COOLDOWN, null);
             payments.add(step.use().payment());
         }
@@ -434,7 +431,7 @@ public final class AbilityService {
         for (CompositeStep step : steps) {
             if (step.ability().value().type() instanceof ChannelSource) {
                 abilities.setChannelledAbility(step.use().ability());
-                AbilityStorage.value(abilities, HolderHelper.id(step.use().ability()), ChannelPulse.class, new ChannelPulse(0.0D), gameTime)
+                AbilityStorage.value(abilities, step.use().ability(), ChannelPulse.class, new ChannelPulse(0.0D), gameTime)
                         .set(Math.addExact(gameTime, step.use().channelIntervalTicks()));
             } else {
                 executeEffects(step.ability().value(), actor, step.context(), origin);
@@ -448,12 +445,12 @@ public final class AbilityService {
     }
 
     private static void applyAbilityState(PreparedUse use, AbilityAttachment abilities, long gameTime) {
-        Identifier id = HolderHelper.id(use.ability());
-        AbilityStorage.startCooldown(abilities, id, use.cooldownTicks(), gameTime);
+        Holder<Ability> ability = use.ability();
+        AbilityStorage.startCooldown(abilities, ability, use.cooldownTicks(), gameTime);
         if (use.consumeCharge()) {
-            ChargesDataStorage declaration = use.ability().value().charges()
+            ChargesDataStorage declaration = ability.value().charges()
                     .map(ChargesDataStorage.Settings::declared).orElse(ChargesDataStorage.INSTANCE);
-            AbilityStorage.charges(abilities, id, declaration, gameTime).setRemaining(Math.max(0.0D, use.chargeBefore() - 1.0D), gameTime);
+            AbilityStorage.charges(abilities, ability, declaration, gameTime).setRemaining(Math.max(0.0D, use.chargeBefore() - 1.0D), gameTime);
         }
     }
 
@@ -467,7 +464,7 @@ public final class AbilityService {
                     definition.elementAffinity(), context, definition.elementAffinityMode());
             scaled = scaled.with(DamageCalculationService.ELEMENT_MODIFIER, modifier);
         }
-        return scaled.with(DamageCalculationService.DAMAGE_MULTIPLIER, ProgressionDamageMultiplier.of(actor, HolderHelper.id(ability)));
+        return scaled.with(DamageCalculationService.DAMAGE_MULTIPLIER, ProgressionDamageMultiplier.of(actor, ability));
     }
 
     private record CompositeStep(Holder<Ability> ability, PreparedUse use, FormulaContext context,

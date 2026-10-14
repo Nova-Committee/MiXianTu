@@ -8,7 +8,6 @@ import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtItems;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.matcher.ItemMatcher;
 import com.iafenvoy.mxt.util.matcher.ItemMatcher.Entry;
@@ -113,7 +112,6 @@ public final class ItemBindingService {
         Holder<PillBinding> identity = matched.orElse(null);
         Holder<Pill> declared = component == null ? null : component.pill().orElse(null);
         Holder<Pill> source = declared != null ? declared : identity == null ? null : identity.value().pill();
-        if (source != null && !source.isBound()) return PillResolution.unbound(source);
         if (source == null)
             return component == null ? PillResolution.none()
                     : PillResolution.componentOnly(component.applyTo(Pill.defaults()));
@@ -145,7 +143,7 @@ public final class ItemBindingService {
     private static TechniqueBinding declaration(Provider access, Holder<Technique> technique) {
         return MxtDatapackRegistries.holders(access, MxtResourceKeys.TECHNIQUE_BINDING)
                 .map(Reference::value)
-                .filter(binding -> HolderHelper.id(binding.technique()).equals(HolderHelper.id(technique)))
+                .filter(binding -> binding.technique().equals(technique))
                 .findFirst()
                 .orElse(null);
     }
@@ -168,7 +166,7 @@ public final class ItemBindingService {
         Optional<TechniqueBinding> declared = taught == null
                 ? ItemMatcher.find(declarations.map(Reference::value), stack)
                 : declarations.map(Reference::value)
-                .filter(binding -> HolderHelper.id(binding.technique()).equals(HolderHelper.id(taught)))
+                .filter(binding -> binding.technique().equals(taught))
                 .findFirst()
                 .or(() -> Optional.of(TechniqueBinding.defaults(taught)));
         TechniqueReadingComponent reading = stack.get(MxtDataComponents.TECHNIQUE_READING.get());
@@ -231,8 +229,7 @@ public final class ItemBindingService {
         try {
             ResolvedBindings bindings = resolve(entity.level().registryAccess(), stack);
             PillResolution pill = bindings.pill();
-            Holder<PillBinding> identity = pill.identity().orElse(null);
-            if (identity != null && identity.isBound()) PillService.registerUse(entity, identity);
+            pill.identity().ifPresent(identity -> PillService.registerUse(entity, identity));
             FormulaContext context = FormulaContext.of(entity);
             bindings.item().map(ItemBinding::actions).orElse(List.of()).forEach(action -> action.execute(entity, context));
             pill.effects().ifPresent(effects -> PillService.apply(entity, effects));
@@ -326,29 +323,24 @@ public final class ItemBindingService {
     /**
      * One pill reading. {@code identity} is the matched binding that owns the counters; empty for a component-only
      * dose. {@code definition} is the pill the dose is named after, which a component-only dose over defaults has
-     * none of. {@code effects} is the pill that actually runs, already overlaid. {@code unbound} is a named pill
-     * that is no longer in the registry: it must not fall back to another pill or to defaults.
+     * none of. {@code effects} is the pill that actually runs, already overlaid.
      */
     public record PillResolution(Optional<Holder<PillBinding>> identity, Optional<Holder<Pill>> definition,
-                                 Optional<Pill> effects, boolean unbound) {
+                                 Optional<Pill> effects) {
         public static PillResolution none() {
-            return new PillResolution(Optional.empty(), Optional.empty(), Optional.empty(), false);
-        }
-
-        public static PillResolution unbound(Holder<Pill> pill) {
-            return new PillResolution(Optional.empty(), Optional.of(pill), Optional.empty(), true);
+            return new PillResolution(Optional.empty(), Optional.empty(), Optional.empty());
         }
 
         public static PillResolution bound(Holder<PillBinding> holder, Holder<Pill> definition, Pill effects) {
-            return new PillResolution(Optional.of(holder), Optional.of(definition), Optional.of(effects), false);
+            return new PillResolution(Optional.of(holder), Optional.of(definition), Optional.of(effects));
         }
 
         public static PillResolution componentOnly(Holder<Pill> definition, Pill effects) {
-            return new PillResolution(Optional.empty(), Optional.of(definition), Optional.of(effects), false);
+            return new PillResolution(Optional.empty(), Optional.of(definition), Optional.of(effects));
         }
 
         public static PillResolution componentOnly(Pill effects) {
-            return new PillResolution(Optional.empty(), Optional.empty(), Optional.of(effects), false);
+            return new PillResolution(Optional.empty(), Optional.empty(), Optional.of(effects));
         }
 
         public boolean present() {

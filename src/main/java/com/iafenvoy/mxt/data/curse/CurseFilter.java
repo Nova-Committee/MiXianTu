@@ -3,7 +3,6 @@ package com.iafenvoy.mxt.data.curse;
 import com.iafenvoy.mxt.attachment.CurseHolderAttachment.State;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.NumberRange;
 import com.mojang.serialization.Codec;
@@ -15,6 +14,7 @@ import net.minecraft.world.entity.Entity;
 
 import java.util.List;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.Optional;
 
 /**
@@ -42,7 +42,7 @@ public record CurseFilter(Optional<Holder<Curse>> curse, List<TagKey<Curse>> tag
     }
 
     private boolean matches(Holder<Curse> held, State state, long gameTime, FormulaContext context) {
-        if (this.curse.isPresent() && !HolderHelper.id(held).equals(HolderHelper.id(this.curse.get()))) return false;
+        if (this.curse.isPresent() && !Objects.equals(held, this.curse.get())) return false;
         for (TagKey<Curse> tag : this.tags) if (!held.is(tag)) return false;
         if (this.stacks.isPresent() && !this.stacks.get().test(state.stacks(), context)) return false;
         if (this.remainingTicks.isPresent()) {

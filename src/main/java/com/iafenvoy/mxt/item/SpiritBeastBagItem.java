@@ -8,7 +8,7 @@ import com.iafenvoy.mxt.runtime.creature.ContractFeedback;
 import com.iafenvoy.mxt.runtime.creature.ContractService;
 import com.iafenvoy.mxt.runtime.creature.Contracts;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.Holder;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -77,7 +77,7 @@ public final class SpiritBeastBagItem extends Item {
         if (!(level instanceof ServerLevel serverLevel) || player == null) return InteractionResult.FAIL;
         // The type is stored beside the data, so the entity is built from it and the saved data is read into it:
         // the creature's own data never has to carry an id of its own.
-        EntityType<?> type = BuiltInRegistries.ENTITY_TYPE.getOptional(stored.entityType().orElseThrow()).orElse(null);
+        EntityType<?> type = stored.entityType().map(Holder::value).orElse(null);
         Entity restored = type == null ? null : type.create(serverLevel, EntitySpawnReason.BUCKET);
         if (restored == null) return failed(player);
         restored.load(TagValueInput.create(ProblemReporter.DISCARDING, serverLevel.registryAccess(), stored.entity().orElseThrow().copy()));

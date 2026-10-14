@@ -78,6 +78,6 @@ public final class ForgingBindingTooltipAppender {
     private static Component blueprintName(Holder<ForgingBlueprint> blueprint) {
         return BuiltInRegistries.ITEM.getOptional(blueprint.value().result())
                 .map(item -> new ItemStack(item).getHoverName())
-                .orElseGet(() -> Component.literal(blueprint.unwrapKey().map(key -> key.identifier().toString()).orElse("?")));
+                .orElseGet(() -> Component.literal(blueprint.unwrapKey().orElseThrow().identifier().toString()));
     }
 }

@@ -1,14 +1,10 @@
 package com.iafenvoy.mxt.runtime.world;
 
-import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.data.aura.Aura;
+import com.iafenvoy.mxt.data.aura.AuraZone;
 import net.minecraft.core.Holder;
-import net.minecraft.resources.Identifier;
 
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Client-side copy of the server-resolved aura at the local player's position, with actual and environmental
@@ -16,8 +12,7 @@ import java.util.Set;
  * against the synced aura registry, so nothing here has to guess which aura a value belonged to.
  */
 public final class AuraClientState {
-    private static final Identifier EMPTY = Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "empty");
-    private static volatile Snapshot current = new Snapshot(EMPTY, Map.of(), Map.of());
+    private static volatile Snapshot current = new Snapshot(Optional.empty(), Map.of(), Map.of());
     private static volatile Snapshot target = current;
     private static long lastNanos = System.nanoTime();
 
@@ -33,8 +28,8 @@ public final class AuraClientState {
         return current;
     }
 
-    public static void update(Identifier source, Map<Holder<Aura>, AuraPool> actual,
-                              Map<Holder<Aura>, AuraPool> environment) {
+    // An absent source is a real answer: no zone covers the player, so the previous one has to stop being drawn.
+    public static void update(Optional<Holder<AuraZone>> source, Map<Holder<Aura>, AuraPool> actual, Map<Holder<Aura>, AuraPool> environment) {
         target = new Snapshot(source, sanitize(actual), sanitize(environment));
     }
 
@@ -52,7 +47,7 @@ public final class AuraClientState {
         return Map.copyOf(sanitized);
     }
 
-    public record Snapshot(Identifier source, Map<Holder<Aura>, AuraPool> actual,
+    public record Snapshot(Optional<Holder<AuraZone>> source, Map<Holder<Aura>, AuraPool> actual,
                            Map<Holder<Aura>, AuraPool> environment) {
         public double actualConcentration() {
             return this.actual.values().stream().mapToDouble(AuraPool::amount).sum();

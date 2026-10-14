@@ -2,6 +2,7 @@ package com.iafenvoy.mxt.testmod;
 
 import com.iafenvoy.mxt.api.AlchemyWorkstation;
 import com.iafenvoy.mxt.data.alchemy.AlchemyFurnaceDefinition;
+import com.iafenvoy.mxt.data.alchemy.MedicinalProperty;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.registry.MxtBlocks;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
@@ -78,7 +79,7 @@ public final class AlchemyGateProbes {
         check(source, "gate-core-upper-recipe", resolved(higher), id("alchemy/hot"));
         check(source, "gate-core-upper-blocker", higher.blocker().orElse(null), AlchemyFailure.TEMPERATURE);
         check(source, "core-tier-speed", duration(higher), 3L);
-        check(source, "core-tier-mixture", property(higher, "alchemy/heat"), 2.0D);
+        check(source, "core-tier-mixture", property(level, higher, "alchemy/heat"), 2.0D);
 
         // The material side of the same rule, on the entry core: one input tier whose own alchemy_modifier is 2 halves
         // this batch as well, which is the factor the core's is multiplied by.
@@ -203,8 +204,10 @@ public final class AlchemyGateProbes {
         return preview.parameters().map(AlchemyWorkstationService.Parameters::durationTicks).orElse(-1L);
     }
 
-    private static double property(AlchemyPreview preview, String property) {
-        return preview.mixture().main().getOrDefault(id(property), -1.0D);
+    private static double property(ServerLevel level, AlchemyPreview preview, String property) {
+        Holder<MedicinalProperty> holder = MxtDatapackRegistries
+                .holder(level.registryAccess(), MxtResourceKeys.MEDICINAL_PROPERTY, id(property)).orElseThrow();
+        return preview.mixture().main().getOrDefault(holder, -1.0D);
     }
 
     private static Identifier id(String path) {

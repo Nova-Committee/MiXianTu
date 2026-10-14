@@ -3,7 +3,6 @@ package com.iafenvoy.mxt.loot;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.util.HolderHelper;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.resources.Identifier;
@@ -29,6 +28,6 @@ public record HasAbilityLootCondition(EntityTarget target,
     public boolean test(LootContext context) {
         Entity entity = this.target.get(context);
         return entity != null && MxtDatapackRegistries.holder(entity.registryAccess(), MxtResourceKeys.ABILITY, this.ability)
-                .map(ability -> entity.getData(MxtAttachments.ABILITY_HOLDER).has(HolderHelper.id(ability))).orElse(false);
+                .map(ability -> entity.getData(MxtAttachments.ABILITY_HOLDER).has(ability)).orElse(false);
     }
 }

@@ -27,6 +27,7 @@ public final class JadeSlipItem extends Item {
         ItemStack stack = player.getItemInHand(hand);
         // A claimed stack is a manual: the technique module prints it, and its hold is read off the vanilla
         // component, so the vanilla use has to run rather than this class answering the click.
+        // FIXME::Remove old version compat
         if (ItemBindingService.technique(level.registryAccess(), stack).isPresent())
             return super.use(level, player, hand);
         if (ItemReading.readInscription(serverPlayer, stack)) return InteractionResult.SUCCESS_SERVER;

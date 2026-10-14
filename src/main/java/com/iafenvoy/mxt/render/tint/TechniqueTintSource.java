@@ -41,7 +41,7 @@ public record TechniqueTintSource(Layer layer) implements ItemTintSource {
     public int calculate(@NonNull ItemStack stack, @Nullable ClientLevel level, @Nullable LivingEntity owner) {
         // A book whose technique is gone keeps the colours its texture was authored with, as an unresolved pill does.
         Holder<Technique> holder = stack.get(MxtDataComponents.TECHNIQUE);
-        return ARGB.opaque(this.layer.color(holder == null || !holder.isBound() ? null : holder.value()));
+        return ARGB.opaque(this.layer.color(holder == null ? null : holder.value()));
     }
 
     @Override

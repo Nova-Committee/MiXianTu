@@ -1,5 +1,6 @@
 package com.iafenvoy.mxt.runtime.forging;
 
+import com.iafenvoy.mxt.util.HolderHelper;
 import net.minecraft.resources.Identifier;
 
 import java.util.List;
@@ -30,8 +31,9 @@ public final class ForgingSessionView {
         return this.session.optimalSteps();
     }
 
+    // Handed out as ids because this is what a listener of the event sees, and an id is what a pack can match on.
     public List<Identifier> history() {
-        return this.session.history();
+        return this.session.history().stream().map(HolderHelper::id).toList();
     }
 
     // The same predicate the server uses, asked of the same object.

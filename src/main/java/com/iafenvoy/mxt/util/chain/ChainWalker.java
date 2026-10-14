@@ -3,7 +3,10 @@ package com.iafenvoy.mxt.util.chain;
 import com.mojang.logging.LogUtils;
 import org.slf4j.Logger;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.function.UnaryOperator;
 
@@ -12,14 +15,14 @@ public final class ChainWalker {
 
     /**
      * Build chains with given objects and next pointer.
-     * The pointer is read through {@code nextGetter}, where null means the line ends here; whatever it hands back has
-     * to be the very instance the list holds, since entries are compared by identity.
+     * The pointer is read through {@code nextGetter}, where null means the line ends here; entries are compared by
+     * value, so what it hands back has to name the same entry the list holds, which for a registry holder means the
+     * same key rather than the same instance.
      * Note: pointer outside given list, fork and loop are not allowed. Each is logged where it is found, and the line
      * that runs into one is left out whole - a prefix is not the line the data describes.
      */
     public static <T, C> List<C> walk(List<T> list, UnaryOperator<T> nextGetter, Function<List<T>, C> chainConstructor) {
-        Set<T> allObjects = newIdentitySet(), referencedObjects = newIdentitySet(), forkedObjects = newIdentitySet();
-        allObjects.addAll(list);
+        Set<T> allObjects = new LinkedHashSet<>(list), referencedObjects = new LinkedHashSet<>(), forkedObjects = new LinkedHashSet<>();
         // Scan "next" reference
         for (T item : list) {
             T next = nextGetter.apply(item);
@@ -36,7 +39,7 @@ public final class ChainWalker {
         // Find heads.
         // Heads are objects that are not referenced by any other object. If an object is referenced by another, it cannot be a head.
         // Read in the order the list gives, so which line is produced first does not depend on hash order.
-        Set<T> visited = newIdentitySet();
+        Set<T> visited = new LinkedHashSet<>();
         List<C> chainList = new ArrayList<>();
         for (T candidate : list) {
             if (referencedObjects.contains(candidate)) continue;
@@ -44,7 +47,7 @@ public final class ChainWalker {
             // Find from head to tail
             List<T> chainNodes = new ArrayList<>();
             T current = candidate;
-            Set<T> path = newIdentitySet();
+            Set<T> path = new LinkedHashSet<>();
             boolean whole = true;
 
             while (current != null) {
@@ -80,9 +83,5 @@ public final class ChainWalker {
         if (visited.size() != allObjects.size())
             LOGGER.error("Unreachable object(s) detected, this should not happened!");
         return List.copyOf(chainList);
-    }
-
-    private static <T> Set<T> newIdentitySet() {
-        return Collections.newSetFromMap(new IdentityHashMap<>());
     }
 }

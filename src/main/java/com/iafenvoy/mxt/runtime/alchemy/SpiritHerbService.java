@@ -47,7 +47,7 @@ public final class SpiritHerbService {
         return MxtDatapackRegistries.holders(access, MxtResourceKeys.SPIRIT_HERB)
                 .filter(holder -> claims(access, holder.value(), stack))
                 .min(Comparator.comparing(Holder::value, ORDER))
-                .map(holder -> holder);
+                .map(holder -> (Holder<SpiritHerb>) holder);
     }
 
     /**
@@ -97,7 +97,7 @@ public final class SpiritHerbService {
         return MxtDatapackRegistries.holders(access, MxtResourceKeys.SPIRIT_HERB)
                 .filter(holder -> RegistryCodecs.matchesValue(holder.value().blocks(), BuiltInRegistries.BLOCK, block))
                 .min(Comparator.comparing(Holder::value, ORDER))
-                .map(holder -> holder);
+                .map(holder -> (Holder<SpiritHerb>) holder);
     }
 
     private static final Comparator<SpiritHerb> ORDER =
@@ -129,12 +129,10 @@ public final class SpiritHerbService {
             double catalyst = positive(value.catalystPower().evaluate(aged));
             return new HerbPotency(herb, years, Map.of(), catalyst, bias, catalyst);
         }
-        Map<Holder<MedicinalProperty>, NumberProvider> source = role == AlchemyRole.MAIN
-                ? value.mainEffects() : value.auxiliaryEffects();
+        Map<Holder<MedicinalProperty>, NumberProvider> source = role == AlchemyRole.MAIN ? value.mainEffects() : value.auxiliaryEffects();
         Map<Holder<MedicinalProperty>, Double> properties = new LinkedHashMap<>();
         double total = 0.0D;
         for (Map.Entry<Holder<MedicinalProperty>, NumberProvider> entry : source.entrySet()) {
-            if (!entry.getKey().isBound()) continue;
             double amount = entry.getValue().evaluate(aged);
             if (!Double.isFinite(amount) || amount == 0.0D) continue;
             properties.put(entry.getKey(), amount);

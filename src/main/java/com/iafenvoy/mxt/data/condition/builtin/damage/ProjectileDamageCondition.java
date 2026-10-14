@@ -6,6 +6,7 @@ import com.iafenvoy.mxt.data.context.condition.DamageConditionContext;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.RegistryFixedCodec;
 import net.minecraft.tags.DamageTypeTags;
@@ -32,7 +33,7 @@ public record ProjectileDamageCondition(Optional<Holder<EntityType<?>>> projecti
         Entity entity = source.getDirectEntity();
         return source.is(DamageTypeTags.IS_PROJECTILE)
                 && entity != null
-                && this.projectile.map(holder -> holder.value() == entity.getType()).orElse(true)
+                && this.projectile.map(holder -> holder.is(BuiltInRegistries.ENTITY_TYPE.wrapAsHolder(entity.getType()))).orElse(true)
                 && this.projectileCondition.test(entity, ctx);
     }
 

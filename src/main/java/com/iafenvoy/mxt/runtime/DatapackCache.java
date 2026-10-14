@@ -106,7 +106,7 @@ public final class DatapackCache {
     private static RealmLines realmLines(HolderLookup.Provider access, ChainCache<RealmStage> chains) {
         ImmutableMap.Builder<Holder<Aura>, Chain<RealmStage>> byAura = ImmutableMap.builder();
         ImmutableMap.Builder<Holder<RealmStage>, Holder<Aura>> auraByRealm = ImmutableMap.builder();
-        validateRegistry(access.lookupOrThrow(MxtResourceKeys.AURA), Aura::resource, (a, b) -> a != b);
+        validateRegistry(access.lookupOrThrow(MxtResourceKeys.AURA), Aura::resource, (a, b) -> !a.is(b));
         for (Holder<Aura> aura : access.lookupOrThrow(MxtResourceKeys.AURA).listElements().toList()) {
             Optional<Holder<RealmStage>> firstRealm = aura.value().firstRealm();
             if (firstRealm.isEmpty()) continue;

@@ -5,12 +5,10 @@ import com.iafenvoy.mxt.data.cost.CostPayment;
 import com.iafenvoy.mxt.data.cost.context.CostContext;
 import com.iafenvoy.mxt.data.cost.context.CostFailure;
 import com.iafenvoy.mxt.data.resource.Resource;
-import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
-import net.minecraft.resources.Identifier;
 
 import java.util.Optional;
 
@@ -23,10 +21,6 @@ public record ResourceCost(Holder<Resource> resource, NumberProvider amount) imp
             Resource.CODEC.fieldOf("resource").forGetter(ResourceCost::resource),
             NumberProvider.CODEC.fieldOf("amount").forGetter(ResourceCost::amount)
     ).apply(i, ResourceCost::new));
-
-    public Identifier id() {
-        return HolderHelper.id(this.resource);
-    }
 
     @Override
     public Optional<CostFailure> test(CostContext context) {

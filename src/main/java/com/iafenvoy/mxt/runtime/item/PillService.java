@@ -41,7 +41,6 @@ public final class PillService {
     }
 
     public enum Failure {
-        UNBOUND,
         CONDITIONS,
         MAX_USES,
         COOLDOWN
@@ -51,11 +50,9 @@ public final class PillService {
         return check(user.level().registryAccess(), user, stack);
     }
 
-    // Conditions, the use cap and the cooldown. An explicit missing binding refuses and does not fall through.
-    // Quality is QualityService's gate, not a second copy of that lookup.
+    // Conditions, the use cap and the cooldown. Quality is QualityService's gate, not a second copy of that lookup.
     public static Optional<Failure> check(Provider access, LivingEntity user, ItemStack stack) {
         PillResolution resolution = ItemBindingService.resolvePill(access, stack);
-        if (resolution.unbound()) return Optional.of(Failure.UNBOUND);
         Pill definition = resolution.effects().orElse(null);
         if (definition == null) return Optional.empty();
         FormulaContext context = FormulaContext.of(user);
@@ -65,7 +62,6 @@ public final class PillService {
     }
 
     public static Optional<Failure> usageFailure(LivingEntity user, Holder<PillBinding> pill) {
-        if (!pill.isBound()) return Optional.of(Failure.UNBOUND);
         if (pill.value().maxUses().filter(max -> uses(user, pill) >= max).isPresent())
             return Optional.of(Failure.MAX_USES);
         if (onCooldown(user, pill)) return Optional.of(Failure.COOLDOWN);
@@ -88,7 +84,7 @@ public final class PillService {
     // One successful consume. The caller has already passed the Start/Tick gate; this does not re-check it.
     // Cooldown and the cap are read from the holder, so an effect overlay cannot shorten or erase them.
     public static void registerUse(LivingEntity entity, Holder<PillBinding> pill) {
-        if (entity.level().isClientSide() || !pill.isBound()) return;
+        if (entity.level().isClientSide()) return;
         PillUsageAttachment usage = entity.getData(MxtAttachments.PILL_USAGE);
         int cooldown = cooldownTicks(pill.value(), entity);
         long until = cooldown == 0 ? 0L : overworldGameTime(entity) + cooldown;

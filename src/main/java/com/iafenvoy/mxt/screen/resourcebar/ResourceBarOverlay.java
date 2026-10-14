@@ -57,7 +57,7 @@ public final class ResourceBarOverlay {
         Registry<Resource> resources = player.level().registryAccess().lookupOrThrow(MxtResourceKeys.RESOURCE);
         List<ResourceBarRenderState> collected = new ArrayList<>();
         collectResources(collected, resources, player, Layout.SELF_HUD, anchor);
-        collectAuraHud(collected, player, anchor);
+        collectAuraHud(collected, anchor);
         return stack(sort(collected));
     }
 
@@ -123,10 +123,9 @@ public final class ResourceBarOverlay {
         }
     }
 
-    private static void collectAuraHud(List<ResourceBarRenderState> result, Player player, Anchor anchor) {
+    private static void collectAuraHud(List<ResourceBarRenderState> result, Anchor anchor) {
         Snapshot snapshot = AuraClientState.current();
-        ClientHud hud = player.level().registryAccess().lookupOrThrow(MxtResourceKeys.AURA_ZONE)
-                .getOptional(snapshot.source()).map(AuraZone::clientHud).orElse(ClientHud.NONE);
+        ClientHud hud = snapshot.source().map(Holder::value).map(AuraZone::clientHud).orElse(ClientHud.NONE);
         hud.storedAura().ifPresent(bar -> addAuraEntry(result, "stored_aura", 0, bar, snapshot.actualConcentration(),
                 resolvedMaximum(snapshot.actualMaximum(), bar.maximum()), anchor));
         hud.sensedConcentration().ifPresent(bar -> addAuraEntry(result, "sensed_concentration", 1, bar,

@@ -6,7 +6,6 @@ import com.iafenvoy.mxt.data.storage.DataStorageCollector;
 import com.iafenvoy.mxt.data.storage.builtin.CooldownDataStorage;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.artifact.FlightService;
-import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.iafenvoy.mxt.util.formula.number.Constant;
 import com.mojang.serialization.Codec;
@@ -62,7 +61,7 @@ public record FlightControlAbilityType(Hand hand, NumberProvider speedMultiplier
     public Optional<Boolean> state(ToggleContext context) {
         FlightAttachment data = context.holder().getExistingData(MxtAttachments.FLIGHT).orElse(null);
         if (data == null || !data.active()) return Optional.of(false);
-        return Optional.of(data.archetype().filter(skill -> skill.is(HolderHelper.id(context.ability()))).isPresent());
+        return Optional.of(data.archetype().filter(skill -> skill.is(context.ability())).isPresent());
     }
 
     // Landing is free: whatever the flight cost was paid per tick while it lasted, and charging a price for coming

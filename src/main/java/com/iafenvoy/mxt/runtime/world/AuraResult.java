@@ -1,11 +1,11 @@
 package com.iafenvoy.mxt.runtime.world;
 
 import com.iafenvoy.mxt.data.aura.Aura;
+import com.iafenvoy.mxt.data.aura.AuraZone;
 import com.iafenvoy.mxt.data.aura.AuraZone.Distribution;
 import com.iafenvoy.mxt.data.aura.AuraZone.Rules;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
 import net.minecraft.core.Holder;
-import net.minecraft.resources.Identifier;
 
 import java.util.Map;
 
@@ -14,10 +14,21 @@ import java.util.Map;
  * {@link #aura} is the whole answer to "which auras is this place made of", so a place can never name an aura
  * it does not hold.
  */
-public record AuraResult(Map<Holder<Aura>, AuraPool> aura,
-                         Rules rules, double elementFitBonus,
+public record AuraResult(Map<Holder<Aura>, AuraPool> aura, Rules rules, double elementFitBonus,
                          double elementConflictPenalty, EntityCondition cultivateCondition, Distribution distribution,
-                         Identifier source, SourceKind sourceKind) {
+                         Holder<AuraZone> source, SourceKind sourceKind) {
+    public AuraResult(Map<Holder<Aura>, AuraPool> aura, AuraService.Resolved resolved) {
+        this(aura, resolved.zone().value(), resolved);
+    }
+
+    public AuraResult(Map<Holder<Aura>, AuraPool> aura, AuraZone zone, AuraService.Resolved resolved) {
+        this(aura, zone.rules(), zone.elementFitBonus(), zone.elementConflictPenalty(), zone.cultivateCondition(), zone.distribution(), resolved.zone(), resolved.kind());
+    }
+
+    public AuraResult copy(Map<Holder<Aura>, AuraPool> aura) {
+        return new AuraResult(aura, this.rules, this.elementFitBonus, this.elementConflictPenalty, this.cultivateCondition, this.distribution, this.source, this.sourceKind);
+    }
+
     public enum SourceKind {BIOME, DIMENSION, CUSTOM, FORMATION, CHUNK}
 
     public double concentration() {

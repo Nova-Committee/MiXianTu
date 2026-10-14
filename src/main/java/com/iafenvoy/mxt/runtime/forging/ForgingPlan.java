@@ -2,12 +2,10 @@ package com.iafenvoy.mxt.runtime.forging;
 
 import com.iafenvoy.mxt.data.forging.ForgingBlueprint;
 import com.iafenvoy.mxt.data.forging.ForgingMethod;
-import com.iafenvoy.mxt.util.HolderHelper;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
 import net.minecraft.core.RegistryAccess;
-import net.minecraft.resources.Identifier;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -15,23 +13,26 @@ import java.util.*;
 import java.util.Map.Entry;
 
 /**
- * Already-resolved forging plan used by sessions and optimal-step search.
+ * Already-resolved forging plan used by sessions and optimal-step search. Every method is the definition's own
+ * holder, which is what a plan is a snapshot of.
  */
-public record ForgingPlan(int meterMin, int meterMax, int targetMin, int targetMax, List<Identifier> finishPattern,
-                          int requiredSuffixSteps, Map<Identifier, Integer> deltas, int maxSteps, int optimalSteps) {
+public record ForgingPlan(int meterMin, int meterMax, int targetMin, int targetMax,
+                          List<Holder<ForgingMethod>> finishPattern,
+                          int requiredSuffixSteps, Map<Holder<ForgingMethod>, Integer> deltas, int maxSteps,
+                          int optimalSteps) {
     public static final Codec<ForgingPlan> CODEC = RecordCodecBuilder.create(i -> i.group(
             Codec.INT.fieldOf("meter_min").forGetter(ForgingPlan::meterMin),
             Codec.INT.fieldOf("meter_max").forGetter(ForgingPlan::meterMax),
             Codec.INT.fieldOf("target_min").forGetter(ForgingPlan::targetMin),
             Codec.INT.fieldOf("target_max").forGetter(ForgingPlan::targetMax),
-            Identifier.CODEC.listOf().fieldOf("finish_pattern").forGetter(ForgingPlan::finishPattern),
+            ForgingMethod.CODEC.listOf().fieldOf("finish_pattern").forGetter(ForgingPlan::finishPattern),
             Codec.intRange(0, 6).fieldOf("required_suffix_steps").forGetter(ForgingPlan::requiredSuffixSteps),
-            Codec.unboundedMap(Identifier.CODEC, Codec.INT).fieldOf("deltas").forGetter(ForgingPlan::deltas),
+            Codec.unboundedMap(ForgingMethod.CODEC, Codec.INT).fieldOf("deltas").forGetter(ForgingPlan::deltas),
             Codec.INT.fieldOf("max_steps").forGetter(ForgingPlan::maxSteps)
     ).apply(i, ForgingPlan::new));
 
-    public ForgingPlan(int meterMin, int meterMax, int targetMin, int targetMax, List<Identifier> finishPattern,
-                       int requiredSuffixSteps, Map<Identifier, Integer> deltas, int maxSteps) {
+    public ForgingPlan(int meterMin, int meterMax, int targetMin, int targetMax, List<Holder<ForgingMethod>> finishPattern,
+                       int requiredSuffixSteps, Map<Holder<ForgingMethod>, Integer> deltas, int maxSteps) {
         this(meterMin, meterMax, targetMin, targetMax, finishPattern, requiredSuffixSteps, deltas, maxSteps,
                 findOptimalSteps(meterMin, meterMax, targetMin, targetMax, finishPattern, requiredSuffixSteps, deltas));
     }
@@ -39,18 +40,17 @@ public record ForgingPlan(int meterMin, int meterMax, int targetMin, int targetM
     // Built from a definition once per session: the methods are resolved here, so a later datapack reload cannot
     // change the plan a session locked in. The definition names no type of this package.
     public static ForgingPlan of(ForgingBlueprint blueprint, RegistryAccess registries) {
-        Map<Identifier, Integer> deltas = new LinkedHashMap<>();
+        Map<Holder<ForgingMethod>, Integer> deltas = new LinkedHashMap<>();
         for (Holder<ForgingMethod> method : blueprint.resolvedMethods(registries))
-            deltas.put(HolderHelper.id(method), method.value().valueDelta());
+            deltas.put(method, method.value().valueDelta());
         int planMaxSteps = blueprint.hasStepLimit() ? blueprint.maxSteps() : Integer.MAX_VALUE;
         return new ForgingPlan(blueprint.meter().min(), blueprint.meter().max(),
                 blueprint.meter().targetMin(), blueprint.meter().targetMax(),
-                blueprint.finishPattern().steps().stream().map(HolderHelper::id).toList(),
-                blueprint.finishPattern().requiredSuffixSteps(), deltas, planMaxSteps);
+                List.copyOf(blueprint.finishPattern().steps()), blueprint.finishPattern().requiredSuffixSteps(), deltas, planMaxSteps);
     }
 
-    public ForgingPlan(int meterMin, int meterMax, int targetMin, int targetMax, List<Identifier> finishPattern,
-                       int requiredSuffixSteps, Map<Identifier, Integer> deltas) {
+    public ForgingPlan(int meterMin, int meterMax, int targetMin, int targetMax, List<Holder<ForgingMethod>> finishPattern,
+                       int requiredSuffixSteps, Map<Holder<ForgingMethod>, Integer> deltas) {
         this(meterMin, meterMax, targetMin, targetMax, finishPattern, requiredSuffixSteps, deltas, Integer.MAX_VALUE);
     }
 
@@ -84,12 +84,12 @@ public record ForgingPlan(int meterMin, int meterMax, int targetMin, int targetM
 
     // An unlisted method is an answer, not an accident; {@link #delta} is for callers entitled to treat the
     // missing entry as a contract violation.
-    public @Nullable Integer deltaIfAllowed(@NotNull Identifier method) {
+    public @Nullable Integer deltaIfAllowed(@NotNull Holder<ForgingMethod> method) {
         return this.deltas.get(method);
     }
 
     // Throws when the plan does not allow the method; see deltaIfAllowed for the non-throwing question.
-    public int delta(@NotNull Identifier method) {
+    public int delta(@NotNull Holder<ForgingMethod> method) {
         Integer value = this.deltaIfAllowed(method);
         if (value == null) {
             throw new IllegalArgumentException("Method is not allowed: " + method);
@@ -98,7 +98,7 @@ public record ForgingPlan(int meterMin, int meterMax, int targetMin, int targetM
     }
 
     private static int findOptimalSteps(int meterMin, int meterMax, int targetMin, int targetMax,
-                                        List<Identifier> pattern, int requiredSteps, Map<Identifier, Integer> deltas) {
+                                        List<Holder<ForgingMethod>> pattern, int requiredSteps, Map<Holder<ForgingMethod>, Integer> deltas) {
         ArrayDeque<SearchState> queue = new ArrayDeque<>();
         Set<SearchState> visited = new HashSet<>();
         Map<SearchState, Integer> distances = new HashMap<>();
@@ -111,7 +111,7 @@ public record ForgingPlan(int meterMin, int meterMax, int targetMin, int targetM
             int steps = distances.get(state);
             if (state.value >= targetMin && state.value <= targetMax && suffixMatches(state.history, pattern, requiredSteps))
                 return steps;
-            for (Entry<Identifier, Integer> entry : deltas.entrySet()) {
+            for (Entry<Holder<ForgingMethod>, Integer> entry : deltas.entrySet()) {
                 int nextValue = state.value + entry.getValue();
                 if (nextValue < meterMin || nextValue > meterMax) continue;
                 SearchState next = new SearchState(nextValue, append(state.history, entry.getKey()));
@@ -126,7 +126,7 @@ public record ForgingPlan(int meterMin, int meterMax, int targetMin, int targetM
 
     // Whether the last requiredSteps entries of history equal the last requiredSteps of the six-long pattern.
     // One definition, because the optimal-step search and ForgingSession must agree on when a session is done.
-    public static boolean suffixMatches(List<Identifier> history, List<Identifier> pattern, int requiredSteps) {
+    public static boolean suffixMatches(List<Holder<ForgingMethod>> history, List<Holder<ForgingMethod>> pattern, int requiredSteps) {
         if (requiredSteps == 0) return true;
         if (history.size() < requiredSteps) return false;
         for (int index = 0; index < requiredSteps; index++) {
@@ -136,14 +136,14 @@ public record ForgingPlan(int meterMin, int meterMax, int targetMin, int targetM
         return true;
     }
 
-    private static List<Identifier> append(List<Identifier> history, Identifier method) {
-        ArrayList<Identifier> result = new ArrayList<>(Math.min(6, history.size() + 1));
+    private static List<Holder<ForgingMethod>> append(List<Holder<ForgingMethod>> history, Holder<ForgingMethod> method) {
+        ArrayList<Holder<ForgingMethod>> result = new ArrayList<>(Math.min(6, history.size() + 1));
         result.addAll(history.subList(Math.max(0, history.size() - 5), history.size()));
         result.add(method);
         return result;
     }
 
-    private record SearchState(int value, List<Identifier> history) {
+    private record SearchState(int value, List<Holder<ForgingMethod>> history) {
         SearchState {
             history = new LinkedList<>(history);
         }

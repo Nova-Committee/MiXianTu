@@ -5,8 +5,6 @@ import com.iafenvoy.mxt.data.secretrealm.SecretRealm;
 import com.iafenvoy.mxt.data.secretrealm.builtin.ExistingGeneration;
 import com.iafenvoy.mxt.event.SecretRealmEvent.*;
 import com.iafenvoy.mxt.registry.MxtAttachments;
-import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
-import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.world.SecretRealmEntryLocator.Arrival;
 import com.iafenvoy.mxt.runtime.world.SecretRealmEntryLocator.Landing;
 import com.iafenvoy.mxt.util.HolderHelper;
@@ -38,10 +36,9 @@ public final class SecretRealmService {
     }
 
     public static Result enter(LivingEntity traveller, MinecraftServer server, Holder<SecretRealm> definition) {
-        Identifier id = HolderHelper.id(definition);
-        // The token can outlive the definition it names, so the current registry is the last word on whether it
-        // still exists.
-        if (MxtDatapackRegistries.holder(server.registryAccess(), MxtResourceKeys.SECRET_REALM, id).isEmpty())
+        // A token can outlive the definition it names, so the current registry is the last word on whether this realm
+        // still exists. Kept here rather than at the token, because every caller has to be held to it.
+        if (definition.unwrapKey().flatMap(server.overworld().registryAccess()::get).isEmpty())
             return Result.rejected(Failure.DISABLED);
         SecretRealmTravelAttachment travel = traveller.getData(MxtAttachments.SECRET_REALM_TRAVEL);
         if (travel.active()) return Result.rejected(Failure.ALREADY_TRAVELLING);

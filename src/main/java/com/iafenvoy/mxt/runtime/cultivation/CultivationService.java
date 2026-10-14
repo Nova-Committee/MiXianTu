@@ -14,7 +14,6 @@ import com.iafenvoy.mxt.event.CultivationBreakEvent.Post;
 import com.iafenvoy.mxt.event.CultivationBreakEvent.Pre;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtCriteriaTriggers;
-import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.DatapackCache;
 import com.iafenvoy.mxt.runtime.ability.AbilityEventBridge;
@@ -25,7 +24,6 @@ import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import net.minecraft.core.Holder;
-import net.minecraft.core.Holder.Reference;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -36,6 +34,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.function.BooleanSupplier;
 
@@ -52,15 +51,7 @@ public final class CultivationService {
     private CultivationService() {
     }
 
-    public static BreakthroughResult attempt(LivingEntity entity, CultivationAttachment spirit, ResourceHolderAttachment resources,
-                                             Identifier auraId, FormulaContext context, BooleanSupplier conditionsMet) {
-        Reference<Aura> aura = MxtDatapackRegistries.holder(entity.level().registryAccess(), MxtResourceKeys.AURA, auraId).orElse(null);
-        return aura == null ? BreakthroughResult.rejected(Failure.NO_NEXT_REALM, null)
-                : attempt(entity, spirit, resources, aura, context, conditionsMet);
-    }
-
-    public static BreakthroughResult attempt(LivingEntity entity, CultivationAttachment spirit, ResourceHolderAttachment resources,
-                                             Holder<Aura> aura, FormulaContext context, BooleanSupplier conditionsMet) {
+    public static BreakthroughResult attempt(LivingEntity entity, CultivationAttachment spirit, ResourceHolderAttachment resources, Holder<Aura> aura, FormulaContext context, BooleanSupplier conditionsMet) {
         if (entity.level().isClientSide()) return BreakthroughResult.rejected(Failure.SERVER_ONLY, null);
         Holder<RealmStage> target = next(aura, spirit);
         if (target == null) return BreakthroughResult.rejected(Failure.NO_NEXT_REALM, null);
@@ -71,9 +62,10 @@ public final class CultivationService {
     private static BreakthroughResult attempt(LivingEntity entity, CultivationAttachment spirit, ResourceHolderAttachment resources,
                                               Holder<Aura> aura, Holder<RealmStage> targetHolder,
                                               FormulaContext context, BooleanSupplier conditionsMet) {
+        //FIXME
         Identifier targetId = HolderHelper.id(targetHolder);
         RealmStage target = targetHolder.value();
-        if (!HolderHelper.id(target.aura()).equals(HolderHelper.id(aura)))
+        if (!target.aura().is(aura))
             return BreakthroughResult.rejected(Failure.WRONG_AURA, null);
         FormulaContext resourceContext = ResourceService.formulaContext(entity, aura.value().resource(), context);
         Threshold threshold = threshold(targetHolder, resourceContext);
@@ -87,7 +79,7 @@ public final class CultivationService {
         boolean configuredConditions = target.breakthrough().test(entity, context);
         boolean requiredAbilities = RegistryCodecs.resolve(target.abilityRequirements(),
                         entity.level().registryAccess(), MxtResourceKeys.ABILITY)
-                .allMatch(ability -> entity.getData(MxtAttachments.ABILITY_HOLDER).has(HolderHelper.id(ability)));
+                .allMatch(ability -> entity.getData(MxtAttachments.ABILITY_HOLDER).has(ability));
         BreakthroughResult result = commit(entity, spirit, resources, aura, targetHolder, resourceContext,
                 () -> configuredConditions && requiredAbilities && conditionsMet.getAsBoolean(), NeoForge.EVENT_BUS);
         if (result.advanced()) {
@@ -141,8 +133,7 @@ public final class CultivationService {
         if (refusal.isPresent()) return BreakthroughResult.rejected(failure(refusal.get()), null);
         Pre event = new Pre(spirit, resources, targetHolder, context, minimum, plan.resources());
         if (eventBus.post(event).isCanceled()) return BreakthroughResult.rejected(Failure.CANCELLED, null);
-        plan.resources().clear();
-        plan.resources().putAll(event.costs());
+        plan.reprice(event.costs());
         CostPayment.Result payment = plan.commit();
         if (!payment.paid())
             return BreakthroughResult.rejected(failure(payment.failure()), payment.failedResource());
@@ -171,10 +162,7 @@ public final class CultivationService {
             // not, because advancing along a line nobody validated is what the refusal is about.
             return DatapackCache.get().nextRealm(current).orElse(null);
         }
-        Identifier cultivationId = HolderHelper.id(aura);
-        return aura.value().firstRealm()
-                .filter(value -> HolderHelper.id(value.value().aura()).equals(cultivationId))
-                .orElse(null);
+        return aura.value().firstRealm().filter(value -> Objects.equals(value.value().aura(), aura)).orElse(null);
     }
 
     public static double addProgress(LivingEntity entity, Holder<Aura> aura, double amount, FormulaContext context) {

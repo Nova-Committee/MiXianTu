@@ -103,9 +103,10 @@ public final class MxtKubeJsApi {
      */
     public static boolean grantAbility(@NotNull Entity entity, Identifier id, Identifier source) {
         if (entity.level().isClientSide()) return false;
-        if (Abilities.resolve(entity.level().registryAccess(), id).isEmpty()) return false;
+        Holder<Ability> ability = Abilities.resolve(entity.level().registryAccess(), id).orElse(null);
+        if (ability == null) return false;
         AbilityAttachment attachment = entity.getData(MxtAttachments.ABILITY_HOLDER);
-        return changed(entity, attachment.grant(id, source));
+        return changed(entity, attachment.grant(ability, source));
     }
 
     /**
@@ -115,13 +116,15 @@ public final class MxtKubeJsApi {
      */
     public static boolean revokeAbility(@NotNull Entity entity, Identifier id, Identifier source) {
         if (entity.level().isClientSide()) return false;
-        if (findAbility(entity, id).isEmpty()) return false;
+        Holder<Ability> ability = findAbility(entity, id).orElse(null);
+        if (ability == null) return false;
         AbilityAttachment attachment = entity.getData(MxtAttachments.ABILITY_HOLDER);
-        return changed(entity, attachment.revoke(id, source));
+        return changed(entity, attachment.revoke(ability, source));
     }
 
     /**
-     * Read from the attachment, not the registry: a definition the pack no longer provides still answers.
+     * Read from the attachment's ledger, not the registry: the lookup asks the keys it holds, which are the
+     * abilities themselves.
      */
     public static boolean hasAbility(@NotNull Entity entity, Identifier id) {
         return findAbility(entity, id).isPresent();
@@ -131,7 +134,7 @@ public final class MxtKubeJsApi {
      * Every ability the entity holds, sorted; read from the attachment, as {@link #hasAbility}.
      */
     public static List<String> abilities(@NotNull Entity entity) {
-        return abilityKeys(entity).map(Identifier::toString).sorted().toList();
+        return abilityKeys(entity).map(HolderHelper::id).map(Identifier::toString).sorted().toList();
     }
 
     /**
@@ -152,13 +155,13 @@ public final class MxtKubeJsApi {
     }
 
     // The ledger is the only source of truth a lookup uses; a client script reads nothing.
-    private static Stream<Identifier> abilityKeys(Entity entity) {
+    private static Stream<Holder<Ability>> abilityKeys(Entity entity) {
         if (entity.level().isClientSide()) return Stream.empty();
         return entity.getData(MxtAttachments.ABILITY_HOLDER).sources().keys().stream();
     }
 
-    private static Optional<Identifier> findAbility(Entity entity, Identifier id) {
-        return abilityKeys(entity).filter(held -> held.equals(id)).findFirst();
+    private static Optional<Holder<Ability>> findAbility(Entity entity, Identifier id) {
+        return abilityKeys(entity).filter(held -> held.is(id)).findFirst();
     }
 
     public static ApplyResult applyCurse(@NotNull Entity target, Identifier id, int stacks, Identifier source, FormulaContext context) {
@@ -233,7 +236,7 @@ public final class MxtKubeJsApi {
     private static Optional<Holder<Curse>> findCurseHolder(Entity target, Identifier id) {
         if (target.level().isClientSide()) return Optional.empty();
         for (Holder<Curse> curse : target.getData(MxtAttachments.CURSE_HOLDER).instances().keySet())
-            if (HolderHelper.id(curse).equals(id)) return Optional.of(curse);
+            if (curse.is(id)) return Optional.of(curse);
         return Optional.empty();
     }
 
@@ -253,7 +256,7 @@ public final class MxtKubeJsApi {
     }
 
     public static boolean hasElement(@NotNull Entity entity, Identifier id) {
-        return Elements.of(entity).stream().anyMatch(element -> HolderHelper.id(element).equals(id));
+        return Elements.of(entity).stream().anyMatch(element -> element.is(id));
     }
 
     /**
@@ -423,7 +426,7 @@ public final class MxtKubeJsApi {
     public static boolean hasTechnique(@NotNull Entity entity, Identifier id) {
         TechniqueAttachment spirit = techniqueState(entity);
         if (spirit == null) return false;
-        return spirit.learnedTechniques().stream().anyMatch(technique -> HolderHelper.id(technique).equals(id));
+        return spirit.learnedTechniques().stream().anyMatch(technique -> technique.is(id));
     }
 
     /**
@@ -505,7 +508,7 @@ public final class MxtKubeJsApi {
         SpiritIdentityAttachment spirit = identity(entity);
         if (spirit == null) return null;
         for (Holder<SpiritRoot> root : spirit.spiritRoots())
-            if (HolderHelper.id(root).equals(id)) return root;
+            if (root.is(id)) return root;
         return null;
     }
 
@@ -513,17 +516,17 @@ public final class MxtKubeJsApi {
         SpiritIdentityAttachment spirit = identity(entity);
         if (spirit == null) return null;
         for (Holder<Physique> physique : spirit.physiques())
-            if (HolderHelper.id(physique).equals(id)) return physique;
+            if (physique.is(id)) return physique;
         return null;
     }
 
     public static BreakthroughResult tryBreakthrough(@NotNull LivingEntity entity, @NotNull Identifier auraId, FormulaContext context) {
         if (entity.level().isClientSide())
             return new BreakthroughResult(false, Failure.SERVER_ONLY, null, Map.of());
-        if (MxtDatapackRegistries.get(entity.level().registryAccess(), MxtResourceKeys.AURA, auraId).isEmpty())
-            return new BreakthroughResult(false, Failure.DISABLED, null, Map.of());
+        Holder<Aura> aura = MxtDatapackRegistries.holder(entity.level().registryAccess(), MxtResourceKeys.AURA, auraId).orElse(null);
+        if (aura == null) return new BreakthroughResult(false, Failure.DISABLED, null, Map.of());
         return CultivationService.attempt(entity, entity.getData(MxtAttachments.CULTIVATION),
-                entity.getData(MxtAttachments.RESOURCE_HOLDER), auraId, context, () -> true);
+                entity.getData(MxtAttachments.RESOURCE_HOLDER), aura, context, () -> true);
     }
 
     /**

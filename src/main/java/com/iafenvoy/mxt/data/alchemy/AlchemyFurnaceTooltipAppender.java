@@ -2,18 +2,13 @@ package com.iafenvoy.mxt.data.alchemy;
 
 import com.iafenvoy.mxt.registry.MxtBlocks;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
-import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
-import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.runtime.alchemy.AlchemyWorkstationService;
 import com.iafenvoy.mxt.util.DefinitionText;
-import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.TooltipText;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item.TooltipContext;
 import net.minecraft.world.item.ItemStack;
@@ -25,7 +20,6 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.common.tooltip.TooltipLocation;
 import net.neoforged.neoforge.event.RegisterTooltipAppendersEvent;
 
-import java.util.Optional;
 import java.util.function.Consumer;
 
 @EventBusSubscriber(Dist.CLIENT)
@@ -40,7 +34,7 @@ public final class AlchemyFurnaceTooltipAppender {
 
     private static void append(ItemStack stack, TooltipContext context, TooltipDisplay display, Player player, TooltipFlag flag, Consumer<Component> builder) {
         if (stack.is(MxtBlocks.ALCHEMY_FURNACE_CASING.get().asItem())) {
-            Holder<AlchemyWallMaterial> material = loadedWall(context.registries(), stack).orElse(null);
+            Holder<AlchemyWallMaterial> material = stack.get(MxtDataComponents.ALCHEMY_WALL_MATERIAL.get());
             if (material == null)
                 builder.accept(Component.translatable("tooltip.mxt.alchemy.no_wall_material").withStyle(ChatFormatting.RED));
             else {
@@ -66,7 +60,10 @@ public final class AlchemyFurnaceTooltipAppender {
         if (!stack.is(MxtBlocks.ALCHEMY_FURNACE.get().asItem())) return;
         Provider registries = context.registries();
         if (registries == null) return;
-        AlchemyWorkstationService.furnaceDefinition(registries, stack).ifPresentOrElse(holder -> {
+        Holder<AlchemyFurnaceDefinition> holder = stack.get(MxtDataComponents.ALCHEMY_FURNACE.get());
+        if (holder == null)
+            builder.accept(Component.translatable("screen.mxt.alchemy.no_furnace").withStyle(ChatFormatting.RED));
+        else {
             AlchemyFurnaceDefinition spec = holder.value();
             builder.accept(DefinitionText.text(holder).withStyle(ChatFormatting.DARK_GREEN));
             builder.accept(Component.translatable("tooltip.mxt.alchemy.slots", spec.mainSlots(), spec.auxiliarySlots(), spec.catalystSlots())
@@ -74,7 +71,7 @@ public final class AlchemyFurnaceTooltipAppender {
             builder.accept(Component.translatable("tooltip.mxt.alchemy.capacity", spec.capacity()).withStyle(ChatFormatting.GRAY));
             spec.maxTemperature().ifPresent(limit -> builder.accept(Component.translatable(
                     "tooltip.mxt.alchemy.furnace_temperature", TooltipText.number(limit)).withStyle(ChatFormatting.GRAY)));
-        }, () -> builder.accept(Component.translatable("screen.mxt.alchemy.no_furnace").withStyle(ChatFormatting.RED)));
+        }
         // The build guide is two long lines; behind Shift they do not push the numbers out of sight.
         if (Minecraft.getInstance().hasShiftDown()) {
             builder.accept(Component.translatable("tooltip.mxt.alchemy.structure").withStyle(ChatFormatting.GRAY));
@@ -82,14 +79,5 @@ public final class AlchemyFurnaceTooltipAppender {
         } else {
             builder.accept(Component.translatable("tooltip.mxt.alchemy.hold_shift").withStyle(ChatFormatting.DARK_GRAY));
         }
-    }
-
-    private static Optional<Holder<AlchemyWallMaterial>> loadedWall(Provider registries, ItemStack stack) {
-        if (registries == null) return Optional.empty();
-        Holder<AlchemyWallMaterial> stored = stack.get(MxtDataComponents.ALCHEMY_WALL_MATERIAL.get());
-        if (stored == null) return Optional.empty();
-        Identifier id = HolderHelper.id(stored);
-        if (id.equals(HolderHelper.EMPTY)) return Optional.empty();
-        return MxtDatapackRegistries.holder(registries, MxtResourceKeys.ALCHEMY_WALL_MATERIAL, id).map(holder -> holder);
     }
 }

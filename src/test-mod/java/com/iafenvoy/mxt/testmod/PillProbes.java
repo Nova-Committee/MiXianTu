@@ -34,7 +34,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.game.ClientboundSetHeldSlotPacket;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.RegistryOps;
-import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
@@ -284,22 +283,9 @@ public final class PillProbes {
                     "file=" + excludedFile + " pill=" + (missingPill ? "absent" : "present"),
                     "file=true pill=absent");
 
-            // Nothing in the pack may name the excluded pill: a definition that did would leave an unbound value in the
-            // registry and the whole load would fail. The guard is exercised with the one shape it is for instead, a
-            // holder that carries the key but no value; it must refuse rather than fall back to another pill.
-            clearLedgers(player);
-            feed(player, 10, 0.0F);
-            player.setItemInHand(InteractionHand.MAIN_HAND,
-                    dosed(MxtItems.PILL.get(), PillComponent.ofPill(unboundPill(player))));
-            ItemBindingService.PillResolution unbound = ItemBindingService.resolvePill(player.registryAccess(), player.getMainHandItem());
-            boolean unboundStarted = begin(player);
-            player.stopUsingItem();
-            ok &= leg(source, "unbound_pill", unbound.unbound() && unbound.effects().isEmpty() && !unboundStarted
-                            && PillService.toxicity(player) == 0.0D && !player.hasData(MxtAttachments.PILL_USAGE),
-                    "unbound=" + unbound.unbound() + " effects=" + unbound.effects().isPresent() + " started=" + unboundStarted
-                            + " reason=" + refusal(player) + " tox=" + PillService.toxicity(player),
-                    "unbound=true effects=false started=false reason=unbound tox=0");
-
+            // There is no leg for a pill whose definition left the pack. The only way that holder can exist is
+            // Holder.Reference.createStandAlone, which no read path produces: a registry lookup yields a bound
+            // reference, and an id the pack does not provide fails decoding instead of arriving unbound.
             clearLedgers(player);
             feed(player, 10, 0.0F);
             long overlayAt = PillService.overworldGameTime(player);
@@ -356,8 +342,8 @@ public final class PillProbes {
                             + " toxicityUses=" + PillService.uses(player, toxicity),
                     "gain=4 twice no bound counter");
 
-            // What the client tint reads off a carrier stack: the colour of the pill it resolves. A dose that resolves
-            // to nothing paints nothing, which the unbound_pill leg above already covers.
+            // What the client tint reads off a carrier stack: the colour of the pill it resolves. A stack that neither
+            // a binding nor its own component names paints nothing.
             Pill painted = ItemBindingService.resolvePill(player.registryAccess(),
                     dosed(MxtItems.PILL.get(), component(player, "{\"pill\":\"mxt_test:toxicity\"}"))).effects().orElse(null);
             ok &= leg(source, "pill_color", painted != null && painted.color() == 0x8F3FA8,
@@ -405,14 +391,6 @@ public final class PillProbes {
 
     private static Holder<Pill> pill(ServerPlayer player, String path) {
         return MxtDatapackRegistries.holder(player.registryAccess(), MxtResourceKeys.PILL, id(path)).orElse(null);
-    }
-
-    // A holder that carries the key but no value: what a reference to a pill the pack no longer provides looks like,
-    // and the one shape the resolution must refuse. No definition may name that excluded pill, since the loader would
-    // then leave an unbound value in the registry and the whole world would fail to load.
-    private static Holder<Pill> unboundPill(ServerPlayer player) {
-        return Holder.Reference.createStandAlone(player.registryAccess().lookupOrThrow(MxtResourceKeys.PILL),
-                ResourceKey.create(MxtResourceKeys.PILL, id("disabled_ref")));
     }
 
     private static Identifier id(String path) {

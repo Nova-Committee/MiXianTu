@@ -89,7 +89,6 @@ public final class ItemPickerManager {
         // the declaration names or the jade slip.
         registerSingle(MxtResourceKeys.TECHNIQUE, (holder, access) -> described(ItemBindingService.techniqueCarrier(access, holder), holder));
         register(MxtResourceKeys.ALCHEMY_FURNACE, (holder, access) -> {
-            if (!holder.isBound()) return List.of();
             ItemStack stack = componentStack(MxtBlocks.ALCHEMY_FURNACE.toStack(), MxtDataComponents.ALCHEMY_FURNACE, holder);
             Component name = DefinitionText.text(holder);
             Component quality = QualityService.find(access, stack)
@@ -202,14 +201,14 @@ public final class ItemPickerManager {
 
     // The pack's own order for a list of tiers first, then everything it did not name; a picker page is exactly
     // such a list, which makes it the consumer of the tooltip-order tag.
+    //FIXME::to global ones
     private static void registerOrderedQualities() {
         PROVIDERS.add(new ItemProvider<>(MxtResourceKeys.ITEM_QUALITY, (provider, filter) -> {
             List<PickerItem> items = new ArrayList<>();
             for (Holder<ItemQuality> holder : QualityService.ordered(provider)) {
-                Identifier id = HolderHelper.idOrNull(holder);
-                if (id == null || !filter.test(id)) continue;
-                items.add(described(MxtItems.IDENTIFICATION_MIRROR.toStack(), holder,
-                        QualityService.displayName(holder)));
+                Identifier id = HolderHelper.id(holder);
+                if (!filter.test(id)) continue;
+                items.add(described(MxtItems.IDENTIFICATION_MIRROR.toStack(), holder, QualityService.displayName(holder)));
             }
             return List.copyOf(items);
         }));

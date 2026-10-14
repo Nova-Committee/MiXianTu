@@ -4,12 +4,10 @@ import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.aura.AuraValue;
 import com.iafenvoy.mxt.data.aura.AuraZone;
 import com.iafenvoy.mxt.data.aura.AuraZone.ClientRender;
-import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.world.AuraClientState;
 import com.iafenvoy.mxt.runtime.world.AuraClientState.Snapshot;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.Holder;
-import net.minecraft.core.Registry;
 import net.minecraft.world.entity.Entity;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -54,9 +52,7 @@ public final class AuraZoneRenderer {
     private static Optional<ResolvedFog> resolve(Entity entity) {
         if (entity == null) return Optional.empty();
         Snapshot snapshot = AuraClientState.current();
-        Registry<AuraZone> zones = entity.level().registryAccess().lookupOrThrow(MxtResourceKeys.AURA_ZONE);
-        return zones.getOptional(snapshot.source()).map(zone -> new ResolvedFog(zone.clientRender(), snapshot.environmentConcentration(),
-                zone.aura().values().stream().mapToDouble(AuraValue::amount).sum(), resolveColor(zone, snapshot)));
+        return snapshot.source().map(Holder::value).map(zone -> new ResolvedFog(zone.clientRender(), snapshot.environmentConcentration(), zone.aura().values().stream().mapToDouble(AuraValue::amount).sum(), resolveColor(zone, snapshot)));
     }
 
     private static int resolveColor(AuraZone zone, Snapshot snapshot) {

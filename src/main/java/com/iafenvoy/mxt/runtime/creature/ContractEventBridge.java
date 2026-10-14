@@ -51,7 +51,7 @@ public final class ContractEventBridge {
         operations.tick(context, behavior);
         // The data action colours the following moment, so it runs while the creature is following and not while
         // the owner has told it to do something else.
-        if (behavior == ContractBehaviors.FOLLOW)
+        if (ContractBehaviors.FOLLOW.equals(behavior))
             type.value().followAction().execute(pet, FormulaContext.of(pet));
     }
 

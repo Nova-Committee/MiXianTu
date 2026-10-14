@@ -6,13 +6,12 @@ import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.cost.builtin.AuraCost;
 import com.iafenvoy.mxt.data.cost.context.CostContext;
 import com.iafenvoy.mxt.data.cost.context.CostFailure;
+import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.world.AuraService;
-import com.iafenvoy.mxt.util.HolderHelper;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup;
-import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.Level;
 
 import java.util.LinkedHashMap;
@@ -31,11 +30,11 @@ import java.util.Optional;
 public final class AuraCostDraft implements CostDraft<AuraCost> {
     private final CostContext context;
     private final Map<Holder<Aura>, Double> auras = new LinkedHashMap<>();
-    private final Map<Identifier, Double> account;
+    private final Map<Holder<Resource>, Double> account;
     private final Map<Holder<Aura>, Integer> taken = new LinkedHashMap<>();
     private final Map<Holder<Aura>, Double> refund = new LinkedHashMap<>();
 
-    public AuraCostDraft(CostContext context, Map<Identifier, Double> account) {
+    public AuraCostDraft(CostContext context, Map<Holder<Resource>, Double> account) {
         this.context = context;
         this.account = account;
     }
@@ -50,7 +49,7 @@ public final class AuraCostDraft implements CostDraft<AuraCost> {
         double value = cost.amount().evaluate(this.context.formula());
         if (!Double.isFinite(value) || value <= 0.0D) return Optional.of(CostFailure.INVALID_AMOUNT);
         if (this.context.auraTarget() == CostContext.AuraTarget.VALUE) {
-            this.account.merge(HolderHelper.id(cost.aura().value().resource()), value, Double::sum);
+            this.account.merge(cost.aura().value().resource(), value, Double::sum);
             return Optional.empty();
         }
         this.auras.merge(cost.aura(), value, Double::sum);

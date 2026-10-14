@@ -4,7 +4,6 @@ import com.iafenvoy.mxt.api.WheelEntryKind;
 import com.iafenvoy.mxt.api.WheelSource;
 import com.iafenvoy.mxt.attachment.AbilityAttachment;
 import com.iafenvoy.mxt.attachment.WheelLayoutAttachment;
-import com.iafenvoy.mxt.data.ability.Abilities;
 import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.Sources;
@@ -40,7 +39,7 @@ public final class WheelSources {
         AbilityAttachment holder = entity.getExistingData(MxtAttachments.ABILITY_HOLDER).orElse(null);
         if (holder == null) return List.of();
         return abilities(entity).stream()
-                .filter(ability -> holder.sources().of(HolderHelper.id(ability)).stream().anyMatch(sources::contains))
+                .filter(ability -> holder.sources().of(ability).stream().anyMatch(sources::contains))
                 .toList();
     }
 
@@ -52,43 +51,42 @@ public final class WheelSources {
         if (holder == null) return List.of();
         LinkedHashSet<Holder<Ability>> found = new LinkedHashSet<>();
         holder.sources().keys().stream()
-                .sorted(Comparator.comparing(Identifier::toString))
-                .forEach(id -> Abilities.resolve(entity.level().registryAccess(), id)
-                        .filter(AbilityActivationService::togglable)
-                        .ifPresent(found::add));
+                .sorted(Comparator.comparing(ability -> HolderHelper.id(ability).toString()))
+                .filter(AbilityActivationService::togglable)
+                .forEach(found::add);
         return List.copyOf(found);
     }
 
     // Where one ability's grant comes from right now; empty once nothing holds it, which is a different answer
     // from "held by something the tooltip cannot name".
-    public static Set<Identifier> sources(LivingEntity entity, Identifier abilityId) {
+    public static Set<Identifier> sources(LivingEntity entity, Holder<Ability> ability) {
         AbilityAttachment holder = entity.getExistingData(MxtAttachments.ABILITY_HOLDER).orElse(null);
-        return holder == null ? Set.of() : holder.sources().of(abilityId);
+        return holder == null ? Set.of() : holder.sources().of(ability);
     }
 
     // True when a hand is the only thing holding it: such a skill belongs on that item's own page, because the
     // hand is whatever is picked up next. A charm in a Curios slot stays with the body and counts as the player's.
     public static boolean handOnly(LivingEntity entity, Holder<Ability> ability) {
-        Set<Identifier> sources = sources(entity, HolderHelper.id(ability));
+        Set<Identifier> sources = sources(entity, ability);
         return !sources.isEmpty() && sources.stream().allMatch(Sources::isEquipment);
     }
 
     // The stack an ability acts on, for one page: the first item the page names that offers it. Empty when the
     // ability came from somewhere else entirely (a book, a command), which an item-side ability reports as
     // NO_CARRIER instead of guessing.
-    public static Optional<ItemStack> carrier(LivingEntity entity, WheelSource source, Identifier abilityId) {
-        return Optional.ofNullable(carriers(entity, source).get(abilityId));
+    public static Optional<ItemStack> carrier(LivingEntity entity, WheelSource source, Holder<Ability> ability) {
+        return Optional.ofNullable(carriers(entity, source).get(ability));
     }
 
     // Every ability this page's equipment offers, mapped to the stack offering it, in one pass over the stacks:
     // resolving a definition walks the artifact registry, so a lookup per ability would repeat that walk for
     // every cell of the page.
-    public static Map<Identifier, ItemStack> carriers(LivingEntity entity, WheelSource source) {
-        Map<Identifier, ItemStack> found = new LinkedHashMap<>();
+    public static Map<Holder<Ability>, ItemStack> carriers(LivingEntity entity, WheelSource source) {
+        Map<Holder<Ability>, ItemStack> found = new LinkedHashMap<>();
         for (ItemStack stack : source.equipment(entity)) {
             if (stack.isEmpty()) continue;
             for (Holder<Ability> ability : ArtifactService.abilities(entity.level().registryAccess(), stack))
-                found.putIfAbsent(HolderHelper.id(ability), stack);
+                found.putIfAbsent(ability, stack);
         }
         return found;
     }
@@ -106,7 +104,7 @@ public final class WheelSources {
                 .flatMap(WheelLayoutAttachment::layout).orElse(WheelLayout.EMPTY);
         for (int sector = 0; sector < WheelLayout.SLOTS; sector++) {
             WheelSlot slot = layout.slot(sector);
-            if (slot.kind() == kind && slot.id().equals(id)) return true;
+            if (slot.kind().is(kind) && slot.id().equals(id)) return true;
         }
         return false;
     }
@@ -114,7 +112,7 @@ public final class WheelSources {
     // Whether a derived page's own grants currently offer that ability, which is the answer every equipment page
     // and the Curios page give.
     static boolean granted(LivingEntity entity, WheelSource source, WheelEntryKind kind, Identifier id) {
-        return kind == WheelEntryKinds.ABILITY
-                && abilities(entity, source).stream().anyMatch(ability -> HolderHelper.id(ability).equals(id));
+        return kind.is(WheelEntryKinds.ABILITY)
+                && abilities(entity, source).stream().anyMatch(ability -> ability.is(id));
     }
 }

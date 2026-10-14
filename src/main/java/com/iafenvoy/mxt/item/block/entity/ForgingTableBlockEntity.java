@@ -2,14 +2,13 @@ package com.iafenvoy.mxt.item.block.entity;
 
 import com.iafenvoy.mxt.data.forging.ForgingBlueprint;
 import com.iafenvoy.mxt.registry.MxtBlockEntities;
-import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
-import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.forging.ForgingSurface;
 import com.iafenvoy.mxt.runtime.forging.ForgingTableState;
 import com.iafenvoy.mxt.runtime.forging.ForgingWorkstationService;
 import com.iafenvoy.mxt.screen.menu.ForgingMenu;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
@@ -27,6 +26,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.ValueInput;
@@ -83,7 +83,7 @@ public final class ForgingTableBlockEntity extends BlockEntity implements Forgin
     // also while the block entity is detached from a level, where no registry answers.
     public ForgingBlueprint selectedBlueprint() {
         return this.level == null ? null
-                : this.forging.blueprint().flatMap(id -> MxtDatapackRegistries.get(this.level.registryAccess(), MxtResourceKeys.FORGING_BLUEPRINT, id)).orElse(null);
+                : this.forging.blueprint().map(Holder::value).orElse(null);
     }
 
     public List<Identifier> selectableBlueprintIds() {
@@ -181,6 +181,15 @@ public final class ForgingTableBlockEntity extends BlockEntity implements Forgin
     }
 
     // ------------------------------------------------------------------ persistence
+
+    // The one moment the loaded state is complete and the block entity can already be written through, which is
+    // where a session whose plan could not be rebuilt gets its materials back - see ForgingTableState's ctor.
+    @Override
+    public void setLevel(@NonNull Level level) {
+        super.setLevel(level);
+        if (!level.isClientSide() && ForgingWorkstationService.returnStrandedMaterials(this))
+            this.forgingChanged();
+    }
 
     @Override
     protected void loadAdditional(@NonNull ValueInput input) {

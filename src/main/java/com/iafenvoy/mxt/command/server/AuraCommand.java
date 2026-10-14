@@ -1,6 +1,5 @@
 package com.iafenvoy.mxt.command.server;
 
-import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.command.ServerCommandManager;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.cultivation.Element;
@@ -20,7 +19,6 @@ import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
-import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import org.jetbrains.annotations.Nullable;
 
@@ -114,12 +112,9 @@ public final class AuraCommand {
     }
 
     private static Component sourceName(AuraResult aura) {
-        return DefinitionText.text(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, switch (aura.sourceKind()) {
-            case BIOME -> "biome";
-            case DIMENSION -> "dimension";
-            case FORMATION -> "formation";
-            case CUSTOM, CHUNK -> "aura_zone";
-        }), aura.source());
+        // No zone covers the position, so there is no definition to name; the source kind still prints beside it.
+        if (aura.source() == null) return Component.translatable("command.mxt.aura.query.empty");
+        return DefinitionText.text(aura.source());
     }
 
     private static String auraNumber(double value) {

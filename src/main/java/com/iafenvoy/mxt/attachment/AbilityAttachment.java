@@ -15,22 +15,25 @@ import java.util.*;
 
 /**
  * Ability grants are tracked by source, so removing one source cannot remove another source's ability. The state a
- * granted ability keeps lives here too, in a {@link DataStorageHolder} addressed by the ability's id: the values
- * belong to this attachment, so they are saved and synced with it. Revoking the last source drops that state with it
- * - the cooldown excepted, which keeps running so that putting the item back cannot buy the press again - so a
- * re-granted ability does not come back with the charges it had before.
+ * granted ability keeps lives here too, in a {@link DataStorageHolder} addressed by the ability's own holder: the
+ * values belong to this attachment, so they are saved and synced with it. Revoking the last source drops that state
+ * with it - the cooldown excepted, which keeps running so that putting the item back cannot buy the press again - so
+ * a re-granted ability does not come back with the charges it had before.
  *
- * <p>Grants and stored state both address an ability by id and keep an id that no longer resolves rather than
- * dropping it, so revoking a definition that was deleted still takes it off. The channelled ability is the one
- * running right now, so it is kept as a holder instead: a definition that was deleted stops the channel on load.
+ * <p>Grants and stored state are both addressed by the ability's holder, because that is what an ability is: both
+ * name one entry of {@code mxt:ability} and nothing else does. A definition that leaves the pack is therefore
+ * dropped at load (one logged line) rather than kept, which is the answer every other holder-keyed index gives. What
+ * is <em>not</em> a holder is the source a grant came from - {@code mxt:grant/...} is written by the systems that
+ * grant, not by a registry - so the ledger's values stay ids; the channelled ability is a holder for the same reason
+ * everything else here is.
  */
 public final class AbilityAttachment extends AbstractChangeTrackable {
     public static final MapCodec<AbilityAttachment> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
-            SourceLedger.codec(Identifier.CODEC).lenientOptionalFieldOf("sources", new SourceLedger<>()).forGetter(AbilityAttachment::sources),
+            SourceLedger.codec(Ability.CODEC).lenientOptionalFieldOf("sources", new SourceLedger<>()).forGetter(AbilityAttachment::sources),
             Ability.CODEC.lenientOptionalFieldOf("channelled_ability").forGetter(AbilityAttachment::channelledAbility),
             DataStorageHolder.CODEC.lenientOptionalFieldOf("storage").forGetter(attachment -> Optional.of(attachment.storage))
     ).apply(i, AbilityAttachment::new));
-    private final SourceLedger<Identifier> sources;
+    private final SourceLedger<Holder<Ability>> sources;
     private final DataStorageHolder storage;
     private Optional<Holder<Ability>> channelledAbility;
 
@@ -38,13 +41,13 @@ public final class AbilityAttachment extends AbstractChangeTrackable {
         this(new SourceLedger<>(), Optional.empty(), Optional.empty());
     }
 
-    private AbilityAttachment(SourceLedger<Identifier> sources, Optional<Holder<Ability>> channelledAbility, Optional<DataStorageHolder> storage) {
+    private AbilityAttachment(SourceLedger<Holder<Ability>> sources, Optional<Holder<Ability>> channelledAbility, Optional<DataStorageHolder> storage) {
         this.sources = sources.copy();
         this.channelledAbility = channelledAbility;
         this.storage = storage.orElseGet(DataStorageHolder::new);
     }
 
-    public SourceLedger<Identifier> sources() {
+    public SourceLedger<Holder<Ability>> sources() {
         return this.sources;
     }
 
@@ -56,17 +59,17 @@ public final class AbilityAttachment extends AbstractChangeTrackable {
         return this.channelledAbility;
     }
 
-    public boolean has(Identifier ability) {
+    public boolean has(Holder<Ability> ability) {
         return this.sources.holds(ability);
     }
 
-    public void setSources(Identifier ability, List<Identifier> values) {
+    public void setSources(Holder<Ability> ability, List<Identifier> values) {
         this.sources.drop(ability);
         for (Identifier value : values) this.sources.grant(ability, value);
         this.markDirty();
     }
 
-    public boolean grant(Identifier ability, Identifier source) {
+    public boolean grant(Holder<Ability> ability, Identifier source) {
         if (!this.sources.grant(ability, source)) return false;
         this.markDirty();
         return true;
@@ -74,7 +77,7 @@ public final class AbilityAttachment extends AbstractChangeTrackable {
 
     // When the revoked source was the last one, the state the ability owned goes with it, except the cooldown: a
     // weapon that leaves the hand must not hand its skill back ready.
-    public boolean revoke(Identifier ability, Identifier source) {
+    public boolean revoke(Holder<Ability> ability, Identifier source) {
         if (!this.sources.revoke(ability, source)) return false;
         if (!this.sources.holds(ability)) this.storage.clearExcept(ability, CooldownDataStorage.class);
         this.markDirty();
@@ -83,10 +86,10 @@ public final class AbilityAttachment extends AbstractChangeTrackable {
 
     // What the source no longer declares is released and what it declares and does not hold yet is granted; an
     // ability that lost its last source drops its state here too, so this path cleans up exactly like revoke.
-    public boolean reconcileSource(Identifier source, Collection<Identifier> desiredAbilities) {
-        Set<Identifier> released = new LinkedHashSet<>();
+    public boolean reconcileSource(Identifier source, Collection<Holder<Ability>> desiredAbilities) {
+        Set<Holder<Ability>> released = new LinkedHashSet<>();
         if (!this.sources.reconcile(source, desiredAbilities, released)) return false;
-        for (Identifier ability : released)
+        for (Holder<Ability> ability : released)
             if (!this.sources.holds(ability)) this.storage.clearExcept(ability, CooldownDataStorage.class);
         this.markDirty();
         return true;

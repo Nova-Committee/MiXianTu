@@ -20,6 +20,7 @@ import net.neoforged.neoforge.event.entity.living.LivingEntityUseItemEvent.Tick;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent.RightClickItem;
 
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Drives a hold end to end for every module that declares one: arms the use cycle, answers what vanilla asks
@@ -129,13 +130,15 @@ public final class HoldService {
 
     // An item's own component - food, a potion - is not ours, and is left exactly as found: reading it is what
     // distinguishes the two, since nothing on the stack records who wrote it. The duration is deliberately not
-    // compared: a declaration may size the component from the stack, whose count can change mid-read.
+    // compared: a declaration may size the component from the stack, whose count can change mid-read. The sound is
+    // compared as a holder, not by its value: a declaration may name an inline definition, which decodes to a holder
+    // with no registry key, so the identity of the written instance is the only thing there is to compare.
     private static boolean ours(ItemStack stack, Provider registries, HoldBinding hold) {
         Consumable component = stack.get(DataComponents.CONSUMABLE);
         if (component == null) return false;
         return !component.hasConsumeParticles() && component.onConsumeEffects().isEmpty()
                 && component.animation() == hold.holdAnimation(registries, stack)
-                && (component.sound().value() == SILENT_SOUND.value() || component.sound().value() == hold.holdSound(registries, stack).value());
+                && (Objects.equals(component.sound(), SILENT_SOUND) || Objects.equals(component.sound(), hold.holdSound(registries, stack)));
     }
 
     // The component counts in seconds and truncates back to ticks, so a plain division lands a tick short on some

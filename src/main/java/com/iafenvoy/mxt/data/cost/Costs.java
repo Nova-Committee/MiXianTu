@@ -4,10 +4,10 @@ import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.cost.builtin.AuraCost;
 import com.iafenvoy.mxt.data.cost.builtin.ResourceCost;
 import com.iafenvoy.mxt.data.cost.context.CostContext;
+import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.mojang.serialization.DataResult;
 import net.minecraft.core.Holder;
-import net.minecraft.resources.Identifier;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
@@ -26,12 +26,12 @@ public final class Costs {
      * not depend on order.
      */
     public static DataResult<List<Cost>> validate(List<Cost> costs) {
-        Set<Identifier> resources = new HashSet<>();
-        Set<Identifier> auras = new HashSet<>();
+        Set<Holder<Resource>> resources = new HashSet<>();
+        Set<Holder<Aura>> auras = new HashSet<>();
         for (Cost cost : costs) {
-            if (cost instanceof ResourceCost resource && !resources.add(resource.id()))
-                return DataResult.error(() -> "Duplicate resource cost " + resource.id());
-            if (cost instanceof AuraCost aura && !auras.add(HolderHelper.id(aura.aura())))
+            if (cost instanceof ResourceCost resource && !resources.add(resource.resource()))
+                return DataResult.error(() -> "Duplicate resource cost " + HolderHelper.id(resource.resource()));
+            if (cost instanceof AuraCost aura && !auras.add(aura.aura()))
                 return DataResult.error(() -> "Duplicate aura cost " + HolderHelper.id(aura.aura()));
         }
         return DataResult.success(costs);

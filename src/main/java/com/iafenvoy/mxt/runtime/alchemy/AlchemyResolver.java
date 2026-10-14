@@ -7,12 +7,10 @@ import com.iafenvoy.mxt.recipe.AlchemyRecipeInput;
 import com.iafenvoy.mxt.recipe.AlchemyRecipeInput.Slot;
 import com.iafenvoy.mxt.recipe.AlchemyRole;
 import com.iafenvoy.mxt.runtime.alchemy.SpiritHerbService.HerbPotency;
-import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup.Provider;
-import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Recipe;
@@ -34,8 +32,8 @@ public final class AlchemyResolver {
     }
 
     public static AlchemyMixture mixture(Provider access, List<Slot> slots, FormulaContext context) {
-        Map<Identifier, Double> main = new LinkedHashMap<>();
-        Map<Identifier, Double> auxiliary = new LinkedHashMap<>();
+        Map<Holder<MedicinalProperty>, Double> main = new LinkedHashMap<>();
+        Map<Holder<MedicinalProperty>, Double> auxiliary = new LinkedHashMap<>();
         double catalyst = 0.0D;
         double weight = 0.0D;
         double signed = 0.0D;
@@ -65,14 +63,14 @@ public final class AlchemyResolver {
     }
 
     public static Evaluated evaluate(AlchemyRecipe recipe, FormulaContext context) {
-        Map<Identifier, Double> main = numbers(recipe.mainRequirements(), context);
-        Map<Identifier, Double> auxiliary = numbers(recipe.auxiliaryRequirements(), context);
+        Map<Holder<MedicinalProperty>, Double> main = numbers(recipe.mainRequirements(), context);
+        Map<Holder<MedicinalProperty>, Double> auxiliary = numbers(recipe.auxiliaryRequirements(), context);
         Double catalyst = positive(recipe.catalystRequirement(), context);
         Double balance = unit(recipe.balanceTolerance(), context);
         Double target = nonNegative(recipe.targetTemperature(), context);
         Double tolerance = nonNegative(recipe.temperatureTolerance(), context);
         Double duration = positive(recipe.duration(), context);
-        Map<Identifier, Double> aura = nonNegativeMap(recipe.minimumAura(), context);
+        Map<Holder<Aura>, Double> aura = nonNegativeMap(recipe.minimumAura(), context);
         boolean valid = main != null && auxiliary != null && catalyst != null && balance != null
                 && target != null && tolerance != null && duration != null && aura != null;
         return new Evaluated(valid ? main : Map.of(), valid ? auxiliary : Map.of(), valid ? catalyst : 0.0D,
@@ -93,15 +91,15 @@ public final class AlchemyResolver {
     public static List<Gap> gaps(AlchemyRecipe recipe, AlchemyMixture mixture, Evaluated evaluated) {
         if (!evaluated.valid()) return List.of(new Gap(Gap.Kind.MISSING, null, null, 0.0D, 0.0D));
         List<Gap> gaps = new ArrayList<>();
-        evaluated.main().forEach((id, required) -> {
-            double actual = mixture.main().getOrDefault(id, 0.0D);
+        evaluated.main().forEach((property, required) -> {
+            double actual = mixture.main().getOrDefault(property, 0.0D);
             if (actual + EPSILON < required)
-                gaps.add(new Gap(Gap.Kind.MISSING, AlchemyRole.MAIN, id, actual, required));
+                gaps.add(new Gap(Gap.Kind.MISSING, AlchemyRole.MAIN, property, actual, required));
         });
-        evaluated.auxiliary().forEach((id, required) -> {
-            double actual = mixture.auxiliary().getOrDefault(id, 0.0D);
+        evaluated.auxiliary().forEach((property, required) -> {
+            double actual = mixture.auxiliary().getOrDefault(property, 0.0D);
             if (actual + EPSILON < required)
-                gaps.add(new Gap(Gap.Kind.MISSING, AlchemyRole.AUXILIARY, id, actual, required));
+                gaps.add(new Gap(Gap.Kind.MISSING, AlchemyRole.AUXILIARY, property, actual, required));
         });
         extra(mixture.main(), evaluated.main(), AlchemyRole.MAIN, gaps);
         extra(mixture.auxiliary(), evaluated.auxiliary(), AlchemyRole.AUXILIARY, gaps);
@@ -147,10 +145,10 @@ public final class AlchemyResolver {
     /**
      * 1 if the candidate strictly covers the other, 0 if equal, -1 if keys differ or a value is lower.
      */
-    private static int cover(Map<Identifier, Double> candidate, Map<Identifier, Double> other) {
+    private static <K> int cover(Map<K, Double> candidate, Map<K, Double> other) {
         if (candidate.size() != other.size()) return -1;
         boolean strict = false;
-        for (Map.Entry<Identifier, Double> entry : candidate.entrySet()) {
+        for (Map.Entry<K, Double> entry : candidate.entrySet()) {
             Double required = other.get(entry.getKey());
             if (required == null) return -1;
             double value = entry.getValue();
@@ -175,33 +173,33 @@ public final class AlchemyResolver {
         return (RecipeHolder<T>) holder;
     }
 
-    private static void add(Map<Identifier, Double> into, Map<Holder<MedicinalProperty>, Double> properties, int count) {
-        properties.forEach((property, amount) -> into.merge(HolderHelper.id(property), amount * count, Double::sum));
+    private static void add(Map<Holder<MedicinalProperty>, Double> into, Map<Holder<MedicinalProperty>, Double> properties, int count) {
+        properties.forEach((property, amount) -> into.merge(property, amount * count, Double::sum));
     }
 
-    private static void extra(Map<Identifier, Double> actual, Map<Identifier, Double> required, AlchemyRole role, List<Gap> gaps) {
-        actual.forEach((id, amount) -> {
-            if (Math.abs(amount) > EPSILON && !required.containsKey(id))
-                gaps.add(new Gap(Gap.Kind.EXTRA, role, id, amount, 0.0D));
+    private static void extra(Map<Holder<MedicinalProperty>, Double> actual, Map<Holder<MedicinalProperty>, Double> required, AlchemyRole role, List<Gap> gaps) {
+        actual.forEach((property, amount) -> {
+            if (Math.abs(amount) > EPSILON && !required.containsKey(property))
+                gaps.add(new Gap(Gap.Kind.EXTRA, role, property, amount, 0.0D));
         });
     }
 
-    private static @Nullable Map<Identifier, Double> numbers(Map<Holder<MedicinalProperty>, NumberProvider> providers, FormulaContext context) {
-        Map<Identifier, Double> result = new LinkedHashMap<>();
+    private static @Nullable Map<Holder<MedicinalProperty>, Double> numbers(Map<Holder<MedicinalProperty>, NumberProvider> providers, FormulaContext context) {
+        Map<Holder<MedicinalProperty>, Double> result = new LinkedHashMap<>();
         for (Map.Entry<Holder<MedicinalProperty>, NumberProvider> entry : providers.entrySet()) {
             Double value = positive(entry.getValue(), context);
             if (value == null) return null;
-            result.put(HolderHelper.id(entry.getKey()), value);
+            result.put(entry.getKey(), value);
         }
         return result;
     }
 
-    private static @Nullable Map<Identifier, Double> nonNegativeMap(Map<Holder<Aura>, NumberProvider> providers, FormulaContext context) {
-        Map<Identifier, Double> result = new LinkedHashMap<>();
+    private static @Nullable Map<Holder<Aura>, Double> nonNegativeMap(Map<Holder<Aura>, NumberProvider> providers, FormulaContext context) {
+        Map<Holder<Aura>, Double> result = new LinkedHashMap<>();
         for (Map.Entry<Holder<Aura>, NumberProvider> entry : providers.entrySet()) {
             Double value = nonNegative(entry.getValue(), context);
             if (value == null) return null;
-            result.put(HolderHelper.id(entry.getKey()), value);
+            result.put(entry.getKey(), value);
         }
         return result;
     }
@@ -221,15 +219,18 @@ public final class AlchemyResolver {
         return Double.isFinite(value) && value >= 0.0D && value <= 1.0D ? value : null;
     }
 
-    public record Evaluated(Map<Identifier, Double> main, Map<Identifier, Double> auxiliary, double catalyst,
-                            double balanceTolerance, double targetTemperature, double temperatureTolerance,
-                            double duration, Map<Identifier, Double> minimumAura, boolean valid) {
+    public record Evaluated(Map<Holder<MedicinalProperty>, Double> main,
+                            Map<Holder<MedicinalProperty>, Double> auxiliary,
+                            double catalyst, double balanceTolerance, double targetTemperature,
+                            double temperatureTolerance, double duration, Map<Holder<Aura>, Double> minimumAura,
+                            boolean valid) {
     }
 
     /**
      * {@code role} is null only for a balance gap.
      */
-    public record Gap(Kind kind, @Nullable AlchemyRole role, @Nullable Identifier property, double actual,
+    public record Gap(Kind kind, @Nullable AlchemyRole role, @Nullable Holder<MedicinalProperty> property,
+                      double actual,
                       double required) {
         public enum Kind {MISSING, EXTRA, CATALYST, BALANCE}
     }

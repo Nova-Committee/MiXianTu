@@ -1,6 +1,7 @@
 package com.iafenvoy.mxt.testmod;
 
 import com.iafenvoy.mxt.attachment.AbilityAttachment;
+import com.iafenvoy.mxt.data.ability.Abilities;
 import com.iafenvoy.mxt.event.CurseRemoveEvent.Post;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.ability.AbilityEventBridge;
@@ -59,7 +60,8 @@ public final class MxtTestMod {
         AbilityAttachment holder = player.getData(MxtAttachments.ABILITY_HOLDER);
         Identifier source = Identifier.fromNamespaceAndPath(MOD_ID, "hotbar_test");
         for (String id : List.of("firebolt", "water_shield", "infuse_true_essence", "awaken_divine_sense"))
-            holder.grant(Identifier.fromNamespaceAndPath(MOD_ID, id), source);
+            Abilities.resolve(player.level().registryAccess(), Identifier.fromNamespaceAndPath(MOD_ID, id))
+                    .ifPresent(ability -> holder.grant(ability, source));
         AbilityEventBridge.rebuildTriggerSubscriptions(player);
     }
 }

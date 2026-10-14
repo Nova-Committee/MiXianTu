@@ -15,11 +15,10 @@ import com.iafenvoy.mxt.data.item.TalismanComponent;
 import com.iafenvoy.mxt.data.item.TalismanComponent.TriggerMode;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.data.quality.QualityLadders;
+import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.recipe.TalismanDrawingRecipe;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
-import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtItems;
-import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.item.QualityService;
 import com.iafenvoy.mxt.runtime.talisman.TalismanDrawingScorer.Point;
 import com.iafenvoy.mxt.runtime.talisman.TalismanDrawingScorer.Score;
@@ -372,16 +371,13 @@ public final class TalismanWorkstationService {
     // resources the price actually names are touched.
     private static List<Runnable> snapshotResources(CostContext context, CostPayment planning) {
         ResourceHolderAttachment target = context.resourceTarget();
-        if (target == null || planning.resources().isEmpty()) return List.of();
-        Provider registries = context.formula().registries();
-        if (registries == null) return List.of();
+        if (target == null || planning.account().isEmpty()) return List.of();
         List<Runnable> refunds = new ArrayList<>();
-        for (Identifier id : planning.resources().keySet())
-            MxtDatapackRegistries.holder(registries, MxtResourceKeys.RESOURCE, id).ifPresent(resource -> {
-                double value = target.get(resource);
-                Audit audit = target.audit(resource);
-                refunds.add(() -> target.set(resource, value, audit.minSnapshot(), audit.maxSnapshot(), audit.lastChangedTick(), audit.source()));
-            });
+        for (Holder<Resource> resource : planning.account().keySet()) {
+            double value = target.get(resource);
+            Audit audit = target.audit(resource);
+            refunds.add(() -> target.set(resource, value, audit.minSnapshot(), audit.maxSnapshot(), audit.lastChangedTick(), audit.source()));
+        }
         return refunds;
     }
 

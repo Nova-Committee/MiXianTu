@@ -4,7 +4,6 @@ import com.iafenvoy.mxt.command.ServerCommandManager;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.cultivation.RealmStage;
 import com.iafenvoy.mxt.registry.MxtAttachments;
-import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.DatapackCache;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService;
@@ -25,9 +24,6 @@ import net.minecraft.core.Holder.Reference;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
-
-import java.util.LinkedHashMap;
-import java.util.Map;
 
 import static net.minecraft.commands.Commands.argument;
 import static net.minecraft.commands.Commands.literal;
@@ -68,24 +64,15 @@ public final class RealmCommand {
     private static int chain(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         CommandSourceStack source = ctx.getSource();
         Reference<RealmStage> target = ResourceArgument.getResource(ctx, "realm", MxtResourceKeys.REALM_STAGE);
-        Identifier start = HolderHelper.id(target);
         Holder<Aura> aura = target.value().aura();
         Identifier auraId = HolderHelper.id(aura);
-        // The ladder in use is the loaded one, so a stage the pack no longer provides breaks the chain here for the
-        // same reason the server cache refuses to index such a chain.
-        Map<Identifier, Reference<RealmStage>> stages = new LinkedHashMap<>();
-        MxtDatapackRegistries.holders(source.getServer().registryAccess(), MxtResourceKeys.REALM_STAGE)
-                .forEach(stage -> stages.put(HolderHelper.id(stage), stage));
-        if (!stages.containsKey(start)) {
-            source.sendFailure(Component.translatable("command.mxt.realm.chain.none", start.toString()));
-            return 0;
-        }
         // A chain the cache validated is read straight from it. One it refused to index whole is still walked here
-        // from the loaded stages, so an author sees what is written rather than only "no chain".
+        // from the loaded stages, so an author sees what is written rather than only "no chain". The argument parser
+        // resolved this stage against the loaded registry, so the walk's own answer is the only one left to ask.
         Chain<RealmStage> chain = DatapackCache.get().realmsOf(aura);
         int current = chain.indexOf(target);
         if (current < 0) {
-            source.sendFailure(Component.translatable("command.mxt.realm.chain.none", start.toString()));
+            source.sendFailure(Component.translatable("command.mxt.realm.chain.none", HolderHelper.id(target).toString()));
             return 0;
         }
         Component line = chain.buildText(target);

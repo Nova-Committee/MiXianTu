@@ -111,8 +111,10 @@ public final class MxtDatapackRegistries {
         return access.lookupOrThrow(key).listElements();
     }
 
-    public static <T> Optional<Reference<T>> holder(Provider access, ResourceKey<? extends Registry<T>> key, Identifier id) {
-        return access.get(ResourceKey.create(key, id));
+    // Widened to Holder on purpose: every caller wants the entry, not the reference, and Optional is invariant so the
+    // widening has to happen here rather than at each call site.
+    public static <T> Optional<Holder<T>> holder(Provider access, ResourceKey<? extends Registry<T>> key, Identifier id) {
+        return access.get(ResourceKey.create(key, id)).map(holder -> holder);
     }
 
     public static <T> Optional<T> get(Provider access, ResourceKey<? extends Registry<T>> key, Identifier id) {

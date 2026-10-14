@@ -24,7 +24,6 @@ import com.iafenvoy.mxt.runtime.resource.ResourceTransactions;
 import com.iafenvoy.mxt.runtime.resource.ResourceTransactions.Evaluation;
 import com.iafenvoy.mxt.runtime.trigger.CultivationTriggerService;
 import com.iafenvoy.mxt.runtime.world.AuraResult;
-import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.FormulaContexts;
 import net.minecraft.core.Holder;
@@ -60,8 +59,7 @@ public final class CultivationMethodService {
         return Result.startedResult();
     }
 
-    public static Result start(LivingEntity entity, CultivationAttachment spirit, Identifier actionId, Cultivation definition,
-                               long gameTime, FormulaContext context) {
+    public static Result start(LivingEntity entity, CultivationAttachment spirit, Identifier actionId, Cultivation definition, long gameTime, FormulaContext context) {
         Holder<Cultivation> action = MxtDatapackRegistries.holder(entity.level().registryAccess(), MxtResourceKeys.CULTIVATION, actionId).orElse(null);
         if (action == null) return Result.rejected(Failure.DISABLED, null);
         boolean conditions = definition.startCondition().test(entity, context) && canStartCultivation(entity, context);
@@ -74,9 +72,7 @@ public final class CultivationMethodService {
                 .allMatch(aura -> aura.startCultivateConditions().test(entity, context));
     }
 
-    public static Result tick(LivingEntity entity, CultivationAttachment spirit, ResourceHolderAttachment resources, AuraResult aura, Holder<Cultivation> action,
-                              Cultivation definition, long gameTime, FormulaContext context, BooleanSupplier conditionsMet) {
-        Identifier actionId = HolderHelper.id(action);
+    public static Result tick(LivingEntity entity, CultivationAttachment spirit, ResourceHolderAttachment resources, AuraResult aura, Holder<Cultivation> action, Cultivation definition, long gameTime, FormulaContext context, BooleanSupplier conditionsMet) {
         if (!canCultivateInEnvironment(spirit, entity, aura, context))
             return stop(entity, spirit, action, definition, gameTime, Failure.ENVIRONMENT);
         double affinity = CultivationAffinity.multiplier(entity.getData(MxtAttachments.SPIRIT_IDENTITY),
@@ -84,9 +80,7 @@ public final class CultivationMethodService {
         return tick(entity, spirit, resources, aura, action, definition, gameTime, context, conditionsMet, affinity);
     }
 
-    private static Result tick(LivingEntity entity, CultivationAttachment spirit, ResourceHolderAttachment resources, AuraResult aura, Holder<Cultivation> action,
-                               Cultivation definition, long gameTime, FormulaContext context,
-                               BooleanSupplier conditionsMet, double affinity) {
+    private static Result tick(LivingEntity entity, CultivationAttachment spirit, ResourceHolderAttachment resources, AuraResult aura, Holder<Cultivation> action, Cultivation definition, long gameTime, FormulaContext context, BooleanSupplier conditionsMet, double affinity) {
         if (!spirit.cultivating() || spirit.cultivation().filter(action::equals).isEmpty())
             return Result.rejected(Failure.NOT_ACTIVE, null);
         if (!conditionsMet.getAsBoolean())
@@ -120,7 +114,7 @@ public final class CultivationMethodService {
         CostPayment costPlan = CostPayment.of(costContext);
         if (costPlan.loadAndTest(definition.costs()).isPresent())
             return stop(entity, spirit, action, definition, gameTime, Failure.INVALID_FORMULA);
-        Evaluation costs = Evaluation.of(costPlan.resources());
+        Evaluation costs = costPlan.evaluation();
         Map<Holder<Aura>, Double> gains;
         try {
             gains = evaluateGains(definition.auraGains(), context);
@@ -141,7 +135,7 @@ public final class CultivationMethodService {
         gains.replaceAll((id, amount) -> amount * speed);
         if (!Double.isFinite(speed) || speed < 0.0D)
             return stop(entity, spirit, action, definition, gameTime, Failure.INVALID_FORMULA);
-        ResourceTransactions.Result preview = ResourceTransactions.tryConsume(context.registries(), copyOf(resources), costs);
+        ResourceTransactions.Result preview = ResourceTransactions.tryConsume(copyOf(resources), costs);
         if (!preview.committed()) return Result.rejected(Failure.INSUFFICIENT_RESOURCE, preview.failedResource());
         if (!canApplyGains(entity, copyOf(resources), gains, context))
             return stop(entity, spirit, action, definition, gameTime, Failure.INVALID_FORMULA);
@@ -328,7 +322,7 @@ public final class CultivationMethodService {
                                           FormulaContext context) {
         for (Holder<Aura> aura : realmCultivations(spirit)) {
             ActiveCultivation active = active(aura);
-            ResourceService.change(resources, active.id(), absorbed,
+            ResourceService.change(resources, active.resource(), absorbed,
                     ResourceService.formulaContext(spirit, active.resource(), context));
         }
     }
@@ -337,7 +331,7 @@ public final class CultivationMethodService {
                                           double absorbed, FormulaContext context) {
         for (Holder<Aura> aura : realmCultivations(spirit)) {
             ActiveCultivation active = active(aura);
-            ResourceService.change(resources, active.id(), absorbed,
+            ResourceService.change(resources, active.resource(), absorbed,
                     ResourceService.formulaContext(entity, active.resource(), context));
         }
     }
@@ -388,10 +382,9 @@ public final class CultivationMethodService {
             double available = Math.max(0.0D, resources.get(resource) - bounds.min());
             double remainingProgress = CultivationService.remainingProgressForChain(spirit, aura, context);
             if (remainingProgress <= 0.0D) return;
-            double consumed = Math.min(conversion.resourceToCultivationMaxPerTick(),
-                    Math.min(available, remainingProgress / conversion.resourceToCultivation()));
+            double consumed = Math.min(conversion.resourceToCultivationMaxPerTick(), Math.min(available, remainingProgress / conversion.resourceToCultivation()));
             if (consumed > 0.0D) {
-                ResourceService.change(resources, active.id(), -consumed, context);
+                ResourceService.change(resources, active.resource(), -consumed, context);
                 CultivationService.addProgressForChain(spirit, aura, consumed * conversion.resourceToCultivation(), context);
                 return;
             }
@@ -403,7 +396,7 @@ public final class CultivationMethodService {
                     Math.min(spirit.cultivationProgress(aura), capacity / conversion.cultivationToResource()));
             if (extracted > 0.0D) {
                 spirit.setCultivationProgress(aura, Math.max(0.0D, spirit.cultivationProgress(aura) - extracted));
-                ResourceService.change(resources, active.id(), extracted * conversion.cultivationToResource(), context);
+                ResourceService.change(resources, active.resource(), extracted * conversion.cultivationToResource(), context);
             }
         }
     }
@@ -444,10 +437,6 @@ public final class CultivationMethodService {
     }
 
     private record ActiveCultivation(Holder<Aura> aura) {
-        private Identifier id() {
-            return HolderHelper.id(this.aura.value().resource());
-        }
-
         private Resource definition() {
             return this.aura.value().resource().value();
         }

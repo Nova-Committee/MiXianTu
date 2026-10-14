@@ -1,10 +1,12 @@
 package com.iafenvoy.mxt.runtime.forging;
 
+import com.iafenvoy.mxt.MiXianTu;
+import com.iafenvoy.mxt.data.forging.ForgingBlueprint;
 import com.iafenvoy.mxt.runtime.forging.ForgingSession.Snapshot;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import net.minecraft.core.Holder;
 import net.minecraft.core.UUIDUtil;
-import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
 
 import java.util.ArrayList;
@@ -20,14 +22,14 @@ import java.util.UUID;
  */
 public final class ForgingTableState {
     public static final Codec<ForgingTableState> CODEC = RecordCodecBuilder.create(i -> i.group(
-            Identifier.CODEC.optionalFieldOf("blueprint").forGetter(ForgingTableState::blueprint),
+            ForgingBlueprint.CODEC.optionalFieldOf("blueprint").forGetter(ForgingTableState::blueprint),
             ForgingPlan.CODEC.optionalFieldOf("plan").forGetter(ForgingTableState::plan),
             Snapshot.CODEC.optionalFieldOf("session").forGetter(ForgingTableState::session),
             ItemStack.CODEC.listOf().optionalFieldOf("consumed", List.of()).forGetter(ForgingTableState::consumed),
             UUIDUtil.CODEC.optionalFieldOf("starter").forGetter(ForgingTableState::starter)
     ).apply(i, ForgingTableState::new));
 
-    private Identifier blueprint;
+    private Holder<ForgingBlueprint> blueprint;
     private ForgingPlan plan;
     private Snapshot session;
     private List<ItemStack> consumed;
@@ -37,14 +39,22 @@ public final class ForgingTableState {
         this(Optional.empty(), Optional.empty(), Optional.empty(), List.of(), Optional.empty());
     }
 
-    private ForgingTableState(Optional<Identifier> blueprint, Optional<ForgingPlan> plan, Optional<Snapshot> session, List<ItemStack> consumed, Optional<UUID> starter) {
+    private ForgingTableState(Optional<Holder<ForgingBlueprint>> blueprint, Optional<ForgingPlan> plan, Optional<Snapshot> session, List<ItemStack> consumed, Optional<UUID> starter) {
         this.blueprint = blueprint.orElse(null);
         this.plan = plan.orElse(null);
         this.session = session.orElse(null);
         this.consumed = copyStacks(consumed);
         this.starter = starter.orElse(null);
+        // A blueprint without its plan or session is a save whose plan could not be rebuilt, which is what a pack
+        // that no longer provides one of the frozen methods leaves behind: the session is dropped so the table
+        // unlocks instead of failing to load. Its consumed stacks are kept here and handed back to the input slots
+        // by ForgingWorkstationService#returnStrandedMaterials once the block entity has its level - no return
+        // path can settle a state that is no longer active, so nothing else would ever free them.
         if (this.blueprint != null && (this.plan == null || this.session == null)) {
-            throw new IllegalArgumentException("Incomplete forging table state");
+            MiXianTu.LOGGER.warn("Dropping an incomplete forging session for {}: its plan could not be rebuilt", this.blueprintId());
+            this.blueprint = null;
+            this.plan = null;
+            this.session = null;
         }
     }
 
@@ -54,8 +64,12 @@ public final class ForgingTableState {
         return this.session != null;
     }
 
-    public Optional<Identifier> blueprint() {
+    public Optional<Holder<ForgingBlueprint>> blueprint() {
         return Optional.ofNullable(this.blueprint);
+    }
+
+    private String blueprintId() {
+        return this.blueprint.unwrapKey().map(key -> key.identifier().toString()).orElse("?");
     }
 
     // Frozen when the session started, so it stays valid after a datapack reload.
@@ -71,13 +85,19 @@ public final class ForgingTableState {
         return this.consumed;
     }
 
+    // The load-time return of a degraded session keeps whatever the input slots could not take, since a chunk
+    // load has no player to hand it to.
+    public void retainConsumed(List<ItemStack> leftover) {
+        this.consumed = copyStacks(leftover);
+    }
+
     // Informational only: every player may keep striking the shared session.
     public Optional<UUID> starter() {
         return Optional.ofNullable(this.starter);
     }
 
     // The caller has already removed the consumed stacks from the block entity container.
-    public void lock(Identifier blueprint, ForgingPlan plan, ForgingSession value, List<ItemStack> consumed, UUID starter) {
+    public void lock(Holder<ForgingBlueprint> blueprint, ForgingPlan plan, ForgingSession value, List<ItemStack> consumed, UUID starter) {
         if (this.active()) throw new IllegalStateException("Forging session already active");
         this.blueprint = blueprint;
         this.plan = plan;

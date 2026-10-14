@@ -80,7 +80,7 @@ public final class TechniqueCommand {
         }
         TechniqueBinding value = binding.orElseThrow();
         source.sendSuccess(() -> Component.translatable("command.mxt.technique.diagnose.binding",
-                value.technique().unwrapKey().map(key -> key.identifier().toString()).orElse("?"),
+                value.technique().unwrapKey().orElseThrow().identifier().toString(),
                 value.learnTime(), value.holdAnimation().getSerializedName()), false);
 
         // This gate cancels Start and Tick, so a refusal here is what a pose that appears and then aborts looks like.
@@ -115,7 +115,7 @@ public final class TechniqueCommand {
     private static int repair(CommandSourceStack source, boolean dryRun) throws CommandSyntaxException {
         ServerPlayer player = source.getPlayerOrException();
         TechniqueAttachment identity = player.getData(MxtAttachments.TECHNIQUE);
-        List<Identifier> removed = new ArrayList<>();
+        Set<Holder<Technique>> removed = new LinkedHashSet<>();
 
         List<Holder<Technique>> techniques = prune(player.level().registryAccess(), identity.learnedTechniques(), removed);
         // Only the ids this sweep collected are dropped, so a record owned by something else survives the technique
@@ -167,13 +167,12 @@ public final class TechniqueCommand {
     }
 
     // Package-visible so the server audit can exercise the sweep directly.
-    public static List<Holder<Technique>> prune(Provider access, List<Holder<Technique>> values, List<Identifier> removed) {
+    public static List<Holder<Technique>> prune(Provider access, List<Holder<Technique>> values, Set<Holder<Technique>> removed) {
         List<Holder<Technique>> kept = new ArrayList<>(values.size());
-        Set<Identifier> seen = new LinkedHashSet<>();
+        Set<Holder<Technique>> seen = new LinkedHashSet<>();
         for (Holder<Technique> technique : values) {
-            Identifier id = HolderHelper.id(technique);
-            if (!resolves(access, technique) || !seen.add(id)) {
-                removed.add(id);
+            if (!resolves(access, technique) || !seen.add(technique)) {
+                removed.add(technique);
                 continue;
             }
             kept.add(technique);
@@ -183,11 +182,11 @@ public final class TechniqueCommand {
 
     // Only the ids this sweep collected are dropped, so a record owned by something else survives the technique
     // repair; a level whose definition is gone is stale for everyone and goes too.
-    public static Map<Holder<Technique>, Holder<Progression>> pruneLevels(Provider access, Map<Holder<Technique>, Holder<Progression>> values, List<Identifier> removed) {
+    public static Map<Holder<Technique>, Holder<Progression>> pruneLevels(Provider access, Map<Holder<Technique>, Holder<Progression>> values, Set<Holder<Technique>> removed) {
         Map<Holder<Technique>, Holder<Progression>> kept = new LinkedHashMap<>();
         for (Entry<Holder<Technique>, Holder<Progression>> entry : values.entrySet()) {
-            if (removed.contains(HolderHelper.id(entry.getKey())) || !resolvesLevel(access, entry.getValue())) {
-                removed.add(HolderHelper.id(entry.getKey()));
+            if (removed.contains(entry.getKey()) || !resolvesLevel(access, entry.getValue())) {
+                removed.add(entry.getKey());
                 continue;
             }
             kept.put(entry.getKey(), entry.getValue());
@@ -195,25 +194,22 @@ public final class TechniqueCommand {
         return kept;
     }
 
-    // Checked by id against the live registry: a removed entry has no value to read, and asking for one would
-    // throw. Package-visible for the server audit, which cannot build a genuine unbound holder.
+    // Checked against the live registry, which is the only thing that can answer "the current pack still provides
+    // this": a holder that outlived a reload keeps the value it was bound to, so reading that value would answer yes
+    // either way. Package-visible for the server audit.
     public static boolean resolves(Provider access, Holder<Technique> technique) {
         if (technique == null) return false;
-        Identifier id = HolderHelper.id(technique);
-        if (id.equals(HolderHelper.EMPTY)) return false;
-        return MxtDatapackRegistries.get(access, MxtResourceKeys.TECHNIQUE, id).isPresent();
+        return MxtDatapackRegistries.holder(access, MxtResourceKeys.TECHNIQUE, HolderHelper.id(technique)).isPresent();
     }
 
     public static boolean resolvesLevel(Provider access, Holder<Progression> level) {
         if (level == null) return false;
-        Identifier id = HolderHelper.id(level);
-        if (id.equals(HolderHelper.EMPTY)) return false;
-        return MxtDatapackRegistries.get(access, MxtResourceKeys.PROGRESSION, id).isPresent();
+        return MxtDatapackRegistries.holder(access, MxtResourceKeys.PROGRESSION, HolderHelper.id(level)).isPresent();
     }
 
-    private static String join(List<Identifier> values) {
+    private static String join(Collection<Holder<Technique>> values) {
         Set<String> unique = new LinkedHashSet<>();
-        for (Identifier id : values) unique.add(id.toString());
+        for (Holder<Technique> technique : values) unique.add(HolderHelper.id(technique).toString());
         return String.join(", ", unique);
     }
 }

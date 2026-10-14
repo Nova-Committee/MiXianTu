@@ -1,11 +1,12 @@
 package com.iafenvoy.mxt.runtime.ability;
 
 import com.iafenvoy.mxt.attachment.AbilityAttachment;
+import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.EntitySources;
 import com.iafenvoy.mxt.runtime.ModuleHooks;
 import com.iafenvoy.mxt.runtime.Sources;
-import com.iafenvoy.mxt.util.HolderHelper;
+import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.LivingEntity;
 
@@ -29,9 +30,9 @@ public final class AbilityGrantService {
         // Grants are state, so only the server rebuilds them; a client reads what it was sent.
         if (entity.level().isClientSide()) return new Result(0, 0);
         AbilityAttachment abilities = entity.getData(MxtAttachments.ABILITY_HOLDER);
-        Map<Identifier, Set<Identifier>> desired = new LinkedHashMap<>();
+        Map<Identifier, Set<Holder<Ability>>> desired = new LinkedHashMap<>();
         EntitySources.GrantSink sink = (source, ability) ->
-                desired.computeIfAbsent(source, ignored -> new LinkedHashSet<>()).add(HolderHelper.id(ability));
+                desired.computeIfAbsent(source, ignored -> new LinkedHashSet<>()).add(ability);
         for (EntitySources.Grants source : ModuleHooks.all(EntitySources.Grants.class))
             source.collect(entity, sink);
         int granted = 0;
@@ -40,12 +41,12 @@ public final class AbilityGrantService {
         sources.addAll(desired.keySet());
         for (Identifier source : sources) {
             if (!Sources.isGranted(source)) continue;
-            Set<Identifier> wanted = desired.getOrDefault(source, Set.of());
-            Set<Identifier> held = abilities.sources().keysHeldBy(source);
+            Set<Holder<Ability>> wanted = desired.getOrDefault(source, Set.of());
+            Set<Holder<Ability>> held = abilities.sources().keysHeldBy(source);
             if (held.equals(wanted)) continue;
             abilities.reconcileSource(source, wanted);
-            for (Identifier ability : wanted) if (!held.contains(ability)) granted++;
-            for (Identifier ability : held) if (!wanted.contains(ability)) revoked++;
+            for (Holder<Ability> ability : wanted) if (!held.contains(ability)) granted++;
+            for (Holder<Ability> ability : held) if (!wanted.contains(ability)) revoked++;
         }
         AbilityEventBridge.rebuildTriggerSubscriptions(entity);
         return new Result(granted, revoked);

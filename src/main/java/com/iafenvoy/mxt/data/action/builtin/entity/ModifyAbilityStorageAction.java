@@ -1,15 +1,15 @@
 package com.iafenvoy.mxt.data.action.builtin.entity;
 
 import com.iafenvoy.mxt.MiXianTu;
+import com.iafenvoy.mxt.data.ability.Abilities;
 import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.context.action.EntityActionContext;
 import com.iafenvoy.mxt.data.storage.DataStorage;
 import com.iafenvoy.mxt.registry.MxtAttachments;
-import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
-import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Entity;
 import org.jspecify.annotations.NonNull;
@@ -28,17 +28,17 @@ public record ModifyAbilityStorageAction(Identifier id, DataStorage value) imple
     public void execute(@NonNull EntityActionContext ctx) {
         Entity entity = ctx.entity();
         if (entity.level().isClientSide()) return;
-        Ability definition = MxtDatapackRegistries.get(entity.level().registryAccess(), MxtResourceKeys.ABILITY, this.id)
-                .orElse(null);
-        if (definition == null) {
+        Holder<Ability> ability = Abilities.resolve(entity.level().registryAccess(), this.id).orElse(null);
+        if (ability == null) {
             MiXianTu.LOGGER.warn("{} is not an ability; nothing was written", this.id);
             return;
         }
+        Ability definition = ability.value();
         if (!definition.declares(this.value)) {
             MiXianTu.LOGGER.warn("{} declares no {}; nothing was written", this.id, this.value.getClass().getSimpleName());
             return;
         }
-        entity.getData(MxtAttachments.ABILITY_HOLDER).storage().set(this.id, this.value, entity.level().getGameTime());
+        entity.getData(MxtAttachments.ABILITY_HOLDER).storage().set(ability, this.value, entity.level().getGameTime());
     }
 
     @Override

@@ -674,9 +674,9 @@ public final class MxtTestCommands {
             if (!close(third, 1.0D))
                 return "a publish past the cooldown added " + third + " instead of the 1 the cooldowned rule owes";
             TriggerCooldownAttachment cooldowns = player.getExistingData(MxtAttachments.TRIGGER_COOLDOWNS).orElse(null);
-            if (cooldowns == null || !cooldowns.isOnCooldown(id("cooldown_probe"), now + 200L))
+            if (cooldowns == null || !cooldowns.isOnCooldown(require(MxtResourceKeys.TRIGGER, id("cooldown_probe")), now + 200L))
                 return "the cooldown the last publish armed was not recorded against its own rule";
-            if (cooldowns.isOnCooldown(id("chance_probe"), now + 200L))
+            if (cooldowns.isOnCooldown(require(MxtResourceKeys.TRIGGER, id("chance_probe")), now + 200L))
                 return "a rule that never fired was charged a cooldown anyway";
         } finally {
             resources.set(probe, previous, 0.0D, 100_000.0D, -1L, "probe");
@@ -694,7 +694,7 @@ public final class MxtTestCommands {
         action.execute(new ItemActionContext(player, stack, FormulaContext.of(player)));
         ItemAbilitiesComponent component = stack.get(MxtDataComponents.ITEM_ABILITIES.get());
         if (component == null || component.abilities().size() != 1
-                || !component.abilities().getFirst().equals(HolderHelper.id(ability)))
+                || !component.abilities().getFirst().is(ability))
             return "the item-ability action wrote " + (component == null ? "nothing" : component.abilities().size() + " entries");
         if (!ArtifactService.abilities(level.registryAccess(), stack).contains(ability))
             return "the ability the action wrote is not granted by the artifact runtime";
@@ -810,7 +810,7 @@ public final class MxtTestCommands {
         if (actor == null) return "could not create the probe being";
         try {
             AbilityAttachment abilities = actor.getData(MxtAttachments.ABILITY_HOLDER);
-            Identifier ability = id("firebolt");
+            Holder<Ability> ability = require(MxtResourceKeys.ABILITY, id("firebolt"));
             Identifier source = id("grant/cooldown_probe");
             long gameTime = level.getGameTime();
             abilities.grant(ability, source);
@@ -1521,9 +1521,9 @@ public final class MxtTestCommands {
             Holder<Technique> technique = require(MxtResourceKeys.TECHNIQUE, PROBE_TECHNIQUE);
             Holder<Ability> ability = require(MxtResourceKeys.ABILITY, PROBE_ABILITY);
             spirit.addLearnedTechnique(technique);
-            double entry = ProgressionDamageMultiplier.of(attacker, HolderHelper.id(ability));
+            double entry = ProgressionDamageMultiplier.of(attacker, ability);
             spirit.techniqueLevels().set(technique, require(MxtResourceKeys.PROGRESSION, PROBE_PROGRESSION_LEVEL));
-            double advanced = ProgressionDamageMultiplier.of(attacker, HolderHelper.id(ability));
+            double advanced = ProgressionDamageMultiplier.of(attacker, ability);
             float masteryBefore = masteryDefender.getHealth();
             DamageCalculationService.deal(attacker, masteryDefender, 4.0D, Optional.empty(),
                     context.with(DamageCalculationService.DAMAGE_MULTIPLIER, advanced));
@@ -1948,7 +1948,7 @@ public final class MxtTestCommands {
                     == ContractService.Failure.ALREADY_BOUND;
             // The owner side of the same bind: what the type declares is held by the owner, and the bind action
             // runs on the owner rather than on the beast that signed.
-            boolean ownerBound = abilities.has(OWNER_BOND) && player.hasEffect(MobEffects.ABSORPTION);
+            boolean ownerBound = abilities.has(require(MxtResourceKeys.ABILITY, OWNER_BOND)) && player.hasEffect(MobEffects.ABSORPTION);
             boolean record = priceRefused && bound && profiled && synced && twice && ownerBound;
             source.sendSuccess(() -> Component.literal("contract probe: price_refused=" + priceRefused
                     + " bind_failure=" + secondBind.failure() + " qi=" + resources.get(qi)
@@ -1966,7 +1966,7 @@ public final class MxtTestCommands {
             boolean limitHit = ContractService.bind(open, player, second, false).failure()
                     == ContractService.Failure.LIMIT_REACHED;
             // Two contracts, two grants: the second type adds its own ability without disturbing the first.
-            boolean bothHeld = abilities.has(OPEN_BOND) && abilities.has(OWNER_BOND);
+            boolean bothHeld = abilities.has(require(MxtResourceKeys.ABILITY, OPEN_BOND)) && abilities.has(require(MxtResourceKeys.ABILITY, OWNER_BOND));
             // Ending a contract is not the same act as forgetting who owns the creature, and the owner lives on
             // the creature, so a released probe still answers the player it was signed with.
             boolean releasedFirst = ContractService.release(first, player.getUUID(), false).changed()
@@ -1974,7 +1974,7 @@ public final class MxtTestCommands {
                     && Contracts.ownerOf(first).filter(player.getUUID()::equals).isPresent();
             // The release action runs on the owner, and the grant of the type they no longer hold goes with it
             // while the one another contract still declares stays.
-            boolean ownerReleased = !abilities.has(OPEN_BOND) && abilities.has(OWNER_BOND)
+            boolean ownerReleased = !abilities.has(require(MxtResourceKeys.ABILITY, OPEN_BOND)) && abilities.has(require(MxtResourceKeys.ABILITY, OWNER_BOND))
                     && player.hasEffect(MobEffects.WEAKNESS);
             boolean freed = releasedFirst && ContractService.bind(open, player, second, false).changed();
             boolean limit = firstBound && limitHit && freed && bothHeld && ownerReleased;
@@ -2063,7 +2063,7 @@ public final class MxtTestCommands {
                     && second.isRemoved();
             SpiritBeastComponent stored = bagStack.getOrDefault(MxtDataComponents.SPIRIT_BEAST, SpiritBeastComponent.EMPTY);
             boolean described = stored.stored()
-                    && stored.entityType().filter(BuiltInRegistries.ENTITY_TYPE.getKey(second.getType())::equals).isPresent()
+                    && stored.entityType().filter(holder -> holder.is(BuiltInRegistries.ENTITY_TYPE.wrapAsHolder(second.getType()))).isPresent()
                     && stored.name().isPresent()
                     && stored.contractType().map(HolderHelper::id).filter(OPEN_CONTRACT::equals).isPresent()
                     && stored.owner().filter(player.getUUID()::equals).isPresent()
@@ -2096,7 +2096,7 @@ public final class MxtTestCommands {
                     "order:wander", "order:stay", "tick:wander", "captured", "freed", "death"));
             // A death takes the dead beast's contract off the owner the same way a release does, and only that
             // one: the open contract the probe is still holding keeps its own ability.
-            boolean ownerEnded = !abilities.has(OWNER_BOND) && abilities.has(OPEN_BOND)
+            boolean ownerEnded = !abilities.has(require(MxtResourceKeys.ABILITY, OWNER_BOND)) && abilities.has(require(MxtResourceKeys.ABILITY, OPEN_BOND))
                     && player.hasEffect(MobEffects.GLOWING);
             boolean ending = death && order && ownerEnded;
             source.sendSuccess(() -> Component.literal("contract probe: death=" + death + " owner_ended=" + ownerEnded
@@ -2135,7 +2135,8 @@ public final class MxtTestCommands {
         Holder<Progression> third = require(MxtResourceKeys.PROGRESSION, BEAST_3);
         Holder<Progression> foreign = require(MxtResourceKeys.PROGRESSION, SWORD_ART_1);
         Holder<Resource> growth = require(MxtResourceKeys.RESOURCE, BEAST_GROWTH);
-        Identifier ability = HolderHelper.id(require(MxtResourceKeys.ABILITY, PROGRESSION_GROWTH));
+        Holder<Ability> growthAbility = require(MxtResourceKeys.ABILITY, PROGRESSION_GROWTH);
+        Holder<Ability> ability = growthAbility;
         // The id a creature's grants are written under: one category, so ending the bond can revoke exactly them.
         Identifier grantSource = Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "grant/creature/"
                 + PROBE_BEAST_PROFILE.getNamespace() + "/" + PROBE_BEAST_PROFILE.getPath());
@@ -2197,7 +2198,7 @@ public final class MxtTestCommands {
                     List.of(PROBE_BEAST_PROFILE)).test(beast, FormulaContext.of(beast))
                     && !new ProgressionEntityCondition(third, CompareOperation.GREATER_THAN_OR_EQUAL,
                     List.of(PROBE_BEAST_PROFILE)).test(beast, FormulaContext.of(beast))
-                    && close(ProgressionDamageMultiplier.of(beast, ability), 1.5D);
+                    && close(ProgressionDamageMultiplier.of(beast, growthAbility), 1.5D);
             boolean reading = gated && reads;
             source.sendSuccess(() -> Component.literal("progression probe: gated=" + gated + " reads=" + reads
                     + (reading ? " OK" : " MISMATCH")), false);
@@ -2208,7 +2209,7 @@ public final class MxtTestCommands {
                     == ProgressionAdminService.Failure.FOREIGN_LEVEL;
             boolean written = ProgressionAdminService.setLevel(beast, PROBE_BEAST_PROFILE, third, false).changed()
                     && stoodOn(beast, BEAST_3) && signals.size() == 2
-                    && close(ProgressionDamageMultiplier.of(beast, ability), 2.0D);
+                    && close(ProgressionDamageMultiplier.of(beast, growthAbility), 2.0D);
             boolean unchanged = ProgressionAdminService.setLevel(beast, PROBE_BEAST_PROFILE, third, false).failure()
                     == ProgressionAdminService.Failure.SAME_LEVEL;
             boolean unknown = ProgressionAdminService.setLevel(beast, SWORD_MANUAL, third, false).failure()
@@ -2222,7 +2223,7 @@ public final class MxtTestCommands {
             // was left behind stops granting; stepping back onto the entry level is the absence of a record again.
             boolean demoted = EntitySources.held(beast, PROBE_BEAST_PROFILE)
                     .map(ProgressionService::demote).orElse(false)
-                    && stoodOn(beast, BEAST_2) && close(ProgressionDamageMultiplier.of(beast, ability), 1.5D);
+                    && stoodOn(beast, BEAST_2) && close(ProgressionDamageMultiplier.of(beast, growthAbility), 1.5D);
             boolean atEntry = EntitySources.held(beast, PROBE_BEAST_PROFILE)
                     .map(ProgressionService::demote).orElse(false)
                     && stoodOn(beast, BEAST_1)
@@ -2239,7 +2240,7 @@ public final class MxtTestCommands {
             AbilityGrantService.recalculate(beast);
             PassiveAttributeService.tick(beast);
             boolean prune = swept == 1 && stoodOn(beast, BEAST_1)
-                    && close(ProgressionDamageMultiplier.of(beast, ability), 1.0D)
+                    && close(ProgressionDamageMultiplier.of(beast, growthAbility), 1.0D)
                     && !abilities.has(ability)
                     && close(beast.getAttributeValue(Attributes.MAX_HEALTH), baseHealth);
             source.sendSuccess(() -> Component.literal("progression probe: swept=" + swept + " prune=" + prune
@@ -2576,8 +2577,10 @@ public final class MxtTestCommands {
                 .map(ref -> ref.value().costs()).orElse(List.of());
         boolean mount = mountEntry != null && close(mountEntry.speed().evaluate(context), 0.12D)
                 && mountEntry.seats() == 2 && !mountEntry.sit()
-                && mountCosts.size() == 1 && mountCosts.getFirst() instanceof ResourceCost cost
-                && cost.id().equals(QI) && close(cost.amount().evaluate(context), 0.1D)
+                && mountCosts.size() == 1 && mountCosts.getFirst() instanceof ResourceCost(
+                Holder<Resource> resource, com.iafenvoy.mxt.util.formula.NumberProvider amount
+        )
+                && resource.is(qiResource) && close(amount.evaluate(context), 0.1D)
                 // Unwritten display and an unwritten render are both "whatever the renderer does by default".
                 && mountEntry.display().isEmpty()
                 && mountEntry.render() == ItemMountRender.INSTANCE
@@ -2773,13 +2776,13 @@ public final class MxtTestCommands {
             TechniqueAttachment spirit = pilot.getData(MxtAttachments.TECHNIQUE);
             spirit.addLearnedTechnique(require(MxtResourceKeys.TECHNIQUE, id("sword_control_manual")));
             AbilityGrantService.recalculate(pilot);
-            boolean granted = pilot.getData(MxtAttachments.ABILITY_HOLDER).has(HolderHelper.id(controlAbility));
+            boolean granted = pilot.getData(MxtAttachments.ABILITY_HOLDER).has(controlAbility);
             double qiBeforePress = pilotResources.get(qiResource);
             Togglable.Result pressed = AbilityActivationService.activate(pilot, controlAbility, null);
             FlyingSwordEntity sword = pilot.getVehicle() instanceof FlyingSwordEntity value ? value : null;
             boolean riding = pressed.failure() == null && sword != null && mountEntry != null
                     && pilot.getData(MxtAttachments.FLIGHT).active()
-                    && pilot.getData(MxtAttachments.FLIGHT).vehicle().filter(id("azure_sword_mount")::equals).isPresent()
+                    && pilot.getData(MxtAttachments.FLIGHT).vehicle().filter(vehicle -> vehicle.is(id("azure_sword_mount"))).isPresent()
                     && pilot.getData(MxtAttachments.FLIGHT).archetype().filter(archetype -> archetype.is(HolderHelper.id(controlAbility))).isPresent()
                     // Custody: the artifact left the hand, and it is what the mount is made of.
                     && pilot.getMainHandItem().isEmpty() && sword.visual().is(Items.IRON_SWORD)
@@ -2952,12 +2955,12 @@ public final class MxtTestCommands {
                 && ArtifactStorageService.INSTANCE.get(access, jadeStack, storageAbility, 1, player).getCount() == 3
                 // The capacity is the definition's, so the slot one past it is not there.
                 && ArtifactStorageService.INSTANCE.get(access, jadeStack, storageAbility, 27, player).isEmpty()
-                && ItemStorageService.get(jadeStack, HolderHelper.id(storageAbility), ContainerDataStorage.class)
+                && ItemStorageService.get(jadeStack, storageAbility, ContainerDataStorage.class)
                 .filter(value -> value.contents().size() == 27 && value.get(0).isEmpty()
                         && value.get(1).is(Items.STONE) && value.get(2).is(Items.DIRT)).isPresent()
                 // Another ability's id is a different slot: two storage abilities on one carrier never share a box.
-                && ItemStorageService.get(jadeStack, HolderHelper.id(foreignStorage), ContainerDataStorage.class).isEmpty()
-                && roundTripsStorage(jadeStorage, HolderHelper.id(storageAbility),
+                && ItemStorageService.get(jadeStack, foreignStorage, ContainerDataStorage.class).isEmpty()
+                && roundTripsStorage(jadeStorage, storageAbility,
                 source.getLevel().registryAccess());
         ok &= check(source, "artifact roster container 27 slots, slot 1 = stone x3, slot 2 = dirt, one entry per (ability, kind), codec round-trip", container);
 
@@ -3446,9 +3449,11 @@ public final class MxtTestCommands {
             heavyFire.setSpiritRoots(List.of(dualRoot));
             SpiritIdentityAttachment evenRoots = new SpiritIdentityAttachment();
             evenRoots.setSpiritRoots(List.of(dualEvenRoot));
+            // The source is deliberately absent: the affinity below never reads it, and naming a zone here would
+            // make the numbers depend on what this world happens to hold after all.
             AuraResult fireOnly = new AuraResult(Map.of(require(MxtResourceKeys.AURA, SPIRIT_POWER), AuraPool.natural(1.0D, 1.0D, 0.0D)),
                     AuraZone.Rules.DEFAULT, 0.0D, 0.0D, AlwaysCondition.INSTANCE, AuraZone.Distribution.EQUAL,
-                    id("probe"), AuraResult.SourceKind.CHUNK);
+                    null, AuraResult.SourceKind.CHUNK);
             double heavy = CultivationAffinity.multiplier(heavyFire, null, fireOnly, FormulaContext.EMPTY);
             double even = CultivationAffinity.multiplier(evenRoots, null, fireOnly, FormulaContext.EMPTY);
             double bareWeight = require(MxtResourceKeys.SPIRIT_ROOT, PROBE_FIRE_ROOT).value().elements().getFirst().weight();
@@ -3590,7 +3595,7 @@ public final class MxtTestCommands {
     // Sends the ability storage component through the registered network codec and reads it back - the very codec
     // the server uses when handing a container slot to a client, and the one place an empty stack in the list could
     // take the whole packet down. Reached from the container leg above, which is what keeps it from rotting.
-    private static boolean roundTripsStorage(DataStorageHolder holder, Identifier id, RegistryAccess registries) {
+    private static boolean roundTripsStorage(DataStorageHolder holder, Holder<Ability> ability, RegistryAccess registries) {
         if (holder == null) return false;
         DataComponentType<DataStorageHolder> type = MxtDataComponents.STORAGE.get();
         // The connection type only tells NeoForge what the other end is; NEOFORGE is what this server's own
@@ -3599,7 +3604,7 @@ public final class MxtTestCommands {
         try {
             type.streamCodec().encode(buffer, holder);
             DataStorageHolder decoded = type.streamCodec().decode(buffer);
-            return decoded.get(id, ContainerDataStorage.class)
+            return decoded.get(ability, ContainerDataStorage.class)
                     .filter(value -> value.contents().size() == 27 && value.get(0).isEmpty()
                             && value.get(1).is(Items.STONE) && value.get(1).getCount() == 3)
                     .isPresent();
@@ -4332,15 +4337,15 @@ public final class MxtTestCommands {
             rebornStages.raiseMinorStageRecord(qiRefining, 2);
             rebornTechniques.addLearnedTechnique(require(MxtResourceKeys.TECHNIQUE, TECHNIQUE));
             AbilityGrantService.recalculate(reborn);
-            boolean realmAbility = rebornAbilities.has(id("awaken_divine_sense"));
+            boolean realmAbility = rebornAbilities.has(require(MxtResourceKeys.ABILITY, id("awaken_divine_sense")));
             LifeSpanService.set(reborn, 5L);
             boolean rebornSettled = LifeSpanService.settle(reborn);
             boolean reset = rebornSpirit.realmStages().isEmpty() && rebornStages.minorStageRecord(qiRefining) == -1
-                    && !rebornAbilities.has(id("awaken_divine_sense"));
+                    && !rebornAbilities.has(require(MxtResourceKeys.ABILITY, id("awaken_divine_sense")));
             // What the body still is keeps its grants, so the root's own ability survives the realm's.
             boolean kept = rebornTechniques.learnedTechniques().contains(require(MxtResourceKeys.TECHNIQUE, TECHNIQUE))
                     && !reborn.getData(MxtAttachments.SPIRIT_IDENTITY).spiritRoots().isEmpty()
-                    && rebornAbilities.has(PROBE_AFFINITY_ABILITY);
+                    && rebornAbilities.has(require(MxtResourceKeys.ABILITY, PROBE_AFFINITY_ABILITY));
             boolean rebornLedger = LifeSpanService.remaining(reborn) == 24_000L && LifeSpanService.total(reborn) == 24_000L;
             ok &= check(source, "lifespan probe: reincarnate realm_ability=" + realmAbility
                             + " realms=" + rebornSpirit.realmStages().size()
@@ -4362,7 +4367,7 @@ public final class MxtTestCommands {
             ensureResource(climber, climbResources, climbPayment, 100.0D);
             climbSpirit.setCultivationProgress(requireProfile(source.registryAccess(), QI), 100.0D);
             CultivationService.BreakthroughResult breakthrough = CultivationService.attempt(climber, climbSpirit,
-                    climbResources, QI, FormulaContext.of(climber), () -> true);
+                    climbResources, requireProfile(source.registryAccess(), QI), FormulaContext.of(climber), () -> true);
             boolean declared = qiRefining.value().lifespan().isPresent();
             // The pack's cap is part of the arithmetic: 25 is the fixture's own cost, and a body that cannot hold
             // that much turns the whole leg into an INSUFFICIENT_RESOURCE answer that says nothing about lifespan.
@@ -4420,7 +4425,7 @@ public final class MxtTestCommands {
             restartSpirit.setRealmStage(qiRefining);
             restartIdentity.raiseMinorStageRecord(qiRefining, 2);
             AbilityGrantService.recalculate(restart);
-            boolean restartAbility = restartAbilities.has(id("awaken_divine_sense"));
+            boolean restartAbility = restartAbilities.has(require(MxtResourceKeys.ABILITY, id("awaken_divine_sense")));
             LifeSpanService.set(restart, 5L);
             boolean[] ended = {false};
             int[] rebirths = {0};
@@ -4448,13 +4453,13 @@ public final class MxtTestCommands {
             }
             boolean restartReset = restartSpirit.realmStages().isEmpty()
                     && restartIdentity.minorStageRecord(qiRefining) == -1
-                    && !restartAbilities.has(id("awaken_divine_sense"))
-                    && restartAbilities.has(PROBE_AFFINITY_ABILITY);
+                    && !restartAbilities.has(require(MxtResourceKeys.ABILITY, id("awaken_divine_sense")))
+                    && restartAbilities.has(require(MxtResourceKeys.ABILITY, PROBE_AFFINITY_ABILITY));
             boolean restartLedger = LifeSpanService.remaining(restart) == 24_000L && LifeSpanService.total(restart) == 24_000L;
             ok &= check(source, "lifespan probe: explicit_reincarnate ran=" + restarted.changed()
                             + " refused=" + restartRefused + " ability=" + restartAbility
                             + " realms=" + restartSpirit.realmStages().size()
-                            + " kept_root=" + restartAbilities.has(PROBE_AFFINITY_ABILITY)
+                            + " kept_root=" + restartAbilities.has(require(MxtResourceKeys.ABILITY, PROBE_AFFINITY_ABILITY))
                             + " ledger=" + LifeSpanService.remaining(restart)
                             + " rebirth_post=" + rebirths[0] + " end_event=" + ended[0],
                     restartAbility && restarted.changed() && restartRefused && restartReset && restartLedger
@@ -4845,7 +4850,8 @@ public final class MxtTestCommands {
         TechniqueService.learn(player, techniques, technique.holder(), context);
         techniques.addLearnedTechnique(technique.holder());
         AbilityGrantService.recalculate(player);
-        TEST_ACTIVE_ABILITIES.forEach(id -> player.getData(MxtAttachments.ABILITY_HOLDER).grant(id, TEST_ABILITY_SOURCE));
+        TEST_ACTIVE_ABILITIES.forEach(abilityId ->
+                player.getData(MxtAttachments.ABILITY_HOLDER).grant(require(MxtResourceKeys.ABILITY, abilityId), TEST_ABILITY_SOURCE));
         // Granting an ability does not register its triggers by itself; the runtime index is only rebuilt where
         // the ability sources actually change.
         AbilityEventBridge.rebuildTriggerSubscriptions(player);
@@ -5112,13 +5118,13 @@ public final class MxtTestCommands {
             boolean bareLearned = TechniqueService.learn(bareA, bareIdentity, sword, contextOf(bareA)).changed();
             bareA.getData(MxtAttachments.TECHNIQUE).techniqueLevels()
                     .set(sword, require(MxtResourceKeys.PROGRESSION, PROBE_PROGRESSION_LEVEL));
-            boolean bareGranted = bareAbilities.has(id("artifact_guard"));
+            boolean bareGranted = bareAbilities.has(require(MxtResourceKeys.ABILITY, id("artifact_guard")));
             boolean forgotten = TechniqueService.forget(bareA, bareIdentity, sword).changed();
             boolean gone = bareIdentity.learnedTechniques().stream()
                     .noneMatch(technique -> HolderHelper.id(technique).equals(SWORD_MANUAL))
                     && bareIdentity.techniqueLevels().levels().keySet().stream()
                     .noneMatch(owner -> HolderHelper.id(owner).equals(SWORD_MANUAL))
-                    && !bareAbilities.has(id("artifact_guard"))
+                    && !bareAbilities.has(require(MxtResourceKeys.ABILITY, id("artifact_guard")))
                     && !bareSpirit.realmStages().isEmpty();
             boolean absent = TechniqueService.forget(bareA, bareIdentity, sword).failure()
                     == TechniqueService.Failure.ABSENT;
@@ -5282,7 +5288,7 @@ public final class MxtTestCommands {
                 .orElseThrow(() -> new IllegalStateException("Missing Qingxiao test definition " + id));
     }
 
-    private static Reference<Aura> requireProfile(RegistryAccess access, Identifier resource) {
+    private static Holder<Aura> requireProfile(RegistryAccess access, Identifier resource) {
         return MxtDatapackRegistries.holder(access, MxtResourceKeys.AURA, resource)
                 .orElseThrow(() -> new IllegalStateException("Missing Qingxiao cultivation profile " + resource));
     }

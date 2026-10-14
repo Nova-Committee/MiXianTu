@@ -17,6 +17,15 @@ public interface WheelEntryKind {
     Identifier id();
 
     /**
+     * Whether this kind is the one another names. A kind is its id: the registry hands out one instance per id, but
+     * nothing here compares instances, so a content mod's object and the framework's own are the same kind whenever
+     * they name the same id.
+     */
+    default boolean is(WheelEntryKind other) {
+        return other != null && this.id().equals(other.id());
+    }
+
+    /**
      * The kind's name in the configuration screen. A built-in kind returns its own translation key; a content mod
      * may return whatever component it likes.
      */

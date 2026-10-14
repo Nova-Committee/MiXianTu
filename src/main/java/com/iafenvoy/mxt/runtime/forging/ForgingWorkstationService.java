@@ -1,5 +1,6 @@
 package com.iafenvoy.mxt.runtime.forging;
 
+import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.data.forging.ForgingBlueprint;
 import com.iafenvoy.mxt.data.forging.ForgingBlueprint.FailureSettlement;
@@ -66,11 +67,10 @@ public final class ForgingWorkstationService {
     }
 
     // This blueprint's allowed_methods intersected with the placed tools' methods; the tools' union alone when
-    // the blueprint declares nothing or no id is selected.
-    public static List<Identifier> availableMethodIds(Container container, Provider access, Identifier blueprintId) {
+    // the blueprint declares nothing or no session is running.
+    public static List<Identifier> availableMethodIds(Container container, Provider access, Holder<ForgingBlueprint> blueprintRef) {
         List<Identifier> unlocked = toolMethodIds(container, access);
-        ForgingBlueprint blueprint = blueprintId == null ? null
-                : MxtDatapackRegistries.get(access, MxtResourceKeys.FORGING_BLUEPRINT, blueprintId).orElse(null);
+        ForgingBlueprint blueprint = blueprintRef == null ? null : blueprintRef.value();
         if (blueprint == null || !blueprint.restrictsMethods()) return unlocked;
         Set<Identifier> allowed = new LinkedHashSet<>();
         blueprint.allowedMethods().stream().forEach(method -> allowed.add(HolderHelper.id(method)));
@@ -133,7 +133,7 @@ public final class ForgingWorkstationService {
         if (!result.started()) return new StartOutcome(result.failure(), false);
 
         materials.consume(surface.forgingContainer());
-        state.lock(blueprintId, ForgingPlan.of(blueprint, registries), result.session(), materials.consumed(), player.getUUID());
+        state.lock(holder, ForgingPlan.of(blueprint, registries), result.session(), materials.consumed(), player.getUUID());
         surface.forgingChanged();
         settleIfComplete(player, surface, state, result.session());
         return new StartOutcome(null, true);
@@ -147,8 +147,8 @@ public final class ForgingWorkstationService {
         if (!outputEmpty(surface)) return new StrikeOutcome(Failure.OUTPUT_BLOCKED, false, 0);
         Holder<ForgingMethod> method = MxtDatapackRegistries.holder(player.level().registryAccess(), MxtResourceKeys.FORGING_METHOD, methodId).orElse(null);
         if (method == null) return new StrikeOutcome(Failure.DISABLED, false, 0);
-        Identifier blueprintId = state.blueprint().orElse(null);
-        if (!availableMethodIds(surface.forgingContainer(), player.level().registryAccess(), blueprintId).contains(methodId))
+        Holder<ForgingBlueprint> blueprintRef = state.blueprint().orElse(null);
+        if (!availableMethodIds(surface.forgingContainer(), player.level().registryAccess(), blueprintRef).contains(methodId))
             return new StrikeOutcome(Failure.METHOD_NOT_AVAILABLE, false, 0);
         ForgingPlan plan = state.plan().orElse(null);
         ForgingSession session = state.session().map(snapshot -> ForgingSession.restore(plan, snapshot)).orElse(null);
@@ -207,11 +207,11 @@ public final class ForgingWorkstationService {
     // For callers that have already established the session, the range and the free output slot; two callers
     // share this body rather than agreeing by hand.
     private static FinishOutcome settle(ServerPlayer player, ForgingSurface surface, ForgingTableState state) {
-        Identifier blueprintId = state.blueprint().orElse(null);
-        Holder<ForgingBlueprint> holder = MxtDatapackRegistries.holder(player.level().registryAccess(), MxtResourceKeys.FORGING_BLUEPRINT, blueprintId).orElse(null);
+        Holder<ForgingBlueprint> holder = state.blueprint().orElse(null);
+        if (holder == null) return new FinishOutcome(Failure.DISABLED, false);
         ForgingPlan plan = state.plan().orElse(null);
         ForgingSession session = state.session().map(snapshot -> ForgingSession.restore(plan, snapshot)).orElse(null);
-        if (holder == null || session == null) return new FinishOutcome(Failure.DISABLED, false);
+        if (session == null) return new FinishOutcome(Failure.DISABLED, false);
 
         ForgingBlueprint blueprint = holder.value();
         // The locked materials are read here rather than at start because only the settlement turns them into
@@ -249,7 +249,7 @@ public final class ForgingWorkstationService {
         // session exactly as it was, materials and all.
         Failure refusal = session == null ? Failure.NO_SESSION : ForgingService.cancel(player, surface, session);
         if (refusal != null) return new CancelOutcome(refusal, false);
-        ForgingBlueprint blueprint = state.blueprint().flatMap(id -> MxtDatapackRegistries.get(player.level().registryAccess(), MxtResourceKeys.FORGING_BLUEPRINT, id)).orElse(null);
+        ForgingBlueprint blueprint = state.blueprint().map(Holder::value).orElse(null);
         if (blueprint != null) blueprint.failAction().execute(player, FormulaContext.of(player));
         // After the policy, because its whole input is what the session took; and a full clear rather than
         // dropping just the session - see ForgingTableState#clear.
@@ -260,7 +260,7 @@ public final class ForgingWorkstationService {
     }
 
     private static void fail(ServerPlayer player, ForgingSurface surface, ForgingTableState state, ForgingSession session) {
-        ForgingBlueprint blueprint = state.blueprint().flatMap(id -> MxtDatapackRegistries.get(player.level().registryAccess(), MxtResourceKeys.FORGING_BLUEPRINT, id)).orElse(null);
+        ForgingBlueprint blueprint = state.blueprint().map(Holder::value).orElse(null);
         if (blueprint == null) {
             returnLocked(player, surface, state);
         } else {
@@ -282,6 +282,25 @@ public final class ForgingWorkstationService {
             ItemStack remainder = insertIntoInputs(container, stack);
             if (!remainder.isEmpty()) give(player, remainder);
         }
+    }
+
+    // Used when a session is found degraded on load, where the materials it had taken would otherwise be stranded
+    // in a state nothing can settle any more. Whatever the input slots cannot take is kept in the state rather
+    // than dropped, since a chunk load has no player to hand it to. Touches the container only, which is valid
+    // while the block entity is still detached from its level.
+    public static boolean returnStrandedMaterials(ForgingSurface surface) {
+        ForgingTableState state = surface.forgingState();
+        if (state.active() || state.consumed().isEmpty()) return false;
+        Container container = surface.forgingContainer();
+        List<ItemStack> leftover = new ArrayList<>();
+        for (ItemStack stack : state.consumed()) {
+            ItemStack remainder = insertIntoInputs(container, stack);
+            if (!remainder.isEmpty()) leftover.add(remainder);
+        }
+        state.retainConsumed(leftover);
+        if (!leftover.isEmpty())
+            MiXianTu.LOGGER.warn("A forge table at {} could not take back {} stack(s) of a session that was dropped", surface.pos(), leftover.size());
+        return true;
     }
 
     private static ItemStack insertIntoInputs(Container container, ItemStack stack) {

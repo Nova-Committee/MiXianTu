@@ -85,7 +85,7 @@ public final class WheelMenuContent {
     // general check would open it on another page instead of saying that this item has nothing to offer.
     public static boolean hasAnyEntry(List<WheelPage> pages, WheelSource source) {
         for (WheelPage page : pages) {
-            if (page.source() != source) continue;
+            if (!page.source().is(source)) continue;
             for (WheelMenuEntry entry : page.sectors()) if (entry != null) return true;
         }
         return false;

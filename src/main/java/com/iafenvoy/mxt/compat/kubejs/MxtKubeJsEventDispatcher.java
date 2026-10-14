@@ -217,8 +217,10 @@ final class MxtKubeJsEventDispatcher implements Dispatcher {
             return this.event.getClass().getSimpleName().toLowerCase(Locale.ROOT);
         }
 
+        // A holder's own toString is a debug string, so the id is what a script can compare against; a position
+        // no zone covers has no source at all.
         public String getSource() {
-            return this.event.result().source().toString();
+            return this.event.result().source() == null ? "" : HolderHelper.id(this.event.result().source()).toString();
         }
 
         public double getConcentration() {

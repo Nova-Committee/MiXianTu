@@ -2,13 +2,11 @@ package com.iafenvoy.mxt.attachment;
 
 import com.iafenvoy.mxt.data.item.PillBinding;
 import com.iafenvoy.mxt.util.AbstractChangeTrackable;
-import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.codec.CollectionCodecs;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
-import net.minecraft.resources.Identifier;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -49,20 +47,11 @@ public final class PillUsageAttachment extends AbstractChangeTrackable {
         return this.cooldownUntil(pill) > gameTime;
     }
 
-    // Holder identity is not stable across a reload, so a saved key is matched by id when the instance differs.
     public Dose dose(Holder<PillBinding> pill) {
-        Dose direct = this.entries.get(pill);
-        if (direct != null) return direct;
-        Identifier id = HolderHelper.idOrNull(pill);
-        if (id == null) return null;
-        for (Map.Entry<Holder<PillBinding>, Dose> entry : this.entries.entrySet())
-            if (entry.getKey().is(id)) return entry.getValue();
-        return null;
+        return this.entries.get(pill);
     }
 
     public void record(Holder<PillBinding> pill, int uses, long cooldownUntil) {
-        Identifier id = HolderHelper.idOrNull(pill);
-        if (id != null) this.entries.keySet().removeIf(key -> key != pill && key.is(id));
         this.entries.put(pill, new Dose(Math.max(0, uses), cooldownUntil));
         this.markDirty();
     }

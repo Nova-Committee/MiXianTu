@@ -6,7 +6,6 @@ import com.iafenvoy.mxt.data.quality.QualityRequirement;
 import com.iafenvoy.mxt.util.ClientLevelAccess;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup.Provider;
-import net.minecraft.core.HolderLookup.RegistryLookup;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.api.distmarker.Dist;
@@ -29,8 +28,7 @@ public final class QualityRequirements {
     public static boolean test(Provider access, ItemStack stack, QualityRequirement requirement) {
         // Nothing asked: every stack passes, including one whose tier nothing declares.
         if (requirement.isEmpty()) return true;
-        RegistryLookup<ItemQuality> registry = QualityService.registry(access).orElse(null);
-        Holder<ItemQuality> quality = QualityService.find(registry, access, stack).orElse(null);
+        Holder<ItemQuality> quality = QualityService.find(access, stack).orElse(null);
         if (quality == null || !requirement.admits(quality)) return false;
         Holder<ItemQuality> minimum = requirement.minQuality().orElse(null);
         // A ladder position is not written on the stack, so only the indexed chain can answer it.

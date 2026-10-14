@@ -6,15 +6,12 @@ import com.iafenvoy.mxt.data.cost.builtin.ResourceCost;
 import com.iafenvoy.mxt.data.cost.context.CostContext;
 import com.iafenvoy.mxt.data.cost.context.CostFailure;
 import com.iafenvoy.mxt.data.resource.Resource;
-import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
-import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.resource.ResourceService;
 import com.iafenvoy.mxt.runtime.resource.ResourceTransactions;
 import com.iafenvoy.mxt.runtime.resource.ResourceTransactions.Evaluation;
 import com.iafenvoy.mxt.runtime.resource.ResourceTransactions.Result;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.Holder;
-import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.resources.Identifier;
 import org.jetbrains.annotations.Nullable;
 
@@ -32,13 +29,13 @@ import java.util.Optional;
  */
 public final class ResourceCostDraft implements CostDraft<ResourceCost> {
     private final CostContext context;
-    private final Map<Identifier, Double> account;
+    private final Map<Holder<Resource>, Double> account;
     private final @Nullable ResourceHolderAttachment target;
     private final @Nullable ResourceHolderAttachment baseline;
     private final Map<Holder<Resource>, Value> written = new LinkedHashMap<>();
     private @Nullable Identifier failedResource;
 
-    public ResourceCostDraft(CostContext context, Map<Identifier, Double> account) {
+    public ResourceCostDraft(CostContext context, Map<Holder<Resource>, Double> account) {
         this.context = context;
         this.account = account;
         this.target = context.resourceTarget();
@@ -53,10 +50,10 @@ public final class ResourceCostDraft implements CostDraft<ResourceCost> {
         // Each cost is evaluated with the formula context of the resource it spends, so a cost may refer to that
         // resource's realm rank and absorbed aura.
         FormulaContext formula = this.context.payer() == null ? this.context.formula()
-                : ResourceService.formulaContext(this.context.payer(), cost.id(), this.context.formula());
+                : ResourceService.formulaContext(this.context.payer(), cost.resource(), this.context.formula());
         double value = cost.amount().evaluate(formula);
         if (!Double.isFinite(value) || value <= 0.0D) return Optional.of(CostFailure.INVALID_AMOUNT);
-        this.account.merge(cost.id(), value, Double::sum);
+        this.account.merge(cost.resource(), value, Double::sum);
         return Optional.empty();
     }
 
@@ -75,16 +72,13 @@ public final class ResourceCostDraft implements CostDraft<ResourceCost> {
         // because a draft can wait - a cast pays at the end of its cast time - and putting an older value back
         // would undo whatever else the account gained in between.
         this.written.clear();
-        // Without an access the ids resolve to nothing, and the payment below refuses for the same reason: the
-        // snapshot is skipped rather than taken against a registry this context never had.
-        Provider access = this.context.formula().registries();
-        if (access != null)
-            for (Identifier id : this.account.keySet())
-                MxtDatapackRegistries.holder(access, MxtResourceKeys.RESOURCE, id).ifPresent(resource -> {
-                    Audit audit = this.target.audit(resource);
-                    this.written.put(resource, new Value(resource, this.target.get(resource), audit.minSnapshot(),
-                            audit.maxSnapshot(), audit.lastChangedTick(), audit.source()));
-                });
+        // The account is keyed by the resource itself, so the snapshot is the same table the payment charges: there
+        // is no second lookup here that could fail and leave reset() nothing to put back.
+        for (Holder<Resource> resource : this.account.keySet()) {
+            Audit audit = this.target.audit(resource);
+            this.written.put(resource, new Value(resource, this.target.get(resource), audit.minSnapshot(),
+                    audit.maxSnapshot(), audit.lastChangedTick(), audit.source()));
+        }
         return this.consume(this.target) ? Optional.empty() : Optional.of(CostFailure.INSUFFICIENT_RESOURCE);
     }
 
@@ -104,7 +98,7 @@ public final class ResourceCostDraft implements CostDraft<ResourceCost> {
     // The write itself, all-or-nothing: tryConsume validates every entry before it touches any, so a store that
     // cannot pay for the whole price is left exactly as it was.
     private boolean consume(ResourceHolderAttachment holder) {
-        Result result = ResourceTransactions.tryConsume(this.context.formula().registries(), this.context.payer(), holder, new Evaluation(this.account));
+        Result result = ResourceTransactions.tryConsume(this.context.payer(), holder, new Evaluation(this.account));
         this.failedResource = result.failedResource();
         return result.committed();
     }

@@ -116,7 +116,7 @@ public final class WheelSelectionState {
     // reports.
     public static void firstPageOf(WheelSource source) {
         for (int index = 0; index < pages.size(); index++)
-            if (pages.get(index).source() == source) {
+            if (pages.get(index).source().is(source)) {
                 page = index;
                 return;
             }

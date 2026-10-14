@@ -20,7 +20,8 @@ public final class Abilities {
     }
 
     public static Optional<Holder<Ability>> resolve(Provider access, @Nullable Identifier id) {
+        //FIXME::
         if (id == null) return Optional.empty();
-        return MxtDatapackRegistries.holder(access, MxtResourceKeys.ABILITY, id).map(holder -> holder);
+        return MxtDatapackRegistries.holder(access, MxtResourceKeys.ABILITY, id);
     }
 }

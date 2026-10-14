@@ -4,7 +4,6 @@ import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.util.HolderHelper;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
 import net.minecraft.core.HolderLookup.Provider;
@@ -44,12 +43,13 @@ public final class AuraLookup {
     // (Aura#resource), and a value naming no aura is a plain counter rather than a second kind of aura.
     public static Optional<Reference<Aura>> holder(@Nullable Provider access, Identifier resource) {
         if (access == null) return Optional.empty();
-        return all(access).filter(aura -> HolderHelper.id(aura.value().resource()).equals(resource)).findFirst();
+        return all(access).filter(aura -> aura.value().resource().is(resource)).findFirst();
     }
 
     // Keeps the holder: a realm chain is keyed by the aura holder, so comparisons need the reference.
     public static Optional<Reference<Aura>> holder(@Nullable Provider access, Holder<Resource> resource) {
-        return holder(access, HolderHelper.id(resource));
+        if (access == null) return Optional.empty();
+        return all(access).filter(aura -> aura.value().resource().is(resource)).findFirst();
     }
 
     public static Optional<Reference<Aura>> holder(@Nullable LivingEntity entity, Holder<Resource> resource) {
@@ -61,7 +61,7 @@ public final class AuraLookup {
     }
 
     public static Optional<Aura> find(@Nullable Provider access, Holder<Resource> resource) {
-        return find(access, HolderHelper.id(resource));
+        return holder(access, resource).map(Reference::value);
     }
 
     public static Optional<Aura> find(LivingEntity entity, Holder<Resource> resource) {

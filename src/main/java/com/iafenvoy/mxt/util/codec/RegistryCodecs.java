@@ -37,11 +37,13 @@ public final class RegistryCodecs {
     }
 
     public static <T> boolean matches(Collection<Either<Holder<T>, TagKey<T>>> values, Holder<T> candidate) {
-        return values.stream().anyMatch(value -> value.map(entry -> entry.value() == candidate.value(), candidate::is));
+        return values.stream().anyMatch(value -> value.map(holder -> holder.is(candidate), candidate::is));
     }
 
     // A caller holding the value rather than its holder - a block or an item it already has in hand - asks the same
-    // question the holder form does, without having to find the holder first.
+    // question the holder form does, without having to find the holder first. The value is compared by identity
+    // because that is all such a caller has, and a registry value is one object; a caller with a holder in hand uses
+    // the form above, where the comparison is the holder's own.
     public static <T> boolean matchesValue(Collection<Either<Holder<T>, TagKey<T>>> values, Registry<T> registry, T candidate) {
         if (values.isEmpty()) return false;
         for (Either<Holder<T>, TagKey<T>> value : values) {
@@ -58,10 +60,12 @@ public final class RegistryCodecs {
         return false;
     }
 
+    //FIXME::
     public static <T> boolean matches(Collection<Either<Holder<T>, TagKey<T>>> values, Registry<T> registry, ResourceKey<Registry<T>> key, Identifier candidate) {
         return registry.get(ResourceKey.create(key, candidate)).map(holder -> matches(values, holder)).orElse(false);
     }
 
+    //FIXME::
     public static <T> boolean matchesKey(Collection<Either<ResourceKey<T>, TagKey<T>>> values, Registry<T> registry, Identifier candidate) {
         return values.stream().anyMatch(value -> value.map(key -> key.identifier().equals(candidate),
                 tag -> registry.listElements().anyMatch(holder -> holder.is(tag) && holder.unwrapKey()

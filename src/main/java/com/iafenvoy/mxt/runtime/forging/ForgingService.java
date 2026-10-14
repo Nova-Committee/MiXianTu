@@ -12,7 +12,6 @@ import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.event.ForgingEvent;
 import com.iafenvoy.mxt.event.ForgingEvent.*;
 import com.iafenvoy.mxt.runtime.item.QualityService;
-import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.Holder;
 import net.minecraft.core.RegistryAccess;
@@ -55,8 +54,7 @@ public final class ForgingService {
     public static StrikeResult strike(ServerPlayer player, ForgingSurface surface, ForgingSession session, Holder<ForgingMethod> method,
                                       ResourceHolderAttachment resources, FormulaContext context, BooleanSupplier conditions) {
         if (!conditions.getAsBoolean()) return StrikeResult.rejected(Failure.CONDITIONS, null);
-        Identifier methodId = HolderHelper.id(method);
-        if (!session.canStrike(methodId)) return StrikeResult.rejected(Failure.INVALID_STRIKE, null);
+        if (!session.canStrike(method)) return StrikeResult.rejected(Failure.INVALID_STRIKE, null);
         StrikePre event = new StrikePre(player, surface.pos(), new ForgingSessionView(session), method, resources, context);
         Failure refusal = postEvent(event);
         if (refusal != null) return StrikeResult.rejected(refusal, null);
@@ -65,7 +63,7 @@ public final class ForgingService {
         if (plan.loadAndTest(event.costs()).isPresent()) return StrikeResult.rejected(Failure.INVALID_FORMULA, null);
         CostPayment.Result payment = plan.commit();
         if (!payment.paid()) return StrikeResult.rejected(Failure.INSUFFICIENT_RESOURCE, payment.failedResource());
-        if (!session.strike(methodId))
+        if (!session.strike(method))
             throw new IllegalStateException("Forging session changed after its strike precheck");
         notifyListeners(new StrikePost(player, surface.pos(), new ForgingSessionView(session)));
         return StrikeResult.struck(session.value(), session.steps(), payment.resources());
@@ -91,7 +89,7 @@ public final class ForgingService {
         int extra = session.extraSteps();
         Holder<ItemQuality> quality = qualityForExtraSteps.apply(effectiveExtraSteps(extra, forgingModifier));
         if (quality == null) return FinishResult.rejected(Failure.INVALID_BLUEPRINT);
-        ForgingResultComponent result = new ForgingResultComponent(HolderHelper.id(blueprint), session.value(), session.steps(), session.optimalSteps(), extra);
+        ForgingResultComponent result = new ForgingResultComponent(blueprint, session.value(), session.steps(), session.optimalSteps(), extra);
         notifyListeners(new CompletePost(player, surface.pos(), blueprint, new ForgingSessionView(session), result, quality));
         return FinishResult.finished(result, quality);
     }

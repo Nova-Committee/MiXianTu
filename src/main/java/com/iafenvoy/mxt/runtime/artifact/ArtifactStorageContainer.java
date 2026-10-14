@@ -1,7 +1,6 @@
 package com.iafenvoy.mxt.runtime.artifact;
 
 import com.iafenvoy.mxt.data.ability.Ability;
-import com.iafenvoy.mxt.util.HolderHelper;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.server.level.ServerPlayer;
@@ -51,7 +50,7 @@ public final class ArtifactStorageContainer extends SimpleContainer {
     }
 
     private Optional<ItemStack> carrier() {
-        return ArtifactService.carried(this.access(), this.viewer, HolderHelper.id(this.ability));
+        return ArtifactService.carried(this.access(), this.viewer, this.ability);
     }
 
     private Provider access() {

@@ -4,7 +4,13 @@ import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.cost.context.CostContext;
 import com.iafenvoy.mxt.data.cost.context.CostFailure;
+import com.iafenvoy.mxt.data.resource.Resource;
+import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
+import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.runtime.resource.ResourceTransactions.Evaluation;
+import com.iafenvoy.mxt.util.HolderHelper;
 import net.minecraft.core.Holder;
+import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.resources.Identifier;
 import org.jetbrains.annotations.Nullable;
 
@@ -26,7 +32,7 @@ import java.util.*;
  */
 public final class CostPayment {
     private final CostContext context;
-    private final Map<Identifier, Double> account = new LinkedHashMap<>();
+    private final Map<Holder<Resource>, Double> account = new LinkedHashMap<>();
     private final Map<Class<?>, CostDraft<?>> drafts = new LinkedHashMap<>();
     private final List<Cost> direct = new ArrayList<>();
     private @Nullable Map<Holder<Aura>, Double> auras;
@@ -143,12 +149,40 @@ public final class CostPayment {
     }
 
     /**
-     * The resource price loaded so far, mutable: a listener that re-prices a payment writes here, and a caller
-     * paying part of the price itself takes out what it paid. This is the account table of the resource draft, and
-     * what the payment charges.
+     * The resource price loaded so far, as the id-keyed table a listener, a script or a result names resources in.
+     * This is a copy: what the payment charges is {@link #account()}, and a re-price goes through {@link #reprice}.
      */
     public Map<Identifier, Double> resources() {
+        Map<Identifier, Double> reported = new LinkedHashMap<>();
+        this.account.forEach((resource, amount) -> reported.merge(HolderHelper.id(resource), amount, Double::sum));
+        return reported;
+    }
+
+    /**
+     * The same price keyed by the resource itself: the table the drafts charge, and what a caller holding resources
+     * (a tooltip, an account snapshot, an evaluation) reads. Mutable, because that is what the drafts write into.
+     */
+    public Map<Holder<Resource>, Double> account() {
         return this.account;
+    }
+
+    /**
+     * This price as the amounts a transaction writes.
+     */
+    public Evaluation evaluation() {
+        return new Evaluation(this.account);
+    }
+
+    /**
+     * Replaces this price from the id-keyed table a listener hands back. An id the registries do not provide is
+     * dropped, which is the answer every other unresolved id gets.
+     */
+    public void reprice(Map<Identifier, Double> amounts) {
+        Provider access = this.context.formula().registries();
+        this.account.clear();
+        if (access == null) return;
+        amounts.forEach((id, amount) -> MxtDatapackRegistries.holder(access, MxtResourceKeys.RESOURCE, id)
+                .ifPresent(resource -> this.account.merge(resource, amount, Double::sum)));
     }
 
     /**
@@ -225,7 +259,7 @@ public final class CostPayment {
         Map<Identifier, Double> resources = new LinkedHashMap<>();
         Map<Holder<Aura>, Double> auras = new LinkedHashMap<>();
         for (CostPayment payment : payments) {
-            payment.account.forEach((id, amount) -> resources.merge(id, amount, Double::sum));
+            payment.account.forEach((resource, amount) -> resources.merge(HolderHelper.id(resource), amount, Double::sum));
             if (payment.auras != null)
                 payment.auras.forEach((aura, amount) -> auras.merge(aura, amount, Double::sum));
         }

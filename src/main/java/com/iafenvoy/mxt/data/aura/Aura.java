@@ -48,7 +48,8 @@ public record Aura(Holder<Resource> resource, Optional<Holder<RealmStage>> first
 
     @Override
     public @NonNull String toString() {
-        return "Aura[resource=" + HolderHelper.id(this.resource) + ", first_realm=" + this.firstRealm.map(HolderHelper::id).orElse(HolderHelper.EMPTY) + "]";
+        return "Aura[resource=" + HolderHelper.id(this.resource) + ", first_realm="
+                + this.firstRealm.map(holder -> HolderHelper.id(holder).toString()).orElse("-") + "]";
     }
 
     // The per-tick limit applies to the consumed source value before the multiplier.

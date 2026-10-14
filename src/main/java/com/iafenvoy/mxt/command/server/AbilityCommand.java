@@ -10,7 +10,6 @@ import com.iafenvoy.mxt.runtime.ability.AbilityEventBridge;
 import com.iafenvoy.mxt.runtime.ability.AbilityService;
 import com.iafenvoy.mxt.runtime.ability.AbilityService.UseResult;
 import com.iafenvoy.mxt.util.DefinitionText;
-import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
@@ -71,8 +70,8 @@ public final class AbilityCommand {
         return ResourceArgument.getResource(ctx, "id", MxtResourceKeys.ABILITY);
     }
 
-    // Read from the attachment rather than the registry, so an ability whose definition the pack no longer provides
-    // is still reported: it is still held, and revoking it by name is still what takes it off.
+    // Read from the attachment rather than the registry, so what the ledger holds is what is reported. The ledger is
+    // keyed by the ability holder, so an ability the pack no longer provides is not in it to be listed.
     private static int list(CommandSourceStack source, @NotNull Entity target) {
         AbilityAttachment abilities = target.getData(MxtAttachments.ABILITY_HOLDER);
         source.sendSuccess(() -> Component.translatable("command.mxt.ability.list.header", target.getDisplayName()), false);
@@ -80,8 +79,8 @@ public final class AbilityCommand {
             source.sendSuccess(() -> Component.translatable("command.mxt.ability.list.empty"), false);
             return 1;
         }
-        for (Identifier ability : abilities.sources().keys()) {
-            Component name = DefinitionText.text(MxtResourceKeys.ABILITY, ability);
+        for (Holder<Ability> ability : abilities.sources().keys()) {
+            Component name = DefinitionText.text(ability);
             Component from = Component.literal(abilities.sources().of(ability).stream()
                     .map(Identifier::toString).sorted().reduce((a, b) -> a + ", " + b).orElse("-"));
             source.sendSuccess(() -> Component.translatable("command.mxt.ability.list.line", name, from), false);
@@ -92,12 +91,11 @@ public final class AbilityCommand {
     private static int grant(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         CommandSourceStack source = ctx.getSource();
         Reference<Ability> ability = ResourceArgument.getResource(ctx, "ability", MxtResourceKeys.ABILITY);
-        Identifier id = HolderHelper.id(ability);
         Collection<? extends Entity> targets = EntityArgument.getEntities(ctx, "targets");
         int granted = 0;
         for (Entity target : targets) {
             AbilityAttachment abilities = target.getData(MxtAttachments.ABILITY_HOLDER);
-            if (abilities.grant(id, SOURCE)) {
+            if (abilities.grant(ability, SOURCE)) {
                 granted++;
                 rebuild(target);
                 source.sendSuccess(() -> Component.translatable("command.mxt.ability.granted",
@@ -118,7 +116,7 @@ public final class AbilityCommand {
         Collection<? extends Entity> targets = EntityArgument.getEntities(ctx, "targets");
         int revoked = 0;
         for (Entity target : targets) {
-            if (target.getData(MxtAttachments.ABILITY_HOLDER).revoke(HolderHelper.id(ability), SOURCE)) {
+            if (target.getData(MxtAttachments.ABILITY_HOLDER).revoke(ability, SOURCE)) {
                 revoked++;
                 rebuild(target);
                 source.sendSuccess(() -> Component.translatable("command.mxt.ability.revoked",

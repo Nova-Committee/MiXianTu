@@ -6,6 +6,7 @@ import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.particle.SpiritWispParticleOptions;
 import com.iafenvoy.mxt.registry.MxtEntityTypes;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.util.HolderHelper;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
@@ -46,6 +47,7 @@ public final class SpiritBurstEntity extends ThrowableProjectile {
     private static final float TRAIL_PARTICLE_SIZE = 0.085F;
     private static final EntityDataAccessor<Integer> AMOUNT = SynchedEntityData.defineId(SpiritBurstEntity.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Integer> PARTICLE_COLOR = SynchedEntityData.defineId(SpiritBurstEntity.class, EntityDataSerializers.INT);
+    //FIXME::Holder?
     private static final EntityDataAccessor<String> AURA = SynchedEntityData.defineId(SpiritBurstEntity.class, EntityDataSerializers.STRING);
 
     public SpiritBurstEntity(EntityType<? extends SpiritBurstEntity> type, Level level) {
@@ -141,9 +143,7 @@ public final class SpiritBurstEntity extends ThrowableProjectile {
 
     // Requires a registry holder: only the id travels, so an inline value could not be rebuilt on arrival.
     public void setAura(Holder<Aura> aura) {
-        Identifier id = aura.unwrapKey().map(ResourceKey::identifier)
-                .orElseThrow(() -> new IllegalArgumentException("Spirit burst aura must be a registry holder"));
-        this.getEntityData().set(AURA, id.toString());
+        this.getEntityData().set(AURA, HolderHelper.id(aura).toString());
     }
 
     private Optional<Reference<Aura>> aura() {

@@ -12,16 +12,15 @@ import com.iafenvoy.mxt.data.cost.Cost;
 import com.iafenvoy.mxt.data.cost.CostPayment;
 import com.iafenvoy.mxt.data.cost.context.CostContext;
 import com.iafenvoy.mxt.data.cost.context.CostOrigin;
+import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtEntityTypes;
-import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
 import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.Unit;
@@ -136,7 +135,7 @@ public final class FlightService {
         // The flight allowance is an attribute ({@code NeoForgeMod.CREATIVE_FLIGHT}); the mayfly flag is the
         // deprecated view of it, and reading the attribute is what can actually be written back. Only a player has
         // any of that to remember, so the snapshot stays at its defaults for anything else.
-        data.start(skill, HolderHelper.id(found.ability()), holder.level().getGameTime(),
+        data.start(skill, found.ability(), holder.level().getGameTime(),
                 holder.getAttributeValue(NeoForgeMod.CREATIVE_FLIGHT),
                 holder instanceof Player player && player.getAbilities().flying,
                 holder instanceof Player flying ? flying.getAbilities().getFlyingSpeed() : 0.0F, body.getUUID());
@@ -222,7 +221,7 @@ public final class FlightService {
         if (stack.isEmpty()) return List.of();
         Provider access = level.registryAccess();
         List<Fuel> burned = new ArrayList<>();
-        for (Map.Entry<Identifier, Double> entry : new ArrayList<>(planning.resources().entrySet())) {
+        for (Map.Entry<Holder<Resource>, Double> entry : new ArrayList<>(planning.account().entrySet())) {
             double left = entry.getValue();
             // A price written as a resource still names the aura an artifact can pay it in, so the store is
             // asked which of its auras are counted in that resource.
@@ -235,8 +234,8 @@ public final class FlightService {
                 left -= taken;
                 burned.add(new Fuel(aura, taken));
             }
-            if (left <= 0.0D) planning.resources().remove(entry.getKey());
-            else entry.setValue(left);
+            if (left <= 0.0D) planning.account().remove(entry.getKey());
+            else planning.account().put(entry.getKey(), left);
         }
         return burned;
     }

@@ -1,8 +1,9 @@
 package com.iafenvoy.mxt.runtime.forging;
 
+import com.iafenvoy.mxt.data.forging.ForgingMethod;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import net.minecraft.resources.Identifier;
+import net.minecraft.core.Holder;
 
 import java.util.LinkedList;
 import java.util.List;
@@ -14,7 +15,7 @@ import java.util.List;
  */
 public final class ForgingSession {
     private final ForgingPlan plan;
-    private final List<Identifier> history = new LinkedList<>();
+    private final List<Holder<ForgingMethod>> history = new LinkedList<>();
     private int value;
     private int steps;
 
@@ -22,7 +23,7 @@ public final class ForgingSession {
         this.plan = plan;
     }
 
-    private ForgingSession(ForgingPlan plan, int value, int steps, List<Identifier> history) {
+    private ForgingSession(ForgingPlan plan, int value, int steps, List<Holder<ForgingMethod>> history) {
         this.plan = plan;
         if (!plan.inBounds(value) || steps < 0 || history.size() > 6) {
             throw new IllegalArgumentException("Invalid forging session snapshot");
@@ -49,7 +50,7 @@ public final class ForgingSession {
     }
 
     // What leaves this class to be persisted is {@link #snapshot()}.
-    List<Identifier> history() {
+    List<Holder<ForgingMethod>> history() {
         return List.copyOf(this.history);
     }
 
@@ -59,7 +60,7 @@ public final class ForgingSession {
         return this.plan.optimalSteps();
     }
 
-    public boolean strike(Identifier method) {
+    public boolean strike(Holder<ForgingMethod> method) {
         if (!this.canStrike(method)) return false;
         this.value += this.plan.delta(method);
         this.steps++;
@@ -72,7 +73,7 @@ public final class ForgingSession {
 
     // Needs both a step left in the budget and a value that stays inside the meter; a method the plan does not
     // list is refused rather than raised.
-    public boolean canStrike(Identifier method) {
+    public boolean canStrike(Holder<ForgingMethod> method) {
         if (this.steps >= this.plan.maxSteps()) return false;
         Integer delta = this.plan.deltaIfAllowed(method);
         return delta != null && this.plan.inBounds(this.value + delta);
@@ -91,10 +92,10 @@ public final class ForgingSession {
     }
 
     // The persistable half of a session: its progress, and nothing that belongs to the plan.
-    public record Snapshot(int value, int steps, List<Identifier> history) {
+    public record Snapshot(int value, int steps, List<Holder<ForgingMethod>> history) {
         public static final Codec<Snapshot> CODEC = RecordCodecBuilder.create(i -> i.group(
                 Codec.INT.fieldOf("value").forGetter(Snapshot::value), Codec.INT.fieldOf("steps").forGetter(Snapshot::steps),
-                Identifier.CODEC.listOf().fieldOf("history").forGetter(Snapshot::history)
+                ForgingMethod.CODEC.listOf().fieldOf("history").forGetter(Snapshot::history)
         ).apply(i, Snapshot::new));
 
         public Snapshot {

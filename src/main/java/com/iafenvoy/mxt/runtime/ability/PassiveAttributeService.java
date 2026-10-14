@@ -2,11 +2,13 @@ package com.iafenvoy.mxt.runtime.ability;
 
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.data.AttributeEntry;
+import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.EntitySources;
 import com.iafenvoy.mxt.runtime.ModuleHooks;
 import com.iafenvoy.mxt.runtime.Sources;
 import com.iafenvoy.mxt.runtime.ability.AbilityModifierService.ResolvedModifier;
+import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.FormulaContexts;
 import net.minecraft.core.Holder;
@@ -89,12 +91,14 @@ public final class PassiveAttributeService {
 
     private static List<Entry> entries(LivingEntity entity) {
         List<Entry> entries = new ArrayList<>();
-        Map<Identifier, Integer> abilityIndices = new HashMap<>();
+        Map<Holder<Ability>, Integer> abilityIndices = new HashMap<>();
         for (ResolvedModifier value : AbilityModifierService.resolve(entity, entity.getData(MxtAttachments.ABILITY_HOLDER))) {
             int index = abilityIndices.merge(value.ability(), 1, Integer::sum) - 1;
             AttributeEntry definition = value.modifier();
-            entries.add(new Entry(Sources.Declaration.ABILITY, value.ability(), index, definition,
-                    modifierId(Sources.Declaration.ABILITY, value.ability(), index, definition.modifier())));
+            // An attribute modifier id is persisted by vanilla, so the ability's own id is what it is built from.
+            Identifier abilityId = HolderHelper.id(value.ability());
+            entries.add(new Entry(Sources.Declaration.ABILITY, abilityId, index, definition,
+                    modifierId(Sources.Declaration.ABILITY, abilityId, index, definition.modifier())));
         }
 
         // Everything a datapack declares comes from the registered providers; a body with none of them has no

@@ -10,7 +10,6 @@ import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.curse.CurseService;
 import com.iafenvoy.mxt.runtime.curse.CurseService.ApplyResult;
 import com.iafenvoy.mxt.util.DefinitionText;
-import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.LongArgumentType;
@@ -166,7 +165,7 @@ public final class CurseCommand {
     private static Optional<Holder<Curse>> heldByName(Collection<? extends Entity> targets, Identifier id) {
         for (Entity target : targets) {
             for (Holder<Curse> curse : target.getData(MxtAttachments.CURSE_HOLDER).instances().keySet())
-                if (HolderHelper.id(curse).equals(id)) return Optional.of(curse);
+                if (curse.is(id)) return Optional.of(curse);
         }
         return Optional.empty();
     }

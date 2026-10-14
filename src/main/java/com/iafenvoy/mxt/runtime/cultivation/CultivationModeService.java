@@ -9,7 +9,6 @@ import com.iafenvoy.mxt.runtime.cultivation.CultivationMethodService.Failure;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationMethodService.Result;
 import com.iafenvoy.mxt.runtime.trigger.CultivationTriggerService;
 import com.iafenvoy.mxt.util.DefinitionText;
-import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.FormulaContexts;
 import net.minecraft.core.Holder;
@@ -19,6 +18,7 @@ import net.minecraft.world.entity.LivingEntity;
 
 import java.util.Comparator;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.Optional;
 
 /**
@@ -89,7 +89,7 @@ public final class CultivationModeService {
         CultivationAttachment spirit = entity.getData(MxtAttachments.CULTIVATION);
         Holder<Cultivation> running = spirit.cultivation().orElse(null);
         boolean active = spirit.cultivating() && running != null;
-        if (active && HolderHelper.id(running).equals(HolderHelper.id(action)))
+        if (active && Objects.equals(running, action))
             return Result.rejected(Failure.ALREADY_ACTIVE, null);
         FormulaContext context = FormulaContexts.forEntity(entity);
         if (!applicable(entity, action, context)) return Result.rejected(Failure.NOT_APPLICABLE, null);

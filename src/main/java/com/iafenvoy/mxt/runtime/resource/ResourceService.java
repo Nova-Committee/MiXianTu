@@ -61,7 +61,7 @@ public final class ResourceService {
 
     // An id is resolved through the same access the formula reads, never through a running server: a context
     // built off a client has no server to reach for, and one that carries none resolves nothing.
-    private static Optional<Holder.Reference<Resource>> resource(@Nullable Provider access, Identifier id) {
+    private static Optional<Holder<Resource>> resource(@Nullable Provider access, Identifier id) {
         return access == null ? Optional.empty() : MxtDatapackRegistries.holder(access, MxtResourceKeys.RESOURCE, id);
     }
 

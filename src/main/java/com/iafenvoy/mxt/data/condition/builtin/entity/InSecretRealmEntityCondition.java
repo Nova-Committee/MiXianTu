@@ -6,7 +6,6 @@ import com.iafenvoy.mxt.data.secretrealm.SecretRealm;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.world.SecretRealmRecord;
 import com.iafenvoy.mxt.runtime.world.SecretRealmRegistry;
-import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
@@ -48,7 +47,7 @@ public record InSecretRealmEntityCondition(Optional<Either<Holder<SecretRealm>, 
     }
 
     private static boolean matches(Either<Holder<SecretRealm>, TagKey<SecretRealm>> value, Holder<SecretRealm> candidate) {
-        return value.map(holder -> HolderHelper.id(holder).equals(HolderHelper.id(candidate)), candidate::is);
+        return value.map(candidate::equals, candidate::is);
     }
 
     /**

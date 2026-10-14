@@ -1,6 +1,5 @@
 package com.iafenvoy.mxt.runtime.artifact;
 
-import com.iafenvoy.mxt.data.ability.Abilities;
 import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.ability.type.MountAbilityType;
 import com.iafenvoy.mxt.data.ability.type.StorageAbilityType;
@@ -13,6 +12,7 @@ import com.iafenvoy.mxt.data.artifact.ArtifactStateComponent;
 import com.iafenvoy.mxt.data.artifact.ItemAbilitiesComponent;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.aura.SpiritStorageComponent;
+import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.event.ArtifactRefineEvent.Post;
 import com.iafenvoy.mxt.event.ArtifactRefineEvent.Pre;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
@@ -163,14 +163,14 @@ public final class ArtifactService {
     }
 
     // The definition's grants plus whatever the component was written with, so an artifact, a scripted stack and
-    // a plain stack all reach the ability runtime the same way. Every entry is addressed by the id the runtime
-    // keys its grant and its stored state by, and a tag stands for the abilities it lists.
+    // a plain stack all reach the ability runtime the same way. Every entry is the ability's own holder, which is
+    // what the grant ledger and its stored state are keyed by, and a tag stands for the abilities it lists.
     public static List<Holder<Ability>> abilities(Provider access, ItemStack stack) {
         if (stack.isEmpty()) return List.of();
         LinkedHashSet<Holder<Ability>> granted = new LinkedHashSet<>();
         definition(access, stack).ifPresent(holder -> granted.addAll(RegistryCodecs.resolve(holder.value().abilities(), access, MxtResourceKeys.ABILITY).toList()));
         ItemAbilitiesComponent component = stack.getOrDefault(MxtDataComponents.ITEM_ABILITIES.get(), new ItemAbilitiesComponent(List.of()));
-        component.abilities().forEach(id -> Abilities.resolve(access, id).ifPresent(granted::add));
+        granted.addAll(component.abilities());
         return List.copyOf(granted);
     }
 
@@ -214,22 +214,22 @@ public final class ArtifactService {
     // when the holder is a player. Deliberately wider than what a wheel page reads - an open screen has to keep
     // working while the artifact is moved around the inventory, and has to stop the moment it leaves the holder,
     // because what it writes into would otherwise be a stack nobody carries, which is how items disappear.
-    public static Optional<ItemStack> carried(Provider access, LivingEntity holder, Identifier abilityId) {
+    public static Optional<ItemStack> carried(Provider access, LivingEntity holder, Holder<Ability> ability) {
         for (ItemStack stack : ArtifactUpkeepService.carried(holder))
-            if (holds(access, stack, abilityId)) return Optional.of(stack);
+            if (holds(access, stack, ability)) return Optional.of(stack);
         if (holder instanceof Player player)
             for (int slot = 0; slot < player.getInventory().getContainerSize(); slot++) {
                 ItemStack stack = player.getInventory().getItem(slot);
-                if (holds(access, stack, abilityId)) return Optional.of(stack);
+                if (holds(access, stack, ability)) return Optional.of(stack);
             }
         return Optional.empty();
     }
 
     // Whether this stack offers that ability; the same reading the grant ledger uses, so an item and its
     // abilities cannot disagree about what it holds.
-    private static boolean holds(Provider access, ItemStack stack, Identifier abilityId) {
+    private static boolean holds(Provider access, ItemStack stack, Holder<Ability> abilityId) {
         if (stack == null || stack.isEmpty()) return false;
-        return abilities(access, stack).stream().anyMatch(ref -> HolderHelper.id(ref).equals(abilityId));
+        return abilities(access, stack).stream().anyMatch(abilityId::equals);
     }
 
     // What the definition declares plus the bonus earned by being fed. A stack claiming no definition, or one
@@ -258,10 +258,10 @@ public final class ArtifactService {
     // The auras this stack's store carries that are counted in the given resource: how a price written as a
     // resource finds the aura an artifact can actually pay it in. Ordered by id so a store holding several
     // answers the same way every tick.
-    public static List<Holder<Aura>> aurasFor(ItemStack stack, Identifier resource) {
+    public static List<Holder<Aura>> aurasFor(ItemStack stack, Holder<Resource> resource) {
         List<Holder<Aura>> found = new ArrayList<>();
         store(stack).amounts().keySet().stream()
-                .filter(aura -> HolderHelper.id(aura.value().resource()).equals(resource))
+                .filter(aura -> aura.value().resource().is(resource))
                 .sorted(Comparator.comparing(aura -> HolderHelper.id(aura).toString()))
                 .forEach(found::add);
         return found;
