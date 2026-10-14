@@ -4,7 +4,6 @@ import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.context.action.EntityActionContext;
 import com.iafenvoy.mxt.data.cultivation.Physique;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationIdentityService;
-import com.iafenvoy.mxt.util.HolderHelper;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
@@ -22,7 +21,7 @@ public record RemovePhysiqueAction(Holder<Physique> physique) implements EntityA
     @Override
     public void execute(@NonNull EntityActionContext ctx) {
         if (ctx.entity() instanceof LivingEntity living)
-            CultivationIdentityService.removePhysique(living, HolderHelper.id(this.physique));
+            CultivationIdentityService.removePhysique(living, this.physique);
     }
 
     @Override

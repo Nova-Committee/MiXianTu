@@ -45,8 +45,6 @@ public final class ForgingWorkstationService {
     private ForgingWorkstationService() {
     }
 
-    // ------------------------------------------------------------------ listing
-
     // Takes the container rather than a ForgingSurface, because the client half of the menu has its own copy
     // of the slot contents.
     public static List<Identifier> selectableBlueprintIds(Container container, Provider access) {
@@ -79,8 +77,6 @@ public final class ForgingWorkstationService {
         return unlocked.stream().filter(allowed::contains).toList();
     }
 
-    // ------------------------------------------------------------------ materials
-
     // One entry's count is a total across the input slots, not a share, which is why an entry is never tested with
     // SizedIngredient#test - that one wants a single stack to hold the whole count.
     public static int availableCount(Container container, SizedIngredient entry) {
@@ -100,15 +96,12 @@ public final class ForgingWorkstationService {
 
     // The item an entry names, for the interface: a plain ingredient answers from its holder set and a custom one
     // from the items it enumerates. Empty for a tag that currently holds nothing.
+    @SuppressWarnings("DataFlowIssue")
     public static ItemStack preview(SizedIngredient entry) {
         Ingredient ingredient = entry.ingredient();
-        Stream<Holder<Item>> items = ingredient.isCustom()
-                ? ingredient.getCustomIngredient().items()
-                : ingredient.getValues().stream();
+        Stream<Holder<Item>> items = ingredient.isCustom() ? ingredient.getCustomIngredient().items() : ingredient.getValues().stream();
         return items.findFirst().map(holder -> new ItemStack(holder.value())).orElse(ItemStack.EMPTY);
     }
-
-    // ------------------------------------------------------------------ cancellation policy
 
     // The default policy: everything the session took goes back to the input slots.
     public static final ForgingCancellation RETURN_EVERYTHING = (player, surface, state, blueprint) -> returnLocked(player, surface, state);
@@ -120,8 +113,6 @@ public final class ForgingWorkstationService {
     public static void setCancellation(ForgingCancellation policy) {
         cancellation = policy == null ? RETURN_EVERYTHING : policy;
     }
-
-    // ------------------------------------------------------------------ session
 
     public static StartOutcome start(ServerPlayer player, ForgingSurface surface, Identifier blueprintId) {
         if (!canUse(player, surface)) return new StartOutcome(Failure.OUT_OF_RANGE, false);
@@ -315,8 +306,6 @@ public final class ForgingWorkstationService {
     private static void give(ServerPlayer player, ItemStack stack) {
         if (!player.getInventory().add(stack)) player.drop(stack, false);
     }
-
-    // ------------------------------------------------------------------ helpers
 
     public static boolean canUse(ServerPlayer player, ForgingSurface surface) {
         if (!(surface instanceof BlockEntity blockEntity)) return true;

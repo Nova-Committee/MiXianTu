@@ -328,11 +328,12 @@ public final class MxtKubeJsApi {
         Holder<SpiritRoot> root = MxtDatapackRegistries.holder(entity.level().registryAccess(), MxtResourceKeys.SPIRIT_ROOT, id).orElse(null);
         return root == null
                 ? new CultivationIdentityService.Result(false, CultivationIdentityService.Failure.DISABLED)
-                : CultivationIdentityService.grantSpiritRoot(entity, id, root.value());
+                : CultivationIdentityService.grantSpiritRoot(entity, root);
     }
 
     public static boolean removeSpiritRoot(@NotNull LivingEntity entity, Identifier id) {
-        return !entity.level().isClientSide() && CultivationIdentityService.removeSpiritRoot(entity, id);
+        Holder<SpiritRoot> root = MxtDatapackRegistries.holder(entity.level().registryAccess(), MxtResourceKeys.SPIRIT_ROOT, id).orElse(null);
+        return root != null && !entity.level().isClientSide() && CultivationIdentityService.removeSpiritRoot(entity, root);
     }
 
     /**
@@ -382,11 +383,12 @@ public final class MxtKubeJsApi {
         Holder<Physique> physique = MxtDatapackRegistries.holder(entity.level().registryAccess(), MxtResourceKeys.PHYSIQUE, id).orElse(null);
         return physique == null
                 ? new CultivationIdentityService.Result(false, CultivationIdentityService.Failure.DISABLED)
-                : CultivationIdentityService.grantPhysique(entity, id, physique.value(), FormulaContext.of(entity));
+                : CultivationIdentityService.grantPhysique(entity, physique, FormulaContext.of(entity));
     }
 
     public static boolean removePhysique(@NotNull LivingEntity entity, Identifier id) {
-        return !entity.level().isClientSide() && CultivationIdentityService.removePhysique(entity, id);
+        Holder<Physique> physique = MxtDatapackRegistries.holder(entity.level().registryAccess(), MxtResourceKeys.PHYSIQUE, id).orElse(null);
+        return physique != null && !entity.level().isClientSide() && CultivationIdentityService.removePhysique(entity, physique);
     }
 
     public static CultivationToggleService.Result setPhysiqueEnabled(@NotNull LivingEntity entity, Identifier id, boolean enabled) {

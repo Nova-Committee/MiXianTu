@@ -4,7 +4,6 @@ import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.context.action.EntityActionContext;
 import com.iafenvoy.mxt.data.cultivation.SpiritRoot;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationIdentityService;
-import com.iafenvoy.mxt.util.HolderHelper;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
@@ -22,7 +21,7 @@ public record GrantSpiritRootAction(Holder<SpiritRoot> spiritRoot) implements En
     @Override
     public void execute(@NonNull EntityActionContext ctx) {
         if (ctx.entity() instanceof LivingEntity living)
-            CultivationIdentityService.grantSpiritRoot(living, HolderHelper.id(this.spiritRoot), this.spiritRoot.value());
+            CultivationIdentityService.grantSpiritRoot(living, this.spiritRoot);
     }
 
     @Override

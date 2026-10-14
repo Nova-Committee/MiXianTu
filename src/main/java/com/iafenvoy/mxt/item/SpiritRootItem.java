@@ -6,7 +6,6 @@ import com.iafenvoy.mxt.runtime.cultivation.CultivationIdentityService;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationIdentityService.Failure;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationIdentityService.Result;
 import com.iafenvoy.mxt.util.DefinitionText;
-import com.iafenvoy.mxt.util.HolderHelper;
 import net.minecraft.core.Holder;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
@@ -37,7 +36,7 @@ public final class SpiritRootItem extends Item {
             ItemFeedback.send(player, Component.translatable("item.mxt.spirit_root.unbound"));
             return InteractionResult.FAIL;
         }
-        Result result = CultivationIdentityService.grantSpiritRoot(serverPlayer, HolderHelper.id(root), root.value());
+        Result result = CultivationIdentityService.grantSpiritRoot(serverPlayer, root);
         if (!result.changed()) {
             ItemFeedback.send(player, failure(result.failure()));
             return InteractionResult.FAIL;

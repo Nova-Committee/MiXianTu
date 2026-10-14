@@ -1,7 +1,6 @@
 package com.iafenvoy.mxt.command.server;
 
 import com.iafenvoy.mxt.attachment.SpiritIdentityAttachment;
-import com.iafenvoy.mxt.command.RegistryReferences;
 import com.iafenvoy.mxt.command.ServerCommandManager;
 import com.iafenvoy.mxt.data.cultivation.SpiritRoot;
 import com.iafenvoy.mxt.registry.MxtAttachments;
@@ -20,13 +19,10 @@ import net.minecraft.commands.CommandBuildContext;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.commands.arguments.ResourceArgument;
-import net.minecraft.commands.arguments.ResourceKeyArgument;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
-import net.minecraft.resources.Identifier;
-import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import org.jetbrains.annotations.NotNull;
@@ -67,11 +63,11 @@ public final class SpiritRootCommand {
                                         .executes(SpiritRootCommand::remove))))
                 .then(literal("enable").requires(ServerCommandManager::mayChange)
                         .then(argument("targets", EntityArgument.entities())
-                                .then(argument("root", ResourceKeyArgument.key(MxtResourceKeys.SPIRIT_ROOT))
+                                .then(argument("root", ResourceArgument.resource(context, MxtResourceKeys.SPIRIT_ROOT))
                                         .executes(ctx -> toggle(ctx, true)))))
                 .then(literal("disable").requires(ServerCommandManager::mayChange)
                         .then(argument("targets", EntityArgument.entities())
-                                .then(argument("root", ResourceKeyArgument.key(MxtResourceKeys.SPIRIT_ROOT))
+                                .then(argument("root", ResourceArgument.resource(context, MxtResourceKeys.SPIRIT_ROOT))
                                         .executes(ctx -> toggle(ctx, false)))));
     }
 
@@ -160,34 +156,22 @@ public final class SpiritRootCommand {
     // current pack no longer provides can still be switched off: the state is about the body.
     private static int toggle(CommandContext<CommandSourceStack> ctx, boolean enabled) throws CommandSyntaxException {
         CommandSourceStack source = ctx.getSource();
-        ResourceKey<SpiritRoot> key = RegistryReferences.key(ctx, "root", MxtResourceKeys.SPIRIT_ROOT);
-        Identifier id = key.identifier();
+        Holder<SpiritRoot> root = ResourceArgument.getResource(ctx, "root", MxtResourceKeys.SPIRIT_ROOT);
         int changed = 0;
         for (Entity target : EntityArgument.getEntities(ctx, "targets")) {
             if (!(target instanceof LivingEntity living)) {
                 source.sendFailure(Component.translatable("command.mxt.identity.not_living", target.getDisplayName()));
                 continue;
             }
-            Holder<SpiritRoot> root = find(living.getData(MxtAttachments.SPIRIT_IDENTITY), id);
-            CultivationToggleService.Result result = root == null
-                    ? new CultivationToggleService.Result(false, CultivationToggleService.Failure.NOT_HELD)
-                    : CultivationToggleService.setSpiritRootEnabled(living, root, enabled);
+            CultivationToggleService.Result result = CultivationToggleService.setSpiritRootEnabled(living, root, enabled);
             if (!result.changed()) {
-                source.sendFailure(Component.translatable("command.mxt.identity.toggle_failed",
-                        target.getDisplayName(), id.toString(), reason(result.failure())));
+                source.sendFailure(Component.translatable("command.mxt.identity.toggle_failed", target.getDisplayName(), HolderHelper.id(root), reason(result.failure())));
                 continue;
             }
             changed++;
-            source.sendSuccess(() -> Component.translatable("command.mxt.identity.toggled",
-                    DefinitionText.text(root), Component.translatable(enabled
-                            ? "command.mxt.identity.on" : "command.mxt.identity.off"), target.getDisplayName()), true);
+            source.sendSuccess(() -> Component.translatable("command.mxt.identity.toggled", DefinitionText.text(root), Component.translatable(enabled ? "command.mxt.identity.on" : "command.mxt.identity.off"), target.getDisplayName()), true);
         }
         return changed;
-    }
-
-    private static Holder<SpiritRoot> find(SpiritIdentityAttachment identity, Identifier id) {
-        for (Holder<SpiritRoot> root : identity.spiritRoots()) if (HolderHelper.id(root).equals(id)) return root;
-        return null;
     }
 
     // Printed as its own name rather than as a sentence: the values are a fixed vocabulary shared with the

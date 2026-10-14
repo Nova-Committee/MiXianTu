@@ -196,8 +196,8 @@ public final class DatapackCache {
     /**
      * One validated chain, low to high; empty for a profile the walk did not index.
      */
-    public List<Identifier> realmsOf(Holder<Aura> cultivation) {
-        return Optional.ofNullable(this.realmLinesByAura.get(cultivation)).map(Chain::ids).orElse(List.of());
+    public Chain<RealmStage> realmsOf(Holder<Aura> cultivation) {
+        return Optional.ofNullable(this.realmLinesByAura.get(cultivation)).orElse(Chain.empty());
     }
 
     /**

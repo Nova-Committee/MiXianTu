@@ -37,7 +37,7 @@ public final class ProgressionHolder<T extends ProgressionOwner> extends Abstrac
 
     // The key codec is the sort's own, so a holder only ever decodes owners of the one registry it belongs to.
     public static <T extends ProgressionOwner> Codec<ProgressionHolder<T>> codec(Codec<Holder<T>> owners) {
-        return CollectionCodecs.map(owners, Progression.CODEC).xmap(values -> new ProgressionHolder<T>(new LinkedHashMap<>(values)), holder -> holder.levels);
+        return CollectionCodecs.map(owners, Progression.CODEC).xmap(values -> new ProgressionHolder<>(new LinkedHashMap<>(values)), holder -> holder.levels);
     }
 
     public Map<Holder<T>, Holder<Progression>> levels() {

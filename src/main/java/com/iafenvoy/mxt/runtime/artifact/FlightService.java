@@ -108,6 +108,7 @@ public final class FlightService {
         FlightControlAbilityType control = (FlightControlAbilityType) skill.value().type();
         Mount found = find(holder, control.hand());
         FlightAttachment data = holder.getData(MxtAttachments.FLIGHT);
+        assert found != null;
         double speed = speed(found.type(), control, context);
         MountVehicle vehicle = createVehicle(holder.level(), found.type()).orElse(null);
         if (vehicle == null) return Result.rejected(Failure.INVALID_VEHICLE);

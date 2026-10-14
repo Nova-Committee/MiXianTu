@@ -1,6 +1,5 @@
 package com.iafenvoy.mxt.command.server;
 
-import com.iafenvoy.mxt.command.ChainReport;
 import com.iafenvoy.mxt.command.ServerCommandManager;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.cultivation.RealmStage;
@@ -13,6 +12,7 @@ import com.iafenvoy.mxt.runtime.cultivation.MinorStageService;
 import com.iafenvoy.mxt.runtime.resource.ResourceService;
 import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.HolderHelper;
+import com.iafenvoy.mxt.util.chain.Chain;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
@@ -26,7 +26,8 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 
-import java.util.*;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 import static net.minecraft.commands.Commands.argument;
 import static net.minecraft.commands.Commands.literal;
@@ -81,14 +82,14 @@ public final class RealmCommand {
         }
         // A chain the cache validated is read straight from it. One it refused to index whole is still walked here
         // from the loaded stages, so an author sees what is written rather than only "no chain".
-        List<Identifier> ids = DatapackCache.get().realmsOf(aura);
-        int current = ids.indexOf(start);
+        Chain<RealmStage> chain = DatapackCache.get().realmsOf(aura);
+        int current = chain.indexOf(target);
         if (current < 0) {
             source.sendFailure(Component.translatable("command.mxt.realm.chain.none", start.toString()));
             return 0;
         }
-        Component line = ChainReport.line(ids.stream().map(id -> DefinitionText.text(stages.get(id))).toList(), current);
+        Component line = chain.buildText(target);
         source.sendSuccess(() -> Component.translatable("command.mxt.realm.chain", auraId.toString(), line), false);
-        return ids.size();
+        return chain.size();
     }
 }

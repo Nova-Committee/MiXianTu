@@ -6,7 +6,6 @@ import com.iafenvoy.mxt.runtime.cultivation.CultivationIdentityService;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationIdentityService.Failure;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationIdentityService.Result;
 import com.iafenvoy.mxt.util.DefinitionText;
-import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.Holder;
 import net.minecraft.network.chat.Component;
@@ -39,8 +38,7 @@ public final class PhysiqueItem extends Item {
             ItemFeedback.send(player, Component.translatable("item.mxt.physique.unbound"));
             return InteractionResult.FAIL;
         }
-        Result result = CultivationIdentityService.grantPhysique(serverPlayer, HolderHelper.id(physique),
-                physique.value(), FormulaContext.of(serverPlayer));
+        Result result = CultivationIdentityService.grantPhysique(serverPlayer, physique, FormulaContext.of(serverPlayer));
         if (!result.changed()) {
             ItemFeedback.send(player, failure(result.failure()));
             return InteractionResult.FAIL;

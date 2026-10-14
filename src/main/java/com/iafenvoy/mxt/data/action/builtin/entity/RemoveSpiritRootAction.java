@@ -4,7 +4,6 @@ import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.context.action.EntityActionContext;
 import com.iafenvoy.mxt.data.cultivation.SpiritRoot;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationIdentityService;
-import com.iafenvoy.mxt.util.HolderHelper;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
@@ -22,7 +21,7 @@ public record RemoveSpiritRootAction(Holder<SpiritRoot> spiritRoot) implements E
     @Override
     public void execute(@NonNull EntityActionContext ctx) {
         if (ctx.entity() instanceof LivingEntity living)
-            CultivationIdentityService.removeSpiritRoot(living, HolderHelper.id(this.spiritRoot));
+            CultivationIdentityService.removeSpiritRoot(living, this.spiritRoot);
     }
 
     @Override

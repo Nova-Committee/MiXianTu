@@ -2,7 +2,6 @@ package com.iafenvoy.mxt.command.server;
 
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.attachment.AbilityAttachment;
-import com.iafenvoy.mxt.command.RegistryReferences;
 import com.iafenvoy.mxt.command.ServerCommandManager;
 import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.registry.MxtAttachments;
@@ -20,11 +19,10 @@ import net.minecraft.commands.CommandBuildContext;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.commands.arguments.ResourceArgument;
-import net.minecraft.commands.arguments.ResourceKeyArgument;
+import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
-import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
@@ -65,7 +63,7 @@ public final class AbilityCommand {
                 .then(literal("revoke")
                         .requires(ServerCommandManager::mayChange)
                         .then(argument("targets", EntityArgument.entities())
-                                .then(argument("ability", ResourceKeyArgument.key(MxtResourceKeys.ABILITY))
+                                .then(argument("ability", ResourceArgument.resource(context, MxtResourceKeys.ABILITY))
                                         .executes(AbilityCommand::revoke))));
     }
 
@@ -116,12 +114,11 @@ public final class AbilityCommand {
     // source is a failure rather than a silent success.
     private static int revoke(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         CommandSourceStack source = ctx.getSource();
-        ResourceKey<Ability> ability = RegistryReferences.key(ctx, "ability", MxtResourceKeys.ABILITY);
-        Identifier id = ability.identifier();
+        Holder<Ability> ability = ResourceArgument.getResource(ctx, "ability", MxtResourceKeys.ABILITY);
         Collection<? extends Entity> targets = EntityArgument.getEntities(ctx, "targets");
         int revoked = 0;
         for (Entity target : targets) {
-            if (target.getData(MxtAttachments.ABILITY_HOLDER).revoke(id, SOURCE)) {
+            if (target.getData(MxtAttachments.ABILITY_HOLDER).revoke(HolderHelper.id(ability), SOURCE)) {
                 revoked++;
                 rebuild(target);
                 source.sendSuccess(() -> Component.translatable("command.mxt.ability.revoked",

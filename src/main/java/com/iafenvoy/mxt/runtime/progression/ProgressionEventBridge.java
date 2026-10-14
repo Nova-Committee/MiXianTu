@@ -52,4 +52,5 @@ public final class ProgressionEventBridge {
     private static void prune(LivingEntity entity) {
         if (ProgressionService.pruneForeignLevels(entity) == 0) return;
         AbilityGrantService.recalculate(entity);
-    }}
+    }
+}

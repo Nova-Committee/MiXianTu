@@ -20,7 +20,7 @@ import java.util.Optional;
  * its length, so a pack that states a cooldown once in the ability's own field can read it back here.
  */
 public record AbilityStorageCooldownCondition(Identifier id, Optional<NumberRange> remaining,
-                                               Optional<Boolean> ready) implements EntityCondition {
+                                              Optional<Boolean> ready) implements EntityCondition {
     public static final MapCodec<AbilityStorageCooldownCondition> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             Identifier.CODEC.fieldOf("id").forGetter(AbilityStorageCooldownCondition::id),
             NumberRange.CODEC.optionalFieldOf("remaining").forGetter(AbilityStorageCooldownCondition::remaining),

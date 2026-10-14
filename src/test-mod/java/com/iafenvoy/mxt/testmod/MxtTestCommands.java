@@ -81,9 +81,9 @@ import com.iafenvoy.mxt.item.block.entity.RiftBlockEntity;
 import com.iafenvoy.mxt.network.payload.WheelActionC2SPayload;
 import com.iafenvoy.mxt.recipe.SpiritRecipe;
 import com.iafenvoy.mxt.registry.*;
+import com.iafenvoy.mxt.runtime.EntitySources;
 import com.iafenvoy.mxt.runtime.ability.*;
 import com.iafenvoy.mxt.runtime.artifact.*;
-import com.iafenvoy.mxt.runtime.EntitySources;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactHoldService.ClaimResult;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactService.RefineResult;
 import com.iafenvoy.mxt.runtime.creature.*;
@@ -1763,7 +1763,7 @@ public final class MxtTestCommands {
     // Grants through the authoritative service a data pack action would take; false means the definition was
     // refused, and the leg that asked for it fails rather than measuring a body that never got it.
     private static boolean grantProbePhysique(LivingEntity entity, Identifier id) {
-        return CultivationIdentityService.grantPhysique(entity, id, require(MxtResourceKeys.PHYSIQUE, id).value(),
+        return CultivationIdentityService.grantPhysique(entity, require(MxtResourceKeys.PHYSIQUE, id),
                 FormulaContext.of(entity)).changed();
     }
 
@@ -2157,7 +2157,7 @@ public final class MxtTestCommands {
             // level's own configuration the "born with it" list.
             boolean entry = stoodOn(beast, BEAST_1)
                     && EntitySources.held(beast, PROBE_BEAST_PROFILE)
-                    .flatMap(owner -> ProgressionService.next(owner))
+                    .flatMap(ProgressionService::next)
                     .map(held -> HolderHelper.id(held).equals(BEAST_2)).orElse(false)
                     && beast.getData(MxtAttachments.CREATURE_SPIRIT).profileLevels().levels().isEmpty()
                     && !abilities.has(ability);
@@ -2295,7 +2295,7 @@ public final class MxtTestCommands {
     // The level the creature answers with for its own profile: the record, or the entry level it never left.
     private static boolean stoodOn(Mob creature, Identifier level) {
         return EntitySources.held(creature, PROBE_BEAST_PROFILE)
-                .flatMap(owner -> ProgressionService.current(owner))
+                .flatMap(ProgressionService::current)
                 .map(held -> HolderHelper.id(held).equals(level)).orElse(false);
     }
 
@@ -3280,7 +3280,7 @@ public final class MxtTestCommands {
         pig.setPos(pos.getX() + 0.5D, pos.getY(), pos.getZ() + 0.5D);
         level.addFreshEntity(pig);
         if (root != null)
-            CultivationIdentityService.grantSpiritRoot(pig, root, require(MxtResourceKeys.SPIRIT_ROOT, root).value());
+            CultivationIdentityService.grantSpiritRoot(pig, require(MxtResourceKeys.SPIRIT_ROOT, root));
         return pig;
     }
 
@@ -3424,7 +3424,7 @@ public final class MxtTestCommands {
             Holder<SpiritRoot> dualAntiWater = require(MxtResourceKeys.SPIRIT_ROOT, PROBE_ANTI_WATER_ROOT);
             Holder<SpiritRoot> dualInert = require(MxtResourceKeys.SPIRIT_ROOT, PROBE_INERT_ROOT);
             Holder<SpiritRoot> dualMetal = require(MxtResourceKeys.SPIRIT_ROOT, PROBE_METAL_ROOT);
-            boolean dualGranted = CultivationIdentityService.grantSpiritRoot(toggleProbe, PROBE_DUAL_ROOT, dualRoot.value()).changed();
+            boolean dualGranted = CultivationIdentityService.grantSpiritRoot(toggleProbe, dualRoot).changed();
             SpiritIdentityAttachment dualIdentity = toggleProbe.getData(MxtAttachments.SPIRIT_IDENTITY);
             FormulaContext affinityContext = FormulaContext.EMPTY;
             double onWater = CultivationAffinity.abilityMultiplier(dualIdentity, List.of(Either.left(water)), affinityContext, Ability.AffinityMode.AVERAGE);
@@ -3472,13 +3472,13 @@ public final class MxtTestCommands {
             Holder<SpiritRoot> antiWater = require(MxtResourceKeys.SPIRIT_ROOT, PROBE_ANTI_WATER_ROOT);
             Holder<SpiritRoot> probeWater = require(MxtResourceKeys.SPIRIT_ROOT, PROBE_WATER_ROOT);
             Holder<SpiritRoot> probeInert = require(MxtResourceKeys.SPIRIT_ROOT, PROBE_INERT_ROOT);
-            boolean blocked = CultivationIdentityService.grantSpiritRoot(conflictProbe, PROBE_ANTI_WATER_ROOT, antiWater.value()).changed()
-                    && CultivationIdentityService.grantSpiritRoot(conflictProbe, PROBE_WATER_ROOT, probeWater.value()).failure()
+            boolean blocked = CultivationIdentityService.grantSpiritRoot(conflictProbe, antiWater).changed()
+                    && CultivationIdentityService.grantSpiritRoot(conflictProbe, probeWater).failure()
                     == CultivationIdentityService.Failure.ELEMENT_CONFLICT;
-            boolean inertBlocked = CultivationIdentityService.grantSpiritRoot(conflictProbe, PROBE_INERT_ROOT, probeInert.value()).failure()
+            boolean inertBlocked = CultivationIdentityService.grantSpiritRoot(conflictProbe, probeInert).failure()
                     == CultivationIdentityService.Failure.ELEMENT_CONFLICT;
             boolean reopened = CultivationToggleService.setSpiritRootEnabled(conflictProbe, antiWater, false).changed()
-                    && CultivationIdentityService.grantSpiritRoot(conflictProbe, PROBE_WATER_ROOT, probeWater.value()).changed();
+                    && CultivationIdentityService.grantSpiritRoot(conflictProbe, probeWater).changed();
             boolean conflict = blocked && inertBlocked && reopened;
             source.sendSuccess(() -> Component.literal("element probe: conflict blocked=" + blocked
                     + " inert_blocked=" + inertBlocked + " reopened=" + reopened
@@ -4839,9 +4839,9 @@ public final class MxtTestCommands {
         HolderLookup<SpiritRoot> waterRoot = new HolderLookup<>(MxtResourceKeys.SPIRIT_ROOT, WATER_ROOT);
         HolderLookup<Physique> physique = new HolderLookup<>(MxtResourceKeys.PHYSIQUE, PHYSIQUE);
         HolderLookup<Technique> technique = new HolderLookup<>(MxtResourceKeys.TECHNIQUE, TECHNIQUE);
-        CultivationIdentityService.grantSpiritRoot(player, ROOT, root.value());
-        CultivationIdentityService.grantSpiritRoot(player, WATER_ROOT, waterRoot.value());
-        CultivationIdentityService.grantPhysique(player, PHYSIQUE, physique.value(), context);
+        CultivationIdentityService.grantSpiritRoot(player, root.holder());
+        CultivationIdentityService.grantSpiritRoot(player, waterRoot.holder());
+        CultivationIdentityService.grantPhysique(player, physique.holder(), context);
         TechniqueService.learn(player, techniques, technique.holder(), context);
         techniques.addLearnedTechnique(technique.holder());
         AbilityGrantService.recalculate(player);
@@ -5105,12 +5105,12 @@ public final class MxtTestCommands {
 
             // 13. Forgetting takes the technique and its own stage record, and rebuilds what it granted; the realm
             //     stage and everything else in the body are other state and stay exactly where they were.
-        TechniqueAttachment bareIdentity = bareA.getData(MxtAttachments.TECHNIQUE);
+            TechniqueAttachment bareIdentity = bareA.getData(MxtAttachments.TECHNIQUE);
             CultivationAttachment bareSpirit = bareA.getData(MxtAttachments.CULTIVATION);
             AbilityAttachment bareAbilities = bareA.getData(MxtAttachments.ABILITY_HOLDER);
             bareSpirit.setRealmStage(require(MxtResourceKeys.REALM_STAGE, QI_REFINING));
             boolean bareLearned = TechniqueService.learn(bareA, bareIdentity, sword, contextOf(bareA)).changed();
-        bareA.getData(MxtAttachments.TECHNIQUE).techniqueLevels()
+            bareA.getData(MxtAttachments.TECHNIQUE).techniqueLevels()
                     .set(sword, require(MxtResourceKeys.PROGRESSION, PROBE_PROGRESSION_LEVEL));
             boolean bareGranted = bareAbilities.has(id("artifact_guard"));
             boolean forgotten = TechniqueService.forget(bareA, bareIdentity, sword).changed();

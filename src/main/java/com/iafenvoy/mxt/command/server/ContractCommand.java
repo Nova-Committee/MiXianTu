@@ -28,7 +28,6 @@ import net.minecraft.commands.arguments.ResourceArgument;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
@@ -131,17 +130,15 @@ public final class ContractCommand {
         // nothing, so a plain stat block reads exactly as it did before.
         EntitySources.held(mob, mob.getExistingData(MxtAttachments.CREATURE_SPIRIT)
                         .flatMap(CreatureSpiritAttachment::profile).map(HolderHelper::id).orElse(null))
-                .ifPresent(held -> {
-                    ProgressionService.current(held).ifPresent(current -> {
-                        Component next = ProgressionService.next(held).map(DefinitionText::text)
-                                .orElseGet(() -> Component.translatable("command.mxt.contract.info.level.top"));
-                        source.sendSuccess(() -> Component.translatable("command.mxt.contract.info.level",
-                                held.id().toString(), DefinitionText.text(current), next), false);
-                        ProgressionService.masteryOf(mob, held).ifPresent(mastery -> source.sendSuccess(
-                                () -> Component.translatable("command.mxt.contract.info.mastery", mastery.have(),
-                                        mastery.required(), mastery.resource().toString()), false));
-                    });
-                });
+                .ifPresent(held -> ProgressionService.current(held).ifPresent(current -> {
+                    Component next = ProgressionService.next(held).map(DefinitionText::text)
+                            .orElseGet(() -> Component.translatable("command.mxt.contract.info.level.top"));
+                    source.sendSuccess(() -> Component.translatable("command.mxt.contract.info.level",
+                            held.id().toString(), DefinitionText.text(current), next), false);
+                    ProgressionService.masteryOf(mob, held).ifPresent(mastery -> source.sendSuccess(
+                            () -> Component.translatable("command.mxt.contract.info.mastery", mastery.have(),
+                                    mastery.required(), mastery.resource().toString()), false));
+                }));
         int cooldown = type.value().recallCooldown();
         if (cooldown > 0) {
             long remaining = Math.max(0L, contract.recallAt() + cooldown - mob.level().getGameTime());

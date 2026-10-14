@@ -1,8 +1,12 @@
 package com.iafenvoy.mxt.util.chain;
 
+import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.mojang.logging.LogUtils;
+import net.minecraft.ChatFormatting;
 import net.minecraft.core.Holder;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.Identifier;
 import org.slf4j.Logger;
 
@@ -16,6 +20,10 @@ import java.util.function.BiPredicate;
  */
 public record Chain<T>(List<Holder<T>> nodes) {
     private static final Logger LOGGER = LogUtils.getLogger();
+
+    public static <T> Chain<T> empty() {
+        return new Chain<>(List.of());
+    }
 
     public int size() {
         return this.nodes.size();
@@ -65,5 +73,16 @@ public record Chain<T>(List<Holder<T>> nodes) {
         for (int i = 1; i < this.nodes.size(); i++)
             if (!predicate.test(this.nodes.get(i - 1).value(), this.nodes.get(i).value()))
                 LOGGER.error("Chain {} is failed validation at {} and {}.", this.ids(), HolderHelper.id(this.nodes.get(i - 1)), HolderHelper.id(this.nodes.get(i)));
+    }
+
+    public Component buildText(Holder<T> current) {
+        List<? extends Component> entries = this.nodes().stream().map(DefinitionText::text).toList();
+        int currentIndex = this.indexOf(current);
+        MutableComponent text = Component.empty();
+        for (int i = 0; i < entries.size(); i++) {
+            if (i > 0) text.append(Component.literal(" → ").withStyle(ChatFormatting.DARK_GRAY));
+            text.append(entries.get(i).copy().withStyle(i == currentIndex ? ChatFormatting.GREEN : i < currentIndex ? ChatFormatting.GRAY : ChatFormatting.WHITE));
+        }
+        return text;
     }
 }

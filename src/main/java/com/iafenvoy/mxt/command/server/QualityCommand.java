@@ -1,15 +1,13 @@
 package com.iafenvoy.mxt.command.server;
 
-import com.iafenvoy.mxt.command.ChainReport;
 import com.iafenvoy.mxt.command.ServerCommandManager;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.data.quality.QualityLadders;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.item.QualityService;
 import com.iafenvoy.mxt.runtime.item.QualityUpgradeService;
-import com.iafenvoy.mxt.util.chain.Chain;
-import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.HolderHelper;
+import com.iafenvoy.mxt.util.chain.Chain;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
@@ -19,7 +17,6 @@ import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.commands.arguments.ResourceArgument;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
-import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Entity;
@@ -151,16 +148,12 @@ public final class QualityCommand {
         CommandSourceStack source = ctx.getSource();
         Reference<ItemQuality> quality = ResourceArgument.getResource(ctx, "quality", MxtResourceKeys.ITEM_QUALITY);
         // A tier sits on exactly one ladder, the one its own chain walks into.
-        Provider access = source.getServer().registryAccess();
-        Chain<ItemQuality> ladder = QualityLadders.of(quality).orElse(null);
-        if (ladder == null) {
+        Chain<ItemQuality> chain = QualityLadders.of(quality).orElse(null);
+        if (chain == null) {
             source.sendFailure(Component.translatable("command.mxt.quality.chain.none", HolderHelper.id(quality).toString()));
             return 0;
         }
-        Component line = ChainReport.line(ladder.nodes().stream().map(DefinitionText::text).toList(),
-                ladder.indexOf(quality));
-        source.sendSuccess(() -> Component.translatable("command.mxt.quality.chain",
-                QualityLadders.name(quality).map(Identifier::toString).orElse("null"), line), false);
+        source.sendSuccess(() -> Component.translatable("command.mxt.quality.chain", QualityLadders.name(quality).map(Identifier::toString).orElse("null"), chain.buildText(quality)), false);
         return 1;
     }
 }

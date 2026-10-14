@@ -1,7 +1,6 @@
 package com.iafenvoy.mxt.command.server;
 
 import com.iafenvoy.mxt.attachment.SpiritIdentityAttachment;
-import com.iafenvoy.mxt.command.RegistryReferences;
 import com.iafenvoy.mxt.command.ServerCommandManager;
 import com.iafenvoy.mxt.data.cultivation.Physique;
 import com.iafenvoy.mxt.registry.MxtAttachments;
@@ -24,8 +23,6 @@ import net.minecraft.commands.arguments.ResourceKeyArgument;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.Identifier;
-import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import org.jetbrains.annotations.NotNull;
@@ -64,7 +61,7 @@ public final class PhysiqueCommand {
                 // provides, so they take a bare registry key: ResourceArgument would refuse that id while parsing.
                 .then(literal("remove").requires(ServerCommandManager::mayChange)
                         .then(argument("targets", EntityArgument.entities())
-                                .then(argument("physique", ResourceKeyArgument.key(MxtResourceKeys.PHYSIQUE))
+                                .then(argument("physique", ResourceArgument.resource(context, MxtResourceKeys.PHYSIQUE))
                                         .executes(PhysiqueCommand::remove))))
                 .then(literal("enable").requires(ServerCommandManager::mayChange)
                         .then(argument("targets", EntityArgument.entities())
@@ -106,8 +103,7 @@ public final class PhysiqueCommand {
                 source.sendFailure(Component.translatable("command.mxt.identity.not_living", target.getDisplayName()));
                 continue;
             }
-            Result result = CultivationIdentityService.grantPhysique(living, HolderHelper.id(physique), physique.value(),
-                    FormulaContext.of(living));
+            Result result = CultivationIdentityService.grantPhysique(living, physique, FormulaContext.of(living));
             if (!result.changed()) {
                 source.sendFailure(Component.translatable("command.mxt.identity.grant_failed",
                         DefinitionText.text(physique), target.getDisplayName(), reason(result.failure())));
@@ -122,22 +118,19 @@ public final class PhysiqueCommand {
 
     private static int remove(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         CommandSourceStack source = ctx.getSource();
-        ResourceKey<Physique> key = RegistryReferences.key(ctx, "physique", MxtResourceKeys.PHYSIQUE);
-        Identifier id = key.identifier();
+        Reference<Physique> physique = ResourceArgument.getResource(ctx, "physique", MxtResourceKeys.PHYSIQUE);
         int removed = 0;
         for (Entity target : EntityArgument.getEntities(ctx, "targets")) {
             if (!(target instanceof LivingEntity living)) {
                 source.sendFailure(Component.translatable("command.mxt.identity.not_living", target.getDisplayName()));
                 continue;
             }
-            if (!CultivationIdentityService.removePhysique(living, id)) {
-                source.sendFailure(Component.translatable("command.mxt.identity.remove_failed",
-                        target.getDisplayName(), id.toString()));
+            if (!CultivationIdentityService.removePhysique(living, physique)) {
+                source.sendFailure(Component.translatable("command.mxt.identity.remove_failed", target.getDisplayName(), DefinitionText.text(physique)));
                 continue;
             }
             removed++;
-            source.sendSuccess(() -> Component.translatable("command.mxt.identity.removed",
-                    DefinitionText.text(key), target.getDisplayName()), true);
+            source.sendSuccess(() -> Component.translatable("command.mxt.identity.removed", DefinitionText.text(physique), target.getDisplayName()), true);
         }
         return removed;
     }
@@ -146,21 +139,16 @@ public final class PhysiqueCommand {
     // current pack no longer provides can still be switched off: the state is about the body.
     private static int toggle(CommandContext<CommandSourceStack> ctx, boolean enabled) throws CommandSyntaxException {
         CommandSourceStack source = ctx.getSource();
-        ResourceKey<Physique> key = RegistryReferences.key(ctx, "physique", MxtResourceKeys.PHYSIQUE);
-        Identifier id = key.identifier();
+        Holder<Physique> physique = ResourceArgument.getResource(ctx, "physique", MxtResourceKeys.PHYSIQUE);
         int changed = 0;
         for (Entity target : EntityArgument.getEntities(ctx, "targets")) {
             if (!(target instanceof LivingEntity living)) {
                 source.sendFailure(Component.translatable("command.mxt.identity.not_living", target.getDisplayName()));
                 continue;
             }
-            Holder<Physique> physique = find(living.getData(MxtAttachments.SPIRIT_IDENTITY), id);
-            CultivationToggleService.Result result = physique == null
-                    ? new CultivationToggleService.Result(false, CultivationToggleService.Failure.NOT_HELD)
-                    : CultivationToggleService.setPhysiqueEnabled(living, physique, enabled);
+            CultivationToggleService.Result result = CultivationToggleService.setPhysiqueEnabled(living, physique, enabled);
             if (!result.changed()) {
-                source.sendFailure(Component.translatable("command.mxt.identity.toggle_failed",
-                        target.getDisplayName(), id.toString(), reason(result.failure())));
+                source.sendFailure(Component.translatable("command.mxt.identity.toggle_failed", target.getDisplayName(), HolderHelper.id(physique), reason(result.failure())));
                 continue;
             }
             changed++;
@@ -169,12 +157,6 @@ public final class PhysiqueCommand {
                             ? "command.mxt.identity.on" : "command.mxt.identity.off"), target.getDisplayName()), true);
         }
         return changed;
-    }
-
-    private static Holder<Physique> find(SpiritIdentityAttachment identity, Identifier id) {
-        for (Holder<Physique> physique : identity.physiques())
-            if (HolderHelper.id(physique).equals(id)) return physique;
-        return null;
     }
 
     // Printed as its own name rather than as a sentence: the values are a fixed vocabulary shared with the
