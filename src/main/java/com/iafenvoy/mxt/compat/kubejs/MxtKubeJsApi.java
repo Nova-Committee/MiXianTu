@@ -557,7 +557,7 @@ public final class MxtKubeJsApi {
         if (entity.level().isClientSide()) return null;
         Provider access = entity.level().registryAccess();
         return QualityService.find(access, stack)
-                .flatMap(quality -> QualityLadders.cache(access).keyOf(HolderHelper.id(quality))).orElse(null);
+                .flatMap(quality -> QualityLadders.name(quality)).orElse(null);
     }
 
     /**
@@ -608,7 +608,7 @@ public final class MxtKubeJsApi {
         Holder<ItemQuality> first = MxtDatapackRegistries.holder(access, MxtResourceKeys.ITEM_QUALITY, left).orElse(null);
         Holder<ItemQuality> second = MxtDatapackRegistries.holder(access, MxtResourceKeys.ITEM_QUALITY, right).orElse(null);
         // An id the current pack does not provide has no position, which is the same answer as two unrelated ladders.
-        return first == null || second == null ? OptionalInt.empty() : QualityLadders.compare(access, first, second);
+        return first == null || second == null ? OptionalInt.empty() : QualityLadders.compare(first, second);
     }
 
     /**

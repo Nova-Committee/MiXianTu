@@ -54,7 +54,6 @@ import net.minecraft.commands.arguments.coordinates.BlockPosArgument;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
-import net.minecraft.core.IdMap;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
@@ -80,13 +79,8 @@ import static net.minecraft.commands.Commands.literal;
  * operator tooling never claims short generic spellings such as {@code /registries}.
  */
 public final class MxtCommand {
-    // The chat report lists at most this many problems; the log keeps all of them.
-    private static final int MAX_REPORTED_PROBLEMS = 12;
-
     public static void attach(CommandBuildContext context, LiteralArgumentBuilder<CommandSourceStack> root) {
-        root.then(literal("registries")
-                        .then(literal("list").executes(ctx -> listRegistries(ctx.getSource())))
-                        .then(literal("validate").executes(ctx -> validationStatus(ctx.getSource()))))
+        root.then(literal("registries").executes(ctx -> listRegistries(ctx.getSource())))
                 .then(literal("attachment").then(literal("status").executes(ctx -> attachmentStatus(ctx.getSource()))))
                 .then(literal("resource")
                         .then(argument("id", ResourceArgument.resource(context, MxtResourceKeys.RESOURCE))
@@ -186,39 +180,14 @@ public final class MxtCommand {
         return ResourceArgument.getResource(ctx, "definition", MxtResourceKeys.SECRET_REALM);
     }
 
-    private static int validationStatus(CommandSourceStack source) {
-        RegistryAccess access = source.registryAccess();
-        int registryCount = MxtDatapackRegistries.registries().size();
-        int entryCount = MxtDatapackRegistries.registries().stream().map(access::lookupOrThrow).mapToInt(IdMap::size).sum();
-        // The cache collects every problem it finds while it builds its indexes, so this reports the whole
-        // list instead of the first thing that failed.
-        List<String> problems = DatapackCache.get().map(DatapackCache::problems).orElse(List.of());
-        if (problems.isEmpty()) {
-            source.sendSuccess(() -> Component.translatable("command.mxt.registries.validation_passed", registryCount, entryCount,
-                    Component.translatable("command.mxt.registries.no_problems")), false);
-            return 1;
-        }
-        source.sendFailure(Component.translatable("command.mxt.registries.validation_failed", registryCount, entryCount,
-                Component.literal(summarize(problems))));
-        return 0;
-    }
-
-    private static String summarize(List<String> problems) {
-        int shown = Math.min(problems.size(), MAX_REPORTED_PROBLEMS);
-        String text = String.join("; ", problems.subList(0, shown));
-        return problems.size() > shown ? text + "; ...(+" + (problems.size() - shown) + ")" : text;
-    }
-
     private static CompletableFuture<Suggestions> suggestRuleSignals(SuggestionsBuilder builder) {
-        return SharedSuggestionProvider.suggest(DatapackCache.get()
-                .map(cache -> cache.triggerSignals().stream().map(Identifier::toString).toList())
-                .orElse(List.of()), builder);
+        return SharedSuggestionProvider.suggest(DatapackCache.get().triggerSignals().stream().map(Identifier::toString).toList(), builder);
     }
 
     // Every signal a rule reacts to or a subscription listens to: the two sets a signal can be published against.
     private static CompletableFuture<Suggestions> suggestPublishedSignals(SuggestionsBuilder builder) {
         Set<String> ids = new LinkedHashSet<>();
-        DatapackCache.get().ifPresent(cache -> cache.triggerSignals().forEach(signal -> ids.add(signal.toString())));
+        DatapackCache.get().triggerSignals().forEach(signal -> ids.add(signal.toString()));
         TriggerDispatcher.signals().forEach(signal -> ids.add(signal.toString()));
         return SharedSuggestionProvider.suggest(ids, builder);
     }
@@ -555,7 +524,7 @@ public final class MxtCommand {
     }
 
     private static int listTriggerRules(CommandSourceStack source, Identifier signal) {
-        List<Reference<TriggerRule>> rules = DatapackCache.get().map(cache -> cache.triggerRules(signal)).orElse(List.of());
+        List<Reference<TriggerRule>> rules = DatapackCache.get().triggerRules(signal);
         source.sendSuccess(() -> Component.translatable("command.mxt.trigger.rules.header", signal.toString(), rules.size()), false);
         rules.forEach(rule -> source.sendSuccess(() -> Component.translatable("command.mxt.trigger.rules.entry",
                 HolderHelper.id(rule).toString(),

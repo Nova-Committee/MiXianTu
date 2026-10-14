@@ -170,11 +170,7 @@ public final class CultivationService {
             // The validated chain answers one rung at a time in either direction. Without one - no server, or
             // before a world is loaded - the realm's own next_realm answers instead; a chain the walk refused does
             // not, because advancing along a line nobody validated is what the refusal is about.
-            DatapackCache cache = DatapackCache.get().orElse(null);
-            Identifier nextId = cache != null ? cache.nextRealm(HolderHelper.id(current)).orElse(null)
-                    : current.value().nextRealm()
-                    .filter(value -> HolderHelper.id(value.value().aura()).equals(cultivationId))
-                    .map(HolderHelper::id).orElse(null);
+            Identifier nextId = DatapackCache.get().nextRealm(current).orElse(null);
             return nextId == null ? Optional.empty()
                     : MxtDatapackRegistries.holder(MxtResourceKeys.REALM_STAGE, nextId)
                     .map(value -> Transition.realm(current, value, aura));
@@ -274,8 +270,7 @@ public final class CultivationService {
         double progress = spirit.cultivationProgress(aura);
         boolean reached = progress + PROGRESS_EPSILON >= threshold.breakthroughExp();
         boolean conditions = reached && transition.conditions().test(entity, context);
-        return new BreakthroughStatus(reached, conditions, transition.autoBreakthrough(),
-                threshold.breakthroughExp(), threshold.maxExperience());
+        return new BreakthroughStatus(reached, conditions, transition.autoBreakthrough(), threshold.breakthroughExp(), threshold.maxExperience());
     }
 
     // Runtime trigger subscriptions are rebuilt separately and never stored in the attachment.
@@ -285,14 +280,10 @@ public final class CultivationService {
     }
 
     // Administrative, validated through the server cache rather than by traversing the registry here.
-    public static boolean setRealm(CultivationAttachment spirit, Identifier target) {
-        DatapackCache cache = DatapackCache.get().orElse(null);
-        Identifier cultivationId = cache == null ? null : cache.cultivationForRealm(target).orElse(null);
-        if (cultivationId == null) return false;
-        Reference<Aura> aura = MxtDatapackRegistries.holder(MxtResourceKeys.AURA, cultivationId).orElse(null);
-        Holder<RealmStage> targetHolder = MxtDatapackRegistries.holder(MxtResourceKeys.REALM_STAGE, target).orElse(null);
-        if (aura == null || targetHolder == null) return false;
-        spirit.setRealmStage(targetHolder);
+    public static boolean setRealm(CultivationAttachment spirit, Holder<RealmStage> target) {
+        Holder<Aura> aura = DatapackCache.get().cultivationForRealm(target).orElse(null);
+        if (aura == null) return false;
+        spirit.setRealmStage(target);
         spirit.setCultivationProgress(aura, 0.0D);
         return true;
     }

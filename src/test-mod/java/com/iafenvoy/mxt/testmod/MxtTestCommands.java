@@ -1325,7 +1325,7 @@ public final class MxtTestCommands {
         if (!Double.isNaN(undefined))
             return "a stage without minor_stages reads as " + undefined + " instead of NaN";
         CultivationAttachment spirit = player.getData(MxtAttachments.CULTIVATION);
-        if (!CultivationService.setRealm(spirit, QI_REFINING))
+        if (!CultivationService.setRealm(spirit, qiRefining))
             return "the realm cache could not resolve " + QI_REFINING;
         spirit.setCultivationProgress(requireProfile(access, QI), 80.0D);
         FormulaContext context = ResourceService.formulaContext(player, require(MxtResourceKeys.RESOURCE, QI), FormulaContext.of(player));
@@ -1842,7 +1842,8 @@ public final class MxtTestCommands {
             Holder<Aura> burstAura = require(MxtResourceKeys.AURA, SPIRIT_POWER);
             Holder<Resource> burstResource = require(MxtResourceKeys.RESOURCE, SPIRIT_POWER);
             long burstAt = level.getGameTime();
-            boolean burst = CultivationService.setRealm(probe.getData(MxtAttachments.CULTIVATION), SPIRIT_POWER_REFINING)
+            Holder<RealmStage> burstRealm = require(MxtResourceKeys.REALM_STAGE, SPIRIT_POWER_REFINING);
+            boolean burst = CultivationService.setRealm(probe.getData(MxtAttachments.CULTIVATION), burstRealm)
                     && SpiritBurstService.fireOnce(probe, SPIRIT_POWER)
                     && close(burstResources.get(burstResource), 10.0D)
                     && probe.getData(MxtAttachments.SPIRIT_BURST_COOLDOWNS).isOnCooldown(burstAura, burstAt)
@@ -3211,14 +3212,6 @@ public final class MxtTestCommands {
         boolean namedShortfall = ArtifactHoldService.blockedAura(player, emptyWard, emptyWardDefinition) == qi;
         ok &= check(source, "artifact pour feedback full=" + fullSilent + " named=" + namedShortfall,
                 fullSilent && namedShortfall);
-
-        List<String> problems = DatapackCache.get().map(cache -> cache.problems().stream()
-                .filter(problem -> problem.contains("/mxt/artifact/")).toList()).orElse(List.of());
-        // The merge deleted the "granted as mxt:passive but the ability itself is active" check: there is no second
-        // intent left to disagree with. What remains is the claim conflict between the two echo-shard fixtures.
-        boolean claimed = problems.stream().anyMatch(problem -> problem.contains("already claims")
-                && (problem.contains(MISDECLARED_ARTIFACT.getPath()) || problem.contains(CLAIM_CONFLICT_ARTIFACT.getPath())));
-        ok &= check(source, "artifact roster validator problems=" + problems, problems.size() == 1 && claimed);
 
         if (ok) {
             source.sendSuccess(() -> Component.literal("artifact roster: OK"), false);
@@ -4776,8 +4769,8 @@ public final class MxtTestCommands {
         FormulaContext context = FormulaContext.of(player);
 
         grantIdentity(player, identity, context);
-        if (!CultivationService.setRealm(spirit, QI_REFINING)
-                || !CultivationService.setRealm(spirit, SPIRIT_POWER_REFINING)) {
+        if (!CultivationService.setRealm(spirit, require(MxtResourceKeys.REALM_STAGE, QI_REFINING))
+                || !CultivationService.setRealm(spirit, require(MxtResourceKeys.REALM_STAGE, SPIRIT_POWER_REFINING))) {
             source.sendFailure(Component.translatable("command.mxt_test.kit.realm_failed"));
             return 0;
         }

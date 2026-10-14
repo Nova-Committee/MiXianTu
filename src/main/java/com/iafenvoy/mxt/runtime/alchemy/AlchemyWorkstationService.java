@@ -467,7 +467,7 @@ public final class AlchemyWorkstationService {
     // The core's position on its own ladder; a core with no tier, or one no walked ladder holds, reads as 0, the
     // same way the drawing's paper_rank answers 0 for both.
     private static double furnaceRank(Provider access, ItemStack stack) {
-        return QualityService.find(access, stack).map(quality -> QualityLadders.rank(access, quality).orElse(0)).orElse(0);
+        return QualityService.find(access, stack).map(quality -> QualityLadders.rank(quality).orElse(0)).orElse(0);
     }
 
     private static @Nullable AlchemyFailure recipeBlocker(List<Candidate> candidates, @Nullable Candidate chosen) {

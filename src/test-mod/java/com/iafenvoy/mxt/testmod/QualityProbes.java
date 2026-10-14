@@ -20,7 +20,6 @@ import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtItems;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.runtime.DatapackCache;
 import com.iafenvoy.mxt.runtime.forging.ForgingSurface;
 import com.iafenvoy.mxt.runtime.forging.ForgingWorkstationService;
 import com.iafenvoy.mxt.runtime.item.QualityRequirements;
@@ -119,33 +118,33 @@ public final class QualityProbes {
             Holder<ItemQuality> normalTier = tier(access, "mxt_test:normal");
             Holder<ItemQuality> excellentTier = tier(access, "mxt_test:excellent");
             Holder<ItemQuality> kilnTier = tier(access, "mxt_test:alchemy/kiln_a");
-            OptionalInt upward = QualityLadders.compare(access, excellentTier, poorTier);
-            OptionalInt downward = QualityLadders.compare(access, poorTier, excellentTier);
-            OptionalInt level = QualityLadders.compare(access, normalTier, normalTier);
+            OptionalInt upward = QualityLadders.compare(excellentTier, poorTier);
+            OptionalInt downward = QualityLadders.compare(poorTier, excellentTier);
+            OptionalInt level = QualityLadders.compare(normalTier, normalTier);
             ok &= leg(source, "compare_same_chain",
                     upward.orElse(99) == 2 && downward.orElse(99) == -2 && level.orElse(99) == 0
-                            && QualityLadders.rank(access, poorTier).orElse(-1) == 0
-                            && QualityLadders.rank(access, excellentTier).orElse(-1) == 2
-                            && QualityLadders.atLeast(access, excellentTier, normalTier)
-                            && !QualityLadders.atLeast(access, poorTier, normalTier),
+                            && QualityLadders.rank(poorTier).orElse(-1) == 0
+                            && QualityLadders.rank(excellentTier).orElse(-1) == 2
+                            && QualityLadders.atLeast(excellentTier, normalTier)
+                            && !QualityLadders.atLeast(poorTier, normalTier),
                     "up=" + upward.orElse(99) + " down=" + downward.orElse(99) + " same=" + level.orElse(99)
-                            + " poor_rank=" + QualityLadders.rank(access, poorTier).orElse(-1)
-                            + " excellent_rank=" + QualityLadders.rank(access, excellentTier).orElse(-1)
-                            + " excellent_at_least_normal=" + QualityLadders.atLeast(access, excellentTier, normalTier)
-                            + " poor_at_least_normal=" + QualityLadders.atLeast(access, poorTier, normalTier),
+                            + " poor_rank=" + QualityLadders.rank(poorTier).orElse(-1)
+                            + " excellent_rank=" + QualityLadders.rank(excellentTier).orElse(-1)
+                            + " excellent_at_least_normal=" + QualityLadders.atLeast(excellentTier, normalTier)
+                            + " poor_at_least_normal=" + QualityLadders.atLeast(poorTier, normalTier),
                     "up=2 down=-2 same=0 poor_rank=0 excellent_rank=2 excellent_at_least_normal=true poor_at_least_normal=false");
 
             // Two ladders' positions mean nothing to each other, so the answer is "cannot be compared" rather than a
             // direction; the requirement layer reads the same emptiness as "no".
             ok &= leg(source, "compare_cross_chain",
-                    QualityLadders.compare(access, excellentTier, kilnTier).isEmpty()
-                            && QualityLadders.compare(access, kilnTier, excellentTier).isEmpty()
-                            && !QualityLadders.atLeast(access, kilnTier, normalTier)
-                            && QualityLadders.atLeast(access, kilnTier, kilnTier),
-                    "excellent_vs_kiln=" + QualityLadders.compare(access, excellentTier, kilnTier).orElse(99)
-                            + " kiln_vs_excellent=" + QualityLadders.compare(access, kilnTier, excellentTier).orElse(99)
-                            + " kiln_at_least_normal=" + QualityLadders.atLeast(access, kilnTier, normalTier)
-                            + " kiln_at_least_kiln=" + QualityLadders.atLeast(access, kilnTier, kilnTier),
+                    QualityLadders.compare(excellentTier, kilnTier).isEmpty()
+                            && QualityLadders.compare(kilnTier, excellentTier).isEmpty()
+                            && !QualityLadders.atLeast(kilnTier, normalTier)
+                            && QualityLadders.atLeast(kilnTier, kilnTier),
+                    "excellent_vs_kiln=" + QualityLadders.compare(excellentTier, kilnTier).orElse(99)
+                            + " kiln_vs_excellent=" + QualityLadders.compare(kilnTier, excellentTier).orElse(99)
+                            + " kiln_at_least_normal=" + QualityLadders.atLeast(kilnTier, normalTier)
+                            + " kiln_at_least_kiln=" + QualityLadders.atLeast(kilnTier, kilnTier),
                     "excellent_vs_kiln=99 kiln_vs_excellent=99 kiln_at_least_normal=false kiln_at_least_kiln=true");
 
             // The refused ladder: two tiers point at each other, so the walk has no entry to start from, no walked
@@ -155,21 +154,18 @@ public final class QualityProbes {
             Holder<ItemQuality> refusedTier = tier(access, "mxt_test:refused_probe");
             ItemStack refused = named(Items.DIRT, refusedTier);
             QualityRequirement refusedFloor = new QualityRequirement(List.of(), Optional.of(refusedTier));
-            List<String> qualityProblems = DatapackCache.get().map(cache -> cache.problems().stream()
-                    .filter(problem -> problem.contains("/mxt/quality/")).toList()).orElse(List.of());
+            // What the walk found about this cycle is logged rather than collected, so all that is checked here is
+            // that no reading of the ladder answers anything for either tier of it.
             ok &= leg(source, "compare_refused_ladder",
-                    QualityLadders.rank(access, refusedTier).isEmpty()
-                            && QualityLadders.compare(access, refusedTier, refusedTier).isEmpty()
-                            && !QualityLadders.atLeast(access, refusedTier, refusedTier)
-                            && !QualityRequirements.test(access, refused, refusedFloor)
-                            && qualityProblems.size() == 2
-                            && qualityProblems.stream().allMatch(problem -> problem.contains("refused_probe")),
-                    "rank=" + QualityLadders.rank(access, refusedTier).orElse(99)
-                            + " self=" + QualityLadders.compare(access, refusedTier, refusedTier).orElse(99)
-                            + " at_least_self=" + QualityLadders.atLeast(access, refusedTier, refusedTier)
-                            + " requirement=" + QualityRequirements.test(access, refused, refusedFloor)
-                            + " problems=" + qualityProblems.size(),
-                    "rank=99 self=99 at_least_self=false requirement=false problems=2");
+                    QualityLadders.rank(refusedTier).isEmpty()
+                            && QualityLadders.compare(refusedTier, refusedTier).isEmpty()
+                            && !QualityLadders.atLeast(refusedTier, refusedTier)
+                            && !QualityRequirements.test(access, refused, refusedFloor),
+                    "rank=" + QualityLadders.rank(refusedTier).orElse(99)
+                            + " self=" + QualityLadders.compare(refusedTier, refusedTier).orElse(99)
+                            + " at_least_self=" + QualityLadders.atLeast(refusedTier, refusedTier)
+                            + " requirement=" + QualityRequirements.test(access, refused, refusedFloor),
+                    "rank=99 self=99 at_least_self=false requirement=false");
 
             ok &= leg(source, "empty_refused",
                     condition(ops, "{\"type\": \"mxt:item_quality\"}") == null

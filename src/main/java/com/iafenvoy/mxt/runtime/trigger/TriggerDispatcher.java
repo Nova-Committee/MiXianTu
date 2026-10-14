@@ -119,7 +119,7 @@ public final class TriggerDispatcher {
     public static boolean hasListener(Identifier signal) {
         LinkedHashMap<UUID, LinkedHashMap<String, TriggerSubscription>> byOwner = BY_SIGNAL.get(signal);
         if (byOwner != null && !byOwner.isEmpty()) return true;
-        return DatapackCache.get().map(cache -> !cache.triggerRules(signal).isEmpty()).orElse(false);
+        return !DatapackCache.get().triggerRules(signal).isEmpty();
     }
 
     // Every signal at least one owner listens to, in a stable order, for command completion.

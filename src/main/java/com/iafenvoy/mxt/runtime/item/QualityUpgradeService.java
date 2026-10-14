@@ -6,8 +6,8 @@ import com.iafenvoy.mxt.data.cost.context.CostFailure;
 import com.iafenvoy.mxt.data.cost.context.CostOrigin;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.data.quality.QualityLadders;
-import com.iafenvoy.mxt.util.ChainCache;
 import com.iafenvoy.mxt.util.HolderHelper;
+import com.iafenvoy.mxt.util.chain.ChainCache;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup.Provider;
@@ -34,11 +34,11 @@ public final class QualityUpgradeService {
         Provider access = actor.level().registryAccess();
         Holder<ItemQuality> current = QualityService.find(access, stack).orElse(null);
         if (current == null) return Result.rejected(Failure.NO_QUALITY);
-        ChainCache<ItemQuality> ladders = QualityLadders.cache(access);
+        ChainCache<ItemQuality> ladders = QualityLadders.cache();
         // A tier no ladder holds has nothing to climb, and a ladder the walk refused whole leaves all of its tiers
         // out, so a broken ladder lands here too.
-        if (!ladders.contains(HolderHelper.id(current))) return Result.rejected(Failure.NO_CHAIN);
-        Holder<ItemQuality> next = ladders.next(HolderHelper.id(current)).orElse(null);
+        if (!ladders.contains(current)) return Result.rejected(Failure.NO_CHAIN);
+        Holder<ItemQuality> next = ladders.next(current).orElse(null);
         if (next == null) return Result.rejected(Failure.AT_TOP);
         ItemQuality step = next.value();
         FormulaContext formula = FormulaContext.of(actor);
@@ -54,13 +54,12 @@ public final class QualityUpgradeService {
     public static boolean canUpgrade(LivingEntity actor, ItemStack stack) {
         Provider access = actor.level().registryAccess();
         Holder<ItemQuality> current = QualityService.find(access, stack).orElse(null);
-        return current != null && QualityLadders.cache(access).next(HolderHelper.id(current)).isPresent();
+        return current != null && QualityLadders.cache().next(current).isPresent();
     }
 
     // The tier the ladder would move to, for a caller that wants to show it before anything is paid.
     public static Optional<Holder<ItemQuality>> nextTier(Provider access, ItemStack stack) {
-        return QualityService.find(access, stack)
-                .flatMap(current -> QualityLadders.cache(access).next(HolderHelper.id(current)));
+        return QualityService.find(access, stack).flatMap(current -> QualityLadders.cache().next(current));
     }
 
     // Every cost failure ends the same way for the caller: a resource that ran out is named, anything else is

@@ -3,6 +3,7 @@ package com.iafenvoy.mxt.data.quality;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.data.cost.Cost;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.util.chain.ChainNode;
 import com.iafenvoy.mxt.util.codec.MiscCodecs;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.iafenvoy.mxt.util.formula.number.Constant;
@@ -31,7 +32,8 @@ import java.util.Optional;
  */
 public record ItemQuality(Optional<Integer> color, Modifier valueMultiplier, Modifier forgingModifier,
                           Modifier alchemyModifier, EntityCondition condition, Optional<Holder<ItemQuality>> next,
-                          List<Cost> upgradeCosts, EntityCondition upgradeCondition, Optional<Identifier> quality) {
+                          List<Cost> upgradeCosts, EntityCondition upgradeCondition,
+                          Optional<Identifier> quality) implements ChainNode<ItemQuality> {
     public static final Codec<Holder<ItemQuality>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.ITEM_QUALITY);
     public static final Codec<ItemQuality> DIRECT_CODEC = RecordCodecBuilder.create(i -> i.group(
             MiscCodecs.RGB_COLOR.optionalFieldOf("color").forGetter(ItemQuality::color),

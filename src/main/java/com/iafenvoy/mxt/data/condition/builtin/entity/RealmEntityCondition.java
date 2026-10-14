@@ -8,13 +8,11 @@ import com.iafenvoy.mxt.data.cultivation.RealmStage;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.DatapackCache;
 import com.iafenvoy.mxt.runtime.aura.AuraLookup;
-import com.iafenvoy.mxt.util.HolderHelper;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
-import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Entity;
 import org.jspecify.annotations.NonNull;
 
@@ -39,21 +37,17 @@ public record RealmEntityCondition(Holder<RealmStage> realm,
     @Override
     public boolean test(@NonNull EntityConditionContext ctx) {
         Entity entity = ctx.entity();
-        Identifier required = HolderHelper.id(this.realm);
         CultivationAttachment cultivation = entity.getData(MxtAttachments.CULTIVATION);
         Stream<Holder<RealmStage>> stages = cultivation.realmStages().values().stream();
         // A missing stage is the mortal state; for a value whose profile enters a chain its
         // first realm is the pending stage used by cultivation formulas.
         Stream<Aura> profiles = AuraLookup.all(entity.level()).map(Reference::value);
-        stages = Stream.concat(stages,
-                profiles.map(Aura::firstRealm).flatMap(Optional::stream)
-                        .filter(first -> cultivation.realmStage(first.value().aura()) == null));
+        stages = Stream.concat(stages, profiles.map(Aura::firstRealm).flatMap(Optional::stream)
+                .filter(first -> cultivation.realmStage(first.value().aura()) == null));
         boolean inRealm = stages.anyMatch(current -> switch (this.comparison) {
             case EXACT -> current.equals(this.realm);
-            case AT_LEAST ->
-                    DatapackCache.get().map(cache -> cache.isRealmAtLeast(HolderHelper.id(current), required)).orElse(false);
-            case AT_MOST ->
-                    DatapackCache.get().map(cache -> cache.isRealmAtLeast(required, HolderHelper.id(current))).orElse(false);
+            case AT_LEAST -> DatapackCache.get().isRealmAtLeast(current, this.realm);
+            case AT_MOST -> DatapackCache.get().isRealmAtLeast(this.realm, current);
         });
         if (!inRealm || this.minMinorStage.isEmpty()) return inRealm;
         // -1 for a realm the body never entered, so a threshold is never met by a realm it has not stood in.

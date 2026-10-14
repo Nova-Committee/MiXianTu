@@ -13,11 +13,11 @@ import com.iafenvoy.mxt.data.trigger.TriggerContext;
 import com.iafenvoy.mxt.data.trigger.TriggerSignals;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.runtime.EntitySources;
 import com.iafenvoy.mxt.runtime.DatapackCache;
+import com.iafenvoy.mxt.runtime.EntitySources;
 import com.iafenvoy.mxt.runtime.trigger.TriggerDispatcher;
-import com.iafenvoy.mxt.util.ChainCache;
 import com.iafenvoy.mxt.util.HolderHelper;
+import com.iafenvoy.mxt.util.chain.Chain;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.Holder;
@@ -99,11 +99,10 @@ public final class ProgressionService {
     // Cumulative: what a level grants stays active on every later level, so everything at or below the current
     // one is the answer.
     public static List<Holder<Ability>> grantedAbilities(ProgressionOwner owner, Holder<Progression> current, Provider access) {
-        DatapackCache cache = DatapackCache.get().orElse(null);
-        if (cache == null || current == null) return List.of();
-        Identifier currentId = HolderHelper.id(current);
+        DatapackCache cache = DatapackCache.get();
+        if (current == null) return List.of();
         return owner.levels().entrySet().stream()
-                .filter(entry -> cache.isLevelAtLeast(currentId, HolderHelper.id(entry.getKey())))
+                .filter(entry -> cache.isLevelAtLeast(current, entry.getKey()))
                 .flatMap(entry -> RegistryCodecs.resolve(entry.getValue().abilities(), access, MxtResourceKeys.ABILITY))
                 .distinct()
                 .toList();
@@ -120,9 +119,8 @@ public final class ProgressionService {
                                   Holder<Progression> reached) {
         FormulaContext formula = FormulaContext.of(entity);
         definition.config(reached).ifPresent(config -> config.action().execute(entity, formula));
-        int rank = DatapackCache.get().flatMap(cache -> cache.rankForLevel(HolderHelper.id(reached))).orElse(0);
-        TriggerContext triggerContext = new TriggerContext().actor(entity).level(entity.level())
-                .formula(formula.with("level", rank));
+        int rank = DatapackCache.get().rankForLevel(reached).orElse(0);
+        TriggerContext triggerContext = new TriggerContext().actor(entity).level(entity.level()).formula(formula.with("level", rank));
         triggerContext.set("owner", owner.toString());
         triggerContext.set("level", (double) rank);
         TriggerDispatcher.publish(TriggerSignals.PROGRESSION_LEVEL, triggerContext, entity.level().getGameTime());
@@ -161,22 +159,12 @@ public final class ProgressionService {
     public static int rankFromEntry(ProgressionOwner owner, Holder<Progression> level) {
         Holder<Progression> entry = owner.entryLevel().orElse(null);
         if (entry == null) return -1;
-        Identifier entryId = HolderHelper.id(entry);
-        Identifier wanted = HolderHelper.id(level);
-        DatapackCache cache = DatapackCache.get().orElse(null);
-        if (cache != null) {
-            ChainCache.Chain<Progression> chain = cache.progressionChains().chainOf(entryId).orElse(null);
-            if (chain == null) return -1;
-            int from = chain.indexOf(entryId);
-            int at = chain.indexOf(wanted);
-            return at < from ? -1 : at - from;
-        }
-        Holder<Progression> current = entry;
-        for (int rank = 0; current != null && rank < MAX_CHAIN_LENGTH; rank++) {
-            if (HolderHelper.id(current).equals(wanted)) return rank;
-            current = nextLevel(current).orElse(null);
-        }
-        return -1;
+        DatapackCache cache = DatapackCache.get();
+        Chain<Progression> chain = cache.progressionChains().chainOf(entry).orElse(null);
+        if (chain == null) return -1;
+        int from = chain.indexOf(entry);
+        int at = chain.indexOf(level);
+        return at < from ? -1 : at - from;
     }
 
     /**
@@ -186,17 +174,7 @@ public final class ProgressionService {
     public static int levelCount(ProgressionOwner owner) {
         Holder<Progression> entry = owner.entryLevel().orElse(null);
         if (entry == null) return 0;
-        Identifier entryId = HolderHelper.id(entry);
-        DatapackCache cache = DatapackCache.get().orElse(null);
-        if (cache != null)
-            return cache.progressionChains().chainOf(entryId)
-                    .map(chain -> chain.size() - chain.indexOf(entryId)).orElse(0);
-        int count = 0;
-        Holder<Progression> current = entry;
-        while (current != null && count < MAX_CHAIN_LENGTH) {
-            count++;
-            current = nextLevel(current).orElse(null);
-        }
-        return count;
+        DatapackCache cache = DatapackCache.get();
+        return cache.progressionChains().chainOf(entry).map(chain -> chain.size() - chain.indexOf(entry)).orElse(0);
     }
 }

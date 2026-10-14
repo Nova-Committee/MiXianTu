@@ -357,7 +357,7 @@ public final class TalismanWorkstationService {
     // tier both answer 0, which a settlement formula therefore cannot tell apart.
     private static double paperRank(RegistryAccess access, ItemStack paper) {
         Holder<ItemQuality> quality = QualityService.find(access, paper).orElse(null);
-        return quality == null ? 0.0D : QualityLadders.rank(access, quality).orElse(0);
+        return quality == null ? 0.0D : QualityLadders.rank(quality).orElse(0);
     }
 
     private static CostContext context(ServerPlayer player, Container paperSlot) {

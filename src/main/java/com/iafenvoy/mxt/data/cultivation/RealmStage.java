@@ -10,6 +10,7 @@ import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.data.cost.Cost;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.util.HolderHelper;
+import com.iafenvoy.mxt.util.chain.ChainNode;
 import com.iafenvoy.mxt.util.codec.MiscCodecs;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
@@ -39,7 +40,7 @@ public record RealmStage(Holder<Aura> aura, NumberProvider auraShareWeight,
                          List<Either<Holder<Ability>, TagKey<Ability>>> abilityRequirements,
                          List<MinorStageAbilities> minorStageAbilities, Optional<Holder<Tribulation>> tribulation,
                          Optional<ParticleEffect> breakthroughParticle, EntityAction successAction,
-                         EntityAction failAction) {
+                         EntityAction failAction) implements ChainNode<RealmStage> {
     /**
      * The ceiling on {@code minor_stages}, which only decides how finely a realm's progress is divided.
      */
@@ -126,5 +127,10 @@ public record RealmStage(Holder<Aura> aura, NumberProvider auraShareWeight,
                 + ", abilityRequirements=" + this.abilityRequirements.size()
                 + ", minorStageAbilities=" + this.minorStageAbilities.size()
                 + ", hasTribulation=" + this.tribulation.isPresent() + "]";
+    }
+
+    @Override
+    public Optional<Holder<RealmStage>> next() {
+        return this.nextRealm;
     }
 }

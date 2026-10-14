@@ -34,7 +34,7 @@ public final class QualityRequirements {
         if (quality == null || !requirement.admits(quality)) return false;
         Holder<ItemQuality> minimum = requirement.minQuality().orElse(null);
         // A ladder position is not written on the stack, so only the indexed chain can answer it.
-        return minimum == null || QualityLadders.atLeast(access, quality, minimum);
+        return minimum == null || QualityLadders.atLeast(quality, minimum);
     }
 
     /**

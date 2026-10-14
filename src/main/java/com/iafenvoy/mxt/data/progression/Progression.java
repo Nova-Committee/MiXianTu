@@ -1,6 +1,7 @@
 package com.iafenvoy.mxt.data.progression;
 
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.util.chain.ChainNode;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.iafenvoy.mxt.util.formula.number.Constant;
 import com.mojang.serialization.Codec;
@@ -19,7 +20,8 @@ import java.util.Optional;
  * so a broken chain is only detectable at runtime, and {@code damage_multiplier} belongs to the powers the chain
  * grants at that level rather than to everything the holder does.
  */
-public record Progression(Optional<Holder<Progression>> nextLevel, NumberProvider mastery, double damageMultiplier) {
+public record Progression(Optional<Holder<Progression>> nextLevel, NumberProvider mastery,
+                          double damageMultiplier) implements ChainNode<Progression> {
     public static final Codec<Holder<Progression>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.PROGRESSION);
     public static final Codec<Progression> DIRECT_CODEC = RecordCodecBuilder.<Progression>create(i -> i.group(
             RegistryFixedCodec.create(MxtResourceKeys.PROGRESSION).optionalFieldOf("next_level").forGetter(Progression::nextLevel),
@@ -38,5 +40,10 @@ public record Progression(Optional<Holder<Progression>> nextLevel, NumberProvide
     public @NonNull String toString() {
         return "Progression[hasNextLevel=" + this.nextLevel.isPresent()
                 + ", damageMultiplier=" + this.damageMultiplier + "]";
+    }
+
+    @Override
+    public Optional<Holder<Progression>> next() {
+        return this.nextLevel;
     }
 }

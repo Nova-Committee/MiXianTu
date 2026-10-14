@@ -31,11 +31,9 @@ public final class TriggerRuleService {
     }
 
     public static void dispatch(TriggerSignal signal) {
-        DatapackCache cache = DatapackCache.get().orElse(null);
-        if (cache == null) return;
         Entity actor = signal.context().actor();
         if (actor == null) return;
-        List<Reference<TriggerRule>> rules = cache.triggerRules(signal.type());
+        List<Reference<TriggerRule>> rules = DatapackCache.get().triggerRules(signal.type());
         if (rules.isEmpty()) return;
         long gameTime = actor.level().getGameTime();
         TriggerCooldownAttachment cooldowns = actor.getExistingData(MxtAttachments.TRIGGER_COOLDOWNS).orElse(null);

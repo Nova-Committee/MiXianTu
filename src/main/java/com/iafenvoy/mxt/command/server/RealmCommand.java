@@ -2,6 +2,7 @@ package com.iafenvoy.mxt.command.server;
 
 import com.iafenvoy.mxt.command.ChainReport;
 import com.iafenvoy.mxt.command.ServerCommandManager;
+import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.cultivation.RealmStage;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
@@ -19,6 +20,7 @@ import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import net.minecraft.commands.CommandBuildContext;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.arguments.ResourceArgument;
+import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
@@ -50,7 +52,7 @@ public final class RealmCommand {
         Reference<RealmStage> realm = ResourceArgument.getResource(ctx, "realm", MxtResourceKeys.REALM_STAGE);
         ServerPlayer player = source.getPlayer();
         if (player == null) return 0;
-        if (!CultivationService.setRealm(player.getData(MxtAttachments.CULTIVATION), HolderHelper.id(realm))) {
+        if (!CultivationService.setRealm(player.getData(MxtAttachments.CULTIVATION), realm)) {
             source.sendFailure(Component.translatable("command.mxt.realm.set_failed", DefinitionText.text(realm)));
             return 0;
         }
@@ -66,7 +68,8 @@ public final class RealmCommand {
         CommandSourceStack source = ctx.getSource();
         Reference<RealmStage> target = ResourceArgument.getResource(ctx, "realm", MxtResourceKeys.REALM_STAGE);
         Identifier start = HolderHelper.id(target);
-        Identifier aura = HolderHelper.id(target.value().aura());
+        Holder<Aura> aura = target.value().aura();
+        Identifier auraId = HolderHelper.id(aura);
         // The ladder in use is the loaded one, so a stage the pack no longer provides breaks the chain here for the
         // same reason the server cache refuses to index such a chain.
         Map<Identifier, Reference<RealmStage>> stages = new LinkedHashMap<>();
@@ -78,50 +81,14 @@ public final class RealmCommand {
         }
         // A chain the cache validated is read straight from it. One it refused to index whole is still walked here
         // from the loaded stages, so an author sees what is written rather than only "no chain".
-        List<Identifier> ids = DatapackCache.get().map(cache -> cache.realmsOf(aura))
-                .filter(chain -> chain.contains(start)).orElseGet(() -> walkChain(stages, start, aura));
+        List<Identifier> ids = DatapackCache.get().realmsOf(aura);
         int current = ids.indexOf(start);
         if (current < 0) {
             source.sendFailure(Component.translatable("command.mxt.realm.chain.none", start.toString()));
             return 0;
         }
         Component line = ChainReport.line(ids.stream().map(id -> DefinitionText.text(stages.get(id))).toList(), current);
-        source.sendSuccess(() -> Component.translatable("command.mxt.realm.chain", aura.toString(), line), false);
+        source.sendSuccess(() -> Component.translatable("command.mxt.realm.chain", auraId.toString(), line), false);
         return ids.size();
-    }
-
-    // A ladder is one aura's stages: following the links backwards reaches its first stage. A link that leaves the
-    // aura is not one of its rungs, and a stage that already has a predecessor keeps that one, so the walk below
-    // cannot be turned into a cycle by hand-written data.
-    private static List<Identifier> walkChain(Map<Identifier, Reference<RealmStage>> stages, Identifier start, Identifier aura) {
-        Map<Identifier, Identifier> previous = new HashMap<>();
-        for (Reference<RealmStage> stage : stages.values()) {
-            if (!HolderHelper.id(stage.value().aura()).equals(aura)) continue;
-            nextOf(stages, stage, aura).ifPresent(next -> previous.putIfAbsent(next, HolderHelper.id(stage)));
-        }
-        Identifier head = start;
-        Set<Identifier> seen = new HashSet<>();
-        seen.add(start);
-        while (previous.containsKey(head) && seen.add(previous.get(head))) head = previous.get(head);
-
-        List<Identifier> ids = new ArrayList<>();
-        Set<Identifier> walked = new HashSet<>();
-        Identifier cursor = head;
-        while (cursor != null && walked.add(cursor)) {
-            Reference<RealmStage> stage = stages.get(cursor);
-            if (stage == null) break;
-            ids.add(cursor);
-            cursor = nextOf(stages, stage, aura).orElse(null);
-        }
-        return ids;
-    }
-
-    // The next rung of the same ladder, or empty at its top: a link that names another aura or an absent stage ends
-    // the walk rather than continuing into data that is not this chain.
-    private static Optional<Identifier> nextOf(Map<Identifier, Reference<RealmStage>> stages,
-                                               Reference<RealmStage> stage, Identifier aura) {
-        return stage.value().nextRealm().map(HolderHelper::id).map(stages::get)
-                .filter(next -> HolderHelper.id(next.value().aura()).equals(aura))
-                .map(HolderHelper::id);
     }
 }
