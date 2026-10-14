@@ -41,11 +41,9 @@ public final class AuraCommand {
                         .executes(ctx -> queryAura(ctx.getSource(), null))
                         .then(literal("element")
                                 .then(argument("element", ResourceArgument.resource(context, MxtResourceKeys.ELEMENT))
-                                        .executes(ctx -> queryElement(ctx.getSource(),
-                                                ResourceArgument.getResource(ctx, "element", MxtResourceKeys.ELEMENT)))))
+                                        .executes(ctx -> queryElement(ctx.getSource(), ResourceArgument.getResource(ctx, "element", MxtResourceKeys.ELEMENT)))))
                         .then(argument("type", ResourceArgument.resource(context, MxtResourceKeys.AURA))
-                                .executes(ctx -> queryAura(ctx.getSource(),
-                                        ResourceArgument.getResource(ctx, "type", MxtResourceKeys.AURA)))))
+                                .executes(ctx -> queryAura(ctx.getSource(), ResourceArgument.getResource(ctx, "type", MxtResourceKeys.AURA)))))
                 .then(literal("vein").executes(ctx -> queryVein(ctx.getSource())))
                 .then(literal("cache")
                         .then(literal("clear")

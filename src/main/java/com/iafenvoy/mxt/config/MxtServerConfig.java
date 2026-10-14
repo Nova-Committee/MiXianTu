@@ -338,6 +338,7 @@ public final class MxtServerConfig extends AutoInitConfigContainer {
         public final BooleanEntry aura = BooleanEntry.builder("config.mxt.server.commands.aura", true).key("aura").tooltip("config.mxt.server.commands.aura.tooltip").build();
         public final BooleanEntry breakthrough = BooleanEntry.builder("config.mxt.server.commands.breakthrough", true).key("breakthrough").tooltip("config.mxt.server.commands.breakthrough.tooltip").build();
         public final BooleanEntry contract = BooleanEntry.builder("config.mxt.server.commands.contract", true).key("contract").tooltip("config.mxt.server.commands.contract.tooltip").build();
+        public final BooleanEntry cultivate = BooleanEntry.builder("config.mxt.server.commands.cultivate", true).key("cultivate").tooltip("config.mxt.server.commands.cultivate.tooltip").build();
         public final BooleanEntry curse = BooleanEntry.builder("config.mxt.server.commands.curse", true).key("curse").tooltip("config.mxt.server.commands.curse.tooltip").build();
         public final BooleanEntry display = BooleanEntry.builder("config.mxt.server.commands.display", true).key("display").tooltip("config.mxt.server.commands.display.tooltip").build();
         public final BooleanEntry flight = BooleanEntry.builder("config.mxt.server.commands.flight", true).key("flight").tooltip("config.mxt.server.commands.flight.tooltip").build();
@@ -349,6 +350,7 @@ public final class MxtServerConfig extends AutoInitConfigContainer {
         public final BooleanEntry picker = BooleanEntry.builder("config.mxt.server.commands.picker", true).key("picker").tooltip("config.mxt.server.commands.picker.tooltip").build();
         public final BooleanEntry quality = BooleanEntry.builder("config.mxt.server.commands.quality", true).key("quality").tooltip("config.mxt.server.commands.quality.tooltip").build();
         public final BooleanEntry realm = BooleanEntry.builder("config.mxt.server.commands.realm", true).key("realm").tooltip("config.mxt.server.commands.realm.tooltip").build();
+        public final BooleanEntry resource = BooleanEntry.builder("config.mxt.server.commands.resource", true).key("resource").tooltip("config.mxt.server.commands.resource.tooltip").build();
         public final BooleanEntry rift = BooleanEntry.builder("config.mxt.server.commands.rift", true).key("rift").tooltip("config.mxt.server.commands.rift.tooltip").build();
         public final BooleanEntry secretRealm = BooleanEntry.builder("config.mxt.server.commands.secret_realm", true).key("secret_realm").tooltip("config.mxt.server.commands.secret_realm.tooltip").build();
         public final BooleanEntry spiritRoot = BooleanEntry.builder("config.mxt.server.commands.spirit_root", true).key("spirit_root").tooltip("config.mxt.server.commands.spirit_root.tooltip").build();

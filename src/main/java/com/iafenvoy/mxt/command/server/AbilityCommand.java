@@ -29,7 +29,6 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
 
@@ -52,16 +51,19 @@ public final class AbilityCommand {
                         .executes(ctx -> list(ctx.getSource(), ctx.getSource().getPlayerOrException()))
                         .then(argument("target", EntityArgument.entity())
                                 .executes(ctx -> list(ctx.getSource(), EntityArgument.getEntity(ctx, "target")))))
-                .then(literal("cast").requires(ServerCommandManager::mayChange)
+                .then(literal("cast")
+                        .requires(ServerCommandManager::mayChange)
                         .then(argument("id", ResourceArgument.resource(context, MxtResourceKeys.ABILITY))
                                 .executes(ctx -> castAbility(ctx.getSource(), id(ctx)))))
-                .then(literal("grant").requires(ServerCommandManager::mayChange)
+                .then(literal("grant")
+                        .requires(ServerCommandManager::mayChange)
                         .then(argument("targets", EntityArgument.entities())
                                 .then(argument("ability", ResourceArgument.resource(context, MxtResourceKeys.ABILITY))
                                         .executes(AbilityCommand::grant))))
                 // ResourceKeyArgument, not ResourceArgument: a revoked ability only has to be held by the source
                 // ledger, so an id whose definition is gone is still exactly what has to be named here.
-                .then(literal("revoke").requires(ServerCommandManager::mayChange)
+                .then(literal("revoke")
+                        .requires(ServerCommandManager::mayChange)
                         .then(argument("targets", EntityArgument.entities())
                                 .then(argument("ability", ResourceKeyArgument.key(MxtResourceKeys.ABILITY))
                                         .executes(AbilityCommand::revoke))));

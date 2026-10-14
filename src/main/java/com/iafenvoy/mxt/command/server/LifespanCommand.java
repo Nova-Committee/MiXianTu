@@ -14,7 +14,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import java.util.Locale;
 
@@ -27,7 +26,7 @@ import static net.minecraft.commands.Commands.literal;
  * the rebirth reset. Written in ticks, which is the unit the ledger really holds; the readout is the same one
  * the information panel shows.
  */
-public final class LifeSpanCommand {
+public final class LifespanCommand {
     public static LiteralArgumentBuilder<CommandSourceStack> build(CommandBuildContext context) {
         return literal("lifespan")
                 .executes(ctx -> get(ctx.getSource(), ctx.getSource().getPlayerOrException()))
@@ -38,14 +37,14 @@ public final class LifeSpanCommand {
                 .then(literal("set").requires(ServerCommandManager::mayChange)
                         .then(argument("targets", EntityArgument.entities())
                                 .then(argument("ticks", LongArgumentType.longArg(0L))
-                                        .executes(LifeSpanCommand::set))))
+                                        .executes(LifespanCommand::set))))
                 .then(literal("add").requires(ServerCommandManager::mayChange)
                         .then(argument("targets", EntityArgument.entities())
                                 .then(argument("ticks", LongArgumentType.longArg())
-                                        .executes(LifeSpanCommand::add))))
+                                        .executes(LifespanCommand::add))))
                 .then(literal("reincarnate").requires(ServerCommandManager::mayChange)
                         .then(argument("targets", EntityArgument.entities())
-                                .executes(LifeSpanCommand::reincarnate)));
+                                .executes(LifespanCommand::reincarnate)));
     }
 
     private static int get(CommandSourceStack source, @NotNull Entity target) {

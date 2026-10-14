@@ -24,6 +24,7 @@ import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.arguments.ResourceKeyArgument;
 import net.minecraft.core.Holder;
+import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
@@ -72,7 +73,7 @@ public final class TechniqueCommand {
         Identifier itemId = BuiltInRegistries.ITEM.getKey(stack.getItem());
         source.sendSuccess(() -> Component.translatable("command.mxt.technique.diagnose.item", itemId.toString()), false);
 
-        Optional<TechniqueBinding> binding = ItemBindingService.technique(stack);
+        Optional<TechniqueBinding> binding = ItemBindingService.technique(player.level().registryAccess(), stack);
         if (binding.isEmpty()) {
             source.sendSuccess(() -> Component.translatable("command.mxt.technique.diagnose.no_binding"), false);
             return 1;
@@ -116,8 +117,8 @@ public final class TechniqueCommand {
         SpiritIdentityAttachment identity = player.getData(MxtAttachments.SPIRIT_IDENTITY);
         List<Identifier> removed = new ArrayList<>();
 
-        List<Holder<Technique>> techniques = prune(identity.learnedTechniques(), removed);
-        Map<Identifier, Holder<Progression>> levels = pruneLevels(player.getData(MxtAttachments.PROGRESSION).levels(), removed);
+        List<Holder<Technique>> techniques = prune(player.level().registryAccess(), identity.learnedTechniques(), removed);
+        Map<Identifier, Holder<Progression>> levels = pruneLevels(player.level().registryAccess(), player.getData(MxtAttachments.PROGRESSION).levels(), removed);
 
         if (!dryRun) {
             identity.setLearnedTechniques(techniques);
@@ -165,12 +166,12 @@ public final class TechniqueCommand {
     }
 
     // Package-visible so the server audit can exercise the sweep directly.
-    public static List<Holder<Technique>> prune(List<Holder<Technique>> values, List<Identifier> removed) {
+    public static List<Holder<Technique>> prune(Provider access, List<Holder<Technique>> values, List<Identifier> removed) {
         List<Holder<Technique>> kept = new ArrayList<>(values.size());
         Set<Identifier> seen = new LinkedHashSet<>();
         for (Holder<Technique> technique : values) {
             Identifier id = HolderHelper.id(technique);
-            if (!resolves(technique) || !seen.add(id)) {
+            if (!resolves(access, technique) || !seen.add(id)) {
                 removed.add(id);
                 continue;
             }
@@ -181,10 +182,10 @@ public final class TechniqueCommand {
 
     // Only the ids this sweep collected are dropped, so a progression owned by something else survives the
     // technique repair; a level whose definition is gone is stale for everyone and goes too.
-    public static Map<Identifier, Holder<Progression>> pruneLevels(Map<Identifier, Holder<Progression>> values, List<Identifier> removed) {
+    public static Map<Identifier, Holder<Progression>> pruneLevels(Provider access, Map<Identifier, Holder<Progression>> values, List<Identifier> removed) {
         Map<Identifier, Holder<Progression>> kept = new LinkedHashMap<>();
         for (Entry<Identifier, Holder<Progression>> entry : values.entrySet()) {
-            if (removed.contains(entry.getKey()) || !resolvesLevel(entry.getValue())) {
+            if (removed.contains(entry.getKey()) || !resolvesLevel(access, entry.getValue())) {
                 removed.add(entry.getKey());
                 continue;
             }
@@ -195,18 +196,18 @@ public final class TechniqueCommand {
 
     // Checked by id against the live registry: a removed entry has no value to read, and asking for one would
     // throw. Package-visible for the server audit, which cannot build a genuine unbound holder.
-    public static boolean resolves(Holder<Technique> technique) {
+    public static boolean resolves(Provider access, Holder<Technique> technique) {
         if (technique == null) return false;
         Identifier id = HolderHelper.id(technique);
         if (id.equals(HolderHelper.EMPTY)) return false;
-        return MxtDatapackRegistries.get(MxtResourceKeys.TECHNIQUE, id).isPresent();
+        return MxtDatapackRegistries.get(access, MxtResourceKeys.TECHNIQUE, id).isPresent();
     }
 
-    public static boolean resolvesLevel(Holder<Progression> level) {
+    public static boolean resolvesLevel(Provider access, Holder<Progression> level) {
         if (level == null) return false;
         Identifier id = HolderHelper.id(level);
         if (id.equals(HolderHelper.EMPTY)) return false;
-        return MxtDatapackRegistries.get(MxtResourceKeys.PROGRESSION, id).isPresent();
+        return MxtDatapackRegistries.get(access, MxtResourceKeys.PROGRESSION, id).isPresent();
     }
 
     private static String join(List<Identifier> values) {

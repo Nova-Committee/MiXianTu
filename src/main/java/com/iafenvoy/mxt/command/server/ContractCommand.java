@@ -71,8 +71,7 @@ public final class ContractCommand {
                 .then(literal("behavior").requires(ServerCommandManager::mayChange)
                         .then(argument("target", EntityArgument.entity())
                                 .then(argument("behavior", IdentifierArgument.id())
-                                        .suggests((ctx, builder) -> SharedSuggestionProvider.suggest(ContractBehaviors.known()
-                                                .stream().map(behavior -> behavior.id().toString()).sorted().toList(), builder))
+                                        .suggests((ctx, builder) -> SharedSuggestionProvider.suggest(ContractBehaviors.known().stream().map(behavior -> behavior.id().toString()).sorted().toList(), builder))
                                         .executes(ctx -> behavior(ctx, false))
                                         .then(literal("force").executes(ctx -> behavior(ctx, true))))))
                 // One creature holds one chain, so the level alone names what to write; whose chain it is comes
