@@ -3,6 +3,7 @@ package com.iafenvoy.mxt.compat.kubejs;
 import com.iafenvoy.mxt.attachment.AbilityAttachment;
 import com.iafenvoy.mxt.attachment.CurseHolderAttachment.State;
 import com.iafenvoy.mxt.attachment.SpiritIdentityAttachment;
+import com.iafenvoy.mxt.attachment.TechniqueAttachment;
 import com.iafenvoy.mxt.data.ability.Abilities;
 import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.ability.Togglable;
@@ -402,18 +403,23 @@ public final class MxtKubeJsApi {
         return entity.getExistingData(MxtAttachments.SPIRIT_IDENTITY).orElse(null);
     }
 
+    // The technique half lives in its own attachment, read the same way.
+    private static TechniqueAttachment techniqueState(Entity entity) {
+        return entity.getExistingData(MxtAttachments.TECHNIQUE).orElse(null);
+    }
+
     /**
      * Every technique the entity has learned, sorted. Read off the body, so a technique the current pack no longer
      * provides is still reported, and {@link #forgetTechnique} by that name still takes it off.
      */
     public static List<String> techniques(@NotNull Entity entity) {
-        SpiritIdentityAttachment spirit = identity(entity);
+        TechniqueAttachment spirit = techniqueState(entity);
         return spirit == null ? List.of() : spirit.learnedTechniques().stream()
                 .map(HolderHelper::id).map(Identifier::toString).sorted().toList();
     }
 
     public static boolean hasTechnique(@NotNull Entity entity, Identifier id) {
-        SpiritIdentityAttachment spirit = identity(entity);
+        TechniqueAttachment spirit = techniqueState(entity);
         if (spirit == null) return false;
         return spirit.learnedTechniques().stream().anyMatch(technique -> HolderHelper.id(technique).equals(id));
     }
@@ -475,7 +481,7 @@ public final class MxtKubeJsApi {
         Holder<Technique> technique = MxtDatapackRegistries.holder(entity.level().registryAccess(), MxtResourceKeys.TECHNIQUE, id).orElse(null);
         return technique == null
                 ? new TechniqueService.Result(false, TechniqueService.Failure.DISABLED)
-                : TechniqueService.learn(entity, entity.getData(MxtAttachments.SPIRIT_IDENTITY), technique,
+                : TechniqueService.learn(entity, entity.getData(MxtAttachments.TECHNIQUE), technique,
                 FormulaContext.of(entity));
     }
 
@@ -490,7 +496,7 @@ public final class MxtKubeJsApi {
         // A reference the current pack no longer provides has no holder to name, so the record goes by id alone.
         Holder<Technique> technique = MxtDatapackRegistries
                 .holder(entity.level().registryAccess(), MxtResourceKeys.TECHNIQUE, id).orElse(null);
-        return TechniqueService.forget(entity, entity.getData(MxtAttachments.SPIRIT_IDENTITY), technique);
+        return TechniqueService.forget(entity, entity.getData(MxtAttachments.TECHNIQUE), technique);
     }
 
     private static Holder<SpiritRoot> foundSpiritRoot(Entity entity, Identifier id) {

@@ -1,6 +1,6 @@
 package com.iafenvoy.mxt.command.server;
 
-import com.iafenvoy.mxt.attachment.SpiritIdentityAttachment;
+import com.iafenvoy.mxt.attachment.TechniqueAttachment;
 import com.iafenvoy.mxt.command.ServerCommandManager;
 import com.iafenvoy.mxt.data.cultivation.Technique;
 import com.iafenvoy.mxt.data.item.TechniqueBinding;
@@ -87,7 +87,7 @@ public final class TechniqueCommand {
         Optional<Failure> refusal = QualityService.check(player, stack);
         source.sendSuccess(() -> Component.translatable("command.mxt.technique.diagnose.gate", refusal.map(Enum::name).orElse("OK")), false);
 
-        SpiritIdentityAttachment spirit = player.getData(MxtAttachments.SPIRIT_IDENTITY);
+        TechniqueAttachment spirit = player.getData(MxtAttachments.TECHNIQUE);
         boolean known = spirit.learnedTechniques().contains(value.technique());
         source.sendSuccess(() -> Component.translatable("command.mxt.technique.diagnose.known",
                 known ? "yes" : "no", spirit.learnedTechniques().size()), false);
@@ -114,7 +114,7 @@ public final class TechniqueCommand {
 
     private static int repair(CommandSourceStack source, boolean dryRun) throws CommandSyntaxException {
         ServerPlayer player = source.getPlayerOrException();
-        SpiritIdentityAttachment identity = player.getData(MxtAttachments.SPIRIT_IDENTITY);
+        TechniqueAttachment identity = player.getData(MxtAttachments.TECHNIQUE);
         List<Identifier> removed = new ArrayList<>();
 
         List<Holder<Technique>> techniques = prune(player.level().registryAccess(), identity.learnedTechniques(), removed);
@@ -147,7 +147,7 @@ public final class TechniqueCommand {
     private static int drop(CommandSourceStack source, Holder<Technique> technique) throws CommandSyntaxException {
         ServerPlayer player = source.getPlayerOrException();
         Identifier id = HolderHelper.id(technique);
-        if (!TechniqueService.forget(player, player.getData(MxtAttachments.SPIRIT_IDENTITY), technique).changed()) {
+        if (!TechniqueService.forget(player, player.getData(MxtAttachments.TECHNIQUE), technique).changed()) {
             source.sendFailure(Component.translatable("command.mxt.technique.drop.absent", id.toString()));
             return 0;
         }
@@ -158,7 +158,7 @@ public final class TechniqueCommand {
     private static int forget(CommandSourceStack source, Holder<Technique> technique) throws CommandSyntaxException {
         ServerPlayer player = source.getPlayerOrException();
         Identifier id = HolderHelper.id(technique);
-        if (!TechniqueService.forget(player, player.getData(MxtAttachments.SPIRIT_IDENTITY), technique).changed()) {
+        if (!TechniqueService.forget(player, player.getData(MxtAttachments.TECHNIQUE), technique).changed()) {
             source.sendFailure(Component.translatable("command.mxt.technique.forget.absent", id.toString()));
             return 0;
         }

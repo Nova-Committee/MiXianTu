@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.runtime.cultivation;
 
 import com.iafenvoy.mxt.MiXianTu;
-import com.iafenvoy.mxt.attachment.SpiritStatsAttachment;
+import com.iafenvoy.mxt.attachment.LifespanAttachment;
 import com.iafenvoy.mxt.config.MxtServerConfig;
 import com.iafenvoy.mxt.config.MxtServerConfig.LifespanOutcome;
 import com.iafenvoy.mxt.event.LifeSpanEndEvent.Post;
@@ -50,12 +50,12 @@ public final class LifeSpanService {
     // Read-only and without creating the attachment: asking a chicken how long it may live must not give it a
     // ledger, and one is asked for every non-passenger entity on the tick hook.
     public static long remaining(Entity entity) {
-        SpiritStatsAttachment stats = existing(entity);
+        LifespanAttachment stats = existing(entity);
         return stats == null ? UNACCOUNTED : stats.lifespanRemaining();
     }
 
     public static long total(Entity entity) {
-        SpiritStatsAttachment stats = existing(entity);
+        LifespanAttachment stats = existing(entity);
         return stats == null ? UNACCOUNTED : stats.lifespanTotal();
     }
 
@@ -66,7 +66,7 @@ public final class LifeSpanService {
     public static Result set(LivingEntity entity, long ticks) {
         if (entity.level().isClientSide()) return Result.refused(Failure.SERVER_ONLY);
         if (ticks < 0L) return Result.refused(Failure.INVALID_VALUE);
-        SpiritStatsAttachment stats = entity.getData(MxtAttachments.SPIRIT_STATS);
+        LifespanAttachment stats = entity.getData(MxtAttachments.LIFESPAN);
         long before = stats.lifespanRemaining();
         stats.setLifespan(ticks, ticks);
         warnIfCrossed(entity, stats, before);
@@ -83,7 +83,7 @@ public final class LifeSpanService {
         // typing {@code add 0}, would otherwise leave the body accounted for at zero - which the very next
         // settlement reads as a spent life and executes.
         if (ticks == 0L) return Result.written();
-        SpiritStatsAttachment stats = entity.getData(MxtAttachments.SPIRIT_STATS);
+        LifespanAttachment stats = entity.getData(MxtAttachments.LIFESPAN);
         long before = stats.lifespanRemaining();
         if (stats.lifespanTotal() < 0L) {
             long base = Math.max(0L, MxtServerConfig.INSTANCE.lifespan.baseLifespan.getValue());
@@ -105,7 +105,7 @@ public final class LifeSpanService {
         if (!MxtServerConfig.INSTANCE.lifespan.enabled.getValue()) return false;
         long base = MxtServerConfig.INSTANCE.lifespan.baseLifespan.getValue();
         if (base <= 0L) return false;
-        SpiritStatsAttachment stats = entity.getData(MxtAttachments.SPIRIT_STATS);
+        LifespanAttachment stats = entity.getData(MxtAttachments.LIFESPAN);
         if (stats.lifespanTotal() >= 0L) return false;
         stats.setLifespan(base, base);
         return true;
@@ -125,7 +125,7 @@ public final class LifeSpanService {
         // Creative and spectator bodies are outside the survival rules - and spectating is what expiry itself
         // leaves a player as, which is also what keeps one death from being replayed every settlement.
         if (entity instanceof ServerPlayer player && (player.isCreative() || player.isSpectator())) return false;
-        SpiritStatsAttachment stats = existing(entity);
+        LifespanAttachment stats = existing(entity);
         if (stats == null) return false;
         if (stats.lifespanTotal() < 0L && !seed(living)) return false;
         long before = stats.lifespanRemaining();
@@ -145,7 +145,7 @@ public final class LifeSpanService {
      */
     public static Result reincarnate(LivingEntity entity) {
         if (entity.level().isClientSide()) return Result.refused(Failure.SERVER_ONLY);
-        SpiritStatsAttachment stats = entity.getData(MxtAttachments.SPIRIT_STATS);
+        LifespanAttachment stats = entity.getData(MxtAttachments.LIFESPAN);
         // Nothing has happened yet, so a listener saying no leaves the body untouched - unlike expiry, where the
         // life is already spent and a refusal can only mean closing the account.
         if (NeoForge.EVENT_BUS.post(new LifeSpanRebirthEvent.Pre(entity, stats)).isCanceled())
@@ -160,7 +160,7 @@ public final class LifeSpanService {
     }
 
     // The one place the expiry state machine lives.
-    private static void expire(LivingEntity entity, SpiritStatsAttachment stats) {
+    private static void expire(LivingEntity entity, LifespanAttachment stats) {
         if (NeoForge.EVENT_BUS.post(new Pre(entity, stats)).isCanceled()) {
             // A listener that wrote a positive number has bought this body more time; one that wrote nothing has
             // simply refused the end, which closes the account rather than retrying it forever.
@@ -185,7 +185,7 @@ public final class LifeSpanService {
 
     // A player watches on: no death event, no drops, no respawn point. The ledger keeps its zero, so releasing
     // them without granting life ends the next life at the next settlement - the account is spent, not unlimited.
-    private static void death(LivingEntity entity, SpiritStatsAttachment stats) {
+    private static void death(LivingEntity entity, LifespanAttachment stats) {
         if (entity instanceof ServerPlayer player) {
             player.setGameMode(GameType.SPECTATOR);
             player.sendSystemMessage(Component.translatable("message.mxt.lifespan.deceased"));
@@ -205,7 +205,7 @@ public final class LifeSpanService {
         DamageCalculationService.deal(null, entity, Float.MAX_VALUE, damageType(entity.level()), null);
     }
 
-    private static void closeAccount(SpiritStatsAttachment stats) {
+    private static void closeAccount(LifespanAttachment stats) {
         stats.setLifespan(UNACCOUNTED, 0L);
     }
 
@@ -220,14 +220,15 @@ public final class LifeSpanService {
         return Optional.ofNullable(fallback);
     }
 
-    // The reset list, one switch per line; the defaults are what a plain rebirth keeps. Grants and passive
-    // attributes are reconciled last, because they answer what the body still is rather than what it was.
-    private static void reincarnate(LivingEntity entity, SpiritStatsAttachment stats) {
+    // The reset list, one switch per line and one attachment per module, so a switch can only reach its own
+    // module's state. Grants and passive attributes are reconciled last, because they answer what the body still is
+    // rather than what it was.
+    private static void reincarnate(LivingEntity entity, LifespanAttachment stats) {
         MxtServerConfig.Reincarnation settings = MxtServerConfig.INSTANCE.reincarnation;
         if (settings.kills.getValue()) kill(entity);
         if (settings.resetCultivation.getValue()) entity.getData(MxtAttachments.CULTIVATION).resetCultivation();
         if (settings.clearMinorStages.getValue())
-            entity.getData(MxtAttachments.SPIRIT_IDENTITY).clearMinorStageRecords();
+            entity.getData(MxtAttachments.MINOR_STAGES).clearMinorStageRecords();
         if (settings.cancelTribulation.getValue())
             TribulationService.cancel(entity.getData(MxtAttachments.TRIBULATION));
         if (settings.clearResources.getValue()) entity.getData(MxtAttachments.RESOURCE_HOLDER).clear();
@@ -238,9 +239,9 @@ public final class LifeSpanService {
         if (!settings.keepTechniques.getValue()) {
             // Clearing the learned list already drops each technique's own record with it, since a record for a
             // technique the body no longer learned is state nothing can read.
-            entity.getData(MxtAttachments.SPIRIT_IDENTITY).setLearnedTechniques(List.of());
+            entity.getData(MxtAttachments.TECHNIQUE).setLearnedTechniques(List.of());
         }
-        if (!settings.keepSoul.getValue()) stats.resetSoul();
+        if (!settings.keepSoul.getValue()) entity.getData(MxtAttachments.SOUL_STATS).resetSoul();
         AbilityGrantService.recalculate(entity);
         PassiveAttributeService.reconcile(entity);
         long base = MxtServerConfig.INSTANCE.lifespan.baseLifespan.getValue();
@@ -250,7 +251,7 @@ public final class LifeSpanService {
 
     // A crossing, not a state: buying life back and losing it again warns again, which is the wanted reading, and
     // a single large loss still warns because it crossed on the way down.
-    private static void warnIfCrossed(Entity entity, SpiritStatsAttachment stats, long before) {
+    private static void warnIfCrossed(Entity entity, LifespanAttachment stats, long before) {
         if (!(entity instanceof ServerPlayer player)) return;
         MxtServerConfig.Lifespan settings = MxtServerConfig.INSTANCE.lifespan;
         double fraction = settings.warningFraction.getValue();
@@ -278,8 +279,8 @@ public final class LifeSpanService {
         return String.format(Locale.ROOT, "%.1f", (double) Math.max(0L, ticks) / ticksPerYear);
     }
 
-    private static SpiritStatsAttachment existing(Entity entity) {
-        return entity.getExistingData(MxtAttachments.SPIRIT_STATS).orElse(null);
+    private static LifespanAttachment existing(Entity entity) {
+        return entity.getExistingData(MxtAttachments.LIFESPAN).orElse(null);
     }
 
     private static long saturatedAdd(long value, long delta) {

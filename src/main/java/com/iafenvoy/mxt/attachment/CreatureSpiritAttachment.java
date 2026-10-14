@@ -40,7 +40,8 @@ public final class CreatureSpiritAttachment extends AbstractChangeTrackable {
             throw new IllegalArgumentException("Creature intelligence must be finite and non-negative");
         this.intelligence = intelligence;
         this.innerCore = innerCore;
-        this.profileLevels = profileLevels;
+        // The absent-field default is one instance every decode shares, so a decoded holder is copied.
+        this.profileLevels = new ProgressionHolder<>(profileLevels);
         this.markDirty();
     }
 

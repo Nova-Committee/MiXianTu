@@ -1,8 +1,8 @@
 package com.iafenvoy.mxt.attachment;
 
 import com.iafenvoy.mxt.data.item.PillBinding;
-import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.AbstractChangeTrackable;
+import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.codec.CollectionCodecs;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
@@ -19,8 +19,7 @@ import java.util.Map;
  */
 public final class PillUsageAttachment extends AbstractChangeTrackable {
     public static final MapCodec<PillUsageAttachment> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
-            CollectionCodecs.map(PillBinding.CODEC, Dose.CODEC).lenientOptionalFieldOf("entries", Map.of())
-                    .forGetter(PillUsageAttachment::entries)
+            CollectionCodecs.map(PillBinding.CODEC, Dose.CODEC).lenientOptionalFieldOf("entries", Map.of()).forGetter(PillUsageAttachment::entries)
     ).apply(i, PillUsageAttachment::new));
     private final Map<Holder<PillBinding>, Dose> entries;
 

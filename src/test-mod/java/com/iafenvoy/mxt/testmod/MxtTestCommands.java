@@ -1341,7 +1341,7 @@ public final class MxtTestCommands {
         // The record only grows and the refresh writes what the progress says, so at 80/100 of a nine-stage realm
         // the body stands on stage 7; a realm that declares no minor stages can never be recorded by the runtime.
         MinorStageService.refresh(player, requireProfile(access, QI), context);
-        SpiritIdentityAttachment identity = player.getData(MxtAttachments.SPIRIT_IDENTITY);
+        MinorStageAttachment identity = player.getData(MxtAttachments.MINOR_STAGES);
         int reached = identity.minorStageRecord(qiRefining);
         if (reached != 7) return "the minor stage record reads " + reached + " at 80/100 instead of 7";
         if (identity.raiseMinorStageRecord(qiRefining, 3)) return "the minor stage record went backwards";
@@ -1517,7 +1517,7 @@ public final class MxtTestCommands {
             source.sendSuccess(() -> Component.literal("damage probe: element outgoing=" + outgoing
                     + " adapted=" + adapted + " health_lost=" + lost + (elements ? " OK" : " MISMATCH")), false);
 
-            SpiritIdentityAttachment spirit = attacker.getData(MxtAttachments.SPIRIT_IDENTITY);
+            TechniqueAttachment spirit = attacker.getData(MxtAttachments.TECHNIQUE);
             Holder<Technique> technique = require(MxtResourceKeys.TECHNIQUE, PROBE_TECHNIQUE);
             Holder<Ability> ability = require(MxtResourceKeys.ABILITY, PROBE_ABILITY);
             spirit.addLearnedTechnique(technique);
@@ -2770,7 +2770,7 @@ public final class MxtTestCommands {
             boolean ungranted = refused.failure() == Togglable.Failure.NOT_GRANTED
                     && !pilot.getData(MxtAttachments.FLIGHT).active() && !pilot.getMainHandItem().isEmpty();
             // A technique is the ordinary way in: learning it grants the skill through the same ledger as any grant.
-            SpiritIdentityAttachment spirit = pilot.getData(MxtAttachments.SPIRIT_IDENTITY);
+            TechniqueAttachment spirit = pilot.getData(MxtAttachments.TECHNIQUE);
             spirit.addLearnedTechnique(require(MxtResourceKeys.TECHNIQUE, id("sword_control_manual")));
             AbilityGrantService.recalculate(pilot);
             boolean granted = pilot.getData(MxtAttachments.ABILITY_HOLDER).has(HolderHelper.id(controlAbility));
@@ -2846,7 +2846,7 @@ public final class MxtTestCommands {
         // this probe reads stacks of its own rather than what the player holds.
         ItemStack heldBefore = player.getMainHandItem().copy();
         ensureResource(player, player.getData(MxtAttachments.RESOURCE_HOLDER), qiResource, 40.0D);
-        SpiritIdentityAttachment playerSpirit = player.getData(MxtAttachments.SPIRIT_IDENTITY);
+        TechniqueAttachment playerSpirit = player.getData(MxtAttachments.TECHNIQUE);
         playerSpirit.addLearnedTechnique(require(MxtResourceKeys.TECHNIQUE, id("sword_control_manual")));
         AbilityGrantService.recalculate(player);
         int ownedBefore = ownedSwords(player);
@@ -2873,7 +2873,7 @@ public final class MxtTestCommands {
             ItemStack crashMount = new ItemStack(Items.IRON_SWORD);
             ArtifactService.refine(crashMount, crasher);
             crasher.setItemInHand(InteractionHand.MAIN_HAND, crashMount);
-            SpiritIdentityAttachment crashSpirit = crasher.getData(MxtAttachments.SPIRIT_IDENTITY);
+            TechniqueAttachment crashSpirit = crasher.getData(MxtAttachments.TECHNIQUE);
             crashSpirit.addLearnedTechnique(require(MxtResourceKeys.TECHNIQUE, id("sword_control_manual")));
             AbilityGrantService.recalculate(crasher);
             FlyingSwordEntity crashSword = AbilityActivationService.activate(crasher, controlAbility, null).failure() == null
@@ -3449,8 +3449,8 @@ public final class MxtTestCommands {
             AuraResult fireOnly = new AuraResult(Map.of(require(MxtResourceKeys.AURA, SPIRIT_POWER), AuraPool.natural(1.0D, 1.0D, 0.0D)),
                     AuraZone.Rules.DEFAULT, 0.0D, 0.0D, AlwaysCondition.INSTANCE, AuraZone.Distribution.EQUAL,
                     id("probe"), AuraResult.SourceKind.CHUNK);
-            double heavy = CultivationAffinity.multiplier(heavyFire, fireOnly, FormulaContext.EMPTY);
-            double even = CultivationAffinity.multiplier(evenRoots, fireOnly, FormulaContext.EMPTY);
+            double heavy = CultivationAffinity.multiplier(heavyFire, null, fireOnly, FormulaContext.EMPTY);
+            double even = CultivationAffinity.multiplier(evenRoots, null, fireOnly, FormulaContext.EMPTY);
             double bareWeight = require(MxtResourceKeys.SPIRIT_ROOT, PROBE_FIRE_ROOT).value().elements().getFirst().weight();
             boolean weighted = close(heavy, 1.87D) && close(even, 1.65D) && close(bareWeight, 1.0D);
             source.sendSuccess(() -> Component.literal("element probe: weights 70/30=" + heavy + " 1/1=" + even
@@ -4210,7 +4210,7 @@ public final class MxtTestCommands {
             settings.enabled.setValue(false);
             settings.baseLifespan.setValue(24_000L);
             boolean dormantSettled = LifeSpanService.settle(dormant);
-            boolean dormantLedger = dormant.getExistingData(MxtAttachments.SPIRIT_STATS).isPresent();
+            boolean dormantLedger = dormant.getExistingData(MxtAttachments.LIFESPAN).isPresent();
             boolean dormantWrite = LifeSpanService.set(dormant, 100L).changed();
             ok &= check(source, "lifespan probe: switch_off settled=" + dormantSettled + " ledger=" + dormantLedger
                             + " written=" + LifeSpanService.remaining(dormant),
@@ -4324,25 +4324,27 @@ public final class MxtTestCommands {
             reincarnation.keepSoul.setValue(true);
             Holder<RealmStage> qiRefining = require(MxtResourceKeys.REALM_STAGE, QI_REFINING);
             CultivationAttachment rebornSpirit = reborn.getData(MxtAttachments.CULTIVATION);
-            SpiritIdentityAttachment rebornIdentity = reborn.getData(MxtAttachments.SPIRIT_IDENTITY);
+            MinorStageAttachment rebornStages = reborn.getData(MxtAttachments.MINOR_STAGES);
+            TechniqueAttachment rebornTechniques = reborn.getData(MxtAttachments.TECHNIQUE);
             AbilityAttachment rebornAbilities = reborn.getData(MxtAttachments.ABILITY_HOLDER);
             rebornSpirit.setRealmStage(qiRefining);
             rebornSpirit.setCultivationProgress(requireProfile(source.registryAccess(), QI), 80.0D);
-            rebornIdentity.raiseMinorStageRecord(qiRefining, 2);
-            rebornIdentity.addLearnedTechnique(require(MxtResourceKeys.TECHNIQUE, TECHNIQUE));
+            rebornStages.raiseMinorStageRecord(qiRefining, 2);
+            rebornTechniques.addLearnedTechnique(require(MxtResourceKeys.TECHNIQUE, TECHNIQUE));
             AbilityGrantService.recalculate(reborn);
             boolean realmAbility = rebornAbilities.has(id("awaken_divine_sense"));
             LifeSpanService.set(reborn, 5L);
             boolean rebornSettled = LifeSpanService.settle(reborn);
-            boolean reset = rebornSpirit.realmStages().isEmpty() && rebornIdentity.minorStageRecord(qiRefining) == -1
+            boolean reset = rebornSpirit.realmStages().isEmpty() && rebornStages.minorStageRecord(qiRefining) == -1
                     && !rebornAbilities.has(id("awaken_divine_sense"));
             // What the body still is keeps its grants, so the root's own ability survives the realm's.
-            boolean kept = rebornIdentity.learnedTechniques().contains(require(MxtResourceKeys.TECHNIQUE, TECHNIQUE))
-                    && !rebornIdentity.spiritRoots().isEmpty() && rebornAbilities.has(PROBE_AFFINITY_ABILITY);
+            boolean kept = rebornTechniques.learnedTechniques().contains(require(MxtResourceKeys.TECHNIQUE, TECHNIQUE))
+                    && !reborn.getData(MxtAttachments.SPIRIT_IDENTITY).spiritRoots().isEmpty()
+                    && rebornAbilities.has(PROBE_AFFINITY_ABILITY);
             boolean rebornLedger = LifeSpanService.remaining(reborn) == 24_000L && LifeSpanService.total(reborn) == 24_000L;
             ok &= check(source, "lifespan probe: reincarnate realm_ability=" + realmAbility
                             + " realms=" + rebornSpirit.realmStages().size()
-                            + " minor_stage=" + rebornIdentity.minorStageRecord(qiRefining)
+                            + " minor_stage=" + rebornStages.minorStageRecord(qiRefining)
                             + " kept=" + kept + " ledger=" + LifeSpanService.remaining(reborn),
                     realmAbility && rebornSettled && reset && kept && rebornLedger);
 
@@ -4400,12 +4402,12 @@ public final class MxtTestCommands {
             settings.enabled.setValue(true);
             settings.baseLifespan.setValue(0L);
             boolean zeroAdd = LifeSpanService.add(untouched, 0L).changed()
-                    && untouched.getExistingData(MxtAttachments.SPIRIT_STATS).isEmpty();
+                    && untouched.getExistingData(MxtAttachments.LIFESPAN).isEmpty();
             boolean clean = !LifeSpanService.settle(untouched)
-                    && untouched.getExistingData(MxtAttachments.SPIRIT_STATS).isEmpty()
+                    && untouched.getExistingData(MxtAttachments.LIFESPAN).isEmpty()
                     && LifeSpanService.remaining(untouched) == -1L;
             ok &= check(source, "lifespan probe: no_ledger zero_add=" + zeroAdd + " settle_created="
-                    + untouched.getExistingData(MxtAttachments.SPIRIT_STATS).isPresent(), zeroAdd && clean);
+                    + untouched.getExistingData(MxtAttachments.LIFESPAN).isPresent(), zeroAdd && clean);
 
             // 12. The explicit entry point the command, the script and the action call, on leg 8's policy: it runs
             //     the same reset without an expiry - so no end event fires - and it works while the system is
@@ -4413,7 +4415,7 @@ public final class MxtTestCommands {
             settings.enabled.setValue(false);
             settings.baseLifespan.setValue(24_000L);
             CultivationAttachment restartSpirit = restart.getData(MxtAttachments.CULTIVATION);
-            SpiritIdentityAttachment restartIdentity = restart.getData(MxtAttachments.SPIRIT_IDENTITY);
+            MinorStageAttachment restartIdentity = restart.getData(MxtAttachments.MINOR_STAGES);
             AbilityAttachment restartAbilities = restart.getData(MxtAttachments.ABILITY_HOLDER);
             restartSpirit.setRealmStage(qiRefining);
             restartIdentity.raiseMinorStageRecord(qiRefining, 2);
@@ -4781,11 +4783,11 @@ public final class MxtTestCommands {
     private static int giveKit(CommandSourceStack source) throws CommandSyntaxException {
         ServerPlayer player = source.getPlayerOrException();
         CultivationAttachment spirit = player.getData(MxtAttachments.CULTIVATION);
-        SpiritIdentityAttachment identity = player.getData(MxtAttachments.SPIRIT_IDENTITY);
+        TechniqueAttachment techniques = player.getData(MxtAttachments.TECHNIQUE);
         ResourceHolderAttachment resources = player.getData(MxtAttachments.RESOURCE_HOLDER);
         FormulaContext context = FormulaContext.of(player);
 
-        grantIdentity(player, identity, context);
+        grantIdentity(player, techniques, context);
         if (!CultivationService.setRealm(spirit, require(MxtResourceKeys.REALM_STAGE, QI_REFINING))
                 || !CultivationService.setRealm(spirit, require(MxtResourceKeys.REALM_STAGE, SPIRIT_POWER_REFINING))) {
             source.sendFailure(Component.translatable("command.mxt_test.kit.realm_failed"));
@@ -4832,7 +4834,7 @@ public final class MxtTestCommands {
                 require(MxtResourceKeys.TECHNIQUE, id(path)));
     }
 
-    private static void grantIdentity(ServerPlayer player, SpiritIdentityAttachment spirit, FormulaContext context) {
+    private static void grantIdentity(ServerPlayer player, TechniqueAttachment techniques, FormulaContext context) {
         HolderLookup<SpiritRoot> root = new HolderLookup<>(MxtResourceKeys.SPIRIT_ROOT, ROOT);
         HolderLookup<SpiritRoot> waterRoot = new HolderLookup<>(MxtResourceKeys.SPIRIT_ROOT, WATER_ROOT);
         HolderLookup<Physique> physique = new HolderLookup<>(MxtResourceKeys.PHYSIQUE, PHYSIQUE);
@@ -4840,8 +4842,8 @@ public final class MxtTestCommands {
         CultivationIdentityService.grantSpiritRoot(player, ROOT, root.value());
         CultivationIdentityService.grantSpiritRoot(player, WATER_ROOT, waterRoot.value());
         CultivationIdentityService.grantPhysique(player, PHYSIQUE, physique.value(), context);
-        TechniqueService.learn(player, spirit, technique.holder(), context);
-        spirit.addLearnedTechnique(technique.holder());
+        TechniqueService.learn(player, techniques, technique.holder(), context);
+        techniques.addLearnedTechnique(technique.holder());
         AbilityGrantService.recalculate(player);
         TEST_ACTIVE_ABILITIES.forEach(id -> player.getData(MxtAttachments.ABILITY_HOLDER).grant(id, TEST_ABILITY_SOURCE));
         // Granting an ability does not register its triggers by itself; the runtime index is only rebuilt where
@@ -4951,11 +4953,11 @@ public final class MxtTestCommands {
             // 3. mxt:technique reads the learned list: the tag entry, the named entry, all of them, and none.
             boolean noneLearned = !asks(named, learner) && !asks(strict, learner) && asks(worldly, learner);
             boolean learnedBreathing = TechniqueService.learn(learner,
-                    learner.getData(MxtAttachments.SPIRIT_IDENTITY), breathing, contextOf(learner)).changed();
+                    learner.getData(MxtAttachments.TECHNIQUE), breathing, contextOf(learner)).changed();
             boolean tagOnly = asks(gated, learner) && !asks(named, learner) && !asks(strict, learner)
                     && !asks(worldly, learner);
             boolean learnedSword = TechniqueService.learn(learner,
-                    learner.getData(MxtAttachments.SPIRIT_IDENTITY), sword, contextOf(learner)).changed();
+                    learner.getData(MxtAttachments.TECHNIQUE), sword, contextOf(learner)).changed();
             boolean allOf = asks(named, learner) && asks(strict, learner);
             ok &= check(source, "cultivation probe: technique none=" + noneLearned + " learned="
                             + (learnedBreathing && learnedSword) + " tag=" + tagOnly + " all=" + allOf,
@@ -4966,7 +4968,7 @@ public final class MxtTestCommands {
             CultivationAttachment veteranSpirit = veteran.getData(MxtAttachments.CULTIVATION);
             boolean seatedFree = CultivationModeService.start(veteran, veteranSpirit, free, contextOf(veteran)).started()
                     && runs(veteranSpirit, FREE_MEDITATION);
-            TechniqueService.learn(veteran, veteran.getData(MxtAttachments.SPIRIT_IDENTITY), breathing,
+            TechniqueService.learn(veteran, veteran.getData(MxtAttachments.TECHNIQUE), breathing,
                     contextOf(veteran));
             boolean movedOn = picks(CultivationModeService.select(veteran, contextOf(veteran)), TECHNIQUE_MEDITATION)
                     && runs(veteranSpirit, FREE_MEDITATION);
@@ -5103,12 +5105,12 @@ public final class MxtTestCommands {
 
             // 13. Forgetting takes the technique and its own stage record, and rebuilds what it granted; the realm
             //     stage and everything else in the body are other state and stay exactly where they were.
-            SpiritIdentityAttachment bareIdentity = bareA.getData(MxtAttachments.SPIRIT_IDENTITY);
+        TechniqueAttachment bareIdentity = bareA.getData(MxtAttachments.TECHNIQUE);
             CultivationAttachment bareSpirit = bareA.getData(MxtAttachments.CULTIVATION);
             AbilityAttachment bareAbilities = bareA.getData(MxtAttachments.ABILITY_HOLDER);
             bareSpirit.setRealmStage(require(MxtResourceKeys.REALM_STAGE, QI_REFINING));
             boolean bareLearned = TechniqueService.learn(bareA, bareIdentity, sword, contextOf(bareA)).changed();
-            bareA.getData(MxtAttachments.SPIRIT_IDENTITY).techniqueLevels()
+        bareA.getData(MxtAttachments.TECHNIQUE).techniqueLevels()
                     .set(sword, require(MxtResourceKeys.PROGRESSION, PROBE_PROGRESSION_LEVEL));
             boolean bareGranted = bareAbilities.has(id("artifact_guard"));
             boolean forgotten = TechniqueService.forget(bareA, bareIdentity, sword).changed();

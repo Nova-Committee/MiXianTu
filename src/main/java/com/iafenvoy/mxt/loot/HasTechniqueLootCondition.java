@@ -1,6 +1,6 @@
 package com.iafenvoy.mxt.loot;
 
-import com.iafenvoy.mxt.attachment.SpiritIdentityAttachment;
+import com.iafenvoy.mxt.attachment.TechniqueAttachment;
 import com.iafenvoy.mxt.data.condition.builtin.entity.HasTechniqueEntityCondition;
 import com.iafenvoy.mxt.data.condition.builtin.entity.HasTechniqueEntityCondition.Match;
 import com.iafenvoy.mxt.data.cultivation.Technique;
@@ -40,8 +40,8 @@ public record HasTechniqueLootCondition(EntityTarget target,
     @Override
     public boolean test(LootContext context) {
         Entity entity = this.target.get(context);
-        SpiritIdentityAttachment spirit = entity == null ? null
-                : entity.getExistingData(MxtAttachments.SPIRIT_IDENTITY).orElse(null);
+        TechniqueAttachment spirit = entity == null ? null
+                : entity.getExistingData(MxtAttachments.TECHNIQUE).orElse(null);
         return spirit != null && HasTechniqueEntityCondition.learned(spirit, this.techniques, this.match);
     }
 

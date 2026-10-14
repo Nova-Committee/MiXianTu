@@ -2,7 +2,7 @@ package com.iafenvoy.mxt.screen.information;
 
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
-import com.iafenvoy.mxt.attachment.SpiritIdentityAttachment;
+import com.iafenvoy.mxt.attachment.TechniqueAttachment;
 import com.iafenvoy.mxt.config.MxtClientConfig;
 import com.iafenvoy.mxt.data.IconReference;
 import com.iafenvoy.mxt.data.progression.Progression;
@@ -247,7 +247,7 @@ public final class InformationPanelScreen extends AuiScreen {
     private void refreshTechniques() {
         AuiScrollList<TechniqueRow> list = this.techniques;
         if (list == null || this.minecraft.player == null) return;
-        SpiritIdentityAttachment spirit = this.minecraft.player.getData(MxtAttachments.SPIRIT_IDENTITY);
+        TechniqueAttachment spirit = this.minecraft.player.getData(MxtAttachments.TECHNIQUE);
         ResourceHolderAttachment resources = this.minecraft.player.getData(MxtAttachments.RESOURCE_HOLDER);
         Mode mode = MxtClientConfig.INSTANCE.techniques.progressMode.getValue();
         List<Entry> rows = TechniqueProgress.rows(spirit, resources,

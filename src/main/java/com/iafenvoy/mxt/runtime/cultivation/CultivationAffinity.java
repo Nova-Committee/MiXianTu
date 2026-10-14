@@ -1,6 +1,7 @@
 package com.iafenvoy.mxt.runtime.cultivation;
 
 import com.iafenvoy.mxt.attachment.SpiritIdentityAttachment;
+import com.iafenvoy.mxt.attachment.TechniqueAttachment;
 import com.iafenvoy.mxt.data.ability.Ability.AffinityMode;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.cultivation.Element;
@@ -28,7 +29,8 @@ public final class CultivationAffinity {
     private CultivationAffinity() {
     }
 
-    public static double multiplier(SpiritIdentityAttachment spirit, AuraResult aura, FormulaContext context) {
+    public static double multiplier(SpiritIdentityAttachment spirit, TechniqueAttachment techniques, AuraResult aura,
+                                    FormulaContext context) {
         double total = 0.0D;
         int count = 0;
         for (Holder<SpiritRoot> rootHolder : spirit.activeSpiritRoots()) {
@@ -45,7 +47,7 @@ public final class CultivationAffinity {
             total += base * modifier;
             count++;
         }
-        return combine(spirit, context, total, count);
+        return combine(techniques, context, total, count);
     }
 
     // A root that binds several elements draws on every pool it is bound to, in proportion: each element's
@@ -77,13 +79,14 @@ public final class CultivationAffinity {
 
     // No root means no root-side multiplier at all, which is 1 rather than zero: a body without a spirit root
     // still cultivates, it simply gets nothing extra for an element it does not have.
-    private static double combine(SpiritIdentityAttachment spirit, FormulaContext context, double total, int count) {
+    private static double combine(TechniqueAttachment techniques, FormulaContext context, double total, int count) {
         double result = count == 0 ? 1.0D : total / count;
-        for (Holder<Technique> techniqueHolder : spirit.learnedTechniques()) {
-            double modifier = techniqueHolder.value().cultivationModifier().evaluate(context);
-            if (!Double.isFinite(modifier) || modifier < 0.0D) return Double.NaN;
-            result *= modifier;
-        }
+        if (techniques != null)
+            for (Holder<Technique> techniqueHolder : techniques.learnedTechniques()) {
+                double modifier = techniqueHolder.value().cultivationModifier().evaluate(context);
+                if (!Double.isFinite(modifier) || modifier < 0.0D) return Double.NaN;
+                result *= modifier;
+            }
         return Double.isFinite(result) && result >= 0.0D ? result : Double.NaN;
     }
 

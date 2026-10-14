@@ -131,8 +131,8 @@ public final class CultivationAttachment extends AbstractChangeTrackable {
         return this.cultivateCooldowns.getOrDefault(action, 0L) > gameTime;
     }
 
-    // Back to a mortal: no progress, no realm, no sitting and no cooldown. The identity half (roots, physiques,
-    // techniques) is a different attachment and is not touched here.
+    // Back to a mortal: no progress, no realm, no sitting and no cooldown. The identity half (roots and physiques)
+    // and the techniques are separate attachments and are not touched here.
     public void resetCultivation() {
         this.cultivationProgresses.clear();
         this.realmStages.clear();

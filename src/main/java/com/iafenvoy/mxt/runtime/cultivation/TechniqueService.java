@@ -1,6 +1,6 @@
 package com.iafenvoy.mxt.runtime.cultivation;
 
-import com.iafenvoy.mxt.attachment.SpiritIdentityAttachment;
+import com.iafenvoy.mxt.attachment.TechniqueAttachment;
 import com.iafenvoy.mxt.data.cultivation.Technique;
 import com.iafenvoy.mxt.event.TechniqueLearnEvent.Post;
 import com.iafenvoy.mxt.event.TechniqueLearnEvent.Pre;
@@ -21,7 +21,7 @@ public final class TechniqueService {
     private TechniqueService() {
     }
 
-    public static Result learn(SpiritIdentityAttachment spirit, Holder<Technique> technique) {
+    public static Result learn(TechniqueAttachment spirit, Holder<Technique> technique) {
         Technique definition = technique.value();
         if (spirit.learnedTechniques().contains(technique)) return Result.rejected(Failure.ALREADY_LEARNED);
         Set<Identifier> existing = new HashSet<>();
@@ -37,7 +37,7 @@ public final class TechniqueService {
         return Result.changedResult();
     }
 
-    public static Result learn(LivingEntity entity, SpiritIdentityAttachment spirit, Holder<Technique> technique, FormulaContext context) {
+    public static Result learn(LivingEntity entity, TechniqueAttachment spirit, Holder<Technique> technique, FormulaContext context) {
         boolean allowed = technique.value().learnCondition().test(entity, context);
         if (!allowed) return Result.rejected(Failure.CONDITIONS);
         Result result = learn(spirit, technique);
@@ -51,7 +51,7 @@ public final class TechniqueService {
     // own progression record goes with it, because a re-learn starts at the entry level; realm progress, resources
     // and the running method live in other attachments and are none of this method's business. A reference the pack
     // no longer provides has no holder here, so the record is dropped through the identity half instead.
-    public static Result forget(LivingEntity entity, SpiritIdentityAttachment spirit, @Nullable Holder<Technique> technique) {
+    public static Result forget(LivingEntity entity, TechniqueAttachment spirit, @Nullable Holder<Technique> technique) {
         if (technique == null) return Result.rejected(Failure.ABSENT);
         List<Holder<Technique>> techniques = new ArrayList<>(spirit.learnedTechniques());
         boolean forgotten = techniques.removeIf(technique::equals);

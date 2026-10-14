@@ -55,7 +55,7 @@ public final class InformationManager {
         register("cultivation_progress", Side.CULTIVATION, InformationManager::progressLines);
         register("spirit_roots", Side.CULTIVATION, InformationManager::spiritRootLines);
         register("physiques", Side.CULTIVATION, InformationManager::physiqueLines);
-        register("techniques", Side.CULTIVATION, c -> lineWithDefinitions(c, "info.mxt.techniques", c.getData(MxtAttachments.SPIRIT_IDENTITY).learnedTechniques()));
+        register("techniques", Side.CULTIVATION, c -> lineWithDefinitions(c, "info.mxt.techniques", c.getData(MxtAttachments.TECHNIQUE).learnedTechniques()));
         register("curses", Side.CULTIVATION, InformationManager::curseLines);
     }
 

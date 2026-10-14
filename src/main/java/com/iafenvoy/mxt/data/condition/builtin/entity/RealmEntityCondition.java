@@ -43,8 +43,8 @@ public record RealmEntityCondition(Holder<RealmStage> realm, CompareOperation co
         boolean inRealm = current != null && DatapackCache.get().realmChains().compare(this.comparison, current, this.realm);
         if (!inRealm || this.minMinorStage.isEmpty()) return inRealm;
         // -1 for a realm the body never entered, so a threshold is never met by a realm it has not stood in.
-        return entity.getExistingData(MxtAttachments.SPIRIT_IDENTITY)
-                .map(identity -> identity.minorStageRecord(this.realm) >= this.minMinorStage.get())
+        return entity.getExistingData(MxtAttachments.MINOR_STAGES)
+                .map(stages -> stages.minorStageRecord(this.realm) >= this.minMinorStage.get())
                 .orElse(false);
     }
 

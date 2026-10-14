@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.runtime.cultivation;
 
 import com.iafenvoy.mxt.attachment.CultivationAttachment;
-import com.iafenvoy.mxt.attachment.SpiritIdentityAttachment;
+import com.iafenvoy.mxt.attachment.MinorStageAttachment;
 import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.cultivation.RealmStage;
@@ -28,20 +28,20 @@ public final class MinorStageService {
     // has actually reached. The grant rebuild only happens when the record grew, which is once per stage crossed.
     public static boolean refresh(LivingEntity entity, Holder<Aura> aura, FormulaContext context) {
         CultivationAttachment cultivation = entity.getData(MxtAttachments.CULTIVATION);
-        SpiritIdentityAttachment identity = entity.getData(MxtAttachments.SPIRIT_IDENTITY);
-        if (!record(cultivation, identity, aura, context)) return false;
+        MinorStageAttachment stages = entity.getData(MxtAttachments.MINOR_STAGES);
+        if (!record(cultivation, stages, aura, context)) return false;
         AbilityGrantService.recalculate(entity);
         return true;
     }
 
     // True when the record grew: no realm, no minor stages and a formula that cannot be resolved all read as
     // "nothing to record" rather than as a failure.
-    public static boolean record(CultivationAttachment cultivation, SpiritIdentityAttachment identity,
+    public static boolean record(CultivationAttachment cultivation, MinorStageAttachment stages,
                                  Holder<Aura> aura, FormulaContext context) {
         Holder<RealmStage> stage = cultivation.realmStage(aura);
         if (stage == null) return false;
         double index = CultivationService.minorStage(aura, cultivation, context);
-        return Double.isFinite(index) && identity.raiseMinorStageRecord(stage, (int) index);
+        return Double.isFinite(index) && stages.raiseMinorStageRecord(stage, (int) index);
     }
 
     // An entry is a minimum: its abilities are active on that minor stage or any later one, the same reading a

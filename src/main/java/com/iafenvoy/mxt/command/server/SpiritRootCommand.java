@@ -63,7 +63,7 @@ public final class SpiritRootCommand {
                 // provides, so they take a bare registry key: ResourceArgument would refuse that id while parsing.
                 .then(literal("remove").requires(ServerCommandManager::mayChange)
                         .then(argument("targets", EntityArgument.entities())
-                                .then(argument("root", ResourceKeyArgument.key(MxtResourceKeys.SPIRIT_ROOT))
+                                .then(argument("root", ResourceArgument.resource(context, MxtResourceKeys.SPIRIT_ROOT))
                                         .executes(SpiritRootCommand::remove))))
                 .then(literal("enable").requires(ServerCommandManager::mayChange)
                         .then(argument("targets", EntityArgument.entities())
@@ -123,7 +123,7 @@ public final class SpiritRootCommand {
                 source.sendFailure(Component.translatable("command.mxt.identity.not_living", target.getDisplayName()));
                 continue;
             }
-            Result result = CultivationIdentityService.grantSpiritRoot(living, HolderHelper.id(root), root.value());
+            Result result = CultivationIdentityService.grantSpiritRoot(living, root);
             if (!result.changed()) {
                 source.sendFailure(Component.translatable("command.mxt.identity.grant_failed",
                         DefinitionText.text(root), target.getDisplayName(), reason(result.failure())));
@@ -138,17 +138,15 @@ public final class SpiritRootCommand {
 
     private static int remove(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         CommandSourceStack source = ctx.getSource();
-        ResourceKey<SpiritRoot> root = RegistryReferences.key(ctx, "root", MxtResourceKeys.SPIRIT_ROOT);
-        Identifier id = root.identifier();
+        Reference<SpiritRoot> root = ResourceArgument.getResource(ctx, "root", MxtResourceKeys.SPIRIT_ROOT);
         int removed = 0;
         for (Entity target : EntityArgument.getEntities(ctx, "targets")) {
             if (!(target instanceof LivingEntity living)) {
                 source.sendFailure(Component.translatable("command.mxt.identity.not_living", target.getDisplayName()));
                 continue;
             }
-            if (!CultivationIdentityService.removeSpiritRoot(living, id)) {
-                source.sendFailure(Component.translatable("command.mxt.identity.remove_failed",
-                        target.getDisplayName(), id.toString()));
+            if (!CultivationIdentityService.removeSpiritRoot(living, root)) {
+                source.sendFailure(Component.translatable("command.mxt.identity.remove_failed", target.getDisplayName(), HolderHelper.id(root).toString()));
                 continue;
             }
             removed++;

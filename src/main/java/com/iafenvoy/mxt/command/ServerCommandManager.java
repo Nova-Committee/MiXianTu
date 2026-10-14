@@ -45,7 +45,7 @@ public final class ServerCommandManager {
         builder.put(QualityCommand::build, config.quality);
         builder.put(RealmCommand::build, config.realm);
         builder.put(ResourceCommand::build, config.resource);
-        builder.put(RiftCommand::build, config.rift);
+        builder.put(_ -> RiftCommand.build(), config.rift);
         builder.put(SecretRealmCommand::build, config.secretRealm);
         builder.put(SpiritRootCommand::build, config.spiritRoot);
         builder.put(TalismanCommand::build, config.talisman);

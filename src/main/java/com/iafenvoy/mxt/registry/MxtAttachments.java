@@ -6,7 +6,6 @@ import com.iafenvoy.mxt.runtime.creature.BoundBeastsAttachment;
 import com.iafenvoy.mxt.runtime.formation.FormationWorldAttachment;
 import com.iafenvoy.mxt.runtime.world.AuraWorldAttachment;
 import com.iafenvoy.mxt.runtime.world.SecretRealmWorldAttachment;
-import com.iafenvoy.mxt.util.AbstractChangeTrackable;
 import com.iafenvoy.mxt.util.ChangeTrackable;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -30,10 +29,13 @@ public final class MxtAttachments {
     public static final DeferredRegister<AttachmentType<?>> REGISTRY = DeferredRegister.create(NeoForgeRegistries.ATTACHMENT_TYPES, MiXianTu.MOD_ID);
     private static final List<Supplier<? extends AttachmentType<?>>> SYNCED_ENTITY_ATTACHMENTS = new ArrayList<>();
 
-    // Entity
+    // Entity. One attachment per module that keeps state, so the reset a module performs cannot reach another's.
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<CultivationAttachment>> CULTIVATION = entity("cultivation", CultivationAttachment::new, CultivationAttachment.CODEC);
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<MinorStageAttachment>> MINOR_STAGES = entity("minor_stages", MinorStageAttachment::new, MinorStageAttachment.CODEC);
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<LifespanAttachment>> LIFESPAN = entity("lifespan", LifespanAttachment::new, LifespanAttachment.CODEC);
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<SpiritIdentityAttachment>> SPIRIT_IDENTITY = entity("spirit_identity", SpiritIdentityAttachment::new, SpiritIdentityAttachment.CODEC);
-    public static final DeferredHolder<AttachmentType<?>, AttachmentType<SpiritStatsAttachment>> SPIRIT_STATS = entity("spirit_stats", SpiritStatsAttachment::new, SpiritStatsAttachment.CODEC);
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<TechniqueAttachment>> TECHNIQUE = entity("technique", TechniqueAttachment::new, TechniqueAttachment.CODEC);
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<SoulStatsAttachment>> SOUL_STATS = entity("soul_stats", SoulStatsAttachment::new, SoulStatsAttachment.CODEC);
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<FloatHoldingItemAttachment>> FLOAT_HOLDING_ITEM = entityWithoutDeathCopy("float_holding_item", FloatHoldingItemAttachment::new, FloatHoldingItemAttachment.CODEC);
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<ResourceHolderAttachment>> RESOURCE_HOLDER = entity("resource_holder", ResourceHolderAttachment::new, ResourceHolderAttachment.CODEC);
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<ElementAttachment>> ELEMENT_ATTACHMENT = entity("element_attachment", ElementAttachment::new, ElementAttachment.CODEC);

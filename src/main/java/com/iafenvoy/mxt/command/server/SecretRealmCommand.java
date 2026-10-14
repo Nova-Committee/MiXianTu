@@ -1,6 +1,5 @@
 package com.iafenvoy.mxt.command.server;
 
-import com.iafenvoy.mxt.command.RegistryReferences;
 import com.iafenvoy.mxt.command.ServerCommandManager;
 import com.iafenvoy.mxt.data.secretrealm.SecretRealm;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
@@ -14,6 +13,7 @@ import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import net.minecraft.commands.CommandBuildContext;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.arguments.DimensionArgument;
+import net.minecraft.commands.arguments.IdentifierArgument;
 import net.minecraft.commands.arguments.ResourceArgument;
 import net.minecraft.core.Holder.Reference;
 import net.minecraft.core.registries.Registries;
@@ -43,7 +43,7 @@ public final class SecretRealmCommand {
                         .executes(ctx -> listSecretRealms(ctx.getSource())))
                 .then(literal("info")
                         .then(argument("dimension", DimensionArgument.dimension())
-                                .executes(ctx -> secretRealmInfo(ctx.getSource(), RegistryReferences.dimension(ctx, "dimension")))))
+                                .executes(ctx -> secretRealmInfo(ctx.getSource(), IdentifierArgument.getId(ctx, "dimension")))))
                 .then(literal("enter")
                         .then(argument("definition", ResourceArgument.resource(context, MxtResourceKeys.SECRET_REALM))
                                 .executes(ctx -> enterSecretRealm(ctx.getSource(), ResourceArgument.getResource(ctx, "definition", MxtResourceKeys.SECRET_REALM)))))
@@ -51,7 +51,7 @@ public final class SecretRealmCommand {
                         .executes(ctx -> exitSecretRealm(ctx.getSource())))
                 .then(literal("destroy")
                         .then(argument("dimension", DimensionArgument.dimension())
-                                .executes(ctx -> destroySecretRealm(ctx.getSource(), RegistryReferences.dimension(ctx, "dimension")))));
+                                .executes(ctx -> destroySecretRealm(ctx.getSource(), IdentifierArgument.getId(ctx, "dimension")))));
     }
 
     private static int listSecretRealms(CommandSourceStack source) {

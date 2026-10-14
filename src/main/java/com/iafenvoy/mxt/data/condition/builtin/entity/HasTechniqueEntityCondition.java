@@ -1,6 +1,6 @@
 package com.iafenvoy.mxt.data.condition.builtin.entity;
 
-import com.iafenvoy.mxt.attachment.SpiritIdentityAttachment;
+import com.iafenvoy.mxt.attachment.TechniqueAttachment;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.data.context.condition.EntityConditionContext;
 import com.iafenvoy.mxt.data.cultivation.Technique;
@@ -39,7 +39,7 @@ public record HasTechniqueEntityCondition(List<Either<Holder<Technique>, TagKey<
     }
 
     // Shared with the loot condition of the same name, so both answer the question the same way.
-    public static boolean learned(SpiritIdentityAttachment spirit, List<Either<Holder<Technique>, TagKey<Technique>>> techniques, Match match) {
+    public static boolean learned(TechniqueAttachment spirit, List<Either<Holder<Technique>, TagKey<Technique>>> techniques, Match match) {
         List<Holder<Technique>> known = spirit.learnedTechniques();
         if (techniques.isEmpty()) return !known.isEmpty();
         return match == Match.ALL
@@ -55,7 +55,7 @@ public record HasTechniqueEntityCondition(List<Either<Holder<Technique>, TagKey<
 
     @Override
     public boolean test(@NonNull EntityConditionContext ctx) {
-        SpiritIdentityAttachment spirit = ctx.entity().getExistingData(MxtAttachments.SPIRIT_IDENTITY).orElse(null);
+        TechniqueAttachment spirit = ctx.entity().getExistingData(MxtAttachments.TECHNIQUE).orElse(null);
         return spirit != null && learned(spirit, this.techniques, this.match);
     }
 

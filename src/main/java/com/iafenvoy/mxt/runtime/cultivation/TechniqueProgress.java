@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.runtime.cultivation;
 
 import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
-import com.iafenvoy.mxt.attachment.SpiritIdentityAttachment;
+import com.iafenvoy.mxt.attachment.TechniqueAttachment;
 import com.iafenvoy.mxt.data.cultivation.Technique;
 import com.iafenvoy.mxt.data.progression.Progression;
 import com.iafenvoy.mxt.data.progression.ProgressionHolder;
@@ -49,7 +49,7 @@ public final class TechniqueProgress {
     public record Progress(double done, double span, double fraction) {
     }
 
-    public static List<Entry> rows(SpiritIdentityAttachment spirit, ResourceHolderAttachment resources,
+    public static List<Entry> rows(TechniqueAttachment spirit, ResourceHolderAttachment resources,
                                    FormulaContext context) {
         List<Entry> rows = new ArrayList<>(spirit.learnedTechniques().size());
         ProgressionHolder<Technique> levels = spirit.techniqueLevels();

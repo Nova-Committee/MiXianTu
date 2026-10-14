@@ -1,74 +1,46 @@
 package com.iafenvoy.mxt.attachment;
 
 import com.iafenvoy.mxt.data.cultivation.Physique;
-import com.iafenvoy.mxt.data.cultivation.RealmStage;
 import com.iafenvoy.mxt.data.cultivation.SpiritRoot;
-import com.iafenvoy.mxt.data.cultivation.Technique;
-import com.iafenvoy.mxt.data.progression.ProgressionHolder;
-import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.util.AbstractChangeTrackable;
 import com.iafenvoy.mxt.util.codec.CollectionCodecs;
-import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
-import net.minecraft.resources.RegistryFixedCodec;
 
-import java.util.*;
+import java.util.LinkedHashSet;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Set;
 
 /**
- * Persisted roots, physiques and learned techniques, and how far each learned technique has been climbed. The two
- * {@code disabled_*} sets are the storage half of the enable/disable module and name things the entity still holds,
- * so held and active are different questions: ownership reads {@link #spiritRoots()}, every effect reads
- * {@link #activeSpiritRoots()}.
- *
- * <p>A technique's levels belong to the techniques this body learned, so they are kept here rather than in an
- * attachment shared with every other sort of owner: a technique and a creature profile that share an id cannot
- * then read each other's records.
+ * The spirit roots and physiques one body holds, and which of them are switched off. The two {@code disabled_*}
+ * sets name things the entity still holds, so held and active are different questions: ownership reads
+ * {@link #spiritRoots()}, every effect reads {@link #activeSpiritRoots()}.
  */
 public final class SpiritIdentityAttachment extends AbstractChangeTrackable {
     public static final MapCodec<SpiritIdentityAttachment> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             CollectionCodecs.list(SpiritRoot.CODEC).lenientOptionalFieldOf("spirit_roots", List.of()).forGetter(SpiritIdentityAttachment::spiritRoots),
             CollectionCodecs.list(Physique.CODEC).lenientOptionalFieldOf("physiques", List.of()).forGetter(SpiritIdentityAttachment::physiques),
-            CollectionCodecs.list(Technique.CODEC).lenientOptionalFieldOf("learned_techniques", List.of()).forGetter(SpiritIdentityAttachment::learnedTechniques),
             CollectionCodecs.set(SpiritRoot.CODEC).lenientOptionalFieldOf("disabled_spirit_roots", Set.of()).forGetter(SpiritIdentityAttachment::disabledSpiritRoots),
-            CollectionCodecs.set(Physique.CODEC).lenientOptionalFieldOf("disabled_physiques", Set.of()).forGetter(SpiritIdentityAttachment::disabledPhysiques),
-            CollectionCodecs.map(RealmStage.CODEC, Codec.INT).lenientOptionalFieldOf("minor_stage_records", Map.of()).forGetter(SpiritIdentityAttachment::minorStageRecords),
-            // The absent-field default is one instance every decode shares, so the constructor copies it through
-            // ownedBy rather than adopting it.
-            ProgressionHolder.codec(RegistryFixedCodec.create(MxtResourceKeys.TECHNIQUE)).lenientOptionalFieldOf("technique_levels", new ProgressionHolder<>()).forGetter(SpiritIdentityAttachment::techniqueLevels)
+            CollectionCodecs.set(Physique.CODEC).lenientOptionalFieldOf("disabled_physiques", Set.of()).forGetter(SpiritIdentityAttachment::disabledPhysiques)
     ).apply(i, SpiritIdentityAttachment::new));
     private final List<Holder<SpiritRoot>> spiritRoots;
     private final List<Holder<Physique>> physiques;
-    private final List<Holder<Technique>> learnedTechniques;
     private final Set<Holder<SpiritRoot>> disabledSpiritRoots;
     private final Set<Holder<Physique>> disabledPhysiques;
-    private final Map<Holder<RealmStage>, Integer> minorStageRecords;
-    private final ProgressionHolder<Technique> techniqueLevels;
 
     public SpiritIdentityAttachment() {
-        this(List.of(), List.of(), List.of(), Set.of(), Set.of(), Map.of(), new ProgressionHolder<>());
+        this(List.of(), List.of(), Set.of(), Set.of());
     }
 
     private SpiritIdentityAttachment(List<Holder<SpiritRoot>> spiritRoots, List<Holder<Physique>> physiques,
-                                     List<Holder<Technique>> learnedTechniques,
                                      Set<Holder<SpiritRoot>> disabledSpiritRoots,
-                                     Set<Holder<Physique>> disabledPhysiques,
-                                     Map<Holder<RealmStage>, Integer> minorStageRecords,
-                                     ProgressionHolder<Technique> techniqueLevels) {
+                                     Set<Holder<Physique>> disabledPhysiques) {
         this.spiritRoots = new LinkedList<>(spiritRoots);
         this.physiques = new LinkedList<>(physiques);
-        this.learnedTechniques = new LinkedList<>(learnedTechniques);
         this.disabledSpiritRoots = new LinkedHashSet<>(disabledSpiritRoots);
         this.disabledPhysiques = new LinkedHashSet<>(disabledPhysiques);
-        this.minorStageRecords = new LinkedHashMap<>(minorStageRecords);
-        this.techniqueLevels = techniqueLevels;
-    }
-
-    @Override
-    public boolean checkDirty() {
-        if (this.techniqueLevels.checkDirty()) this.markDirty();
-        return super.checkDirty();
     }
 
     public List<Holder<SpiritRoot>> spiritRoots() {
@@ -119,16 +91,6 @@ public final class SpiritIdentityAttachment extends AbstractChangeTrackable {
         return changed;
     }
 
-    public List<Holder<Technique>> learnedTechniques() {
-        return this.learnedTechniques;
-    }
-
-    // Where each learned technique stands in its own chain; a technique the body gives up leaves its record behind
-    // nowhere else, since forgetting clears this too.
-    public ProgressionHolder<Technique> techniqueLevels() {
-        return this.techniqueLevels;
-    }
-
     public void setSpiritRoots(List<Holder<SpiritRoot>> values) {
         this.spiritRoots.clear();
         this.spiritRoots.addAll(values);
@@ -141,48 +103,6 @@ public final class SpiritIdentityAttachment extends AbstractChangeTrackable {
         this.physiques.clear();
         this.physiques.addAll(values);
         this.disabledPhysiques.retainAll(this.physiques);
-        this.markDirty();
-    }
-
-    public void setLearnedTechniques(List<Holder<Technique>> values) {
-        this.learnedTechniques.clear();
-        this.learnedTechniques.addAll(values);
-        // A record for a technique the body no longer learned is state nothing can read, so it goes with it.
-        this.techniqueLevels.retainOnly(this.learnedTechniques);
-        this.markDirty();
-    }
-
-    public void addLearnedTechnique(Holder<Technique> value) {
-        if (value != null && !this.learnedTechniques.contains(value)) {
-            this.learnedTechniques.add(value);
-            this.markDirty();
-        }
-    }
-
-    // Highest minor stage reached inside each realm stage, 0-based. A key means "this body has stood in that
-    // realm at all", and a value only ever grows, so a breakthrough never takes an unlock back with it.
-    public Map<Holder<RealmStage>, Integer> minorStageRecords() {
-        return this.minorStageRecords;
-    }
-
-    // -1 for a realm the body never entered, which is below every legal index.
-    public int minorStageRecord(Holder<RealmStage> stage) {
-        return this.minorStageRecords.getOrDefault(stage, -1);
-    }
-
-    public boolean raiseMinorStageRecord(Holder<RealmStage> stage, int index) {
-        if (stage == null || index < 0) return false;
-        Integer recorded = this.minorStageRecords.get(stage);
-        if (recorded != null && recorded >= index) return false;
-        this.minorStageRecords.put(stage, index);
-        this.markDirty();
-        return true;
-    }
-
-    // Reincarnation: the records describe how far one life got inside a realm, so the next life starts over.
-    public void clearMinorStageRecords() {
-        if (this.minorStageRecords.isEmpty()) return;
-        this.minorStageRecords.clear();
         this.markDirty();
     }
 }

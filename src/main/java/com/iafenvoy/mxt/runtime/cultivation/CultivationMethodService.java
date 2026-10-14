@@ -79,7 +79,8 @@ public final class CultivationMethodService {
         Identifier actionId = HolderHelper.id(action);
         if (!canCultivateInEnvironment(spirit, entity, aura, context))
             return stop(entity, spirit, action, definition, gameTime, Failure.ENVIRONMENT);
-        double affinity = CultivationAffinity.multiplier(entity.getData(MxtAttachments.SPIRIT_IDENTITY), aura, context);
+        double affinity = CultivationAffinity.multiplier(entity.getData(MxtAttachments.SPIRIT_IDENTITY),
+                entity.getExistingData(MxtAttachments.TECHNIQUE).orElse(null), aura, context);
         return tick(entity, spirit, resources, aura, action, definition, gameTime, context, conditionsMet, affinity);
     }
 

@@ -1,7 +1,9 @@
 package com.iafenvoy.mxt.runtime.cultivation;
 
 import com.iafenvoy.mxt.attachment.CultivationAttachment;
+import com.iafenvoy.mxt.attachment.MinorStageAttachment;
 import com.iafenvoy.mxt.attachment.SpiritIdentityAttachment;
+import com.iafenvoy.mxt.attachment.TechniqueAttachment;
 import com.iafenvoy.mxt.data.cultivation.Physique;
 import com.iafenvoy.mxt.data.cultivation.RealmStage;
 import com.iafenvoy.mxt.data.cultivation.SpiritRoot;
@@ -25,8 +27,8 @@ import java.util.Map;
 
 /**
  * Everything a body's cultivation identity contributes: what its spirit roots, physiques, techniques and minor
- * stages grant, the passive modifiers they declare, and the techniques it owns a progression chain for. Each
- * technique's own levels are read from the identity attachment, which is where they are kept.
+ * stages grant, the passive modifiers they declare, and the techniques it owns a progression chain for. Each of
+ * those lives in the attachment of its own module, so this reads three of them.
  *
  * <p>One object answers all three, so the cultivation side is one registration rather than one per question.
  */
@@ -43,52 +45,59 @@ public final class CultivationHooks implements EntitySources.Grants, EntitySourc
 
     @Override
     public void collect(LivingEntity entity, EntitySources.GrantSink sink) {
-        SpiritIdentityAttachment spirit = entity.getExistingData(MxtAttachments.SPIRIT_IDENTITY).orElse(null);
-        if (spirit == null) return;
         Provider access = entity.level().registryAccess();
-        for (Holder<SpiritRoot> root : spirit.activeSpiritRoots())
-            sink.want(Sources.granted(Sources.Grant.SPIRIT_ROOT, HolderHelper.id(root)), root.value().grantedAbilities(), access);
-        for (Holder<Physique> physique : spirit.activePhysiques())
-            sink.want(Sources.granted(Sources.Grant.PHYSIQUE, HolderHelper.id(physique)), physique.value().grantedAbilities(), access);
-        for (Holder<Technique> technique : spirit.learnedTechniques()) {
-            Identifier id = HolderHelper.id(technique);
-            Identifier source = Sources.granted(Sources.Grant.TECHNIQUE, id);
-            sink.want(source, technique.value().grantedAbilities(), access);
-            // Mastery adds to the same source, so a promotion only has to change the level: a technique's grants
-            // are one contribution, not one per level it passed.
-            spirit.techniqueLevels().current(technique).ifPresent(current ->
-                    sink.wantResolved(source, ProgressionService.grantedAbilities(technique.value(), current, access)));
+        SpiritIdentityAttachment roots = entity.getExistingData(MxtAttachments.SPIRIT_IDENTITY).orElse(null);
+        if (roots != null) {
+            for (Holder<SpiritRoot> root : roots.activeSpiritRoots())
+                sink.want(Sources.granted(Sources.Grant.SPIRIT_ROOT, HolderHelper.id(root)), root.value().grantedAbilities(), access);
+            for (Holder<Physique> physique : roots.activePhysiques())
+                sink.want(Sources.granted(Sources.Grant.PHYSIQUE, HolderHelper.id(physique)), physique.value().grantedAbilities(), access);
         }
+        TechniqueAttachment techniques = entity.getExistingData(MxtAttachments.TECHNIQUE).orElse(null);
+        if (techniques != null)
+            for (Holder<Technique> technique : techniques.learnedTechniques()) {
+                Identifier id = HolderHelper.id(technique);
+                Identifier source = Sources.granted(Sources.Grant.TECHNIQUE, id);
+                sink.want(source, technique.value().grantedAbilities(), access);
+                // Mastery adds to the same source, so a promotion only has to change the level: a technique's grants
+                // are one contribution, not one per level it passed.
+                techniques.techniqueLevels().current(technique).ifPresent(current ->
+                        sink.wantResolved(source, ProgressionService.grantedAbilities(technique.value(), current, access)));
+            }
         // A realm stage's unlocks are keyed by how far the body got inside it, so the record is the whole answer:
         // no record means the body never stood in that realm, and a realm it has left keeps granting.
-        for (Map.Entry<Holder<RealmStage>, Integer> record : spirit.minorStageRecords().entrySet())
-            sink.wantResolved(Sources.granted(Sources.Grant.REALM_STAGE, HolderHelper.id(record.getKey())),
-                    MinorStageService.unlockedAbilities(record.getKey(), record.getValue(), access));
+        MinorStageAttachment stages = entity.getExistingData(MxtAttachments.MINOR_STAGES).orElse(null);
+        if (stages != null)
+            for (Map.Entry<Holder<RealmStage>, Integer> record : stages.minorStageRecords().entrySet())
+                sink.wantResolved(Sources.granted(Sources.Grant.REALM_STAGE, HolderHelper.id(record.getKey())),
+                        MinorStageService.unlockedAbilities(record.getKey(), record.getValue(), access));
     }
 
-    // Both attachments are read without being created, so a body that never cultivated costs nothing here.
+    // Every attachment is read without being created, so a body that never cultivated costs nothing here.
     @Override
     public void collect(LivingEntity entity, EntitySources.AttributeSink sink) {
         CultivationAttachment cultivation = entity.getExistingData(MxtAttachments.CULTIVATION).orElse(null);
         if (cultivation != null)
             for (Holder<RealmStage> realm : cultivation.realmStages().values())
                 sink.add(Sources.Declaration.REALM, HolderHelper.id(realm), realm.value().passiveModifiers());
-        SpiritIdentityAttachment spirit = entity.getExistingData(MxtAttachments.SPIRIT_IDENTITY).orElse(null);
-        if (spirit == null) return;
-        for (Holder<Technique> technique : spirit.learnedTechniques())
-            sink.add(Sources.Declaration.TECHNIQUE, HolderHelper.id(technique), technique.value().passiveModifiers());
-        for (Holder<Physique> physique : spirit.activePhysiques())
-            sink.add(Sources.Declaration.PHYSIQUE, HolderHelper.id(physique), physique.value().attributeModifiers());
+        TechniqueAttachment techniques = entity.getExistingData(MxtAttachments.TECHNIQUE).orElse(null);
+        if (techniques != null)
+            for (Holder<Technique> technique : techniques.learnedTechniques())
+                sink.add(Sources.Declaration.TECHNIQUE, HolderHelper.id(technique), technique.value().passiveModifiers());
+        SpiritIdentityAttachment roots = entity.getExistingData(MxtAttachments.SPIRIT_IDENTITY).orElse(null);
+        if (roots != null)
+            for (Holder<Physique> physique : roots.activePhysiques())
+                sink.add(Sources.Declaration.PHYSIQUE, HolderHelper.id(physique), physique.value().attributeModifiers());
     }
 
-    // Every learned technique owns its own chain, and the identity attachment holds the levels of exactly those.
+    // Every learned technique owns its own chain, and the technique attachment holds the levels of exactly those.
     @Override
     public List<EntitySources.Owner<?>> held(Entity entity) {
-        SpiritIdentityAttachment spirit = entity.getExistingData(MxtAttachments.SPIRIT_IDENTITY).orElse(null);
-        if (spirit == null) return List.of();
-        ProgressionHolder<Technique> levels = spirit.techniqueLevels();
-        List<EntitySources.Owner<?>> owners = new ArrayList<>(spirit.learnedTechniques().size());
-        for (Holder<Technique> technique : spirit.learnedTechniques())
+        TechniqueAttachment techniques = entity.getExistingData(MxtAttachments.TECHNIQUE).orElse(null);
+        if (techniques == null) return List.of();
+        ProgressionHolder<Technique> levels = techniques.techniqueLevels();
+        List<EntitySources.Owner<?>> owners = new ArrayList<>(techniques.learnedTechniques().size());
+        for (Holder<Technique> technique : techniques.learnedTechniques())
             owners.add(new EntitySources.Owner<>(technique, levels));
         return owners;
     }

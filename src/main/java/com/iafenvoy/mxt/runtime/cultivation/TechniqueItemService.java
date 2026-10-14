@@ -1,6 +1,6 @@
 package com.iafenvoy.mxt.runtime.cultivation;
 
-import com.iafenvoy.mxt.attachment.SpiritIdentityAttachment;
+import com.iafenvoy.mxt.attachment.TechniqueAttachment;
 import com.iafenvoy.mxt.config.MxtServerConfig;
 import com.iafenvoy.mxt.data.cultivation.Technique;
 import com.iafenvoy.mxt.data.item.HoldBinding;
@@ -223,7 +223,7 @@ public final class TechniqueItemService {
     }
 
     private static void learn(LivingEntity entity, ItemStack stack, TechniqueBinding binding) {
-        SpiritIdentityAttachment spirit = entity.getData(MxtAttachments.SPIRIT_IDENTITY);
+        TechniqueAttachment spirit = entity.getData(MxtAttachments.TECHNIQUE);
         Result result = TechniqueService.learn(entity, spirit, binding.technique(), FormulaContext.of(entity));
         // Every completed read pays, not only the ones that teach: a refusal is still a read the player
         // spent the hold on. Charged before the outcome is looked at so the two cases cannot drift.

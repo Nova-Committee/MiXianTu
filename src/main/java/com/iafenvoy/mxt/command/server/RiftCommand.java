@@ -1,31 +1,22 @@
 package com.iafenvoy.mxt.command.server;
 
-import com.iafenvoy.mxt.command.RegistryReferences;
 import com.iafenvoy.mxt.command.ServerCommandManager;
-import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.item.RiftComponent;
 import com.iafenvoy.mxt.item.RiftAnchorItem;
 import com.iafenvoy.mxt.item.block.entity.RiftBlockEntity;
-import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtBlocks;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
-import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.runtime.cultivation.CultivationService;
 import com.iafenvoy.mxt.runtime.curse.CurseService;
 import com.iafenvoy.mxt.runtime.rift.RiftColors;
 import com.iafenvoy.mxt.runtime.rift.RiftConnections;
-import com.iafenvoy.mxt.util.DefinitionText;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
-import net.minecraft.commands.CommandBuildContext;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.arguments.DimensionArgument;
-import net.minecraft.commands.arguments.ResourceArgument;
+import net.minecraft.commands.arguments.IdentifierArgument;
 import net.minecraft.commands.arguments.coordinates.BlockPosArgument;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Holder.Reference;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
@@ -35,7 +26,6 @@ import net.minecraft.world.level.block.Block;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
-import java.util.Locale;
 
 import static net.minecraft.commands.Commands.argument;
 import static net.minecraft.commands.Commands.literal;
@@ -47,24 +37,24 @@ import static net.minecraft.commands.Commands.literal;
  * {@link CurseService}, so a curse applied here obeys its own condition and stacking.
  */
 public final class RiftCommand {
-    public static LiteralArgumentBuilder<CommandSourceStack> build(CommandBuildContext context) {
+    public static LiteralArgumentBuilder<CommandSourceStack> build() {
         return literal("rift")
                 .requires(ServerCommandManager::mayChange)
                 .then(literal("info").then(argument("pos", BlockPosArgument.blockPos())
                         .executes(ctx -> riftInfo(ctx.getSource(), BlockPosArgument.getBlockPos(ctx, "pos")))))
                 .then(literal("target").then(argument("pos", BlockPosArgument.blockPos())
                         .then(argument("dimension", DimensionArgument.dimension())
-                                .executes(ctx -> setRiftTarget(ctx.getSource(), BlockPosArgument.getBlockPos(ctx, "pos"), RegistryReferences.dimension(ctx, "dimension"))))))
+                                .executes(ctx -> setRiftTarget(ctx.getSource(), BlockPosArgument.getBlockPos(ctx, "pos"), IdentifierArgument.getId(ctx, "dimension"))))))
                 .then(literal("color").then(argument("pos", BlockPosArgument.blockPos())
                         .then(argument("color", StringArgumentType.word())
                                 .executes(ctx -> setRiftColor(ctx.getSource(), BlockPosArgument.getBlockPos(ctx, "pos"), StringArgumentType.getString(ctx, "color"))))))
                 .then(literal("place").then(argument("pos", BlockPosArgument.blockPos())
                         .then(argument("dimension", DimensionArgument.dimension())
-                                .executes(ctx -> placeRift(ctx.getSource(), BlockPosArgument.getBlockPos(ctx, "pos"), RegistryReferences.dimension(ctx, "dimension"))))))
+                                .executes(ctx -> placeRift(ctx.getSource(), BlockPosArgument.getBlockPos(ctx, "pos"), IdentifierArgument.getId(ctx, "dimension"))))))
                 .then(literal("bind").then(argument("dimension", DimensionArgument.dimension())
-                        .executes(ctx -> bindRiftAnchor(ctx.getSource(), RegistryReferences.dimension(ctx, "dimension"), null))
+                        .executes(ctx -> bindRiftAnchor(ctx.getSource(), IdentifierArgument.getId(ctx, "dimension"), null))
                         .then(argument("color", StringArgumentType.word())
-                                .executes(ctx -> bindRiftAnchor(ctx.getSource(), RegistryReferences.dimension(ctx, "dimension"), StringArgumentType.getString(ctx, "color"))))));
+                                .executes(ctx -> bindRiftAnchor(ctx.getSource(), IdentifierArgument.getId(ctx, "dimension"), StringArgumentType.getString(ctx, "color"))))));
     }
 
     @Nullable
