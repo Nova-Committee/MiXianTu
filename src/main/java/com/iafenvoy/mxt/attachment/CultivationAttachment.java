@@ -3,7 +3,7 @@ package com.iafenvoy.mxt.attachment;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.cultivation.Cultivation;
 import com.iafenvoy.mxt.data.cultivation.RealmStage;
-import com.iafenvoy.mxt.util.ShouldSyncAttachment;
+import com.iafenvoy.mxt.util.AbstractChangeTrackable;
 import com.iafenvoy.mxt.util.codec.CollectionCodecs;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
@@ -21,7 +21,7 @@ import java.util.Optional;
  * keyed by the cultivation profile, so storing the profile is the whole identity and the stored state cannot
  * duplicate what the data already says.
  */
-public final class CultivationAttachment extends ShouldSyncAttachment {
+public final class CultivationAttachment extends AbstractChangeTrackable {
     public static final MapCodec<CultivationAttachment> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             CollectionCodecs.doubleMap(Aura.CODEC).lenientOptionalFieldOf("cultivation_progress", Object2DoubleMaps.emptyMap()).forGetter(CultivationAttachment::cultivationProgresses),
             CollectionCodecs.map(Aura.CODEC, RealmStage.CODEC).lenientOptionalFieldOf("realm_stages", Map.of()).forGetter(CultivationAttachment::realmStages),
@@ -31,7 +31,6 @@ public final class CultivationAttachment extends ShouldSyncAttachment {
             Codec.LONG.lenientOptionalFieldOf("next_cultivate_tick", 0L).forGetter(CultivationAttachment::nextCultivateTick),
             CollectionCodecs.longMap(Cultivation.CODEC).lenientOptionalFieldOf("cultivate_cooldowns", Object2LongMaps.emptyMap()).forGetter(CultivationAttachment::cultivateCooldowns)
     ).apply(i, CultivationAttachment::new));
-
     private final Object2DoubleMap<Holder<Aura>> cultivationProgresses;
     private final Map<Holder<Aura>, Holder<RealmStage>> realmStages;
     private Optional<Holder<Cultivation>> cultivation;
@@ -43,10 +42,7 @@ public final class CultivationAttachment extends ShouldSyncAttachment {
         this(Object2DoubleMaps.emptyMap(), Map.of(), Optional.empty(), false, 0L, 0L, Object2LongMaps.emptyMap());
     }
 
-    private CultivationAttachment(Object2DoubleMap<Holder<Aura>> cultivationProgresses, Map<Holder<Aura>, Holder<RealmStage>> realmStages,
-                                  Optional<Holder<Cultivation>> cultivation, boolean cultivating,
-                                  long cultivateStartedAt, long nextCultivateTick,
-                                  Map<Holder<Cultivation>, Long> cultivateCooldowns) {
+    private CultivationAttachment(Object2DoubleMap<Holder<Aura>> cultivationProgresses, Map<Holder<Aura>, Holder<RealmStage>> realmStages, Optional<Holder<Cultivation>> cultivation, boolean cultivating, long cultivateStartedAt, long nextCultivateTick, Map<Holder<Cultivation>, Long> cultivateCooldowns) {
         this.cultivationProgresses = new Object2DoubleOpenHashMap<>(cultivationProgresses);
         this.realmStages = new LinkedHashMap<>(realmStages);
         this.cultivation = cultivation;

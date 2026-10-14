@@ -1,10 +1,11 @@
 package com.iafenvoy.mxt.runtime;
 
-import com.iafenvoy.mxt.attachment.ProgressionAttachment;
 import com.iafenvoy.mxt.data.AttributeEntry;
 import com.iafenvoy.mxt.data.ability.Ability;
+import com.iafenvoy.mxt.data.progression.ProgressionHolder;
 import com.iafenvoy.mxt.data.progression.ProgressionOwner;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import com.mojang.datafixers.util.Either;
 import net.minecraft.core.Holder;
@@ -19,19 +20,19 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * What a body's own sources contribute: the abilities its definitions grant, the passive attributes they declare
- * and the progressions they own. One module registers one object under whichever of the three it answers, and the
- * service that applies them knows only these contracts.
+ * What a body's own sources contribute: the abilities its definitions grant, the passive attributes they declare and
+ * the progressions they own. One module registers one object under whichever of the three it answers, and the service
+ * that applies them knows only these contracts.
  */
 public final class EntitySources {
     private EntitySources() {
     }
 
-    // One granting system, asked once per rebuild. It states its whole contribution, so whatever it stops naming
-    // is released.
+    // One granting system, asked once per rebuild. It states its whole contribution, so whatever it stops naming is
+    // released. Each system reads the attachments of its own sort, since that is where its levels are kept.
     @FunctionalInterface
     public interface Grants {
-        void collect(LivingEntity entity, ProgressionAttachment progress, GrantSink sink);
+        void collect(LivingEntity entity, GrantSink sink);
     }
 
     // One declaring system, asked once per reconcile or per tick.
@@ -40,11 +41,11 @@ public final class EntitySources {
         void collect(LivingEntity entity, AttributeSink sink);
     }
 
-    // One system whose definitions own a progression chain. A definition that declares no chain is not an owner,
-    // so a system may name one only when its own rules say so.
+    // One system whose definitions own a progression chain. A definition that declares no chain is not an owner, so
+    // a system may name one only when its own rules say so.
     @FunctionalInterface
     public interface Owns {
-        List<Owner> held(Entity entity);
+        List<Owner<?>> held(Entity entity);
     }
 
     // What a granting system answers with: grants per source id. Several abilities may share one source.
@@ -71,20 +72,29 @@ public final class EntitySources {
         void add(Sources.Declaration kind, Identifier source, List<AttributeEntry> values);
     }
 
-    // One owner a body holds, together with the id its level is stored under.
-    public record Owner(Identifier id, ProgressionOwner definition) {
+    // One owner a body holds, together with the holder that keeps its levels. The holder is what makes the sort part
+    // of the address: a technique and a creature profile sharing an id are two owners with a slot each.
+    public record Owner<T extends ProgressionOwner>(Holder<T> holder, ProgressionHolder<T> levels) {
+        public Identifier id() {
+            return HolderHelper.id(this.holder);
+        }
+
+        public T definition() {
+            return this.holder.value();
+        }
     }
 
     // Every owner the body holds right now, from every registered system.
-    public static List<Owner> heldBy(Entity entity) {
-        List<Owner> owners = new ArrayList<>();
+    public static List<Owner<?>> heldBy(Entity entity) {
+        List<Owner<?>> owners = new ArrayList<>();
         for (Owns source : ModuleHooks.all(Owns.class)) owners.addAll(source.held(entity));
         return owners;
     }
 
-    // The one owner a body holds under that id, if it holds it at all: reads and administrative writes both ask
-    // this rather than walking the sources themselves.
-    public static Optional<Owner> held(Entity entity, Identifier owner) {
+    // The one owner a body holds under that id, if it holds it at all: reads and administrative writes both ask this
+    // rather than walking the sources themselves. An id two sorts share is ambiguous here, so the caller that can
+    // tell them apart asks its own system instead.
+    public static Optional<Owner<?>> held(Entity entity, Identifier owner) {
         return heldBy(entity).stream().filter(entry -> entry.id().equals(owner)).findFirst();
     }
 }

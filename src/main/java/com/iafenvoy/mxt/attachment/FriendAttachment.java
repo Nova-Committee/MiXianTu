@@ -20,9 +20,7 @@ public final class FriendAttachment {
             CollectionCodecs.list(NameAndId.CODEC).lenientOptionalFieldOf("permanent", List.of()).forGetter(FriendAttachment::permanent),
             CollectionCodecs.list(NameAndId.CODEC).lenientOptionalFieldOf("temporary", List.of()).forGetter(FriendAttachment::temporary)
     ).apply(i, FriendAttachment::new));
-
-    private final Map<UUID, NameAndId> permanent = new LinkedHashMap<>();
-    private final Map<UUID, NameAndId> temporary = new LinkedHashMap<>();
+    private final Map<UUID, NameAndId> permanent = new LinkedHashMap<>(), temporary = new LinkedHashMap<>();
 
     public FriendAttachment() {
     }

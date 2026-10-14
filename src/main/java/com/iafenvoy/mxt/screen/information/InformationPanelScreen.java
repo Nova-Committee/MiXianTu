@@ -250,8 +250,7 @@ public final class InformationPanelScreen extends AuiScreen {
         SpiritIdentityAttachment spirit = this.minecraft.player.getData(MxtAttachments.SPIRIT_IDENTITY);
         ResourceHolderAttachment resources = this.minecraft.player.getData(MxtAttachments.RESOURCE_HOLDER);
         Mode mode = MxtClientConfig.INSTANCE.techniques.progressMode.getValue();
-        List<Entry> rows = TechniqueProgress.rows(spirit,
-                this.minecraft.player.getData(MxtAttachments.PROGRESSION), resources,
+        List<Entry> rows = TechniqueProgress.rows(spirit, resources,
                 FormulaContexts.forEntity(this.minecraft.player));
         List<TechniqueRow> entries = new ArrayList<>(rows.size());
         for (Entry row : rows) entries.add(new TechniqueRow(row, TechniqueProgress.progress(row, mode)));

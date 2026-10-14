@@ -1,6 +1,6 @@
 package com.iafenvoy.mxt.attachment;
 
-import com.iafenvoy.mxt.util.ShouldSyncAttachment;
+import com.iafenvoy.mxt.util.AbstractChangeTrackable;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.world.item.ItemStack;
@@ -8,7 +8,7 @@ import net.minecraft.world.item.ItemStack;
 /**
  * One temporarily reserved item stack shared by server-side item consumers.
  */
-public final class FloatHoldingItemAttachment extends ShouldSyncAttachment {
+public final class FloatHoldingItemAttachment extends AbstractChangeTrackable {
     public static final MapCodec<FloatHoldingItemAttachment> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             ItemStack.CODEC.lenientOptionalFieldOf("item", ItemStack.EMPTY).forGetter(FloatHoldingItemAttachment::item)
     ).apply(i, FloatHoldingItemAttachment::new));

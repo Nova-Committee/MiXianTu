@@ -2,7 +2,7 @@ package com.iafenvoy.mxt.attachment;
 
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.data.curse.Curse;
-import com.iafenvoy.mxt.util.ShouldSyncAttachment;
+import com.iafenvoy.mxt.util.AbstractChangeTrackable;
 import com.iafenvoy.mxt.util.SourceLedger;
 import com.iafenvoy.mxt.util.codec.CollectionCodecs;
 import com.mojang.serialization.Codec;
@@ -19,7 +19,7 @@ import java.util.*;
  * {@link SourceLedger} of who keeps it alive - the same ledger ability grants use, so "removing one source cannot
  * remove another source's curse" means here exactly what it means there.
  */
-public final class CurseHolderAttachment extends ShouldSyncAttachment {
+public final class CurseHolderAttachment extends AbstractChangeTrackable {
     public static final MapCodec<CurseHolderAttachment> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             CollectionCodecs.map(Curse.CODEC, State.CODEC).lenientOptionalFieldOf("instances", Map.of()).forGetter(CurseHolderAttachment::instances),
             SourceLedger.codec(Curse.CODEC).lenientOptionalFieldOf("sources", new SourceLedger<>()).forGetter(CurseHolderAttachment::sources)

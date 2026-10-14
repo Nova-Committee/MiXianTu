@@ -83,6 +83,7 @@ import com.iafenvoy.mxt.recipe.SpiritRecipe;
 import com.iafenvoy.mxt.registry.*;
 import com.iafenvoy.mxt.runtime.ability.*;
 import com.iafenvoy.mxt.runtime.artifact.*;
+import com.iafenvoy.mxt.runtime.EntitySources;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactHoldService.ClaimResult;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactService.RefineResult;
 import com.iafenvoy.mxt.runtime.creature.*;
@@ -1521,7 +1522,7 @@ public final class MxtTestCommands {
             Holder<Ability> ability = require(MxtResourceKeys.ABILITY, PROBE_ABILITY);
             spirit.addLearnedTechnique(technique);
             double entry = ProgressionDamageMultiplier.of(attacker, HolderHelper.id(ability));
-            attacker.getData(MxtAttachments.PROGRESSION).setLevel(HolderHelper.id(technique), require(MxtResourceKeys.PROGRESSION, PROBE_PROGRESSION_LEVEL));
+            spirit.techniqueLevels().set(technique, require(MxtResourceKeys.PROGRESSION, PROBE_PROGRESSION_LEVEL));
             double advanced = ProgressionDamageMultiplier.of(attacker, HolderHelper.id(ability));
             float masteryBefore = masteryDefender.getHealth();
             DamageCalculationService.deal(attacker, masteryDefender, 4.0D, Optional.empty(),
@@ -2155,9 +2156,10 @@ public final class MxtTestCommands {
             // The entry level is where a creature stands before any record exists, which is what makes an entry
             // level's own configuration the "born with it" list.
             boolean entry = stoodOn(beast, BEAST_1)
-                    && ProgressionService.nextLevelOf(beast, PROBE_BEAST_PROFILE)
+                    && EntitySources.held(beast, PROBE_BEAST_PROFILE)
+                    .flatMap(owner -> ProgressionService.next(owner))
                     .map(held -> HolderHelper.id(held).equals(BEAST_2)).orElse(false)
-                    && beast.getData(MxtAttachments.PROGRESSION).level(PROBE_BEAST_PROFILE) == null
+                    && beast.getData(MxtAttachments.CREATURE_SPIRIT).profileLevels().levels().isEmpty()
                     && !abilities.has(ability);
             // The contract condition answers from the record, so a body nobody took answers bound=false; the
             // contradictory shape is refused when the definition loads rather than read as a silent false.
@@ -2216,9 +2218,23 @@ public final class MxtTestCommands {
                     + " written=" + written + " unchanged=" + unchanged + " unknown_owner=" + unknown
                     + (admin ? " OK" : " MISMATCH")), false);
 
+            // Stepping back one level is the same walk as stepping up, so the record is rewritten and the level that
+            // was left behind stops granting; stepping back onto the entry level is the absence of a record again.
+            boolean demoted = EntitySources.held(beast, PROBE_BEAST_PROFILE)
+                    .map(ProgressionService::demote).orElse(false)
+                    && stoodOn(beast, BEAST_2) && close(ProgressionDamageMultiplier.of(beast, ability), 1.5D);
+            boolean atEntry = EntitySources.held(beast, PROBE_BEAST_PROFILE)
+                    .map(ProgressionService::demote).orElse(false)
+                    && stoodOn(beast, BEAST_1)
+                    && beast.getData(MxtAttachments.CREATURE_SPIRIT).profileLevels().levels().isEmpty();
+            source.sendSuccess(() -> Component.literal("progression probe: demoted=" + demoted
+                    + " at_entry=" + atEntry + (demoted && atEntry ? " OK" : " MISMATCH")), false);
+            boolean transition = demoted && atEntry;
+
             // A record that is no longer on its owner's chain is a data-pack symptom, so it is swept rather than
             // read: the creature falls back to its entry level and what the record granted is rebuilt away.
-            beast.getData(MxtAttachments.PROGRESSION).setLevel(PROBE_BEAST_PROFILE, foreign);
+            beast.getData(MxtAttachments.CREATURE_SPIRIT).profileLevels()
+                    .set(require(MxtResourceKeys.CREATURE_PROFILE, PROBE_BEAST_PROFILE), foreign);
             int swept = ProgressionService.pruneForeignLevels(beast);
             AbilityGrantService.recalculate(beast);
             PassiveAttributeService.tick(beast);
@@ -2246,7 +2262,7 @@ public final class MxtTestCommands {
             boolean released = ContractService.release(beast, player.getUUID(), true).changed();
             PassiveAttributeService.tick(beast);
             boolean cleared = stoodOn(beast, BEAST_1)
-                    && beast.getData(MxtAttachments.PROGRESSION).level(PROBE_BEAST_PROFILE) == null
+                    && beast.getData(MxtAttachments.CREATURE_SPIRIT).profileLevels().levels().isEmpty()
                     && !abilities.has(ability)
                     && close(beast.getAttributeValue(Attributes.MAX_HEALTH), baseHealth)
                     && new ContractEntityCondition(false, List.of(), List.of()).test(beast, FormulaContext.of(beast));
@@ -2260,11 +2276,11 @@ public final class MxtTestCommands {
             boolean grown = ProgressionDriver.tick(beast) && stoodOn(beast, BEAST_2);
             beast.hurtServer(level, level.damageSources().genericKill(), Float.MAX_VALUE);
             boolean death = rebound && grown && !beast.getData(MxtAttachments.CONTRACT).bound()
-                    && beast.getData(MxtAttachments.PROGRESSION).level(PROBE_BEAST_PROFILE) == null;
+                    && beast.getData(MxtAttachments.CREATURE_SPIRIT).profileLevels().levels().isEmpty();
             source.sendSuccess(() -> Component.literal("progression probe: rebound=" + rebound + " grown=" + grown
                     + " death=" + death + (death ? " OK" : " MISMATCH")), false);
 
-            if (entry && contractAsk && advance && reading && admin && prune && ending && death) {
+            if (entry && contractAsk && advance && reading && admin && transition && prune && ending && death) {
                 source.sendSuccess(() -> Component.literal("progression probe: OK"), false);
                 return 1;
             }
@@ -2278,7 +2294,8 @@ public final class MxtTestCommands {
 
     // The level the creature answers with for its own profile: the record, or the entry level it never left.
     private static boolean stoodOn(Mob creature, Identifier level) {
-        return ProgressionService.currentLevelOf(creature, PROBE_BEAST_PROFILE)
+        return EntitySources.held(creature, PROBE_BEAST_PROFILE)
+                .flatMap(owner -> ProgressionService.current(owner))
                 .map(held -> HolderHelper.id(held).equals(level)).orElse(false);
     }
 
@@ -5091,16 +5108,17 @@ public final class MxtTestCommands {
             AbilityAttachment bareAbilities = bareA.getData(MxtAttachments.ABILITY_HOLDER);
             bareSpirit.setRealmStage(require(MxtResourceKeys.REALM_STAGE, QI_REFINING));
             boolean bareLearned = TechniqueService.learn(bareA, bareIdentity, sword, contextOf(bareA)).changed();
-            bareA.getData(MxtAttachments.PROGRESSION).setLevel(HolderHelper.id(sword), require(MxtResourceKeys.PROGRESSION, PROBE_PROGRESSION_LEVEL));
+            bareA.getData(MxtAttachments.SPIRIT_IDENTITY).techniqueLevels()
+                    .set(sword, require(MxtResourceKeys.PROGRESSION, PROBE_PROGRESSION_LEVEL));
             boolean bareGranted = bareAbilities.has(id("artifact_guard"));
-            boolean forgotten = TechniqueService.forget(bareA, bareIdentity, SWORD_MANUAL).changed();
+            boolean forgotten = TechniqueService.forget(bareA, bareIdentity, sword).changed();
             boolean gone = bareIdentity.learnedTechniques().stream()
                     .noneMatch(technique -> HolderHelper.id(technique).equals(SWORD_MANUAL))
-                    && bareA.getData(MxtAttachments.PROGRESSION).levels().keySet().stream()
-                    .noneMatch(owner -> owner.equals(SWORD_MANUAL))
+                    && bareIdentity.techniqueLevels().levels().keySet().stream()
+                    .noneMatch(owner -> HolderHelper.id(owner).equals(SWORD_MANUAL))
                     && !bareAbilities.has(id("artifact_guard"))
                     && !bareSpirit.realmStages().isEmpty();
-            boolean absent = TechniqueService.forget(bareA, bareIdentity, SWORD_MANUAL).failure()
+            boolean absent = TechniqueService.forget(bareA, bareIdentity, sword).failure()
                     == TechniqueService.Failure.ABSENT;
             ok &= check(source, "cultivation probe: forget learned=" + bareLearned + " granted=" + bareGranted
                             + " forgotten=" + forgotten + " gone=" + gone + " absent=" + absent,

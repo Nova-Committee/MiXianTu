@@ -1,7 +1,6 @@
 package com.iafenvoy.mxt.command.server;
 
 import com.iafenvoy.mxt.attachment.SpiritIdentityAttachment;
-import com.iafenvoy.mxt.command.RegistryReferences;
 import com.iafenvoy.mxt.command.ServerCommandManager;
 import com.iafenvoy.mxt.data.cultivation.Technique;
 import com.iafenvoy.mxt.data.item.TechniqueBinding;
@@ -21,8 +20,9 @@ import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import net.minecraft.commands.CommandBuildContext;
 import net.minecraft.commands.CommandSourceStack;
-import net.minecraft.commands.arguments.ResourceKeyArgument;
+import net.minecraft.commands.arguments.ResourceArgument;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -43,7 +43,7 @@ import static net.minecraft.commands.Commands.literal;
  * so such a reference survives but fails quietly ({@code Ignoring invalid list element} in the log is the tell).
  */
 public final class TechniqueCommand {
-    public static LiteralArgumentBuilder<CommandSourceStack> build() {
+    public static LiteralArgumentBuilder<CommandSourceStack> build(CommandBuildContext context) {
         return literal("technique")
                 .then(literal("repair")
                         .requires(ServerCommandManager::mayChange)
@@ -53,13 +53,13 @@ public final class TechniqueCommand {
                 // resolves, so the key is never bound to a registry entry.
                 .then(literal("drop")
                         .requires(ServerCommandManager::mayChange)
-                        .then(argument("id", ResourceKeyArgument.key(MxtResourceKeys.TECHNIQUE))
-                                .executes(ctx -> drop(ctx.getSource(), RegistryReferences.key(ctx, "id", MxtResourceKeys.TECHNIQUE).identifier()))))
+                        .then(argument("id", ResourceArgument.resource(context, MxtResourceKeys.TECHNIQUE))
+                                .executes(ctx -> drop(ctx.getSource(), ResourceArgument.getResource(ctx, "id", MxtResourceKeys.TECHNIQUE)))))
                 // The same surgery under the name a player means: dropping a mistake, forgetting a technique.
                 .then(literal("forget")
                         .requires(ServerCommandManager::mayChange)
-                        .then(argument("id", ResourceKeyArgument.key(MxtResourceKeys.TECHNIQUE))
-                                .executes(ctx -> forget(ctx.getSource(), RegistryReferences.key(ctx, "id", MxtResourceKeys.TECHNIQUE).identifier()))))
+                        .then(argument("id", ResourceArgument.resource(context, MxtResourceKeys.TECHNIQUE))
+                                .executes(ctx -> forget(ctx.getSource(), ResourceArgument.getResource(ctx, "id", MxtResourceKeys.TECHNIQUE)))))
                 .then(literal("diagnose").executes(ctx -> diagnose(ctx.getSource())));
     }
 
@@ -118,11 +118,15 @@ public final class TechniqueCommand {
         List<Identifier> removed = new ArrayList<>();
 
         List<Holder<Technique>> techniques = prune(player.level().registryAccess(), identity.learnedTechniques(), removed);
-        Map<Identifier, Holder<Progression>> levels = pruneLevels(player.level().registryAccess(), player.getData(MxtAttachments.PROGRESSION).levels(), removed);
+        // Only the ids this sweep collected are dropped, so a record owned by something else survives the technique
+        // repair; a level whose definition is gone is stale for everyone and goes too. Dropping a record the sweep
+        // kept because its owner went away is the learned list's own doing, so it is not repeated here.
+        Map<Holder<Technique>, Holder<Progression>> levels = pruneLevels(player.level().registryAccess(),
+                identity.techniqueLevels().levels(), removed);
 
         if (!dryRun) {
             identity.setLearnedTechniques(techniques);
-            player.getData(MxtAttachments.PROGRESSION).setLevels(levels);
+            identity.techniqueLevels().setLevels(levels);
         }
 
         int count = removed.size();
@@ -130,7 +134,7 @@ public final class TechniqueCommand {
             source.sendSuccess(() -> Component.translatable("command.mxt.technique.repair.clean"), false);
             return 1;
         }
-        if (!dryRun) rebuild(player, identity);
+        if (!dryRun) AbilityGrantService.recalculate(player);
         String listed = join(removed);
         source.sendSuccess(() -> Component.translatable(dryRun
                 ? "command.mxt.technique.repair.dry"
@@ -140,9 +144,10 @@ public final class TechniqueCommand {
 
     // Both nodes are the same removal, kept apart only by what they are pointed at: "drop" is used against a
     // reference the pack no longer provides, "forget" is a player giving up a technique they still hold.
-    private static int drop(CommandSourceStack source, Identifier id) throws CommandSyntaxException {
+    private static int drop(CommandSourceStack source, Holder<Technique> technique) throws CommandSyntaxException {
         ServerPlayer player = source.getPlayerOrException();
-        if (!TechniqueService.forget(player, player.getData(MxtAttachments.SPIRIT_IDENTITY), id).changed()) {
+        Identifier id = HolderHelper.id(technique);
+        if (!TechniqueService.forget(player, player.getData(MxtAttachments.SPIRIT_IDENTITY), technique).changed()) {
             source.sendFailure(Component.translatable("command.mxt.technique.drop.absent", id.toString()));
             return 0;
         }
@@ -150,19 +155,15 @@ public final class TechniqueCommand {
         return 1;
     }
 
-    private static int forget(CommandSourceStack source, Identifier id) throws CommandSyntaxException {
+    private static int forget(CommandSourceStack source, Holder<Technique> technique) throws CommandSyntaxException {
         ServerPlayer player = source.getPlayerOrException();
-        if (!TechniqueService.forget(player, player.getData(MxtAttachments.SPIRIT_IDENTITY), id).changed()) {
+        Identifier id = HolderHelper.id(technique);
+        if (!TechniqueService.forget(player, player.getData(MxtAttachments.SPIRIT_IDENTITY), technique).changed()) {
             source.sendFailure(Component.translatable("command.mxt.technique.forget.absent", id.toString()));
             return 0;
         }
         source.sendSuccess(() -> Component.translatable("command.mxt.technique.forget.done", id.toString()), true);
         return 1;
-    }
-
-    // Granted abilities, passive attributes and resource ceilings all derive from the definitions just dropped.
-    private static void rebuild(ServerPlayer player, SpiritIdentityAttachment identity) {
-        AbilityGrantService.recalculate(player);
     }
 
     // Package-visible so the server audit can exercise the sweep directly.
@@ -180,13 +181,13 @@ public final class TechniqueCommand {
         return kept;
     }
 
-    // Only the ids this sweep collected are dropped, so a progression owned by something else survives the
-    // technique repair; a level whose definition is gone is stale for everyone and goes too.
-    public static Map<Identifier, Holder<Progression>> pruneLevels(Provider access, Map<Identifier, Holder<Progression>> values, List<Identifier> removed) {
-        Map<Identifier, Holder<Progression>> kept = new LinkedHashMap<>();
-        for (Entry<Identifier, Holder<Progression>> entry : values.entrySet()) {
-            if (removed.contains(entry.getKey()) || !resolvesLevel(access, entry.getValue())) {
-                removed.add(entry.getKey());
+    // Only the ids this sweep collected are dropped, so a record owned by something else survives the technique
+    // repair; a level whose definition is gone is stale for everyone and goes too.
+    public static Map<Holder<Technique>, Holder<Progression>> pruneLevels(Provider access, Map<Holder<Technique>, Holder<Progression>> values, List<Identifier> removed) {
+        Map<Holder<Technique>, Holder<Progression>> kept = new LinkedHashMap<>();
+        for (Entry<Holder<Technique>, Holder<Progression>> entry : values.entrySet()) {
+            if (removed.contains(HolderHelper.id(entry.getKey())) || !resolvesLevel(access, entry.getValue())) {
+                removed.add(HolderHelper.id(entry.getKey()));
                 continue;
             }
             kept.put(entry.getKey(), entry.getValue());

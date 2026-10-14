@@ -238,8 +238,7 @@ public final class AbilityEventBridge {
     }
 
     private static boolean initializeResource(LivingEntity entity, ResourceHolderAttachment holder, Reference<Resource> resource) {
-        return HolderHelper.idOptional(resource).map(id -> ResourceService.initialize(holder, id,
-                ResourceService.formulaContext(entity, id, FormulaContext.of(entity))).changed()).orElse(false);
+        return HolderHelper.idOptional(resource).map(id -> ResourceService.initialize(holder, id, ResourceService.formulaContext(entity, id, FormulaContext.of(entity))).changed()).orElse(false);
     }
 
     // One pass for every granted ability. Every stored value ticks itself first and reports what it changed, then the

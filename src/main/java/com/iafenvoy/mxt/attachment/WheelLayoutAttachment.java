@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.attachment;
 
 import com.iafenvoy.mxt.runtime.wheel.WheelLayout;
-import com.iafenvoy.mxt.util.ShouldSyncAttachment;
+import com.iafenvoy.mxt.util.AbstractChangeTrackable;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -15,12 +15,11 @@ import java.util.Optional;
  * <strong>number</strong> and nothing else, numbered across the whole wheel, so it deliberately does not name the
  * entry: a number whose entry is gone is still the number that finds it again when it comes back.
  */
-public final class WheelLayoutAttachment extends ShouldSyncAttachment {
+public final class WheelLayoutAttachment extends AbstractChangeTrackable {
     public static final MapCodec<WheelLayoutAttachment> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             WheelLayout.CODEC.lenientOptionalFieldOf("layout").forGetter(WheelLayoutAttachment::layout),
             Codec.INT.lenientOptionalFieldOf("armed").forGetter(WheelLayoutAttachment::armed)
     ).apply(i, WheelLayoutAttachment::new));
-
     private Optional<WheelLayout> layout = Optional.empty();
     private Optional<Integer> armed = Optional.empty();
 

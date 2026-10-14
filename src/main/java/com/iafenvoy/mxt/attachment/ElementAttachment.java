@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.attachment;
 
 import com.iafenvoy.mxt.data.cultivation.Element;
-import com.iafenvoy.mxt.util.ShouldSyncAttachment;
+import com.iafenvoy.mxt.util.AbstractChangeTrackable;
 import com.iafenvoy.mxt.util.codec.CollectionCodecs;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
@@ -17,7 +17,7 @@ import java.util.Map;
  * which is why this attachment holds no rules of its own. An amount that reaches zero is dropped rather than stored,
  * so "nothing has built up" has one representation.
  */
-public final class ElementAttachment extends ShouldSyncAttachment {
+public final class ElementAttachment extends AbstractChangeTrackable {
     public static final MapCodec<ElementAttachment> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             CollectionCodecs.map(Element.CODEC, Codec.DOUBLE).lenientOptionalFieldOf("amounts", Map.of()).forGetter(ElementAttachment::amounts)
     ).apply(i, ElementAttachment::new));

@@ -1,9 +1,7 @@
 package com.iafenvoy.mxt.runtime.progression;
 
-import com.iafenvoy.mxt.attachment.ProgressionAttachment;
 import com.iafenvoy.mxt.data.progression.Progression;
 import com.iafenvoy.mxt.data.progression.ProgressionOwner;
-import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.EntitySources;
 import com.iafenvoy.mxt.runtime.ability.AbilityGrantService;
 import com.iafenvoy.mxt.util.HolderHelper;
@@ -12,28 +10,31 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.LivingEntity;
 
 /**
- * The administrative write to a progression. It stores a level the way a promotion does, so what a level grants
- * and what a data pack hears about it are the same whether the body climbed there or an operator put it there.
+ * The administrative write to a progression. It stores a level the way a promotion does, so what a level grants and
+ * what a data pack hears about it are the same whether the body climbed there or an operator put it there. A level
+ * below the current one is a demotion, which is how a pack takes growth back without redefining the chain.
  */
 public final class ProgressionAdminService {
     private ProgressionAdminService() {
     }
 
     public static Result setLevel(LivingEntity entity, Identifier owner, Holder<Progression> level, boolean force) {
-        ProgressionOwner definition = EntitySources.heldBy(entity).stream()
-                .filter(held -> held.id().equals(owner))
-                .map(EntitySources.Owner::definition)
-                .findFirst().orElse(null);
-        if (definition == null || definition.entryLevel().isEmpty()) return Result.rejected(Failure.UNKNOWN_OWNER);
+        return EntitySources.held(entity, owner)
+                .map(held -> setLevel(entity, held, level, force))
+                .orElseGet(() -> Result.rejected(Failure.UNKNOWN_OWNER));
+    }
+
+    public static <T extends ProgressionOwner> Result setLevel(LivingEntity entity, EntitySources.Owner<T> owner,
+                                                               Holder<Progression> level, boolean force) {
+        if (owner.definition().entryLevel().isEmpty()) return Result.rejected(Failure.UNKNOWN_OWNER);
         // A level from another chain compares against nothing, so the stored order would refuse both bounds.
-        if (!force && !ProgressionService.follows(definition, level)) return Result.rejected(Failure.FOREIGN_LEVEL);
-        ProgressionAttachment progress = entity.getData(MxtAttachments.PROGRESSION);
-        Holder<Progression> current = progress.level(owner);
+        if (!force && !ProgressionService.follows(owner, level)) return Result.rejected(Failure.FOREIGN_LEVEL);
+        Holder<Progression> current = ProgressionService.recorded(owner).orElse(null);
         if (current != null && HolderHelper.id(current).equals(HolderHelper.id(level)))
             return Result.rejected(Failure.SAME_LEVEL);
-        progress.setLevel(owner, level);
+        ProgressionService.set(owner, level);
         // The same order a promotion takes: record, then what entering the level means, then the grants it owes.
-        ProgressionService.enterLevel(entity, owner, definition, level);
+        ProgressionService.enterLevel(entity, owner.id(), owner.definition(), level);
         AbilityGrantService.recalculate(entity);
         return Result.changedResult();
     }

@@ -17,9 +17,7 @@ import java.util.function.Consumer;
  * the attachment that holds it: each value records its own change, and whoever wants to save and sync reads that.
  */
 public final class DataStorageHolder {
-    public static final Codec<DataStorageHolder> CODEC = Entry.CODEC.listOf()
-            .validate(DataStorageHolder::validate)
-            .xmap(DataStorageHolder::new, DataStorageHolder::entries);
+    public static final Codec<DataStorageHolder> CODEC = Entry.CODEC.listOf().validate(DataStorageHolder::validate).xmap(DataStorageHolder::new, DataStorageHolder::entries);
     private final Map<Address, DataStorage> values = new LinkedHashMap<>();
 
     public DataStorageHolder() {

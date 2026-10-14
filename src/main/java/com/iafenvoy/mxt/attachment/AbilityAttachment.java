@@ -3,7 +3,7 @@ package com.iafenvoy.mxt.attachment;
 import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.storage.DataStorageHolder;
 import com.iafenvoy.mxt.data.storage.builtin.CooldownDataStorage;
-import com.iafenvoy.mxt.util.ShouldSyncAttachment;
+import com.iafenvoy.mxt.util.AbstractChangeTrackable;
 import com.iafenvoy.mxt.util.SourceLedger;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -24,7 +24,7 @@ import java.util.*;
  * dropping it, so revoking a definition that was deleted still takes it off. The channelled ability is the one
  * running right now, so it is kept as a holder instead: a definition that was deleted stops the channel on load.
  */
-public final class AbilityAttachment extends ShouldSyncAttachment {
+public final class AbilityAttachment extends AbstractChangeTrackable {
     public static final MapCodec<AbilityAttachment> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             SourceLedger.codec(Identifier.CODEC).lenientOptionalFieldOf("sources", new SourceLedger<>()).forGetter(AbilityAttachment::sources),
             Ability.CODEC.lenientOptionalFieldOf("channelled_ability").forGetter(AbilityAttachment::channelledAbility),
@@ -38,8 +38,7 @@ public final class AbilityAttachment extends ShouldSyncAttachment {
         this(new SourceLedger<>(), Optional.empty(), Optional.empty());
     }
 
-    private AbilityAttachment(SourceLedger<Identifier> sources, Optional<Holder<Ability>> channelledAbility,
-                              Optional<DataStorageHolder> storage) {
+    private AbilityAttachment(SourceLedger<Identifier> sources, Optional<Holder<Ability>> channelledAbility, Optional<DataStorageHolder> storage) {
         this.sources = sources.copy();
         this.channelledAbility = channelledAbility;
         this.storage = storage.orElseGet(DataStorageHolder::new);

@@ -6,7 +6,8 @@ import com.iafenvoy.mxt.runtime.creature.BoundBeastsAttachment;
 import com.iafenvoy.mxt.runtime.formation.FormationWorldAttachment;
 import com.iafenvoy.mxt.runtime.world.AuraWorldAttachment;
 import com.iafenvoy.mxt.runtime.world.SecretRealmWorldAttachment;
-import com.iafenvoy.mxt.util.ShouldSyncAttachment;
+import com.iafenvoy.mxt.util.AbstractChangeTrackable;
+import com.iafenvoy.mxt.util.ChangeTrackable;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
@@ -32,7 +33,6 @@ public final class MxtAttachments {
     // Entity
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<CultivationAttachment>> CULTIVATION = entity("cultivation", CultivationAttachment::new, CultivationAttachment.CODEC);
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<SpiritIdentityAttachment>> SPIRIT_IDENTITY = entity("spirit_identity", SpiritIdentityAttachment::new, SpiritIdentityAttachment.CODEC);
-    public static final DeferredHolder<AttachmentType<?>, AttachmentType<ProgressionAttachment>> PROGRESSION = entity("progression", ProgressionAttachment::new, ProgressionAttachment.CODEC);
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<SpiritStatsAttachment>> SPIRIT_STATS = entity("spirit_stats", SpiritStatsAttachment::new, SpiritStatsAttachment.CODEC);
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<FloatHoldingItemAttachment>> FLOAT_HOLDING_ITEM = entityWithoutDeathCopy("float_holding_item", FloatHoldingItemAttachment::new, FloatHoldingItemAttachment.CODEC);
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<ResourceHolderAttachment>> RESOURCE_HOLDER = entity("resource_holder", ResourceHolderAttachment::new, ResourceHolderAttachment.CODEC);
@@ -67,12 +67,12 @@ public final class MxtAttachments {
         if (entity.level().isClientSide()) return;
         for (Supplier<? extends AttachmentType<?>> type : SYNCED_ENTITY_ATTACHMENTS) {
             AttachmentType<?> rawType = type.get();
-            if (entity.getExistingData(rawType).orElse(null) instanceof ShouldSyncAttachment attachment && attachment.checkDirty())
+            if (entity.getExistingData(rawType).orElse(null) instanceof ChangeTrackable attachment && attachment.checkDirty())
                 entity.syncData(rawType);
         }
     }
 
-    private static <T extends ShouldSyncAttachment> DeferredHolder<AttachmentType<?>, AttachmentType<T>> entity(String name, Supplier<T> factory, MapCodec<T> codec) {
+    private static <T extends ChangeTrackable> DeferredHolder<AttachmentType<?>, AttachmentType<T>> entity(String name, Supplier<T> factory, MapCodec<T> codec) {
         StreamCodec<RegistryFriendlyByteBuf, T> streamCodec = ByteBufCodecs.fromCodecWithRegistries(codec.codec());
         DeferredHolder<AttachmentType<?>, AttachmentType<T>> holder = REGISTRY.register(name, () -> AttachmentType.builder(factory).serialize(codec).sync(streamCodec).copyOnDeath().build());
         SYNCED_ENTITY_ATTACHMENTS.add(holder);
@@ -80,7 +80,7 @@ public final class MxtAttachments {
     }
 
     // No copyOnDeath: an in-progress inventory must not duplicate when a player respawns.
-    private static <T extends ShouldSyncAttachment> DeferredHolder<AttachmentType<?>, AttachmentType<T>> entityWithoutDeathCopy(String name, Supplier<T> factory, MapCodec<T> codec) {
+    private static <T extends ChangeTrackable> DeferredHolder<AttachmentType<?>, AttachmentType<T>> entityWithoutDeathCopy(String name, Supplier<T> factory, MapCodec<T> codec) {
         StreamCodec<RegistryFriendlyByteBuf, T> streamCodec = ByteBufCodecs.fromCodecWithRegistries(codec.codec());
         DeferredHolder<AttachmentType<?>, AttachmentType<T>> holder = REGISTRY.register(name, () -> AttachmentType.builder(factory).serialize(codec).sync(streamCodec).build());
         SYNCED_ENTITY_ATTACHMENTS.add(holder);

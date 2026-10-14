@@ -1,6 +1,6 @@
 package com.iafenvoy.mxt.attachment;
 
-import com.iafenvoy.mxt.util.ShouldSyncAttachment;
+import com.iafenvoy.mxt.util.AbstractChangeTrackable;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -9,7 +9,7 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
  * Persistent accumulated pill toxicity for one living entity. {@code decayRemainder} is the unfinished
  * 20-tick decay period; it is not toxicity and is only advanced while a positive decay rate is configured.
  */
-public final class PillToxicityAttachment extends ShouldSyncAttachment {
+public final class PillToxicityAttachment extends AbstractChangeTrackable {
     public static final MapCodec<PillToxicityAttachment> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             Codec.DOUBLE.lenientOptionalFieldOf("toxicity", 0.0D).forGetter(PillToxicityAttachment::toxicity),
             Codec.INT.lenientOptionalFieldOf("decay_remainder", 0).forGetter(PillToxicityAttachment::decayRemainder)

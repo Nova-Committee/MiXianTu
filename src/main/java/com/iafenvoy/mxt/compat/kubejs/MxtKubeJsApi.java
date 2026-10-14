@@ -25,6 +25,7 @@ import com.iafenvoy.mxt.event.CurseRemoveEvent.Reason;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.runtime.EntitySources;
 import com.iafenvoy.mxt.runtime.ability.AbilityActivationService;
 import com.iafenvoy.mxt.runtime.ability.AbilityEventBridge;
 import com.iafenvoy.mxt.runtime.ability.AbilityService;
@@ -421,9 +422,8 @@ public final class MxtKubeJsApi {
      * The progression level that owner has reached, or {@code null} when the entity has no record for it yet.
      */
     public static @Nullable Identifier progressionLevel(@NotNull Entity entity, Identifier owner) {
-        Holder<Progression> level = entity.getExistingData(MxtAttachments.PROGRESSION)
-                .map(progress -> progress.level(owner)).orElse(null);
-        return level == null ? null : HolderHelper.id(level);
+        return EntitySources.held(entity, owner)
+                .flatMap(ProgressionService::recorded).map(HolderHelper::id).orElse(null);
     }
 
     /**
@@ -431,14 +431,16 @@ public final class MxtKubeJsApi {
      * advanced. Null when the entity does not hold that owner at all.
      */
     public static @Nullable Identifier progressionCurrent(@NotNull Entity entity, Identifier owner) {
-        return ProgressionService.currentLevelOf(entity, owner).map(HolderHelper::id).orElse(null);
+        return EntitySources.held(entity, owner)
+                .flatMap(ProgressionService::current).map(HolderHelper::id).orElse(null);
     }
 
     /**
      * The level after the current one on the same chain, or {@code null} at the top of the chain.
      */
     public static @Nullable Identifier progressionNext(@NotNull Entity entity, Identifier owner) {
-        return ProgressionService.nextLevelOf(entity, owner).map(HolderHelper::id).orElse(null);
+        return EntitySources.held(entity, owner)
+                .flatMap(ProgressionService::next).map(HolderHelper::id).orElse(null);
     }
 
     /**
@@ -446,7 +448,7 @@ public final class MxtKubeJsApi {
      * the owner measures no mastery at all. A mastery formula that cannot be evaluated answers null rather than 0.
      */
     public static @Nullable ProgressionMastery progressionMastery(@NotNull Entity entity, Identifier owner) {
-        return ProgressionService.masteryOf(entity, owner).orElse(null);
+        return EntitySources.held(entity, owner).flatMap(held -> ProgressionService.masteryOf(entity, held)).orElse(null);
     }
 
     /**
@@ -485,7 +487,10 @@ public final class MxtKubeJsApi {
     public static TechniqueService.Result forgetTechnique(@NotNull LivingEntity entity, Identifier id) {
         if (entity.level().isClientSide())
             return new TechniqueService.Result(false, TechniqueService.Failure.SERVER_ONLY);
-        return TechniqueService.forget(entity, entity.getData(MxtAttachments.SPIRIT_IDENTITY), id);
+        // A reference the current pack no longer provides has no holder to name, so the record goes by id alone.
+        Holder<Technique> technique = MxtDatapackRegistries
+                .holder(entity.level().registryAccess(), MxtResourceKeys.TECHNIQUE, id).orElse(null);
+        return TechniqueService.forget(entity, entity.getData(MxtAttachments.SPIRIT_IDENTITY), technique);
     }
 
     private static Holder<SpiritRoot> foundSpiritRoot(Entity entity, Identifier id) {

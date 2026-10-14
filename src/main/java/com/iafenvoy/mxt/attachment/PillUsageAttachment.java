@@ -2,7 +2,7 @@ package com.iafenvoy.mxt.attachment;
 
 import com.iafenvoy.mxt.data.item.PillBinding;
 import com.iafenvoy.mxt.util.HolderHelper;
-import com.iafenvoy.mxt.util.ShouldSyncAttachment;
+import com.iafenvoy.mxt.util.AbstractChangeTrackable;
 import com.iafenvoy.mxt.util.codec.CollectionCodecs;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
@@ -17,7 +17,7 @@ import java.util.Map;
  * Uses and cooldown expiry for each pill binding, keyed by the binding holder rather than the carrier item.
  * Cooldown expiry is an overworld game time. Counts are not cleared by death, dimension change or logout.
  */
-public final class PillUsageAttachment extends ShouldSyncAttachment {
+public final class PillUsageAttachment extends AbstractChangeTrackable {
     public static final MapCodec<PillUsageAttachment> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             CollectionCodecs.map(PillBinding.CODEC, Dose.CODEC).lenientOptionalFieldOf("entries", Map.of())
                     .forGetter(PillUsageAttachment::entries)

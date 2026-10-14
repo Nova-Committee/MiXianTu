@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.attachment;
 
 import com.iafenvoy.mxt.data.ability.Ability;
-import com.iafenvoy.mxt.util.ShouldSyncAttachment;
+import com.iafenvoy.mxt.util.AbstractChangeTrackable;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -19,7 +19,7 @@ import java.util.UUID;
  * two artifacts that both declare a mount are told apart by which one is underfoot rather than by which is held. The
  * artifact itself rides inside the mount entity, so nothing about the item needs to be kept here.
  */
-public final class FlightAttachment extends ShouldSyncAttachment {
+public final class FlightAttachment extends AbstractChangeTrackable {
     public static final MapCodec<FlightAttachment> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             Codec.BOOL.lenientOptionalFieldOf("active", false).forGetter(FlightAttachment::active),
             Ability.CODEC.lenientOptionalFieldOf("archetype").forGetter(FlightAttachment::archetype),

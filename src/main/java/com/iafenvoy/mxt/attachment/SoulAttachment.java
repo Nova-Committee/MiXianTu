@@ -1,6 +1,6 @@
 package com.iafenvoy.mxt.attachment;
 
-import com.iafenvoy.mxt.util.ShouldSyncAttachment;
+import com.iafenvoy.mxt.util.AbstractChangeTrackable;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -11,7 +11,7 @@ import java.util.UUID;
 /**
  * Optional soul-form state retained after a death transition.
  */
-public final class SoulAttachment extends ShouldSyncAttachment {
+public final class SoulAttachment extends AbstractChangeTrackable {
     public static final MapCodec<SoulAttachment> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             Codec.BOOL.lenientOptionalFieldOf("active", false).forGetter(SoulAttachment::active),
             Codec.STRING.lenientOptionalFieldOf("origin", "").forGetter(SoulAttachment::origin),

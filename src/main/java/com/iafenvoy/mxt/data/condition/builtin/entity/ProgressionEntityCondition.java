@@ -1,10 +1,8 @@
 package com.iafenvoy.mxt.data.condition.builtin.entity;
 
-import com.iafenvoy.mxt.attachment.ProgressionAttachment;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.data.context.condition.EntityConditionContext;
 import com.iafenvoy.mxt.data.progression.Progression;
-import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.DatapackCache;
 import com.iafenvoy.mxt.runtime.EntitySources;
 import com.iafenvoy.mxt.runtime.progression.ProgressionService;
@@ -37,10 +35,9 @@ public record ProgressionEntityCondition(Holder<Progression> level, CompareOpera
 
     @Override
     public boolean test(@NonNull EntityConditionContext ctx) {
-        ProgressionAttachment progress = ctx.entity().getExistingData(MxtAttachments.PROGRESSION).orElse(null);
-        for (EntitySources.Owner held : EntitySources.heldBy(ctx.entity())) {
+        for (EntitySources.Owner<?> held : EntitySources.heldBy(ctx.entity())) {
             if (!this.owner.isEmpty() && !this.owner.contains(held.id())) continue;
-            Holder<Progression> current = ProgressionService.currentLevel(progress, held.id(), held.definition()).orElse(null);
+            Holder<Progression> current = ProgressionService.current(held).orElse(null);
             if (current != null && this.reached(current)) return true;
         }
         return false;

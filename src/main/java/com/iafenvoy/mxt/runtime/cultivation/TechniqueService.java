@@ -1,18 +1,16 @@
 package com.iafenvoy.mxt.runtime.cultivation;
 
-import com.iafenvoy.mxt.attachment.ProgressionAttachment;
 import com.iafenvoy.mxt.attachment.SpiritIdentityAttachment;
 import com.iafenvoy.mxt.data.cultivation.Technique;
 import com.iafenvoy.mxt.event.TechniqueLearnEvent.Post;
 import com.iafenvoy.mxt.event.TechniqueLearnEvent.Pre;
-import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.ability.AbilityGrantService;
-import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.LivingEntity;
 import net.neoforged.neoforge.common.NeoForge;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 
@@ -51,12 +49,13 @@ public final class TechniqueService {
 
     // Removal is asked by id, so it also reaches a reference the current pack no longer provides. The technique's
     // own progression record goes with it, because a re-learn starts at the entry level; realm progress, resources
-    // and the running method live in other attachments and are none of this method's business.
-    public static Result forget(LivingEntity entity, SpiritIdentityAttachment spirit, Identifier id) {
+    // and the running method live in other attachments and are none of this method's business. A reference the pack
+    // no longer provides has no holder here, so the record is dropped through the identity half instead.
+    public static Result forget(LivingEntity entity, SpiritIdentityAttachment spirit, @Nullable Holder<Technique> technique) {
+        if (technique == null) return Result.rejected(Failure.ABSENT);
         List<Holder<Technique>> techniques = new ArrayList<>(spirit.learnedTechniques());
-        ProgressionAttachment progress = entity.getData(MxtAttachments.PROGRESSION);
-        boolean forgotten = techniques.removeIf(technique -> HolderHelper.id(technique).equals(id));
-        boolean cleared = progress.clearLevel(id);
+        boolean forgotten = techniques.removeIf(technique::equals);
+        boolean cleared = spirit.techniqueLevels().clear(technique);
         if (!forgotten && !cleared) return Result.rejected(Failure.ABSENT);
         spirit.setLearnedTechniques(techniques);
         AbilityGrantService.recalculate(entity);

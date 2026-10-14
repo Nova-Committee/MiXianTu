@@ -236,8 +236,9 @@ public final class LifeSpanService {
             entity.getData(MxtAttachments.SPIRIT_IDENTITY).setPhysiques(List.of());
         }
         if (!settings.keepTechniques.getValue()) {
+            // Clearing the learned list already drops each technique's own record with it, since a record for a
+            // technique the body no longer learned is state nothing can read.
             entity.getData(MxtAttachments.SPIRIT_IDENTITY).setLearnedTechniques(List.of());
-            entity.getData(MxtAttachments.PROGRESSION).clear();
         }
         if (!settings.keepSoul.getValue()) stats.resetSoul();
         AbilityGrantService.recalculate(entity);

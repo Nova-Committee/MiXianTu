@@ -2,7 +2,7 @@ package com.iafenvoy.mxt.attachment;
 
 import com.iafenvoy.mxt.data.secretrealm.SecretRealm;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.util.ShouldSyncAttachment;
+import com.iafenvoy.mxt.util.AbstractChangeTrackable;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -15,7 +15,7 @@ import java.util.Optional;
 /**
  * Return location retained while a player is inside a temporary secret realm.
  */
-public final class SecretRealmTravelAttachment extends ShouldSyncAttachment {
+public final class SecretRealmTravelAttachment extends AbstractChangeTrackable {
     public static final MapCodec<SecretRealmTravelAttachment> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             RegistryFixedCodec.create(MxtResourceKeys.SECRET_REALM).lenientOptionalFieldOf("realm").forGetter(SecretRealmTravelAttachment::realm),
             Identifier.CODEC.lenientOptionalFieldOf("origin_dimension").forGetter(SecretRealmTravelAttachment::originDimension),

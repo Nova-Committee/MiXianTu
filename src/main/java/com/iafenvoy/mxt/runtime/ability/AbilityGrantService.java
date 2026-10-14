@@ -1,7 +1,6 @@
 package com.iafenvoy.mxt.runtime.ability;
 
 import com.iafenvoy.mxt.attachment.AbilityAttachment;
-import com.iafenvoy.mxt.attachment.ProgressionAttachment;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.EntitySources;
 import com.iafenvoy.mxt.runtime.ModuleHooks;
@@ -30,12 +29,11 @@ public final class AbilityGrantService {
         // Grants are state, so only the server rebuilds them; a client reads what it was sent.
         if (entity.level().isClientSide()) return new Result(0, 0);
         AbilityAttachment abilities = entity.getData(MxtAttachments.ABILITY_HOLDER);
-        ProgressionAttachment progress = entity.getExistingData(MxtAttachments.PROGRESSION).orElse(null);
         Map<Identifier, Set<Identifier>> desired = new LinkedHashMap<>();
         EntitySources.GrantSink sink = (source, ability) ->
                 desired.computeIfAbsent(source, ignored -> new LinkedHashSet<>()).add(HolderHelper.id(ability));
         for (EntitySources.Grants source : ModuleHooks.all(EntitySources.Grants.class))
-            source.collect(entity, progress, sink);
+            source.collect(entity, sink);
         int granted = 0;
         int revoked = 0;
         Set<Identifier> sources = new LinkedHashSet<>(abilities.sources().allSources());

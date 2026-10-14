@@ -1,12 +1,12 @@
 package com.iafenvoy.mxt.runtime.cultivation;
 
 import com.iafenvoy.mxt.attachment.CultivationAttachment;
-import com.iafenvoy.mxt.attachment.ProgressionAttachment;
 import com.iafenvoy.mxt.attachment.SpiritIdentityAttachment;
 import com.iafenvoy.mxt.data.cultivation.Physique;
 import com.iafenvoy.mxt.data.cultivation.RealmStage;
 import com.iafenvoy.mxt.data.cultivation.SpiritRoot;
 import com.iafenvoy.mxt.data.cultivation.Technique;
+import com.iafenvoy.mxt.data.progression.ProgressionHolder;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.EntitySources;
 import com.iafenvoy.mxt.runtime.ModuleHooks;
@@ -19,12 +19,14 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
 /**
  * Everything a body's cultivation identity contributes: what its spirit roots, physiques, techniques and minor
- * stages grant, the passive modifiers they declare, and the techniques it owns a progression chain for.
+ * stages grant, the passive modifiers they declare, and the techniques it owns a progression chain for. Each
+ * technique's own levels are read from the identity attachment, which is where they are kept.
  *
  * <p>One object answers all three, so the cultivation side is one registration rather than one per question.
  */
@@ -40,7 +42,7 @@ public final class CultivationHooks implements EntitySources.Grants, EntitySourc
     }
 
     @Override
-    public void collect(LivingEntity entity, ProgressionAttachment progress, EntitySources.GrantSink sink) {
+    public void collect(LivingEntity entity, EntitySources.GrantSink sink) {
         SpiritIdentityAttachment spirit = entity.getExistingData(MxtAttachments.SPIRIT_IDENTITY).orElse(null);
         if (spirit == null) return;
         Provider access = entity.level().registryAccess();
@@ -54,7 +56,7 @@ public final class CultivationHooks implements EntitySources.Grants, EntitySourc
             sink.want(source, technique.value().grantedAbilities(), access);
             // Mastery adds to the same source, so a promotion only has to change the level: a technique's grants
             // are one contribution, not one per level it passed.
-            ProgressionService.currentLevel(progress, id, technique.value()).ifPresent(current ->
+            spirit.techniqueLevels().current(technique).ifPresent(current ->
                     sink.wantResolved(source, ProgressionService.grantedAbilities(technique.value(), current, access)));
         }
         // A realm stage's unlocks are keyed by how far the body got inside it, so the record is the whole answer:
@@ -79,13 +81,15 @@ public final class CultivationHooks implements EntitySources.Grants, EntitySourc
             sink.add(Sources.Declaration.PHYSIQUE, HolderHelper.id(physique), physique.value().attributeModifiers());
     }
 
-    // Every learned technique owns its own chain; the level it stands on is the key its record is stored under.
+    // Every learned technique owns its own chain, and the identity attachment holds the levels of exactly those.
     @Override
-    public List<EntitySources.Owner> held(Entity entity) {
+    public List<EntitySources.Owner<?>> held(Entity entity) {
         SpiritIdentityAttachment spirit = entity.getExistingData(MxtAttachments.SPIRIT_IDENTITY).orElse(null);
         if (spirit == null) return List.of();
-        return spirit.learnedTechniques().stream()
-                .map(technique -> new EntitySources.Owner(HolderHelper.id(technique), technique.value()))
-                .toList();
+        ProgressionHolder<Technique> levels = spirit.techniqueLevels();
+        List<EntitySources.Owner<?>> owners = new ArrayList<>(spirit.learnedTechniques().size());
+        for (Holder<Technique> technique : spirit.learnedTechniques())
+            owners.add(new EntitySources.Owner<>(technique, levels));
+        return owners;
     }
 }

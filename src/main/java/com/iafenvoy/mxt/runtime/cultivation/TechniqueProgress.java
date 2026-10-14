@@ -1,13 +1,11 @@
 package com.iafenvoy.mxt.runtime.cultivation;
 
-import com.iafenvoy.mxt.attachment.ProgressionAttachment;
 import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.attachment.SpiritIdentityAttachment;
 import com.iafenvoy.mxt.data.cultivation.Technique;
 import com.iafenvoy.mxt.data.progression.Progression;
+import com.iafenvoy.mxt.data.progression.ProgressionHolder;
 import com.iafenvoy.mxt.data.resource.Resource;
-import com.iafenvoy.mxt.runtime.progression.ProgressionService;
-import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import net.minecraft.core.Holder;
@@ -19,8 +17,8 @@ import java.util.List;
 /**
  * The current level and mastery progress of each learned technique, as a plain display model. Nothing here is
  * client-only: the learned techniques, their progression levels and their mastery values are all synchronised
- * attachments, so a client builds the same rows a server would. Chain order comes from {@link ProgressionService},
- * which reads the validated lines on a server and the definitions' own links on a client.
+ * attachments, so a client builds the same rows a server would. Chain order comes from the holder that keeps the
+ * records, which reads the validated lines on a server and the definitions' own links on a client.
  */
 public final class TechniqueProgress {
     private TechniqueProgress() {
@@ -51,25 +49,26 @@ public final class TechniqueProgress {
     public record Progress(double done, double span, double fraction) {
     }
 
-    public static List<Entry> rows(SpiritIdentityAttachment spirit, ProgressionAttachment progress,
-                                   ResourceHolderAttachment resources, FormulaContext context) {
+    public static List<Entry> rows(SpiritIdentityAttachment spirit, ResourceHolderAttachment resources,
+                                   FormulaContext context) {
         List<Entry> rows = new ArrayList<>(spirit.learnedTechniques().size());
+        ProgressionHolder<Technique> levels = spirit.techniqueLevels();
         for (Holder<Technique> technique : spirit.learnedTechniques())
-            rows.add(row(technique, progress, resources, context));
+            rows.add(row(technique, levels, resources, context));
         return rows;
     }
 
-    private static Entry row(Holder<Technique> technique, ProgressionAttachment progress,
+    private static Entry row(Holder<Technique> technique, ProgressionHolder<Technique> levels,
                              ResourceHolderAttachment resources, FormulaContext context) {
         Technique definition = technique.value();
-        Holder<Progression> level = ProgressionService.currentLevel(progress, HolderHelper.id(technique), definition).orElse(null);
+        Holder<Progression> level = levels.current(technique).orElse(null);
         // A level the technique's own climb cannot reach - a pack changed its entry level - is reported as no
         // level rather than as rank -1 of this one.
-        int rank = rankOf(definition, level);
+        int rank = level == null ? -1 : levels.rank(technique, level);
         if (rank < 0) level = null;
         Holder<Resource> mastery = definition.masteryResource().orElse(null);
-        Holder<Progression> next = level == null ? null : ProgressionService.nextLevel(level).orElse(null);
-        return new Entry(technique, level, rank, chainLength(definition),
+        Holder<Progression> next = level == null ? null : levels.next(technique).orElse(null);
+        return new Entry(technique, level, rank, levels.levelCount(technique),
                 level == null ? 0.0D : evaluate(level.value().mastery(), context),
                 mastery != null, mastery == null ? 0.0D : resources.get(mastery),
                 next == null ? Double.NaN : evaluate(next.value().mastery(), context));
@@ -100,15 +99,5 @@ public final class TechniqueProgress {
     private static double evaluate(NumberProvider provider, FormulaContext context) {
         double value = provider.evaluate(context);
         return Double.isFinite(value) ? value : 0.0D;
-    }
-
-    // The chain is validated when the server cache is built, so this only asks the shared service: the validated
-    // lines answer on a server, and the definitions' own links answer on a client.
-    private static int chainLength(Technique definition) {
-        return ProgressionService.levelCount(definition);
-    }
-
-    private static int rankOf(Technique definition, @Nullable Holder<Progression> level) {
-        return level == null ? -1 : ProgressionService.rankFromEntry(definition, level);
     }
 }

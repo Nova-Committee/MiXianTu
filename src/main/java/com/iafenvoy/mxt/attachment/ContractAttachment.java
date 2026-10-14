@@ -4,7 +4,7 @@ import com.iafenvoy.mxt.data.creature.ContractBehavior;
 import com.iafenvoy.mxt.data.creature.ContractBehaviors;
 import com.iafenvoy.mxt.data.creature.ContractType;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.util.ShouldSyncAttachment;
+import com.iafenvoy.mxt.util.AbstractChangeTrackable;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -26,7 +26,7 @@ import java.util.Optional;
  * consumes it, and the framework asks {@code ContractOperations#recall} in between. The order the owner picked is
  * a state, and this is its only copy: stored as an id so a record survives a behaviour class being replaced.</p>
  */
-public final class ContractAttachment extends ShouldSyncAttachment {
+public final class ContractAttachment extends AbstractChangeTrackable {
     public static final MapCodec<ContractAttachment> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             RegistryFixedCodec.create(MxtResourceKeys.CONTRACT_TYPE).lenientOptionalFieldOf("contract_type").forGetter(ContractAttachment::contractType),
             Codec.LONG.lenientOptionalFieldOf("bound_at", -1L).forGetter(ContractAttachment::boundAt),
@@ -46,8 +46,7 @@ public final class ContractAttachment extends ShouldSyncAttachment {
         this(Optional.empty(), -1L, false, -1L, Optional.empty());
     }
 
-    private ContractAttachment(Optional<Holder<ContractType>> contractType, long boundAt, boolean recalled, long recallAt,
-                               Optional<Identifier> behavior) {
+    private ContractAttachment(Optional<Holder<ContractType>> contractType, long boundAt, boolean recalled, long recallAt, Optional<Identifier> behavior) {
         this.contractType = contractType;
         this.boundAt = boundAt;
         this.recalled = recalled;

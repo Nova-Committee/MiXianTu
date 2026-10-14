@@ -46,8 +46,7 @@ public final class AuraChunkAttachment {
         this(false, Optional.empty(), new Int2ObjectOpenHashMap<>(), Map.of());
     }
 
-    private AuraChunkAttachment(boolean initialized, Optional<Holder<AuraZone>> template,
-                                Int2ObjectMap<BlockAuraSectionCache> blockAuraSections, Map<Holder<Aura>, AuraPool> auras) {
+    private AuraChunkAttachment(boolean initialized, Optional<Holder<AuraZone>> template, Int2ObjectMap<BlockAuraSectionCache> blockAuraSections, Map<Holder<Aura>, AuraPool> auras) {
         this.initialized = initialized;
         this.template = template;
         this.blockAuraSections = new Int2ObjectOpenHashMap<>(blockAuraSections);

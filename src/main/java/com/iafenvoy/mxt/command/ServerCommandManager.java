@@ -49,7 +49,7 @@ public final class ServerCommandManager {
         builder.put(SecretRealmCommand::build, config.secretRealm);
         builder.put(SpiritRootCommand::build, config.spiritRoot);
         builder.put(TalismanCommand::build, config.talisman);
-        builder.put(_ -> TechniqueCommand.build(), config.technique);
+        builder.put(TechniqueCommand::build, config.technique);
         builder.put(_ -> TradeCommand.build(), config.trade);
         builder.put(TribulationCommand::build, config.tribulation);
         builder.put(TriggersCommand::build, config.triggers);

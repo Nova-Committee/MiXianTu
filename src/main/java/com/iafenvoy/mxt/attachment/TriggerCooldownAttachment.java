@@ -14,8 +14,7 @@ import net.minecraft.resources.Identifier;
  */
 public final class TriggerCooldownAttachment {
     public static final MapCodec<TriggerCooldownAttachment> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
-            CollectionCodecs.longMap(Identifier.CODEC).lenientOptionalFieldOf("cooldowns", Object2LongMaps.emptyMap())
-                    .forGetter(TriggerCooldownAttachment::cooldowns)
+            CollectionCodecs.longMap(Identifier.CODEC).lenientOptionalFieldOf("cooldowns", Object2LongMaps.emptyMap()).forGetter(TriggerCooldownAttachment::cooldowns)
     ).apply(i, TriggerCooldownAttachment::new));
     private final Object2LongMap<Identifier> cooldowns;
 

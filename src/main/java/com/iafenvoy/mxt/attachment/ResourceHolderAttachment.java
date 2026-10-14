@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.attachment;
 
 import com.iafenvoy.mxt.data.resource.Resource;
-import com.iafenvoy.mxt.util.ShouldSyncAttachment;
+import com.iafenvoy.mxt.util.AbstractChangeTrackable;
 import com.iafenvoy.mxt.util.codec.CollectionCodecs;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
@@ -18,7 +18,7 @@ import java.util.Map;
  * Server-authoritative current values and resolved bounds. The bound snapshots are synchronised with the
  * attachment, so clients never have to evaluate a resource formula authoritatively.
  */
-public final class ResourceHolderAttachment extends ShouldSyncAttachment {
+public final class ResourceHolderAttachment extends AbstractChangeTrackable {
     public static final MapCodec<ResourceHolderAttachment> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             CollectionCodecs.doubleMap(Resource.CODEC).fieldOf("values").forGetter(ResourceHolderAttachment::values),
             CollectionCodecs.map(Resource.CODEC, Audit.CODEC).fieldOf("audit").forGetter(ResourceHolderAttachment::audit)

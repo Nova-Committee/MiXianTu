@@ -1,6 +1,6 @@
 package com.iafenvoy.mxt.attachment;
 
-import com.iafenvoy.mxt.util.ShouldSyncAttachment;
+import com.iafenvoy.mxt.util.AbstractChangeTrackable;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -8,13 +8,12 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 /**
  * Persisted long-lived spirit statistics unrelated to the cultivation chain.
  */
-public final class SpiritStatsAttachment extends ShouldSyncAttachment {
+public final class SpiritStatsAttachment extends AbstractChangeTrackable {
     public static final MapCodec<SpiritStatsAttachment> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             Codec.LONG.lenientOptionalFieldOf("lifespan_remaining", -1L).forGetter(SpiritStatsAttachment::lifespanRemaining),
             Codec.LONG.lenientOptionalFieldOf("lifespan_total", -1L).forGetter(SpiritStatsAttachment::lifespanTotal),
             SoulState.CODEC.lenientOptionalFieldOf("soul", SoulState.EMPTY).forGetter(SpiritStatsAttachment::soulState)
     ).apply(i, SpiritStatsAttachment::new));
-
     private long lifespanRemaining;
     private long lifespanTotal;
     private SoulState soulState;

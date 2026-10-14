@@ -1,7 +1,6 @@
 package com.iafenvoy.mxt.runtime.progression;
 
 import com.iafenvoy.mxt.MiXianTu;
-import com.iafenvoy.mxt.attachment.ProgressionAttachment;
 import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.condition.AlwaysCondition;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
@@ -17,7 +16,6 @@ import com.iafenvoy.mxt.runtime.DatapackCache;
 import com.iafenvoy.mxt.runtime.EntitySources;
 import com.iafenvoy.mxt.runtime.trigger.TriggerDispatcher;
 import com.iafenvoy.mxt.util.HolderHelper;
-import com.iafenvoy.mxt.util.chain.Chain;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.math.CompareOperation;
@@ -31,48 +29,56 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * The owner-agnostic half of every progression: where a holder stands, what the next level is, what each level
- * grants and whether it may be entered. Which owners a body holds, when it advances and what happens then belong
- * to the owning module. Ordering comes from {@link DatapackCache}.
+ * The owner-agnostic half of every progression: where a holder stands, what the next level is, what each level grants
+ * and whether it may be entered. Which owners a body holds, when it advances and what happens then belong to the
+ * owning module. Every question is asked of an {@link EntitySources.Owner}, so it reaches the holder of that owner's
+ * own sort and never another sort's records. Ordering comes from {@link DatapackCache}.
  */
 public final class ProgressionService {
-    // Bound on the ownership walk, so a chain that escaped validation cannot stall a login.
-    private static final int MAX_CHAIN_LENGTH = 512;
-
     private ProgressionService() {
     }
 
-    // The recorded level, or the owner's entry level while the holder never advanced; empty means the owner has
-    // no chain, so nothing can be granted or climbed for it.
-    public static Optional<Holder<Progression>> currentLevel(ProgressionAttachment progress, Identifier owner,
-                                                             ProgressionOwner definition) {
-        Holder<Progression> stored = progress == null ? null : progress.level(owner);
-        return Optional.ofNullable(stored != null ? stored : definition.entryLevel().orElse(null));
+    // Where the owner stands: its record, or its own entry level while it never advanced.
+    public static <T extends ProgressionOwner> Optional<Holder<Progression>> current(EntitySources.Owner<T> owner) {
+        return owner.levels().current(owner.holder());
     }
 
-    public static Optional<Holder<Progression>> nextLevel(Holder<Progression> current) {
-        return current == null ? Optional.empty() : current.value().nextLevel();
+    // The level the owner actually recorded, so an owner still standing on its entry level answers empty.
+    public static <T extends ProgressionOwner> Optional<Holder<Progression>> recorded(EntitySources.Owner<T> owner) {
+        return owner.levels().recorded(owner.holder());
     }
 
-    // Where a body stands on one owner it holds: the record, or that owner's entry level. Empty when the body
-    // does not hold the owner at all, which is also what an administrative write answers with.
-    public static Optional<Holder<Progression>> currentLevelOf(Entity entity, Identifier owner) {
-        return EntitySources.held(entity, owner).flatMap(held ->
-                currentLevel(entity.getExistingData(MxtAttachments.PROGRESSION).orElse(null), owner, held.definition()));
+    public static <T extends ProgressionOwner> Optional<Holder<Progression>> next(EntitySources.Owner<T> owner) {
+        return owner.levels().next(owner.holder());
     }
 
-    public static Optional<Holder<Progression>> nextLevelOf(Entity entity, Identifier owner) {
-        return currentLevelOf(entity, owner).flatMap(ProgressionService::nextLevel);
+    public static <T extends ProgressionOwner> boolean set(EntitySources.Owner<T> owner,
+                                                           Holder<Progression> level) {
+        return owner.levels().set(owner.holder(), level);
+    }
+
+    // One step along the owner's own chain; both bounds and the record itself are the holder's business, so a
+    // caller only says which direction.
+    public static <T extends ProgressionOwner> boolean promote(EntitySources.Owner<T> owner) {
+        return owner.levels().promote(owner.holder());
+    }
+
+    public static <T extends ProgressionOwner> boolean demote(EntitySources.Owner<T> owner) {
+        return owner.levels().demote(owner.holder());
+    }
+
+    public static <T extends ProgressionOwner> boolean follows(EntitySources.Owner<T> owner,
+                                                               Holder<Progression> level) {
+        return owner.levels().follows(owner.holder(), level);
     }
 
     // What the next level asks for and what the body already has of the resource that measures it. A mastery
     // formula that cannot be evaluated answers empty rather than zero, so a caller never reads a false "done".
-    public static Optional<ProgressionMastery> masteryOf(Entity entity, Identifier owner) {
-        EntitySources.Owner held = EntitySources.held(entity, owner).orElse(null);
-        if (held == null) return Optional.empty();
-        Holder<Resource> mastery = held.definition().masteryResource().orElse(null);
+    public static <T extends ProgressionOwner> Optional<ProgressionMastery> masteryOf(Entity entity,
+                                                                                      EntitySources.Owner<T> owner) {
+        Holder<Resource> mastery = owner.definition().masteryResource().orElse(null);
         if (mastery == null) return Optional.empty();
-        Holder<Progression> target = nextLevelOf(entity, owner).orElse(null);
+        Holder<Progression> target = next(owner).orElse(null);
         if (target == null) return Optional.empty();
         final double required;
         try {
@@ -91,12 +97,6 @@ public final class ProgressionService {
         return owner.config(target).map(ProgressionConfig::condition).orElse(AlwaysCondition.INSTANCE);
     }
 
-    public static boolean canAdvance(LivingEntity entity, ProgressionOwner owner, Holder<Progression> current,
-                                     FormulaContext context) {
-        Holder<Progression> target = nextLevel(current).orElse(null);
-        return target != null && advanceCondition(owner, target).test(entity, context);
-    }
-
     // Cumulative: what a level grants stays active on every later level, so everything at or below the current
     // one is the answer.
     public static List<Holder<Ability>> grantedAbilities(ProgressionOwner owner, Holder<Progression> current, Provider access) {
@@ -107,10 +107,6 @@ public final class ProgressionService {
                 .flatMap(entry -> RegistryCodecs.resolve(entry.getValue().abilities(), access, MxtResourceKeys.ABILITY))
                 .distinct()
                 .toList();
-    }
-
-    public static void setLevel(LivingEntity entity, Identifier owner, Holder<Progression> level) {
-        entity.getData(MxtAttachments.PROGRESSION).setLevel(owner, level);
     }
 
     // What marks a level as entered: the level's own action runs first, so whoever reacts sees a body that has
@@ -132,13 +128,10 @@ public final class ProgressionService {
      * many records went. Meant for login and datapack load, never for a read - the walk is only affordable there.
      */
     public static int pruneForeignLevels(Entity entity) {
-        ProgressionAttachment progress = entity.getExistingData(MxtAttachments.PROGRESSION).orElse(null);
-        if (progress == null) return 0;
         int cleared = 0;
-        for (EntitySources.Owner owner : EntitySources.heldBy(entity)) {
-            Holder<Progression> stored = progress.level(owner.id());
-            if (stored == null || follows(owner.definition(), stored)) continue;
-            if (!progress.clearLevel(owner.id())) continue;
+        for (EntitySources.Owner<?> owner : EntitySources.heldBy(entity)) {
+            Holder<Progression> stored = recorded(owner).orElse(null);
+            if (stored == null || !prune(owner)) continue;
             MiXianTu.LOGGER.warn("Dropped progression level {} for owner {} on {}: not reachable from that owner's entry level",
                     HolderHelper.id(stored), owner.id(), entity.getName().getString());
             cleared++;
@@ -146,36 +139,8 @@ public final class ProgressionService {
         return cleared;
     }
 
-    // The entry level itself, or anything the links reach from it. Also the answer an administrative write asks
-    // before it stores a level, so the rule lives in one place.
-    public static boolean follows(ProgressionOwner owner, Holder<Progression> level) {
-        return rankFromEntry(owner, level) >= 0;
-    }
-
-    /**
-     * Where a level sits above the owner's own entry level (0 is the entry itself), or -1 when the owner never
-     * reaches it. The validated chains answer while a server is running; a client, or anything asking before a world
-     * is loaded, gets the definitions' own links, bounded so a chain that escaped validation cannot stall it.
-     */
-    public static int rankFromEntry(ProgressionOwner owner, Holder<Progression> level) {
-        Holder<Progression> entry = owner.entryLevel().orElse(null);
-        if (entry == null) return -1;
-        DatapackCache cache = DatapackCache.get();
-        Chain<Progression> chain = cache.progressionChains().chainOf(entry).orElse(null);
-        if (chain == null) return -1;
-        int from = chain.indexOf(entry);
-        int at = chain.indexOf(level);
-        return at < from ? -1 : at - from;
-    }
-
-    /**
-     * How many levels the owner's climb has, counted from its entry level up; zero when it declares no entry, and
-     * zero for a chain the server refused.
-     */
-    public static int levelCount(ProgressionOwner owner) {
-        Holder<Progression> entry = owner.entryLevel().orElse(null);
-        if (entry == null) return 0;
-        DatapackCache cache = DatapackCache.get();
-        return cache.progressionChains().chainOf(entry).map(chain -> chain.size() - chain.indexOf(entry)).orElse(0);
+    // Reachability is the owner's own chain's question, so the answer comes from the holder that keeps its records.
+    public static <T extends ProgressionOwner> boolean prune(EntitySources.Owner<T> owner) {
+        return owner.levels().prune(owner.holder());
     }
 }

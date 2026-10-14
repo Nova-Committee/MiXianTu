@@ -1,6 +1,6 @@
 package com.iafenvoy.mxt.attachment;
 
-import com.iafenvoy.mxt.util.ShouldSyncAttachment;
+import com.iafenvoy.mxt.util.AbstractChangeTrackable;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.world.phys.Vec3;
@@ -12,7 +12,7 @@ import java.util.Optional;
  * whoever writes the record - and y counts down from the vehicle's current top, so a vehicle that changes height
  * with its pose takes the perched creature along.
  */
-public final class PerchAttachment extends ShouldSyncAttachment {
+public final class PerchAttachment extends AbstractChangeTrackable {
     public static final MapCodec<PerchAttachment> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             Vec3.CODEC.lenientOptionalFieldOf("offset").forGetter(PerchAttachment::offset)
     ).apply(i, PerchAttachment::new));

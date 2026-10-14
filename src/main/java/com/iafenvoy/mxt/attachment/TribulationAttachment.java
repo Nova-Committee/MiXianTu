@@ -3,7 +3,7 @@ package com.iafenvoy.mxt.attachment;
 import com.iafenvoy.mxt.data.Tribulation;
 import com.iafenvoy.mxt.data.storage.DataStorage;
 import com.iafenvoy.mxt.data.timeline.TimelineEntry;
-import com.iafenvoy.mxt.util.ShouldSyncAttachment;
+import com.iafenvoy.mxt.util.AbstractChangeTrackable;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -19,7 +19,7 @@ import java.util.Optional;
  * cursor standing on the one being consumed. The cursor is stored rather than derived, because a branch beat can
  * send the run backwards; an empty {@link #state()} is what makes the head beat's start fire once.
  */
-public final class TribulationAttachment extends ShouldSyncAttachment {
+public final class TribulationAttachment extends AbstractChangeTrackable {
     public static final MapCodec<TribulationAttachment> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             Tribulation.CODEC.lenientOptionalFieldOf("tribulation").forGetter(TribulationAttachment::tribulation),
             TimelineEntry.CODEC.listOf().lenientOptionalFieldOf("timeline", List.of()).forGetter(TribulationAttachment::beats),

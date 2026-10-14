@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.attachment;
 
 import com.iafenvoy.mxt.data.aura.Aura;
-import com.iafenvoy.mxt.util.ShouldSyncAttachment;
+import com.iafenvoy.mxt.util.AbstractChangeTrackable;
 import com.iafenvoy.mxt.util.codec.CollectionCodecs;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -14,10 +14,9 @@ import net.minecraft.core.Holder;
  * Server-authoritative cooldowns for spirit bursts. The client receives this attachment only to draw the remaining
  * fraction on the wheel, following vanilla item cooldown semantics.
  */
-public final class SpiritBurstCooldownAttachment extends ShouldSyncAttachment {
+public final class SpiritBurstCooldownAttachment extends AbstractChangeTrackable {
     public static final MapCodec<SpiritBurstCooldownAttachment> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
-            CollectionCodecs.longMap(Aura.CODEC).lenientOptionalFieldOf("cooldowns", Object2LongMaps.emptyMap())
-                    .forGetter(SpiritBurstCooldownAttachment::cooldowns)
+            CollectionCodecs.longMap(Aura.CODEC).lenientOptionalFieldOf("cooldowns", Object2LongMaps.emptyMap()).forGetter(SpiritBurstCooldownAttachment::cooldowns)
     ).apply(i, SpiritBurstCooldownAttachment::new));
     private final Object2LongMap<Holder<Aura>> cooldowns;
 
