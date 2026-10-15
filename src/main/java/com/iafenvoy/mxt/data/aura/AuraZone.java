@@ -17,6 +17,7 @@ import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.resources.RegistryFixedCodec;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.tags.TagKey;
 import net.minecraft.util.ExtraCodecs;
 import net.minecraft.world.level.biome.Biome;
@@ -30,8 +31,12 @@ import java.util.Optional;
 
 /**
  * Immutable datapack template for one aura environment.
+ *
+ * <p>{@code dimensions} is written as ids rather than as {@code Holder<LevelStem>}: {@code minecraft:dimension} is
+ * loaded in the layer after the one this registry is loaded in, so a holder could never be resolved while a pack
+ * decodes and every entry would be dropped. The id is resolved where the zone is matched instead.
  */
-public record AuraZone(Map<Holder<Aura>, AuraValue> aura, List<Either<Holder<LevelStem>, TagKey<LevelStem>>> dimensions,
+public record AuraZone(Map<Holder<Aura>, AuraValue> aura, List<Either<ResourceKey<LevelStem>, TagKey<LevelStem>>> dimensions,
                        List<Either<Holder<Biome>, TagKey<Biome>>> biomes, Fluctuation fluctuation, Rules rules,
                        EntityCondition cultivateCondition, Distribution distribution, double elementFitBonus,
                        double elementConflictPenalty, Noise noise, Optional<ParticleEffect> particle,
@@ -39,7 +44,7 @@ public record AuraZone(Map<Holder<Aura>, AuraValue> aura, List<Either<Holder<Lev
     public static final Codec<Holder<AuraZone>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.AURA_ZONE);
     public static final Codec<AuraZone> DIRECT_CODEC = RecordCodecBuilder.<AuraZone>create(i -> i.group(
             AuraValue.MAP_CODEC.optionalFieldOf("aura", Map.of()).forGetter(AuraZone::aura),
-            RegistryCodecs.holderOrTagList(Registries.LEVEL_STEM).optionalFieldOf("dimensions", List.of()).forGetter(AuraZone::dimensions),
+            RegistryCodecs.keyOrTagList(Registries.LEVEL_STEM).optionalFieldOf("dimensions", List.of()).forGetter(AuraZone::dimensions),
             RegistryCodecs.holderOrTagList(Registries.BIOME).optionalFieldOf("biomes", List.of()).forGetter(AuraZone::biomes),
             Fluctuation.CODEC.optionalFieldOf("fluctuation", Fluctuation.NONE).forGetter(AuraZone::fluctuation),
             Rules.CODEC.optionalFieldOf("rules", Rules.DEFAULT).forGetter(AuraZone::rules),

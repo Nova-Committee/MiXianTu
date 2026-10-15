@@ -26,8 +26,8 @@ public record SpawnSwordAuraAction(NumberProvider speed, OptionalInt bladeColor,
                                    EntityAction collideAction) implements EntityAction {
     public static final MapCodec<SpawnSwordAuraAction> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             NumberProvider.CODEC.optionalFieldOf("speed", new Constant(1.0D)).forGetter(SpawnSwordAuraAction::speed),
-            OptionalCodecs.rgbColorCodec("blade_color").forGetter(SpawnSwordAuraAction::bladeColor),
-            OptionalCodecs.rgbColorCodec("aura_color").forGetter(SpawnSwordAuraAction::auraColor),
+            OptionalCodecs.argbColorCodec("blade_color").forGetter(SpawnSwordAuraAction::bladeColor),
+            OptionalCodecs.argbColorCodec("aura_color").forGetter(SpawnSwordAuraAction::auraColor),
             OptionalCodecs.boolCodec("radial_flame").forGetter(SpawnSwordAuraAction::radialFlame),
             OptionalCodecs.floatCodec(0.01F, 32.0F, "length").forGetter(SpawnSwordAuraAction::length),
             OptionalCodecs.floatCodec(0.01F, 32.0F, "blade_width").forGetter(SpawnSwordAuraAction::bladeWidth),

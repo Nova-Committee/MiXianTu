@@ -127,9 +127,9 @@ public final class SpiritBurstEntity extends ThrowableProjectile {
     }
 
     public void setParticleColor(int particleColor) {
-        if (particleColor < 0 || particleColor > 0xFFFFFF)
-            throw new IllegalArgumentException("Particle color must be an RGB value");
-        this.getEntityData().set(PARTICLE_COLOR, particleColor);
+        // A definition authors its tint through vanilla's string colour codec, which carries an alpha byte the trail
+        // never uses - it draws with its own fade - so only the RGB part is kept rather than the whole value refused.
+        this.getEntityData().set(PARTICLE_COLOR, particleColor & 0xFFFFFF);
     }
 
     public void setAura(@NotNull Holder<Aura> aura) {

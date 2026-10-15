@@ -76,7 +76,7 @@ public final class HoldService {
     @SubscribeEvent
     public static void onUseStart(Start event) {
         if (event.getEntity().level().isClientSide()) return;
-        TemporaryUseComponent.takeBack(event.getEntity());
+        TemporaryUseComponent.takeBack(event.getEntity(), TemporaryUseComponent.Owner.HOLD);
     }
 
     // Keeps a read alive on the client, plays its sound on the server.
@@ -119,7 +119,8 @@ public final class HoldService {
         // The same refusal the click path makes, so the hold module cannot take an item's own use away from it.
         if (stack.has(DataComponents.CONSUMABLE) && !ours(stack, registries, hold)) return;
         TemporaryUseComponent.write(holder, stack,
-                consumable(hold, registries, stack, sound, hold.holdTicks(holder, registries, stack)));
+                consumable(hold, registries, stack, sound, hold.holdTicks(holder, registries, stack)),
+                TemporaryUseComponent.Owner.HOLD);
     }
 
     private static Consumable consumable(HoldBinding hold, Provider registries, ItemStack stack, Holder<SoundEvent> sound, int ticks) {

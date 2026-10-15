@@ -8,14 +8,15 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.Entity;
 
 import java.util.List;
 import java.util.Optional;
 
 /**
- * Selects a number from ordered condition/value branches. The scalar fallback
- * is used when no Player is available or no branch matches.
+ * Selects a number from ordered condition/value branches. The branches are asked of the body the number belongs
+ * to - the caster, or the player when there is no caster - and the scalar fallback is used when there is no body in
+ * scope or no branch matches.
  */
 public record Conditional(List<Branch> branches, Optional<NumberProvider> fallback) implements NumberProvider {
     private static final Codec<NumberProvider> SCALAR_CODEC = Codec.either(FINITE_DOUBLE_CODEC, Codec.STRING).flatXmap(
@@ -37,10 +38,12 @@ public record Conditional(List<Branch> branches, Optional<NumberProvider> fallba
 
     @Override
     public double evaluate(FormulaContext context) {
-        Player player = context.player();
-        if (player != null)
+        // A branch condition is an entity condition, so it is asked of whatever body the number is read for: a
+        // creature's own resource ceiling must not fall back just because its reader is not a player.
+        Entity entity = context.caster() != null ? context.caster() : context.player();
+        if (entity != null)
             for (Branch branch : this.branches)
-                if (branch.condition().test(player, context)) return branch.value().evaluate(context);
+                if (branch.condition().test(entity, context)) return branch.value().evaluate(context);
         Optional<NumberProvider> fallback = this.fallback;
         return fallback.map(numberProvider -> numberProvider.evaluate(context)).orElse(0.0D);
     }

@@ -176,12 +176,13 @@ public final class AuraService {
 
     // Dimension stems are a writable registry that is not synced to clients, so only the server may expand a
     // dimension tag through LEVEL_STEM; a secret realm has no level stem of its own, so it also matches aliases.
+    // The zone names its dimensions by id, so the registry is only asked here and never while a pack loads.
     private static boolean matchesDimension(Level level, AuraZone zone, Identifier dimension) {
         if (!(level instanceof ServerLevel server))
-            return RegistryCodecs.matches(zone.dimensions(), level.registryAccess().lookupOrThrow(Registries.LEVEL_STEM), dimension);
+            return RegistryCodecs.matchesKeys(zone.dimensions(), level.registryAccess().lookupOrThrow(Registries.LEVEL_STEM), dimension);
         Registry<LevelStem> registry = server.registryAccess().lookupOrThrow(Registries.LEVEL_STEM);
-        if (RegistryCodecs.matches(zone.dimensions(), registry, dimension)) return true;
-        return SecretRealmRegistry.aliases(dimension).anyMatch(alias -> RegistryCodecs.matches(zone.dimensions(), registry, alias));
+        if (RegistryCodecs.matchesKeys(zone.dimensions(), registry, dimension)) return true;
+        return SecretRealmRegistry.aliases(dimension).anyMatch(alias -> RegistryCodecs.matchesKeys(zone.dimensions(), registry, alias));
     }
 
     private static Optional<Resolved> customZone(Level level, BlockPos pos) {

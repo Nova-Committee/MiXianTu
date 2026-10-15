@@ -1,6 +1,7 @@
 package com.iafenvoy.mxt.testmod;
 
 import com.iafenvoy.mxt.event.CurseRemoveEvent.Post;
+import com.iafenvoy.mxt.probe.ProbeTests;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.mojang.logging.LogUtils;
 import net.minecraft.resources.Identifier;
@@ -30,7 +31,8 @@ public final class MxtTestMod {
         PillProbeActions.REGISTRY.register(modBus);
         ProbeMountRenders.REGISTRY.register(modBus);
         modBus.addListener(MxtTestMod::registerAttributes);
-        NeoForge.EVENT_BUS.addListener(MxtTestCommands::registerCommands);
+        modBus.addListener(ProbeTests::registerFunctions);
+        modBus.addListener(ProbeTests::registerTests);
         NeoForge.EVENT_BUS.addListener(MxtTestMod::logCurseRemovals);
         LOGGER.info("Loaded MiXianTu test mod");
     }

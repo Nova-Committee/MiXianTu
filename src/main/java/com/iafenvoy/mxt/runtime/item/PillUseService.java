@@ -58,18 +58,18 @@ public final class PillUseService {
         // happens to carry an equal one is never stripped.
         TemporaryUseComponent.write(entity, stack, new Consumable(PillItem.CONSUMABLE.consumeSeconds(),
                 PillItem.CONSUMABLE.animation(), PillItem.CONSUMABLE.sound(), PillItem.CONSUMABLE.hasConsumeParticles(),
-                PillItem.CONSUMABLE.onConsumeEffects()));
+                PillItem.CONSUMABLE.onConsumeEffects()), TemporaryUseComponent.Owner.PILL);
     }
 
     // Vanilla has eaten one by the time these run, so what is left of the stack is the item as its author wrote it.
     @SubscribeEvent
     public static void onUseFinish(Finish event) {
-        TemporaryUseComponent.takeBack(event.getEntity());
+        TemporaryUseComponent.takeBack(event.getEntity(), TemporaryUseComponent.Owner.PILL);
     }
 
     @SubscribeEvent
     public static void onUseStop(Stop event) {
-        TemporaryUseComponent.takeBack(event.getEntity());
+        TemporaryUseComponent.takeBack(event.getEntity(), TemporaryUseComponent.Owner.PILL);
     }
 
     // A gesture can also end without either event - dying mid-eat is one - so an entity that is no longer using
@@ -77,7 +77,7 @@ public final class PillUseService {
     @SubscribeEvent
     public static void onEntityTick(Post event) {
         if (!(event.getEntity() instanceof LivingEntity entity) || entity.isUsingItem()) return;
-        if (!TemporaryUseComponent.hasFor(entity)) return;
-        TemporaryUseComponent.takeBack(entity);
+        if (!TemporaryUseComponent.hasFor(entity, TemporaryUseComponent.Owner.PILL)) return;
+        TemporaryUseComponent.takeBack(entity, TemporaryUseComponent.Owner.PILL);
     }
 }

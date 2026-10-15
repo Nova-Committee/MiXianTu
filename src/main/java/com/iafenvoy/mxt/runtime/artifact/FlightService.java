@@ -134,11 +134,13 @@ public final class FlightService {
         }
         // The flight allowance is an attribute ({@code NeoForgeMod.CREATIVE_FLIGHT}); the mayfly flag is the
         // deprecated view of it, and reading the attribute is what can actually be written back. Only a player has
-        // any of that to remember, so the snapshot stays at its defaults for anything else.
+        // any of that to remember, and only a player's entity type carries the attribute at all - asking a beast for
+        // it throws - so the snapshot stays at its defaults for anything else.
+        Player pilot = holder instanceof Player value ? value : null;
         data.start(skill, found.ability(), holder.level().getGameTime(),
-                holder.getAttributeValue(NeoForgeMod.CREATIVE_FLIGHT),
-                holder instanceof Player player && player.getAbilities().flying,
-                holder instanceof Player flying ? flying.getAbilities().getFlyingSpeed() : 0.0F, body.getUUID());
+                pilot == null ? 0.0D : pilot.getAttributeValue(NeoForgeMod.CREATIVE_FLIGHT),
+                pilot != null && pilot.getAbilities().flying,
+                pilot == null ? 0.0F : pilot.getAbilities().getFlyingSpeed(), body.getUUID());
         // The mount's own "the flight has begun" hook. It runs on the driver, because that is the entity a pack can
         // actually give an effect or a resource to; the mount itself is data with a body.
         found.type().actions().onMount().execute(holder, context);

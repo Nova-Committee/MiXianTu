@@ -17,8 +17,11 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.RandomSource;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.portal.TeleportTransition;
+import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.common.NeoForge;
 import org.jetbrains.annotations.Nullable;
 
@@ -102,8 +105,9 @@ public final class SecretRealmService {
         double originZ = traveller.getZ();
         float originYaw = traveller.getYRot();
         float originPitch = traveller.getXRot();
-        if (!traveller.teleportTo(destination, arrival.position().x, arrival.position().y, arrival.position().z,
-                Set.of(), arrival.yaw(), arrival.pitch(), false))
+        LivingEntity arrived = move(traveller, destination, arrival.position().x, arrival.position().y,
+                arrival.position().z, arrival.yaw(), arrival.pitch());
+        if (arrived == null)
             return Result.rejected(Failure.TELEPORT_FAILED);
         if (joining) {
             members.add(member);
@@ -111,10 +115,12 @@ public final class SecretRealmService {
             SecretRealmRegistry.replace(record);
         }
         // Written once the traveller is really there: the origin is what an exit and an orphan sweep come back to.
-        travel.begin(definition, originDimension, originX, originY, originZ, originYaw, originPitch);
+        // The state goes on the body that landed, which is not the one that left when the platform had to rebuild it.
+        arrived.getData(MxtAttachments.SECRET_REALM_TRAVEL)
+                .begin(definition, originDimension, originX, originY, originZ, originYaw, originPitch);
         NeoForge.EVENT_BUS.post(new EnterPost(server, definition, record.dimension(), record.index(), record.owner(), member));
-        value.enterAction().execute(traveller, context);
-        return Result.entered();
+        value.enterAction().execute(arrived, FormulaContext.of(arrived));
+        return Result.entered(arrived);
     }
 
     public static Result exit(LivingEntity traveller) {
@@ -124,26 +130,26 @@ public final class SecretRealmService {
         SecretRealm value = definition.value();
         if (!value.exitCondition().test(traveller, FormulaContext.of(traveller)))
             return Result.rejected(Failure.EXIT_DENIED, value.exitDeniedMessage());
-        Failure failure = leave(traveller);
-        return failure == null ? Result.exited() : Result.rejected(failure);
+        Moved moved = leave(traveller);
+        return moved.failure() == null ? Result.exited(moved.traveller()) : Result.rejected(moved.failure());
     }
 
     // Also the exit used by an expiry and by an administrator, which is why it never consults the exit
-    // condition: a definition must not be able to lock a traveller inside a secret realm forever. Null means the
-    // traveller is out (or had nothing to undo); anything else is a refusal, and nothing is cleared for it, so the
-    // record still says where they are and a later attempt can try again.
-    private static @Nullable Failure leave(LivingEntity traveller) {
+    // condition: a definition must not be able to lock a traveller inside a secret realm forever. A null failure
+    // means the traveller is out (or had nothing to undo); anything else is a refusal, and nothing is cleared for it,
+    // so the record still says where they are and a later attempt can try again.
+    private static Moved leave(LivingEntity traveller) {
         SecretRealmTravelAttachment travel = travel(traveller);
         Holder<SecretRealm> definition = travel == null ? null : travel.realm().orElse(null);
-        if (definition == null || !travel.active()) return null;
+        if (definition == null || !travel.active()) return Moved.arrived(traveller);
         MinecraftServer server = traveller.level().getServer();
         ServerLevel origin = origin(server, travel).orElse(null);
-        if (origin == null) return Failure.MISSING_ORIGIN;
+        if (origin == null) return Moved.refused(Failure.MISSING_ORIGIN);
         Optional<SecretRealmRecord> held = SecretRealmRegistry.ofMember(traveller.getUUID());
-        if (!traveller.teleportTo(origin, travel.originX(), travel.originY(), travel.originZ(), Set.of(),
-                travel.originYaw(), travel.originPitch(), false))
-            return Failure.TELEPORT_FAILED;
-        travel.clear();
+        LivingEntity arrived = move(traveller, origin, travel.originX(), travel.originY(), travel.originZ(),
+                travel.originYaw(), travel.originPitch());
+        if (arrived == null) return Moved.refused(Failure.TELEPORT_FAILED);
+        arrived.getData(MxtAttachments.SECRET_REALM_TRAVEL).clear();
         if (held.isPresent()) {
             SecretRealmRecord record = held.get();
             List<UUID> members = new ArrayList<>(record.members());
@@ -152,9 +158,21 @@ public final class SecretRealmService {
             if (updated.empty()) retire(server, updated);
             else SecretRealmRegistry.replace(updated);
             NeoForge.EVENT_BUS.post(new Exit(server, definition, record.dimension(), record.index(), record.owner(), traveller.getUUID()));
-            definition.value().exitAction().execute(traveller, FormulaContext.of(traveller));
+            definition.value().exitAction().execute(arrived, FormulaContext.of(arrived));
         }
-        return null;
+        return Moved.arrived(arrived);
+    }
+
+    // A non-player crossing a dimension is rebuilt by the platform: the body that lands in the destination is a new
+    // entity and the one handed in is removed, so everything after a move belongs to the returned body. The boolean
+    // form of Entity#teleportTo discards that answer, which is why the transition is built here by hand. A player is
+    // teleported in place and comes back as itself, and null means the platform refused the move.
+    private static @Nullable LivingEntity move(LivingEntity traveller, ServerLevel destination, double x, double y,
+                                               double z, float yaw, float pitch) {
+        TeleportTransition transition = new TeleportTransition(destination, new Vec3(x, y, z), Vec3.ZERO, yaw, pitch,
+                Set.of(), TeleportTransition.DO_NOTHING);
+        Entity moved = traveller.teleport(transition);
+        return moved instanceof LivingEntity living ? living : null;
     }
 
     // Only a read: a traveller that never entered a secret realm should not be handed an attachment for asking.
@@ -180,7 +198,7 @@ public final class SecretRealmService {
             if (member != null) {
                 // A member the platform would not move keeps the instance retired for later: retiring now would
                 // drop the record of somebody still standing inside it.
-                if (leave(member) != null) expelled = false;
+                if (leave(member).failure() != null) expelled = false;
                 continue;
             }
             SecretRealmRecord current = SecretRealmRegistry.at(record.dimension()).orElse(null);
@@ -200,7 +218,7 @@ public final class SecretRealmService {
     public static boolean destroy(MinecraftServer server, SecretRealmRecord record) {
         for (UUID id : List.copyOf(record.members())) {
             LivingEntity member = findMember(server, id);
-            if (member != null && leave(member) != null) return false;
+            if (member != null && leave(member).failure() != null) return false;
         }
         SecretRealmRecord current = SecretRealmRegistry.at(record.dimension()).orElse(null);
         if (current == null) return false;
@@ -220,10 +238,10 @@ public final class SecretRealmService {
         MinecraftServer server = traveller.level().getServer();
         ServerLevel origin = origin(server, travel).orElse(null);
         if (origin == null) return false;
-        if (!traveller.teleportTo(origin, travel.originX(), travel.originY(), travel.originZ(), Set.of(),
-                travel.originYaw(), travel.originPitch(), false))
-            return false;
-        travel.clear();
+        LivingEntity arrived = move(traveller, origin, travel.originX(), travel.originY(), travel.originZ(),
+                travel.originYaw(), travel.originPitch());
+        if (arrived == null) return false;
+        arrived.getData(MxtAttachments.SECRET_REALM_TRAVEL).clear();
         return true;
     }
 
@@ -281,21 +299,38 @@ public final class SecretRealmService {
         CONDITION_NOT_MET, EXIT_DENIED, TELEPORT_FAILED
     }
 
-    public record Result(boolean changed, Failure failure, Optional<Component> message) {
-        static Result entered() {
-            return new Result(true, null, Optional.empty());
+    /**
+     * A secret realm answer. {@code traveller} is the body that now stands where it was sent: the platform rebuilds a
+     * non-player that crosses a dimension, so a caller that means to keep holding the traveller has to take this one.
+     * Empty when nothing moved, which is every refusal.
+     */
+    public record Result(boolean changed, Failure failure, Optional<Component> message, Optional<LivingEntity> traveller) {
+        static Result entered(LivingEntity traveller) {
+            return new Result(true, null, Optional.empty(), Optional.of(traveller));
         }
 
-        static Result exited() {
-            return new Result(true, null, Optional.empty());
+        static Result exited(LivingEntity traveller) {
+            return new Result(true, null, Optional.empty(), Optional.of(traveller));
         }
 
         static Result rejected(Failure failure) {
-            return new Result(false, failure, Optional.empty());
+            return new Result(false, failure, Optional.empty(), Optional.empty());
         }
 
         static Result rejected(Failure failure, Optional<Component> message) {
-            return new Result(false, failure, message);
+            return new Result(false, failure, message, Optional.empty());
+        }
+    }
+
+    // The answer to a move out: the refusal, and the body that came out - a non-player crossing a dimension is
+    // rebuilt, so it is not always the entity handed in.
+    private record Moved(@Nullable Failure failure, @Nullable LivingEntity traveller) {
+        static Moved refused(Failure failure) {
+            return new Moved(failure, null);
+        }
+
+        static Moved arrived(LivingEntity traveller) {
+            return new Moved(null, traveller);
         }
     }
 }

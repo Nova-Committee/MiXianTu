@@ -24,7 +24,9 @@ public record SpiritWispParticleOptions(int color, float size) implements Partic
     );
 
     public SpiritWispParticleOptions {
-        if (color < 0 || color > 0xFFFFFF) throw new IllegalArgumentException("Particle color must be an RGB value");
+        // The colour is authored through vanilla's string colour codec, which carries an alpha byte; the wisp is RGB
+        // and draws with its own fade, so the alpha is dropped here instead of at every caller.
+        color &= 0xFFFFFF;
         if (!Float.isFinite(size) || size <= 0.0F)
             throw new IllegalArgumentException("Particle size must be finite and positive");
     }

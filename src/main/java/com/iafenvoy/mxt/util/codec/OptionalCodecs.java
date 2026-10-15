@@ -44,6 +44,10 @@ public final class OptionalCodecs {
         return packInt(ExtraCodecs.STRING_RGB_COLOR.optionalFieldOf(name));
     }
 
+    public static MapCodec<OptionalInt> argbColorCodec(String name) {
+        return packInt(ExtraCodecs.STRING_ARGB_COLOR.optionalFieldOf(name));
+    }
+
     private static MapCodec<OptionalInt> packInt(MapCodec<Optional<Integer>> codec) {
         return codec.xmap(o -> o.map(OptionalInt::of).orElseGet(OptionalInt::empty), o -> o.isPresent() ? Optional.of(o.getAsInt()) : Optional.empty());
     }

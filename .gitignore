@@ -30,6 +30,7 @@ bin/
 run/
 run-test-client/
 run-test-server/
+run-game-test-server/
 !**/src/**/run/
 **/src/generated/**/.cache/
 repo/

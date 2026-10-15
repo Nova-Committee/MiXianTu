@@ -50,6 +50,7 @@ def testClientGameDirectory = project.findProperty('mxtTestClientGameDirectory')
 def testClientUsername = project.findProperty('mxtTestClientUsername')
 def testServerGameDirectory = project.findProperty('mxtTestServerGameDirectory') ?: 'run-test-server'
 def testServerPort = project.findProperty('mxtTestServerPort') ?: '25566'
+def gameTestSelection = project.findProperty('mxtGameTestSelection')
 
 neoForge {
     version = project.neo_version
@@ -65,9 +66,20 @@ neoForge {
             programArgument '--nogui'
             systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
         }
+        // Every game test lives in the test mod, so this run only has to serve `mxt_test`. `enabledGameTestNamespaces`
+        // is not read by NeoForge any more (nothing in 26.1.2.99 looks it up): the game test server runs every
+        // registered instance, and the property is kept in step with the rest of the runs for documentation only.
         gameTestServer {
             type = "gameTestServer"
-            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+            gameDirectory = file('run-game-test-server')
+            ideName = 'Game Test Server'
+            systemProperty 'neoforge.enabledGameTestNamespaces', "${mod_id}_test"
+            // `-PmxtGameTestSelection=mxt_test:*alchemy*` narrows a run to a test selector, so a failing domain can
+            // be iterated on without paying for the whole suite.
+            if (gameTestSelection) {
+                programArgument '--tests'
+                programArgument gameTestSelection
+            }
         }
 
         testClient {

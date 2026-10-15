@@ -1,23 +1,20 @@
-package com.iafenvoy.mxt.testmod;
+package com.iafenvoy.mxt.probe.item;
 
+import com.iafenvoy.mxt.probe.Probe;
+import com.iafenvoy.mxt.probe.ProbeContext;
 import com.iafenvoy.mxt.runtime.item.ItemBindingService;
-import com.mojang.authlib.GameProfile;
-import net.minecraft.commands.CommandSourceStack;
+import com.iafenvoy.mxt.testmod.MxtTestWeaponItems;
 import net.minecraft.core.component.DataComponents;
-import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.EquipmentSlotGroup;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.ItemAttributeModifiers;
-import net.neoforged.neoforge.common.util.FakePlayer;
 import net.neoforged.neoforge.event.tick.EntityTickEvent;
 
 import java.util.List;
-import java.util.UUID;
 
 /**
  * The dynamic half of a weapon binding, asserted on what the service writes rather than on a live attribute: the
@@ -35,74 +32,79 @@ public final class WeaponBindingProbes {
     private WeaponBindingProbes() {
     }
 
-    public static int run(CommandSourceStack source) {
-        ServerLevel level = source.getLevel();
-        // A console has no player and this leg needs a caster for every formula, so it stands in a throwaway one.
-        ServerPlayer player = source.getPlayer();
-        if (player == null) player = new FakePlayer(level, new GameProfile(UUID.randomUUID(), "weapon_probe"));
-        // The leg occupies both hands and moves the caster's level, so both are put back rather than left changed.
-        ItemStack wornMain = player.getItemBySlot(EquipmentSlot.MAINHAND);
-        ItemStack wornOff = player.getItemBySlot(EquipmentSlot.OFFHAND);
-        int wornLevel = player.experienceLevel;
-        boolean ok = true;
-        try {
-            ok = legs(source, player);
-        } finally {
-            player.setItemInHand(InteractionHand.MAIN_HAND, wornMain);
-            player.setItemInHand(InteractionHand.OFF_HAND, wornOff);
-            player.experienceLevel = wornLevel;
-        }
-        return ok ? 1 : 0;
+    public static List<Probe> probes() {
+        return List.of(
+                Probe.of("item/weapon/dynamic_value", WeaponBindingProbes::dynamicValue),
+                Probe.of("item/weapon/reevaluated", WeaponBindingProbes::reevaluated),
+                Probe.of("item/weapon/zero_skipped", WeaponBindingProbes::zeroSkipped),
+                Probe.of("item/weapon/offhand_group", WeaponBindingProbes::offhandGroup),
+                Probe.of("item/weapon/both_hands", WeaponBindingProbes::bothHands),
+                Probe.of("item/weapon/idempotent", WeaponBindingProbes::idempotent),
+                Probe.of("item/weapon/formula_function", WeaponBindingProbes::formulaFunction),
+                Probe.of("item/weapon/formula_clamped", WeaponBindingProbes::formulaClamped));
     }
 
-    private static boolean legs(CommandSourceStack source, ServerPlayer player) {
-        boolean ok = true;
-        ItemStack blade = new ItemStack(MxtTestWeaponItems.DYNAMIC_BLADE.get());
-        player.setItemInHand(InteractionHand.MAIN_HAND, blade);
-        setLevel(player, 7);
-        tick(player);
-
-        // The provider replaces the written amount, and it is re-read every tick rather than baked at load.
-        ok &= leg(source, "dynamic_value",
+    // The provider replaces the written amount, and it is re-read every tick rather than baked at load.
+    private static void dynamicValue(ProbeContext context) {
+        ServerPlayer player = context.player();
+        ItemStack blade = blade(player, 7);
+        leg(context, "dynamic_value",
                 close(amount(blade, EquipmentSlot.MAINHAND, BLADE_DAMAGE), 9.0D)
                         && close(amount(blade, EquipmentSlot.MAINHAND, BLADE_SPEED), 0.35D),
                 "damage=" + amount(blade, EquipmentSlot.MAINHAND, BLADE_DAMAGE)
                         + " speed=" + amount(blade, EquipmentSlot.MAINHAND, BLADE_SPEED),
                 "damage=9.0 speed=0.35");
+    }
 
+    private static void reevaluated(ProbeContext context) {
+        ServerPlayer player = context.player();
+        ItemStack blade = blade(player, 7);
         setLevel(player, 12);
         tick(player);
-        ok &= leg(source, "reevaluated",
+        leg(context, "reevaluated",
                 close(amount(blade, EquipmentSlot.MAINHAND, BLADE_DAMAGE), 14.0D),
                 "damage=" + amount(blade, EquipmentSlot.MAINHAND, BLADE_DAMAGE), "damage=14.0");
+    }
 
-        // A value that comes out zero contributes nothing, so the entry is left out instead of written as 0.
-        setLevel(player, 0);
-        tick(player);
-        ok &= leg(source, "zero_skipped",
+    // A value that comes out zero contributes nothing, so the entry is left out instead of written as 0.
+    private static void zeroSkipped(ProbeContext context) {
+        ServerPlayer player = context.player();
+        ItemStack blade = blade(player, 0);
+        leg(context, "zero_skipped",
                 close(amount(blade, EquipmentSlot.MAINHAND, BLADE_DAMAGE), 2.0D)
                         && Double.isNaN(amount(blade, EquipmentSlot.MAINHAND, BLADE_SPEED)),
                 "damage=" + amount(blade, EquipmentSlot.MAINHAND, BLADE_DAMAGE)
                         + " speed=" + amount(blade, EquipmentSlot.MAINHAND, BLADE_SPEED),
                 "damage=2.0 speed=none");
+    }
 
-        // The regression this whole leg exists for: the offhand stack has to carry offhand entries, and the
-        // vanilla per-slot predicate is what has to find them.
+    // The regression this whole leg exists for: the offhand stack has to carry offhand entries, and the
+    // vanilla per-slot predicate is what has to find them.
+    private static void offhandGroup(ProbeContext context) {
+        ServerPlayer player = context.player();
         ItemStack fan = new ItemStack(MxtTestWeaponItems.OFFHAND_FAN.get());
         setLevel(player, 7);
         player.setItemInHand(InteractionHand.OFF_HAND, fan);
         tick(player);
-        ok &= leg(source, "offhand_group",
+        leg(context, "offhand_group",
                 group(fan, FAN_ARMOR) == EquipmentSlotGroup.OFFHAND
                         && close(amount(fan, EquipmentSlot.OFFHAND, FAN_ARMOR), 10.0D)
                         && !EquipmentSlotGroup.MAINHAND.test(EquipmentSlot.OFFHAND),
                 "group=" + group(fan, FAN_ARMOR) + " offhand=" + amount(fan, EquipmentSlot.OFFHAND, FAN_ARMOR)
                         + " mainhand=" + amount(fan, EquipmentSlot.MAINHAND, FAN_ARMOR),
                 "group=offhand offhand=10.0 mainhand=none");
+    }
 
-        // Both hands at once: each stack answers only in its own hand, which holds because the two ids differ.
+    // Both hands at once: each stack answers only in its own hand, which holds because the two ids differ.
+    private static void bothHands(ProbeContext context) {
+        ServerPlayer player = context.player();
+        ItemStack blade = blade(player, 7);
+        ItemStack fan = new ItemStack(MxtTestWeaponItems.OFFHAND_FAN.get());
+        setLevel(player, 7);
         tick(player);
-        ok &= leg(source, "both_hands",
+        player.setItemInHand(InteractionHand.OFF_HAND, fan);
+        tick(player);
+        leg(context, "both_hands",
                 group(blade, BLADE_DAMAGE) == EquipmentSlotGroup.MAINHAND
                         && Double.isNaN(amount(blade, EquipmentSlot.OFFHAND, BLADE_DAMAGE))
                         && Double.isNaN(amount(fan, EquipmentSlot.MAINHAND, FAN_ARMOR))
@@ -110,34 +112,60 @@ public final class WeaponBindingProbes {
                 "blade=" + group(blade, BLADE_DAMAGE) + " fan=" + group(fan, FAN_ARMOR)
                         + " blade_offhand=" + amount(blade, EquipmentSlot.OFFHAND, BLADE_DAMAGE),
                 "blade=mainhand fan=offhand blade_offhand=none");
+    }
 
-        // Repeating a tick must not append a second copy of an id it already wrote.
-        ok &= leg(source, "idempotent", count(blade, BLADE_DAMAGE) == 1,
+    // Repeating a tick must not append a second copy of an id it already wrote.
+    private static void idempotent(ProbeContext context) {
+        ServerPlayer player = context.player();
+        ItemStack blade = blade(player, 7);
+        ItemStack fan = new ItemStack(MxtTestWeaponItems.OFFHAND_FAN.get());
+        setLevel(player, 7);
+        tick(player);
+        player.setItemInHand(InteractionHand.OFF_HAND, fan);
+        tick(player);
+        leg(context, "idempotent", count(blade, BLADE_DAMAGE) == 1,
                 "entries=" + count(blade, BLADE_DAMAGE), "entries=1");
+    }
 
-        // Functions come from the mod's own registry, so a fixture that calls one covers that wiring too.
+    // Functions come from the mod's own registry, so a fixture that calls one covers that wiring too.
+    private static void formulaFunction(ProbeContext context) {
+        ServerPlayer player = context.player();
         ItemStack formula = new ItemStack(MxtTestWeaponItems.FORMULA_BLADE.get());
         player.setItemInHand(InteractionHand.MAIN_HAND, formula);
         player.setItemInHand(InteractionHand.OFF_HAND, ItemStack.EMPTY);
         setLevel(player, 7);
         tick(player);
-        ok &= leg(source, "formula_function",
+        leg(context, "formula_function",
                 close(amount(formula, EquipmentSlot.MAINHAND, FORMULA_DAMAGE), 14.0D)
                         && close(amount(formula, EquipmentSlot.MAINHAND, FORMULA_BONUS), 0.2D),
                 "clamp=" + amount(formula, EquipmentSlot.MAINHAND, FORMULA_DAMAGE)
                         + " max=" + amount(formula, EquipmentSlot.MAINHAND, FORMULA_BONUS),
                 "clamp=14.0 max=0.2");
+    }
 
-        // Above the clamp the additive half stops growing while the multiplied half keeps its own slope.
+    // Above the clamp the additive half stops growing while the multiplied half keeps its own slope.
+    private static void formulaClamped(ProbeContext context) {
+        ServerPlayer player = context.player();
+        ItemStack formula = new ItemStack(MxtTestWeaponItems.FORMULA_BLADE.get());
+        player.setItemInHand(InteractionHand.MAIN_HAND, formula);
+        player.setItemInHand(InteractionHand.OFF_HAND, ItemStack.EMPTY);
         setLevel(player, 20);
         tick(player);
-        ok &= leg(source, "formula_clamped",
+        leg(context, "formula_clamped",
                 close(amount(formula, EquipmentSlot.MAINHAND, FORMULA_DAMAGE), 20.0D)
                         && close(amount(formula, EquipmentSlot.MAINHAND, FORMULA_BONUS), 1.5D),
                 "clamp=" + amount(formula, EquipmentSlot.MAINHAND, FORMULA_DAMAGE)
                         + " max=" + amount(formula, EquipmentSlot.MAINHAND, FORMULA_BONUS),
                 "clamp=20.0 max=1.5");
-        return ok;
+    }
+
+    // The old run's opening moves: blade in the main hand, the level set, and the stack ticked once.
+    private static ItemStack blade(ServerPlayer player, int level) {
+        ItemStack blade = new ItemStack(MxtTestWeaponItems.DYNAMIC_BLADE.get());
+        player.setItemInHand(InteractionHand.MAIN_HAND, blade);
+        setLevel(player, level);
+        tick(player);
+        return blade;
     }
 
     private static void tick(ServerPlayer player) {
@@ -188,11 +216,12 @@ public final class WeaponBindingProbes {
         return !Double.isNaN(actual) && Math.abs(actual - expected) < 1.0E-3D;
     }
 
-    private static boolean leg(CommandSourceStack source, String name, boolean ok, String actual, String expected) {
+    // One leg of the old command: the value is asserted, and the line it printed is kept, on the branch it printed it.
+    private static boolean leg(ProbeContext context, String name, boolean ok, String actual, String expected) {
         String line = "weapon binding probe: " + name + " actual=" + actual + " expected=" + expected
                 + (ok ? " OK" : " MISMATCH");
-        if (ok) source.sendSuccess(() -> Component.literal(line), false);
-        else source.sendFailure(Component.literal(line));
+        if (ok) context.note(line);
+        else context.fail(line);
         return ok;
     }
 }

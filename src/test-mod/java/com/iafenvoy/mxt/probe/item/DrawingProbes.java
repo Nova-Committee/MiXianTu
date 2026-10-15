@@ -1,13 +1,18 @@
-package com.iafenvoy.mxt.testmod;
+package com.iafenvoy.mxt.probe.item;
 
-import com.iafenvoy.mxt.data.talisman.Talisman;
 import com.iafenvoy.mxt.data.aura.SpiritStorageComponent;
 import com.iafenvoy.mxt.data.item.TalismanComponent;
+import com.iafenvoy.mxt.data.quality.ItemQuality;
+import com.iafenvoy.mxt.data.talisman.Talisman;
 import com.iafenvoy.mxt.item.block.TalismanWorkstationBlock;
+import com.iafenvoy.mxt.probe.Probe;
+import com.iafenvoy.mxt.probe.ProbeContext;
+import com.iafenvoy.mxt.probe.ProbeDefinitions;
+import com.iafenvoy.mxt.recipe.TalismanDrawingRecipe;
 import com.iafenvoy.mxt.registry.MxtBlocks;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.registry.MxtItems;
-import com.iafenvoy.mxt.recipe.TalismanDrawingRecipe;
+import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.talisman.BrushPigmentService;
 import com.iafenvoy.mxt.runtime.talisman.TalismanDrawingScorer;
 import com.iafenvoy.mxt.runtime.talisman.TalismanDrawingScorer.Point;
@@ -19,13 +24,11 @@ import com.iafenvoy.mxt.runtime.talisman.TalismanWorkstationService.Outcome;
 import com.iafenvoy.mxt.runtime.talisman.TalismanWorkstationService.StrokeRefusal;
 import com.iafenvoy.mxt.runtime.talisman.TalismanWorkstationService.StrokeResult;
 import com.iafenvoy.mxt.screen.menu.TalismanWorkstationMenu;
+import com.iafenvoy.mxt.testmod.MxtTestMod;
 import com.iafenvoy.mxt.util.HolderHelper;
-import com.mojang.authlib.GameProfile;
-import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Holder;
-import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -38,23 +41,19 @@ import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.ServerLevelData;
-import net.neoforged.neoforge.common.util.FakePlayer;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.UUID;
 
 /**
- * The drawing workstation's session and settlement path, driven from a dedicated server with no client: the formula
+ * The drawing workstation's session and settlement path, driven from a real player in the level: the formula
  * list and what makes a formula affordable, opening a session (which takes the paper out of the menu's own slot),
  * charging strokes to the brush, the refusals, the settlement (both the carrier it pours and the reconciliation
  * that rejects a doctored drawing), and the two ways a session ends without being submitted.
  *
- * <p>Every step prints one {@code OK} / {@code MISMATCH} line and every failure names what was actually read. A
- * console invocation has no player, so the leg builds a {@link FakePlayer} of its own; nothing on this path needs a
- * real one, because the carrier's pour is metered from the carrier's own store rather than from a holder's account.
- * The scratch station is a real block of this mod, placed {@code (4, 4, 4)} from the source, and the state that was
+ * <p>Every step reports one {@code OK} / {@code MISMATCH} line and every failure names what was actually read. The
+ * scratch station is a real block of this mod, placed at arena relative {@code (8, 0, 8)}, and the state that was
  * there before is put back when the leg ends. The station stores nothing, so every fixture goes into the slot of a
  * menu this leg opened itself.
  */
@@ -69,41 +68,100 @@ public final class DrawingProbes {
     private DrawingProbes() {
     }
 
-    public static int run(CommandSourceStack source) {
-        ServerLevel level = source.getLevel();
-        ServerPlayer player = source.getPlayer();
-        if (player == null) {
-            FakePlayer fallback = new FakePlayer(level, new GameProfile(UUID.randomUUID(), "DrawingProbe"));
-            fallback.setPos(source.getPosition());
-            player = fallback;
-        }
-        Probe probe = new Probe(source, level, player);
-        try {
-            probe.setup();
-            probe.dip();
-            probe.list();
-            probe.start();
-            probe.swap();
-            probe.strokes();
-            probe.submit();
-            probe.cancelAndRefund();
-            probe.reconciliation();
-            probe.stackRefund();
-        } finally {
-            probe.restore();
-        }
-        ServerPlayer finalPlayer = player;
-        source.sendSuccess(() -> Component.literal("drawing probe [" + finalPlayer.getName().getString() + "]: "
-                + (probe.failed == 0 ? "OK" : "MISMATCH") + " " + probe.passed + " checks passed, "
-                + probe.failed + " mismatched"), probe.failed > 0);
-        return probe.failed == 0 ? 1 : 0;
+    public static List<Probe> probes() {
+        return List.of(
+                Probe.of("item/drawing/setup", DrawingProbes::setupStation),
+                Probe.of("item/drawing/dip", DrawingProbes::dip),
+                Probe.of("item/drawing/list", DrawingProbes::list),
+                Probe.of("item/drawing/start", DrawingProbes::start),
+                Probe.of("item/drawing/swap", DrawingProbes::swap),
+                Probe.of("item/drawing/strokes", DrawingProbes::strokes),
+                Probe.of("item/drawing/submit", DrawingProbes::submit),
+                Probe.of("item/drawing/cancel_and_refund", DrawingProbes::cancelAndRefund),
+                Probe.of("item/drawing/reconciliation", DrawingProbes::reconciliation),
+                Probe.of("item/drawing/stack_refund", DrawingProbes::stackRefund));
+    }
+
+    // Named apart from the leg's own setup so the reference above cannot be read as the instance method.
+    private static void setupStation(ProbeContext context) {
+        new Station(context).setup();
+    }
+
+    private static void dip(ProbeContext context) {
+        Station probe = new Station(context);
+        probe.setup();
+        probe.dip();
+    }
+
+    private static void list(ProbeContext context) {
+        Station probe = new Station(context);
+        probe.setup();
+        probe.list();
+    }
+
+    private static void start(ProbeContext context) {
+        Station probe = new Station(context);
+        probe.setup();
+        probe.list();
+        probe.gradePaper();
+        probe.start();
+    }
+
+    // The old run reached the swap with the format and the session the two earlier steps had left behind.
+    private static void swap(ProbeContext context) {
+        Station probe = new Station(context);
+        probe.setup();
+        probe.list();
+        probe.gradePaper();
+        probe.start();
+        probe.swap();
+    }
+
+    private static void strokes(ProbeContext context) {
+        Station probe = new Station(context);
+        probe.setup();
+        probe.list();
+        probe.gradePaper();
+        probe.start();
+        probe.swap();
+        probe.strokes();
+    }
+
+    private static void submit(ProbeContext context) {
+        Station probe = new Station(context);
+        probe.setup();
+        probe.list();
+        probe.gradePaper();
+        probe.start();
+        probe.swap();
+        probe.strokes();
+        probe.submit();
+    }
+
+    private static void cancelAndRefund(ProbeContext context) {
+        Station probe = new Station(context);
+        probe.setup();
+        probe.cancelAndRefund();
+    }
+
+    private static void reconciliation(ProbeContext context) {
+        Station probe = new Station(context);
+        probe.setup();
+        probe.reconciliation();
+    }
+
+    private static void stackRefund(ProbeContext context) {
+        Station probe = new Station(context);
+        probe.setup();
+        probe.cancelAndRefund();
+        probe.stackRefund();
     }
 
     /**
      * One run of the leg: the scratch station, the lines it reports and the state it has to give back.
      */
-    private static final class Probe {
-        private final CommandSourceStack source;
+    private static final class Station {
+        private final ProbeContext context;
         private final ServerLevel level;
         private final ServerPlayer player;
         private final BlockPos at;
@@ -114,19 +172,17 @@ public final class DrawingProbes {
                 new Stroke(List.of(new Point(0.50D, 0.06D), new Point(0.50D, 0.94D))),
                 new Stroke(List.of(new Point(0.22D, 0.28D), new Point(0.50D, 0.10D), new Point(0.78D, 0.28D))),
                 new Stroke(List.of(new Point(0.30D, 0.72D), new Point(0.70D, 0.72D))));
-        private int passed;
-        private int failed;
 
-        private Probe(CommandSourceStack source, ServerLevel level, ServerPlayer player) {
-            this.source = source;
-            this.level = level;
-            this.player = player;
-            this.at = BlockPos.containing(source.getPosition()).offset(4, 4, 4);
-            this.previousState = level.getBlockState(this.at);
-            if (!level.setBlockAndUpdate(this.at, MxtBlocks.TALISMAN_WORKSTATION.get().defaultBlockState()
+        private Station(ProbeContext context) {
+            this.context = context;
+            this.level = context.level();
+            this.player = context.player();
+            this.at = context.at(8, 0, 8);
+            this.previousState = this.level.getBlockState(this.at);
+            if (!this.level.setBlockAndUpdate(this.at, MxtBlocks.TALISMAN_WORKSTATION.get().defaultBlockState()
                     .setValue(TalismanWorkstationBlock.FACING, Direction.NORTH)))
                 throw new IllegalStateException("The drawing probe could not place its workstation");
-            this.previousMenu = player.containerMenu;
+            this.previousMenu = this.player.containerMenu;
             this.previousGameTime = this.clock().getGameTime();
         }
 
@@ -145,6 +201,17 @@ public final class DrawingProbes {
                     "slots " + this.paper().getContainerSize() + ", slot "
                             + read(this.paper().getItem(0)) + ", carried " + read(carried) + ", pigment "
                             + BrushPigmentService.pigment(carried));
+        }
+
+        // The ward formula declares a paper requirement (at least `normal` quality), so the legs that swap to it
+        // stock a graded sheet: with a blank one the swap is refused by the formula's own requirement rather than by
+        // the rule under test. Neither fixture's grades read `paper_rank`, so the grade changes no settled number.
+        private void gradePaper() {
+            Holder<ItemQuality> quality = this.context.require(MxtResourceKeys.ITEM_QUALITY, ProbeDefinitions.NORMAL_QUALITY);
+            for (int index = 0; index < this.paper().getContainerSize(); index++) {
+                ItemStack stack = this.paper().getItem(index);
+                if (!stack.isEmpty()) stack.set(MxtDataComponents.QUALITY, quality);
+            }
         }
 
         // Dipping, in the vanilla bundle's shape: a click on a pigment stack feeds the brush one portion, whichever
@@ -305,7 +372,8 @@ public final class DrawingProbes {
         }
 
         // Charging one stroke at a time, the two refusals a stroke can meet, and nothing else moving.
-        private void strokes() {            TalismanDrawingSession session = this.session();
+        private void strokes() {
+            TalismanDrawingSession session = this.session();
             if (session == null) {
                 this.mismatch("strokes-one-at-a-time", "there is no session to draw in");
                 return;
@@ -460,6 +528,7 @@ public final class DrawingProbes {
         private void stackRefund() {
             TalismanWorkstationMenu menu = this.open();
             this.paper().setItem(0, MxtItems.BLANK_TALISMAN.toStack(3));
+            this.gradePaper();
             int bag = this.carriedPapers();
             menu.select(this.player, SIGIL);
             this.check("stack-start-takes-one-sheet", this.paper().getItem(0).getCount() == 2 && this.carriedPapers() == bag,
@@ -485,7 +554,9 @@ public final class DrawingProbes {
                             + " (wanted " + (bag + 3) + ")");
         }
 
-        /** Blank talismans in the player's own inventory; a refund must never add to this. */
+        /**
+         * Blank talismans in the player's own inventory; a refund must never add to this.
+         */
         private int carriedPapers() {
             Inventory bag = this.player.getInventory();
             int total = 0;
@@ -543,7 +614,9 @@ public final class DrawingProbes {
             return doctored;
         }
 
-        /** The three reference strokes of the test pack's formula, in the bitmap pixels a player's strokes arrive in. */
+        /**
+         * The three reference strokes of the test pack's formula, in the bitmap pixels a player's strokes arrive in.
+         */
         private List<Stroke> bitmap() {
             List<Stroke> converted = new ArrayList<>();
             for (Stroke stroke : this.reference) {
@@ -589,6 +662,8 @@ public final class DrawingProbes {
             clock.setGameTime(clock.getGameTime() + 10L);
         }
 
+        // The old run's teardown. Nothing calls it now: the next probe retires the player, and the level and the
+        // station go with the arena.
         private void restore() {
             try {
                 if (this.player.containerMenu instanceof TalismanWorkstationMenu open) open.removed(this.player);
@@ -599,23 +674,21 @@ public final class DrawingProbes {
             }
         }
 
+        // The old helper printed an OK line for a pass and a MISMATCH line for a failure, both the same way.
         private void check(String step, boolean ok, String actual) {
-            if (ok) {
-                this.passed++;
-                this.source.sendSuccess(() -> Component.literal("drawing " + step + ": OK"), false);
-            } else {
-                this.failed++;
-                this.source.sendSuccess(() -> Component.literal("drawing " + step + ": MISMATCH " + actual), false);
-            }
+            if (ok) this.context.note("drawing " + step + ": OK");
+            else this.context.fail("drawing " + step + ": MISMATCH " + actual);
         }
 
         private void mismatch(String step, String actual) {
             this.check(step, false, actual);
         }
 
-        /** A measured number a passing run would otherwise not show; informational, never an assertion. */
+        /**
+         * A measured number a passing run would otherwise not show; informational, never an assertion.
+         */
         private void note(String step, String detail) {
-            this.source.sendSuccess(() -> Component.literal("[info] drawing " + step + ": " + detail), false);
+            this.context.note("[info] drawing " + step + ": " + detail);
         }
     }
 

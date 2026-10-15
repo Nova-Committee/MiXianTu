@@ -19,7 +19,6 @@ import java.util.function.Function;
  */
 public record SpriteIcon(Optional<Identifier> sprite, Optional<Identifier> texture, Optional<Region> region, int width,
                          int height) {
-    public static final Codec<SpriteIcon> SPRITE_CODEC = bare(true), TEXTURE_CODEC = bare(false);
     // The middle ground every GUI texture is authored at, matching the renderers that came before this type.
     public static final int DEFAULT_TEXTURE_SIZE = 256;
 
@@ -43,6 +42,10 @@ public record SpriteIcon(Optional<Identifier> sprite, Optional<Identifier> textu
             Codec.intRange(0, 8192).optionalFieldOf("width", 0).forGetter(SpriteIcon::width),
             Codec.intRange(0, 8192).optionalFieldOf("height", 0).forGetter(SpriteIcon::height)
     ).apply(i, SpriteIcon::new)).validate(SpriteIcon::validate);
+
+    // Declared after CODEC: a bare id is the other side of an either with it, and a field initialiser that ran
+    // before CODEC would capture null and leave the pair permanently undecodable.
+    public static final Codec<SpriteIcon> SPRITE_CODEC = bare(true), TEXTURE_CODEC = bare(false);
 
     public static SpriteIcon of(Identifier id, boolean sprite) {
         return new SpriteIcon(Optional.ofNullable(sprite ? id : null), Optional.ofNullable(sprite ? null : id), Optional.empty(), 0, 0);
