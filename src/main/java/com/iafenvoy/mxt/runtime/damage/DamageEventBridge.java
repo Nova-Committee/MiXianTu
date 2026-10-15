@@ -39,7 +39,7 @@ public final class DamageEventBridge {
         if (reduced != incoming) event.setAmount((float) reduced);
         // Only a strike that declared what it was made of rubs off. The amounts come from the same reading, and
         // what the target carries decides how much gets through.
-        if (strike.origin().attaches())
+        if (strike.attaches())
             ElementReactionService.applyFromStrike(target, strike.attachment(), FormulaContext.of(target), DamageCalculationService.attachmentMultiplier(target));
     }
 }

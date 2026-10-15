@@ -4,18 +4,13 @@ import com.iafenvoy.mxt.api.AuraAccess;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.particle.SpiritWispParticleOptions;
+import com.iafenvoy.mxt.registry.MxtEntityDataSerializers;
 import com.iafenvoy.mxt.registry.MxtEntityTypes;
-import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.util.HolderHelper;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
-import net.minecraft.core.Holder.Reference;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
-import net.minecraft.network.syncher.SynchedEntityData.Builder;
-import net.minecraft.resources.Identifier;
-import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
@@ -32,6 +27,7 @@ import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
+import org.jetbrains.annotations.NotNull;
 import org.jspecify.annotations.NonNull;
 
 import java.util.Optional;
@@ -47,8 +43,7 @@ public final class SpiritBurstEntity extends ThrowableProjectile {
     private static final float TRAIL_PARTICLE_SIZE = 0.085F;
     private static final EntityDataAccessor<Integer> AMOUNT = SynchedEntityData.defineId(SpiritBurstEntity.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Integer> PARTICLE_COLOR = SynchedEntityData.defineId(SpiritBurstEntity.class, EntityDataSerializers.INT);
-    //FIXME::Holder?
-    private static final EntityDataAccessor<String> AURA = SynchedEntityData.defineId(SpiritBurstEntity.class, EntityDataSerializers.STRING);
+    private static final EntityDataAccessor<Optional<Holder<Aura>>> AURA = SynchedEntityData.defineId(SpiritBurstEntity.class, MxtEntityDataSerializers.AURA.get());
 
     public SpiritBurstEntity(EntityType<? extends SpiritBurstEntity> type, Level level) {
         super(type, level);
@@ -65,21 +60,18 @@ public final class SpiritBurstEntity extends ThrowableProjectile {
     }
 
     @Override
-    protected void defineSynchedData(@NonNull Builder builder) {
+    protected void defineSynchedData(SynchedEntityData.@NonNull Builder builder) {
         builder.define(AMOUNT, 0);
         builder.define(PARTICLE_COLOR, 0xFFFFFF);
-        builder.define(AURA, "");
+        builder.define(AURA, Optional.empty());
     }
 
     @Override
     public void tick() {
         if (!this.level().isClientSide() && this.tryHitAuraAccess()) return;
         super.tick();
-        if (this.level().isClientSide()) {
-            this.spawnTrailParticles();
-        } else if (this.tickCount >= MAX_LIFETIME_TICKS) {
-            this.discard();
-        }
+        if (this.level().isClientSide()) this.spawnTrailParticles();
+        else if (this.tickCount >= MAX_LIFETIME_TICKS) this.discard();
     }
 
     @Override
@@ -92,9 +84,8 @@ public final class SpiritBurstEntity extends ThrowableProjectile {
         if (!this.level().isClientSide()) {
             BlockPos pos = hit.getBlockPos();
             BlockEntity blockEntity = this.level().getBlockEntity(pos);
-            if (blockEntity instanceof AuraAccess accessor) {
-                this.aura().ifPresent(type -> accessor.insert(this.ownerLivingEntity(), this.registryAccess(), type, this.amount(), false));
-            }
+            if (blockEntity instanceof AuraAccess accessor)
+                this.getAura().ifPresent(type -> accessor.insert(this.ownerLivingEntity(), this.registryAccess(), type, this.getAmount(), false));
             this.discard();
         }
     }
@@ -108,14 +99,14 @@ public final class SpiritBurstEntity extends ThrowableProjectile {
     protected void readAdditionalSaveData(@NonNull ValueInput input) {
         this.setAmount(input.getIntOr("amount", 0));
         this.setParticleColor(input.getIntOr("particle_color", 0xFFFFFF));
-        this.getEntityData().set(AURA, input.getStringOr("aura", ""));
+        input.read("aura", Aura.CODEC).ifPresent(this::setAura);
     }
 
     @Override
     protected void addAdditionalSaveData(@NonNull ValueOutput output) {
-        output.putInt("amount", this.amount());
-        output.putInt("particle_color", this.particleColor());
-        output.putString("aura", this.getEntityData().get(AURA));
+        output.putInt("amount", this.getAmount());
+        output.putInt("particle_color", this.getParticleColor());
+        this.getAura().ifPresent(aura -> output.store("aura", Aura.CODEC, aura));
     }
 
     @Override
@@ -123,7 +114,7 @@ public final class SpiritBurstEntity extends ThrowableProjectile {
         return false;
     }
 
-    public int amount() {
+    public int getAmount() {
         return this.getEntityData().get(AMOUNT);
     }
 
@@ -131,7 +122,7 @@ public final class SpiritBurstEntity extends ThrowableProjectile {
         this.getEntityData().set(AMOUNT, AuraAccess.requireNonNegative(amount));
     }
 
-    public int particleColor() {
+    public int getParticleColor() {
         return this.getEntityData().get(PARTICLE_COLOR);
     }
 
@@ -141,16 +132,12 @@ public final class SpiritBurstEntity extends ThrowableProjectile {
         this.getEntityData().set(PARTICLE_COLOR, particleColor);
     }
 
-    // Requires a registry holder: only the id travels, so an inline value could not be rebuilt on arrival.
-    public void setAura(Holder<Aura> aura) {
-        this.getEntityData().set(AURA, HolderHelper.id(aura).toString());
+    public void setAura(@NotNull Holder<Aura> aura) {
+        this.getEntityData().set(AURA, Optional.of(aura));
     }
 
-    private Optional<Reference<Aura>> aura() {
-        Identifier id = Identifier.tryParse(this.getEntityData().get(AURA));
-        if (id == null) return Optional.empty();
-        return this.level().registryAccess().lookupOrThrow(MxtResourceKeys.AURA)
-                .get(ResourceKey.create(MxtResourceKeys.AURA, id));
+    private Optional<Holder<Aura>> getAura() {
+        return this.getEntityData().get(AURA);
     }
 
     private void spawnTrailParticles() {
@@ -168,7 +155,7 @@ public final class SpiritBurstEntity extends ThrowableProjectile {
     }
 
     private int variedParticleColor() {
-        int color = this.particleColor();
+        int color = this.getParticleColor();
         float red = (color >> 16 & 0xFF) / 255.0F;
         float green = (color >> 8 & 0xFF) / 255.0F;
         float blue = (color & 0xFF) / 255.0F;
@@ -192,10 +179,8 @@ public final class SpiritBurstEntity extends ThrowableProjectile {
         double closestDistance = Double.POSITIVE_INFINITY;
         BlockPos closestPos = null;
 
-        BlockPos min = BlockPos.containing(Math.min(start.x, end.x) - 1.0D, Math.min(start.y, end.y) - 1.0D,
-                Math.min(start.z, end.z) - 1.0D);
-        BlockPos max = BlockPos.containing(Math.max(start.x, end.x) + 1.0D, Math.max(start.y, end.y) + 1.0D,
-                Math.max(start.z, end.z) + 1.0D);
+        BlockPos min = BlockPos.containing(Math.min(start.x, end.x) - 1.0D, Math.min(start.y, end.y) - 1.0D, Math.min(start.z, end.z) - 1.0D);
+        BlockPos max = BlockPos.containing(Math.max(start.x, end.x) + 1.0D, Math.max(start.y, end.y) + 1.0D, Math.max(start.z, end.z) + 1.0D);
         for (BlockPos pos : BlockPos.betweenClosed(min, max)) {
             BlockEntity blockEntity = this.level().getBlockEntity(pos);
             if (!(blockEntity instanceof AuraAccess)) continue;
@@ -213,14 +198,13 @@ public final class SpiritBurstEntity extends ThrowableProjectile {
 
         if (closestPos == null) return false;
 
-        BlockHitResult blockHit = this.level().clip(new ClipContext(start, end,
-                Block.COLLIDER, Fluid.NONE, this));
+        BlockHitResult blockHit = this.level().clip(new ClipContext(start, end, Block.COLLIDER, Fluid.NONE, this));
         if (blockHit.getType() != BlockHitResult.Type.MISS && start.distanceToSqr(blockHit.getLocation()) <= closestDistance)
             return false;
 
         BlockEntity blockEntity = this.level().getBlockEntity(closestPos);
         if (!(blockEntity instanceof AuraAccess accessor)) return false;
-        this.aura().ifPresent(type -> accessor.insert(this.ownerLivingEntity(), this.registryAccess(), type, this.amount(), false));
+        this.getAura().ifPresent(type -> accessor.insert(this.ownerLivingEntity(), this.registryAccess(), type, this.getAmount(), false));
         this.discard();
         return true;
     }

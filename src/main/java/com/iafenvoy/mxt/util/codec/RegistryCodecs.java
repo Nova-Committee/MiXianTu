@@ -61,11 +61,6 @@ public final class RegistryCodecs {
     }
 
     //FIXME::
-    public static <T> boolean matches(Collection<Either<Holder<T>, TagKey<T>>> values, Registry<T> registry, ResourceKey<Registry<T>> key, Identifier candidate) {
-        return registry.get(ResourceKey.create(key, candidate)).map(holder -> matches(values, holder)).orElse(false);
-    }
-
-    //FIXME::
     public static <T> boolean matchesKey(Collection<Either<ResourceKey<T>, TagKey<T>>> values, Registry<T> registry, Identifier candidate) {
         return values.stream().anyMatch(value -> value.map(key -> key.identifier().equals(candidate),
                 tag -> registry.listElements().anyMatch(holder -> holder.is(tag) && holder.unwrapKey()

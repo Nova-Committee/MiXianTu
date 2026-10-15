@@ -71,7 +71,7 @@ public final class QualityService {
      * Registers a carrier component that keeps the definition inside a record of its own.
      */
     public static <C, T extends QualityProvider> void carry(Supplier<? extends DataComponentType<C>> type, Function<C, Optional<Holder<T>>> extract) {
-        CARRIERS.add(stack -> Optional.ofNullable(stack.get(type)).flatMap(extract).map(Holder::value).flatMap(QualityProvider::defaultQuality));
+        CARRIERS.add(stack -> Optional.ofNullable(stack.get(type)).flatMap(extract).map(Holder::value).flatMap(QualityProvider::quality));
     }
 
     @SubscribeEvent(priority = EventPriority.HIGHEST)
@@ -148,7 +148,6 @@ public final class QualityService {
         return check(user.level().registryAccess(), user, stack);
     }
 
-    // The same read for a caller that already looked the registry up (the use gate does).
     public static Optional<Holder<ItemQuality>> find(Provider access, ItemStack stack) {
         if (stack.isEmpty()) return Optional.empty();
         return Optional.ofNullable(stack.get(MxtDataComponents.QUALITY.get()))

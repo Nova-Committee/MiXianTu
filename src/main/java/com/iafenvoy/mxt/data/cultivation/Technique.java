@@ -11,7 +11,6 @@ import com.iafenvoy.mxt.data.progression.ProgressionOwner;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.util.codec.MiscCodecs;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.iafenvoy.mxt.util.formula.number.Constant;
@@ -23,6 +22,7 @@ import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.RegistryFixedCodec;
 import net.minecraft.tags.TagKey;
+import net.minecraft.util.ExtraCodecs;
 
 import java.util.List;
 import java.util.Map;
@@ -43,15 +43,13 @@ public record Technique(Optional<Holder<ItemQuality>> quality, Optional<IconRefe
                         List<Either<Holder<Ability>, TagKey<Ability>>> grantedAbilities,
                         Optional<Holder<Progression>> defaultLevel, Optional<Holder<Resource>> masteryResource,
                         Map<Holder<Progression>, ProgressionConfig> configuration) implements ProgressionOwner, QualityProvider {
-    // The book texture as authored: a pack that names no colour keeps the blue cover and the white title mark.
-    public static final int DEFAULT_PRIMARY_COLOR = 0x0E54A0;
-    public static final int DEFAULT_SECONDARY_COLOR = 0xE4E8EB;
+    public static final int DEFAULT_PRIMARY_COLOR = 0x0E54A0, DEFAULT_SECONDARY_COLOR = 0xE4E8EB;
     public static final Codec<Holder<Technique>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.TECHNIQUE);
     public static final Codec<Technique> DIRECT_CODEC = RecordCodecBuilder.<Technique>create(i -> i.group(
             ItemQuality.CODEC.optionalFieldOf("quality").forGetter(Technique::quality),
             IconReference.CODEC.optionalFieldOf("icon").forGetter(Technique::icon),
-            MiscCodecs.RGB_COLOR.optionalFieldOf("primary_color", DEFAULT_PRIMARY_COLOR).forGetter(Technique::primaryColor),
-            MiscCodecs.RGB_COLOR.optionalFieldOf("secondary_color", DEFAULT_SECONDARY_COLOR).forGetter(Technique::secondaryColor),
+            ExtraCodecs.STRING_RGB_COLOR.optionalFieldOf("primary_color", DEFAULT_PRIMARY_COLOR).forGetter(Technique::primaryColor),
+            ExtraCodecs.STRING_RGB_COLOR.optionalFieldOf("secondary_color", DEFAULT_SECONDARY_COLOR).forGetter(Technique::secondaryColor),
             EntityCondition.optionalCodec("learn_condition").forGetter(Technique::learnCondition),
             Identifier.CODEC.listOf().optionalFieldOf("exclusive_tags", List.of()).forGetter(Technique::exclusiveTags),
             NumberProvider.CODEC.optionalFieldOf("cultivation_modifier", new Constant(1.0D)).forGetter(Technique::cultivationModifier),
@@ -59,8 +57,7 @@ public record Technique(Optional<Holder<ItemQuality>> quality, Optional<IconRefe
             RegistryCodecs.holderOrTagList(MxtResourceKeys.ABILITY).optionalFieldOf("granted_abilities", List.of()).forGetter(Technique::grantedAbilities),
             Progression.CODEC.optionalFieldOf("default_level").forGetter(Technique::defaultLevel),
             Resource.CODEC.optionalFieldOf("mastery_resource").forGetter(Technique::masteryResource),
-            Codec.unboundedMap(Progression.CODEC, ProgressionConfig.CODEC)
-                    .optionalFieldOf("configuration", Map.of()).forGetter(Technique::configuration)
+            Codec.unboundedMap(Progression.CODEC, ProgressionConfig.CODEC).optionalFieldOf("configuration", Map.of()).forGetter(Technique::configuration)
     ).apply(i, Technique::new)).validate(Technique::validate);
 
     private static DataResult<Technique> validate(Technique technique) {
@@ -69,11 +66,6 @@ public record Technique(Optional<Holder<ItemQuality>> quality, Optional<IconRefe
         if (technique.defaultLevel().isEmpty() && technique.masteryResource().isPresent())
             return DataResult.error(() -> "mastery_resource needs default_level to name the progression chain it measures");
         return DataResult.success(technique);
-    }
-
-    @Override
-    public Optional<Holder<ItemQuality>> defaultQuality() {
-        return this.quality;
     }
 
     @Override

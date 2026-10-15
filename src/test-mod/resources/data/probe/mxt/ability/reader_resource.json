@@ -1,5 +1,5 @@
 {
   "type": "mxt:modifier",
-  "condition": {"type": "mxt:ability_storage_resource", "id": "probe:storage_probe", "amount": {"min": 4, "max": 6}},
+  "condition": {"type": "mxt:ability_storage_resource", "ability": "probe:storage_probe", "amount": {"min": 4, "max": 6}},
   "modifiers": [{"attribute": "minecraft:max_health", "id": "probe:ability/reader_resource", "amount": 8, "operation": "add_value"}]
 }

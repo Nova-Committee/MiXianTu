@@ -11,9 +11,9 @@ import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
+import net.minecraft.world.level.block.Block;
 import org.jspecify.annotations.NonNull;
 import snownee.jade.api.BlockAccessor;
 import snownee.jade.api.IBlockComponentProvider;
@@ -32,11 +32,10 @@ public enum BlockAuraComponentProvider implements IBlockComponentProvider {
 
     @Override
     public void appendTooltip(@NonNull ITooltip tooltip, BlockAccessor accessor, @NonNull IPluginConfig config) {
-        Identifier blockId = BuiltInRegistries.BLOCK.getKey(accessor.getBlock());
         Totals totals = new Totals();
         MxtDatapackRegistries.holders(accessor.getLevel().registryAccess(), MxtResourceKeys.BLOCK_AURA)
                 .map(Reference::value)
-                .filter(definition -> RegistryCodecs.matches(definition.blocks(), BuiltInRegistries.BLOCK, Registries.BLOCK, blockId))
+                .filter(definition -> RegistryCodecs.matchesValue(definition.blocks(), BuiltInRegistries.BLOCK, accessor.getBlock()))
                 .forEach(totals::add);
         totals.appendTo(tooltip);
     }

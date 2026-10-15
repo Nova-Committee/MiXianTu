@@ -15,12 +15,12 @@
 			"to": [11, 2, 12],
 			"rotation": {"angle": 0, "axis": "y", "origin": [5, 0, 3]},
 			"faces": {
-				"north": {"uv": [4.5, 4.5, 7.5, 5.5], "texture": "#2", "tintindex": 0},
-				"east": {"uv": [0, 4.5, 4.5, 5.5], "texture": "#2", "tintindex": 0},
-				"south": {"uv": [12, 4.5, 15, 5.5], "texture": "#2", "tintindex": 0},
-				"west": {"uv": [7.5, 4.5, 12, 5.5], "texture": "#2", "tintindex": 0},
-				"up": {"uv": [7.5, 4.5, 4.5, 0], "texture": "#2", "tintindex": 0},
-				"down": {"uv": [10.5, 0, 7.5, 4.5], "texture": "#2", "tintindex": 0}
+				"north": {"uv": [4.5, 4.5, 7.5, 5.5], "texture": "#2"},
+				"east": {"uv": [0, 4.5, 4.5, 5.5], "texture": "#2"},
+				"south": {"uv": [12, 4.5, 15, 5.5], "texture": "#2"},
+				"west": {"uv": [7.5, 4.5, 12, 5.5], "texture": "#2"},
+				"up": {"uv": [7.5, 4.5, 4.5, 0], "texture": "#2"},
+				"down": {"uv": [10.5, 0, 7.5, 4.5], "texture": "#2"}
 			}
 		},
 		{

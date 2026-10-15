@@ -2,7 +2,6 @@ package com.iafenvoy.mxt.data.cultivation;
 
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.util.codec.MiscCodecs;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
@@ -11,6 +10,7 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.RegistryFixedCodec;
 import net.minecraft.tags.TagKey;
+import net.minecraft.util.ExtraCodecs;
 import net.minecraft.world.damagesource.DamageType;
 import org.jspecify.annotations.NonNull;
 
@@ -33,7 +33,7 @@ public record Element(List<Relation> overcomes, List<Relation> adaptedTo, List<D
             DamageTypeClaim.CODEC.listOf().optionalFieldOf("damage_types", List.of()).forGetter(Element::damageTypes),
             Codec.DOUBLE.optionalFieldOf("attachment_decay", 0.0D).forGetter(Element::attachmentDecay),
             Codec.DOUBLE.optionalFieldOf("damage_attachment", 0.0D).forGetter(Element::damageAttachment),
-            MiscCodecs.RGB_COLOR.optionalFieldOf("color", 0xFFFFFF).forGetter(Element::color),
+            ExtraCodecs.STRING_RGB_COLOR.optionalFieldOf("color", 0xFFFFFF).forGetter(Element::color),
             Codec.DOUBLE.optionalFieldOf("conflict_multiplier", 1.0D).forGetter(Element::conflictMultiplier)
     ).apply(i, Element::new)).validate(Element::validate);
 

@@ -1,5 +1,6 @@
 package com.iafenvoy.mxt.data.condition.builtin.entity;
 
+import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.data.context.condition.EntityConditionContext;
 import com.iafenvoy.mxt.data.storage.builtin.TargetLockDataStorage;
@@ -7,7 +8,7 @@ import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import net.minecraft.resources.Identifier;
+import net.minecraft.core.Holder;
 import net.minecraft.world.entity.Entity;
 import org.jetbrains.annotations.Nullable;
 import org.jspecify.annotations.NonNull;
@@ -19,18 +20,17 @@ import java.util.UUID;
  * Reads the {@code target} of the {@code mxt:target_lock} of a named ability, optionally requiring that entity to
  * still be in the actor's level within {@code max_distance}; an ability that declares no such kind is false.
  */
-public record AbilityStorageTargetCondition(Identifier id, boolean locked,
+public record AbilityStorageTargetCondition(Holder<Ability> ability, boolean locked,
                                             Optional<NumberProvider> maxDistance) implements EntityCondition {
     public static final MapCodec<AbilityStorageTargetCondition> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
-            Identifier.CODEC.fieldOf("id").forGetter(AbilityStorageTargetCondition::id),
+            Ability.CODEC.fieldOf("ability").forGetter(AbilityStorageTargetCondition::ability),
             Codec.BOOL.optionalFieldOf("locked", true).forGetter(AbilityStorageTargetCondition::locked),
             NumberProvider.CODEC.optionalFieldOf("max_distance").forGetter(AbilityStorageTargetCondition::maxDistance)
     ).apply(i, AbilityStorageTargetCondition::new));
 
     @Override
     public boolean test(@NonNull EntityConditionContext ctx) {
-        AbilityStorageReading reading = AbilityStorageReading.of(ctx.entity(), this.id).orElse(null);
-        if (reading == null) return false;
+        AbilityStorageReading reading = AbilityStorageReading.of(ctx.entity(), this.ability);
         if (reading.declared(TargetLockDataStorage.class).isEmpty()) return false;
         Optional<String> target = reading.stored(TargetLockDataStorage.class).flatMap(TargetLockDataStorage::target);
         if (target.isPresent() != this.locked) return false;

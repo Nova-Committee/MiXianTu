@@ -11,7 +11,6 @@ import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.item.ItemStack;
@@ -69,8 +68,7 @@ public final class CreatureProfileService {
     }
 
     public static boolean matchesType(Mob creature, CreatureProfile definition) {
-        Identifier type = BuiltInRegistries.ENTITY_TYPE.getKey(creature.getType());
-        return RegistryCodecs.matches(definition.entities(), BuiltInRegistries.ENTITY_TYPE, Registries.ENTITY_TYPE, type);
+        return RegistryCodecs.matchesValue(definition.entities(), BuiltInRegistries.ENTITY_TYPE, creature.getType());
     }
 
     public static boolean applySelected(Mob creature) {

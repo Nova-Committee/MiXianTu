@@ -59,8 +59,7 @@ public final class DamageCalculationService {
 
     // The source is built here, not by the caller, so attribution is not each call site's own decision: a kill
     // counts as the attacker's. Reduction is not applied here - it runs in the event this call raises.
-    public static double deal(@Nullable Entity attacker, Entity target, double amount,
-                              Optional<Holder<DamageType>> damageType, @Nullable FormulaContext context) {
+    public static double deal(@Nullable Entity attacker, Entity target, double amount, Optional<Holder<DamageType>> damageType, @Nullable FormulaContext context) {
         if (!(target.level() instanceof ServerLevel level)) return 0.0D;
         if (!Double.isFinite(amount) || amount <= 0.0D) return 0.0D;
         DamageSource source = source(level, attacker, damageType);
@@ -68,7 +67,7 @@ public final class DamageCalculationService {
             target.hurtServer(level, source, (float) amount);
             return amount;
         }
-        double shaped = outgoing(attacker, target, amount, context, DamageElements.strike(level, damageType, attacker));
+        double shaped = outgoing(attacker, target, amount, context, DamageElements.strike(damageType, attacker));
         if (shaped <= 0.0D) return 0.0D;
         target.hurtServer(level, source, (float) shaped);
         return shaped;

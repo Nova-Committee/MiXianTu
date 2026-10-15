@@ -11,6 +11,7 @@ import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.util.ExtraCodecs;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.Vec3;
 import org.jspecify.annotations.NonNull;
 
@@ -60,7 +61,7 @@ public record SpawnSwordAuraAction(NumberProvider speed, Optional<Integer> blade
         this.guardWidth.ifPresent(aura::setGuardWidth);
         this.scale.ifPresent(aura::setScale);
         this.lifetime.ifPresent(aura::setLifetime);
-        aura.setCollideAction(source, this.collideAction);
+        if (source instanceof LivingEntity living) aura.setCollideAction(living, this.collideAction);
         source.level().addFreshEntity(aura);
     }
 

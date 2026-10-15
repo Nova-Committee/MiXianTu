@@ -1,5 +1,6 @@
 package com.iafenvoy.mxt.data.condition.builtin.entity;
 
+import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.data.context.condition.EntityConditionContext;
 import com.iafenvoy.mxt.data.storage.builtin.TimerDataStorage;
@@ -7,7 +8,7 @@ import com.iafenvoy.mxt.util.formula.NumberRange;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import net.minecraft.resources.Identifier;
+import net.minecraft.core.Holder;
 import org.jspecify.annotations.NonNull;
 
 import java.util.Optional;
@@ -16,18 +17,17 @@ import java.util.Optional;
  * Reads how much of the {@code mxt:timer} of a named ability is left as ticks until its stored {@code ends_at}, and
  * whether that end has passed. A timer with no {@code ends_at} is not running, so it counts as ended.
  */
-public record AbilityStorageTimerCondition(Identifier id, Optional<NumberRange> remaining,
+public record AbilityStorageTimerCondition(Holder<Ability> ability, Optional<NumberRange> remaining,
                                            Optional<Boolean> ended) implements EntityCondition {
     public static final MapCodec<AbilityStorageTimerCondition> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
-            Identifier.CODEC.fieldOf("id").forGetter(AbilityStorageTimerCondition::id),
+            Ability.CODEC.fieldOf("ability").forGetter(AbilityStorageTimerCondition::ability),
             NumberRange.CODEC.optionalFieldOf("remaining").forGetter(AbilityStorageTimerCondition::remaining),
             Codec.BOOL.optionalFieldOf("ended").forGetter(AbilityStorageTimerCondition::ended)
     ).apply(i, AbilityStorageTimerCondition::new));
 
     @Override
     public boolean test(@NonNull EntityConditionContext ctx) {
-        AbilityStorageReading reading = AbilityStorageReading.of(ctx.entity(), this.id).orElse(null);
-        if (reading == null) return false;
+        AbilityStorageReading reading = AbilityStorageReading.of(ctx.entity(), this.ability);
         if (reading.declared(TimerDataStorage.class).isEmpty()) return false;
         Optional<Double> endsAt = reading.stored(TimerDataStorage.class).flatMap(TimerDataStorage::endsAt);
         long gameTime = ctx.entity().level().getGameTime();

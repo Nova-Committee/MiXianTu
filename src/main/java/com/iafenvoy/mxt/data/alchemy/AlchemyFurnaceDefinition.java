@@ -35,11 +35,6 @@ public record AlchemyFurnaceDefinition(int mainSlots, int auxiliarySlots, Option
             POSITIVE.optionalFieldOf("max_temperature").forGetter(AlchemyFurnaceDefinition::maxTemperature)
     ).apply(i, AlchemyFurnaceDefinition::new));
 
-    @Override
-    public Optional<Holder<ItemQuality>> defaultQuality() {
-        return this.quality;
-    }
-
     /**
      * The catalyst slot count is fixed; it is not a pack field.
      */

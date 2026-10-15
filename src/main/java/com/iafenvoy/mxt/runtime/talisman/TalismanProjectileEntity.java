@@ -2,18 +2,13 @@ package com.iafenvoy.mxt.runtime.talisman;
 
 import com.iafenvoy.mxt.data.talisman.Talisman;
 import com.iafenvoy.mxt.data.talisman.TalismanUse;
+import com.iafenvoy.mxt.registry.MxtEntityDataSerializers;
 import com.iafenvoy.mxt.registry.MxtEntityTypes;
 import com.iafenvoy.mxt.registry.MxtItems;
-import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.Holder;
 import net.minecraft.network.syncher.EntityDataAccessor;
-import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
-import net.minecraft.network.syncher.SynchedEntityData.Builder;
-import net.minecraft.resources.Identifier;
-import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
@@ -24,8 +19,11 @@ import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.EntityHitResult;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jspecify.annotations.NonNull;
+
+import java.util.Optional;
 
 /**
  * A thrown carrier, in flight. It remembers the inscription's id rather than the definition, because only an id can
@@ -36,8 +34,7 @@ import org.jspecify.annotations.NonNull;
  */
 public final class TalismanProjectileEntity extends ThrowableItemProjectile {
     private static final int MAX_LIFETIME_TICKS = 200;
-    //FIXME::Holder?
-    private static final EntityDataAccessor<String> TALISMAN = SynchedEntityData.defineId(TalismanProjectileEntity.class, EntityDataSerializers.STRING);
+    private static final EntityDataAccessor<Optional<Holder<Talisman>>> TALISMAN = SynchedEntityData.defineId(TalismanProjectileEntity.class, MxtEntityDataSerializers.TALISMAN.get());
 
     public TalismanProjectileEntity(EntityType<? extends TalismanProjectileEntity> type, Level level) {
         super(type, level);
@@ -52,9 +49,9 @@ public final class TalismanProjectileEntity extends ThrowableItemProjectile {
     }
 
     @Override
-    protected void defineSynchedData(@NonNull Builder builder) {
+    protected void defineSynchedData(SynchedEntityData.@NonNull Builder builder) {
         super.defineSynchedData(builder);
-        builder.define(TALISMAN, "");
+        builder.define(TALISMAN, Optional.empty());
     }
 
     @Override
@@ -66,8 +63,7 @@ public final class TalismanProjectileEntity extends ThrowableItemProjectile {
     // answer the same fall without a second synchronised value.
     @Override
     protected double getDefaultGravity() {
-        Holder<Talisman> definition = this.talisman();
-        return definition == null ? 0.0D : definition.value().type().gravity(FormulaContext.EMPTY);
+        return this.getTalisman().map(holder -> holder.value().type().gravity(FormulaContext.EMPTY)).orElse(0.0D);
     }
 
     @Override
@@ -93,13 +89,13 @@ public final class TalismanProjectileEntity extends ThrowableItemProjectile {
     @Override
     protected void readAdditionalSaveData(@NonNull ValueInput input) {
         super.readAdditionalSaveData(input);
-        this.getEntityData().set(TALISMAN, input.getStringOr("talisman", ""));
+        input.read("talisman", Talisman.CODEC).ifPresent(this::setTalisman);
     }
 
     @Override
     protected void addAdditionalSaveData(@NonNull ValueOutput output) {
         super.addAdditionalSaveData(output);
-        output.putString("talisman", this.getEntityData().get(TALISMAN));
+        this.getTalisman().ifPresent(definition -> output.store("talisman", Talisman.CODEC, definition));
     }
 
     // The landing half of the definition's own use. Nothing happens when either side is missing: a bi-entity action
@@ -121,18 +117,16 @@ public final class TalismanProjectileEntity extends ThrowableItemProjectile {
     // gone, which leaves both halves without their caster.
     private @Nullable TalismanUse use() {
         if (this.level().isClientSide()) return null;
-        Holder<Talisman> definition = this.talisman();
-        if (definition == null || !(this.getOwner() instanceof LivingEntity living)) return null;
-        return new TalismanUse(living, FormulaContext.of(living), this.position(), definition);
+        Optional<Holder<Talisman>> definition = this.getTalisman();
+        if (definition.isEmpty() || !(this.getOwner() instanceof LivingEntity living)) return null;
+        return new TalismanUse(living, FormulaContext.of(living), this.position(), definition.get());
     }
 
-    private void setTalisman(Holder<Talisman> definition) {
-        this.getEntityData().set(TALISMAN, HolderHelper.id(definition).toString());
+    private void setTalisman(@NotNull Holder<Talisman> definition) {
+        this.getEntityData().set(TALISMAN, Optional.of(definition));
     }
 
-    private @Nullable Holder<Talisman> talisman() {
-        Identifier id = Identifier.tryParse(this.getEntityData().get(TALISMAN));
-        if (id == null) return null;
-        return this.level().registryAccess().get(ResourceKey.create(MxtResourceKeys.TALISMAN, id)).orElse(null);
+    private Optional<Holder<Talisman>> getTalisman() {
+        return this.getEntityData().get(TALISMAN);
     }
 }

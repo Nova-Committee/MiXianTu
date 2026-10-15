@@ -186,8 +186,7 @@ public final class AuraService {
         if (!(level instanceof ServerLevel server)) return RegistryCodecs.matchesKey(zone.dimensions(), dimension);
         Registry<LevelStem> registry = server.registryAccess().lookupOrThrow(Registries.LEVEL_STEM);
         if (RegistryCodecs.matchesKey(zone.dimensions(), registry, dimension)) return true;
-        return SecretRealmRegistry.aliases(dimension)
-                .anyMatch(alias -> RegistryCodecs.matchesKey(zone.dimensions(), registry, alias));
+        return SecretRealmRegistry.aliases(dimension).anyMatch(alias -> RegistryCodecs.matchesKey(zone.dimensions(), registry, alias));
     }
 
     private static Optional<Resolved> customZone(Level level, BlockPos pos) {

@@ -7,6 +7,7 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.util.ExtraCodecs;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.ItemStackTemplate;
 
 import java.util.List;
@@ -44,5 +45,9 @@ public record CurrencyValue(List<Entry> item, long value, List<DescribedEntry<It
                 ExtraCodecs.intRange(1, 99).fieldOf("cost").forGetter(Exchange::cost),
                 ItemStackTemplate.CODEC.fieldOf("result").forGetter(Exchange::result)
         ).apply(i, Exchange::new));
+
+        public ItemStack stack() {
+            return this.result.create();
+        }
     }
 }

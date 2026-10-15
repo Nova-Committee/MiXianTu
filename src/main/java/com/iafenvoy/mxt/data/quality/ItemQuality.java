@@ -13,6 +13,7 @@ import net.minecraft.core.Holder;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.RegistryFixedCodec;
+import net.minecraft.util.ExtraCodecs;
 
 import java.util.List;
 import java.util.Optional;
@@ -36,7 +37,7 @@ public record ItemQuality(Optional<Integer> color, Modifier valueMultiplier, Mod
                           Optional<Identifier> quality) implements ChainNode<ItemQuality> {
     public static final Codec<Holder<ItemQuality>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.ITEM_QUALITY);
     public static final Codec<ItemQuality> DIRECT_CODEC = RecordCodecBuilder.create(i -> i.group(
-            MiscCodecs.RGB_COLOR.optionalFieldOf("color").forGetter(ItemQuality::color),
+            ExtraCodecs.STRING_RGB_COLOR.optionalFieldOf("color").forGetter(ItemQuality::color),
             Modifier.CODEC.optionalFieldOf("value_multiplier", Modifier.DEFAULT).forGetter(ItemQuality::valueMultiplier),
             Modifier.CODEC.optionalFieldOf("forging_modifier", Modifier.DEFAULT).forGetter(ItemQuality::forgingModifier),
             Modifier.CODEC.optionalFieldOf("alchemy_modifier", Modifier.DEFAULT).forGetter(ItemQuality::alchemyModifier),

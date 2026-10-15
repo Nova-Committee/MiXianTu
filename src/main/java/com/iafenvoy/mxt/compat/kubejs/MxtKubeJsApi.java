@@ -4,7 +4,6 @@ import com.iafenvoy.mxt.attachment.AbilityAttachment;
 import com.iafenvoy.mxt.attachment.CurseHolderAttachment.State;
 import com.iafenvoy.mxt.attachment.SpiritIdentityAttachment;
 import com.iafenvoy.mxt.attachment.TechniqueAttachment;
-import com.iafenvoy.mxt.data.ability.Abilities;
 import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.ability.Togglable;
 import com.iafenvoy.mxt.data.aura.Aura;
@@ -79,7 +78,8 @@ public final class MxtKubeJsApi {
     public static UseResult useAbility(@NotNull Entity actor, Identifier id, FormulaContext context) {
         if (actor.level().isClientSide())
             return new UseResult(false, false, AbilityService.Failure.SERVER_ONLY, null, Map.of());
-        Holder<Ability> ability = Abilities.resolve(actor.level().registryAccess(), id).orElse(null);
+        Provider access = actor.level().registryAccess();
+        Holder<Ability> ability = MxtDatapackRegistries.holder(access, MxtResourceKeys.ABILITY, id).orElse(null);
         if (ability == null)
             return new UseResult(false, false, AbilityService.Failure.NOT_GRANTED, null, Map.of());
         return AbilityService.use(ability, actor, actor.getData(MxtAttachments.ABILITY_HOLDER),
@@ -91,7 +91,8 @@ public final class MxtKubeJsApi {
      * carrier is the stack the script names, and an ability that acts on an item refuses without one.
      */
     public static Togglable.Result activateAbility(@NotNull LivingEntity holder, Identifier id, @Nullable ItemStack carrier) {
-        Holder<Ability> ability = Abilities.resolve(holder.level().registryAccess(), id).orElse(null);
+        Provider access = holder.level().registryAccess();
+        Holder<Ability> ability = MxtDatapackRegistries.holder(access, MxtResourceKeys.ABILITY, id).orElse(null);
         if (ability == null || holder.level().isClientSide())
             return Togglable.Result.refused(Togglable.Failure.UNAVAILABLE);
         return AbilityActivationService.activate(holder, ability, carrier);
@@ -103,7 +104,8 @@ public final class MxtKubeJsApi {
      */
     public static boolean grantAbility(@NotNull Entity entity, Identifier id, Identifier source) {
         if (entity.level().isClientSide()) return false;
-        Holder<Ability> ability = Abilities.resolve(entity.level().registryAccess(), id).orElse(null);
+        Provider access = entity.level().registryAccess();
+        Holder<Ability> ability = MxtDatapackRegistries.holder(access, MxtResourceKeys.ABILITY, id).orElse(null);
         if (ability == null) return false;
         AbilityAttachment attachment = entity.getData(MxtAttachments.ABILITY_HOLDER);
         return changed(entity, attachment.grant(ability, source));

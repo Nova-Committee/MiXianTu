@@ -128,7 +128,7 @@ public final class ServerNetworkHandler {
         if (!(player.containerMenu instanceof ChequeTableMenu menu))
             return;
         if (payload.checkIn()) menu.checkIn(player);
-        else menu.checkOut();
+        else menu.checkOut(player);
     }
 
     static void onStationTrade(StationTradeC2SPayload payload, IPayloadContext context) {

@@ -11,7 +11,6 @@ import com.iafenvoy.mxt.registry.MxtRecipeTypes;
 import com.iafenvoy.mxt.runtime.talisman.TalismanDrawingScorer;
 import com.iafenvoy.mxt.runtime.talisman.TalismanDrawingScorer.Point;
 import com.iafenvoy.mxt.runtime.talisman.TalismanDrawingScorer.Stroke;
-import com.iafenvoy.mxt.util.codec.MiscCodecs;
 import com.iafenvoy.mxt.util.formula.FormulaVariables;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.iafenvoy.mxt.util.formula.number.*;
@@ -27,6 +26,7 @@ import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.resources.Identifier;
 import net.minecraft.tags.TagKey;
+import net.minecraft.util.ExtraCodecs;
 import net.minecraft.util.StringRepresentable;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -106,9 +106,9 @@ public record TalismanDrawingRecipe(EntityCondition unlockCondition, Holder<Tali
             Cost.LIST_CODEC.optionalFieldOf("costs", List.of()).forGetter(TalismanDrawingRecipe::costs),
             Ingredient.CODEC.optionalFieldOf("paper").forGetter(TalismanDrawingRecipe::paper),
             Pattern.CODEC.fieldOf("pattern").forGetter(TalismanDrawingRecipe::pattern),
-            MiscCodecs.RGB_COLOR.optionalFieldOf("background_color", DEFAULT_BACKGROUND_COLOR)
+            ExtraCodecs.STRING_RGB_COLOR.optionalFieldOf("background_color", DEFAULT_BACKGROUND_COLOR)
                     .forGetter(TalismanDrawingRecipe::backgroundColor),
-            MiscCodecs.RGB_COLOR.optionalFieldOf("foreground_color", DEFAULT_FOREGROUND_COLOR)
+            ExtraCodecs.STRING_RGB_COLOR.optionalFieldOf("foreground_color", DEFAULT_FOREGROUND_COLOR)
                     .forGetter(TalismanDrawingRecipe::foregroundColor),
             JUDGEMENT_CODEC.optionalFieldOf("judgement", TalismanDrawingScorer.Judgement.DEFAULT)
                     .forGetter(TalismanDrawingRecipe::judgement),

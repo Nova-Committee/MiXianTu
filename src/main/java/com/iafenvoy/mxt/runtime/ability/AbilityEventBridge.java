@@ -223,7 +223,7 @@ public final class AbilityEventBridge {
     }
 
     // Called by the server-side cultivation entry points after a successful breakthrough.
-    public static void onBreakthrough(LivingEntity entity, Identifier target, FormulaContext context) {
+    public static void onBreakthrough(LivingEntity entity, FormulaContext context) {
         dispatch(TriggerSignals.BREAKTHROUGH, entity, context.with("breakthrough", 1.0D));
     }
 

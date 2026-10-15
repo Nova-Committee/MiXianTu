@@ -1,5 +1,6 @@
 package com.iafenvoy.mxt.data.condition.builtin.entity;
 
+import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.data.context.condition.EntityConditionContext;
 import com.iafenvoy.mxt.data.storage.builtin.CooldownDataStorage;
@@ -7,7 +8,7 @@ import com.iafenvoy.mxt.util.formula.NumberRange;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import net.minecraft.resources.Identifier;
+import net.minecraft.core.Holder;
 import org.jspecify.annotations.NonNull;
 
 import java.util.Optional;
@@ -19,18 +20,17 @@ import java.util.Optional;
  * <p>An ability does not have to declare {@code mxt:cooldown} for this to answer: every payment writes the value and
  * its length, so a pack that states a cooldown once in the ability's own field can read it back here.
  */
-public record AbilityStorageCooldownCondition(Identifier id, Optional<NumberRange> remaining,
+public record AbilityStorageCooldownCondition(Holder<Ability> ability, Optional<NumberRange> remaining,
                                               Optional<Boolean> ready) implements EntityCondition {
     public static final MapCodec<AbilityStorageCooldownCondition> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
-            Identifier.CODEC.fieldOf("id").forGetter(AbilityStorageCooldownCondition::id),
+            Ability.CODEC.fieldOf("ability").forGetter(AbilityStorageCooldownCondition::ability),
             NumberRange.CODEC.optionalFieldOf("remaining").forGetter(AbilityStorageCooldownCondition::remaining),
             Codec.BOOL.optionalFieldOf("ready").forGetter(AbilityStorageCooldownCondition::ready)
     ).apply(i, AbilityStorageCooldownCondition::new));
 
     @Override
     public boolean test(@NonNull EntityConditionContext ctx) {
-        AbilityStorageReading reading = AbilityStorageReading.of(ctx.entity(), this.id).orElse(null);
-        if (reading == null) return false;
+        AbilityStorageReading reading = AbilityStorageReading.of(ctx.entity(), this.ability);
         double left = 0.0D;
         Optional<CooldownDataStorage> stored = reading.stored(CooldownDataStorage.class);
         // A value written without a length is a cooldown of no length, which is how a pack states "ready at once".

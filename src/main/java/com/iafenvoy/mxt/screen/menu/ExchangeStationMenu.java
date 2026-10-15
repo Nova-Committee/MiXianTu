@@ -1,9 +1,9 @@
 package com.iafenvoy.mxt.screen.menu;
 
+import com.iafenvoy.mxt.data.economy.CurrencyValue.Exchange;
 import com.iafenvoy.mxt.registry.MxtBlocks;
 import com.iafenvoy.mxt.registry.MxtMenus;
 import com.iafenvoy.mxt.runtime.economy.CurrencyValueService;
-import com.iafenvoy.mxt.runtime.economy.CurrencyValueService.ExchangeOffer;
 import com.iafenvoy.mxt.screen.aui.AuiPages;
 import com.sighs.apricityui.screen.ApricityContainerMenu;
 import net.minecraft.core.RegistryAccess;
@@ -40,7 +40,7 @@ public final class ExchangeStationMenu extends ApricityContainerMenu {
     private final Slot inputSlot;
     private final Slot resultSlot;
     private ItemStack previousInput = ItemStack.EMPTY;
-    private List<ExchangeOffer> offers = List.of();
+    private List<Exchange> offers = List.of();
     private Runnable updateListener = () -> {
     };
     private long lastSoundTime;
@@ -80,7 +80,7 @@ public final class ExchangeStationMenu extends ApricityContainerMenu {
         return this.selectedExchange.get();
     }
 
-    public List<ExchangeOffer> getVisibleOffers() {
+    public List<Exchange> getVisibleOffers() {
         return this.offers;
     }
 
@@ -154,7 +154,7 @@ public final class ExchangeStationMenu extends ApricityContainerMenu {
     public void removed(@NonNull Player player) {
         super.removed(player);
         this.setup.result().clearContent();
-        this.access.execute((level, position) -> this.clearContainer(player, this.setup.input()));
+        this.access.execute((_, _) -> this.clearContainer(player, this.setup.input()));
     }
 
     private void setupOfferList(ItemStack stack) {
@@ -165,8 +165,8 @@ public final class ExchangeStationMenu extends ApricityContainerMenu {
     }
 
     private void setupResultSlot(int index) {
-        ExchangeOffer offer = this.isValidExchange(index) ? this.offers.get(index) : null;
-        this.resultSlot.set(offer != null && this.inputSlot.getItem().getCount() >= offer.cost() ? offer.output() : ItemStack.EMPTY);
+        Exchange offer = this.isValidExchange(index) ? this.offers.get(index) : null;
+        this.resultSlot.set(offer != null && this.inputSlot.getItem().getCount() >= offer.cost() ? offer.stack() : ItemStack.EMPTY);
         this.broadcastChanges();
     }
 
@@ -174,7 +174,7 @@ public final class ExchangeStationMenu extends ApricityContainerMenu {
         return index >= 0 && index < this.offers.size();
     }
 
-    private ExchangeOffer selectedOffer() {
+    private Exchange selectedOffer() {
         int index = this.selectedExchange.get();
         return this.isValidExchange(index) ? this.offers.get(index) : null;
     }
@@ -194,7 +194,7 @@ public final class ExchangeStationMenu extends ApricityContainerMenu {
      * is built before this menu's own body and cannot read its state directly.
      */
     private void takeResult(Player player, ItemStack stack) {
-        ExchangeOffer offer = this.selectedOffer();
+        Exchange offer = this.selectedOffer();
         if (offer == null || this.inputSlot.getItem().getCount() < offer.cost()) return;
         stack.onCraftedBy(player, stack.getCount());
         this.inputSlot.remove(offer.cost());

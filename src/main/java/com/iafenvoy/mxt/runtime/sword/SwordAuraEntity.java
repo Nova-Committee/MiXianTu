@@ -10,10 +10,7 @@ import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.network.syncher.SynchedEntityData.Builder;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.damagesource.DamageSource;
-import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.EntityReference;
-import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.entity.MoverType;
+import net.minecraft.world.entity.*;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.storage.ValueInput;
@@ -27,9 +24,8 @@ import org.jspecify.annotations.Nullable;
 /**
  * Visual sword aura projectile. Movement is server-owned; the client only renders the synchronized state.
  */
-public final class SwordAuraEntity extends Entity {
-    public static final int DEFAULT_BLADE_COLOR = 0xC778D9FF;
-    public static final int DEFAULT_AURA_COLOR = 0xCC78D9FF;
+public final class SwordAuraEntity extends Entity implements OwnableEntity {
+    public static final int DEFAULT_BLADE_COLOR = 0xC778D9FF, DEFAULT_AURA_COLOR = 0xCC78D9FF;
     public static final boolean DEFAULT_RADIAL_FLAME = false;
     public static final float DEFAULT_LENGTH = 1.65F;
     public static final float DEFAULT_BLADE_WIDTH = 0.26F;
@@ -39,10 +35,10 @@ public final class SwordAuraEntity extends Entity {
     public static final float DEFAULT_SCALE = 1.0F;
     public static final int DEFAULT_LIFETIME_TICKS = 80;
     private int lifetime = DEFAULT_LIFETIME_TICKS;
-    // Impact behaviour and who it is attributed to: server-only data, so neither is synched and a client learns
+    // Impact behavior and who it is attributed to: server-only data, so neither is synched and a client learns
     // neither. No action keeps the aura phasing through the world, which is what it did before the field existed.
     private @Nullable EntityAction collideAction;
-    private @Nullable EntityReference<Entity> caster;
+    private @Nullable EntityReference<LivingEntity> owner;
 
     private static final EntityDataAccessor<Integer> BLADE_COLOR = SynchedEntityData.defineId(SwordAuraEntity.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Integer> AURA_COLOR = SynchedEntityData.defineId(SwordAuraEntity.class, EntityDataSerializers.INT);
@@ -80,7 +76,7 @@ public final class SwordAuraEntity extends Entity {
         builder.define(SCALE, DEFAULT_SCALE);
     }
 
-    public int bladeColor() {
+    public int getBladeColor() {
         return this.getEntityData().get(BLADE_COLOR);
     }
 
@@ -88,7 +84,7 @@ public final class SwordAuraEntity extends Entity {
         this.getEntityData().set(BLADE_COLOR, color);
     }
 
-    public int auraColor() {
+    public int getAuraColor() {
         return this.getEntityData().get(AURA_COLOR);
     }
 
@@ -104,7 +100,7 @@ public final class SwordAuraEntity extends Entity {
         this.getEntityData().set(RADIAL_FLAME, radialFlame);
     }
 
-    public float length() {
+    public float getLength() {
         return this.getEntityData().get(LENGTH);
     }
 
@@ -112,7 +108,7 @@ public final class SwordAuraEntity extends Entity {
         this.getEntityData().set(LENGTH, dimension(length, "length"));
     }
 
-    public float bladeWidth() {
+    public float getBladeWidth() {
         return this.getEntityData().get(BLADE_WIDTH);
     }
 
@@ -120,7 +116,7 @@ public final class SwordAuraEntity extends Entity {
         this.getEntityData().set(BLADE_WIDTH, dimension(bladeWidth, "blade width"));
     }
 
-    public float thickness() {
+    public float getThickness() {
         return this.getEntityData().get(THICKNESS);
     }
 
@@ -128,7 +124,7 @@ public final class SwordAuraEntity extends Entity {
         this.getEntityData().set(THICKNESS, dimension(thickness, "thickness"));
     }
 
-    public float handleLength() {
+    public float getHandleLength() {
         return this.getEntityData().get(HANDLE_LENGTH);
     }
 
@@ -136,7 +132,7 @@ public final class SwordAuraEntity extends Entity {
         this.getEntityData().set(HANDLE_LENGTH, dimension(handleLength, "handle length"));
     }
 
-    public float guardWidth() {
+    public float getGuardWidth() {
         return this.getEntityData().get(GUARD_WIDTH);
     }
 
@@ -144,7 +140,7 @@ public final class SwordAuraEntity extends Entity {
         this.getEntityData().set(GUARD_WIDTH, dimension(guardWidth, "guard width"));
     }
 
-    public float scale() {
+    public float getScale() {
         return this.getEntityData().get(SCALE);
     }
 
@@ -159,9 +155,14 @@ public final class SwordAuraEntity extends Entity {
 
     // The two travel together: an impact with nobody to attribute it to could only run the action against the aura
     // itself, which is not the entity the action is about.
-    public void setCollideAction(Entity caster, EntityAction action) {
-        this.caster = EntityReference.of(caster);
+    public void setCollideAction(LivingEntity caster, EntityAction action) {
+        this.owner = EntityReference.of(caster);
         this.collideAction = action;
+    }
+
+    @Override
+    public @Nullable EntityReference<LivingEntity> getOwnerReference() {
+        return this.owner;
     }
 
     @Override
@@ -194,7 +195,7 @@ public final class SwordAuraEntity extends Entity {
         Vec3 from = this.position();
         Vec3 hit = this.blockHit(from, velocity);
         if (hit == null) return false;
-        Entity caster = EntityReference.getEntity(this.caster, this.level());
+        LivingEntity caster = EntityReference.getLivingEntity(this.owner, this.level());
         if (caster != null) this.collideAction.execute(new EntityActionContext(caster, FormulaContext.of(caster), hit));
         this.discard();
         return true;
@@ -203,11 +204,9 @@ public final class SwordAuraEntity extends Entity {
     // The ray gives the exact impact point but only covers the box's centre line, so the volume the box sweeps is
     // asked when it misses: the box decides what the aura can hit, the blade's visual length does not.
     private @Nullable Vec3 blockHit(Vec3 from, Vec3 velocity) {
-        BlockHitResult hit = this.level().clip(new ClipContext(from, from.add(velocity), ClipContext.Block.COLLIDER,
-                ClipContext.Fluid.NONE, this));
+        BlockHitResult hit = this.level().clip(new ClipContext(from, from.add(velocity), ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, this));
         if (hit.getType() != HitResult.Type.MISS) return hit.getLocation();
-        return this.level().getBlockCollisions(this, this.getBoundingBox().expandTowards(velocity)).iterator().hasNext()
-                ? from : null;
+        return this.level().getBlockCollisions(this, this.getBoundingBox().expandTowards(velocity)).iterator().hasNext() ? from : null;
     }
 
     private void updateRotation(Vec3 velocity) {
@@ -229,24 +228,24 @@ public final class SwordAuraEntity extends Entity {
         this.setHandleLength(input.getFloatOr("handle_length", DEFAULT_HANDLE_LENGTH));
         this.setGuardWidth(input.getFloatOr("guard_width", DEFAULT_GUARD_WIDTH));
         this.setScale(input.getFloatOr("scale", DEFAULT_SCALE));
-        this.caster = EntityReference.read(input, "caster");
+        this.owner = EntityReference.read(input, "caster");
         this.collideAction = input.read("collide_action", EntityAction.CODEC).orElse(null);
     }
 
     @Override
     protected void addAdditionalSaveData(@NonNull ValueOutput output) {
         output.putInt("lifetime", this.lifetime);
-        output.putInt("blade_color", this.bladeColor());
-        output.putInt("aura_color", this.auraColor());
+        output.putInt("blade_color", this.getBladeColor());
+        output.putInt("aura_color", this.getAuraColor());
         output.putBoolean("radial_flame", this.isRadialFlame());
-        output.putFloat("length", this.length());
-        output.putFloat("blade_width", this.bladeWidth());
-        output.putFloat("thickness", this.thickness());
-        output.putFloat("handle_length", this.handleLength());
-        output.putFloat("guard_width", this.guardWidth());
-        output.putFloat("scale", this.scale());
+        output.putFloat("length", this.getLength());
+        output.putFloat("blade_width", this.getBladeWidth());
+        output.putFloat("thickness", this.getThickness());
+        output.putFloat("handle_length", this.getHandleLength());
+        output.putFloat("guard_width", this.getGuardWidth());
+        output.putFloat("scale", this.getScale());
         if (this.collideAction != null) {
-            EntityReference.store(this.caster, output, "caster");
+            EntityReference.store(this.owner, output, "caster");
             output.store("collide_action", EntityAction.CODEC, this.collideAction);
         }
     }

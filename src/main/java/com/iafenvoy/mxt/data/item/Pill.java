@@ -7,13 +7,13 @@ import com.iafenvoy.mxt.data.action.NoOpAction;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.util.codec.MiscCodecs;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.iafenvoy.mxt.util.formula.number.Constant;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.RegistryFixedCodec;
+import net.minecraft.util.ExtraCodecs;
 
 import java.util.List;
 import java.util.Optional;
@@ -33,7 +33,7 @@ public record Pill(Optional<Holder<ItemQuality>> quality, int color, EntityActio
     public static final Codec<Holder<Pill>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.PILL);
     public static final Codec<Pill> DIRECT_CODEC = RecordCodecBuilder.create(i -> i.group(
             ItemQuality.CODEC.optionalFieldOf("quality").forGetter(Pill::quality),
-            MiscCodecs.RGB_COLOR.optionalFieldOf("color", DEFAULT_COLOR).forGetter(Pill::color),
+            ExtraCodecs.STRING_RGB_COLOR.optionalFieldOf("color", DEFAULT_COLOR).forGetter(Pill::color),
             EntityAction.optionalCodec("on_consume").forGetter(Pill::onConsume),
             NumberProvider.CODEC.optionalFieldOf("toxicity_gain", new Constant(0.0D)).forGetter(Pill::toxicityGain),
             NumberProvider.CODEC.optionalFieldOf("toxicity_threshold", new Constant(Double.MAX_VALUE)).forGetter(Pill::toxicityThreshold),
@@ -41,11 +41,6 @@ public record Pill(Optional<Holder<ItemQuality>> quality, int color, EntityActio
             NumberProvider.CODEC.optionalFieldOf("toxicity_after_overdose", new Constant(0.0D)).forGetter(Pill::toxicityAfterOverdose),
             DescribedEntry.codec(EntityCondition.CODEC, "condition").listOf().optionalFieldOf("conditions", List.of()).forGetter(Pill::conditions)
     ).apply(i, Pill::new));
-
-    @Override
-    public Optional<Holder<ItemQuality>> defaultQuality() {
-        return this.quality;
-    }
 
     /**
      * What a stack carrying only effect overrides reads as: nothing claimed it, so every field is the one the codec

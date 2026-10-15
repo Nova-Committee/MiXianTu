@@ -1,33 +1,26 @@
 package com.iafenvoy.mxt.data.condition.builtin.entity;
 
 import com.iafenvoy.mxt.attachment.AbilityAttachment;
-import com.iafenvoy.mxt.data.ability.Abilities;
 import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.storage.DataStorage;
 import com.iafenvoy.mxt.data.storage.DataStorageHolder;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import net.minecraft.core.Holder;
-import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Entity;
 
 import java.util.Optional;
 
 /**
- * The read side of the addressing the ability storage action writes with: one ability, named by its own id in the
- * condition and resolved to its holder here. Only a kind the ability declares may be read; anything else means
- * "nothing to read".
+ * The read side of the addressing the ability storage action writes with: one ability, named by its own holder in
+ * the condition. Only a kind the ability declares may be read; anything else means "nothing to read".
  */
 record AbilityStorageReading(Holder<Ability> ability, Optional<DataStorageHolder> holder, Ability definition) {
-    static Optional<AbilityStorageReading> of(Entity entity, Identifier id) {
-        // Read off the entity's own level rather than a running server, so a client-side evaluation answers from
-        // the registries it actually has and a missing definition is simply "nothing written".
-        Holder<Ability> ability = Abilities.resolve(entity.level().registryAccess(), id).orElse(null);
-        if (ability == null) return Optional.empty();
-        // Read-only, so an entity that never had ability state is not given an empty attachment to carry around.
-        // Missing state is not a failure: every kind reads as "nothing written yet" instead.
-        return Optional.of(new AbilityStorageReading(ability,
+    // Read-only, so an entity that never had ability state is not given an empty attachment to carry around.
+    // Missing state is not a failure: every kind reads as "nothing written yet" instead.
+    static AbilityStorageReading of(Entity entity, Holder<Ability> ability) {
+        return new AbilityStorageReading(ability,
                 entity.getExistingData(MxtAttachments.ABILITY_HOLDER).map(AbilityAttachment::storage),
-                ability.value()));
+                ability.value());
     }
 
     <T extends DataStorage> Optional<T> declared(Class<T> kind) {

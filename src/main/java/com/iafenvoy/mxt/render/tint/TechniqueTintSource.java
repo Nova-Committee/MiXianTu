@@ -21,6 +21,7 @@ import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
 import java.util.Locale;
+import java.util.function.ToIntFunction;
 
 /**
  * Paints one texture layer of the built-in technique book with the colour of the technique the stack resolves. The layer
@@ -39,7 +40,6 @@ public record TechniqueTintSource(Layer layer) implements ItemTintSource {
 
     @Override
     public int calculate(@NonNull ItemStack stack, @Nullable ClientLevel level, @Nullable LivingEntity owner) {
-        // A book whose technique is gone keeps the colours its texture was authored with, as an unresolved pill does.
         Holder<Technique> holder = stack.get(MxtDataComponents.TECHNIQUE);
         return ARGB.opaque(this.layer.color(holder == null ? null : holder.value()));
     }
@@ -49,15 +49,18 @@ public record TechniqueTintSource(Layer layer) implements ItemTintSource {
         return MAP_CODEC;
     }
 
-    // Which of the two colours a book carries; the tint index on the model is what pairs them with the textures.
     public enum Layer implements StringRepresentable {
-        PRIMARY, SECONDARY;
+        PRIMARY(technique -> technique == null ? Technique.DEFAULT_PRIMARY_COLOR : technique.primaryColor()),
+        SECONDARY(technique -> technique == null ? Technique.DEFAULT_SECONDARY_COLOR : technique.secondaryColor());
         public static final Codec<Layer> CODEC = StringRepresentable.fromEnum(Layer::values);
+        private final ToIntFunction<Technique> colorGetter;
+
+        Layer(ToIntFunction<Technique> colorGetter) {
+            this.colorGetter = colorGetter;
+        }
 
         private int color(@Nullable Technique technique) {
-            if (this == PRIMARY)
-                return technique == null ? Technique.DEFAULT_PRIMARY_COLOR : technique.primaryColor();
-            return technique == null ? Technique.DEFAULT_SECONDARY_COLOR : technique.secondaryColor();
+            return this.colorGetter.applyAsInt(technique);
         }
 
         @Override

@@ -38,10 +38,10 @@ public class ColoredLightningBoltRenderer extends EntityRenderer<ColoredLightnin
     public void extractRenderState(ColoredLightningBolt entity, ColoredLightningBoltRenderState state, float partialTicks) {
         super.extractRenderState(entity, state, partialTicks);
         state.seed = entity.seed;
-        state.color = entity.color();
-        state.alpha = entity.alpha();
-        state.thickness = entity.thickness();
-        state.palette = entity.palette();
+        state.color = entity.getColor();
+        state.alpha = entity.getAlpha();
+        state.thickness = entity.getThickness();
+        state.palette = entity.getPalette();
     }
 
     @Override

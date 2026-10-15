@@ -266,6 +266,8 @@ if (definition.unwrapKey().flatMap(server.overworld().registryAccess()::get).isE
 > **顺带解决的**：`AbilityEventBridge` 的 `tickAbilities` / `finishDueCasts` / `syncAbilitySubscriptions`、`WheelSources.abilities`、`AbilityModifierService.resolve` 里的 `Abilities.resolve(台账键)` 全部消失（`keys()` 直接就是 holder）。
 > **代价（已写进类注释）**：定义被移出数据包时，账本里那一项与它名下的状态值在**解码时被丢掉**（各打一行日志），不再保留"查不到的 id"——这正是原「不改」理由的反面。
 > **仍按 id 的**：`SourceLedger` 的**值**（`mxt:grant/...` 来源 id）、命令参数 / action 与 condition 的 JSON 字段、实体 NBT 里的字符串、`Abilities.resolve` 本身，以及 `WheelSources#carriers` 那张页内缓存（`Map<Identifier, ItemStack>`，仍是批 4 未做项）。
+>
+> **2026-10-15（三）再收一处**：`mxt:modify_ability_storage` 与六个 `mxt:ability_storage_*` 条件都改收 `Holder<Ability>`（`Ability.CODEC`），**JSON 键统一成 `ability`**；`AbilityStorageReading.of` 因此收 holder、不再 `Abilities.resolve`，那个只服务"id 查不到"的 `Optional` 也去掉。**属破坏性字段改名**：文档站（`data-storage` / `technical/ability` / `entity_action_types` 中英）与测试包 18 个夹具同步改完。**代价**：写/读一个当前包没有的技能 id 现在是**加载期失败**，不再是静默答 `false`（与 `grant_ability` / `has_ability` / `mxt:targeted` 一致）。改完 `Abilities.resolve` 全仓只剩 6 处，都在真正的 id 边界（KubeJS 入参 ×3、轮盘按键载荷 ×2、轮盘条目判定 ×1）。
 
 > **一个必须留在这一批里的口径**（原附 A 的唯一硬结论）：`Cost` 管线的 `Map<Identifier, Double>` 是**资源账户的原生货币**——
 > `CostPayment.resources()` 这个对外契约、`ResourceTransactions.Evaluation`、事件 `Post(resources)`、KubeJS 的 `Result`

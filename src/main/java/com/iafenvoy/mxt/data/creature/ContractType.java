@@ -55,9 +55,4 @@ public record ContractType(Optional<Holder<ItemQuality>> quality, EntityConditio
             Codec.intRange(0, Integer.MAX_VALUE).optionalFieldOf("max_owned", 0).forGetter(ContractType::maxOwned),
             Codec.intRange(0, Integer.MAX_VALUE).optionalFieldOf("recall_cooldown", 0).forGetter(ContractType::recallCooldown)
     ).apply(i, ContractType::new));
-
-    @Override
-    public Optional<Holder<ItemQuality>> defaultQuality() {
-        return this.quality;
-    }
 }

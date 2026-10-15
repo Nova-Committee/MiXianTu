@@ -55,8 +55,7 @@ public final class EntitySources {
         // A definition's own list, which may name ids or tags. The access is the caller's because the caller is the
         // one that holds it: a grant is rebuilt from inside collect(), which already has the body being asked about.
         default void want(Identifier source, List<Either<Holder<Ability>, TagKey<Ability>>> values, Provider access) {
-            RegistryCodecs.resolve(values, access, MxtResourceKeys.ABILITY)
-                    .forEach(ability -> this.want(source, ability));
+            RegistryCodecs.resolve(values, access, MxtResourceKeys.ABILITY).forEach(ability -> this.want(source, ability));
         }
 
         // A list already resolved by the owner, such as the cumulative unlocks of a reached level.

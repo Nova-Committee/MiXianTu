@@ -13,7 +13,7 @@ import org.jspecify.annotations.NonNull;
 import java.util.List;
 
 /**
- * Lightning bolt whose render colour, glow, thickness and gradient are per-instance instead of the vanilla
+ * Lightning bolt whose render color, glow, thickness and gradient are per-instance instead of the vanilla
  * constants; damage, fire, lightning rods, copper weathering, the sky flash and the thunder are inherited
  * unchanged.
  * <p>
@@ -24,9 +24,7 @@ public final class ColoredLightningBolt extends LightningBolt {
     // The vanilla bolt colour 0.45, 0.45, 0.5, rounded to eight bits per channel.
     public static final int DEFAULT_COLOR = 0x737380;
     // The vanilla vertex alpha, which additive blending turns into glow strength rather than transparency.
-    public static final float DEFAULT_ALPHA = 0.3F;
-    public static final float DEFAULT_THICKNESS = 1.0F;
-    public static final float MIN_THICKNESS = 0.1F, MAX_THICKNESS = 4.0F;
+    public static final float DEFAULT_ALPHA = 0.3F, DEFAULT_THICKNESS = 1.0F, MIN_THICKNESS = 0.1F, MAX_THICKNESS = 4.0F;
     // The bound exists for the synched data channel, not the renderer: a palette is read once per seam, so its
     // length never costs anything at render time.
     public static final int MAX_PALETTE = 16;
@@ -48,7 +46,7 @@ public final class ColoredLightningBolt extends LightningBolt {
         builder.define(PALETTE, List.of());
     }
 
-    public int color() {
+    public int getColor() {
         return this.getEntityData().get(COLOR);
     }
 
@@ -58,7 +56,7 @@ public final class ColoredLightningBolt extends LightningBolt {
         this.getEntityData().set(COLOR, color);
     }
 
-    public float alpha() {
+    public float getAlpha() {
         return this.getEntityData().get(ALPHA);
     }
 
@@ -66,7 +64,7 @@ public final class ColoredLightningBolt extends LightningBolt {
         this.getEntityData().set(ALPHA, alpha);
     }
 
-    public float thickness() {
+    public float getThickness() {
         return this.getEntityData().get(THICKNESS);
     }
 
@@ -76,9 +74,9 @@ public final class ColoredLightningBolt extends LightningBolt {
 
     /**
      * The gradient of the strand, first entry at the top and last at the ground. Empty means the flat
-     * {@link #color()} - that is what every bolt looked like before gradients existed.
+     * {@link #getColor()} - that is what every bolt looked like before gradients existed.
      */
-    public List<Integer> palette() {
+    public List<Integer> getPalette() {
         return this.getEntityData().get(PALETTE);
     }
 

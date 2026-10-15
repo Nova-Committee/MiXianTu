@@ -5,12 +5,13 @@ import com.iafenvoy.mxt.api.WheelEntryKind;
 import com.iafenvoy.mxt.api.WheelSource;
 import com.iafenvoy.mxt.attachment.AbilityAttachment;
 import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
-import com.iafenvoy.mxt.data.ability.Abilities;
 import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.ability.Togglable;
 import com.iafenvoy.mxt.data.creature.ContractBehavior;
 import com.iafenvoy.mxt.data.creature.ContractBehaviors;
 import com.iafenvoy.mxt.registry.MxtAttachments;
+import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
+import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.ability.AbilityActivationService;
 import com.iafenvoy.mxt.runtime.ability.AbilityFeedback;
 import com.iafenvoy.mxt.runtime.ability.AbilityService;
@@ -22,6 +23,7 @@ import com.iafenvoy.mxt.runtime.spirit.SpiritBurstService;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.Holder;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
@@ -87,8 +89,9 @@ public final class WheelService {
 
     // Asking for a state a switch is already in is a no-op rather than a take-off followed by a landing, which is
     // what lets a screen re-send its intent without watching the state.
-    static boolean directed(ServerPlayer player, WheelSource source, Identifier id, boolean wanted) {
-        Holder<Ability> ability = Abilities.resolve(player.level().registryAccess(), id).orElse(null);
+    public static boolean directed(ServerPlayer player, WheelSource source, Identifier id, boolean wanted) {
+        HolderLookup.Provider access = player.level().registryAccess();
+        Holder<Ability> ability = MxtDatapackRegistries.holder(access, MxtResourceKeys.ABILITY, id).orElse(null);
         if (ability == null) {
             MiXianTu.LOGGER.info("Dropping the directed wheel request {} from {}: the ability is no longer registered",
                     id, player.getGameProfile().name());
@@ -118,8 +121,9 @@ public final class WheelService {
 
     // One press. An ability that says it can be pressed goes through the shared entry point, which is where a
     // switch, a container and a cast are told apart; anything else keeps the plain cast path.
-    static boolean press(ServerPlayer player, WheelSource source, Identifier id) {
-        Holder<Ability> ability = Abilities.resolve(player.level().registryAccess(), id).orElse(null);
+    public static boolean press(ServerPlayer player, WheelSource source, Identifier id) {
+        HolderLookup.Provider access = player.level().registryAccess();
+        Holder<Ability> ability = MxtDatapackRegistries.holder(access, MxtResourceKeys.ABILITY, id).orElse(null);
         if (ability == null) {
             // The same race WheelSources#offers exists for, one step later: registered when the source was read
             // and gone by the time the press arrived, which is rare enough to be worth saying rather than dropping.
@@ -152,7 +156,7 @@ public final class WheelService {
     }
 
     // A burst the player cannot pay for is refused the same way an ability is.
-    static boolean burst(ServerPlayer player, Identifier id) {
+    public static boolean burst(ServerPlayer player, Identifier id) {
         if (SpiritBurstService.fireOnce(player, id)) return true;
         MiXianTu.LOGGER.info("Refusing the wheel burst {} for {}: the burst did not go off",
                 id, player.getGameProfile().name());
@@ -162,7 +166,7 @@ public final class WheelService {
 
     // An order for the beast the player's bell is tuned to. The creature is re-read from the bell here, and the
     // record, the owner and the order itself are all re-checked behind that, so a stale bell orders nothing.
-    static boolean order(ServerPlayer player, Identifier id) {
+    public static boolean order(ServerPlayer player, Identifier id) {
         ContractBehavior behavior = ContractBehaviors.byId(id).orElse(null);
         if (behavior == null) {
             // A layout or a hand-edited stack can name an order whose provider is gone; the same race the ability

@@ -9,7 +9,6 @@ import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
-import net.minecraft.core.Registry;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
@@ -38,16 +37,18 @@ public final class ElementReactionService {
     // until the thread dies. A body already in here only takes the amount - the running chain sees the new total
     // on its next pass - so at most MAX_CHAIN reactions fire per body per application. Identity, not equality,
     // and per thread because a chain never crosses one.
-    private static final ThreadLocal<Set<Entity>> IN_CHAIN =
-            ThreadLocal.withInitial(() -> Collections.newSetFromMap(new IdentityHashMap<>()));
+    private static final ThreadLocal<Set<Entity>> IN_CHAIN = ThreadLocal.withInitial(() -> Collections.newSetFromMap(new IdentityHashMap<>()));
+    private static final List<Reference<ElementReaction>> ORDER_CACHE = new LinkedList<>();
 
-    // The walk order is cached per reaction registry instance, which a reloaded pack may keep: DatapackCache drops
-    // it on every datapack load, so an edited priority is never served from the previous pack.
-    private static final int MAX_CACHED_REGISTRIES = 4;
-    private static final Object LOCK = new Object();
-    private static volatile Map<Registry<ElementReaction>, List<Reference<ElementReaction>>> orders = Map.of();
+    public static void clear() {
+        ORDER_CACHE.clear();
+    }
 
-    private ElementReactionService() {
+    public static void reload(RegistryAccess access) {
+        clear();
+        access.lookupOrThrow(MxtResourceKeys.ELEMENT_REACTION).listElements()
+                .sorted(Comparator.comparingInt((Reference<ElementReaction> holder) -> holder.value().priority()).reversed().thenComparing(holder -> holder.key().identifier()))
+                .forEach(ORDER_CACHE::add);
     }
 
     // A negative amount takes away. Zero and non-finite are silent no-ops: applying an element is not a
@@ -69,8 +70,7 @@ public final class ElementReactionService {
 
     // Scaled first: a carrier whose gear resists buildup simply receives less and needs more strikes before a
     // reaction answers. 1.0 is "nothing resists"; a non-finite or negative multiplier contributes nothing.
-    public static void applyFromStrike(LivingEntity target, Set<Holder<Element>> strike, FormulaContext context,
-                                       double multiplier) {
+    public static void applyFromStrike(LivingEntity target, Set<Holder<Element>> strike, FormulaContext context, double multiplier) {
         Map<Holder<Element>, Double> amounts = new LinkedHashMap<>();
         for (Holder<Element> element : strike) amounts.put(element, element.value().damageAttachment());
         applyFromStrike(target, amounts, context, multiplier);
@@ -78,8 +78,7 @@ public final class ElementReactionService {
 
     // For a caller that already knows what each element leaves: a damage type's claim may carry a number of its
     // own, so a lava bath and a fireball can be the same element and still build up at different rates.
-    public static void applyFromStrike(LivingEntity target, Map<Holder<Element>, Double> amounts,
-                                       FormulaContext context, double multiplier) {
+    public static void applyFromStrike(LivingEntity target, Map<Holder<Element>, Double> amounts, FormulaContext context, double multiplier) {
         if (!Double.isFinite(multiplier) || multiplier <= 0.0D) return;
         amounts.forEach((element, amount) -> {
             double scaled = amount * multiplier;
@@ -88,8 +87,7 @@ public final class ElementReactionService {
     }
 
     public static double amount(Entity entity, Holder<Element> element) {
-        return entity.getExistingData(MxtAttachments.ELEMENT_ATTACHMENT)
-                .map(attachment -> attachment.amount(element)).orElse(0.0D);
+        return entity.getExistingData(MxtAttachments.ELEMENT_ATTACHMENT).map(attachment -> attachment.amount(element)).orElse(0.0D);
     }
 
     // The highest priority whose demand every listed element meets and whose condition passes, registry id
@@ -98,38 +96,13 @@ public final class ElementReactionService {
     public static Holder<ElementReaction> match(Entity entity, FormulaContext context) {
         ElementAttachment attachment = entity.getExistingData(MxtAttachments.ELEMENT_ATTACHMENT).orElse(null);
         if (attachment == null || attachment.isEmpty()) return null;
-        return ordered(entity.level().registryAccess()).stream()
+        return ORDER_CACHE.stream()
                 .filter(holder -> satisfied(holder.value(), attachment, entity, context))
                 .findFirst().orElse(null);
     }
 
     // Asked once per element per strike and once per link of a chain, and the answer only changes when the
     // registry does, so the registry instance is the cache key.
-    private static List<Reference<ElementReaction>> ordered(RegistryAccess access) {
-        Registry<ElementReaction> registry = access.lookupOrThrow(MxtResourceKeys.ELEMENT_REACTION);
-        List<Reference<ElementReaction>> cached = orders.get(registry);
-        if (cached != null) return cached;
-        synchronized (LOCK) {
-            cached = orders.get(registry);
-            if (cached != null) return cached;
-            List<Reference<ElementReaction>> built = registry.listElements()
-                    .sorted(Comparator.comparingInt((Reference<ElementReaction> holder) -> holder.value().priority()).reversed()
-                            .thenComparing(holder -> holder.key().identifier()))
-                    .toList();
-            Map<Registry<ElementReaction>, List<Reference<ElementReaction>>> updated =
-                    orders.size() + 1 > MAX_CACHED_REGISTRIES ? new HashMap<>() : new HashMap<>(orders);
-            updated.put(registry, built);
-            orders = Map.copyOf(updated);
-            return built;
-        }
-    }
-
-    // Called on every datapack load, before anything can rebuild the order.
-    public static void invalidate() {
-        synchronized (LOCK) {
-            orders = Map.of();
-        }
-    }
 
     // An application made while this body is already part way through a chain does not start a chain of its own:
     // the amount lands and the running chain answers it, which is what makes MAX_CHAIN bound the whole rule.

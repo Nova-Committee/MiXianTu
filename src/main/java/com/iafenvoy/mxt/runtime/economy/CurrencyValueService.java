@@ -12,15 +12,12 @@ import com.iafenvoy.mxt.util.matcher.ItemMatcher;
 import net.minecraft.core.Holder.Reference;
 import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.core.RegistryAccess;
-import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.server.ServerLifecycleHooks;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.OptionalLong;
@@ -29,45 +26,31 @@ import java.util.stream.Stream;
 /**
  * Server-side read API for item-backed currency definitions.
  */
-//FIXME::Refactor method reloads
 public final class CurrencyValueService {
-    private CurrencyValueService() {
+    public static OptionalLong unitValue(@NotNull Provider provider, @NotNull Item item) {
+        return unitValue(provider, new ItemStack(item));
     }
 
-    public static OptionalLong unitValue(@NotNull Item item) {
-        return unitValue(new ItemStack(item));
-    }
-
-    public static OptionalLong unitValue(@NotNull ItemStack stack) {
-        MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
-        if (server == null) return OptionalLong.empty();
-        return unitValue(server.registryAccess(), stack);
-    }
-
-    public static OptionalLong unitValue(@NotNull Provider access, @NotNull Item item) {
-        return unitValue(access, new ItemStack(item));
-    }
-
-    public static OptionalLong unitValue(@NotNull Provider access, @NotNull ItemStack stack) {
+    public static OptionalLong unitValue(@NotNull Provider provider, @NotNull ItemStack stack) {
         if (stack.isEmpty()) return OptionalLong.of(0L);
-        return find(access, stack)
-                .map(definition -> unitValue(access, stack, definition, isAvailable(definition), FormulaContext.of(access)))
+        return find(provider, stack)
+                .map(definition -> unitValue(provider, stack, definition, isAvailable(definition), FormulaContext.of(provider)))
                 .orElseGet(OptionalLong::empty);
     }
 
-    public static OptionalLong unitValue(@NotNull Provider access, @Nullable Entity holder, @NotNull ItemStack stack, @NotNull FormulaContext context) {
-        if (holder == null) return unitValue(access, stack);
+    public static OptionalLong unitValue(@NotNull Provider provider, @Nullable Entity holder, @NotNull ItemStack stack, @NotNull FormulaContext context) {
+        if (holder == null) return unitValue(provider, stack);
         if (stack.isEmpty()) return OptionalLong.of(0L);
-        return find(access, stack)
-                .map(definition -> unitValue(access, stack, definition, isAvailable(definition, holder, stack, context), context))
+        return find(provider, stack)
+                .map(definition -> unitValue(provider, stack, definition, isAvailable(definition, holder, stack, context), context))
                 .orElseGet(OptionalLong::empty);
     }
 
-    public static OptionalLong unitValue(@NotNull RegistryAccess access, @Nullable Entity holder, @NotNull ItemStack stack) {
-        if (holder == null) return unitValue(access, stack);
+    public static OptionalLong unitValue(@NotNull RegistryAccess provider, @Nullable Entity holder, @NotNull ItemStack stack) {
+        if (holder == null) return unitValue(provider, stack);
         if (stack.isEmpty()) return OptionalLong.of(0L);
-        return find(access, stack)
-                .map(definition -> unitValue(access, stack, definition, isAvailable(definition, holder, stack, FormulaContext.of(access)), FormulaContext.of(access)))
+        return find(provider, stack)
+                .map(definition -> unitValue(provider, stack, definition, isAvailable(definition, holder, stack, FormulaContext.of(provider)), FormulaContext.of(provider)))
                 .orElseGet(OptionalLong::empty);
     }
 
@@ -75,9 +58,9 @@ public final class CurrencyValueService {
     // value_multiplier of the quality the priced stack itself resolves, because that stack is this settlement's
     // own input. A product that would fall below one, reach past a long, or stop being finite leaves the
     // declared denomination alone instead of clamping, so an unusable modifier can only ever mean "no change".
-    private static OptionalLong unitValue(Provider access, ItemStack stack, CurrencyValue definition, boolean available, FormulaContext context) {
+    private static OptionalLong unitValue(Provider provider, ItemStack stack, CurrencyValue definition, boolean available, FormulaContext context) {
         if (!available) return OptionalLong.of(0L);
-        double multiplier = QualityService.modifier(access, stack, ItemQuality::valueMultiplier, context);
+        double multiplier = QualityService.modifier(provider, stack, ItemQuality::valueMultiplier, context);
         if (multiplier == QualityService.DEFAULT_MODIFIER) return OptionalLong.of(definition.value());
         double scaled = definition.value() * multiplier;
         if (!Double.isFinite(scaled) || scaled < 1.0D || scaled >= Long.MAX_VALUE)
@@ -85,63 +68,53 @@ public final class CurrencyValueService {
         return OptionalLong.of(Math.round(scaled));
     }
 
-    public static OptionalLong value(@NotNull ItemStack stack) {
-        if (stack.isEmpty()) return OptionalLong.of(0L);
-        OptionalLong unit = unitValue(stack);
-        if (unit.isEmpty() || unit.getAsLong() > Long.MAX_VALUE / stack.getCount()) return OptionalLong.empty();
-        return OptionalLong.of(unit.getAsLong() * stack.getCount());
-    }
-
-    public static OptionalLong value(@Nullable Entity holder, @NotNull ItemStack stack) {
-        if (holder == null) return value(stack);
+    public static OptionalLong value(@NotNull Entity holder, @NotNull ItemStack stack) {
         if (stack.isEmpty()) return OptionalLong.of(0L);
         OptionalLong unit = unitValue(holder.level().registryAccess(), holder, stack);
         if (unit.isEmpty() || unit.getAsLong() > Long.MAX_VALUE / stack.getCount()) return OptionalLong.empty();
         return OptionalLong.of(unit.getAsLong() * stack.getCount());
     }
 
-    public static List<ExchangeOffer> exchangeOffers(RegistryAccess registryAccess, ItemStack input) {
+    public static List<CurrencyValue.Exchange> exchangeOffers(RegistryAccess access, ItemStack input) {
         if (input.isEmpty()) return List.of();
-        return matching(registryAccess, input)
+        return matching(access, input)
                 .filter(CurrencyValueService::isAvailable)
                 .flatMap(definition -> definition.exchanges().stream())
-                .map(exchange -> new ExchangeOffer(exchange.result().create(), exchange.cost()))
                 .toList();
     }
 
-    public static List<ExchangeOffer> exchangeOffers(@NotNull RegistryAccess registryAccess, @Nullable Entity holder, @NotNull ItemStack input) {
-        if (holder == null) return exchangeOffers(registryAccess, input);
+    public static List<CurrencyValue.Exchange> exchangeOffers(@NotNull RegistryAccess access, @Nullable Entity holder, @NotNull ItemStack input) {
+        if (holder == null) return exchangeOffers(access, input);
         if (input.isEmpty()) return List.of();
-        return matching(registryAccess, input)
-                .filter(definition -> isAvailable(definition, holder, input, FormulaContext.of(registryAccess)))
+        return matching(access, input)
+                .filter(definition -> isAvailable(definition, holder, input, FormulaContext.of(access)))
                 .flatMap(definition -> definition.exchanges().stream())
-                .map(exchange -> new ExchangeOffer(exchange.result().create(), exchange.cost()))
                 .toList();
     }
 
     // Whether a stack can occupy the exchange input slot, even before its count is sufficient.
-    public static boolean isExchangeInput(RegistryAccess registryAccess, ItemStack input) {
+    public static boolean isExchangeInput(RegistryAccess access, ItemStack input) {
         if (input.isEmpty()) return false;
-        return matching(registryAccess, input).anyMatch(definition -> isAvailable(definition) && !definition.exchanges().isEmpty());
+        return matching(access, input).anyMatch(definition -> isAvailable(definition) && !definition.exchanges().isEmpty());
     }
 
-    public static boolean isExchangeInput(@NotNull RegistryAccess registryAccess, @Nullable Entity holder, @NotNull ItemStack input) {
-        if (holder == null) return isExchangeInput(registryAccess, input);
+    public static boolean isExchangeInput(@NotNull RegistryAccess access, @Nullable Entity holder, @NotNull ItemStack input) {
+        if (holder == null) return isExchangeInput(access, input);
         if (input.isEmpty()) return false;
-        return matching(registryAccess, input)
-                .anyMatch(definition -> isAvailable(definition, holder, input, FormulaContext.of(registryAccess))
+        return matching(access, input)
+                .anyMatch(definition -> isAvailable(definition, holder, input, FormulaContext.of(access))
                         && !definition.exchanges().isEmpty());
     }
 
     // Finds a currency definition by stack matcher without evaluating unavailable_when.
-    public static Optional<CurrencyValue> definition(Provider access, ItemStack stack) {
+    public static Optional<CurrencyValue> definition(Provider provider, ItemStack stack) {
         if (stack.isEmpty()) return Optional.empty();
-        return ItemMatcher.find(MxtDatapackRegistries.holders(access, MxtResourceKeys.CURRENCY).map(Reference::value), stack);
+        return ItemMatcher.find(MxtDatapackRegistries.holders(provider, MxtResourceKeys.CURRENCY).map(Reference::value), stack);
     }
 
-    public static Optional<DescribedEntry<ItemCondition>> unavailableReason(@NotNull Provider access, @Nullable Entity holder, @NotNull ItemStack stack) {
-        return definition(access, stack).flatMap(definition -> definition.unavailableWhen().stream()
-                .filter(entry -> holder != null && entry.value().test(holder, stack, FormulaContext.of(access))).findFirst());
+    public static Optional<DescribedEntry<ItemCondition>> unavailableReason(@NotNull Provider provider, @Nullable Entity holder, @NotNull ItemStack stack) {
+        return definition(provider, stack).flatMap(definition -> definition.unavailableWhen().stream()
+                .filter(entry -> holder != null && entry.value().test(holder, stack, FormulaContext.of(provider))).findFirst());
     }
 
     private static boolean isAvailable(CurrencyValue definition, @NotNull Entity holder, @NotNull ItemStack stack, @NotNull FormulaContext context) {
@@ -160,36 +133,10 @@ public final class CurrencyValueService {
     }
 
     private static Optional<CurrencyValue> find(Provider access, ItemStack stack) {
-        return ItemMatcher.find(MxtDatapackRegistries.holders(access, MxtResourceKeys.CURRENCY)
-                .map(Reference::value), stack);
+        return ItemMatcher.find(MxtDatapackRegistries.holders(access, MxtResourceKeys.CURRENCY).map(Reference::value), stack);
     }
 
     private static Optional<CurrencyValue> find(RegistryAccess access, ItemStack stack) {
-        return ItemMatcher.find(MxtDatapackRegistries.holders(access, MxtResourceKeys.CURRENCY)
-                .map(Reference::value), stack);
+        return ItemMatcher.find(MxtDatapackRegistries.holders(access, MxtResourceKeys.CURRENCY).map(Reference::value), stack);
     }
-
-    // Empty when any stack is not configured as currency or the sum overflows.
-    public static OptionalLong totalValue(@NotNull Collection<ItemStack> stacks) {
-        long total = 0L;
-        for (ItemStack stack : stacks) {
-            OptionalLong value = value(stack);
-            if (value.isEmpty() || value.getAsLong() > Long.MAX_VALUE - total) return OptionalLong.empty();
-            total += value.getAsLong();
-        }
-        return OptionalLong.of(total);
-    }
-
-    //FIXME::Merge with CUrrencyValueDefinition.Exchange
-    public record ExchangeOffer(ItemStack output, int cost) {
-        public ExchangeOffer {
-            output = output.copy();
-        }
-
-        @Override
-        public ItemStack output() {
-            return this.output;
-        }
-    }
-
 }

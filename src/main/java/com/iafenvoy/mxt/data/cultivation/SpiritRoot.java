@@ -44,11 +44,6 @@ public record SpiritRoot(List<ElementWeight> elements, NumberProvider cultivatio
             RegistryCodecs.holderOrTagList(MxtResourceKeys.ELEMENT).optionalFieldOf("conflicting_elements", List.of()).forGetter(SpiritRoot::conflictingElements)
     ).apply(i, SpiritRoot::new)).validate(SpiritRoot::validate);
 
-    @Override
-    public Optional<Holder<ItemQuality>> defaultQuality() {
-        return this.quality;
-    }
-
     /**
      * One element of a root and its share of it. Weights are proportions rather than multipliers: they are
      * normalised where they are read, so {@code [1, 1]} and {@code [0.5, 0.5]} mean the same thing, and a root

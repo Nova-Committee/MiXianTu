@@ -1635,7 +1635,7 @@ public final class MxtTestCommands {
             // dropped) from 12.0 (relation read anyway) and 4.0 (mastery dropped too), which 1.0 could not.
             Holder<DamageType> magicDamage = level.registryAccess().lookupOrThrow(Registries.DAMAGE_TYPE)
                     .getOrThrow(DamageTypes.MAGIC);
-            Set<Holder<Element>> declared = DamageElements.of(level.registryAccess(), magicDamage);
+            Set<Holder<Element>> declared = DamageElements.of(magicDamage);
             FormulaContext unownedContext = FormulaContext.of(attacker)
                     .with(DamageCalculationService.DAMAGE_MULTIPLIER, 2.0D);
             double unowned = DamageCalculationService.outgoing(null, unownedDefender, 4.0D, unownedContext, declared);
@@ -3330,7 +3330,7 @@ public final class MxtTestCommands {
                 return 0;
             }
             // 1. A claimed damage type names the element even when the caster has no roots at all.
-            boolean typeClaimsFire = DamageElements.of(level.registryAccess(), magic).contains(fire);
+            boolean typeClaimsFire = DamageElements.of(magic).contains(fire);
             double beforeClaim = waterVictim.getHealth();
             DamageCalculationService.deal(rootless, waterVictim, 10.0D, Optional.of(magic), FormulaContext.of(rootless));
             double claimedLost = beforeClaim - waterVictim.getHealth();

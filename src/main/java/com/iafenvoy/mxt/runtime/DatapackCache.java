@@ -237,14 +237,15 @@ public final class DatapackCache {
     @SubscribeEvent
     public static void onTagsUpdated(TagsUpdatedEvent event) {
         if (!event.shouldUpdateStaticData()) return;
-        INSTANCE = of(event.getRegistries(), event instanceof TagsUpdatedEvent.ServerDataLoad);
+        RegistryAccess access = event.getRegistries();
+        INSTANCE = of(access, event instanceof TagsUpdatedEvent.ServerDataLoad);
         // The indexes below are keyed by registry instance, which a reloaded pack may keep, so they are dropped
         // here rather than left to notice the reload by themselves.
-        // FIXME::
-        DamageElements.invalidate();
-        ElementReactionService.invalidate();
-        FormulaNames.invalidate();
-        AlchemyHeatService.invalidate();
+        // FIXME::Move all cache to here
+        AlchemyHeatService.reload(access);
+        DamageElements.reload(access);
+        ElementReactionService.reload(access);
+        FormulaNames.reload(access);
     }
 
     @EventBusSubscriber(Dist.CLIENT)
@@ -252,6 +253,10 @@ public final class DatapackCache {
         @SubscribeEvent
         public static void onLoggingOut(ClientPlayerNetworkEvent.LoggingOut event) {
             INSTANCE = EMPTY;
+            AlchemyHeatService.clear();
+            DamageElements.clear();
+            ElementReactionService.clear();
+            FormulaNames.clear();
         }
     }
 }

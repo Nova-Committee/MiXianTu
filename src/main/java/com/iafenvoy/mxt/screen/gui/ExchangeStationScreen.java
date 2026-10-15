@@ -1,6 +1,6 @@
 package com.iafenvoy.mxt.screen.gui;
 
-import com.iafenvoy.mxt.runtime.economy.CurrencyValueService.ExchangeOffer;
+import com.iafenvoy.mxt.data.economy.CurrencyValue;
 import com.iafenvoy.mxt.screen.aui.AuiContainerScreen;
 import com.iafenvoy.mxt.screen.aui.AuiElements;
 import com.iafenvoy.mxt.screen.menu.ExchangeStationMenu;
@@ -82,12 +82,11 @@ public final class ExchangeStationScreen extends AuiContainerScreen<ExchangeStat
         // Recomputed every tick rather than only from the menu's update callback: the offers are derived on the
         // client from the input stack, and the first refresh can land before that callback fires.
         this.displayOffers = this.menu.hasInputItem();
-        List<ExchangeOffer> offers = this.menu.getVisibleOffers();
+        List<CurrencyValue.Exchange> offers = this.menu.getVisibleOffers();
         for (int cell = 0; cell < this.offerCells.size(); cell++) {
             int index = this.startIndex + cell;
             boolean visible = this.displayOffers && index < offers.size();
-            this.offerCells.get(cell).show(visible ? offers.get(index).output() : ItemStack.EMPTY,
-                    visible && index == this.menu.getSelectedExchange(), visible);
+            this.offerCells.get(cell).show(visible ? offers.get(index).stack() : ItemStack.EMPTY, visible && index == this.menu.getSelectedExchange(), visible);
         }
         if (this.scroller == null) return;
         AuiElements.setClass(this.scroller, "disabled", !this.isScrollBarActive());

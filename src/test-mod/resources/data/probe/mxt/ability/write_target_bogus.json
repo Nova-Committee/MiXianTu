@@ -3,7 +3,7 @@
   "cooldown": 0,
   "entity_action": {
     "type": "mxt:modify_ability_storage",
-    "id": "probe:storage_probe",
+    "ability": "probe:storage_probe",
     "value": {
       "type": "mxt:target_lock",
       "range": 16,

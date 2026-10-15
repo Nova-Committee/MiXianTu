@@ -64,11 +64,6 @@ public record Formation(Optional<Holder<ItemQuality>> quality, Optional<Identifi
             EntityAction.optionalCodec("entity_exit_action").forGetter(Formation::entityExitAction)
     ).apply(i, Formation::new)).flatXmap(Formation::validate, Formation::validate);
 
-    @Override
-    public Optional<Holder<ItemQuality>> defaultQuality() {
-        return this.quality;
-    }
-
     /**
      * Whether standing on the right blocks is part of raising this array at all. {@code always} is for an array
      * that is meant to stand anywhere, and it refuses a declared structure rather than ignoring one.

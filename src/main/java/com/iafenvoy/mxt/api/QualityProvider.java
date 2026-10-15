@@ -19,5 +19,5 @@ public interface QualityProvider {
     /**
      * Empty when the definition declares no tier, which leaves that stack to the next source.
      */
-    Optional<Holder<ItemQuality>> defaultQuality();
+    Optional<Holder<ItemQuality>> quality();
 }

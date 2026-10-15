@@ -38,15 +38,15 @@ public final class SwordAuraRenderer extends EntityRenderer<SwordAuraEntity, Swo
         state.velocity = velocity;
         state.animationTime = entity.tickCount + partialTicks;
         state.centerOffsetY = entity.getBbHeight() * 0.5F;
-        state.bladeColor = entity.bladeColor();
-        state.auraColor = entity.auraColor();
+        state.bladeColor = entity.getBladeColor();
+        state.auraColor = entity.getAuraColor();
         state.radialFlame = entity.isRadialFlame();
-        state.length = entity.length();
-        state.bladeWidth = entity.bladeWidth();
-        state.thickness = entity.thickness();
-        state.handleLength = entity.handleLength();
-        state.guardWidth = entity.guardWidth();
-        state.scale = entity.scale();
+        state.length = entity.getLength();
+        state.bladeWidth = entity.getBladeWidth();
+        state.thickness = entity.getThickness();
+        state.handleLength = entity.getHandleLength();
+        state.guardWidth = entity.getGuardWidth();
+        state.scale = entity.getScale();
     }
 
     @Override
@@ -151,7 +151,7 @@ public final class SwordAuraRenderer extends EntityRenderer<SwordAuraEntity, Swo
 
     @Override
     protected @NonNull AABB getBoundingBoxForCulling(SwordAuraEntity entity) {
-        double radius = (entity.length() + entity.handleLength() + entity.guardWidth()) * entity.scale() + 5;
+        double radius = (entity.getLength() + entity.getHandleLength() + entity.getGuardWidth()) * entity.getScale() + 5;
         return entity.getBoundingBox().inflate(radius);
     }
 }

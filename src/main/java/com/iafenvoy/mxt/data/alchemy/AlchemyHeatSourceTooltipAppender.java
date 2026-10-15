@@ -9,7 +9,6 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.core.Holder.Reference;
 import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Player;
@@ -67,10 +66,9 @@ public final class AlchemyHeatSourceTooltipAppender {
     // The highest priority entry claiming this block wins, and a tie keeps the first in registry order - the same
     // reading the server-side index makes, so the line states the number the furnace would actually use.
     private static @Nullable HeatSource find(Provider access, Block block) {
-        Identifier blockId = BuiltInRegistries.BLOCK.getKey(block);
         return MxtDatapackRegistries.holders(access, MxtResourceKeys.HEAT_SOURCE)
                 .map(Reference::value)
-                .filter(definition -> RegistryCodecs.matches(definition.blocks(), BuiltInRegistries.BLOCK, Registries.BLOCK, blockId))
+                .filter(definition -> RegistryCodecs.matchesValue(definition.blocks(), BuiltInRegistries.BLOCK, block))
                 .max(Comparator.comparingInt(HeatSource::priority))
                 .orElse(null);
     }

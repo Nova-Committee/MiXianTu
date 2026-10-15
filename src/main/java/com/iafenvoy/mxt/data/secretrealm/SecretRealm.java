@@ -55,11 +55,6 @@ public record SecretRealm(Optional<Holder<ItemQuality>> quality, SecretRealmGene
             EntityAction.optionalCodec("exit_action").forGetter(SecretRealm::exitAction)
     ).apply(i, SecretRealm::new)).validate(SecretRealm::validate);
 
-    @Override
-    public Optional<Holder<ItemQuality>> defaultQuality() {
-        return this.quality;
-    }
-
     // Never "whatever the overworld uses": an omitted definition border still gets the vanilla default.
     public Border effectiveBorder() {
         return this.border.orElse(Border.VANILLA_DEFAULT);

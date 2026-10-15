@@ -24,11 +24,6 @@ public record AlchemyWallMaterial(Optional<Holder<ItemQuality>> quality,
             Codec.DOUBLE.validate(AlchemyWallMaterial::positive).fieldOf("max_temperature").forGetter(AlchemyWallMaterial::maxTemperature)
     ).apply(i, AlchemyWallMaterial::new));
 
-    @Override
-    public Optional<Holder<ItemQuality>> defaultQuality() {
-        return this.quality;
-    }
-
     private static DataResult<Double> positive(double value) {
         return Double.isFinite(value) && value > 0.0D
                 ? DataResult.success(value)

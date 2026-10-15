@@ -55,7 +55,7 @@ public record ExplodeAction(float power, ExplosionInteraction interaction, Optio
         Entity caster = ctx.formula().caster();
         DamageSource source = level.damageSources().explosion(entity, caster);
         // The blast's own damage type is what its element is read from, exactly like every other strike.
-        Set<Holder<Element>> elements = DamageElements.strike(level, Optional.of(source.typeHolder()), caster);
+        Set<Holder<Element>> elements = DamageElements.strike(Optional.of(source.typeHolder()), caster);
         level.explode(entity, source, new ShapedCalculator(calculator, caster, ctx.formula(), elements,
                 DamageCalculationService.bypasses(source)), ctx.position(), this.power, this.createFire, this.interaction);
     }

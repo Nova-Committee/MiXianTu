@@ -19,6 +19,7 @@ import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
+import org.jetbrains.annotations.NotNull;
 import org.jspecify.annotations.NonNull;
 
 import java.util.List;
@@ -55,7 +56,7 @@ public final class ChequeTableMenu extends ApricityContainerMenu {
         return MxtMenus.CHEQUE_TABLE.get();
     }
 
-    public boolean checkIn(Player player) {
+    public boolean checkIn(@NotNull Player player) {
         ItemStack blank = this.setup.chequeInput().getItem(0);
         if (!blank.is(MxtItems.CHEQUE.get()) || blank.getOrDefault(MxtDataComponents.CHEQUE.get(), ChequeComponent.EMPTY).value() != 0L)
             return false;
@@ -68,11 +69,11 @@ public final class ChequeTableMenu extends ApricityContainerMenu {
         return true;
     }
 
-    public boolean checkOut() {
+    public boolean checkOut(@NotNull Player player) {
         ItemStack cheque = this.setup.chequeInput().getItem(0);
         ChequeComponent data = cheque.getOrDefault(MxtDataComponents.CHEQUE.get(), ChequeComponent.EMPTY);
         if (!cheque.is(MxtItems.CHEQUE.get()) || data.value() <= 0L || !this.setup.currency().isEmpty()) return false;
-        List<ItemStack> change = CurrencyPaymentService.makeChange(data.value()).orElse(null);
+        List<ItemStack> change = CurrencyPaymentService.makeChange(player, data.value()).orElse(null);
         if (change == null || change.size() > this.setup.currency().getContainerSize()) return false;
         for (int index = 0; index < change.size(); index++) this.setup.currency().setItem(index, change.get(index));
         cheque.shrink(1);

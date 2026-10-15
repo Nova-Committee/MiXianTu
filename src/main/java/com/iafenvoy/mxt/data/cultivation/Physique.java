@@ -46,11 +46,6 @@ public record Physique(List<AttributeEntry> attributeModifiers,
             NumberProvider.CODEC.optionalFieldOf("damage_taken_multiplier", new Constant(1.0D)).forGetter(Physique::damageTakenMultiplier)
     ).apply(i, Physique::new)).validate(Physique::validate);
 
-    @Override
-    public Optional<Holder<ItemQuality>> defaultQuality() {
-        return this.quality;
-    }
-
     // A written number is checked here; a formula only when it runs, which the damage pipeline does.
     private static DataResult<Physique> validate(Physique physique) {
         for (NumberProvider provider : List.of(physique.damageDealtMultiplier(), physique.damageTakenMultiplier()))
