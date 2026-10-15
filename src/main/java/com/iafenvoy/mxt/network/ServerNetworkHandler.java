@@ -26,11 +26,11 @@ import top.theillusivec4.curios.api.CuriosApi;
 import top.theillusivec4.curios.api.SlotContext;
 import top.theillusivec4.curios.api.type.inventory.IDynamicStackHandler;
 
-import java.util.Optional;
+import java.util.OptionalInt;
 
 
 public final class ServerNetworkHandler {
-    public static final Logger MXT_DEBUG = LogUtils.getLogger();
+    public static final Logger LOGGER = LogUtils.getLogger();
 
     // The payload carries what was chosen and off which page, and nothing else: whether the player may use it is
     // decided here and by the pipeline behind it, never by the screen that sent this. A filled-in direction asks for
@@ -54,10 +54,9 @@ public final class ServerNetworkHandler {
     static void onWheelSelection(WheelSelectionC2SPayload payload, IPayloadContext context) {
         if (!(context.player() instanceof ServerPlayer player)) return;
         Integer submitted = payload.armed().orElse(null);
-        Optional<Integer> armed = WheelService.sanitizeArmed(submitted);
+        OptionalInt armed = WheelService.sanitizeArmed(submitted);
         if (submitted != null && armed.isEmpty())
-            MiXianTu.LOGGER.warn("Discarding the wheel cell {} sent by {}: not a cell number",
-                    submitted, player.getGameProfile().name());
+            MiXianTu.LOGGER.warn("Discarding the wheel cell {} sent by {}: not a cell number", submitted, player.getGameProfile().name());
         player.getData(MxtAttachments.WHEEL_LAYOUT).setArmed(armed);
     }
 
@@ -72,23 +71,19 @@ public final class ServerNetworkHandler {
         // `active` is logged after the call for the two actions that can settle a session by themselves: a strike
         // that completes the piece ends it, so "the session is gone afterwards" is the success path.
         switch (payload.action()) {
-            case SELECT -> MXT_DEBUG.info("forging SELECT definition={} selectable={} methods={} outcome={} active={}",
-                    definition, table.selectableBlueprintIds(), table.availableMethodIds(),
-                    ForgingWorkstationService.start(player, table, definition),
-                    table.forgingState().active());
-            case STRIKE -> MXT_DEBUG.info("forging STRIKE definition={} available={} outcome={} active={}",
-                    definition, table.availableMethodIds(),
-                    ForgingWorkstationService.strike(player, table, definition),
-                    table.forgingState().active());
-            case FINISH -> MXT_DEBUG.info("forging FINISH outcome={}", ForgingWorkstationService.finish(player, table));
-            case CANCEL -> MXT_DEBUG.info("forging CANCEL outcome={}", ForgingWorkstationService.cancel(player, table));
+            case SELECT ->
+                    LOGGER.info("forging SELECT definition={} selectable={} methods={} outcome={} active={}", definition, table.selectableBlueprintIds(), table.availableMethodIds(), ForgingWorkstationService.start(player, table, definition), table.forgingState().active());
+            case STRIKE ->
+                    LOGGER.info("forging STRIKE definition={} available={} outcome={} active={}", definition, table.availableMethodIds(), ForgingWorkstationService.strike(player, table, definition), table.forgingState().active());
+            case FINISH -> LOGGER.info("forging FINISH outcome={}", ForgingWorkstationService.finish(player, table));
+            case CANCEL -> LOGGER.info("forging CANCEL outcome={}", ForgingWorkstationService.cancel(player, table));
         }
     }
 
     static void onAlchemyAction(AlchemyActionC2SPayload payload, IPayloadContext context) {
         if (!(context.player() instanceof ServerPlayer player)) return;
-        if (!(player.containerMenu instanceof AlchemyFurnaceMenu menu)
-                || menu.containerId != payload.containerId() || !menu.stillValid(player)) return;
+        if (!(player.containerMenu instanceof AlchemyFurnaceMenu menu) || menu.containerId != payload.containerId() || !menu.stillValid(player))
+            return;
         menu.handleAction(player, payload);
     }
 

@@ -90,6 +90,6 @@ public final class TalismanTooltipAppender {
         Identifier id = MxtRegistries.TALISMAN_TYPE.getKey(type.codec());
         if (!explained.add(id)) return Optional.empty();
         MutableComponent line = DefinitionText.text(MxtResourceKeys.TALISMAN_TYPE, id);
-        return DefinitionText.resolved(line) ? Optional.of(line.withStyle(ChatFormatting.GRAY)) : Optional.empty();
+        return line.getString().isBlank() ? Optional.empty() : Optional.of(line.withStyle(ChatFormatting.GRAY));
     }
 }

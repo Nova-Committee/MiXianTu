@@ -52,8 +52,7 @@ public final class ItemQualityTooltipAppender {
                 .ifPresent(quality -> lines.set(0, QualityService.coloredName(quality, lines.getFirst())));
     }
 
-    private static void appendQuality(ItemStack stack, TooltipContext context, TooltipDisplay display,
-                                      Player player, TooltipFlag flag, Consumer<Component> builder) {
+    private static void appendQuality(ItemStack stack, TooltipContext context, TooltipDisplay display, Player player, TooltipFlag flag, Consumer<Component> builder) {
         Provider registries = context.registries();
         if (registries == null) return;
         QualityService.find(registries, stack).ifPresent(quality -> appendQuality(builder, quality));
@@ -65,15 +64,13 @@ public final class ItemQualityTooltipAppender {
         // The tier's generated description key, shown only when a pack translated it: an untranslated key is skipped
         // rather than printed as its own key text.
         MutableComponent description = DefinitionText.description(quality);
-        if (DefinitionText.resolved(description) && !description.getString().isBlank())
-            builder.accept(description.withStyle(ChatFormatting.GRAY));
+        if (!description.getString().isBlank()) builder.accept(description.withStyle(ChatFormatting.GRAY));
         appendModifier(builder, value.valueMultiplier());
         appendModifier(builder, value.forgingModifier());
         appendModifier(builder, value.alchemyModifier());
     }
 
     private static void appendModifier(Consumer<Component> builder, Modifier modifier) {
-        if (DefinitionText.resolved(modifier.description()) && !modifier.description().getString().isBlank())
-            builder.accept(modifier.description());
+        if (!modifier.description().getString().isBlank()) builder.accept(modifier.description());
     }
 }

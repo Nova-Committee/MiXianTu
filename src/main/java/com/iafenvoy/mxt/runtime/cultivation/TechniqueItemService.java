@@ -218,8 +218,7 @@ public final class TechniqueItemService {
         player.sendSystemMessage(Component.translatable("message.mxt.technique.read",
                 DefinitionText.text(technique)).withStyle(ChatFormatting.GREEN));
         MutableComponent description = DefinitionText.description(technique);
-        if (DefinitionText.resolved(description) && !description.getString().isBlank())
-            player.sendSystemMessage(description.withStyle(ChatFormatting.GRAY));
+        if (!description.getString().isBlank()) player.sendSystemMessage(description.withStyle(ChatFormatting.GRAY));
     }
 
     private static void learn(LivingEntity entity, ItemStack stack, TechniqueBinding binding) {

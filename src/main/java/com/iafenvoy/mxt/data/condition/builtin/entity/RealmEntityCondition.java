@@ -7,15 +7,15 @@ import com.iafenvoy.mxt.data.context.condition.EntityConditionContext;
 import com.iafenvoy.mxt.data.cultivation.RealmStage;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.DatapackCache;
+import com.iafenvoy.mxt.util.codec.OptionalCodecs;
 import com.iafenvoy.mxt.util.math.CompareOperation;
-import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
 import net.minecraft.world.entity.Entity;
 import org.jspecify.annotations.NonNull;
 
-import java.util.Optional;
+import java.util.OptionalInt;
 
 /**
  * Asks what realm the entity stands in, and optionally how far it has got inside that realm. Only the chain the
@@ -24,11 +24,11 @@ import java.util.Optional;
  * stays reached - that is what makes a threshold on it usable as a gate.
  */
 public record RealmEntityCondition(Holder<RealmStage> realm, CompareOperation comparison,
-                                   Optional<Integer> minMinorStage) implements EntityCondition {
+                                   OptionalInt minMinorStage) implements EntityCondition {
     public static final MapCodec<RealmEntityCondition> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             RealmStage.CODEC.fieldOf("realm").forGetter(RealmEntityCondition::realm),
             CompareOperation.CODEC.optionalFieldOf("comparison", CompareOperation.EQUAL).forGetter(RealmEntityCondition::comparison),
-            Codec.INT.optionalFieldOf("min_minor_stage").forGetter(RealmEntityCondition::minMinorStage)
+            OptionalCodecs.intCodec("min_minor_stage").forGetter(RealmEntityCondition::minMinorStage)
     ).apply(i, RealmEntityCondition::new));
 
     @Override
@@ -44,7 +44,7 @@ public record RealmEntityCondition(Holder<RealmStage> realm, CompareOperation co
         if (!inRealm || this.minMinorStage.isEmpty()) return inRealm;
         // -1 for a realm the body never entered, so a threshold is never met by a realm it has not stood in.
         return entity.getExistingData(MxtAttachments.MINOR_STAGES)
-                .map(stages -> stages.minorStageRecord(this.realm) >= this.minMinorStage.get())
+                .map(stages -> stages.minorStageRecord(this.realm) >= this.minMinorStage.getAsInt())
                 .orElse(false);
     }
 

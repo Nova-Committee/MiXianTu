@@ -46,10 +46,10 @@ public final class CurseService {
      * Variant for integrations that own a dedicated event bus.
      */
     public static ApplyResult apply(CurseHolderAttachment data, Holder<Curse> curse, int stacks, long gameTime, FormulaContext context, Identifier source, @NotNull IEventBus eventBus) {
-        return apply(data, curse, stacks, gameTime, context, source, eventBus, Optional.empty());
+        return apply(data, curse, stacks, gameTime, context, source, eventBus, OptionalLong.empty());
     }
 
-    public static ApplyResult apply(CurseHolderAttachment data, Holder<Curse> curse, int stacks, long gameTime, FormulaContext context, Identifier source, IEventBus eventBus, Optional<Long> durationOverride) {
+    public static ApplyResult apply(CurseHolderAttachment data, Holder<Curse> curse, int stacks, long gameTime, FormulaContext context, Identifier source, IEventBus eventBus, OptionalLong durationOverride) {
         CurseApplyEvent.Pre event = new CurseApplyEvent.Pre(data, curse, stacks, gameTime, context, source);
         if (eventBus.post(event).isCanceled()) return ApplyResult.cancelledResult();
         // A replacement discards an existing instance and reports the displaced one as a removal, so listeners
@@ -72,24 +72,24 @@ public final class CurseService {
 
     public static ApplyResult apply(Entity target, Holder<Curse> curse, int stacks,
                                     long gameTime, FormulaContext context, Identifier source) {
-        return apply(target, curse, stacks, gameTime, context, source, NeoForge.EVENT_BUS, Optional.empty());
+        return apply(target, curse, stacks, gameTime, context, source, NeoForge.EVENT_BUS, OptionalLong.empty());
     }
 
     public static ApplyResult apply(@NotNull Entity target, Holder<Curse> curse, int stacks,
                                     long gameTime, FormulaContext context, Identifier source, IEventBus eventBus) {
-        return apply(target, curse, stacks, gameTime, context, source, eventBus, Optional.empty());
+        return apply(target, curse, stacks, gameTime, context, source, eventBus, OptionalLong.empty());
     }
 
     public static ApplyResult applyWithDuration(Entity target, Holder<Curse> curse, int stacks,
                                                 long gameTime, FormulaContext context, Identifier source,
-                                                Optional<Long> durationOverride) {
+                                                OptionalLong durationOverride) {
         return apply(target, curse, stacks, gameTime, context, source, NeoForge.EVENT_BUS, durationOverride);
     }
 
     // Full entity-facing transaction: state mutation plus the behaviour a newly created instance owes and the
     // runtime subscriptions that follow it.
     private static ApplyResult apply(Entity target, Holder<Curse> curse, int stacks, long gameTime,
-                                     FormulaContext context, Identifier source, IEventBus eventBus, Optional<Long> durationOverride) {
+                                     FormulaContext context, Identifier source, IEventBus eventBus, OptionalLong durationOverride) {
         Curse definition = curse.value();
         if (!definition.applicationCondition().test(target, context))
             return ApplyResult.rejected(ApplyFailure.CONDITION);

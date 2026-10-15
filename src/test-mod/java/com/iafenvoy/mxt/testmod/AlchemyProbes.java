@@ -191,25 +191,25 @@ public final class AlchemyProbes {
         furnace.container().setItem(0, new ItemStack(Items.ALLIUM));
         furnace.container().setItem(1, new ItemStack(Items.ALLIUM));
         AlchemyPreview split = AlchemyWorkstationService.preview(playerOf(source), furnace);
-        check(source, "split-main", main(split, mainProperty, -1.0D), main(together, mainProperty, -2.0D));
+        check(source, "split-main", getMain(split, mainProperty, -1.0D), getMain(together, mainProperty, -2.0D));
         check(source, "split-same-recipe", resolvedId(split), resolvedId(together));
         furnace.container().setItem(0, ItemStack.EMPTY);
         furnace.container().setItem(1, ItemStack.EMPTY);
         furnace.container().setItem(2, new ItemStack(Items.ALLIUM, 2));
         AlchemyPreview asAux = AlchemyWorkstationService.preview(playerOf(source), furnace);
-        check(source, "aux-role", main(asAux, mainProperty, 0.0D), 0.0D);
+        check(source, "aux-role", getMain(asAux, mainProperty, 0.0D), 0.0D);
         furnace.container().setItem(0, new ItemStack(Items.AZURE_BLUET));
         furnace.container().setItem(1, ItemStack.EMPTY);
         furnace.container().setItem(2, new ItemStack(Items.CORNFLOWER, 2));
         AlchemyPreview single = AlchemyWorkstationService.preview(playerOf(source), furnace);
-        check(source, "substitute-main", main(single, mainProperty, -1.0D), 6.0D);
+        check(source, "substitute-main", getMain(single, mainProperty, -1.0D), 6.0D);
         check(source, "substitute-balance", single.mixture().balance(), 0.0D);
         check(source, "substitute-resolved", resolvedId(single), PRACTICE);
         ItemStack aged = new ItemStack(Items.ALLIUM);
         aged.set(MxtDataComponents.HERB_AGE.get(), 100);
         furnace.container().setItem(0, aged);
         AlchemyPreview century = AlchemyWorkstationService.preview(playerOf(source), furnace);
-        check(source, "century-main", main(century, mainProperty, -1.0D), 6.0D);
+        check(source, "century-main", getMain(century, mainProperty, -1.0D), 6.0D);
         check(source, "century-resolved", resolvedId(century), PRACTICE);
         check(source, "century-only", matchedCount(century), 1);
         check(source, "century-edible", ediblePractice(level.registryAccess(), century.successOutputs()), true);
@@ -833,7 +833,7 @@ public final class AlchemyProbes {
         return MxtDatapackRegistries.holder(level.registryAccess(), MxtResourceKeys.MEDICINAL_PROPERTY, id).orElseThrow();
     }
 
-    private static double main(AlchemyPreview preview, Holder<MedicinalProperty> property, double fallback) {
+    private static double getMain(AlchemyPreview preview, Holder<MedicinalProperty> property, double fallback) {
         return preview.mixture().main().getOrDefault(property, fallback);
     }
 

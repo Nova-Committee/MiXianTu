@@ -28,6 +28,7 @@ import net.minecraft.world.level.chunk.LevelChunk;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.OptionalDouble;
 
 /**
  * The 20-tick growth settlement and the harvest stamp, both read from the chunk attachment rather than a block
@@ -72,12 +73,12 @@ public final class SpiritHerbGrowthService {
      * which is the one and only answer to "is this a spirit herb" - the attachment is not consulted, because a row
      * outlives the definition that opened it.
      */
-    public static Optional<Double> ageAt(ServerLevel level, BlockPos pos, BlockState state) {
+    public static OptionalDouble ageAt(ServerLevel level, BlockPos pos, BlockState state) {
         Optional<Holder<SpiritHerb>> herb = SpiritHerbService.findBlock(level.registryAccess(), state);
-        if (herb.isEmpty()) return Optional.empty();
+        if (herb.isEmpty()) return OptionalDouble.empty();
         Growth growth = herb.get().value().growth().orElse(null);
-        if (growth == null) return Optional.empty();
-        return Optional.of(resolve(level, pos, growth));
+        if (growth == null) return OptionalDouble.empty();
+        return OptionalDouble.of(resolve(level, pos, growth));
     }
 
     // The harvest. Every stack the block dropped that the herb claims as its fruit is stamped with the age the

@@ -6,6 +6,7 @@ import com.iafenvoy.mxt.data.storage.DataStorageCollector;
 import com.iafenvoy.mxt.data.storage.builtin.CooldownDataStorage;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.artifact.FlightService;
+import com.iafenvoy.mxt.util.OptionalBoolean;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.iafenvoy.mxt.util.formula.number.Constant;
 import com.mojang.serialization.Codec;
@@ -58,10 +59,10 @@ public record FlightControlAbilityType(Hand hand, NumberProvider speedMultiplier
     // A second artifact that also declares a mount must not read as "on" while another flight is up, hence the skill
     // check: what is flying is this entry, and the vehicle it picked up is the attachment's other half.
     @Override
-    public Optional<Boolean> state(ToggleContext context) {
+    public OptionalBoolean state(ToggleContext context) {
         FlightAttachment data = context.holder().getExistingData(MxtAttachments.FLIGHT).orElse(null);
-        if (data == null || !data.active()) return Optional.of(false);
-        return Optional.of(data.archetype().filter(skill -> skill.is(context.ability())).isPresent());
+        if (data == null || !data.active()) return OptionalBoolean.of(false);
+        return OptionalBoolean.of(data.archetype().filter(skill -> skill.is(context.ability())).isPresent());
     }
 
     // Landing is free: whatever the flight cost was paid per tick while it lasted, and charging a price for coming

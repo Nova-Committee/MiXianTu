@@ -27,7 +27,7 @@ public final class CurseLedger {
     }
 
     public synchronized Optional<CurseInstance> apply(Holder<Curse> curse, int requestedStacks, long gameTime,
-                                                      FormulaContext context, Optional<Long> durationOverride) {
+                                                      FormulaContext context, OptionalLong durationOverride) {
         if (requestedStacks <= 0) return Optional.empty();
         Curse definition = curse.value();
         OptionalLong resolved = expiry(definition, gameTime, context, durationOverride);
@@ -62,12 +62,12 @@ public final class CurseLedger {
 
     // A caller-supplied duration may shorten a curse but never outlast the definition: content wanting a longer
     // curse writes a longer duration_ticks, so nobody can hand out an effectively permanent instance.
-    private static OptionalLong expiry(Curse definition, long gameTime, FormulaContext context, Optional<Long> durationOverride) {
+    private static OptionalLong expiry(Curse definition, long gameTime, FormulaContext context, OptionalLong durationOverride) {
         double duration = definition.durationTicks().evaluate(context);
         if (!Double.isFinite(duration) || duration < 0.0D) return OptionalLong.empty();
         OptionalLong declared = definition.typedType().expiry(Math.round(duration), gameTime);
         if (declared.isEmpty() || durationOverride.isEmpty()) return declared;
-        OptionalLong overridden = definition.typedType().expiry(durationOverride.get(), gameTime);
+        OptionalLong overridden = definition.typedType().expiry(durationOverride.getAsLong(), gameTime);
         if (overridden.isEmpty()) return OptionalLong.empty();
         long declaredValue = declared.getAsLong();
         long overriddenValue = overridden.getAsLong();

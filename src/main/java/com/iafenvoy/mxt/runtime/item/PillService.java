@@ -27,6 +27,7 @@ import org.jspecify.annotations.NonNull;
 
 import java.util.Locale;
 import java.util.Optional;
+import java.util.OptionalInt;
 
 /**
  * Server-authoritative pill gate, one-dose settlement and toxicity ledger. Reads use
@@ -62,7 +63,8 @@ public final class PillService {
     }
 
     public static Optional<Failure> usageFailure(LivingEntity user, Holder<PillBinding> pill) {
-        if (pill.value().maxUses().filter(max -> uses(user, pill) >= max).isPresent())
+        OptionalInt maxUses = pill.value().maxUses();
+        if (maxUses.isPresent() && uses(user, pill) >= maxUses.getAsInt())
             return Optional.of(Failure.MAX_USES);
         if (onCooldown(user, pill)) return Optional.of(Failure.COOLDOWN);
         return Optional.empty();

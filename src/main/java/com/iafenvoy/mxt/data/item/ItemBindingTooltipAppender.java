@@ -121,8 +121,7 @@ public final class ItemBindingTooltipAppender {
         if (definition != null) {
             builder.accept(DefinitionText.text(definition).withStyle(ChatFormatting.LIGHT_PURPLE));
             MutableComponent description = DefinitionText.description(definition);
-            if (DefinitionText.resolved(description) && !description.getString().isBlank())
-                builder.accept(description.withStyle(ChatFormatting.GRAY));
+            if (!description.getString().isBlank()) builder.accept(description.withStyle(ChatFormatting.GRAY));
         }
         double gain = effects.toxicityGain().evaluate(formula);
         double threshold = effects.toxicityThreshold().evaluate(formula);

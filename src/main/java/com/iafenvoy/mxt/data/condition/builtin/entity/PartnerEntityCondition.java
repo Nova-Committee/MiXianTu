@@ -3,6 +3,7 @@ package com.iafenvoy.mxt.data.condition.builtin.entity;
 import com.iafenvoy.mxt.data.condition.BiEntityCondition;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.data.context.condition.EntityConditionContext;
+import com.iafenvoy.mxt.util.codec.OptionalCodecs;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.MapCodec;
@@ -12,7 +13,7 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.AABB;
 import org.jspecify.annotations.NonNull;
 
-import java.util.Optional;
+import java.util.OptionalInt;
 
 /**
  * Asks whether the entity has a partner nearby: living entities inside a radius, the asker never among them, each
@@ -56,23 +57,23 @@ public record PartnerEntityCondition(double range, Count count,
     }
 
     // Both ends are inclusive; an absent max means "at least min, however many".
-    public record Count(int min, Optional<Integer> max) {
+    public record Count(int min, OptionalInt max) {
         public static final Codec<Count> CODEC = RecordCodecBuilder.create(i -> i.group(
                 Codec.intRange(0, Integer.MAX_VALUE).optionalFieldOf("min", 1).forGetter(Count::min),
-                Codec.intRange(0, Integer.MAX_VALUE).optionalFieldOf("max").forGetter(Count::max)
+                OptionalCodecs.intCodec(0, Integer.MAX_VALUE, "max").forGetter(Count::max)
         ).apply(i, Count::new));
-        public static final Count ANY = new Count(1, Optional.empty());
+        public static final Count ANY = new Count(1, OptionalInt.empty());
 
         private boolean valid() {
-            return this.min >= 0 && this.max.map(max -> max >= this.min).orElse(true);
+            return this.min >= 0 && (this.max.isEmpty() || this.max.getAsInt() >= this.min);
         }
 
         private boolean exceeded(int found) {
-            return this.max.map(max -> found > max).orElse(false);
+            return this.max.isPresent() && found > this.max.getAsInt();
         }
 
         private boolean reached(int found) {
-            return found >= this.min && this.max.map(max -> found <= max).orElse(true);
+            return found >= this.min && (this.max.isEmpty() || found <= this.max.getAsInt());
         }
     }
 }

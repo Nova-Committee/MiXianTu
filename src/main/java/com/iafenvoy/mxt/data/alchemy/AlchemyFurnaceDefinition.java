@@ -3,6 +3,7 @@ package com.iafenvoy.mxt.data.alchemy;
 import com.iafenvoy.mxt.api.QualityProvider;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.util.codec.OptionalCodecs;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -11,6 +12,7 @@ import net.minecraft.resources.RegistryFixedCodec;
 import org.jspecify.annotations.Nullable;
 
 import java.util.Optional;
+import java.util.OptionalDouble;
 
 /**
  * One furnace specification. Slot counts, capacity, cooling and the furnace's own temperature ceiling are written
@@ -21,7 +23,7 @@ import java.util.Optional;
  */
 public record AlchemyFurnaceDefinition(int mainSlots, int auxiliarySlots, Optional<Holder<ItemQuality>> quality,
                                        int capacity, double coolingPerTick,
-                                       Optional<Double> maxTemperature) implements QualityProvider {
+                                       OptionalDouble maxTemperature) implements QualityProvider {
     public static final int CATALYST_SLOTS = 1;
     public static final int MAX_CAPACITY = 320;
     private static final Codec<Double> POSITIVE = Codec.DOUBLE.validate(AlchemyFurnaceDefinition::positive);
@@ -32,7 +34,7 @@ public record AlchemyFurnaceDefinition(int mainSlots, int auxiliarySlots, Option
             ItemQuality.CODEC.optionalFieldOf("quality").forGetter(AlchemyFurnaceDefinition::quality),
             Codec.intRange(1, MAX_CAPACITY).fieldOf("capacity").forGetter(AlchemyFurnaceDefinition::capacity),
             POSITIVE.fieldOf("cooling_per_tick").forGetter(AlchemyFurnaceDefinition::coolingPerTick),
-            POSITIVE.optionalFieldOf("max_temperature").forGetter(AlchemyFurnaceDefinition::maxTemperature)
+            OptionalCodecs.doubleCodec(POSITIVE, "max_temperature").forGetter(AlchemyFurnaceDefinition::maxTemperature)
     ).apply(i, AlchemyFurnaceDefinition::new));
 
     /**

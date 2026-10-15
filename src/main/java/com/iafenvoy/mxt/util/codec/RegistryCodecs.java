@@ -83,8 +83,4 @@ public final class RegistryCodecs {
         RegistryLookup<T> lookup = access.lookupOrThrow(key);
         return values.stream().flatMap(value -> value.map(Stream::of, tag -> lookup.listElements().filter(holder -> holder.is(tag))));
     }
-
-    public static <T> List<Holder<T>> listAll(Collection<Either<Holder<T>, TagKey<T>>> values, Registry<T> registry) {
-        return resolve(values, registry).toList();
-    }
 }

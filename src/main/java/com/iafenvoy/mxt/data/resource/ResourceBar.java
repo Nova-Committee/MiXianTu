@@ -5,19 +5,20 @@ import com.iafenvoy.mxt.data.resourcebar.ResourceBarRenderData;
 import com.iafenvoy.mxt.data.resourcebar.ResourceBarVisibility;
 import com.iafenvoy.mxt.data.resourcebar.builtin.context.SelfHudContext;
 import com.iafenvoy.mxt.data.resourcebar.builtin.visibility.AlwaysVisibility;
+import com.iafenvoy.mxt.util.codec.OptionalCodecs;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.util.StringRepresentable;
 import org.jspecify.annotations.NonNull;
 
 import java.util.Locale;
-import java.util.Optional;
+import java.util.OptionalDouble;
 
 /**
  * A client-visible resource bar declaration. Renderer and visibility IDs select built-in typed implementations.
  */
 public record ResourceBar(ResourceBarContext context, Anchor anchor, int order, ResourceBarVisibility visibility,
-                          ResourceBarRenderData renderer, ValueDisplay valueDisplay, Optional<Double> maximum) {
+                          ResourceBarRenderData renderer, ValueDisplay valueDisplay, OptionalDouble maximum) {
     public static final Codec<ResourceBar> CODEC = RecordCodecBuilder.create(i -> i.group(
             ResourceBarContext.CODEC.optionalFieldOf("context", SelfHudContext.INSTANCE).forGetter(ResourceBar::context),
             Anchor.CODEC.fieldOf("anchor").forGetter(ResourceBar::anchor),
@@ -25,11 +26,12 @@ public record ResourceBar(ResourceBarContext context, Anchor anchor, int order, 
             ResourceBarVisibility.CODEC.optionalFieldOf("visibility", AlwaysVisibility.INSTANCE).forGetter(ResourceBar::visibility),
             ResourceBarRenderData.CODEC.fieldOf("renderer").forGetter(ResourceBar::renderer),
             ValueDisplay.CODEC.optionalFieldOf("value_display", ValueDisplay.NONE).forGetter(ResourceBar::valueDisplay),
-            Codec.DOUBLE.optionalFieldOf("maximum").forGetter(ResourceBar::maximum)
+            OptionalCodecs.doubleCodec("maximum").forGetter(ResourceBar::maximum)
     ).apply(i, ResourceBar::new));
 
     public ResourceBar {
-        maximum = maximum.filter(value -> Double.isFinite(value) && value > 0.0D);
+        double value = maximum.orElse(Double.NaN);
+        if (!Double.isFinite(value) || value <= 0.0D) maximum = OptionalDouble.empty();
     }
 
     public enum Anchor implements StringRepresentable {

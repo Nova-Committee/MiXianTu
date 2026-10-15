@@ -3,6 +3,7 @@ package com.iafenvoy.mxt.runtime.world;
 import com.iafenvoy.mxt.data.secretrealm.SecretRealm;
 import com.iafenvoy.mxt.data.secretrealm.builtin.ExistingGeneration;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.util.codec.OptionalCodecs;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
@@ -14,6 +15,7 @@ import net.minecraft.world.phys.Vec3;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.OptionalLong;
 import java.util.UUID;
 
 /**
@@ -22,15 +24,15 @@ import java.util.UUID;
  * The membership list is part of the record so one type describes an instance, but it is cleared when a world
  * is loaded: after a restart nobody is standing inside.
  */
-public record SecretRealmRecord(Holder<SecretRealm> definition, int index, ResourceKey<Level> dimension, long seed,
-                                Optional<UUID> owner, long startedAt, long expiresAt, Optional<Vec3> anchor,
-                                boolean prepared, List<UUID> members) {
+public record SecretRealmRecord(Holder<SecretRealm> definition, int index, ResourceKey<Level> dimension,
+                                OptionalLong seed, Optional<UUID> owner, long startedAt, long expiresAt,
+                                Optional<Vec3> anchor, boolean prepared, List<UUID> members) {
     public static final Codec<UUID> UUID_CODEC = Codec.STRING.xmap(UUID::fromString, UUID::toString);
     public static final Codec<SecretRealmRecord> CODEC = RecordCodecBuilder.create(i -> i.group(
             RegistryFixedCodec.create(MxtResourceKeys.SECRET_REALM).fieldOf("definition").forGetter(SecretRealmRecord::definition),
             Codec.INT.lenientOptionalFieldOf("index", 0).forGetter(SecretRealmRecord::index),
             ResourceKey.codec(Registries.DIMENSION).fieldOf("dimension").forGetter(SecretRealmRecord::dimension),
-            Codec.LONG.lenientOptionalFieldOf("seed", 0L).forGetter(SecretRealmRecord::seed),
+            OptionalCodecs.lenientLongCodec("seed").forGetter(SecretRealmRecord::seed),
             UUID_CODEC.lenientOptionalFieldOf("owner").forGetter(SecretRealmRecord::owner),
             Codec.LONG.lenientOptionalFieldOf("started_at", -1L).forGetter(SecretRealmRecord::startedAt),
             Codec.LONG.lenientOptionalFieldOf("expires_at", -1L).forGetter(SecretRealmRecord::expiresAt),

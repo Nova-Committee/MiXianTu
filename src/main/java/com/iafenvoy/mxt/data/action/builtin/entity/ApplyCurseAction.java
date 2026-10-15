@@ -16,6 +16,7 @@ import net.minecraft.world.entity.Entity;
 import org.jspecify.annotations.NonNull;
 
 import java.util.Optional;
+import java.util.OptionalLong;
 
 /**
  * Applies a datapack curse through the authoritative curse transaction.
@@ -37,10 +38,10 @@ public record ApplyCurseAction(Holder<Curse> curse, NumberProvider stacks,
         FormulaContext context = ctx.formula();
         double resolvedStacks = this.stacks.evaluate(context);
         if (!Double.isFinite(resolvedStacks) || resolvedStacks < 1.0D || resolvedStacks > 256.0D) return;
-        Optional<Long> duration = this.durationTicks.flatMap(provider -> {
-            double value = provider.evaluate(context);
-            return Double.isFinite(value) && value >= 0.0D && value <= Long.MAX_VALUE ? Optional.of(Math.round(value)) : Optional.empty();
-        });
+        NumberProvider durationTicks = this.durationTicks.orElse(null);
+        double value = durationTicks == null ? Double.NaN : durationTicks.evaluate(context);
+        OptionalLong duration = Double.isFinite(value) && value >= 0.0D && value <= Long.MAX_VALUE
+                ? OptionalLong.of(Math.round(value)) : OptionalLong.empty();
         CurseService.applyWithDuration(entity, this.curse, (int) Math.round(resolvedStacks), entity.level().getGameTime(), context, SOURCE, duration);
     }
 

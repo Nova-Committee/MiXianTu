@@ -331,16 +331,16 @@ public final class AuraQueryCache {
         return epoch != null && epoch == location.gameTime();
     }
 
-    static Optional<Double> availability(ServerLevel level, AvailabilityKey key) {
-        if (!enabled) return Optional.empty();
+    static OptionalDouble availability(ServerLevel level, AvailabilityKey key) {
+        if (!enabled) return OptionalDouble.empty();
         Map<AvailabilityKey, Double> cache = AVAILABILITY.get(level);
         Double cached = cache == null ? null : cache.get(key);
         if (cached == null) {
             AVAILABILITY_MISSES.incrementAndGet();
-            return Optional.empty();
+            return OptionalDouble.empty();
         }
         AVAILABILITY_HITS.incrementAndGet();
-        return Optional.of(cached);
+        return OptionalDouble.of(cached);
     }
 
     static void cacheAvailability(ServerLevel level, AvailabilityKey key, double value) {

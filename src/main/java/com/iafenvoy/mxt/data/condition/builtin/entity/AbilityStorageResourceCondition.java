@@ -11,6 +11,7 @@ import net.minecraft.core.Holder;
 import org.jspecify.annotations.NonNull;
 
 import java.util.Optional;
+import java.util.OptionalDouble;
 
 /**
  * Reads the {@code amount} of the {@code mxt:resource} of a named ability, counting an unwritten one as 0; an
@@ -28,7 +29,8 @@ public record AbilityStorageResourceCondition(Holder<Ability> ability,
         AbilityStorageReading reading = AbilityStorageReading.of(ctx.entity(), this.ability);
         if (reading.declared(ResourceDataStorage.class).isEmpty()) return false;
         Optional<ResourceDataStorage> stored = reading.stored(ResourceDataStorage.class);
-        return this.amount.map(numberRange -> numberRange.test(stored.flatMap(ResourceDataStorage::amount).orElse(0.0D), ctx.formula())).orElseGet(stored::isPresent);
+        OptionalDouble amount = stored.map(ResourceDataStorage::amount).orElseGet(OptionalDouble::empty);
+        return this.amount.map(numberRange -> numberRange.test(amount.orElse(0.0D), ctx.formula())).orElseGet(stored::isPresent);
     }
 
     @Override

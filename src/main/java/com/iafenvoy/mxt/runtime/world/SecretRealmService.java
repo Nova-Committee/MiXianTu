@@ -233,15 +233,14 @@ public final class SecretRealmService {
         SecretRealm value = definition.value();
         ResourceKey<Level> dimension = SecretRealmGenerationService.dimensionKey(HolderHelper.id(definition), value.generation(), index);
         long expiresAt = value.durationTicks() <= 0L ? -1L : gameTime + value.durationTicks();
-        return new SecretRealmRecord(definition, index, dimension, seed, Optional.empty(), gameTime, expiresAt,
-                Optional.empty(), false, List.of());
+        return new SecretRealmRecord(definition, index, dimension, OptionalLong.of(seed), Optional.empty(), gameTime, expiresAt, Optional.empty(), false, List.of());
     }
 
     // The half of an entry that does not need a player, so scripts and diagnostics can open a secret realm without
     // sending anybody into it.
     public static Optional<SecretRealmRecord> open(MinecraftServer server, SecretRealmRecord record) {
-        // The table is written before the level is built: the seed mixin and the registry both answer for this
-        // dimension while it is being constructed.
+        // The table is written before the level is built: the prepared copy replaces this entry at the end of the
+        // method, and replace() only accepts a dimension the table already holds.
         SecretRealmRegistry.put(record);
         Optional<ServerLevel> opened = SecretRealmGenerationService.open(server, record);
         if (opened.isEmpty()) {

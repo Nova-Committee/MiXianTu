@@ -677,8 +677,7 @@ public final class InformationPanelScreen extends AuiScreen {
             if (!row.hasLevel() || level == null)
                 return Component.translatable("screen.mxt.technique_panel.level_unknown");
             Component name = DefinitionText.text(level);
-            Component label = DefinitionText.resolved(name)
-                    ? name : Component.literal(Integer.toString(row.rank() + 1));
+            Component label = name.getString().isBlank() ? Component.literal(Integer.toString(row.rank() + 1)) : name;
             return Component.translatable("screen.mxt.technique_panel.level", label, row.rank() + 1, row.total());
         }
 

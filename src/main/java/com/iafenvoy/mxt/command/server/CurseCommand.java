@@ -99,11 +99,10 @@ public final class CurseCommand {
         CommandSourceStack source = ctx.getSource();
         Reference<Curse> curse = ResourceArgument.getResource(ctx, "curse", MxtResourceKeys.CURSE);
         Collection<? extends Entity> targets = EntityArgument.getEntities(ctx, "targets");
-        Optional<Long> duration = durationTicks.isPresent() ? Optional.of(durationTicks.getAsLong()) : Optional.empty();
         int applied = 0;
         for (Entity target : targets) {
             ApplyResult result = CurseService.applyWithDuration(target, curse, stacks,
-                    target.level().getGameTime(), FormulaContext.of(target), SOURCE, duration);
+                    target.level().getGameTime(), FormulaContext.of(target), SOURCE, durationTicks);
             if (result.applied()) {
                 applied++;
                 source.sendSuccess(() -> Component.translatable("command.mxt.curse.applied",

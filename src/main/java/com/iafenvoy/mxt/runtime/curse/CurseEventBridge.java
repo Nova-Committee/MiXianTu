@@ -9,6 +9,7 @@ import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.runtime.Sources;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
+import com.iafenvoy.mxt.util.formula.NumberProvider;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
@@ -101,11 +102,10 @@ public final class CurseEventBridge {
                 if (holder.instances().containsKey(curse)) continue;
                 double stacks = action.stacks().evaluate(context);
                 if (!Double.isFinite(stacks) || stacks < 1.0D || stacks > 256.0D) continue;
-                Optional<Long> duration = action.durationTicks().flatMap(provider -> {
-                    double value = provider.evaluate(context);
-                    return Double.isFinite(value) && value >= 0.0D && value <= Long.MAX_VALUE
-                            ? Optional.of(Math.round(value)) : Optional.empty();
-                });
+                NumberProvider durationTicks = action.durationTicks().orElse(null);
+                double durationValue = durationTicks == null ? Double.NaN : durationTicks.evaluate(context);
+                OptionalLong duration = Double.isFinite(durationValue) && durationValue >= 0.0D && durationValue <= Long.MAX_VALUE
+                        ? OptionalLong.of(Math.round(durationValue)) : OptionalLong.empty();
                 CurseService.applyWithDuration(entity, curse, (int) Math.round(stacks), gameTime, context, source, duration);
             }
             CurseService.reconcileSource(entity, source, wanted, gameTime, context);

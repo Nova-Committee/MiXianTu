@@ -1,6 +1,6 @@
 package com.iafenvoy.mxt.data.cultivation;
 
-import com.iafenvoy.mxt.util.codec.MiscCodecs;
+import com.iafenvoy.mxt.util.codec.OptionalCodecs;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
@@ -11,7 +11,7 @@ import net.minecraft.tags.TagKey;
 import net.minecraft.world.damagesource.DamageType;
 
 import java.util.List;
-import java.util.Optional;
+import java.util.OptionalDouble;
 import java.util.function.Function;
 
 /**
@@ -20,19 +20,19 @@ import java.util.function.Function;
  * per kind of hit rather than per element. Accepts a bare id/`#tag`, or an object carrying its own
  * {@code damage_attachment} - an explicitly written {@code 0} is a real answer, not "unset".
  */
-public record DamageTypeClaim(Either<Holder<DamageType>, TagKey<DamageType>> type, Optional<Double> damageAttachment) {
+public record DamageTypeClaim(Either<Holder<DamageType>, TagKey<DamageType>> type, OptionalDouble damageAttachment) {
     private static final Codec<DamageTypeClaim> OBJECT_CODEC = RecordCodecBuilder.create(i -> i.group(
             RegistryCodecs.holderOrTag(Registries.DAMAGE_TYPE).fieldOf("damage_type").forGetter(DamageTypeClaim::type),
-            MiscCodecs.NON_NEGATIVE.optionalFieldOf("damage_attachment").forGetter(DamageTypeClaim::damageAttachment)
+            OptionalCodecs.doubleCodec(0.0D, Double.MAX_VALUE, "damage_attachment").forGetter(DamageTypeClaim::damageAttachment)
     ).apply(i, DamageTypeClaim::new));
 
     // Order matters: a bare string or #tag is tried as the plain form, an object as the form with its own number.
     public static final Codec<DamageTypeClaim> CODEC = Codec.either(RegistryCodecs.holderOrTag(Registries.DAMAGE_TYPE), OBJECT_CODEC)
-            .xmap(value -> value.map(type -> new DamageTypeClaim(type, Optional.empty()), Function.identity()),
+            .xmap(value -> value.map(type -> new DamageTypeClaim(type, OptionalDouble.empty()), Function.identity()),
                     claim -> claim.damageAttachment().isEmpty() ? Either.left(claim.type()) : Either.right(claim));
 
     public static DamageTypeClaim of(Either<Holder<DamageType>, TagKey<DamageType>> type) {
-        return new DamageTypeClaim(type, Optional.empty());
+        return new DamageTypeClaim(type, OptionalDouble.empty());
     }
 
     public double attachment(double elementDefault) {

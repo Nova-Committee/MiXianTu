@@ -22,6 +22,7 @@ import com.iafenvoy.mxt.screen.wheel.WheelDuration;
 import com.iafenvoy.mxt.screen.wheel.WheelSelection;
 import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.HolderHelper;
+import com.iafenvoy.mxt.util.OptionalBoolean;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.Holder;
@@ -32,10 +33,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import org.jspecify.annotations.Nullable;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 
 /**
  * One pressable ability as a wheel entry: the wheel sees a name, icon, cooldown and trigger, and an ability that
@@ -43,7 +41,7 @@ import java.util.Set;
  * switch and a one-shot look different without the wheel knowing what either of them is.
  */
 public record AbilityWheelEntry(Holder<Ability> ability, @Nullable ItemStack carrier,
-                                Optional<Boolean> state) implements WheelMenuEntry {
+                                OptionalBoolean state) implements WheelMenuEntry {
     private static final int ACCENT_ON = 0xFF7BD37B;
     private static final int ACCENT_OFF = 0xFF8A8F9A;
     private static final int ACCENT_READY = 0xFFB08CE8;
@@ -72,7 +70,7 @@ public record AbilityWheelEntry(Holder<Ability> ability, @Nullable ItemStack car
     @Override
     public int accentColor() {
         if (!(this.ability.value().type() instanceof Togglable)) return ACCENT_PLAIN;
-        return this.state.map(on -> on ? ACCENT_ON : ACCENT_OFF).orElse(ACCENT_READY);
+        return this.state.isPresent() ? (this.state.getAsBoolean() ? ACCENT_ON : ACCENT_OFF) : ACCENT_READY;
     }
 
     @Override
@@ -90,10 +88,9 @@ public record AbilityWheelEntry(Holder<Ability> ability, @Nullable ItemStack car
         if (player == null) return 0L;
         AbilityAttachment holder = player.getExistingData(MxtAttachments.ABILITY_HOLDER).orElse(null);
         if (holder == null) return 0L;
-        return AbilityStorage.get(holder, this.ability, CooldownDataStorage.class)
-                .flatMap(CooldownDataStorage::duration)
-                .map(Math::round)
-                .orElse(0L);
+        OptionalDouble duration = AbilityStorage.get(holder, this.ability, CooldownDataStorage.class)
+                .map(CooldownDataStorage::duration).orElseGet(OptionalDouble::empty);
+        return duration.isPresent() ? Math.round(duration.getAsDouble()) : 0L;
     }
 
     @Override

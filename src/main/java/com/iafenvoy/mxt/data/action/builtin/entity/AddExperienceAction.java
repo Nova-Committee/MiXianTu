@@ -2,21 +2,21 @@ package com.iafenvoy.mxt.data.action.builtin.entity;
 
 import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.context.action.EntityActionContext;
-import com.mojang.serialization.Codec;
+import com.iafenvoy.mxt.util.codec.OptionalCodecs;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.world.entity.player.Player;
 import org.jspecify.annotations.NonNull;
 
-import java.util.Optional;
+import java.util.OptionalInt;
 
 /**
  * Grants vanilla experience points and/or levels, to players only.
  */
-public record AddExperienceAction(Optional<Integer> points, Optional<Integer> levels) implements EntityAction {
+public record AddExperienceAction(OptionalInt points, OptionalInt levels) implements EntityAction {
     public static final MapCodec<AddExperienceAction> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
-            Codec.INT.optionalFieldOf("points").forGetter(AddExperienceAction::points),
-            Codec.INT.optionalFieldOf("levels").forGetter(AddExperienceAction::levels)
+            OptionalCodecs.intCodec("points").forGetter(AddExperienceAction::points),
+            OptionalCodecs.intCodec("levels").forGetter(AddExperienceAction::levels)
     ).apply(i, AddExperienceAction::new));
 
     @Override

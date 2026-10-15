@@ -18,6 +18,7 @@ import com.iafenvoy.mxt.runtime.wheel.*;
 import com.iafenvoy.mxt.screen.wheel.WheelMenuContent;
 import com.iafenvoy.mxt.screen.wheel.WheelMenuProvider;
 import com.iafenvoy.mxt.util.HolderHelper;
+import com.iafenvoy.mxt.util.OptionalBoolean;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.Holder;
 import net.minecraft.world.entity.player.Player;
@@ -115,8 +116,8 @@ public final class WheelContent implements WheelMenuProvider {
     // The state is asked here rather than read off the definition, because a switch answers from wherever it keeps
     // its state and the entry only carries the answer.
     private static AbilityWheelEntry entry(Player player, Holder<Ability> ability, @Nullable ItemStack carrier) {
-        Optional<Boolean> state = ability.value().type() instanceof Togglable
-                ? AbilityActivationService.state(player, ability) : Optional.empty();
+        OptionalBoolean state = ability.value().type() instanceof Togglable
+                ? AbilityActivationService.state(player, ability) : OptionalBoolean.empty();
         return new AbilityWheelEntry(ability, carrier, state);
     }
 

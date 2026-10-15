@@ -3,8 +3,6 @@ package com.iafenvoy.mxt.runtime.world;
 import com.google.common.collect.ImmutableList;
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.mixin.MinecraftServerRuntimeAccessor;
-import net.minecraft.core.Registry;
-import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
@@ -36,6 +34,7 @@ public final class RuntimeDimensionService {
             try {
                 WorldData worldData = server.getWorldData();
                 ServerLevelData properties = new DerivedLevelData(worldData, worldData.overworldData());
+                // Only the fallback: a stem carrying neoforge:seed_override replaces this inside the constructor.
                 long biomeSeed = BiomeManager.obfuscateSeed(server.overworld().getSeed());
                 ServerLevel level = new ServerLevel(server,
                         ((MinecraftServerRuntimeAccessor) server).mxt$executor(),
@@ -50,12 +49,6 @@ public final class RuntimeDimensionService {
                 return Optional.empty();
             }
         }
-    }
-
-    public static Optional<ServerLevel> load(MinecraftServer server, ResourceKey<Level> key,
-                                             ResourceKey<LevelStem> stemKey) {
-        Registry<LevelStem> stems = server.registryAccess().lookupOrThrow(Registries.LEVEL_STEM);
-        return stems.get(stemKey).flatMap(holder -> load(server, key, holder.value()));
     }
 
     // The overworld and dimensions with players are deliberately never removed.

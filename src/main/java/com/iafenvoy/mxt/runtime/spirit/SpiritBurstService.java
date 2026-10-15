@@ -43,7 +43,6 @@ public final class SpiritBurstService {
             return;
         }
         Optional<Holder<Aura>> valid = auraId.flatMap(id -> MxtDatapackRegistries.holder(holder.level().registryAccess(), MxtResourceKeys.AURA, id))
-                .map(aura -> aura)
                 .filter(aura -> aura.value().auraType().isPresent() && ResourceUseService.canUse(holder, aura));
         if (valid.isEmpty()) return;
         Set<Holder<Aura>> active = ACTIVE_AURAS.computeIfAbsent(holderId, ignored -> new HashSet<>());
@@ -80,7 +79,6 @@ public final class SpiritBurstService {
     public static boolean fireOnce(LivingEntity holder, Identifier auraId) {
         if (auraId == null) return false;
         Holder<Aura> aura = MxtDatapackRegistries.holder(holder.level().registryAccess(), MxtResourceKeys.AURA, auraId)
-                .map(value -> value)
                 .filter(value -> value.value().auraType().isPresent() && ResourceUseService.canUse(holder, value))
                 .orElse(null);
         return aura != null && attempt(holder, aura);

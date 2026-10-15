@@ -28,7 +28,7 @@ public final class SecretRealmEntryLocator {
     // once structures are in place.
     public static Landing plan(ServerLevel level, SecretRealmRecord record) {
         SecretRealm definition = record.instance();
-        RandomSource random = RandomSource.create(record.seed());
+        RandomSource random = RandomSource.create(record.seed().orElse(level.getSeed()));
         EntryPoint point = definition.pickEntry(random);
         Vec3 position = point != null && point.pos().isPresent()
                 ? point.pos().get()
@@ -36,7 +36,7 @@ public final class SecretRealmEntryLocator {
         return new Landing(point, position);
     }
 
-    // An explicit y is honoured; a random landing is dropped onto whatever now occupies the chosen column,
+    // An explicit y is honored; a random landing is dropped onto whatever now occupies the chosen column,
     // the structures that were just placed included.
     public static Vec3 finish(ServerLevel level, Landing landing) {
         if (landing.point() != null && landing.point().pos().isPresent()) return landing.position();
@@ -45,7 +45,7 @@ public final class SecretRealmEntryLocator {
 
     public static Arrival arrival(ServerLevel level, SecretRealmRecord record, int slot, float fallbackYaw, float fallbackPitch) {
         Vec3 anchor = record.anchor().orElseGet(() -> new Vec3(0.5D, 0.0D, 0.5D));
-        RandomSource random = RandomSource.create(record.seed());
+        RandomSource random = RandomSource.create(record.seed().orElse(level.getSeed()));
         EntryPoint point = record.instance().pickEntry(random);
         double spread = record.instance().entry().stream().mapToDouble(EntryPoint::spread).max().orElse(0.0D);
         Vec3 position = anchor;

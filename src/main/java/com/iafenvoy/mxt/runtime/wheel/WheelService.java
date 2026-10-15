@@ -21,6 +21,7 @@ import com.iafenvoy.mxt.runtime.creature.ContractFeedback;
 import com.iafenvoy.mxt.runtime.creature.ContractService;
 import com.iafenvoy.mxt.runtime.spirit.SpiritBurstService;
 import com.iafenvoy.mxt.util.HolderHelper;
+import com.iafenvoy.mxt.util.OptionalBoolean;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup;
@@ -32,10 +33,7 @@ import net.minecraft.world.entity.Mob;
 import net.minecraft.world.item.ItemStack;
 import org.jspecify.annotations.Nullable;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
-import java.util.Optional;
+import java.util.*;
 
 /**
  * The server's half of the wheel: what a submitted layout may contain, and what choosing a page's entry does.
@@ -99,19 +97,19 @@ public final class WheelService {
             return false;
         }
         // Only a switch has a state to ask for; a one-shot keeps the press channel, which carries no direction.
-        Optional<Boolean> state = AbilityActivationService.state(player, ability);
+        OptionalBoolean state = AbilityActivationService.state(player, ability);
         if (state.isEmpty())
             return refuse(player, id, Togglable.Failure.UNAVAILABLE, null, "directed", "actionbar.mxt.wheel.use_failed");
-        if (state.get() == wanted) return true;
+        if (state.getAsBoolean() == wanted) return true;
         ItemStack carrier = WheelSources.carrier(player, source, ability).orElse(null);
         return activate(player, ability, carrier, id, "directed");
     }
 
     // The number is a place, not an entry, so it stays valid - and finds the same slot again - while whatever used
     // to fill it is gone. Only a value outside the numbering is refused, since that is not a place at all.
-    public static Optional<Integer> sanitizeArmed(@Nullable Integer submitted) {
-        if (submitted == null || submitted < 0 || submitted > MAX_ARMED) return Optional.empty();
-        return Optional.of(submitted);
+    public static OptionalInt sanitizeArmed(@Nullable Integer submitted) {
+        if (submitted == null || submitted < 0 || submitted > MAX_ARMED) return OptionalInt.empty();
+        return OptionalInt.of(submitted);
     }
 
     private static WheelSlot resolve(RegistryAccess access, WheelSlot slot) {

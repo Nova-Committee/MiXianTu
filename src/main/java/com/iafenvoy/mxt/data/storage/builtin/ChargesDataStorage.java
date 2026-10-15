@@ -2,13 +2,14 @@ package com.iafenvoy.mxt.data.storage.builtin;
 
 import com.iafenvoy.mxt.data.ability.AbilityContext;
 import com.iafenvoy.mxt.data.storage.DataStorage;
+import com.iafenvoy.mxt.util.codec.OptionalCodecs;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.iafenvoy.mxt.util.formula.number.Constant;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 
-import java.util.Optional;
+import java.util.OptionalDouble;
 
 /**
  * A pool of uses. {@code maximum} and {@code recharge_ticks} are the declaration and {@code remaining} how many are
@@ -17,19 +18,19 @@ import java.util.Optional;
  */
 public final class ChargesDataStorage extends DataStorage {
     // Addressing instance for a value that does not come from a declaration.
-    public static final ChargesDataStorage INSTANCE = new ChargesDataStorage(new Constant(0.0D), new Constant(0.0D), Optional.empty(), 0L);
+    public static final ChargesDataStorage INSTANCE = new ChargesDataStorage(new Constant(0.0D), new Constant(0.0D), OptionalDouble.empty(), 0L);
     public static final MapCodec<ChargesDataStorage> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             NumberProvider.CODEC.fieldOf("maximum").forGetter(ChargesDataStorage::maximum),
             NumberProvider.CODEC.fieldOf("recharge_ticks").forGetter(ChargesDataStorage::rechargeTicks),
-            Codec.DOUBLE.optionalFieldOf("remaining").forGetter(ChargesDataStorage::remaining),
+            OptionalCodecs.doubleCodec("remaining").forGetter(ChargesDataStorage::remaining),
             Codec.LONG.optionalFieldOf("last_change", 0L).forGetter(ChargesDataStorage::lastChange)
     ).apply(i, ChargesDataStorage::new));
     private final NumberProvider maximum;
     private final NumberProvider rechargeTicks;
-    private Optional<Double> remaining;
+    private OptionalDouble remaining;
     private long lastChange;
 
-    private ChargesDataStorage(NumberProvider maximum, NumberProvider rechargeTicks, Optional<Double> remaining, long lastChange) {
+    private ChargesDataStorage(NumberProvider maximum, NumberProvider rechargeTicks, OptionalDouble remaining, long lastChange) {
         this.maximum = maximum;
         this.rechargeTicks = rechargeTicks;
         this.remaining = remaining;
@@ -58,7 +59,7 @@ public final class ChargesDataStorage extends DataStorage {
         // An interval that is unusable never refills; zero would otherwise fill the pool on every tick.
         if (!Double.isFinite(ticks) || ticks <= 0.0D) return;
         if (context.gameTime() - this.lastChange < Math.max(1L, Math.round(ticks))) return;
-        this.remaining = Optional.of(Math.min(maximum, left + 1.0D));
+        this.remaining = OptionalDouble.of(Math.min(maximum, left + 1.0D));
         this.lastChange = context.gameTime();
         this.markDirty();
     }
@@ -71,7 +72,7 @@ public final class ChargesDataStorage extends DataStorage {
         return this.rechargeTicks;
     }
 
-    public Optional<Double> remaining() {
+    public OptionalDouble remaining() {
         return this.remaining;
     }
 
@@ -80,7 +81,7 @@ public final class ChargesDataStorage extends DataStorage {
     }
 
     public void setRemaining(double value, long gameTime) {
-        this.remaining = Optional.of(value);
+        this.remaining = OptionalDouble.of(value);
         this.lastChange = gameTime;
         this.markDirty();
     }
@@ -100,7 +101,7 @@ public final class ChargesDataStorage extends DataStorage {
         ).apply(i, Settings::new));
 
         public ChargesDataStorage declared() {
-            return new ChargesDataStorage(this.maximum, this.rechargeTicks, Optional.empty(), 0L);
+            return new ChargesDataStorage(this.maximum, this.rechargeTicks, OptionalDouble.empty(), 0L);
         }
     }
 }

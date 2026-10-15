@@ -6,6 +6,7 @@ import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.ability.Togglable;
 import com.iafenvoy.mxt.data.ability.ToggleContext;
 import com.iafenvoy.mxt.registry.MxtAttachments;
+import com.iafenvoy.mxt.util.OptionalBoolean;
 import net.minecraft.core.Holder;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
@@ -40,9 +41,9 @@ public final class AbilityActivationService {
     }
 
     // Read-only, and safe on either side: the state an implementation reports is part of its declaration.
-    public static Optional<Boolean> state(LivingEntity holder, Holder<Ability> ability) {
+    public static OptionalBoolean state(LivingEntity holder, Holder<Ability> ability) {
         if (holder == null || ability == null || !(ability.value().type() instanceof Togglable togglable))
-            return Optional.empty();
+            return OptionalBoolean.empty();
         return togglable.state(new ToggleContext(holder, null, ability));
     }
 

@@ -17,6 +17,7 @@ import org.jspecify.annotations.Nullable;
 
 import java.util.Objects;
 import java.util.Optional;
+import java.util.OptionalInt;
 
 /**
  * Mirrors the chosen cell with the server: restores the number remembered at login and publishes the one the
@@ -70,9 +71,8 @@ public final class WheelSelectionSync {
         WheelLayoutAttachment data = player.getExistingData(MxtAttachments.WHEEL_LAYOUT).orElse(null);
         if (data == null) return;
         consulted = true;
-        Integer saved = data.armed().orElse(null);
-        if (saved == null) return;
-        WheelSelectionState.restore(saved);
-        synced = saved;
+        OptionalInt saved = data.armed();
+        if (saved.isEmpty()) return;
+        WheelSelectionState.restore(synced = saved.getAsInt());
     }
 }

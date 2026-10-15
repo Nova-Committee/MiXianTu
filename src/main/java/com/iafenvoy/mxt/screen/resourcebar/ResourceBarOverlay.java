@@ -31,10 +31,7 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 /**
  * Answers which resource bars want to be drawn, in which order, and at what slot of their stack; everything it
@@ -92,8 +89,7 @@ public final class ResourceBarOverlay {
         return collected;
     }
 
-    private static void collectResources(List<ResourceBarRenderState> result, Registry<Resource> resources,
-                                         LivingEntity entity, Layout layout, Anchor anchor) {
+    private static void collectResources(List<ResourceBarRenderState> result, Registry<Resource> resources, LivingEntity entity, Layout layout, Anchor anchor) {
         long gameTime = entity.level().getGameTime();
         for (Reference<Resource> resource : resources.listElements().toList()) {
             // A bar is declared on a value; the use gate belongs to the aura that value carries (no aura = ungated).
@@ -142,7 +138,7 @@ public final class ResourceBarOverlay {
                 definition.order(), identifier, index, current, 0.0D, maximum,
                 new OriginsRenderData(
                         SpriteIcon.of(OriginsRenderData.DEFAULT_TEXTURE, false),
-                        definition.barIndex(), Optional.of(definition.barIndex()), definition.inverted()),
+                        definition.barIndex(), OptionalInt.of(definition.barIndex()), definition.inverted()),
                 0, 0, Optional.of(Component.translatable(key)), ValueDisplay.NONE));
     }
 

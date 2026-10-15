@@ -5,8 +5,7 @@
   "mixins": [
     "EntityMountRemovalMixin",
     "EntityPerchMixin",
-    "MinecraftServerRuntimeAccessor",
-    "ServerLevelSeedMixin"
+    "MinecraftServerRuntimeAccessor"
   ],
   "client": [
     "BossHealthOverlayMixin",

@@ -6,6 +6,8 @@ import com.iafenvoy.mxt.data.cultivation.RealmStage;
 import com.iafenvoy.mxt.runtime.DatapackCache;
 import net.minecraft.core.Holder;
 
+import java.util.OptionalInt;
+
 /**
  * Where a body stands in a realm chain. Every answer is the shared index's, so a stage that index does not hold has
  * no rank rather than a re-walked one.
@@ -25,6 +27,7 @@ public final class CultivationRanks {
             // no index exists.
             return aura.value().firstRealm().isPresent() ? 0 : -1;
         }
-        return cache.rankForRealm(current).map(rank -> rank + 1).orElse(-1);
+        OptionalInt rank = cache.rankForRealm(current);
+        return rank.isPresent() ? rank.getAsInt() + 1 : -1;
     }
 }

@@ -28,6 +28,7 @@ import java.util.Optional;
 /**
  * Immutable datapack template for one aura environment.
  */
+//FIXME:???
 public record AuraZone(Map<Holder<Aura>, AuraValue> aura,
                        List<Either<ResourceKey<LevelStem>, TagKey<LevelStem>>> dimensions,
                        List<Either<Holder<Biome>, TagKey<Biome>>> biomes, Fluctuation fluctuation, Rules rules,

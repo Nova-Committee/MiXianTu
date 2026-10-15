@@ -206,7 +206,7 @@ public final class MxtKubeJsApi {
         if (durationTicks < 0L) throw new IllegalArgumentException("Curse duration must not be negative");
         return MxtDatapackRegistries.holder(target.level().registryAccess(), MxtResourceKeys.CURSE, id)
                 .map(curse -> CurseService.applyWithDuration(target, curse, stacks, target.level().getGameTime(),
-                        context, source, Optional.of(durationTicks)))
+                        context, source, OptionalLong.of(durationTicks)))
                 .orElseGet(() -> new ApplyResult(null, false, ApplyFailure.UNKNOWN));
     }
 

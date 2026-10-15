@@ -4,8 +4,9 @@ import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.data.context.condition.EntityConditionContext;
 import com.iafenvoy.mxt.data.storage.builtin.CooldownDataStorage;
+import com.iafenvoy.mxt.util.OptionalBoolean;
+import com.iafenvoy.mxt.util.codec.OptionalCodecs;
 import com.iafenvoy.mxt.util.formula.NumberRange;
-import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
@@ -21,11 +22,11 @@ import java.util.Optional;
  * its length, so a pack that states a cooldown once in the ability's own field can read it back here.
  */
 public record AbilityStorageCooldownCondition(Holder<Ability> ability, Optional<NumberRange> remaining,
-                                              Optional<Boolean> ready) implements EntityCondition {
+                                              OptionalBoolean ready) implements EntityCondition {
     public static final MapCodec<AbilityStorageCooldownCondition> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             Ability.CODEC.fieldOf("ability").forGetter(AbilityStorageCooldownCondition::ability),
             NumberRange.CODEC.optionalFieldOf("remaining").forGetter(AbilityStorageCooldownCondition::remaining),
-            Codec.BOOL.optionalFieldOf("ready").forGetter(AbilityStorageCooldownCondition::ready)
+            OptionalCodecs.boolCodec("ready").forGetter(AbilityStorageCooldownCondition::ready)
     ).apply(i, AbilityStorageCooldownCondition::new));
 
     @Override
@@ -40,7 +41,7 @@ public record AbilityStorageCooldownCondition(Holder<Ability> ability, Optional<
             left = stored.get().remaining(ctx.entity().level().getGameTime());
         }
         if (this.remaining.isPresent() && !this.remaining.get().test(left, ctx.formula())) return false;
-        return this.ready.isEmpty() || this.ready.get() == (left <= 0.0D);
+        return this.ready.isEmpty() || this.ready.getAsBoolean() == (left <= 0.0D);
     }
 
     @Override

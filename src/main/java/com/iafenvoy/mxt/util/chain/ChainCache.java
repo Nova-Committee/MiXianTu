@@ -8,6 +8,7 @@ import net.minecraft.core.HolderLookup;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.OptionalInt;
 import java.util.function.BiPredicate;
 import java.util.function.Function;
 import java.util.function.UnaryOperator;
@@ -49,8 +50,9 @@ public final class ChainCache<T> {
         return this.chainOf(node).flatMap(chain -> chain.previous(node));
     }
 
-    public Optional<Integer> rankOf(Holder<T> node) {
-        return this.chainOf(node).map(chain -> chain.indexOf(node));
+    public OptionalInt rankOf(Holder<T> node) {
+        Optional<Chain<T>> chain = this.chainOf(node);
+        return chain.map(tChain -> OptionalInt.of(tChain.indexOf(node))).orElseGet(OptionalInt::empty);
     }
 
     /**

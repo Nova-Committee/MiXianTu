@@ -189,7 +189,7 @@ public final class DatapackCache {
     /**
      * Zero-based, counted from the first realm of the validated chain.
      */
-    public Optional<Integer> rankForRealm(Holder<RealmStage> realm) {
+    public OptionalInt rankForRealm(Holder<RealmStage> realm) {
         return this.realmChains.rankOf(realm);
     }
 
@@ -215,7 +215,7 @@ public final class DatapackCache {
         return this.realmChains.next(realm);
     }
 
-    public Optional<Integer> rankForLevel(Holder<Progression> level) {
+    public OptionalInt rankForLevel(Holder<Progression> level) {
         return this.progressionChains.rankOf(level);
     }
 

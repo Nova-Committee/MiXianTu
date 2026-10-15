@@ -18,7 +18,7 @@ import net.neoforged.neoforge.client.network.ClientPacketDistributor;
 import org.jspecify.annotations.Nullable;
 
 import java.util.List;
-import java.util.Optional;
+import java.util.OptionalDouble;
 
 /**
  * The four furnace views, one page each; see {@link AuiContainerScreen} for the page contract.
@@ -254,8 +254,8 @@ public final class AlchemyFurnaceScreen extends AuiContainerScreen<AlchemyFurnac
 
     private boolean draftDiverged() {
         if (this.target == null || Double.isNaN(this.submitted)) return true;
-        Optional<Double> parsed = parseFinite(this.target.getValue());
-        return parsed.isEmpty() || Double.doubleToLongBits(parsed.get()) != Double.doubleToLongBits(this.submitted);
+        OptionalDouble parsed = parseFinite(this.target.getValue());
+        return parsed.isEmpty() || Double.doubleToLongBits(parsed.getAsDouble()) != Double.doubleToLongBits(this.submitted);
     }
 
     private void writeField(String text) {
@@ -271,25 +271,25 @@ public final class AlchemyFurnaceScreen extends AuiContainerScreen<AlchemyFurnac
     private void applyTemperature() {
         if (this.target == null) return;
         String draft = this.target.getValue();
-        Optional<Double> parsed = parseFinite(draft);
+        OptionalDouble parsed = parseFinite(draft);
         if (parsed.isEmpty()) {
             this.rejection = Component.translatable("screen.mxt.alchemy.temperature_invalid", draft);
             return;
         }
-        this.submitted = parsed.get();
+        this.submitted = parsed.getAsDouble();
         this.inflight++;
         this.draftDirty = true;
         this.rejection = null;
         this.send(Action.TEMPERATURE, this.submitted);
     }
 
-    private static Optional<Double> parseFinite(String raw) {
-        if (raw == null || raw.isBlank()) return Optional.empty();
+    private static OptionalDouble parseFinite(String raw) {
+        if (raw == null || raw.isBlank()) return OptionalDouble.empty();
         try {
             double value = Double.parseDouble(raw.trim());
-            return Double.isFinite(value) ? Optional.of(value) : Optional.empty();
+            return Double.isFinite(value) ? OptionalDouble.of(value) : OptionalDouble.empty();
         } catch (NumberFormatException exception) {
-            return Optional.empty();
+            return OptionalDouble.empty();
         }
     }
 

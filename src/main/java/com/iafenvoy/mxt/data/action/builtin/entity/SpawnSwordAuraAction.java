@@ -3,37 +3,38 @@ package com.iafenvoy.mxt.data.action.builtin.entity;
 import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.context.action.EntityActionContext;
 import com.iafenvoy.mxt.runtime.sword.SwordAuraEntity;
+import com.iafenvoy.mxt.util.OptionalBoolean;
+import com.iafenvoy.mxt.util.OptionalFloat;
+import com.iafenvoy.mxt.util.codec.OptionalCodecs;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.iafenvoy.mxt.util.formula.number.Constant;
-import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import net.minecraft.util.ExtraCodecs;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.Vec3;
 import org.jspecify.annotations.NonNull;
 
-import java.util.Optional;
+import java.util.OptionalInt;
 
-public record SpawnSwordAuraAction(NumberProvider speed, Optional<Integer> bladeColor, Optional<Integer> auraColor,
-                                   Optional<Boolean> radialFlame, Optional<Float> length, Optional<Float> bladeWidth,
-                                   Optional<Float> thickness, Optional<Float> handleLength, Optional<Float> guardWidth,
-                                   Optional<Float> scale, Optional<Integer> lifetime,
+public record SpawnSwordAuraAction(NumberProvider speed, OptionalInt bladeColor, OptionalInt auraColor,
+                                   OptionalBoolean radialFlame, OptionalFloat length, OptionalFloat bladeWidth,
+                                   OptionalFloat thickness, OptionalFloat handleLength, OptionalFloat guardWidth,
+                                   OptionalFloat scale, OptionalInt lifetime,
                                    EntityAction collideAction) implements EntityAction {
     public static final MapCodec<SpawnSwordAuraAction> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             NumberProvider.CODEC.optionalFieldOf("speed", new Constant(1.0D)).forGetter(SpawnSwordAuraAction::speed),
-            ExtraCodecs.STRING_ARGB_COLOR.optionalFieldOf("blade_color").forGetter(SpawnSwordAuraAction::bladeColor),
-            ExtraCodecs.STRING_ARGB_COLOR.optionalFieldOf("aura_color").forGetter(SpawnSwordAuraAction::auraColor),
-            Codec.BOOL.optionalFieldOf("radial_flame").forGetter(SpawnSwordAuraAction::radialFlame),
-            Codec.floatRange(0.01F, 32.0F).optionalFieldOf("length").forGetter(SpawnSwordAuraAction::length),
-            Codec.floatRange(0.01F, 32.0F).optionalFieldOf("blade_width").forGetter(SpawnSwordAuraAction::bladeWidth),
-            Codec.floatRange(0.01F, 32.0F).optionalFieldOf("thickness").forGetter(SpawnSwordAuraAction::thickness),
-            Codec.floatRange(0.01F, 32.0F).optionalFieldOf("handle_length").forGetter(SpawnSwordAuraAction::handleLength),
-            Codec.floatRange(0.01F, 32.0F).optionalFieldOf("guard_width").forGetter(SpawnSwordAuraAction::guardWidth),
-            Codec.floatRange(0.01F, 32.0F).optionalFieldOf("scale").forGetter(SpawnSwordAuraAction::scale),
-            Codec.intRange(1, 72000).optionalFieldOf("lifetime").forGetter(SpawnSwordAuraAction::lifetime),
+            OptionalCodecs.rgbColorCodec("blade_color").forGetter(SpawnSwordAuraAction::bladeColor),
+            OptionalCodecs.rgbColorCodec("aura_color").forGetter(SpawnSwordAuraAction::auraColor),
+            OptionalCodecs.boolCodec("radial_flame").forGetter(SpawnSwordAuraAction::radialFlame),
+            OptionalCodecs.floatCodec(0.01F, 32.0F, "length").forGetter(SpawnSwordAuraAction::length),
+            OptionalCodecs.floatCodec(0.01F, 32.0F, "blade_width").forGetter(SpawnSwordAuraAction::bladeWidth),
+            OptionalCodecs.floatCodec(0.01F, 32.0F, "thickness").forGetter(SpawnSwordAuraAction::thickness),
+            OptionalCodecs.floatCodec(0.01F, 32.0F, "handle_length").forGetter(SpawnSwordAuraAction::handleLength),
+            OptionalCodecs.floatCodec(0.01F, 32.0F, "guard_width").forGetter(SpawnSwordAuraAction::guardWidth),
+            OptionalCodecs.floatCodec(0.01F, 32.0F, "scale").forGetter(SpawnSwordAuraAction::scale),
+            OptionalCodecs.intCodec(1, 72000, "lifetime").forGetter(SpawnSwordAuraAction::lifetime),
             EntityAction.optionalCodec("collide_action").forGetter(SpawnSwordAuraAction::collideAction)
     ).apply(i, SpawnSwordAuraAction::new));
 

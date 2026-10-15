@@ -1,13 +1,13 @@
 package com.iafenvoy.mxt.data.storage.builtin;
 
 import com.iafenvoy.mxt.data.storage.DataStorage;
+import com.iafenvoy.mxt.util.codec.OptionalCodecs;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.iafenvoy.mxt.util.formula.number.Constant;
-import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 
-import java.util.Optional;
+import java.util.OptionalDouble;
 
 /**
  * A running duration. {@code ends_at} is the tick the timer ends at, so a reader compares it against the current tick
@@ -15,15 +15,15 @@ import java.util.Optional;
  */
 public final class TimerDataStorage extends DataStorage {
     // The declaration entry a type lists this kind by; the duration and the end tick come from whatever writes it.
-    public static final TimerDataStorage INSTANCE = new TimerDataStorage(new Constant(0.0D), Optional.empty());
+    public static final TimerDataStorage INSTANCE = new TimerDataStorage(new Constant(0.0D), OptionalDouble.empty());
     public static final MapCodec<TimerDataStorage> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             NumberProvider.CODEC.fieldOf("duration").forGetter(TimerDataStorage::duration),
-            Codec.DOUBLE.optionalFieldOf("ends_at").forGetter(TimerDataStorage::endsAt)
+            OptionalCodecs.doubleCodec("ends_at").forGetter(TimerDataStorage::endsAt)
     ).apply(i, TimerDataStorage::new));
     private final NumberProvider duration;
-    private Optional<Double> endsAt;
+    private OptionalDouble endsAt;
 
-    private TimerDataStorage(NumberProvider duration, Optional<Double> endsAt) {
+    private TimerDataStorage(NumberProvider duration, OptionalDouble endsAt) {
         this.duration = duration;
         this.endsAt = endsAt;
     }
@@ -42,7 +42,7 @@ public final class TimerDataStorage extends DataStorage {
         return this.duration;
     }
 
-    public Optional<Double> endsAt() {
+    public OptionalDouble endsAt() {
         return this.endsAt;
     }
 
@@ -51,16 +51,16 @@ public final class TimerDataStorage extends DataStorage {
     }
 
     public long remaining(long gameTime) {
-        return this.endsAt.map(end -> Math.max(0L, Math.round(end) - gameTime)).orElse(0L);
+        return this.endsAt.isPresent() ? Math.max(0L, Math.round(this.endsAt.getAsDouble()) - gameTime) : 0L;
     }
 
     public void start(double endsAt) {
-        this.endsAt = Optional.of(endsAt);
+        this.endsAt = OptionalDouble.of(endsAt);
         this.markDirty();
     }
 
     public void clear() {
-        this.endsAt = Optional.empty();
+        this.endsAt = OptionalDouble.empty();
         this.markDirty();
     }
 }

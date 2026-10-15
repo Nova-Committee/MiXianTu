@@ -11,6 +11,7 @@ import net.minecraft.core.Holder;
 import org.jspecify.annotations.NonNull;
 
 import java.util.Optional;
+import java.util.OptionalDouble;
 
 /**
  * Reads how many uses the {@code mxt:charges} of a named ability have left. An ability that was never spent keeps no
@@ -29,7 +30,8 @@ public record AbilityStorageChargesCondition(Holder<Ability> ability,
         ChargesDataStorage declaration = reading.declared(ChargesDataStorage.class).orElse(null);
         if (declaration == null) return false;
         double maximum = declaration.maximum().evaluate(ctx.formula());
-        double left = reading.stored(ChargesDataStorage.class).flatMap(ChargesDataStorage::remaining).orElse(maximum);
+        OptionalDouble stored = reading.stored(ChargesDataStorage.class).map(ChargesDataStorage::remaining).orElseGet(OptionalDouble::empty);
+        double left = stored.orElse(maximum);
         if (!Double.isFinite(maximum) || !Double.isFinite(left)) return false;
         return this.remaining.isEmpty() || this.remaining.get().test(left, ctx.formula());
     }

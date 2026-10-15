@@ -108,11 +108,6 @@ public final class SecretRealmRegistry {
         return index;
     }
 
-    public static OptionalLong seedFor(ResourceKey<Level> dimension) {
-        SecretRealmRecord record = INSTANCES.get(dimension);
-        return record == null ? OptionalLong.empty() : OptionalLong.of(record.seed());
-    }
-
     public static boolean isRealm(ResourceKey<Level> dimension) {
         return INSTANCES.containsKey(dimension);
     }

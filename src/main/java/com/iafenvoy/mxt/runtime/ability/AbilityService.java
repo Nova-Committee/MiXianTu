@@ -75,7 +75,8 @@ public final class AbilityService {
         double chargeBefore = Double.NaN;
         if (charges.isPresent()) {
             double maximum = charges.get().maximum().evaluate(context);
-            double available = AbilityStorage.get(abilities, ability, ChargesDataStorage.class).flatMap(ChargesDataStorage::remaining).orElse(maximum);
+            OptionalDouble stored = AbilityStorage.get(abilities, ability, ChargesDataStorage.class).map(ChargesDataStorage::remaining).orElseGet(OptionalDouble::empty);
+            double available = stored.orElse(maximum);
             if (!Double.isFinite(maximum) || maximum < 1.0D || !Double.isFinite(available) || available < 1.0D) {
                 return PrepareResult.rejected(Failure.NO_CHARGES, null);
             }

@@ -267,9 +267,9 @@ public final class QualityService {
     // The colour the pack gave this tier, applied to whatever text names it. A quality without one leaves the
     // text exactly as it was, because a tint is something a pack opts into rather than a default to fall back to.
     public static Component coloredName(Holder<ItemQuality> quality, Component text) {
-        Optional<Integer> color = quality.value().color();
+        OptionalInt color = quality.value().color();
         return color.isEmpty() ? text
-                : text.copy().withStyle(style -> style.withColor(TextColor.fromRgb(color.orElseThrow())));
+                : text.copy().withStyle(style -> style.withColor(TextColor.fromRgb(color.getAsInt())));
     }
 
     // How a tier reads wherever one is listed: the pack's name for it, in the colour that same tier gave itself.

@@ -21,6 +21,7 @@ import net.minecraft.world.level.block.state.BlockState;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.OptionalDouble;
 
 /**
  * End-to-end checks for the herb loop. Each leg prints actual and expected.
@@ -272,7 +273,8 @@ public final class HerbProbes {
     }
 
     private static Double ageAt(ServerLevel level, BlockPos pos) {
-        return SpiritHerbGrowthService.ageAt(level, pos, level.getBlockState(pos)).orElse(null);
+        OptionalDouble age = SpiritHerbGrowthService.ageAt(level, pos, level.getBlockState(pos));
+        return age.isPresent() ? age.getAsDouble() : null;
     }
 
     private static void settle(ServerLevel level, BlockPos pos) {

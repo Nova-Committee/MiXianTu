@@ -51,6 +51,7 @@ import java.util.function.Predicate;
  * <p>Reading the catalogue - rows of a category, rows of one mod, the item list a creative tab takes - is
  * {@code com.iafenvoy.mxt.data.CreativeTabHelper}, which is also what other mods call.</p>
  */
+// TODO::Rewrite
 public final class ItemPickerManager {
     private static final List<ItemProvider<?>> PROVIDERS = new LinkedList<>();
 
@@ -107,7 +108,15 @@ public final class ItemPickerManager {
 
         // A quality carries its name in the data pack rather than in a language file, so that name wins - and the
         // row is drawn in the tier's own colour, which is the one place the ladder is visible side by side.
-        registerOrderedQualities();
+        registerInternal(MxtResourceKeys.ITEM_QUALITY, (provider, filter) -> {
+            List<PickerItem> items = new ArrayList<>();
+            for (Holder<ItemQuality> holder : QualityService.ordered(provider)) {
+                Identifier id = HolderHelper.id(holder);
+                if (!filter.test(id)) continue;
+                items.add(described(MxtItems.IDENTIFICATION_MIRROR.toStack(), holder, QualityService.displayName(holder)));
+            }
+            return List.copyOf(items);
+        });
     }
 
     /**
@@ -186,7 +195,7 @@ public final class ItemPickerManager {
     }
 
     public static <T> void register(ResourceKey<Registry<T>> key, BiFunction<Holder<T>, Provider, List<PickerItem>> rows) {
-        PROVIDERS.add(new ItemProvider<>(key, (provider, filter) -> {
+        registerInternal(key, (provider, filter) -> {
             List<PickerItem> collected = new ArrayList<>();
             provider.lookup(key).stream().flatMap(HolderLookup::listElements).forEach(holder -> {
                 if (!filter.test(holder.key().identifier())) return;
@@ -196,22 +205,11 @@ public final class ItemPickerManager {
                 }
             });
             return List.copyOf(collected);
-        }));
+        });
     }
 
-    // The pack's own order for a list of tiers first, then everything it did not name; a picker page is exactly
-    // such a list, which makes it the consumer of the tooltip-order tag.
-    //FIXME::to global ones
-    private static void registerOrderedQualities() {
-        PROVIDERS.add(new ItemProvider<>(MxtResourceKeys.ITEM_QUALITY, (provider, filter) -> {
-            List<PickerItem> items = new ArrayList<>();
-            for (Holder<ItemQuality> holder : QualityService.ordered(provider)) {
-                Identifier id = HolderHelper.id(holder);
-                if (!filter.test(id)) continue;
-                items.add(described(MxtItems.IDENTIFICATION_MIRROR.toStack(), holder, QualityService.displayName(holder)));
-            }
-            return List.copyOf(items);
-        }));
+    private static <T> void registerInternal(ResourceKey<Registry<T>> key, BiFunction<Provider, Predicate<Identifier>, List<PickerItem>> items) {
+        PROVIDERS.add(new ItemProvider<>(key, items));
     }
 
     /**
@@ -246,8 +244,7 @@ public final class ItemPickerManager {
 
     // A definition that names blocks rather than items is expanded against the block registry: every block it
     // claims is one row, named by the definition, so a tag entry shows the whole family it covers.
-    private static <T> void registerBlocks(ResourceKey<Registry<T>> key,
-                                           Function<T, List<Either<Holder<Block>, TagKey<Block>>>> blocks) {
+    private static <T> void registerBlocks(ResourceKey<Registry<T>> key, Function<T, List<Either<Holder<Block>, TagKey<Block>>>> blocks) {
         register(key, (holder, access) -> {
             Identifier id = HolderHelper.idOrNull(holder);
             Component definition = DefinitionText.text(holder);

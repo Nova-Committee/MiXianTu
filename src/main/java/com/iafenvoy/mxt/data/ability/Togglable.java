@@ -1,5 +1,6 @@
 package com.iafenvoy.mxt.data.ability;
 
+import com.iafenvoy.mxt.util.OptionalBoolean;
 import net.minecraft.resources.Identifier;
 import org.jspecify.annotations.Nullable;
 
@@ -14,8 +15,8 @@ import java.util.Optional;
  */
 public interface Togglable {
     // Empty is the ordinary case for a one-shot: nothing stays on, so there is no state to report (storage).
-    default Optional<Boolean> state(ToggleContext context) {
-        return Optional.empty();
+    default OptionalBoolean state(ToggleContext context) {
+        return OptionalBoolean.empty();
     }
 
     // Whether the press pays through the shared gate first. A cast type pays inside its own transaction, and a

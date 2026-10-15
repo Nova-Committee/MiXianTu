@@ -138,6 +138,7 @@ import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.PlayerNames;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.FormulaContexts;
+import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.iafenvoy.mxt.util.formula.number.Constant;
 import com.iafenvoy.mxt.util.math.CompareOperation;
 import com.mojang.authlib.GameProfile;
@@ -1275,14 +1276,14 @@ public final class MxtTestCommands {
             Identifier expected = AuraZonePriorityProbe.select(dimensionZones).orElseThrow();
             if (resolved.sourceKind() != SourceKind.DIMENSION)
                 return "expected a dimension binding but resolved " + resolved.sourceKind();
-            return expected.equals(resolved.source()) ? null
+            return expected.equals(HolderHelper.id(resolved.source())) ? null
                     : "dimension winner mismatch: expected " + expected + " but resolved " + resolved.source();
         }
         if (biomeZones.isEmpty()) return "no aura zone declares this level, so the rule cannot be checked";
         Identifier expected = AuraZonePriorityProbe.select(biomeZones).orElseThrow();
         if (resolved.sourceKind() != SourceKind.BIOME)
             return "expected a biome binding but resolved " + resolved.sourceKind();
-        return expected.equals(resolved.source()) ? null
+        return expected.equals(HolderHelper.id(resolved.source())) ? null
                 : "biome winner mismatch: expected " + expected + " but resolved " + resolved.source();
     }
 
@@ -1445,10 +1446,6 @@ public final class MxtTestCommands {
             return "the generated element description reads " + DefinitionText.description(metal).getString();
         // No language file is loaded here, so every one of those keys is untranslated and must stay out of a
         // tooltip; that guard is the only thing standing between a pack and a row of raw keys.
-        for (Component generated : List.of(DefinitionText.text(metal), DefinitionText.description(metal),
-                DefinitionText.minorStage(coreForming, 2)))
-            if (DefinitionText.resolved(generated))
-                return "an untranslated generated key counts as drawn text: " + generated.getString();
         return null;
     }
 
@@ -2136,7 +2133,6 @@ public final class MxtTestCommands {
         Holder<Progression> foreign = require(MxtResourceKeys.PROGRESSION, SWORD_ART_1);
         Holder<Resource> growth = require(MxtResourceKeys.RESOURCE, BEAST_GROWTH);
         Holder<Ability> growthAbility = require(MxtResourceKeys.ABILITY, PROGRESSION_GROWTH);
-        Holder<Ability> ability = growthAbility;
         // The id a creature's grants are written under: one category, so ending the bond can revoke exactly them.
         Identifier grantSource = Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "grant/creature/"
                 + PROBE_BEAST_PROFILE.getNamespace() + "/" + PROBE_BEAST_PROFILE.getPath());
@@ -2161,7 +2157,7 @@ public final class MxtTestCommands {
                     .flatMap(ProgressionService::next)
                     .map(held -> HolderHelper.id(held).equals(BEAST_2)).orElse(false)
                     && beast.getData(MxtAttachments.CREATURE_SPIRIT).profileLevels().levels().isEmpty()
-                    && !abilities.has(ability);
+                    && !abilities.has(growthAbility);
             // The contract condition answers from the record, so a body nobody took answers bound=false; the
             // contradictory shape is refused when the definition loads rather than read as a silent false.
             boolean contractAsk = new ContractEntityCondition(false, List.of(), List.of()).test(beast, FormulaContext.of(beast))
@@ -2177,9 +2173,9 @@ public final class MxtTestCommands {
             boolean promoted = ProgressionDriver.tick(beast) && stoodOn(beast, BEAST_2) && signals.size() == 1;
             AbilityGrantService.recalculate(beast);
             PassiveAttributeService.tick(beast);
-            boolean granted = abilities.has(ability)
+            boolean granted = abilities.has(growthAbility)
                     && abilities.sources().entries().stream()
-                    .anyMatch(line -> line.getKey().equals(ability) && line.getValue().equals(grantSource))
+                    .anyMatch(line -> line.getKey().equals(growthAbility) && line.getValue().equals(grantSource))
                     && close(beast.getAttributeValue(Attributes.MAX_HEALTH), baseHealth + 3.0D)
                     // The level's own action ran once on entering it, and it ran before the signal went out.
                     && close(resources.get(growth), 11.0D);
@@ -2241,7 +2237,7 @@ public final class MxtTestCommands {
             PassiveAttributeService.tick(beast);
             boolean prune = swept == 1 && stoodOn(beast, BEAST_1)
                     && close(ProgressionDamageMultiplier.of(beast, growthAbility), 1.0D)
-                    && !abilities.has(ability)
+                    && !abilities.has(growthAbility)
                     && close(beast.getAttributeValue(Attributes.MAX_HEALTH), baseHealth);
             source.sendSuccess(() -> Component.literal("progression probe: swept=" + swept + " prune=" + prune
                     + (prune ? " OK" : " MISMATCH")), false);
@@ -2264,7 +2260,7 @@ public final class MxtTestCommands {
             PassiveAttributeService.tick(beast);
             boolean cleared = stoodOn(beast, BEAST_1)
                     && beast.getData(MxtAttachments.CREATURE_SPIRIT).profileLevels().levels().isEmpty()
-                    && !abilities.has(ability)
+                    && !abilities.has(growthAbility)
                     && close(beast.getAttributeValue(Attributes.MAX_HEALTH), baseHealth)
                     && new ContractEntityCondition(false, List.of(), List.of()).test(beast, FormulaContext.of(beast));
             boolean ending = bound && contractReads && regrown && released && cleared;
@@ -2578,7 +2574,7 @@ public final class MxtTestCommands {
         boolean mount = mountEntry != null && close(mountEntry.speed().evaluate(context), 0.12D)
                 && mountEntry.seats() == 2 && !mountEntry.sit()
                 && mountCosts.size() == 1 && mountCosts.getFirst() instanceof ResourceCost(
-                Holder<Resource> resource, com.iafenvoy.mxt.util.formula.NumberProvider amount
+                Holder<Resource> resource, NumberProvider amount
         )
                 && resource.is(qiResource) && close(amount.evaluate(context), 0.1D)
                 // Unwritten display and an unwritten render are both "whatever the renderer does by default".

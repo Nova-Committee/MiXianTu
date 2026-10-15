@@ -243,9 +243,7 @@ public final class AuraService {
 
     // Nearby (3x3x3) sections use real source positions, the rest their centre with inverse-square falloff,
     // and a source section is only read when its chunk is already loaded.
-    private static void applyBlockDistance(Level level, Map<Holder<Aura>, AuraPool> pools,
-                                           AuraChunkAttachment currentChunk, Holder<AuraZone> zone,
-                                           BlockPos query, long gameTime) {
+    private static void applyBlockDistance(Level level, Map<Holder<Aura>, AuraPool> pools, AuraChunkAttachment currentChunk, Holder<AuraZone> zone, BlockPos query, long gameTime) {
         SectionPos querySection = SectionPos.of(query);
         Map<Holder<Aura>, double[]> weighted = new LinkedHashMap<>();
         int queryChunkX = querySection.x();
@@ -343,11 +341,7 @@ public final class AuraService {
         return dx * dx + dy * dy + dz * dz;
     }
 
-    private static void addWeighted(Map<Holder<Aura>, double[]> weighted,
-                                    AuraChunkAttachment attachment,
-                                    Map<Holder<Aura>, AuraValue> values,
-                                    BlockPos sourcePosition, double falloff,
-                                    Level level, long gameTime) {
+    private static void addWeighted(Map<Holder<Aura>, double[]> weighted, AuraChunkAttachment attachment, Map<Holder<Aura>, AuraValue> values, BlockPos sourcePosition, double falloff, Level level, long gameTime) {
         values.forEach((aura, value) -> {
             double availability = sourceAvailability(level, attachment, aura, sourcePosition, gameTime);
             if (availability <= 0.0D) return;
@@ -358,8 +352,7 @@ public final class AuraService {
         });
     }
 
-    private static double sourceAvailability(Level level, AuraChunkAttachment attachment,
-                                             Holder<Aura> aura, BlockPos sourcePosition, long gameTime) {
+    private static double sourceAvailability(Level level, AuraChunkAttachment attachment, Holder<Aura> aura, BlockPos sourcePosition, long gameTime) {
         // One query asks for this once per source and per aura, so the static tier lookup and the environmental
         // pools behind it are memoised; the shared stock they are compared against stays a live read.
         long started = AuraQueryCache.timing() ? System.nanoTime() : 0L;
@@ -368,8 +361,8 @@ public final class AuraService {
             AvailabilityKey key = server == null ? null
                     : new AvailabilityKey(attachment, sourcePosition.immutable(), aura);
             if (key != null) {
-                Optional<Double> cached = AuraQueryCache.availability(server, key);
-                if (cached.isPresent()) return availability(attachment, aura, cached.get(), sourcePosition);
+                OptionalDouble cached = AuraQueryCache.availability(server, key);
+                if (cached.isPresent()) return availability(attachment, aura, cached.getAsDouble(), sourcePosition);
             }
             Resolved zone = staticZone(level, sourcePosition);
             double environmental = zone == null ? 0 : pools(level, zone.zone, sourcePosition, gameTime).getOrDefault(aura, zeroPool()).amount();
@@ -382,8 +375,7 @@ public final class AuraService {
 
     // Collapses the memoised environmental concentration and the live shared stock into an availability in
     // [0,1], split between the players who can currently see the source section.
-    private static double availability(AuraChunkAttachment attachment, Holder<Aura> aura,
-                                       double environmental, BlockPos sourcePosition) {
+    private static double availability(AuraChunkAttachment attachment, Holder<Aura> aura, double environmental, BlockPos sourcePosition) {
         AuraValue aggregate = attachment.blockAura().get(aura);
         AuraPool shared = attachment.auras().get(aura);
         if (aggregate == null || shared == null || aggregate.amount() <= 0.0D) return 0.0D;

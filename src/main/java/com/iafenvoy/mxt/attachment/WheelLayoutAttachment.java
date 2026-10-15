@@ -2,11 +2,12 @@ package com.iafenvoy.mxt.attachment;
 
 import com.iafenvoy.mxt.runtime.wheel.WheelLayout;
 import com.iafenvoy.mxt.util.AbstractChangeTrackable;
-import com.mojang.serialization.Codec;
+import com.iafenvoy.mxt.util.codec.OptionalCodecs;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 
 import java.util.Optional;
+import java.util.OptionalInt;
 
 /**
  * Server-authoritative wheel state: the twelve cells of the configured page plus the number of the cell the use key
@@ -18,15 +19,15 @@ import java.util.Optional;
 public final class WheelLayoutAttachment extends AbstractChangeTrackable {
     public static final MapCodec<WheelLayoutAttachment> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             WheelLayout.CODEC.lenientOptionalFieldOf("layout").forGetter(WheelLayoutAttachment::layout),
-            Codec.INT.lenientOptionalFieldOf("armed").forGetter(WheelLayoutAttachment::armed)
+            OptionalCodecs.lenientIntCodec("armed").forGetter(WheelLayoutAttachment::armed)
     ).apply(i, WheelLayoutAttachment::new));
     private Optional<WheelLayout> layout = Optional.empty();
-    private Optional<Integer> armed = Optional.empty();
+    private OptionalInt armed = OptionalInt.empty();
 
     public WheelLayoutAttachment() {
     }
 
-    private WheelLayoutAttachment(Optional<WheelLayout> layout, Optional<Integer> armed) {
+    private WheelLayoutAttachment(Optional<WheelLayout> layout, OptionalInt armed) {
         this.layout = layout;
         this.armed = armed;
     }
@@ -35,7 +36,7 @@ public final class WheelLayoutAttachment extends AbstractChangeTrackable {
         return this.layout;
     }
 
-    public Optional<Integer> armed() {
+    public OptionalInt armed() {
         return this.armed;
     }
 
@@ -44,7 +45,7 @@ public final class WheelLayoutAttachment extends AbstractChangeTrackable {
         this.markDirty();
     }
 
-    public void setArmed(Optional<Integer> armed) {
+    public void setArmed(OptionalInt armed) {
         this.armed = armed;
         this.markDirty();
     }

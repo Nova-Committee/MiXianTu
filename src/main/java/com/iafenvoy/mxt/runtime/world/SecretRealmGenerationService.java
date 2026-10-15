@@ -21,6 +21,7 @@ import net.minecraft.world.level.dimension.LevelStem;
 import net.minecraft.world.level.levelgen.FlatLevelSource;
 import net.minecraft.world.level.levelgen.flat.FlatLayerInfo;
 import net.minecraft.world.level.levelgen.flat.FlatLevelGeneratorSettings;
+import net.minecraft.world.level.storage.LevelResource;
 import org.apache.commons.io.FileUtils;
 import org.jetbrains.annotations.Nullable;
 
@@ -73,38 +74,30 @@ public final class SecretRealmGenerationService {
         }
         if (definition.generation() instanceof TemplateGeneration template && !record.prepared()
                 && !copyTemplate(server, record.dimension(), template.template())) return Optional.empty();
-        LevelStem stem = buildStem(server, definition.generation());
+        LevelStem stem = buildStem(server, definition.generation(), record.seed());
         if (stem == null) return Optional.empty();
-        SecretRealmSeedBridge.begin(record.dimension(), record.seed());
-        try {
-            Optional<ServerLevel> level = RuntimeDimensionService.load(server, record.dimension(), stem);
-            level.ifPresent(value -> SecretRealmBorderService.apply(value, definition, true));
-            return level;
-        } finally {
-            SecretRealmSeedBridge.end();
-        }
+        Optional<ServerLevel> level = RuntimeDimensionService.load(server, record.dimension(), stem);
+        level.ifPresent(value -> SecretRealmBorderService.apply(value, definition, true));
+        return level;
     }
 
     // Every registry read happens here rather than in the codec: datapack registries load in parallel, and the
     // stem and dimension type layers are not available to a codec at all. Null when unresolved.
     @Nullable
-    public static LevelStem buildStem(MinecraftServer server, SecretRealmGeneration generation) {
+    private static LevelStem buildStem(MinecraftServer server, SecretRealmGeneration generation, OptionalLong seed) {
         RegistryAccess registries = server.registryAccess();
         try {
             return switch (generation) {
                 case ExistingGeneration ignored -> null;
-                case StemGeneration stem ->
-                        registries.lookupOrThrow(Registries.LEVEL_STEM).getOrThrow(stem.stem()).value();
-                case TemplateGeneration template ->
-                        registries.lookupOrThrow(Registries.LEVEL_STEM).getOrThrow(template.stem()).value();
+                case StemGeneration stem -> seeded(registries, stem.stem(), seed);
+                case TemplateGeneration template -> seeded(registries, template.stem(), seed);
                 case FlatGeneration flat -> {
                     FlatPreset preset = parsePreset(registries.lookupOrThrow(Registries.BLOCK), flat.preset());
                     if (preset == null) yield null;
-                    yield new LevelStem(dimensionType(registries, flat.dimensionType()),
-                            new FlatLevelSource(flatSettings(registries, preset.layers(), preset.biome(), flat.structures())));
+                    yield new LevelStem(dimensionType(registries, flat.dimensionType()), new FlatLevelSource(flatSettings(registries, preset.layers(), preset.biome(), flat.structures())), seed);
                 }
-                case VoidGeneration empty -> new LevelStem(dimensionType(registries, empty.dimensionType()),
-                        new FlatLevelSource(flatSettings(registries, List.of(), empty.biome().or(() -> Optional.of(Biomes.THE_VOID)), empty.structures())));
+                case VoidGeneration empty ->
+                        new LevelStem(dimensionType(registries, empty.dimensionType()), new FlatLevelSource(flatSettings(registries, List.of(), empty.biome().or(() -> Optional.of(Biomes.THE_VOID)), empty.structures())), seed);
                 // Unreachable while every registered strategy is handled above; a new one has to be added here.
                 default -> null;
             };
@@ -112,6 +105,13 @@ public final class SecretRealmGenerationService {
             MiXianTu.LOGGER.error("Invalid secret realm generation parameters {}", generation, exception);
             return null;
         }
+    }
+
+    // A stem is a shared registry entry and several instances may name the same one, so it is copied rather than
+    // edited: the instance's own seed goes into the copy, and the level never falls back to the world seed.
+    private static LevelStem seeded(RegistryAccess registries, ResourceKey<LevelStem> key, OptionalLong seed) {
+        LevelStem shared = registries.lookupOrThrow(Registries.LEVEL_STEM).getOrThrow(key).value();
+        return new LevelStem(shared.type(), shared.generator(), seed);
     }
 
     // A dimension a data pack declared through the level stem registry is never touched: the secret_realm/ folder
@@ -124,7 +124,7 @@ public final class SecretRealmGenerationService {
     // The whole folder goes rather than only the chunk directories, because a dimension also stores its level data
     // and attachments under data/: reusing the key must not resurrect the previous occupant's aura areas.
     private static void discard(MinecraftServer server, Identifier dimension) {
-        Path folder = server.getWorldPath(SecretRealmSeedBridge.folder(dimension));
+        Path folder = server.getWorldPath(dimensionFolder(dimension));
         if (!Files.isDirectory(folder)) return;
         try {
             FileUtils.deleteDirectory(folder.toFile());
@@ -141,7 +141,7 @@ public final class SecretRealmGenerationService {
 
     // What a secret realm destroyed by a crash, or by a definition that has since been deleted, leaves behind.
     public static void clearOrphans(MinecraftServer server, Set<ResourceKey<Level>> claimed) {
-        Path root = server.getWorldPath(SecretRealmSeedBridge.root());
+        Path root = server.getWorldPath(dimensionsRoot());
         if (!Files.isDirectory(root)) return;
         List<Path> candidates = new ArrayList<>();
         try (Stream<Path> namespaces = Files.list(root)) {
@@ -178,7 +178,7 @@ public final class SecretRealmGenerationService {
             return false;
         }
         clearData(server, target);
-        Path destination = server.getWorldPath(SecretRealmSeedBridge.folder(target.identifier()));
+        Path destination = server.getWorldPath(dimensionFolder(target.identifier()));
         try {
             for (String name : DATA_FOLDERS) {
                 Path from = source.resolve(name);
@@ -198,6 +198,16 @@ public final class SecretRealmGenerationService {
         if (dimension.equals(Level.NETHER.identifier())) return "DIM-1";
         if (dimension.equals(Level.END.identifier())) return "DIM1";
         return "dimensions/%s/%s".formatted(dimension.getNamespace(), dimension.getPath());
+    }
+
+    // The world-relative folder of a dimension, the layout vanilla uses for level data.
+    private static LevelResource dimensionFolder(Identifier dimension) {
+        return new LevelResource(dimensionDataFolder(dimension));
+    }
+
+    // The world-relative folder every dimension lives in, used to find instance folders nothing claims.
+    private static LevelResource dimensionsRoot() {
+        return new LevelResource("dimensions");
     }
 
     private static Holder<DimensionType> dimensionType(RegistryAccess registries, Optional<ResourceKey<DimensionType>> key) {

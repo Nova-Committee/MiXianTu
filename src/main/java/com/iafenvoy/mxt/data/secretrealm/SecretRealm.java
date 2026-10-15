@@ -4,7 +4,9 @@ import com.iafenvoy.mxt.api.QualityProvider;
 import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
+import com.iafenvoy.mxt.util.OptionalFloat;
 import com.iafenvoy.mxt.util.codec.MiscCodecs;
+import com.iafenvoy.mxt.util.codec.OptionalCodecs;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -19,6 +21,7 @@ import net.minecraft.world.phys.Vec3;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
+import java.util.OptionalDouble;
 
 /**
  * Datapack policy for a secret realm. A secret realm is not a fixed dimension: every instance is a dimension created on
@@ -84,7 +87,7 @@ public record SecretRealm(Optional<Holder<ItemQuality>> quality, SecretRealmGene
         }
         if (failure == null)
             for (EntryPoint point : value.entry()) {
-                if (point.randomRadius().isPresent() && !(point.randomRadius().get() > 0.0D)) {
+                if (point.randomRadius().isPresent() && !(point.randomRadius().getAsDouble() > 0.0D)) {
                     failure = "Secret realm entry random_radius must be positive";
                     break;
                 }
@@ -154,14 +157,14 @@ public record SecretRealm(Optional<Holder<ItemQuality>> quality, SecretRealmGene
     }
 
     // The field accepts a single object or an array of them, so one fixed entrance keeps the short form.
-    public record EntryPoint(Optional<Vec3> pos, Optional<Float> yaw, Optional<Float> pitch,
-                             Optional<Vec2> randomCenter, Optional<Double> randomRadius, double spread, int weight) {
+    public record EntryPoint(Optional<Vec3> pos, OptionalFloat yaw, OptionalFloat pitch,
+                             Optional<Vec2> randomCenter, OptionalDouble randomRadius, double spread, int weight) {
         public static final Codec<EntryPoint> CODEC = RecordCodecBuilder.create(i -> i.group(
                 Vec3.CODEC.optionalFieldOf("pos").forGetter(EntryPoint::pos),
-                Codec.FLOAT.optionalFieldOf("yaw").forGetter(EntryPoint::yaw),
-                Codec.FLOAT.optionalFieldOf("pitch").forGetter(EntryPoint::pitch),
+                OptionalCodecs.floatCodec("yaw").forGetter(EntryPoint::yaw),
+                OptionalCodecs.floatCodec("pitch").forGetter(EntryPoint::pitch),
                 MiscCodecs.HORIZONTAL_PAIR.optionalFieldOf("random_center").forGetter(EntryPoint::randomCenter),
-                Codec.DOUBLE.optionalFieldOf("random_radius").forGetter(EntryPoint::randomRadius),
+                OptionalCodecs.doubleCodec("random_radius").forGetter(EntryPoint::randomRadius),
                 Codec.DOUBLE.optionalFieldOf("spread", 3.0D).forGetter(EntryPoint::spread),
                 Codec.INT.optionalFieldOf("weight", 1).forGetter(EntryPoint::weight)
         ).apply(i, EntryPoint::new));

@@ -1,11 +1,12 @@
 package com.iafenvoy.mxt.data.storage.builtin;
 
 import com.iafenvoy.mxt.data.storage.DataStorage;
+import com.iafenvoy.mxt.util.codec.OptionalCodecs;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 
-import java.util.Optional;
+import java.util.OptionalDouble;
 
 /**
  * How long a host stays on cooldown: {@code duration} is the length the last use actually got and {@code started_at}
@@ -13,15 +14,15 @@ import java.util.Optional;
  */
 public final class CooldownDataStorage extends DataStorage {
     // The declaration entry a type lists this kind by; the length is written by every payment.
-    public static final CooldownDataStorage INSTANCE = new CooldownDataStorage(Optional.empty(), 0L);
+    public static final CooldownDataStorage INSTANCE = new CooldownDataStorage(OptionalDouble.empty(), 0L);
     public static final MapCodec<CooldownDataStorage> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
-            Codec.DOUBLE.optionalFieldOf("duration").forGetter(CooldownDataStorage::duration),
+            OptionalCodecs.doubleCodec("duration").forGetter(CooldownDataStorage::duration),
             Codec.LONG.optionalFieldOf("started_at", 0L).forGetter(CooldownDataStorage::startedAt)
     ).apply(i, CooldownDataStorage::new));
-    private Optional<Double> duration;
+    private OptionalDouble duration;
     private long startedAt;
 
-    private CooldownDataStorage(Optional<Double> duration, long startedAt) {
+    private CooldownDataStorage(OptionalDouble duration, long startedAt) {
         this.duration = duration;
         this.startedAt = startedAt;
     }
@@ -36,7 +37,7 @@ public final class CooldownDataStorage extends DataStorage {
         return new CooldownDataStorage(this.duration, this.startedAt);
     }
 
-    public Optional<Double> duration() {
+    public OptionalDouble duration() {
         return this.duration;
     }
 
@@ -46,13 +47,13 @@ public final class CooldownDataStorage extends DataStorage {
 
     // The length the payment actually got, and the tick it started on.
     public void start(double duration, long gameTime) {
-        this.duration = Optional.of(duration);
+        this.duration = OptionalDouble.of(duration);
         this.startedAt = gameTime;
         this.markDirty();
     }
 
     public void clear() {
-        this.duration = Optional.empty();
+        this.duration = OptionalDouble.empty();
         this.startedAt = 0L;
         this.markDirty();
     }
