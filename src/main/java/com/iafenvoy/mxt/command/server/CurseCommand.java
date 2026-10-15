@@ -83,7 +83,7 @@ public final class CurseCommand {
         }
         long gameTime = target.level().getGameTime();
         for (Entry<Holder<Curse>, State> entry : instances.entrySet()) {
-            Component name = DefinitionText.text(entry.getKey());
+            Component name = DefinitionText.nameOrId(entry.getKey());
             int stacks = entry.getValue().stacks();
             Component life = entry.getValue().expiresAt() < 0L
                     ? Component.translatable("info.mxt.curse.permanent")
@@ -106,10 +106,10 @@ public final class CurseCommand {
             if (result.applied()) {
                 applied++;
                 source.sendSuccess(() -> Component.translatable("command.mxt.curse.applied",
-                        DefinitionText.text(curse), stacks, target.getDisplayName()), true);
+                        DefinitionText.nameOrId(curse), stacks, target.getDisplayName()), true);
             } else {
                 source.sendFailure(Component.translatable("command.mxt.curse.apply_failed",
-                        DefinitionText.text(curse), target.getDisplayName(), String.valueOf(result.failure())));
+                        DefinitionText.nameOrId(curse), target.getDisplayName(), String.valueOf(result.failure())));
             }
         }
         return applied;
@@ -123,9 +123,9 @@ public final class CurseCommand {
         for (Entity target : targets) {
             if (CurseService.remove(target, curse, Reason.EXPLICIT, target.level().getGameTime()).isPresent()) {
                 removed++;
-                source.sendSuccess(() -> Component.translatable("command.mxt.curse.removed", DefinitionText.text(curse), target.getDisplayName()), true);
+                source.sendSuccess(() -> Component.translatable("command.mxt.curse.removed", DefinitionText.nameOrId(curse), target.getDisplayName()), true);
             } else {
-                source.sendFailure(Component.translatable("command.mxt.curse.remove_failed", target.getDisplayName(), DefinitionText.text(curse)));
+                source.sendFailure(Component.translatable("command.mxt.curse.remove_failed", target.getDisplayName(), DefinitionText.nameOrId(curse)));
             }
         }
         return removed;

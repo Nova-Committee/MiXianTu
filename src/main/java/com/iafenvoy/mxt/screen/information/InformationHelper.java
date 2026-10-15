@@ -16,7 +16,7 @@ public final class InformationHelper {
     }
 
     public static String joinDefinitions(Collection<? extends Holder<?>> values) {
-        return values.stream().map(holder -> DefinitionText.text(holder).getString()).reduce((a, b) -> a + ", " + b).orElse("-");
+        return values.stream().map(holder -> DefinitionText.nameOrId(holder).getString()).reduce((a, b) -> a + ", " + b).orElse("-");
     }
 
     public record Columns(int nameWidth, int valueWidth) {

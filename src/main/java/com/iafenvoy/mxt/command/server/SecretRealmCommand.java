@@ -84,7 +84,7 @@ public final class SecretRealmCommand {
                     result.failure().name())));
             return 0;
         }
-        source.sendSuccess(() -> Component.translatable("command.mxt.secret_realm.entered", DefinitionText.text(definition)), true);
+        source.sendSuccess(() -> Component.translatable("command.mxt.secret_realm.entered", DefinitionText.nameOrId(definition)), true);
         return 1;
     }
 

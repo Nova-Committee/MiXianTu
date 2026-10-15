@@ -111,7 +111,7 @@ public final class CultivationModeService {
         if (reason == null) {
             String reasonKey = "actionbar.mxt.cultivation.failure." + result.failure().name().toLowerCase(Locale.ROOT);
             reason = result.failure() == Failure.INSUFFICIENT_RESOURCE && result.failedResource() != null
-                    ? Component.translatable(reasonKey, DefinitionText.text(MxtResourceKeys.RESOURCE, result.failedResource()))
+                    ? Component.translatable(reasonKey, DefinitionText.nameOrId(MxtResourceKeys.RESOURCE, result.failedResource()))
                     : Component.translatable(reasonKey);
         }
         player.sendSystemMessage(Component.translatable("actionbar.mxt.cultivation.failed", reason), true);

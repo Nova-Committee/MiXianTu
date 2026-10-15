@@ -71,7 +71,7 @@ public final class AuraCommand {
         aura.aura().forEach((holder, pool) -> {
             if (holder.value().auraType().filter(element::equals).isPresent()) pools.put(holder, pool);
         });
-        source.sendSuccess(() -> auraReport(aura, pools, DefinitionText.text(element)), false);
+        source.sendSuccess(() -> auraReport(aura, pools, DefinitionText.nameOrId(element)), false);
         return pools.size();
     }
 
@@ -106,15 +106,15 @@ public final class AuraCommand {
     }
 
     private static Component resourceName(Holder<Aura> aura) {
-        MutableComponent base = DefinitionText.text(aura);
+        MutableComponent base = DefinitionText.nameOrId(aura);
         return aura.value().auraType()
-                .map(type -> base.copy().append(" (").append(DefinitionText.text(type)).append(")")).orElse(base);
+                .map(type -> base.copy().append(" (").append(DefinitionText.nameOrId(type)).append(")")).orElse(base);
     }
 
     private static Component sourceName(AuraResult aura) {
         // No zone covers the position, so there is no definition to name; the source kind still prints beside it.
         if (aura.source() == null) return Component.translatable("command.mxt.aura.query.empty");
-        return DefinitionText.text(aura.source());
+        return DefinitionText.nameOrId(aura.source());
     }
 
     private static String auraNumber(double value) {

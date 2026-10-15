@@ -45,7 +45,7 @@ public final class PhysiqueItem extends Item {
         }
         // Only a physique actually gained is spent, and a creative player keeps it so the picker can be used freely.
         if (!player.hasInfiniteMaterials()) stack.shrink(1);
-        ItemFeedback.send(player, Component.translatable("item.mxt.physique.granted", DefinitionText.text(physique)));
+        ItemFeedback.send(player, Component.translatable("item.mxt.physique.granted", DefinitionText.nameOrId(physique)));
         return InteractionResult.SUCCESS_SERVER;
     }
 

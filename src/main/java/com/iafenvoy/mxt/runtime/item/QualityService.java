@@ -273,9 +273,10 @@ public final class QualityService {
                 : text.copy().withStyle(style -> style.withColor(TextColor.fromRgb(color.getAsInt())));
     }
 
-    // How a tier reads wherever one is listed: the pack's name for it, in the colour that same tier gave itself.
+    // How a tier reads wherever one is listed: the pack's name for it in the colour that same tier gave itself, or
+    // the tier's id when no pack translated a name, because a listed tier has to say which tier it is.
     public static Component displayName(Holder<ItemQuality> quality) {
-        return coloredName(quality, DefinitionText.text(quality));
+        return coloredName(quality, DefinitionText.nameOrId(quality));
     }
 
     // The registry comes from the caller, because every caller holds one: ItemPickerManager is handed the

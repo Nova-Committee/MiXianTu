@@ -125,7 +125,7 @@ public final class ArtifactHoldService {
             Holder<Aura> blocked = blockedAura(holder, stack, artifact);
             if (blocked != null)
                 show(holder, Component.translatable("actionbar.mxt.charge.insufficient_aura",
-                        DefinitionText.text(blocked)), "blocked:" + HolderHelper.id(blocked));
+                        DefinitionText.nameOrId(blocked)), "blocked:" + HolderHelper.id(blocked));
             return;
         }
         long gameTime = holder.level().getGameTime();
@@ -250,7 +250,7 @@ public final class ArtifactHoldService {
         switch (result) {
             case CLAIMED -> {
                 String name = ArtifactService.definition(access, stack)
-                        .map(definition -> DefinitionText.text(definition).getString())
+                        .map(definition -> DefinitionText.nameOrId(definition).getString())
                         .orElse(stack.getHoverName().getString());
                 double cost = ArtifactService.claimHealthCost(access, stack, context);
                 show(holder, cost > 0.0D

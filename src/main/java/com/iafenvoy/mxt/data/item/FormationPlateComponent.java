@@ -74,7 +74,7 @@ public record FormationPlateComponent(List<Either<Identifier, TagKey<Formation>>
     @Override
     public void addToTooltip(@NonNull TooltipContext context, Consumer<Component> consumer, @NonNull TooltipFlag flag, @NonNull DataComponentGetter components) {
         consumer.accept(Component.translatable("tooltip.mxt.formation_plate.formation",
-                this.formation.map(DefinitionText::text).orElse(Component.literal("-"))));
+                this.formation.map(DefinitionText::nameOrId).orElse(Component.literal("-"))));
         if (this.allowed.isEmpty()) {
             consumer.accept(Component.translatable("tooltip.mxt.formation_plate.allowed.any"));
             return;

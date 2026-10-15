@@ -11,9 +11,12 @@ import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.util.DefinitionText;
 import net.minecraft.core.Holder;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.chat.contents.TranslatableContents;
+import net.minecraft.resources.Identifier;
 
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Every name, description and minor-stage name is a key generated from the id the entry was decoded as, so the only
@@ -76,7 +79,32 @@ public final class GeneratedNameVerifyProbes {
         if (!generatedKey(DefinitionText.description(metal)).equals("mxt.element.mxt_test.metal.description"))
             return "the generated element description reads " + generatedKey(DefinitionText.description(metal));
         // Being a translation key is the whole guard: a pack that translates one gets words, a pack that does not
-        // gets nothing drawn, and neither can write text of its own.
+        // gets nothing drawn, and neither can write text of its own. The test pack translates this element, and ships
+        // no description for the aura it also defines.
+        Optional<MutableComponent> written = DefinitionText.resolved(DefinitionText.description(metal));
+        if (written.isEmpty() || written.orElseThrow().getString().equals("mxt.element.mxt_test.metal.description"))
+            return "a translated description reads " + written.map(Component::getString).orElse("<nothing>");
+        if (DefinitionText.resolved(DefinitionText.description(qi)).isPresent())
+            return "an untranslated description would be drawn as " + DefinitionText.description(qi).getString();
+        // Nothing else is required to be a key, so a literal and a blank are judged by the same gate.
+        if (DefinitionText.resolved(Component.literal("plain words")).isEmpty())
+            return "a literal description was dropped";
+        if (DefinitionText.resolved(Component.literal("   ")).isPresent())
+            return "a blank description was drawn";
+        // The sibling suffix a stage's count generates, gated the same way: a translated index reads as words, and
+        // one no pack translated is dropped instead of printing its key into the cultivation row.
+        Optional<MutableComponent> stage = DefinitionText.resolved(DefinitionText.minorStage(qiRefining, 0));
+        if (stage.isEmpty() || stage.orElseThrow().getString().equals("mxt.realm_stage.mxt_test.qi_refining.minor_stage.0"))
+            return "a translated minor stage reads " + stage.map(Component::getString).orElse("<nothing>");
+        if (DefinitionText.resolved(DefinitionText.minorStage(coreForming, 3)).isPresent())
+            return "an untranslated minor stage would be drawn as " + DefinitionText.minorStage(coreForming, 3).getString();
+        // A name somewhere that has to show something falls back to the id rather than to the key, so the row still
+        // says which entry it is.
+        String named = DefinitionText.nameOrId(metal).getString();
+        if (!named.equals("Metal Spirit")) return "a translated name reads " + named;
+        Identifier absent = Identifier.fromNamespaceAndPath("mxt_test", "no_such_herb");
+        String fallback = DefinitionText.nameOrId(MxtResourceKeys.SPIRIT_HERB, absent).getString();
+        if (!fallback.equals("mxt_test:no_such_herb")) return "an untranslated name reads " + fallback;
         return null;
     }
 

@@ -77,7 +77,7 @@ public record Chain<T>(List<Holder<T>> nodes) {
     }
 
     public Component buildText(Holder<T> current) {
-        List<? extends Component> entries = this.nodes().stream().map(DefinitionText::text).toList();
+        List<? extends Component> entries = this.nodes().stream().map(DefinitionText::nameOrId).toList();
         int currentIndex = this.indexOf(current);
         MutableComponent text = Component.empty();
         for (int i = 0; i < entries.size(); i++) {

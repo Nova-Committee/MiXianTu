@@ -24,7 +24,6 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.LivingEntity;
@@ -216,9 +215,11 @@ public final class TechniqueItemService {
         if (!(entity instanceof ServerPlayer player)) return;
         ItemReading.readInscription(player, stack);
         player.sendSystemMessage(Component.translatable("message.mxt.technique.read",
-                DefinitionText.text(technique)).withStyle(ChatFormatting.GREEN));
-        MutableComponent description = DefinitionText.description(technique);
-        if (!description.getString().isBlank()) player.sendSystemMessage(description.withStyle(ChatFormatting.GRAY));
+                DefinitionText.nameOrId(technique)).withStyle(ChatFormatting.GREEN));
+        // What the pack wrote for this manual, drawn only when it translated the generated key: the raw key would
+        // otherwise land in the chat log.
+        DefinitionText.resolved(DefinitionText.description(technique))
+                .ifPresent(text -> player.sendSystemMessage(text.withStyle(ChatFormatting.GRAY)));
     }
 
     private static void learn(LivingEntity entity, ItemStack stack, TechniqueBinding binding) {
@@ -238,7 +239,7 @@ public final class TechniqueItemService {
     private static void notifyLearned(LivingEntity entity, Holder<Technique> technique) {
         if (!(entity instanceof ServerPlayer player)) return;
         player.sendSystemMessage(Component.translatable("actionbar.mxt.technique.learned",
-                DefinitionText.text(technique)).withStyle(ChatFormatting.GREEN), true);
+                DefinitionText.nameOrId(technique)).withStyle(ChatFormatting.GREEN), true);
     }
 
     /**
@@ -254,7 +255,7 @@ public final class TechniqueItemService {
     private static void notifyLearnFailure(LivingEntity entity, Holder<Technique> technique, Result result) {
         if (!(entity instanceof ServerPlayer player) || result.failure() == null) return;
         player.sendSystemMessage(Component.translatable("actionbar.mxt.technique.failed",
-                        DefinitionText.text(technique),
+                        DefinitionText.nameOrId(technique),
                         Component.translatable("actionbar.mxt.technique.failure." + result.failure().name().toLowerCase(Locale.ROOT)))
                 .withStyle(ChatFormatting.RED), true);
     }

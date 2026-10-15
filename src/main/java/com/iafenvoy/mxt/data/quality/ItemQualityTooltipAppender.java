@@ -8,7 +8,6 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item.TooltipContext;
 import net.minecraft.world.item.ItemStack;
@@ -61,10 +60,10 @@ public final class ItemQualityTooltipAppender {
     private static void appendQuality(Consumer<Component> builder, Holder<ItemQuality> quality) {
         ItemQuality value = quality.value();
         builder.accept(Component.translatable("tooltip.mxt.item.quality", QualityService.displayName(quality)));
-        // The tier's generated description key, shown only when a pack translated it: an untranslated key is skipped
+        // The tier's generated description key, drawn only when a pack translated it: an untranslated key is skipped
         // rather than printed as its own key text.
-        MutableComponent description = DefinitionText.description(quality);
-        if (!description.getString().isBlank()) builder.accept(description.withStyle(ChatFormatting.GRAY));
+        DefinitionText.resolved(DefinitionText.description(quality))
+                .ifPresent(text -> builder.accept(text.withStyle(ChatFormatting.GRAY)));
         appendModifier(builder, value.valueMultiplier());
         appendModifier(builder, value.forgingModifier());
         appendModifier(builder, value.alchemyModifier());

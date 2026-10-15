@@ -98,7 +98,7 @@ public final class ContractCommand {
         source.sendSuccess(() -> Component.translatable("command.mxt.contract.list.header", owner, entries.size()), false);
         for (BoundBeastsAttachment.Entry entry : entries) {
             boolean loaded = BoundBeastService.resolve(server, entry).isPresent();
-            Component line = Component.translatable("command.mxt.contract.list.entry", DefinitionText.text(entry.type()),
+            Component line = Component.translatable("command.mxt.contract.list.entry", DefinitionText.nameOrId(entry.type()),
                     entry.beast().toString(), Component.translatable(loaded
                             ? "command.mxt.contract.list.loaded" : "command.mxt.contract.list.unloaded"));
             source.sendSuccess(() -> line, false);
@@ -120,7 +120,7 @@ public final class ContractCommand {
         }
         Holder<ContractType> type = contract.contractType().orElseThrow();
         String owner = Contracts.ownerOf(mob).map(id -> PlayerNames.knownToServer(id).orElse(id.toString())).orElse("-");
-        source.sendSuccess(() -> Component.translatable("command.mxt.contract.info.type", DefinitionText.text(type)), false);
+        source.sendSuccess(() -> Component.translatable("command.mxt.contract.info.type", DefinitionText.nameOrId(type)), false);
         source.sendSuccess(() -> Component.translatable("command.mxt.contract.info.owner", owner), false);
         source.sendSuccess(() -> Component.translatable("command.mxt.contract.info.bound_at", contract.boundAt()), false);
         source.sendSuccess(() -> Component.translatable("command.mxt.contract.info.recalled", Component.translatable(
@@ -131,10 +131,10 @@ public final class ContractCommand {
         EntitySources.held(mob, mob.getExistingData(MxtAttachments.CREATURE_SPIRIT)
                         .flatMap(CreatureSpiritAttachment::profile).map(HolderHelper::id).orElse(null))
                 .ifPresent(held -> ProgressionService.current(held).ifPresent(current -> {
-                    Component next = ProgressionService.next(held).map(DefinitionText::text)
+                    Component next = ProgressionService.next(held).map(DefinitionText::nameOrId)
                             .orElseGet(() -> Component.translatable("command.mxt.contract.info.level.top"));
                     source.sendSuccess(() -> Component.translatable("command.mxt.contract.info.level",
-                            held.id().toString(), DefinitionText.text(current), next), false);
+                            held.id().toString(), DefinitionText.nameOrId(current), next), false);
                     ProgressionService.masteryOf(mob, held).ifPresent(mastery -> source.sendSuccess(
                             () -> Component.translatable("command.mxt.contract.info.mastery", mastery.have(),
                                     mastery.required(), mastery.resource().toString()), false));
@@ -165,7 +165,7 @@ public final class ContractCommand {
             return 0;
         }
         source.sendSuccess(() -> Component.translatable("command.mxt.contract.bind_success", mob.getDisplayName(),
-                DefinitionText.text(type), owner.getDisplayName()), true);
+                DefinitionText.nameOrId(type), owner.getDisplayName()), true);
         return 1;
     }
 
@@ -246,7 +246,7 @@ public final class ContractCommand {
             return 0;
         }
         source.sendSuccess(() -> Component.translatable("command.mxt.contract.level.done", living.getDisplayName(),
-                DefinitionText.text(level)), true);
+                DefinitionText.nameOrId(level)), true);
         return 1;
     }
 }

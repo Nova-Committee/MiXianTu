@@ -47,10 +47,10 @@ public final class CultivateCommand {
     private static int status(CommandSourceStack source) throws CommandSyntaxException {
         ServerPlayer player = source.getPlayerOrException();
         CultivationAttachment spirit = player.getData(MxtAttachments.CULTIVATION);
-        Component action = spirit.cultivation().<Component>map(DefinitionText::text).orElseGet(() -> Component.translatable("command.mxt.message.none"));
+        Component action = spirit.cultivation().<Component>map(DefinitionText::nameOrId).orElseGet(() -> Component.translatable("command.mxt.message.none"));
         Component progress = spirit.cultivationProgresses().isEmpty() ? Component.translatable("command.mxt.message.none")
                 : Component.literal(spirit.cultivationProgresses().object2DoubleEntrySet().stream()
-                .map(entry -> DefinitionText.text(entry.getKey()).getString() + "="
+                .map(entry -> DefinitionText.nameOrId(entry.getKey()).getString() + "="
                         + String.format(Locale.ROOT, "%.2f", entry.getDoubleValue()))
                 .collect(Collectors.joining(", ")));
         source.sendSuccess(() -> Component.translatable("command.mxt.cultivate.status", action, progress, spirit.nextCultivateTick()), false);
@@ -65,12 +65,12 @@ public final class CultivateCommand {
         if (!result.started()) {
             String failure = result.failure() == null ? "not_applicable" : result.failure().name().toLowerCase(Locale.ROOT);
             source.sendFailure(Component.translatable("command.mxt.cultivate.select.failed",
-                    DefinitionText.text(action),
+                    DefinitionText.nameOrId(action),
                     Component.translatable("actionbar.mxt.cultivation.failure." + failure)));
             return 0;
         }
         source.sendSuccess(() -> Component.translatable("command.mxt.cultivate.select.done",
-                DefinitionText.text(action)), true);
+                DefinitionText.nameOrId(action)), true);
         return 1;
     }
 }

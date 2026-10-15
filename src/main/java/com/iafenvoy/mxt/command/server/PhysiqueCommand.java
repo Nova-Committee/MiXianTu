@@ -89,7 +89,7 @@ public final class PhysiqueCommand {
             Component state = Component.translatable(identity.isPhysiqueEnabled(physique) ? "command.mxt.identity.on" : "command.mxt.identity.off");
             // A physique has no element to name, so the slot is empty rather than filled with a placeholder.
             source.sendSuccess(() -> Component.translatable("command.mxt.identity.line",
-                    DefinitionText.text(physique), quality, Component.empty(), state), false);
+                    DefinitionText.nameOrId(physique), quality, Component.empty(), state), false);
         }
         return distinct.size();
     }
@@ -106,12 +106,12 @@ public final class PhysiqueCommand {
             Result result = CultivationIdentityService.grantPhysique(living, physique, FormulaContext.of(living));
             if (!result.changed()) {
                 source.sendFailure(Component.translatable("command.mxt.identity.grant_failed",
-                        DefinitionText.text(physique), target.getDisplayName(), reason(result.failure())));
+                        DefinitionText.nameOrId(physique), target.getDisplayName(), reason(result.failure())));
                 continue;
             }
             granted++;
             source.sendSuccess(() -> Component.translatable("command.mxt.identity.granted",
-                    DefinitionText.text(physique), target.getDisplayName()), true);
+                    DefinitionText.nameOrId(physique), target.getDisplayName()), true);
         }
         return granted;
     }
@@ -126,11 +126,11 @@ public final class PhysiqueCommand {
                 continue;
             }
             if (!CultivationIdentityService.removePhysique(living, physique)) {
-                source.sendFailure(Component.translatable("command.mxt.identity.remove_failed", target.getDisplayName(), DefinitionText.text(physique)));
+                source.sendFailure(Component.translatable("command.mxt.identity.remove_failed", target.getDisplayName(), DefinitionText.nameOrId(physique)));
                 continue;
             }
             removed++;
-            source.sendSuccess(() -> Component.translatable("command.mxt.identity.removed", DefinitionText.text(physique), target.getDisplayName()), true);
+            source.sendSuccess(() -> Component.translatable("command.mxt.identity.removed", DefinitionText.nameOrId(physique), target.getDisplayName()), true);
         }
         return removed;
     }
@@ -153,7 +153,7 @@ public final class PhysiqueCommand {
             }
             changed++;
             source.sendSuccess(() -> Component.translatable("command.mxt.identity.toggled",
-                    DefinitionText.text(physique), Component.translatable(enabled
+                    DefinitionText.nameOrId(physique), Component.translatable(enabled
                             ? "command.mxt.identity.on" : "command.mxt.identity.off"), target.getDisplayName()), true);
         }
         return changed;

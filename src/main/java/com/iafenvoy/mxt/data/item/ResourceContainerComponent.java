@@ -77,7 +77,7 @@ public record ResourceContainerComponent(Object2DoubleMap<Holder<Resource>> valu
     // The amount is always shown; the cap joins it as soon as somebody wrote one for that resource.
     private static Component line(Holder<Resource> resource, double amount, double capacity) {
         return capacity > 0.0D
-                ? Component.translatable("tooltip.mxt.spirit_vessel.resource_capped", DefinitionText.text(resource), TooltipText.number(amount), TooltipText.number(capacity))
-                : Component.translatable("tooltip.mxt.spirit_vessel.resource", DefinitionText.text(resource), TooltipText.number(amount));
+                ? Component.translatable("tooltip.mxt.spirit_vessel.resource_capped", DefinitionText.nameOrId(resource), TooltipText.number(amount), TooltipText.number(capacity))
+                : Component.translatable("tooltip.mxt.spirit_vessel.resource", DefinitionText.nameOrId(resource), TooltipText.number(amount));
     }
 }

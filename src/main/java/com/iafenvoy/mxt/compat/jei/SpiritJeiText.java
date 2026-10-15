@@ -58,7 +58,7 @@ final class SpiritJeiText {
     }
 
     private static String resourceName(Holder<Aura> aura) {
-        return DefinitionText.text(aura).getString();
+        return DefinitionText.nameOrId(aura).getString();
     }
 
     static String providerName(NumberProvider provider) {

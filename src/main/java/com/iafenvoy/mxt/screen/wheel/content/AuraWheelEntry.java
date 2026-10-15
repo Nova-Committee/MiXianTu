@@ -37,7 +37,7 @@ public record AuraWheelEntry(Identifier id, Holder<Aura> aura) implements WheelM
 
     @Override
     public Component title() {
-        return DefinitionText.text(this.aura.value().resource());
+        return DefinitionText.nameOrId(this.aura.value().resource());
     }
 
     @Override
@@ -81,7 +81,7 @@ public record AuraWheelEntry(Identifier id, Holder<Aura> aura) implements WheelM
                         lines.add(Component.translatable("wheel.mxt.tooltip.amount",
                                 WheelTooltips.number(holder.get(resource)), WheelTooltips.number(bounds.max())))));
         definition.auraType().ifPresentOrElse(
-                element -> lines.add(Component.translatable("wheel.mxt.tooltip.element", DefinitionText.text(element))),
+                element -> lines.add(Component.translatable("wheel.mxt.tooltip.element", DefinitionText.nameOrId(element))),
                 () -> lines.add(Component.translatable("wheel.mxt.tooltip.element_none")));
         return lines;
     }

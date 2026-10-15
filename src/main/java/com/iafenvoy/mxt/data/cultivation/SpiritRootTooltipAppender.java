@@ -36,7 +36,7 @@ public final class SpiritRootTooltipAppender {
                                    Player player, TooltipFlag flag, Consumer<Component> builder) {
         Holder<SpiritRoot> root = stack.get(MxtDataComponents.SPIRIT_ROOT);
         if (root == null) return;
-        builder.accept(Component.translatable("tooltip.mxt.spirit_root.root", DefinitionText.text(root)).withStyle(ChatFormatting.AQUA));
+        builder.accept(Component.translatable("tooltip.mxt.spirit_root.root", DefinitionText.nameOrId(root)).withStyle(ChatFormatting.AQUA));
         builder.accept(Component.translatable("tooltip.mxt.spirit_root.hint").withStyle(ChatFormatting.GRAY));
         if (flag.isAdvanced())
             builder.accept(Component.literal("   " + HolderHelper.id(root)).withStyle(ChatFormatting.DARK_GRAY));

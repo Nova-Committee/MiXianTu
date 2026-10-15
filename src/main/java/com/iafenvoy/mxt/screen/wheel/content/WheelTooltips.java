@@ -44,7 +44,7 @@ final class WheelTooltips {
         List<Component> parts = new ArrayList<>(costs.size());
         // The price is keyed by the resource itself, so naming one needs no registry at all.
         payment.account().forEach((resource, amount) -> parts.add(Component.translatable("wheel.mxt.tooltip.cost_part",
-                DefinitionText.text(resource), number(amount))));
+                DefinitionText.nameOrId(resource), number(amount))));
         if (other || payment.beyondResources()) parts.add(Component.translatable("wheel.mxt.tooltip.cost_other"));
         return TooltipText.join(parts);
     }
@@ -52,7 +52,7 @@ final class WheelTooltips {
     static Component elements(List<Either<Holder<Element>, TagKey<Element>>> affinity) {
         List<Component> parts = new ArrayList<>(affinity.size());
         for (Either<Holder<Element>, TagKey<Element>> entry : affinity) {
-            parts.add(entry.map(DefinitionText::text, tag -> Component.literal("#" + tag.location())));
+            parts.add(entry.map(DefinitionText::nameOrId, tag -> Component.literal("#" + tag.location())));
         }
         return TooltipText.join(parts);
     }

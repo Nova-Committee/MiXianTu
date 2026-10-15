@@ -48,7 +48,7 @@ public record CurseContainerComponent(List<ApplyCurseAction> curses) implements 
         consumer.accept(Component.translatable("tooltip.mxt.curse_container").withStyle(ChatFormatting.DARK_RED));
         for (ApplyCurseAction action : this.curses) {
             consumer.accept(Component.literal(" ")
-                    .append(DefinitionText.text(action.curse()))
+                    .append(DefinitionText.nameOrId(action.curse()))
                     .withStyle(ChatFormatting.RED));
         }
     }

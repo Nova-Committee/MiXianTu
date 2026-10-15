@@ -68,7 +68,7 @@ public final class ResourceCommand {
         ServerPlayer player = source.getPlayer();
         if (player == null) return 0;
         double value = player.getData(MxtAttachments.RESOURCE_HOLDER).get(resource);
-        source.sendSuccess(() -> Component.translatable("command.mxt.resource.query", DefinitionText.text(resource), value), false);
+        source.sendSuccess(() -> Component.translatable("command.mxt.resource.query", DefinitionText.nameOrId(resource), value), false);
         return 1;
     }
 
@@ -76,7 +76,7 @@ public final class ResourceCommand {
         ServerPlayer player = source.getPlayer();
         if (player == null) return 0;
         player.getData(MxtAttachments.RESOURCE_HOLDER).set(resource, value);
-        source.sendSuccess(() -> Component.translatable("command.mxt.resource.set", DefinitionText.text(resource), value), true);
+        source.sendSuccess(() -> Component.translatable("command.mxt.resource.set", DefinitionText.nameOrId(resource), value), true);
         return 1;
     }
 
@@ -117,7 +117,7 @@ public final class ResourceCommand {
         Optional<Values> extracted = extractValues(player, resource, bar.context());
         if (extracted.isEmpty()) {
             source.sendSuccess(() -> Component.translatable("command.mxt.resourcebar.unavailable",
-                    DefinitionText.text(resource), index, displayName, contextId), false);
+                    DefinitionText.nameOrId(resource), index, displayName, contextId), false);
             return;
         }
         Values values = extracted.get();
@@ -125,7 +125,7 @@ public final class ResourceCommand {
         double percentage = maximum == values.minimum() ? 100.0D
                 : (values.current() - values.minimum()) / (maximum - values.minimum()) * 100.0D;
         source.sendSuccess(() -> Component.translatable("command.mxt.resourcebar.entry",
-                DefinitionText.text(resource), index, displayName, contextId,
+                DefinitionText.nameOrId(resource), index, displayName, contextId,
                 formatRaw(values.current()), formatRaw(values.minimum()), formatRaw(maximum), formatRaw(percentage),
                 bar.anchor().getSerializedName(), bar.order()), false);
     }

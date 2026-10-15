@@ -35,7 +35,7 @@ public final class PhysiqueTooltipAppender {
     private static void appendPhysique(ItemStack stack, TooltipContext context, TooltipDisplay display, Player player, TooltipFlag flag, Consumer<Component> builder) {
         Holder<Physique> physique = stack.get(MxtDataComponents.PHYSIQUE);
         if (physique == null) return;
-        builder.accept(Component.translatable("tooltip.mxt.physique.physique", DefinitionText.text(physique)).withStyle(ChatFormatting.AQUA));
+        builder.accept(Component.translatable("tooltip.mxt.physique.physique", DefinitionText.nameOrId(physique)).withStyle(ChatFormatting.AQUA));
         builder.accept(Component.translatable("tooltip.mxt.physique.hint").withStyle(ChatFormatting.GRAY));
         if (flag.isAdvanced())
             builder.accept(Component.literal("   " + HolderHelper.id(physique)).withStyle(ChatFormatting.DARK_GRAY));

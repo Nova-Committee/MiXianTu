@@ -78,7 +78,7 @@ public final class AbilityCommand {
             return 1;
         }
         for (Holder<Ability> ability : abilities.sources().keys()) {
-            Component name = DefinitionText.text(ability);
+            Component name = DefinitionText.nameOrId(ability);
             Component from = Component.literal(abilities.sources().of(ability).stream()
                     .map(Identifier::toString).sorted().reduce((a, b) -> a + ", " + b).orElse("-"));
             source.sendSuccess(() -> Component.translatable("command.mxt.ability.list.line", name, from), false);
@@ -97,10 +97,10 @@ public final class AbilityCommand {
                 granted++;
                 rebuild(target);
                 source.sendSuccess(() -> Component.translatable("command.mxt.ability.granted",
-                        DefinitionText.text(ability), target.getDisplayName()), true);
+                        DefinitionText.nameOrId(ability), target.getDisplayName()), true);
             } else {
                 source.sendFailure(Component.translatable("command.mxt.ability.grant_failed",
-                        target.getDisplayName(), DefinitionText.text(ability)));
+                        target.getDisplayName(), DefinitionText.nameOrId(ability)));
             }
         }
         return granted;
@@ -118,10 +118,10 @@ public final class AbilityCommand {
                 revoked++;
                 rebuild(target);
                 source.sendSuccess(() -> Component.translatable("command.mxt.ability.revoked",
-                        DefinitionText.text(ability), target.getDisplayName()), true);
+                        DefinitionText.nameOrId(ability), target.getDisplayName()), true);
             } else {
                 source.sendFailure(Component.translatable("command.mxt.ability.revoke_failed",
-                        target.getDisplayName(), DefinitionText.text(ability)));
+                        target.getDisplayName(), DefinitionText.nameOrId(ability)));
             }
         }
         return revoked;
@@ -142,7 +142,7 @@ public final class AbilityCommand {
             source.sendFailure(Component.translatable("command.mxt.ability.cast_failed", result.failure().name()));
             return 0;
         }
-        source.sendSuccess(() -> Component.translatable("command.mxt.ability.cast_success", DefinitionText.text(ability)), true);
+        source.sendSuccess(() -> Component.translatable("command.mxt.ability.cast_success", DefinitionText.nameOrId(ability)), true);
         return 1;
     }
 }

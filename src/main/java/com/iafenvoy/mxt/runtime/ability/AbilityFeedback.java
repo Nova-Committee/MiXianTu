@@ -24,7 +24,7 @@ public final class AbilityFeedback {
     public static Component reason(Enum<?> failure, @Nullable Identifier failedResource) {
         String name = failure.name().toLowerCase(Locale.ROOT);
         if (failedResource != null && "insufficient_resource".equals(name))
-            return Component.translatable("actionbar.mxt.ability.failure.insufficient_resource_named", DefinitionText.text(MxtResourceKeys.RESOURCE, failedResource));
+            return Component.translatable("actionbar.mxt.ability.failure.insufficient_resource_named", DefinitionText.nameOrId(MxtResourceKeys.RESOURCE, failedResource));
         return Component.translatable("actionbar.mxt.ability.failure." + name);
     }
 

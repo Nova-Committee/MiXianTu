@@ -19,7 +19,7 @@ public enum BossOverlayContext implements ResourceBarContext {
 
     @Override
     public Component name(Holder<Resource> resource) {
-        return Component.translatable("hud.mxt.resource_bar.boss_overlay", DefinitionText.text(resource));
+        return Component.translatable("hud.mxt.resource_bar.boss_overlay", DefinitionText.nameOrId(resource));
     }
 
     @Override

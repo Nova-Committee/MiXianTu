@@ -2,10 +2,14 @@ package com.iafenvoy.mxt.util;
 
 import net.minecraft.core.Holder;
 import net.minecraft.core.Registry;
+import net.minecraft.locale.Language;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.network.chat.contents.TranslatableContents;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
+
+import java.util.Optional;
 
 /**
  * Generate language key: {@code <registry namespace>.<registry path>.<id namespace>.<id path>}
@@ -94,5 +98,34 @@ public final class DefinitionText {
 
     public static MutableComponent minorStage(Holder<?> holder, int index) {
         return text(holder, MINOR_STAGE_SUFFIX + "." + index);
+    }
+
+    /**
+     * The text itself, or nothing when there is none to draw: an entry a pack wrote no words for must be skipped
+     * rather than printed as its own key. A description is the case this exists for - it is a generated key, so it
+     * only reads as text once a resource pack translated it - but a literal, and a translatable carrying a
+     * fallback, always count as text.
+     */
+    public static Optional<MutableComponent> resolved(Component text) {
+        if (text.getContents() instanceof TranslatableContents contents && contents.getFallback() == null && !Language.getInstance().has(contents.getKey()))
+            return Optional.empty();
+        return text.getString().isBlank() ? Optional.empty() : Optional.of(text.copy());
+    }
+
+    /**
+     * A name for somewhere that has to show something - a row, a title, an argument inside another sentence. An id
+     * still says which entry this is, where the generated key says nothing; a place free to draw nothing at all
+     * uses {@link #resolved(Component)} instead.
+     */
+    public static MutableComponent nameOrId(Holder<?> holder) {
+        return resolved(text(holder)).orElseGet(() -> Component.literal(keyOf(holder).identifier().toString()));
+    }
+
+    public static MutableComponent nameOrId(ResourceKey<?> key) {
+        return resolved(text(key)).orElseGet(() -> Component.literal(key.identifier().toString()));
+    }
+
+    public static <T> MutableComponent nameOrId(ResourceKey<Registry<T>> registry, Identifier id) {
+        return resolved(text(registry, id)).orElseGet(() -> Component.literal(id.toString()));
     }
 }

@@ -114,7 +114,7 @@ public final class InformationManager {
                     : null;
             int color = status.conditionsMet() ? 0xFF55FF55 : 0xFFE0E4EC;
             collector.add(first ? Component.translatable("info.mxt.cultivation_progress") : null,
-                    Component.literal(DefinitionText.text(entry.getKey().value().resource()).getString() + ": " + String.format("%.2f", entry.getDoubleValue())),
+                    Component.literal(DefinitionText.nameOrId(entry.getKey().value().resource()).getString() + ": " + String.format("%.2f", entry.getDoubleValue())),
                     color, tooltip);
             first = false;
         }
@@ -131,14 +131,14 @@ public final class InformationManager {
             Holder<SpiritRoot> root = roots.get(index);
             if (index > 0) line.append(", ");
             boolean active = identity.isSpiritRootEnabled(root);
-            line.append(heldName(DefinitionText.text(root), active));
+            line.append(heldName(DefinitionText.nameOrId(root), active));
             List<SpiritRoot.ElementWeight> elements = root.value().elements();
             if (!elements.isEmpty()) {
                 MutableComponent names = Component.empty();
                 for (int elementIndex = 0; elementIndex < elements.size(); elementIndex++) {
                     SpiritRoot.ElementWeight entry = elements.get(elementIndex);
                     if (elementIndex > 0) names.append("/");
-                    names.append(Component.empty().append(DefinitionText.text(entry.element()))
+                    names.append(Component.empty().append(DefinitionText.nameOrId(entry.element()))
                             .append(entry.weight() == 1.0D ? Component.empty()
                                     : Component.literal(" " + TooltipText.number(entry.weight())))
                             .withColor(active ? entry.element().value().color() : SWITCHED_OFF_COLOR));
@@ -163,7 +163,7 @@ public final class InformationManager {
             Holder<Physique> physique = distinct.get(index);
             if (index > 0) line.append(", ");
             boolean active = identity.isPhysiqueEnabled(physique);
-            line.append(heldName(DefinitionText.text(physique), active));
+            line.append(heldName(DefinitionText.nameOrId(physique), active));
             int stacks = Collections.frequency(held, physique);
             if (stacks > 1) line.append(" ×" + stacks);
             notes.add(identityNote(physique, physique.value().quality(), active));
@@ -173,7 +173,7 @@ public final class InformationManager {
 
     // The tier is shown only here, in the row's tooltip: the panel is the one consumer every definition has.
     private static Component identityNote(Holder<?> holder, Optional<Holder<ItemQuality>> quality, boolean active) {
-        MutableComponent note = DefinitionText.text(holder);
+        MutableComponent note = DefinitionText.nameOrId(holder);
         quality.ifPresent(tier -> note.append(" · ").append(QualityService.displayName(tier)));
         if (!active) note.append(" · ").append(Component.translatable("info.mxt.switched_off"));
         return note.withStyle(ChatFormatting.GRAY);
@@ -205,25 +205,26 @@ public final class InformationManager {
         for (Holder<Aura> chain : chains) {
             if (!chain.value().showCultivationInfo()) continue;
             Holder<RealmStage> realm = cultivation.realmStage(chain);
-            Component realmName = realm == null ? Component.translatable("info.mxt.mortal") : DefinitionText.text(realm);
+            Component realmName = realm == null ? Component.translatable("info.mxt.mortal") : DefinitionText.nameOrId(realm);
             Component minorStage = minorStageText(collector.getPlayer(), chain, cultivation, realm, context);
             if (minorStage != null) realmName = realmName.copy().append(" ").append(minorStage);
             collector.add(first ? Component.translatable("info.mxt.realm") : null,
-                    DefinitionText.text(chain.value().resource()).copy().append(": ").append(realmName));
+                    DefinitionText.nameOrId(chain.value().resource()).copy().append(": ").append(realmName));
             first = false;
         }
     }
 
-    // A mortal, and a stage that declares no minor stages, add nothing to the row. The segment arithmetic goes
-    // through the same chain entry point the breakthrough runtime uses, so the row cannot disagree with what the
-    // body actually needs - and that call has to read the total in the same resource context, or a formula would
-    // be evaluated twice with different variables.
+    // A mortal, a stage that declares no minor stages, and a name no pack translated all add nothing to the row.
+    // The segment arithmetic goes through the same chain entry point the breakthrough runtime uses, so the row
+    // cannot disagree with what the body actually needs - and that call has to read the total in the same resource
+    // context, or a formula would be evaluated twice with different variables.
     private static Component minorStageText(Player player, Holder<Aura> chain, CultivationAttachment cultivation,
                                             @Nullable Holder<RealmStage> realm, FormulaContext context) {
         if (realm == null) return null;
         FormulaContext resourceContext = ResourceService.formulaContext(player, chain.value().resource(), context);
         double index = CultivationService.minorStage(chain, cultivation, resourceContext);
-        return Double.isNaN(index) ? null : DefinitionText.minorStage(realm, (int) index);
+        return Double.isNaN(index) ? null
+                : DefinitionText.resolved(DefinitionText.minorStage(realm, (int) index)).orElse(null);
     }
 
     // A curse whose display_condition fails leaves no row behind at all, not an empty one: that is the point
@@ -235,7 +236,7 @@ public final class InformationManager {
         boolean first = true;
         for (Map.Entry<Holder<Curse>, State> entry : player.getData(MxtAttachments.CURSE_HOLDER).instances().entrySet()) {
             if (!entry.getKey().value().displayCondition().test(player, context)) continue;
-            Component name = DefinitionText.text(entry.getKey());
+            Component name = DefinitionText.nameOrId(entry.getKey());
             if (entry.getValue().stacks() > 1) name = name.copy().append(" ×" + entry.getValue().stacks());
             collector.add(first ? Component.translatable("info.mxt.curses") : null, name, CURSE_COLOR,
                     curseTooltip(player.getData(MxtAttachments.CURSE_HOLDER).sources().of(entry.getKey()), entry.getValue(), gameTime));

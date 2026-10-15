@@ -65,7 +65,7 @@ final class AlchemyJeiText {
         boolean first = true;
         for (Map.Entry<Holder<MedicinalProperty>, NumberProvider> entry : requirements.entrySet()) {
             if (!first) pieces.add(piece(LIST_SEPARATOR));
-            pieces.add(new Piece(DefinitionText.text(entry.getKey()), VALUE_COLOR));
+            pieces.add(new Piece(DefinitionText.nameOrId(entry.getKey()), VALUE_COLOR));
             pieces.add(piece(" ≥ " + number(entry.getValue())));
             first = false;
         }
@@ -78,7 +78,7 @@ final class AlchemyJeiText {
         for (Map.Entry<Holder<Aura>, NumberProvider> entry : requirements.entrySet()) {
             if (!first) pieces.add(piece(LIST_SEPARATOR));
             int color = entry.getKey().value().auraType().map(type -> type.value().color()).orElse(0xFFFFFF);
-            pieces.add(new Piece(DefinitionText.text(entry.getKey()),
+            pieces.add(new Piece(DefinitionText.nameOrId(entry.getKey()),
                     SpiritJeiText.readableTextColor(color, SpiritJeiText.PANEL_BACKGROUND)));
             pieces.add(piece(" ≥ " + number(entry.getValue())));
             first = false;

@@ -38,7 +38,9 @@ public final class AlchemyFurnaceTooltipAppender {
             if (material == null)
                 builder.accept(Component.translatable("tooltip.mxt.alchemy.no_wall_material").withStyle(ChatFormatting.RED));
             else {
-                builder.accept(DefinitionText.text(material).withStyle(ChatFormatting.DARK_GREEN));
+                // A heading only a pack can name: an untranslated one is left out rather than drawn as its key.
+                DefinitionText.resolved(DefinitionText.text(material))
+                        .ifPresent(name -> builder.accept(name.withStyle(ChatFormatting.DARK_GREEN)));
                 builder.accept(Component.translatable("tooltip.mxt.alchemy.wall_temperature",
                         TooltipText.number(material.value().maxTemperature())).withStyle(ChatFormatting.GRAY));
             }
@@ -65,7 +67,9 @@ public final class AlchemyFurnaceTooltipAppender {
             builder.accept(Component.translatable("screen.mxt.alchemy.no_furnace").withStyle(ChatFormatting.RED));
         else {
             AlchemyFurnaceDefinition spec = holder.value();
-            builder.accept(DefinitionText.text(holder).withStyle(ChatFormatting.DARK_GREEN));
+            // A heading only a pack can name, like the wall material's above: the numbers below stand without it.
+            DefinitionText.resolved(DefinitionText.text(holder))
+                    .ifPresent(name -> builder.accept(name.withStyle(ChatFormatting.DARK_GREEN)));
             builder.accept(Component.translatable("tooltip.mxt.alchemy.slots", spec.mainSlots(), spec.auxiliarySlots(), spec.catalystSlots())
                     .withStyle(ChatFormatting.GRAY));
             builder.accept(Component.translatable("tooltip.mxt.alchemy.capacity", spec.capacity()).withStyle(ChatFormatting.GRAY));

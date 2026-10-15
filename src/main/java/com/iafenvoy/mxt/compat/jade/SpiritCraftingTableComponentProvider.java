@@ -45,7 +45,7 @@ public enum SpiritCraftingTableComponentProvider implements IBlockComponentProvi
     // the pack dropped still has to read as something.
     private static Component auraName(BlockAccessor accessor, Identifier id) {
         return MxtDatapackRegistries.holder(accessor.getLevel().registryAccess(), MxtResourceKeys.AURA, id)
-                .map(DefinitionText::text).orElseGet(() -> DefinitionText.text(MxtResourceKeys.AURA, id));
+                .map(DefinitionText::nameOrId).orElseGet(() -> DefinitionText.nameOrId(MxtResourceKeys.AURA, id));
     }
 
     @Override

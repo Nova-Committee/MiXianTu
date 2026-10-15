@@ -99,7 +99,7 @@ public final class TalismanCommand {
         }
         source.sendSuccess(() -> Component.translatable(
                 "command.mxt.talisman.given",
-                count, template.getDisplayName(), DefinitionText.text(inscribed),
+                count, template.getDisplayName(), DefinitionText.nameOrId(inscribed),
                 Component.translatable("tooltip.mxt.talisman.mode." + mode.key()),
                 Component.translatable(charged ? "command.mxt.talisman.charged"
                         : "command.mxt.talisman.not_charged")), true);

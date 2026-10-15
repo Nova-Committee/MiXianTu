@@ -44,12 +44,12 @@ public final class BreakthroughCommand {
                     ? Component.translatable("command.mxt.breakthrough.failure.unknown")
                     : result.failure() == CultivationService.Failure.INSUFFICIENT_RESOURCE && result.failedResource() != null
                     ? Component.translatable("command.mxt.breakthrough.failure.insufficient_resource",
-                    DefinitionText.text(MxtResourceKeys.RESOURCE, result.failedResource()))
+                    DefinitionText.nameOrId(MxtResourceKeys.RESOURCE, result.failedResource()))
                     : Component.translatable("command.mxt.breakthrough.failure." + result.failure().name().toLowerCase(Locale.ROOT));
             source.sendFailure(Component.translatable("command.mxt.breakthrough.failed", reason));
             return 0;
         }
-        source.sendSuccess(() -> Component.translatable("command.mxt.breakthrough.success", DefinitionText.text(aura)), true);
+        source.sendSuccess(() -> Component.translatable("command.mxt.breakthrough.success", DefinitionText.nameOrId(aura)), true);
         return 1;
     }
 }

@@ -33,7 +33,7 @@ public enum EnvironmentConcentrationContext implements ResourceBarContext {
     @Override
     public Component name(Holder<Resource> resource) {
         return Component.translatable("hud.mxt.resource_bar.environment_concentration",
-                DefinitionText.text(resource));
+                DefinitionText.nameOrId(resource));
     }
 
     @Override

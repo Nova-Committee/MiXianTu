@@ -64,7 +64,7 @@ public final class TalismanTooltipAppender {
         } else {
             Set<Identifier> explained = new HashSet<>();
             for (Holder<Talisman> talisman : inscribed) {
-                builder.accept(Component.translatable("tooltip.mxt.talisman.entry", DefinitionText.text(talisman)));
+                builder.accept(Component.translatable("tooltip.mxt.talisman.entry", DefinitionText.nameOrId(talisman)));
                 usageLine(talisman.value().type(), explained).ifPresent(builder);
             }
         }
@@ -89,7 +89,7 @@ public final class TalismanTooltipAppender {
     private static Optional<Component> usageLine(TalismanType type, Set<Identifier> explained) {
         Identifier id = MxtRegistries.TALISMAN_TYPE.getKey(type.codec());
         if (!explained.add(id)) return Optional.empty();
-        MutableComponent line = DefinitionText.text(MxtResourceKeys.TALISMAN_TYPE, id);
-        return line.getString().isBlank() ? Optional.empty() : Optional.of(line.withStyle(ChatFormatting.GRAY));
+        return DefinitionText.resolved(DefinitionText.text(MxtResourceKeys.TALISMAN_TYPE, id))
+                .map(line -> line.withStyle(ChatFormatting.GRAY));
     }
 }

@@ -59,7 +59,7 @@ public enum BlockAuraComponentProvider implements IBlockComponentProvider {
             this.auras.entrySet().stream()
                     .filter(entry -> entry.getValue()[0] != 0.0D || entry.getValue()[1] != 0.0D)
                     .forEach(entry -> tooltip.add(Component.translatable("jade.mxt.block_aura.element",
-                            DefinitionText.text(entry.getKey()),
+                            DefinitionText.nameOrId(entry.getKey()),
                             TooltipText.signed(entry.getValue()[0])), ID));
         }
     }

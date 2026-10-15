@@ -105,7 +105,7 @@ public final class FormationPlateItem extends Item {
             return InteractionResult.FAIL;
         }
         ItemFeedback.send(player, Component.translatable("item.mxt.formation_plate.activated",
-                DefinitionText.text(formation)));
+                DefinitionText.nameOrId(formation)));
         return InteractionResult.SUCCESS;
     }
 

@@ -91,7 +91,7 @@ public final class ItemPickerManager {
         registerSingle(MxtResourceKeys.TECHNIQUE, (holder, access) -> described(ItemBindingService.techniqueCarrier(access, holder), holder));
         register(MxtResourceKeys.ALCHEMY_FURNACE, (holder, access) -> {
             ItemStack stack = componentStack(MxtBlocks.ALCHEMY_FURNACE.toStack(), MxtDataComponents.ALCHEMY_FURNACE, holder);
-            Component name = DefinitionText.text(holder);
+            Component name = searchName(holder);
             Component quality = QualityService.find(access, stack)
                     .map(QualityService::displayName)
                     .orElse(Component.translatable("screen.mxt.alchemy.no_quality"));
@@ -113,15 +113,16 @@ public final class ItemPickerManager {
             for (Holder<ItemQuality> holder : QualityService.ordered(provider)) {
                 Identifier id = HolderHelper.id(holder);
                 if (!filter.test(id)) continue;
-                items.add(described(MxtItems.IDENTIFICATION_MIRROR.toStack(), holder, QualityService.displayName(holder)));
+                items.add(described(MxtItems.IDENTIFICATION_MIRROR.toStack(), holder,
+                        DefinitionText.resolved(QualityService.displayName(holder)).orElse(null)));
             }
             return List.copyOf(items);
         });
     }
 
     /**
-     * One row the picker can offer. The row's display name is always among {@code names}, a list rather than a
-     * single name because a definition can be known by more than one.
+     * One row the picker can offer. The searched names are a list rather than a single name because a definition
+     * can be known by more than one; the id is always among them, so a name no pack translated contributes nothing.
      */
     public record PickerItem(ItemStack stack, List<Component> names) {
     }
@@ -220,7 +221,7 @@ public final class ItemPickerManager {
     private static void registerHerbs(ResourceKey<Registry<SpiritHerb>> key) {
         register(key, (holder, access) -> {
             Identifier id = HolderHelper.idOrNull(holder);
-            Component definition = DefinitionText.text(holder);
+            Component definition = searchName(holder);
             SpiritHerb herb = holder.value();
             List<PickerItem> items = new ArrayList<>();
             Optional<Growth> growth = herb.growth();
@@ -247,7 +248,7 @@ public final class ItemPickerManager {
     private static <T> void registerBlocks(ResourceKey<Registry<T>> key, Function<T, List<Either<Holder<Block>, TagKey<Block>>>> blocks) {
         register(key, (holder, access) -> {
             Identifier id = HolderHelper.idOrNull(holder);
-            Component definition = DefinitionText.text(holder);
+            Component definition = searchName(holder);
             List<PickerItem> items = new ArrayList<>();
             for (Holder<Block> block : RegistryCodecs.resolve(blocks.apply(holder.value()), access, Registries.BLOCK).toList()) {
                 ItemStack stack = block.value().asItem().getDefaultInstance();
@@ -265,7 +266,7 @@ public final class ItemPickerManager {
     private static <T> void registerMatcher(ResourceKey<Registry<T>> key, Function<T, List<Entry>> entries) {
         register(key, holder -> {
             Identifier id = HolderHelper.idOrNull(holder);
-            Component definition = DefinitionText.text(holder);
+            Component definition = searchName(holder);
             List<ItemStack> stacks = stackItems(entries.apply(holder.value()));
             List<PickerItem> items = new ArrayList<>(stacks.size());
             for (ItemStack stack : stacks)
@@ -279,7 +280,13 @@ public final class ItemPickerManager {
     }
 
     private static PickerItem described(ItemStack stack, Holder<?> holder) {
-        return described(stack, holder, DefinitionText.text(holder));
+        return described(stack, holder, searchName(holder));
+    }
+
+    // The picker never draws these: they only widen what the search box matches, and a key no pack translated would
+    // widen it with noise. The id is added separately, so dropping one loses no way to find the row.
+    private static @Nullable Component searchName(Holder<?> holder) {
+        return DefinitionText.resolved(DefinitionText.text(holder)).orElse(null);
     }
 
     private static PickerItem described(ItemStack stack, Holder<?> holder, Component name) {

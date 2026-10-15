@@ -41,7 +41,9 @@ public final class SpiritHerbTooltipAppender {
         if (registries == null) return;
         SpiritHerbService.find(registries, stack).ifPresent(found -> {
             SpiritHerb herb = found.value();
-            builder.accept(DefinitionText.text(found).withStyle(ChatFormatting.GREEN));
+            // A heading only a pack can name: an untranslated one is left out rather than drawn as its key.
+            DefinitionText.resolved(DefinitionText.text(found))
+                    .ifPresent(name -> builder.accept(name.withStyle(ChatFormatting.GREEN)));
             builder.accept(Component.translatable("tooltip.mxt.herb.age", SpiritHerbService.age(stack, herb)).withStyle(ChatFormatting.GRAY));
             builder.accept(Component.translatable("tooltip.mxt.herb.thermal", herb.thermalBias()).withStyle(ChatFormatting.GRAY));
             FormulaContext formula = player == null ? FormulaContext.of(registries) : FormulaContext.of(player);
@@ -57,7 +59,7 @@ public final class SpiritHerbTooltipAppender {
             builder.accept(Component.translatable(key, format(potency.totalPower())).withStyle(ChatFormatting.DARK_GREEN));
             for (Map.Entry<Holder<MedicinalProperty>, Double> entry : potency.properties().entrySet())
                 builder.accept(Component.translatable("tooltip.mxt.herb.property",
-                        DefinitionText.text(entry.getKey()), format(entry.getValue())).withStyle(ChatFormatting.DARK_GRAY));
+                        DefinitionText.nameOrId(entry.getKey()), format(entry.getValue())).withStyle(ChatFormatting.DARK_GRAY));
         });
     }
 
