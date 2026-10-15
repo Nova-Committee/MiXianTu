@@ -5,10 +5,7 @@ import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.data.context.condition.DamageConditionContext;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import net.minecraft.core.Holder;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.core.registries.Registries;
-import net.minecraft.resources.RegistryFixedCodec;
 import net.minecraft.tags.DamageTypeTags;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
@@ -20,10 +17,10 @@ import java.util.Optional;
 /**
  * Matches projectile damage, optionally filtering the projectile entity and its condition.
  */
-public record ProjectileDamageCondition(Optional<Holder<EntityType<?>>> projectile,
+public record ProjectileDamageCondition(Optional<EntityType<?>> projectile,
                                         EntityCondition projectileCondition) implements DamageCondition {
     public static final MapCodec<ProjectileDamageCondition> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
-            RegistryFixedCodec.create(Registries.ENTITY_TYPE).optionalFieldOf("projectile").forGetter(ProjectileDamageCondition::projectile),
+            BuiltInRegistries.ENTITY_TYPE.byNameCodec().optionalFieldOf("projectile").forGetter(ProjectileDamageCondition::projectile),
             EntityCondition.optionalCodec("projectile_condition").forGetter(ProjectileDamageCondition::projectileCondition)
     ).apply(i, ProjectileDamageCondition::new));
 
@@ -33,7 +30,7 @@ public record ProjectileDamageCondition(Optional<Holder<EntityType<?>>> projecti
         Entity entity = source.getDirectEntity();
         return source.is(DamageTypeTags.IS_PROJECTILE)
                 && entity != null
-                && this.projectile.map(holder -> holder.is(BuiltInRegistries.ENTITY_TYPE.wrapAsHolder(entity.getType()))).orElse(true)
+                && this.projectile.map(entity.getType()::equals).orElse(true)
                 && this.projectileCondition.test(entity, ctx);
     }
 

@@ -1,6 +1,7 @@
 package com.iafenvoy.mxt.data.ability.target;
 
 import com.iafenvoy.mxt.data.ability.TargetSelector;
+import com.iafenvoy.mxt.util.MiscUtil;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.iafenvoy.mxt.util.formula.number.Constant;
@@ -37,7 +38,7 @@ public record RayTargetSelector(NumberProvider length, NumberProvider radius, bo
     private static DataResult<RayTargetSelector> validate(RayTargetSelector selector) {
         if (selector.limit < 0)
             return DataResult.error(() -> "A target limit must not be negative: " + selector.limit);
-        if (selector.length instanceof Constant(double value) && (!Double.isFinite(value) || value <= 0.0D))
+        if (selector.length instanceof Constant(double value) && (MiscUtil.positive(value) <= 0.0D))
             return DataResult.error(() -> "A ray length must be finite and positive: " + value);
         if (selector.radius instanceof Constant(double value) && (!Double.isFinite(value) || value < 0.0D))
             return DataResult.error(() -> "A ray radius must be finite and non-negative: " + value);

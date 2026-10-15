@@ -13,6 +13,7 @@ import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
+import net.minecraft.resources.RegistryFixedCodec;
 import net.minecraft.tags.TagKey;
 
 import java.util.List;
@@ -39,7 +40,8 @@ public record ContractType(Optional<Holder<ItemQuality>> quality, EntityConditio
                            EntityAction ownerReleaseAction, EntityAction ownerDeathAction,
                            List<Either<Holder<Ability>, TagKey<Ability>>> ownerAbilities, List<Cost> costs,
                            int maxOwned, int recallCooldown) implements QualityProvider {
-    public static final Codec<ContractType> CODEC = RecordCodecBuilder.create(i -> i.group(
+    public static final Codec<Holder<ContractType>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.CONTRACT_TYPE);
+    public static final Codec<ContractType> DIRECT_CODEC = RecordCodecBuilder.create(i -> i.group(
             ItemQuality.CODEC.optionalFieldOf("quality").forGetter(ContractType::quality),
             EntityCondition.optionalCodec("owner_condition").forGetter(ContractType::ownerCondition),
             EntityCondition.optionalCodec("creature_condition").forGetter(ContractType::creatureCondition),

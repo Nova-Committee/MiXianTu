@@ -3,7 +3,6 @@ package com.iafenvoy.mxt.network.payload;
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.aura.AuraZone;
-import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.world.AuraPool;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -34,7 +33,7 @@ public record AuraStateS2CPayload(Optional<Holder<AuraZone>> source, Map<Holder<
             Codec.unboundedMap(Aura.CODEC, AuraPool.CODEC).fieldOf("environment").forGetter(AuraStateS2CPayload::environment)
     ).apply(i, AuraStateS2CPayload::new));
     public static final StreamCodec<RegistryFriendlyByteBuf, AuraStateS2CPayload> STREAM_CODEC = StreamCodec.composite(
-            ByteBufCodecs.optional(ByteBufCodecs.holderRegistry(MxtResourceKeys.AURA_ZONE)), AuraStateS2CPayload::source,
+            ByteBufCodecs.optional(AuraZone.STREAM_CODEC), AuraStateS2CPayload::source,
             ByteBufCodecs.map(LinkedHashMap::new, Aura.STREAM_CODEC, AuraPool.STREAM_CODEC), AuraStateS2CPayload::actual,
             ByteBufCodecs.map(LinkedHashMap::new, Aura.STREAM_CODEC, AuraPool.STREAM_CODEC), AuraStateS2CPayload::environment,
             AuraStateS2CPayload::new);

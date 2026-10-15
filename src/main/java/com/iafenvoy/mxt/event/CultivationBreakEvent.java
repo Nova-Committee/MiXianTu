@@ -3,6 +3,7 @@ package com.iafenvoy.mxt.event;
 import com.iafenvoy.mxt.attachment.CultivationAttachment;
 import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.data.cultivation.RealmStage;
+import com.iafenvoy.mxt.util.MiscUtil;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
@@ -70,7 +71,7 @@ public abstract class CultivationBreakEvent extends Event {
         }
 
         public void setCost(Identifier resource, double amount) {
-            if (resource == null || !Double.isFinite(amount) || amount <= 0.0D)
+            if (resource == null || MiscUtil.positive(amount) <= 0.0D)
                 throw new IllegalArgumentException("Breakthrough costs must be finite and positive");
             this.costs.put(resource, amount);
         }

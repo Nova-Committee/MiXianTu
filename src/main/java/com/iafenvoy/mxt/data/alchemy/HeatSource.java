@@ -1,5 +1,6 @@
 package com.iafenvoy.mxt.data.alchemy;
 
+import com.iafenvoy.mxt.util.MiscUtil;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
@@ -34,7 +35,7 @@ public record HeatSource(List<Either<Holder<Block>, TagKey<Block>>> blocks, doub
     }
 
     private static DataResult<Double> positive(double value) {
-        return Double.isFinite(value) && value > 0.0D
+        return MiscUtil.positive(value) > 0.0D
                 ? DataResult.success(value)
                 : DataResult.error(() -> "Heat source values must be finite positive numbers");
     }

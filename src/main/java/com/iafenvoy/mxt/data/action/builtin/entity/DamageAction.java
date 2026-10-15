@@ -6,6 +6,7 @@ import com.iafenvoy.mxt.data.cultivation.Element;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.damage.DamageCalculationService;
 import com.iafenvoy.mxt.runtime.damage.DamageElements;
+import com.iafenvoy.mxt.util.MiscUtil;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
@@ -39,10 +40,10 @@ public record DamageAction(NumberProvider amount, Optional<Holder<DamageType>> d
     public void execute(@NonNull EntityActionContext ctx) {
         Entity entity = ctx.entity();
         FormulaContext context = ctx.formula();
-        double amount = this.amount.evaluate(context);
+        double amount = MiscUtil.positive(this.amount.evaluate(context));
         // Server only: an action running on a client level must not pretend it dealt damage.
         if (!(entity.level() instanceof ServerLevel)) return;
-        if (!Double.isFinite(amount) || amount <= 0.0D) return;
+        if (amount <= 0.0D) return;
         DamageCalculationService.deal(attacker(entity, context), entity, amount, this.resolvedType(entity.level()), context);
     }
 

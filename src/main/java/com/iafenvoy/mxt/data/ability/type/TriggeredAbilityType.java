@@ -9,6 +9,7 @@ import com.iafenvoy.mxt.data.condition.DamageCondition;
 import com.iafenvoy.mxt.data.storage.DataStorageCollector;
 import com.iafenvoy.mxt.data.storage.builtin.*;
 import com.iafenvoy.mxt.data.trigger.Trigger;
+import com.iafenvoy.mxt.util.MiscUtil;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.iafenvoy.mxt.util.formula.number.Constant;
@@ -64,7 +65,7 @@ public record TriggeredAbilityType(List<Trigger> triggers, NumberProvider chance
         } catch (RuntimeException exception) {
             return false;
         }
-        if (!Double.isFinite(chance) || chance <= 0.0D) return false;
+        if (MiscUtil.positive(chance) <= 0.0D) return false;
         return chance >= 1.0D || entity.getRandom().nextDouble() < chance;
     }
 }

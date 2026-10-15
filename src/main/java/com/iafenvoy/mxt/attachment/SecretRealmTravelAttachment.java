@@ -1,14 +1,12 @@
 package com.iafenvoy.mxt.attachment;
 
 import com.iafenvoy.mxt.data.secretrealm.SecretRealm;
-import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.util.AbstractChangeTrackable;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
-import net.minecraft.resources.RegistryFixedCodec;
 
 import java.util.Optional;
 
@@ -17,7 +15,7 @@ import java.util.Optional;
  */
 public final class SecretRealmTravelAttachment extends AbstractChangeTrackable {
     public static final MapCodec<SecretRealmTravelAttachment> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
-            RegistryFixedCodec.create(MxtResourceKeys.SECRET_REALM).lenientOptionalFieldOf("realm").forGetter(SecretRealmTravelAttachment::realm),
+            SecretRealm.CODEC.lenientOptionalFieldOf("realm").forGetter(SecretRealmTravelAttachment::realm),
             Identifier.CODEC.lenientOptionalFieldOf("origin_dimension").forGetter(SecretRealmTravelAttachment::originDimension),
             Codec.DOUBLE.lenientOptionalFieldOf("origin_x", 0.0D).forGetter(SecretRealmTravelAttachment::originX),
             Codec.DOUBLE.lenientOptionalFieldOf("origin_y", 0.0D).forGetter(SecretRealmTravelAttachment::originY),

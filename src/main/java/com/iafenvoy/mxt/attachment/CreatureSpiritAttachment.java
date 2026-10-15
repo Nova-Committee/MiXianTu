@@ -20,10 +20,10 @@ import java.util.Optional;
  */
 public final class CreatureSpiritAttachment extends AbstractChangeTrackable {
     public static final MapCodec<CreatureSpiritAttachment> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
-            RegistryFixedCodec.create(MxtResourceKeys.CREATURE_PROFILE).lenientOptionalFieldOf("profile").forGetter(CreatureSpiritAttachment::profile),
+            CreatureProfile.CODEC.lenientOptionalFieldOf("profile").forGetter(CreatureSpiritAttachment::profile),
             Codec.DOUBLE.lenientOptionalFieldOf("intelligence", 0.0D).forGetter(CreatureSpiritAttachment::intelligence),
             ItemStack.CODEC.lenientOptionalFieldOf("inner_core", ItemStack.EMPTY).forGetter(CreatureSpiritAttachment::innerCore),
-            ProgressionHolder.codec(RegistryFixedCodec.create(MxtResourceKeys.CREATURE_PROFILE)).lenientOptionalFieldOf("profile_levels", new ProgressionHolder<>()).forGetter(CreatureSpiritAttachment::profileLevels)
+            ProgressionHolder.codec(CreatureProfile.CODEC).lenientOptionalFieldOf("profile_levels", new ProgressionHolder<>()).forGetter(CreatureSpiritAttachment::profileLevels)
     ).apply(i, CreatureSpiritAttachment::new));
     private final ProgressionHolder<CreatureProfile> profileLevels;
     private Holder<CreatureProfile> profile;

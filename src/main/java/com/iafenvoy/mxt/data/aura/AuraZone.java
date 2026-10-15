@@ -3,17 +3,20 @@ package com.iafenvoy.mxt.data.aura;
 import com.iafenvoy.mxt.data.ParticleEffect;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.data.resource.ResourceBar.Anchor;
+import com.iafenvoy.mxt.data.talisman.Talisman;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.util.MiscUtil;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
-import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.Registries;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.resources.RegistryFixedCodec;
-import net.minecraft.resources.ResourceKey;
 import net.minecraft.tags.TagKey;
 import net.minecraft.util.ExtraCodecs;
 import net.minecraft.world.level.biome.Biome;
@@ -28,73 +31,29 @@ import java.util.Optional;
 /**
  * Immutable datapack template for one aura environment.
  */
-//FIXME:???
-public record AuraZone(Map<Holder<Aura>, AuraValue> aura,
-                       List<Either<ResourceKey<LevelStem>, TagKey<LevelStem>>> dimensions,
+public record AuraZone(Map<Holder<Aura>, AuraValue> aura, List<Either<Holder<LevelStem>, TagKey<LevelStem>>> dimensions,
                        List<Either<Holder<Biome>, TagKey<Biome>>> biomes, Fluctuation fluctuation, Rules rules,
                        EntityCondition cultivateCondition, Distribution distribution, double elementFitBonus,
                        double elementConflictPenalty, Noise noise, Optional<ParticleEffect> particle,
                        ClientRender clientRender, ClientHud clientHud, int priority) {
     public static final Codec<Holder<AuraZone>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.AURA_ZONE);
-    private static final MapCodec<Core> CORE_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
-            AuraValue.MAP_CODEC.optionalFieldOf("aura", Map.of()).forGetter(Core::aura),
-            RegistryCodecs.keyOrTagList(Registries.LEVEL_STEM).optionalFieldOf("dimensions", List.of()).forGetter(Core::dimensions),
-            RegistryCodecs.holderOrTagList(Registries.BIOME).optionalFieldOf("biomes", List.of()).forGetter(Core::biomes),
-            Fluctuation.CODEC.optionalFieldOf("fluctuation", Fluctuation.NONE).forGetter(Core::fluctuation),
-            Rules.CODEC.optionalFieldOf("rules", Rules.DEFAULT).forGetter(Core::rules),
-            EntityCondition.optionalCodec("cultivate_condition").forGetter(Core::cultivateCondition),
-            Distribution.CODEC.optionalFieldOf("distribution", Distribution.EQUAL).forGetter(Core::distribution),
-            Codec.INT.optionalFieldOf("priority", 0).forGetter(Core::priority)
-    ).apply(i, Core::from));
-    private static final MapCodec<Visual> VISUAL_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
-            Codec.DOUBLE.optionalFieldOf("element_fit_bonus", 0.0D).forGetter(Visual::elementFitBonus),
-            Codec.DOUBLE.optionalFieldOf("element_conflict_penalty", 0.0D).forGetter(Visual::elementConflictPenalty),
-            Noise.CODEC.optionalFieldOf("noise", Noise.NONE).forGetter(Visual::noise),
-            ParticleEffect.CODEC.optionalFieldOf("particle").forGetter(Visual::particle),
-            ClientRender.CODEC.optionalFieldOf("client_render", ClientRender.DEFAULT).forGetter(Visual::clientRender),
-            ClientHud.CODEC.optionalFieldOf("client_hud", ClientHud.NONE).forGetter(Visual::clientHud)
-    ).apply(i, Visual::from));
     public static final Codec<AuraZone> DIRECT_CODEC = RecordCodecBuilder.<AuraZone>create(i -> i.group(
-            CORE_CODEC.forGetter(AuraZone::core),
-            VISUAL_CODEC.forGetter(AuraZone::visual)
-    ).apply(i, AuraZone::from)).validate(AuraZone::validate);
-
-    private Core core() {
-        return new Core(this.aura, this.dimensions,
-                this.biomes, this.fluctuation, this.rules, this.cultivateCondition, this.distribution, this.priority);
-    }
-
-    private Visual visual() {
-        return new Visual(this.elementFitBonus, this.elementConflictPenalty, this.noise, this.particle, this.clientRender, this.clientHud);
-    }
-
-    private static AuraZone from(Core core, Visual visual) {
-        return new AuraZone(core.aura, core.dimensions,
-                core.biomes, core.fluctuation, core.rules, core.cultivateCondition, core.distribution, visual.elementFitBonus,
-                visual.elementConflictPenalty, visual.noise, visual.particle, visual.clientRender, visual.clientHud, core.priority);
-    }
-
-    private record Core(Map<Holder<Aura>, AuraValue> aura,
-                        List<Either<ResourceKey<LevelStem>, TagKey<LevelStem>>> dimensions,
-                        List<Either<Holder<Biome>, TagKey<Biome>>> biomes, Fluctuation fluctuation, Rules rules,
-                        EntityCondition cultivateCondition, Distribution distribution, int priority) {
-        private static Core from(Map<Holder<Aura>, AuraValue> aura,
-                                 List<Either<ResourceKey<LevelStem>, TagKey<LevelStem>>> dimensions,
-                                 List<Either<Holder<Biome>, TagKey<Biome>>> biomes, Fluctuation fluctuation, Rules rules,
-                                 EntityCondition cultivateCondition, Distribution distribution, int priority) {
-            return new Core(aura, dimensions, biomes, fluctuation, rules,
-                    cultivateCondition, distribution, priority);
-        }
-    }
-
-    private record Visual(double elementFitBonus, double elementConflictPenalty, Noise noise,
-                          Optional<ParticleEffect> particle,
-                          ClientRender clientRender, ClientHud clientHud) {
-        private static Visual from(double elementFitBonus, double elementConflictPenalty, Noise noise, Optional<ParticleEffect> particle,
-                                   ClientRender clientRender, ClientHud clientHud) {
-            return new Visual(elementFitBonus, elementConflictPenalty, noise, particle, clientRender, clientHud);
-        }
-    }
+            AuraValue.MAP_CODEC.optionalFieldOf("aura", Map.of()).forGetter(AuraZone::aura),
+            RegistryCodecs.holderOrTagList(Registries.LEVEL_STEM).optionalFieldOf("dimensions", List.of()).forGetter(AuraZone::dimensions),
+            RegistryCodecs.holderOrTagList(Registries.BIOME).optionalFieldOf("biomes", List.of()).forGetter(AuraZone::biomes),
+            Fluctuation.CODEC.optionalFieldOf("fluctuation", Fluctuation.NONE).forGetter(AuraZone::fluctuation),
+            Rules.CODEC.optionalFieldOf("rules", Rules.DEFAULT).forGetter(AuraZone::rules),
+            EntityCondition.optionalCodec("cultivate_condition").forGetter(AuraZone::cultivateCondition),
+            Distribution.CODEC.optionalFieldOf("distribution", Distribution.EQUAL).forGetter(AuraZone::distribution),
+            Codec.DOUBLE.optionalFieldOf("element_fit_bonus", 0.0D).forGetter(AuraZone::elementFitBonus),
+            Codec.DOUBLE.optionalFieldOf("element_conflict_penalty", 0.0D).forGetter(AuraZone::elementConflictPenalty),
+            Noise.CODEC.optionalFieldOf("noise", Noise.NONE).forGetter(AuraZone::noise),
+            ParticleEffect.CODEC.optionalFieldOf("particle").forGetter(AuraZone::particle),
+            ClientRender.CODEC.optionalFieldOf("client_render", ClientRender.DEFAULT).forGetter(AuraZone::clientRender),
+            ClientHud.CODEC.optionalFieldOf("client_hud", ClientHud.NONE).forGetter(AuraZone::clientHud),
+            Codec.INT.optionalFieldOf("priority", 0).forGetter(AuraZone::priority)
+    ).apply(i, AuraZone::new)).validate(AuraZone::validate);
+    public static final StreamCodec<RegistryFriendlyByteBuf, Holder<AuraZone>> STREAM_CODEC = ByteBufCodecs.holderRegistry(MxtResourceKeys.AURA_ZONE);
 
     private static DataResult<AuraZone> validate(AuraZone value) {
         if (!finite(value.elementFitBonus) || !finite(value.elementConflictPenalty))
@@ -179,8 +138,7 @@ public record AuraZone(Map<Holder<Aura>, AuraValue> aura,
         ).apply(i, ClientHud::new));
 
         private boolean valid() {
-            return this.storedAura.stream().allMatch(Bar::valid)
-                    && this.sensedConcentration.stream().allMatch(Bar::valid);
+            return this.storedAura.stream().allMatch(Bar::valid) && this.sensedConcentration.stream().allMatch(Bar::valid);
         }
     }
 
@@ -195,7 +153,7 @@ public record AuraZone(Map<Holder<Aura>, AuraValue> aura,
         ).apply(i, Bar::new));
 
         private boolean valid() {
-            return Double.isFinite(this.maximum) && this.maximum > 0.0D;
+            return MiscUtil.positive(this.maximum) > 0.0D;
         }
     }
 }

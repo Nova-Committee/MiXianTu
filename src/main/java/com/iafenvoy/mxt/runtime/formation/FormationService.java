@@ -12,6 +12,7 @@ import com.iafenvoy.mxt.runtime.resource.ResourceTransactions;
 import com.iafenvoy.mxt.runtime.resource.ResourceTransactions.Evaluation;
 import com.iafenvoy.mxt.runtime.resource.ResourceTransactions.Result;
 import com.iafenvoy.mxt.util.HolderHelper;
+import com.iafenvoy.mxt.util.MiscUtil;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
@@ -33,8 +34,8 @@ public final class FormationService {
     }
 
     public static ActivateResult activate(Identifier id, Formation definition, ResourceHolderAttachment resources, FormulaContext context, UUID owner) {
-        double radius = definition.radius().evaluate(context);
-        if (!Double.isFinite(radius) || radius <= 0.0D) return ActivateResult.rejected(Failure.INVALID_FORMULA, null);
+        double radius = MiscUtil.positive(definition.radius().evaluate(context));
+        if (radius <= 0.0D) return ActivateResult.rejected(Failure.INVALID_FORMULA, null);
         // The activating player's own account is named directly: activation is driven from a controller block, so
         // there is no entity here to take a channel from, only an account to charge.
         CostPayment.Result payment = CostPayment.pay(definition.activationCosts(),
@@ -79,8 +80,8 @@ public final class FormationService {
             Map<Holder<Aura>, Double> capacities = new LinkedHashMap<>();
             storage.capacity().forEach((aura, provider) -> {
                 if (aura == null) return;
-                double capacity = provider.evaluate(context);
-                if (Double.isFinite(capacity) && capacity > 0.0D) capacities.put(aura, capacity);
+                double capacity = MiscUtil.positive(provider.evaluate(context));
+                if (capacity > 0.0D) capacities.put(aura, capacity);
             });
             return capacities;
         }

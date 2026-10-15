@@ -2,6 +2,7 @@ package com.iafenvoy.mxt.data.storage.builtin;
 
 import com.iafenvoy.mxt.data.ability.AbilityContext;
 import com.iafenvoy.mxt.data.storage.DataStorage;
+import com.iafenvoy.mxt.util.MiscUtil;
 import com.iafenvoy.mxt.util.codec.OptionalCodecs;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.iafenvoy.mxt.util.formula.number.Constant;
@@ -55,9 +56,9 @@ public final class ChargesDataStorage extends DataStorage {
         if (!Double.isFinite(left)) return;
         double maximum = this.maximum.evaluate(context.formula());
         if (!Double.isFinite(maximum) || left >= maximum) return;
-        double ticks = this.rechargeTicks.evaluate(context.formula());
+        double ticks = MiscUtil.positive(this.rechargeTicks.evaluate(context.formula()));
         // An interval that is unusable never refills; zero would otherwise fill the pool on every tick.
-        if (!Double.isFinite(ticks) || ticks <= 0.0D) return;
+        if (ticks <= 0.0D) return;
         if (context.gameTime() - this.lastChange < Math.max(1L, Math.round(ticks))) return;
         this.remaining = OptionalDouble.of(Math.min(maximum, left + 1.0D));
         this.lastChange = context.gameTime();

@@ -3,14 +3,12 @@ package com.iafenvoy.mxt.attachment;
 import com.iafenvoy.mxt.data.creature.ContractBehavior;
 import com.iafenvoy.mxt.data.creature.ContractBehaviors;
 import com.iafenvoy.mxt.data.creature.ContractType;
-import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.util.AbstractChangeTrackable;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
-import net.minecraft.resources.RegistryFixedCodec;
 
 import java.util.Optional;
 
@@ -28,7 +26,7 @@ import java.util.Optional;
  */
 public final class ContractAttachment extends AbstractChangeTrackable {
     public static final MapCodec<ContractAttachment> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
-            RegistryFixedCodec.create(MxtResourceKeys.CONTRACT_TYPE).lenientOptionalFieldOf("contract_type").forGetter(ContractAttachment::contractType),
+            ContractType.CODEC.lenientOptionalFieldOf("contract_type").forGetter(ContractAttachment::contractType),
             Codec.LONG.lenientOptionalFieldOf("bound_at", -1L).forGetter(ContractAttachment::boundAt),
             Codec.BOOL.lenientOptionalFieldOf("recalled", false).forGetter(ContractAttachment::recalled),
             Codec.LONG.lenientOptionalFieldOf("recall_at", -1L).forGetter(ContractAttachment::recallAt),

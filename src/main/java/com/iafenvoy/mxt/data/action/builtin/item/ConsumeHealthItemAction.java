@@ -2,6 +2,7 @@ package com.iafenvoy.mxt.data.action.builtin.item;
 
 import com.iafenvoy.mxt.data.action.ItemAction;
 import com.iafenvoy.mxt.data.context.action.ItemActionContext;
+import com.iafenvoy.mxt.util.MiscUtil;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -23,8 +24,8 @@ public record ConsumeHealthItemAction(NumberProvider amount) implements ItemActi
         // Server only, and it belongs to a living holder: a stack with no actor has nobody to charge.
         if (!(ctx.holder() instanceof LivingEntity holder)) return;
         if (!(holder.level() instanceof ServerLevel level)) return;
-        double amount = this.amount.evaluate(ctx.formula());
-        if (!Double.isFinite(amount) || amount <= 0.0D) return;
+        double amount = MiscUtil.positive(this.amount.evaluate(ctx.formula()));
+        if (amount <= 0.0D) return;
         holder.hurtServer(level, holder.damageSources().magic(), (float) amount);
     }
 

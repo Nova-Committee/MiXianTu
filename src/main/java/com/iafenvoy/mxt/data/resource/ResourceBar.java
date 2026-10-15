@@ -5,6 +5,7 @@ import com.iafenvoy.mxt.data.resourcebar.ResourceBarRenderData;
 import com.iafenvoy.mxt.data.resourcebar.ResourceBarVisibility;
 import com.iafenvoy.mxt.data.resourcebar.builtin.context.SelfHudContext;
 import com.iafenvoy.mxt.data.resourcebar.builtin.visibility.AlwaysVisibility;
+import com.iafenvoy.mxt.util.MiscUtil;
 import com.iafenvoy.mxt.util.codec.OptionalCodecs;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -31,7 +32,7 @@ public record ResourceBar(ResourceBarContext context, Anchor anchor, int order, 
 
     public ResourceBar {
         double value = maximum.orElse(Double.NaN);
-        if (!Double.isFinite(value) || value <= 0.0D) maximum = OptionalDouble.empty();
+        if (MiscUtil.positive(value) <= 0.0D) maximum = OptionalDouble.empty();
     }
 
     public enum Anchor implements StringRepresentable {

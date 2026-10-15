@@ -34,7 +34,7 @@ public enum BlockAuraComponentProvider implements IBlockComponentProvider {
         Totals totals = new Totals();
         MxtDatapackRegistries.holders(accessor.getLevel().registryAccess(), MxtResourceKeys.BLOCK_AURA)
                 .map(Reference::value)
-                .filter(definition -> RegistryCodecs.matchesValue(definition.blocks(), BuiltInRegistries.BLOCK, accessor.getBlock()))
+                .filter(definition -> RegistryCodecs.matches(definition.blocks(), BuiltInRegistries.BLOCK, accessor.getBlock()))
                 .forEach(totals::add);
         totals.appendTo(tooltip);
     }

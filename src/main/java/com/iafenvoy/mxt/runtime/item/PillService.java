@@ -7,6 +7,7 @@ import com.iafenvoy.mxt.data.item.Pill;
 import com.iafenvoy.mxt.data.item.PillBinding;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.item.ItemBindingService.PillResolution;
+import com.iafenvoy.mxt.util.MiscUtil;
 import com.iafenvoy.mxt.util.TooltipText;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.Codec;
@@ -103,7 +104,7 @@ public final class PillService {
         double threshold = definition.toxicityThreshold().evaluate(context);
         if (Double.isFinite(threshold) && value >= threshold) {
             definition.onOverdose().execute(entity, context);
-            toxicity.set(finite(definition.toxicityAfterOverdose().evaluate(context)));
+            toxicity.set(MiscUtil.positive(definition.toxicityAfterOverdose().evaluate(context)));
             notifyOverdose(entity, toxicity.toxicity());
             return Result.overdosed(toxicity.toxicity());
         }
@@ -138,8 +139,8 @@ public final class PillService {
     @SubscribeEvent
     public static void onEntityTick(EntityTickEvent.Post event) {
         if (!(event.getEntity() instanceof LivingEntity entity) || entity.level().isClientSide()) return;
-        double rate = MxtServerConfig.INSTANCE.alchemy.toxicityDecayPerSecond.getValue();
-        if (!Double.isFinite(rate) || rate <= 0.0D) return;
+        double rate = MiscUtil.positive(MxtServerConfig.INSTANCE.alchemy.toxicityDecayPerSecond.getValue());
+        if (rate <= 0.0D) return;
         PillToxicityAttachment toxicity = entity.getExistingData(MxtAttachments.PILL_TOXICITY).orElse(null);
         if (toxicity == null || toxicity.toxicity() <= 0.0D) return;
         int remainder = toxicity.decayRemainder() + 1;
@@ -151,14 +152,10 @@ public final class PillService {
     }
 
     static int cooldownTicks(PillBinding definition, LivingEntity entity) {
-        double value = definition.cooldown().evaluate(FormulaContext.of(entity));
-        if (!Double.isFinite(value) || value <= 0.0D) return 0;
+        double value = MiscUtil.positive(definition.cooldown().evaluate(FormulaContext.of(entity)));
+        if (value <= 0.0D) return 0;
         long ticks = Math.round(value);
         return ticks >= Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) ticks;
-    }
-
-    private static double finite(double value) {
-        return Double.isFinite(value) ? Math.max(0.0D, value) : 0.0D;
     }
 
     public enum ModifyMode implements StringRepresentable {

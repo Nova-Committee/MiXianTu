@@ -47,4 +47,12 @@ public final class MiscCodecs {
     public static <T> Codec<List<T>> combineCodec(Codec<T> codec) {
         return Codec.either(codec, TolerantListCodec.create(codec)).xmap(x -> x.map(List::of, l -> l), l -> l.size() == 1 ? Either.left(l.getFirst()) : Either.right(l));
     }
+
+    public static DataResult<Integer> parseInt(String value) {
+        try {
+            return DataResult.success(Integer.parseInt(value));
+        } catch (NumberFormatException exception) {
+            return DataResult.error(() -> "Invalid integer map key: " + value);
+        }
+    }
 }

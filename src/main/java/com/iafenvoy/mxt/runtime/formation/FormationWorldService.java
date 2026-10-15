@@ -9,6 +9,7 @@ import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.formation.FormationService.ActivateResult;
 import com.iafenvoy.mxt.runtime.world.AuraChunkTicker;
+import com.iafenvoy.mxt.util.MiscUtil;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.Identifier;
@@ -45,8 +46,8 @@ public final class FormationWorldService {
             if (FormationProtection.foreignClaimRefuses(level, controller, owner))
                 return Result.rejected(Failure.FOREIGN_CLAIM, null);
         }
-        double radius = definition.radius().evaluate(context);
-        if (!Double.isFinite(radius) || radius <= 0.0D) return Result.rejected(Failure.ACTIVATION_FAILED, null);
+        double radius = MiscUtil.positive(definition.radius().evaluate(context));
+        if (radius <= 0.0D) return Result.rejected(Failure.ACTIVATION_FAILED, null);
         FormationInstance preview = owner == null ? new FormationInstance(id, radius) : new FormationInstance(id, radius, owner);
         if (NeoForge.EVENT_BUS.post(new Activate(level, controller, preview)).isCanceled())
             return Result.rejected(Failure.CANCELLED, null);

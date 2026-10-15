@@ -1,15 +1,13 @@
 package com.iafenvoy.mxt.data.item;
 
 import com.iafenvoy.mxt.data.talisman.Talisman;
-import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.mojang.serialization.Codec;
-import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
-import net.minecraft.resources.RegistryFixedCodec;
+import net.minecraft.util.StringRepresentable;
+import org.jspecify.annotations.NonNull;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -22,22 +20,16 @@ import java.util.List;
 public record TalismanComponent(List<Holder<Talisman>> talismans, TriggerMode mode) {
     public static final TalismanComponent EMPTY = new TalismanComponent(List.of(), TriggerMode.FIRE);
     public static final Codec<TalismanComponent> CODEC = RecordCodecBuilder.create(i -> i.group(
-            RegistryFixedCodec.create(MxtResourceKeys.TALISMAN).listOf().optionalFieldOf("talismans", List.of())
-                    .forGetter(TalismanComponent::talismans),
+            Talisman.CODEC.listOf().optionalFieldOf("talismans", List.of()).forGetter(TalismanComponent::talismans),
             TriggerMode.CODEC.optionalFieldOf("mode", TriggerMode.FIRE).forGetter(TalismanComponent::mode)
     ).apply(i, TalismanComponent::new));
 
     // FIRE fires the moment the bill is paid, which is what makes a carrier a one-shot; STORE only accumulates
     // and waits to be fired by a hand or switched back.
-    public enum TriggerMode {
+    public enum TriggerMode implements StringRepresentable {
         FIRE("fire"),
         STORE("store");
-
-        public static final Codec<TriggerMode> CODEC = Codec.STRING.comapFlatMap(
-                name -> Arrays.stream(values()).filter(mode -> mode.key.equals(name)).findFirst()
-                        .map(DataResult::success)
-                        .orElseGet(() -> DataResult.error(() -> "Unknown talisman mode: " + name)),
-                mode -> mode.key);
+        public static final Codec<TriggerMode> CODEC = StringRepresentable.fromValues(TriggerMode::values);
 
         private final String key;
 
@@ -51,6 +43,11 @@ public record TalismanComponent(List<Holder<Talisman>> talismans, TriggerMode mo
 
         public TriggerMode other() {
             return this == FIRE ? STORE : FIRE;
+        }
+
+        @Override
+        public @NonNull String getSerializedName() {
+            return this.key;
         }
     }
 

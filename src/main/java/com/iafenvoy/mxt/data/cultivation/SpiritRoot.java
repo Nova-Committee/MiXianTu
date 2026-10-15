@@ -4,6 +4,7 @@ import com.iafenvoy.mxt.api.QualityProvider;
 import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.util.MiscUtil;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.iafenvoy.mxt.util.formula.number.Constant;
@@ -68,7 +69,7 @@ public record SpiritRoot(List<ElementWeight> elements, NumberProvider cultivatio
         }
 
         private static DataResult<ElementWeight> validate(ElementWeight value) {
-            return Double.isFinite(value.weight) && value.weight > 0.0D ? DataResult.success(value)
+            return MiscUtil.positive(value.weight) > 0.0D ? DataResult.success(value)
                     : DataResult.error(() -> "An element weight must be finite and positive: " + value.weight);
         }
 
@@ -89,7 +90,7 @@ public record SpiritRoot(List<ElementWeight> elements, NumberProvider cultivatio
         if (root.elementHolders().stream().distinct().count() != root.elements().size())
             return DataResult.error(() -> "A spirit root must not name the same element twice: " + root.elementHolders());
         double total = root.totalWeight();
-        if (!Double.isFinite(total) || total <= 0.0D)
+        if (MiscUtil.positive(total) <= 0.0D)
             return DataResult.error(() -> "The element weights of a spirit root must add up to a positive, finite number: " + total);
         return DataResult.success(root);
     }

@@ -13,6 +13,7 @@ import com.iafenvoy.mxt.runtime.item.ItemBindingService.ResolvedBindings;
 import com.iafenvoy.mxt.runtime.item.PillService;
 import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.HolderHelper;
+import com.iafenvoy.mxt.util.MiscUtil;
 import com.iafenvoy.mxt.util.TooltipText;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.ChatFormatting;
@@ -139,8 +140,8 @@ public final class ItemBindingTooltipAppender {
         } else if (taken > 0) {
             builder.accept(Component.translatable("tooltip.mxt.pill.uses", taken).withStyle(ChatFormatting.DARK_PURPLE));
         }
-        double cooldown = limits.cooldown().evaluate(formula);
-        if (Double.isFinite(cooldown) && cooldown > 0.0D)
+        double cooldown = MiscUtil.positive(limits.cooldown().evaluate(formula));
+        if (cooldown > 0.0D)
             builder.accept(Component.translatable("tooltip.mxt.pill.cooldown", TooltipText.number(cooldown))
                     .withStyle(ChatFormatting.DARK_PURPLE));
         if (player != null && PillService.onCooldown(player, identity)) {

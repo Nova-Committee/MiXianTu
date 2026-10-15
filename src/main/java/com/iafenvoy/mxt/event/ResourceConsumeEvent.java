@@ -1,6 +1,7 @@
 package com.iafenvoy.mxt.event;
 
 import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
+import com.iafenvoy.mxt.util.MiscUtil;
 import net.minecraft.resources.Identifier;
 import net.neoforged.bus.api.Event;
 import net.neoforged.bus.api.ICancellableEvent;
@@ -35,7 +36,7 @@ public abstract class ResourceConsumeEvent extends Event {
     }
 
     private static void validate(Identifier id, double amount) {
-        if (id == null || !Double.isFinite(amount) || amount <= 0.0D)
+        if (id == null || MiscUtil.positive(amount) <= 0.0D)
             throw new IllegalArgumentException("Resource event costs must be finite and positive");
     }
 

@@ -2,8 +2,7 @@ package com.iafenvoy.mxt.data.condition.builtin.bientity;
 
 import com.iafenvoy.mxt.data.condition.BiEntityCondition;
 import com.iafenvoy.mxt.data.context.condition.BiEntityConditionContext;
-import com.mojang.serialization.Codec;
-import com.mojang.serialization.DataResult;
+import com.iafenvoy.mxt.util.codec.ExtraEnumCodecs;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.world.entity.Entity;
@@ -14,14 +13,10 @@ import net.minecraft.world.phys.HitResult.Type;
 import net.minecraft.world.phys.Vec3;
 import org.jspecify.annotations.NonNull;
 
-import java.util.Locale;
-
 public record CanSeeCondition(Block shapeType, Fluid fluidHandling) implements BiEntityCondition {
-    private static final Codec<Block> BLOCK_CODEC = enumCodec(Block.class);
-    private static final Codec<Fluid> FLUID_CODEC = enumCodec(Fluid.class);
     public static final MapCodec<CanSeeCondition> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
-            BLOCK_CODEC.optionalFieldOf("shape_type", Block.VISUAL).forGetter(CanSeeCondition::shapeType),
-            FLUID_CODEC.optionalFieldOf("fluid_handling", Fluid.NONE).forGetter(CanSeeCondition::fluidHandling)
+            ExtraEnumCodecs.CLIP_CONTEXT_BLOCK.optionalFieldOf("shape_type", Block.VISUAL).forGetter(CanSeeCondition::shapeType),
+            ExtraEnumCodecs.CLIP_CONTEXT_FLUID.optionalFieldOf("fluid_handling", Fluid.NONE).forGetter(CanSeeCondition::fluidHandling)
     ).apply(i, CanSeeCondition::new));
 
     @Override
@@ -37,15 +32,5 @@ public record CanSeeCondition(Block shapeType, Fluid fluidHandling) implements B
     @Override
     public @NonNull MapCodec<CanSeeCondition> codec() {
         return CODEC;
-    }
-
-    private static <E extends Enum<E>> Codec<E> enumCodec(Class<E> type) {
-        return Codec.STRING.comapFlatMap(value -> {
-            try {
-                return DataResult.success(Enum.valueOf(type, value.toUpperCase(Locale.ROOT)));
-            } catch (IllegalArgumentException exception) {
-                return DataResult.error(() -> "Unknown " + type.getSimpleName() + " " + value);
-            }
-        }, value -> value.name().toLowerCase(Locale.ROOT));
     }
 }

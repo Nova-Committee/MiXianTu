@@ -3,6 +3,7 @@ package com.iafenvoy.mxt.runtime.alchemy;
 import com.iafenvoy.mxt.api.AlchemyHeatSource;
 import com.iafenvoy.mxt.data.alchemy.HeatSource;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.util.MiscUtil;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
@@ -44,18 +45,18 @@ public final class AlchemyHeatService {
         BlockState state = stateAt(level, pos);
         if (state == null) return 0.0D;
         if (state.getBlock() instanceof AlchemyHeatSource source)
-            return positive(source.maxTemperature(state, level, pos));
+            return MiscUtil.positive(source.maxTemperature(state, level, pos));
         HeatSource definition = find(state.getBlock());
-        return definition == null ? 0.0D : positive(definition.maxTemperature());
+        return definition == null ? 0.0D : MiscUtil.positive(definition.maxTemperature());
     }
 
     public static double heatingPerTick(ServerLevel level, BlockPos pos) {
         BlockState state = stateAt(level, pos);
         if (state == null) return 0.0D;
         if (state.getBlock() instanceof AlchemyHeatSource source)
-            return positive(source.heatingPerTick(state, level, pos));
+            return MiscUtil.positive(source.heatingPerTick(state, level, pos));
         HeatSource definition = find(state.getBlock());
-        return definition == null ? 0.0D : positive(definition.heatingPerTick());
+        return definition == null ? 0.0D : MiscUtil.positive(definition.heatingPerTick());
     }
 
     /**
@@ -73,9 +74,5 @@ public final class AlchemyHeatService {
 
     private static @Nullable HeatSource find(Block block) {
         return INDEX_CACHE.get(block);
-    }
-
-    private static double positive(double value) {
-        return Double.isFinite(value) && value > 0.0D ? value : 0.0D;
     }
 }

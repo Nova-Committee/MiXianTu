@@ -12,6 +12,7 @@ import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.world.AuraPool;
 import com.iafenvoy.mxt.runtime.world.AuraResult;
 import com.iafenvoy.mxt.runtime.world.AuraService;
+import com.iafenvoy.mxt.util.MiscUtil;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.FormulaContexts;
 import net.minecraft.core.Holder;
@@ -137,13 +138,13 @@ public final class AuraDistributionService {
 
     private static double request(List<Double> requests, int index) {
         double value = requests.get(index);
-        return Double.isFinite(value) ? Math.max(0.0D, value) : 0.0D;
+        return MiscUtil.positive(value);
     }
 
     private static double weight(List<Double> weights, int index, boolean weighted) {
         if (!weighted) return 1.0D;
         double value = weights.get(index);
-        return Double.isFinite(value) ? Math.max(0.0D, value) : 0.0D;
+        return MiscUtil.positive(value);
     }
 
     private static long chunkKey(ServerPlayer player) {
@@ -154,7 +155,7 @@ public final class AuraDistributionService {
     private static double shareWeight(CultivationAttachment spirit, FormulaContext context) {
         return spirit.realmStages().values().stream()
                 .map(stage -> stage.value().auraShareWeight().evaluate(context))
-                .filter(value -> Double.isFinite(value) && value > 0.0D)
+                .filter(value -> MiscUtil.positive(value) > 0.0D)
                 .max(Double::compareTo).orElse(1.0D);
     }
 

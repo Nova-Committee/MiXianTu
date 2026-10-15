@@ -7,6 +7,7 @@ import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.resource.ResourceService;
 import com.iafenvoy.mxt.runtime.resource.ResourceService.Bounds;
+import com.iafenvoy.mxt.util.MiscUtil;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.mojang.serialization.MapCodec;
@@ -31,8 +32,8 @@ public record TransferResourceBiEntityAction(Holder<Resource> resource,
         Entity actor = ctx.actor();
         Entity target = ctx.target();
         FormulaContext context = ctx.formula();
-        double requested = this.amount.evaluate(context);
-        if (!Double.isFinite(requested) || requested <= 0.0D) return;
+        double requested = MiscUtil.positive(this.amount.evaluate(context));
+        if (requested <= 0.0D) return;
         FormulaContext targetContext = target instanceof LivingEntity living
                 ? ResourceService.formulaContext(living, this.resource, context)
                 : context;

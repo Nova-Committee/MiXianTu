@@ -5,6 +5,7 @@ import com.iafenvoy.mxt.data.ability.render.MountRender;
 import com.iafenvoy.mxt.data.ability.render.builtin.ItemMountRender;
 import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.action.NoOpAction;
+import com.iafenvoy.mxt.util.MiscUtil;
 import com.iafenvoy.mxt.util.codec.MiscCodecs;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.mojang.serialization.Codec;
@@ -92,7 +93,7 @@ public record MountAbilityType(NumberProvider speed, int seats, boolean sit, Opt
     // A mount that cannot move is a pack mistake, not a vehicle that happens to be still; the rider's own multiplier
     // is applied by the caller.
     public boolean canMove(double speed) {
-        return Double.isFinite(speed) && speed > 0.0D;
+        return MiscUtil.positive(speed) > 0.0D;
     }
 
     /**

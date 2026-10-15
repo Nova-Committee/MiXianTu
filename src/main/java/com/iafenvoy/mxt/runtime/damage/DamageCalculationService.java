@@ -10,6 +10,7 @@ import com.iafenvoy.mxt.runtime.artifact.ArtifactService;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactUpkeepService;
 import com.iafenvoy.mxt.runtime.cultivation.Elements;
 import com.iafenvoy.mxt.runtime.cultivation.ItemElements;
+import com.iafenvoy.mxt.util.MiscUtil;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
@@ -61,7 +62,8 @@ public final class DamageCalculationService {
     // counts as the attacker's. Reduction is not applied here - it runs in the event this call raises.
     public static double deal(@Nullable Entity attacker, Entity target, double amount, Optional<Holder<DamageType>> damageType, @Nullable FormulaContext context) {
         if (!(target.level() instanceof ServerLevel level)) return 0.0D;
-        if (!Double.isFinite(amount) || amount <= 0.0D) return 0.0D;
+        amount = MiscUtil.positive(amount);
+        if (amount <= 0.0D) return 0.0D;
         DamageSource source = source(level, attacker, damageType);
         if (bypasses(source)) {
             target.hurtServer(level, source, (float) amount);
@@ -78,11 +80,12 @@ public final class DamageCalculationService {
     // one - but mastery and affinity still apply, because they belong to the casting and not to the pair.
     public static double outgoing(@Nullable Entity attacker, Entity target, double amount, @Nullable FormulaContext context,
                                   Set<Holder<Element>> elements) {
-        if (!Double.isFinite(amount) || amount <= 0.0D) return 0.0D;
+        amount = MiscUtil.positive(amount);
+        if (amount <= 0.0D) return 0.0D;
         double pair = attacker == null ? 1.0D : physiqueMultiplier(attacker, true) * overcomeMultiplier(elements, target);
         double result = amount * masteryMultiplier(context) * elementMultiplier(context)
                 * selfConflictMultiplier(attacker) * pair;
-        return Double.isFinite(result) && result > 0.0D ? result : 0.0D;
+        return MiscUtil.positive(result);
     }
 
     // One factor per wielding element, taken from that element's own conflict_multiplier, applied once no
@@ -146,9 +149,10 @@ public final class DamageCalculationService {
     // For a caller that needs the same answer twice: the incoming event reduces with these elements and then
     // builds the element up on the target, so reading the source once is what keeps the two in step.
     public static double incoming(LivingEntity target, Set<Holder<Element>> attacking, double amount) {
-        if (!Double.isFinite(amount) || amount <= 0.0D) return 0.0D;
+        amount = MiscUtil.positive(amount);
+        if (amount <= 0.0D) return 0.0D;
         double result = amount * adaptationMultiplier(target, attacking) * physiqueMultiplier(target, false);
-        return Double.isFinite(result) && result > 0.0D ? result : 0.0D;
+        return MiscUtil.positive(result);
     }
 
     // Every matching pair multiplies, so two elements that both overcome the target both count.

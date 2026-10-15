@@ -10,6 +10,7 @@ import com.iafenvoy.mxt.runtime.resource.ResourceService;
 import com.iafenvoy.mxt.runtime.resource.ResourceTransactions;
 import com.iafenvoy.mxt.runtime.resource.ResourceTransactions.Evaluation;
 import com.iafenvoy.mxt.runtime.resource.ResourceTransactions.Result;
+import com.iafenvoy.mxt.util.MiscUtil;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
@@ -51,8 +52,8 @@ public final class ResourceCostDraft implements CostDraft<ResourceCost> {
         // resource's realm rank and absorbed aura.
         FormulaContext formula = this.context.payer() == null ? this.context.formula()
                 : ResourceService.formulaContext(this.context.payer(), cost.resource(), this.context.formula());
-        double value = cost.amount().evaluate(formula);
-        if (!Double.isFinite(value) || value <= 0.0D) return Optional.of(CostFailure.INVALID_AMOUNT);
+        double value = MiscUtil.positive(cost.amount().evaluate(formula));
+        if (value <= 0.0D) return Optional.of(CostFailure.INVALID_AMOUNT);
         this.account.merge(cost.resource(), value, Double::sum);
         return Optional.empty();
     }

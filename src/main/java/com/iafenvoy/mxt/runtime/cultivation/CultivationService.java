@@ -20,6 +20,7 @@ import com.iafenvoy.mxt.runtime.ability.AbilityEventBridge;
 import com.iafenvoy.mxt.runtime.resource.ResourceService;
 import com.iafenvoy.mxt.runtime.tribulation.TribulationService;
 import com.iafenvoy.mxt.util.HolderHelper;
+import com.iafenvoy.mxt.util.MiscUtil;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
@@ -157,7 +158,8 @@ public final class CultivationService {
     }
 
     public static double addProgressForChain(LivingEntity entity, Holder<Aura> aura, double amount, FormulaContext context) {
-        if (!Double.isFinite(amount) || amount <= 0.0D) return 0.0D;
+        amount = MiscUtil.positive(amount);
+        if (amount <= 0.0D) return 0.0D;
         CultivationAttachment spirit = entity.getData(MxtAttachments.CULTIVATION);
         Holder<RealmStage> target = next(aura, spirit);
         if (target == null) return 0.0D;
@@ -170,7 +172,8 @@ public final class CultivationService {
     }
 
     public static double addProgressForChain(CultivationAttachment spirit, Holder<Aura> aura, double amount, FormulaContext context) {
-        if (!Double.isFinite(amount) || amount <= 0.0D) return 0.0D;
+        amount = MiscUtil.positive(amount);
+        if (amount <= 0.0D) return 0.0D;
         Holder<RealmStage> target = next(aura, spirit);
         return target == null ? 0.0D : addProgress(spirit, aura, amount, target, context);
     }
@@ -239,7 +242,7 @@ public final class CultivationService {
         } finally {
             RESOLVING_MINOR_STAGE.set(Boolean.FALSE);
         }
-        if (!Double.isFinite(total) || total <= 0.0D) return Double.NaN;
+        if (MiscUtil.positive(total) <= 0.0D) return Double.NaN;
         return Math.min(count - 1, Math.floor(progress * count / total));
     }
 

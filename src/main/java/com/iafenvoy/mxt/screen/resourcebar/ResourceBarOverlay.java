@@ -22,6 +22,7 @@ import com.iafenvoy.mxt.runtime.world.AuraClientState;
 import com.iafenvoy.mxt.runtime.world.AuraClientState.Snapshot;
 import com.iafenvoy.mxt.screen.hud.HudManager;
 import com.iafenvoy.mxt.util.HolderHelper;
+import com.iafenvoy.mxt.util.MiscUtil;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
@@ -148,7 +149,7 @@ public final class ResourceBarOverlay {
     }
 
     private static double resolvedMaximum(double dynamic, double fallback) {
-        return Double.isFinite(dynamic) && dynamic > 0.0D ? dynamic : fallback;
+        return MiscUtil.positive(dynamic) > 0.0D ? dynamic : fallback;
     }
 
     // Called from client setup, not left to the first frame: the framework's layer only renders inside a world,

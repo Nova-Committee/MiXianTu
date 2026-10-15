@@ -2,6 +2,7 @@ package com.iafenvoy.mxt.data.action.builtin.item;
 
 import com.iafenvoy.mxt.data.action.ItemAction;
 import com.iafenvoy.mxt.data.context.action.ItemActionContext;
+import com.iafenvoy.mxt.util.MiscUtil;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.mojang.serialization.MapCodec;
 import org.jspecify.annotations.NonNull;
@@ -11,8 +12,8 @@ public record ConsumeItemAction(NumberProvider count) implements ItemAction {
 
     @Override
     public void execute(@NonNull ItemActionContext ctx) {
-        double count = this.count.evaluate(ctx.formula());
-        if (Double.isFinite(count) && count > 0.0D) ctx.stack().shrink(Math.max(1, (int) Math.round(count)));
+        double count = MiscUtil.positive(this.count.evaluate(ctx.formula()));
+        if (count > 0.0D) ctx.stack().shrink(Math.max(1, (int) Math.round(count)));
     }
 
     @Override

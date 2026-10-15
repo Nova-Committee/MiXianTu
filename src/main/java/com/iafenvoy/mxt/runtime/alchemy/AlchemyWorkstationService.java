@@ -18,6 +18,7 @@ import com.iafenvoy.mxt.runtime.item.QualityRequirements;
 import com.iafenvoy.mxt.runtime.item.QualityService;
 import com.iafenvoy.mxt.runtime.world.AuraResult;
 import com.iafenvoy.mxt.runtime.world.AuraService;
+import com.iafenvoy.mxt.util.MiscUtil;
 import com.iafenvoy.mxt.util.codec.CollectionCodecs;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.Codec;
@@ -59,7 +60,7 @@ public final class AlchemyWorkstationService {
         double modifier = inputModifier(player.registryAccess(), station.container(), context)
                 * QualityService.modifier(player.registryAccess(), station.furnaceItem(), ItemQuality::alchemyModifier, context);
         double scaled = modifier == QualityService.DEFAULT_MODIFIER ? evaluated.duration() : evaluated.duration() / modifier;
-        if (!Double.isFinite(scaled) || scaled <= 0.0D) scaled = evaluated.duration();
+        if (MiscUtil.positive(scaled) <= 0.0D) scaled = evaluated.duration();
         long ticks = Math.max(1L, Math.round(Math.min(scaled, Long.MAX_VALUE)));
         return Optional.of(new Parameters(evaluated.targetTemperature(), evaluated.temperatureTolerance(),
                 evaluated.balanceTolerance(), evaluated.catalyst(), ticks, recipe.maxBadTicks(),

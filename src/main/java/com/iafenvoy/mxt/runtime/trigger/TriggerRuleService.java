@@ -7,6 +7,7 @@ import com.iafenvoy.mxt.data.trigger.TriggerSignal;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.DatapackCache;
 import com.iafenvoy.mxt.util.HolderHelper;
+import com.iafenvoy.mxt.util.MiscUtil;
 import net.minecraft.core.Holder.Reference;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Entity;
@@ -57,8 +58,8 @@ public final class TriggerRuleService {
             } finally {
                 DISPATCHING.get().remove(key);
             }
-            double cooldown = rule.cooldown().evaluate(signal.context().formula());
-            if (Double.isFinite(cooldown) && cooldown > 0.0D) {
+            double cooldown = MiscUtil.positive(rule.cooldown().evaluate(signal.context().formula()));
+            if (cooldown > 0.0D) {
                 if (cooldowns == null) cooldowns = actor.getData(MxtAttachments.TRIGGER_COOLDOWNS);
                 cooldowns.setCooldownUntil(holder, gameTime + Math.max(1L, Math.round(cooldown)));
             }

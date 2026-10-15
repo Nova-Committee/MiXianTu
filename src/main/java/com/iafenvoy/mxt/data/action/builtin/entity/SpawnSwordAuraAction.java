@@ -3,6 +3,7 @@ package com.iafenvoy.mxt.data.action.builtin.entity;
 import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.context.action.EntityActionContext;
 import com.iafenvoy.mxt.runtime.sword.SwordAuraEntity;
+import com.iafenvoy.mxt.util.MiscUtil;
 import com.iafenvoy.mxt.util.OptionalBoolean;
 import com.iafenvoy.mxt.util.OptionalFloat;
 import com.iafenvoy.mxt.util.codec.OptionalCodecs;
@@ -44,8 +45,8 @@ public record SpawnSwordAuraAction(NumberProvider speed, OptionalInt bladeColor,
         if (source.level().isClientSide()) return;
 
         FormulaContext formula = ctx.formula();
-        double speed = this.speed.evaluate(formula);
-        if (!Double.isFinite(speed) || speed <= 0.0D) return;
+        double speed = MiscUtil.positive(this.speed.evaluate(formula));
+        if (speed <= 0.0D) return;
 
         Vec3 velocity = source.getLookAngle().scale(speed);
         if (!Double.isFinite(velocity.x) || !Double.isFinite(velocity.y) || !Double.isFinite(velocity.z) || velocity.lengthSqr() <= 1.0E-8D)

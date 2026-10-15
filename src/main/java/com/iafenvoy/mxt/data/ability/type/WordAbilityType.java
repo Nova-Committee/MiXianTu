@@ -18,10 +18,12 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import net.minecraft.util.StringRepresentable;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
+import org.jspecify.annotations.NonNull;
 
 import java.util.LinkedList;
 import java.util.Locale;
@@ -68,16 +70,15 @@ public record WordAbilityType(WordEffect effect, boolean requiresOperator,
         ability.charges().ifPresent(charges -> collector.add(charges.declared()));
     }
 
-    public enum WordEffect {
+    public enum WordEffect implements StringRepresentable {
         SELF_HEAL,
         PURGE_SELF_CURSES;
 
-        public static final Codec<WordEffect> CODEC = Codec.STRING.comapFlatMap(value -> {
-            try {
-                return DataResult.success(valueOf(value.toUpperCase(Locale.ROOT)));
-            } catch (IllegalArgumentException exception) {
-                return DataResult.error(() -> "Unknown word effect " + value);
-            }
-        }, value -> value.name().toLowerCase(Locale.ROOT));
+        public static final Codec<WordEffect> CODEC = StringRepresentable.fromValues(WordEffect::values);
+
+        @Override
+        public @NonNull String getSerializedName() {
+            return this.name().toLowerCase(Locale.ROOT);
+        }
     }
 }

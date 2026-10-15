@@ -20,6 +20,7 @@ import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.RegistryFixedCodec;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.item.ItemStackTemplate;
@@ -41,7 +42,8 @@ public record CreatureProfile(List<Either<Holder<EntityType<?>>, TagKey<EntityTy
                               Map<Holder<Aura>, NumberProvider> minimumAura, Optional<Holder<Progression>> defaultLevel,
                               Optional<Holder<Resource>> masteryResource,
                               Map<Holder<Progression>, ProgressionConfig> configuration) implements ProgressionOwner {
-    public static final Codec<CreatureProfile> CODEC = RecordCodecBuilder.<CreatureProfile>create(i -> i.group(
+    public static final Codec<Holder<CreatureProfile>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.CREATURE_PROFILE);
+    public static final Codec<CreatureProfile> DIRECT_CODEC = RecordCodecBuilder.<CreatureProfile>create(i -> i.group(
             RegistryCodecs.holderOrTagList(Registries.ENTITY_TYPE).optionalFieldOf("entities", List.of()).forGetter(CreatureProfile::entities),
             EntityAction.SINGLE_CODEC.optionalFieldOf("spawn_action", NoOpAction.INSTANCE).forGetter(CreatureProfile::spawnAction),
             NumberProvider.CODEC.optionalFieldOf("intelligence", new Constant(0.0D)).forGetter(CreatureProfile::intelligence),
@@ -51,8 +53,7 @@ public record CreatureProfile(List<Either<Holder<EntityType<?>>, TagKey<EntityTy
             CollectionCodecs.map(Aura.CODEC, NumberProvider.CODEC).optionalFieldOf("minimum_aura", Map.of()).forGetter(CreatureProfile::minimumAura),
             Progression.CODEC.optionalFieldOf("default_level").forGetter(CreatureProfile::defaultLevel),
             Resource.CODEC.optionalFieldOf("mastery_resource").forGetter(CreatureProfile::masteryResource),
-            Codec.unboundedMap(Progression.CODEC, ProgressionConfig.CODEC)
-                    .optionalFieldOf("configuration", Map.of()).forGetter(CreatureProfile::configuration)
+            Codec.unboundedMap(Progression.CODEC, ProgressionConfig.CODEC).optionalFieldOf("configuration", Map.of()).forGetter(CreatureProfile::configuration)
     ).apply(i, CreatureProfile::new)).validate(CreatureProfile::validate);
 
     private static DataResult<CreatureProfile> validate(CreatureProfile profile) {

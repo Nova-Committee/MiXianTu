@@ -16,6 +16,7 @@ import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.Sources;
 import com.iafenvoy.mxt.runtime.ability.AbilityEventBridge;
 import com.iafenvoy.mxt.runtime.damage.DamageCalculationService;
+import com.iafenvoy.mxt.util.MiscUtil;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
@@ -86,8 +87,8 @@ public final class FormationActionRunner {
     private static void attack(AttackFormationAction attack, Entity entity,
                                EntityActionContext context, @Nullable Entity owner) {
         if (!attack.targetCondition().test(entity, context)) return;
-        double amount = attack.damage().evaluate(context.formula());
-        if (Double.isFinite(amount) && amount > 0.0D)
+        double amount = MiscUtil.positive(attack.damage().evaluate(context.formula()));
+        if (amount > 0.0D)
             DamageCalculationService.deal(attack.attributeToOwner() ? owner : null, entity, amount,
                     attack.damageType(), context.formula());
         for (ApplyEffectAction effect : attack.effects()) effect.execute(context);

@@ -12,6 +12,7 @@ import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.resource.ResourceService;
+import com.iafenvoy.mxt.util.MiscUtil;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.matcher.ItemMatcher;
 import net.minecraft.core.Holder;
@@ -71,8 +72,8 @@ public final class ItemAuraService {
     }
 
     private static int capacity(ItemAura definition, FormulaContext context) {
-        double total = definition.aura().evaluate(context);
-        if (!Double.isFinite(total) || total <= 0.0D) return 0;
+        double total = MiscUtil.positive(definition.aura().evaluate(context));
+        if (total <= 0.0D) return 0;
         return total >= Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) Math.floor(total);
     }
 
@@ -96,8 +97,8 @@ public final class ItemAuraService {
             return new TickResult(0.0D, 0.0D, true, true);
         }
         int stackSize = Math.max(1, item.getCount());
-        double speed = active.value().consumeSpeed().evaluate(context) * stackSize;
-        if (!Double.isFinite(speed) || speed <= 0.0D) return TickResult.INVALID;
+        double speed = MiscUtil.positive(active.value().consumeSpeed().evaluate(context) * stackSize);
+        if (speed <= 0.0D) return TickResult.INVALID;
 
         double consumed = Math.min(state.remain(), speed);
         double remaining = state.remain() - consumed;
@@ -150,7 +151,7 @@ public final class ItemAuraService {
         holding.set(item);
         if (item.get(MxtDataComponents.ITEM_AURA) == null) {
             double total = definition.value().aura().evaluate(context);
-            if (!Double.isFinite(total) || total <= 0.0D) {
+            if (MiscUtil.positive(total) <= 0.0D) {
                 holding.clear();
                 giveItem(entity, item);
                 return ItemStack.EMPTY;
@@ -264,7 +265,8 @@ public final class ItemAuraService {
 
     private static double release(LivingEntity entity, ResourceHolderAttachment resources, Holder<Aura> aura,
                                   double amount, FormulaContext context) {
-        if (!Double.isFinite(amount) || amount <= 0.0D) return 0.0D;
+        amount = MiscUtil.positive(amount);
+        if (amount <= 0.0D) return 0.0D;
         // The pool holds values, so the aura names which value is credited: the one direction the two convert
         // in without a lookup.
         Holder<Resource> resource = aura.value().resource();

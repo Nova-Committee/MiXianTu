@@ -5,6 +5,7 @@ import com.iafenvoy.mxt.data.cultivation.Element;
 import com.iafenvoy.mxt.data.cultivation.ElementReaction;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.util.MiscUtil;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import net.minecraft.core.Holder;
@@ -79,7 +80,7 @@ public final class ElementReactionService {
     // For a caller that already knows what each element leaves: a damage type's claim may carry a number of its
     // own, so a lava bath and a fireball can be the same element and still build up at different rates.
     public static void applyFromStrike(LivingEntity target, Map<Holder<Element>, Double> amounts, FormulaContext context, double multiplier) {
-        if (!Double.isFinite(multiplier) || multiplier <= 0.0D) return;
+        if (MiscUtil.positive(multiplier) <= 0.0D) return;
         amounts.forEach((element, amount) -> {
             double scaled = amount * multiplier;
             if (scaled > 0.0D) apply(target, element, scaled, context);
@@ -117,8 +118,8 @@ public final class ElementReactionService {
                 ElementReaction reaction = holder.value();
                 ElementAttachment attachment = entity.getData(MxtAttachments.ELEMENT_ATTACHMENT);
                 for (Entry<Holder<Element>, NumberProvider> entry : reaction.consumption().entrySet()) {
-                    double taken = entry.getValue().evaluate(context);
-                    if (Double.isFinite(taken) && taken > 0.0D) attachment.add(entry.getKey(), -taken);
+                    double taken = MiscUtil.positive(entry.getValue().evaluate(context));
+                    if (taken > 0.0D) attachment.add(entry.getKey(), -taken);
                 }
                 reaction.action().ifPresent(action -> action.execute(entity, context));
                 fired++;

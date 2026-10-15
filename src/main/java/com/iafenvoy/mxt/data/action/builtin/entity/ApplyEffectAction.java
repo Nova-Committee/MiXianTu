@@ -7,7 +7,7 @@ import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.iafenvoy.mxt.util.formula.number.Constant;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.Holder;
 import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.LivingEntity;
@@ -16,10 +16,10 @@ import org.jspecify.annotations.NonNull;
 /**
  * Applies an ordinary vanilla status effect to a living entity.
  */
-public record ApplyEffectAction(MobEffect effect, NumberProvider durationTicks,
+public record ApplyEffectAction(Holder<MobEffect> effect, NumberProvider durationTicks,
                                 NumberProvider amplifier) implements EntityAction {
     public static final MapCodec<ApplyEffectAction> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
-            BuiltInRegistries.MOB_EFFECT.byNameCodec().fieldOf("effect").forGetter(ApplyEffectAction::effect),
+            MobEffect.CODEC.fieldOf("effect").forGetter(ApplyEffectAction::effect),
             NumberProvider.CODEC.fieldOf("duration_ticks").forGetter(ApplyEffectAction::durationTicks),
             NumberProvider.CODEC.optionalFieldOf("amplifier", new Constant(0.0D)).forGetter(ApplyEffectAction::amplifier)
     ).apply(i, ApplyEffectAction::new));
@@ -32,7 +32,7 @@ public record ApplyEffectAction(MobEffect effect, NumberProvider durationTicks,
         double amplifier = this.amplifier.evaluate(context);
         if (!Double.isFinite(duration) || !Double.isFinite(amplifier) || duration < 1.0D || duration > Integer.MAX_VALUE || amplifier < 0.0D || amplifier > 255.0D)
             return;
-        living.addEffect(new MobEffectInstance(BuiltInRegistries.MOB_EFFECT.wrapAsHolder(this.effect), (int) Math.round(duration), (int) Math.round(amplifier)));
+        living.addEffect(new MobEffectInstance(this.effect, (int) Math.round(duration), (int) Math.round(amplifier)));
     }
 
     @Override

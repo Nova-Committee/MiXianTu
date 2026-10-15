@@ -1307,7 +1307,7 @@ public final class MxtTestCommands {
 
     private static boolean declaresDimension(AuraZone zone, Identifier level) {
         return zone.dimensions().stream().anyMatch(value -> value.left()
-                .map(key -> key.identifier().equals(level)).orElse(false));
+                .map(key -> key.is(level)).orElse(false));
     }
 
     // The qi_refining fixture declares nine minor stages on a 100 requirement, so one segment is 100/9 and the
@@ -2060,7 +2060,7 @@ public final class MxtTestCommands {
                     && second.isRemoved();
             SpiritBeastComponent stored = bagStack.getOrDefault(MxtDataComponents.SPIRIT_BEAST, SpiritBeastComponent.EMPTY);
             boolean described = stored.stored()
-                    && stored.entityType().filter(holder -> holder.is(BuiltInRegistries.ENTITY_TYPE.wrapAsHolder(second.getType()))).isPresent()
+                    && stored.entityType().filter(second.getType()::equals).isPresent()
                     && stored.name().isPresent()
                     && stored.contractType().map(HolderHelper::id).filter(OPEN_CONTRACT::equals).isPresent()
                     && stored.owner().filter(player.getUUID()::equals).isPresent()

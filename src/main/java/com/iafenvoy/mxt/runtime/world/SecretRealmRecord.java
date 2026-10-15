@@ -29,7 +29,7 @@ public record SecretRealmRecord(Holder<SecretRealm> definition, int index, Resou
                                 Optional<Vec3> anchor, boolean prepared, List<UUID> members) {
     public static final Codec<UUID> UUID_CODEC = Codec.STRING.xmap(UUID::fromString, UUID::toString);
     public static final Codec<SecretRealmRecord> CODEC = RecordCodecBuilder.create(i -> i.group(
-            RegistryFixedCodec.create(MxtResourceKeys.SECRET_REALM).fieldOf("definition").forGetter(SecretRealmRecord::definition),
+            SecretRealm.CODEC.fieldOf("definition").forGetter(SecretRealmRecord::definition),
             Codec.INT.lenientOptionalFieldOf("index", 0).forGetter(SecretRealmRecord::index),
             ResourceKey.codec(Registries.DIMENSION).fieldOf("dimension").forGetter(SecretRealmRecord::dimension),
             OptionalCodecs.lenientLongCodec("seed").forGetter(SecretRealmRecord::seed),

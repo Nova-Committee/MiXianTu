@@ -6,6 +6,7 @@ import com.iafenvoy.mxt.data.aura.AuraZone;
 import com.iafenvoy.mxt.data.aura.AuraZone.ClientRender;
 import com.iafenvoy.mxt.runtime.world.AuraClientState;
 import com.iafenvoy.mxt.runtime.world.AuraClientState.Snapshot;
+import com.iafenvoy.mxt.util.MiscUtil;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.Holder;
 import net.minecraft.world.entity.Entity;
@@ -62,8 +63,8 @@ public final class AuraZoneRenderer {
         double blue = 0.0D;
         boolean hasExplicitColor = false;
         for (Entry<Holder<Aura>, AuraValue> entry : zone.aura().entrySet()) {
-            double amount = snapshot.environmentPool(entry.getKey()).amount();
-            if (!Double.isFinite(amount) || amount <= 0.0D) continue;
+            double amount = MiscUtil.positive(snapshot.environmentPool(entry.getKey()).amount());
+            if (amount <= 0.0D) continue;
             int color = entry.getValue().color();
             if (color == 0xFFFFFF) {
                 color = entry.getKey().value().auraType().map(type -> type.value().color()).orElse(0xFFFFFF);

@@ -41,7 +41,7 @@ public record FormationPlateComponent(List<Either<Identifier, TagKey<Formation>>
     public static final FormationPlateComponent EMPTY = new FormationPlateComponent(List.of(), Optional.empty());
     public static final Codec<FormationPlateComponent> CODEC = RecordCodecBuilder.create(i -> i.group(
             Codec.either(Identifier.CODEC, TagKey.codec(MxtResourceKeys.FORMATION)).listOf().optionalFieldOf("allowed", List.of()).forGetter(FormationPlateComponent::allowed),
-            RegistryFixedCodec.create(MxtResourceKeys.FORMATION).optionalFieldOf("formation").forGetter(FormationPlateComponent::formation)
+            Formation.CODEC.optionalFieldOf("formation").forGetter(FormationPlateComponent::formation)
     ).apply(i, FormationPlateComponent::new));
 
     // An id or, with a leading #, a tag: the two look identical in JSON apart from the prefix, and a tag has to be

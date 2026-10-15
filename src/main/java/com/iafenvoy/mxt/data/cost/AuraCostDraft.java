@@ -9,6 +9,7 @@ import com.iafenvoy.mxt.data.cost.context.CostFailure;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.world.AuraService;
+import com.iafenvoy.mxt.util.MiscUtil;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup;
@@ -46,8 +47,8 @@ public final class AuraCostDraft implements CostDraft<AuraCost> {
 
     @Override
     public Optional<CostFailure> load(AuraCost cost) {
-        double value = cost.amount().evaluate(this.context.formula());
-        if (!Double.isFinite(value) || value <= 0.0D) return Optional.of(CostFailure.INVALID_AMOUNT);
+        double value = MiscUtil.positive(cost.amount().evaluate(this.context.formula()));
+        if (value <= 0.0D) return Optional.of(CostFailure.INVALID_AMOUNT);
         if (this.context.auraTarget() == CostContext.AuraTarget.VALUE) {
             this.account.merge(cost.aura().value().resource(), value, Double::sum);
             return Optional.empty();
@@ -143,7 +144,8 @@ public final class AuraCostDraft implements CostDraft<AuraCost> {
 
     // Whole units, the only granularity a bank deals in for a display-sized price.
     private static int units(double amount) {
-        if (!Double.isFinite(amount) || amount <= 0.0D) return 0;
+        amount = MiscUtil.positive(amount);
+        if (amount <= 0.0D) return 0;
         return amount >= Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) Math.ceil(amount);
     }
 }

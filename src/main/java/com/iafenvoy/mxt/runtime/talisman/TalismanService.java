@@ -24,6 +24,7 @@ import com.iafenvoy.mxt.runtime.resource.ResourceService;
 import com.iafenvoy.mxt.runtime.spirit.SpiritChargeService;
 import com.iafenvoy.mxt.runtime.spirit.SpiritPour.Entry;
 import com.iafenvoy.mxt.runtime.spirit.SpiritSource;
+import com.iafenvoy.mxt.util.MiscUtil;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import net.minecraft.core.Holder;
@@ -80,8 +81,8 @@ public final class TalismanService {
             double multiplier = Math.min(talisman.value().capacity(), uses);
             for (Cost cost : talisman.value().costs())
                 if (cost instanceof AuraCost(Holder<Aura> aura1, NumberProvider amount1)) {
-                    double amount = amount1.evaluate(FormulaContext.EMPTY);
-                    if (Double.isFinite(amount) && amount > 0.0D)
+                    double amount = MiscUtil.positive(amount1.evaluate(FormulaContext.EMPTY));
+                    if (amount > 0.0D)
                         totals.merge(aura1, amount * multiplier, Double::sum);
                 }
         }
@@ -100,8 +101,8 @@ public final class TalismanService {
         for (Holder<Talisman> talisman : written)
             for (Cost cost : talisman.value().costs())
                 if (cost instanceof AuraCost(Holder<Aura> aura1, NumberProvider amount1)) {
-                    double amount = amount1.evaluate(FormulaContext.EMPTY);
-                    if (Double.isFinite(amount) && amount > 0.0D) draw.merge(aura1, amount, Double::sum);
+                    double amount = MiscUtil.positive(amount1.evaluate(FormulaContext.EMPTY));
+                    if (amount > 0.0D) draw.merge(aura1, amount, Double::sum);
                 }
         return draw;
     }
@@ -119,7 +120,8 @@ public final class TalismanService {
 
     // Whole units, the same rounding the shared stores use: a capacity of half an aura is still one whole one.
     private static int units(double amount) {
-        if (!Double.isFinite(amount) || amount <= 0.0D) return 0;
+        amount = MiscUtil.positive(amount);
+        if (amount <= 0.0D) return 0;
         return amount >= Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) Math.ceil(amount);
     }
 
@@ -339,8 +341,8 @@ public final class TalismanService {
         if (charge.isEmpty()) return;
         ResourceHolderAttachment resources = holder.getData(MxtAttachments.RESOURCE_HOLDER);
         charge.amounts().forEach((aura, units) -> {
-            double amount = units * SpiritChargeService.POUR_COST_PER_UNIT;
-            if (!Double.isFinite(amount) || amount <= 0.0D) return;
+            double amount = MiscUtil.positive(units * SpiritChargeService.POUR_COST_PER_UNIT);
+            if (amount <= 0.0D) return;
             Holder<Resource> resource = aura.value().resource();
             FormulaContext context = ResourceService.formulaContext(holder, resource, FormulaContext.of(holder));
             ResourceService.change(resources, resource, amount, context);

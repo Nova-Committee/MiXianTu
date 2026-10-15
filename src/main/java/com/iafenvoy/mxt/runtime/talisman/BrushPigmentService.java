@@ -5,6 +5,7 @@ import com.iafenvoy.mxt.config.MxtServerConfig;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.registry.MxtItems;
 import com.iafenvoy.mxt.runtime.talisman.TalismanDrawingScorer.Point;
+import com.iafenvoy.mxt.util.MiscUtil;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.tags.TagKey;
@@ -119,7 +120,7 @@ public final class BrushPigmentService {
     public static int chargeFor(double length) {
         MxtServerConfig.Talisman settings = MxtServerConfig.INSTANCE.talisman;
         double rate = settings.pigmentRate.getValue();
-        double raw = Double.isFinite(length) && length > 0.0D ? length * rate : 0.0D;
+        double raw = MiscUtil.positive(length) > 0.0D ? length * rate : 0.0D;
         int charge = raw >= Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) Math.ceil(raw);
         charge = Math.max(charge, settings.pigmentFloor.getValue());
         int cap = settings.pigmentCap.getValue();

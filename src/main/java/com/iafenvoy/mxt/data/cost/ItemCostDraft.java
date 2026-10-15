@@ -3,6 +3,7 @@ package com.iafenvoy.mxt.data.cost;
 import com.iafenvoy.mxt.data.cost.builtin.ItemCost;
 import com.iafenvoy.mxt.data.cost.context.CostContext;
 import com.iafenvoy.mxt.data.cost.context.CostFailure;
+import com.iafenvoy.mxt.util.MiscUtil;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.world.Container;
 import net.minecraft.world.entity.player.Player;
@@ -141,6 +142,6 @@ public final class ItemCostDraft implements CostDraft<ItemCost> {
 
     private int required(ItemCost cost) {
         double value = cost.amount().evaluate(this.formula);
-        return Double.isFinite(value) && value > 0.0D ? (int) Math.ceil(value) : 0;
+        return MiscUtil.positive(value) > 0.0D ? (int) Math.ceil(value) : 0;
     }
 }

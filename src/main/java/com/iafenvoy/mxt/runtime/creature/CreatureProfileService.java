@@ -68,7 +68,7 @@ public final class CreatureProfileService {
     }
 
     public static boolean matchesType(Mob creature, CreatureProfile definition) {
-        return RegistryCodecs.matchesValue(definition.entities(), BuiltInRegistries.ENTITY_TYPE, creature.getType());
+        return RegistryCodecs.matches(definition.entities(), BuiltInRegistries.ENTITY_TYPE, creature.getType());
     }
 
     public static boolean applySelected(Mob creature) {

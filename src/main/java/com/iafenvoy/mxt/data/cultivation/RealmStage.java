@@ -45,6 +45,43 @@ public record RealmStage(Holder<Aura> aura, NumberProvider auraShareWeight,
      * The ceiling on {@code minor_stages}, which only decides how finely a realm's progress is divided.
      */
     public static final int MAX_MINOR_STAGES = 1024;
+    public static final Codec<Holder<RealmStage>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.REALM_STAGE);
+    public static final Codec<RealmStage> DIRECT_CODEC = RecordCodecBuilder.create(i -> i.group(
+            Aura.CODEC.fieldOf("aura").forGetter(RealmStage::aura),
+            NumberProvider.CODEC.optionalFieldOf("aura_share_weight", new Constant(1.0D)).forGetter(RealmStage::auraShareWeight),
+            EntityCondition.optionalCodec("cultivate_condition").forGetter(RealmStage::cultivateCondition),
+            CODEC.optionalFieldOf("next_realm").forGetter(RealmStage::nextRealm),
+            NumberProvider.CODEC.optionalFieldOf("breakthrough_exp", new Constant(0.0D)).forGetter(RealmStage::breakthroughExp),
+            NumberProvider.CODEC.optionalFieldOf("max_experience", new Constant(Double.MAX_VALUE)).forGetter(RealmStage::maxExperience),
+            // A count, not a list: the names of the stages are derived from this realm's own id.
+            Codec.INT.optionalFieldOf("minor_stages", 0).forGetter(RealmStage::minorStages),
+            CultivateConditions.CODEC.optionalFieldOf("breakthrough", CultivateConditions.EMPTY).forGetter(RealmStage::breakthrough),
+            Codec.BOOL.optionalFieldOf("auto_breakthrough", false).forGetter(RealmStage::autoBreakthrough),
+            // Sixteen components; three pairs keep the group at sixteen.
+            MiscCodecs.pair(
+                            AttributeEntry.CODEC.listOf().optionalFieldOf("passive_modifiers", List.of()),
+                            NumberProvider.CODEC.optionalFieldOf("lifespan"))
+                    .forGetter(stage -> Pair.of(stage.passiveModifiers(), stage.lifespan())),
+            Cost.LIST_CODEC.optionalFieldOf("costs", List.of()).forGetter(RealmStage::breakthroughCosts),
+            MiscCodecs.pair(
+                            RegistryCodecs.holderOrTagList(MxtResourceKeys.ABILITY).optionalFieldOf("ability_requirements", List.of()),
+                            MinorStageAbilities.CODEC.listOf().optionalFieldOf("minor_stage_abilities", List.of()))
+                    .forGetter(stage -> Pair.of(stage.abilityRequirements(), stage.minorStageAbilities())),
+            MiscCodecs.pair(
+                            Tribulation.CODEC.optionalFieldOf("tribulation"),
+                            ParticleEffect.CODEC.optionalFieldOf("breakthrough_particle"))
+                    .forGetter(stage -> Pair.of(stage.tribulation(), stage.breakthroughParticle())),
+            MiscCodecs.pair(
+                            EntityAction.optionalCodec("success_action"),
+                            EntityAction.optionalCodec("fail_action"))
+                    .forGetter(stage -> Pair.of(stage.successAction(), stage.failAction()))
+    ).apply(i, (aura, auraShareWeight, cultivateCondition, nextRealm, breakthroughExp,
+                maxExperience, minorStages, breakthrough, autoBreakthrough, passive, breakthroughCosts,
+                abilityRequirements, tribulation, actions) -> new RealmStage(aura,
+            auraShareWeight, cultivateCondition, nextRealm, breakthroughExp, maxExperience, minorStages, breakthrough,
+            autoBreakthrough, passive.getFirst(), passive.getSecond(), breakthroughCosts,
+            abilityRequirements.getFirst(), abilityRequirements.getSecond(),
+            tribulation.getFirst(), tribulation.getSecond(), actions.getFirst(), actions.getSecond())));
 
     /**
      * What standing on one minor stage of this realm unlocks: an entry is active from its own {@code stage}
@@ -79,44 +116,6 @@ public record RealmStage(Holder<Aura> aura, NumberProvider auraShareWeight,
         if (minorStageAbilities.stream().map(MinorStageAbilities::stage).distinct().count() != minorStageAbilities.size())
             throw new IllegalArgumentException("minor_stage_abilities must not name the same stage twice");
     }
-
-    public static final Codec<Holder<RealmStage>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.REALM_STAGE);
-    public static final Codec<RealmStage> DIRECT_CODEC = RecordCodecBuilder.create(i -> i.group(
-            Aura.CODEC.fieldOf("aura").forGetter(RealmStage::aura),
-            NumberProvider.CODEC.optionalFieldOf("aura_share_weight", new Constant(1.0D)).forGetter(RealmStage::auraShareWeight),
-            EntityCondition.optionalCodec("cultivate_condition").forGetter(RealmStage::cultivateCondition),
-            RegistryFixedCodec.create(MxtResourceKeys.REALM_STAGE).optionalFieldOf("next_realm").forGetter(RealmStage::nextRealm),
-            NumberProvider.CODEC.optionalFieldOf("breakthrough_exp", new Constant(0.0D)).forGetter(RealmStage::breakthroughExp),
-            NumberProvider.CODEC.optionalFieldOf("max_experience", new Constant(Double.MAX_VALUE)).forGetter(RealmStage::maxExperience),
-            // A count, not a list: the names of the stages are derived from this realm's own id.
-            Codec.INT.optionalFieldOf("minor_stages", 0).forGetter(RealmStage::minorStages),
-            CultivateConditions.CODEC.optionalFieldOf("breakthrough", CultivateConditions.EMPTY).forGetter(RealmStage::breakthrough),
-            Codec.BOOL.optionalFieldOf("auto_breakthrough", false).forGetter(RealmStage::autoBreakthrough),
-            // Sixteen components; three pairs keep the group at sixteen.
-            MiscCodecs.pair(
-                            AttributeEntry.CODEC.listOf().optionalFieldOf("passive_modifiers", List.of()),
-                            NumberProvider.CODEC.optionalFieldOf("lifespan"))
-                    .forGetter(stage -> Pair.of(stage.passiveModifiers(), stage.lifespan())),
-            Cost.LIST_CODEC.optionalFieldOf("costs", List.of()).forGetter(RealmStage::breakthroughCosts),
-            MiscCodecs.pair(
-                            RegistryCodecs.holderOrTagList(MxtResourceKeys.ABILITY).optionalFieldOf("ability_requirements", List.of()),
-                            MinorStageAbilities.CODEC.listOf().optionalFieldOf("minor_stage_abilities", List.of()))
-                    .forGetter(stage -> Pair.of(stage.abilityRequirements(), stage.minorStageAbilities())),
-            MiscCodecs.pair(
-                            Tribulation.CODEC.optionalFieldOf("tribulation"),
-                            ParticleEffect.CODEC.optionalFieldOf("breakthrough_particle"))
-                    .forGetter(stage -> Pair.of(stage.tribulation(), stage.breakthroughParticle())),
-            MiscCodecs.pair(
-                            EntityAction.optionalCodec("success_action"),
-                            EntityAction.optionalCodec("fail_action"))
-                    .forGetter(stage -> Pair.of(stage.successAction(), stage.failAction()))
-    ).apply(i, (aura, auraShareWeight, cultivateCondition, nextRealm, breakthroughExp,
-                maxExperience, minorStages, breakthrough, autoBreakthrough, passive, breakthroughCosts,
-                abilityRequirements, tribulation, actions) -> new RealmStage(aura,
-            auraShareWeight, cultivateCondition, nextRealm, breakthroughExp, maxExperience, minorStages, breakthrough,
-            autoBreakthrough, passive.getFirst(), passive.getSecond(), breakthroughCosts,
-            abilityRequirements.getFirst(), abilityRequirements.getSecond(),
-            tribulation.getFirst(), tribulation.getSecond(), actions.getFirst(), actions.getSecond())));
 
     // Next-realm links are holder references, so diagnostic output must remain shallow.
     @Override

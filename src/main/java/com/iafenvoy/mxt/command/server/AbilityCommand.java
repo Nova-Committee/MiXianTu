@@ -57,8 +57,6 @@ public final class AbilityCommand {
                         .then(argument("targets", EntityArgument.entities())
                                 .then(argument("ability", ResourceArgument.resource(context, MxtResourceKeys.ABILITY))
                                         .executes(AbilityCommand::grant))))
-                // ResourceKeyArgument, not ResourceArgument: a revoked ability only has to be held by the source
-                // ledger, so an id whose definition is gone is still exactly what has to be named here.
                 .then(literal("revoke")
                         .requires(ServerCommandManager::mayChange)
                         .then(argument("targets", EntityArgument.entities())

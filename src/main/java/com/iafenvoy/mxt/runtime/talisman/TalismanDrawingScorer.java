@@ -1,5 +1,7 @@
 package com.iafenvoy.mxt.runtime.talisman;
 
+import com.iafenvoy.mxt.util.MiscUtil;
+
 import java.util.*;
 
 /**
@@ -61,9 +63,9 @@ public final class TalismanDrawingScorer {
      */
     public static Score score(List<Stroke> reference, List<Stroke> player, double tolerance, Judgement judgement) {
         Judgement params = judgement == null ? Judgement.DEFAULT : judgement;
-        double tolPx = Double.isFinite(tolerance) && tolerance > 0.0D
+        double tolPx = MiscUtil.positive(tolerance) > 0.0D
                 ? tolerance * CANVAS_HEIGHT : DEFAULT_TOLERANCE * CANVAS_HEIGHT;
-        double minStrokePx = nonNegative(params.minStrokeLength()) * CANVAS_HEIGHT;
+        double minStrokePx = MiscUtil.positive(params.minStrokeLength()) * CANVAS_HEIGHT;
 
         // Step 0: degenerate input. Points are scaled to pixels first, so both sides share one pipeline.
         List<List<P>> refRaw = toPixelSpace(reference, CANVAS_WIDTH, CANVAS_HEIGHT);
@@ -137,10 +139,10 @@ public final class TalismanDrawingScorer {
 
         // Step 5-6: order term, total distance and the exponential completion mapping.
         double order = orderDistance(refSide, playerSide, params, tol2);
-        double sigma = Double.isFinite(params.sigma()) && params.sigma() > 0.0D
+        double sigma = MiscUtil.positive(params.sigma()) > 0.0D
                 ? params.sigma() : Judgement.DEFAULT.sigma();
-        double total = (1.0D - shape) + nonNegative(params.directionWeight()) * direction
-                + nonNegative(params.topologyWeight()) * topology + nonNegative(params.orderWeight()) * order;
+        double total = (1.0D - shape) + MiscUtil.positive(params.directionWeight()) * direction
+                + MiscUtil.positive(params.topologyWeight()) * topology + MiscUtil.positive(params.orderWeight()) * order;
         if (!Double.isFinite(total)) return degenerate();
         double completion = Math.min(1.0D, Math.max(0.0D, Math.exp(-total / sigma)));
         return new Score(completion, clamp01(cover), clamp01(precision), clamp01(shape), clamp01(direction),
@@ -603,10 +605,6 @@ public final class TalismanDrawingScorer {
         double dx = a.x() - b.x();
         double dy = a.y() - b.y();
         return dx * dx + dy * dy;
-    }
-
-    private static double nonNegative(double value) {
-        return Double.isFinite(value) && value > 0.0D ? value : 0.0D;
     }
 
     private static double clamp01(double value) {

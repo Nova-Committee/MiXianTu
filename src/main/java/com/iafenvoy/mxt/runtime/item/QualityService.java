@@ -10,6 +10,7 @@ import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.registry.tag.MxtQualityTags;
 import com.iafenvoy.mxt.runtime.item.ItemBindingService.ResolvedBindings;
 import com.iafenvoy.mxt.util.DefinitionText;
+import com.iafenvoy.mxt.util.MiscUtil;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.matcher.ItemMatcher;
 import net.minecraft.ChatFormatting;
@@ -251,7 +252,7 @@ public final class QualityService {
     // settles: a broken formula has to leave that amount alone rather than cancel it.
     public static double modifier(Holder<ItemQuality> quality, Function<ItemQuality, Modifier> selector, FormulaContext context) {
         double value = selector.apply(quality.value()).modifier().evaluate(context);
-        return Double.isFinite(value) && value > 0.0D ? value : DEFAULT_MODIFIER;
+        return MiscUtil.positive(value) > 0.0D ? value : DEFAULT_MODIFIER;
     }
 
     // A stack without a quality is not an error here: content declaring no quality has no modifier to apply,

@@ -67,7 +67,7 @@ public final class AlchemyHeatSourceTooltipAppender {
     private static @Nullable HeatSource find(Provider access, Block block) {
         return MxtDatapackRegistries.holders(access, MxtResourceKeys.HEAT_SOURCE)
                 .map(Reference::value)
-                .filter(definition -> RegistryCodecs.matchesValue(definition.blocks(), BuiltInRegistries.BLOCK, block))
+                .filter(definition -> RegistryCodecs.matches(definition.blocks(), BuiltInRegistries.BLOCK, block))
                 .max(Comparator.comparingInt(HeatSource::priority))
                 .orElse(null);
     }

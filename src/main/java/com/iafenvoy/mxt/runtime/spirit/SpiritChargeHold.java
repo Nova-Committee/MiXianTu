@@ -23,10 +23,8 @@ import java.util.List;
  */
 public record SpiritChargeHold() implements HoldBinding {
     public static final SpiritChargeHold INSTANCE = new SpiritChargeHold();
-
     // BLOCK holds the item up in both hands, and is not the pose the reading gesture uses.
     public static final ItemUseAnimation CHARGE_ANIMATION = ItemUseAnimation.BLOCK;
-
     // Vanilla plays a hold's sound every four ticks, so this has to be short or it piles up into a drone.
     public static final Holder<SoundEvent> CHARGE_SOUND = BuiltInRegistries.SOUND_EVENT.wrapAsHolder(SoundEvents.AMETHYST_BLOCK_CHIME);
 

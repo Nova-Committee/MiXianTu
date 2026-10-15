@@ -43,7 +43,7 @@ public record ItemQuality(OptionalInt color, Modifier valueMultiplier, Modifier 
             Modifier.CODEC.optionalFieldOf("forging_modifier", Modifier.DEFAULT).forGetter(ItemQuality::forgingModifier),
             Modifier.CODEC.optionalFieldOf("alchemy_modifier", Modifier.DEFAULT).forGetter(ItemQuality::alchemyModifier),
             EntityCondition.optionalCodec("condition").forGetter(ItemQuality::condition),
-            RegistryFixedCodec.create(MxtResourceKeys.ITEM_QUALITY).optionalFieldOf("next").forGetter(ItemQuality::next),
+            CODEC.optionalFieldOf("next").forGetter(ItemQuality::next),
             Cost.LIST_CODEC.optionalFieldOf("upgrade_costs", List.of()).forGetter(ItemQuality::upgradeCosts),
             EntityCondition.optionalCodec("upgrade_condition").forGetter(ItemQuality::upgradeCondition),
             Identifier.CODEC.optionalFieldOf("quality").forGetter(ItemQuality::quality)

@@ -7,6 +7,7 @@ import com.iafenvoy.mxt.recipe.AlchemyRecipeInput;
 import com.iafenvoy.mxt.recipe.AlchemyRecipeInput.Slot;
 import com.iafenvoy.mxt.recipe.AlchemyRole;
 import com.iafenvoy.mxt.runtime.alchemy.SpiritHerbService.HerbPotency;
+import com.iafenvoy.mxt.util.MiscUtil;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import net.minecraft.core.Holder;
@@ -206,7 +207,7 @@ public final class AlchemyResolver {
 
     private static @Nullable Double positive(NumberProvider provider, FormulaContext context) {
         double value = provider.evaluate(context);
-        return Double.isFinite(value) && value > 0.0D ? value : null;
+        return MiscUtil.positive(value) > 0.0D ? value : null;
     }
 
     private static @Nullable Double nonNegative(NumberProvider provider, FormulaContext context) {

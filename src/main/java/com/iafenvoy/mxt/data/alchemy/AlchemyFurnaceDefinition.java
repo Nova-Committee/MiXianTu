@@ -3,6 +3,7 @@ package com.iafenvoy.mxt.data.alchemy;
 import com.iafenvoy.mxt.api.QualityProvider;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.util.MiscUtil;
 import com.iafenvoy.mxt.util.codec.OptionalCodecs;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
@@ -53,7 +54,7 @@ public record AlchemyFurnaceDefinition(int mainSlots, int auxiliarySlots, Option
     }
 
     private static DataResult<Double> positive(double value) {
-        return Double.isFinite(value) && value > 0.0D
+        return MiscUtil.positive(value) > 0.0D
                 ? DataResult.success(value)
                 : DataResult.error(() -> "Furnace cooling_per_tick and max_temperature must be finite positive numbers");
     }

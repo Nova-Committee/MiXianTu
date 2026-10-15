@@ -85,7 +85,7 @@ public final class BlockAuraService {
         Block block = state.getBlock();
         Registry<Block> blocks = level.registryAccess().lookupOrThrow(Registries.BLOCK);
         return MxtDatapackRegistries.holders(level.registryAccess(), MxtResourceKeys.BLOCK_AURA)
-                .anyMatch(holder -> RegistryCodecs.matchesValue(holder.value().blocks(), blocks, block));
+                .anyMatch(holder -> RegistryCodecs.matches(holder.value().blocks(), blocks, block));
     }
 
     private record Index(List<BlockAura> definitions, Reference2ObjectMap<Block, List<BlockAura>> byBlock) {

@@ -11,6 +11,7 @@ import com.iafenvoy.mxt.data.context.action.BlockActionContext;
 import com.iafenvoy.mxt.data.talisman.TalismanType;
 import com.iafenvoy.mxt.data.talisman.TalismanUse;
 import com.iafenvoy.mxt.runtime.talisman.TalismanProjectileEntity;
+import com.iafenvoy.mxt.util.MiscUtil;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.iafenvoy.mxt.util.formula.number.Constant;
@@ -58,8 +59,8 @@ public record ThrownTalismanType(NumberProvider speed, NumberProvider gravity, B
     @Override
     public void apply(TalismanUse use, Plan plan) {
         TalismanType.runActions(this.entityAction, this.biEntityAction, use, List.of());
-        double velocity = this.speed.evaluate(use.formula());
-        if (!Double.isFinite(velocity) || velocity <= 0.0D) return;
+        double velocity = MiscUtil.positive(this.speed.evaluate(use.formula()));
+        if (velocity <= 0.0D) return;
         if (use.user().level() instanceof ServerLevel server)
             server.addFreshEntity(new TalismanProjectileEntity(server, use.user(), use.definition(),
                     Math.min(velocity, MAX_SPEED)));

@@ -4,6 +4,7 @@ import com.iafenvoy.mxt.api.QualityProvider;
 import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
+import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.util.OptionalFloat;
 import com.iafenvoy.mxt.util.codec.MiscCodecs;
 import com.iafenvoy.mxt.util.codec.OptionalCodecs;
@@ -14,6 +15,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
+import net.minecraft.resources.RegistryFixedCodec;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.phys.Vec2;
 import net.minecraft.world.phys.Vec3;
@@ -39,7 +41,8 @@ public record SecretRealm(Optional<Holder<ItemQuality>> quality, SecretRealmGene
     // level data would otherwise hand to a runtime dimension.
     public static final double DEFAULT_BORDER_SIZE = 29999984.0D;
     public static final int MAX_INSTANCES = 256, MAX_MEMBERS = 100_000;
-    public static final Codec<SecretRealm> CODEC = RecordCodecBuilder.<SecretRealm>create(i -> i.group(
+    public static final Codec<Holder<SecretRealm>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.SECRET_REALM);
+    public static final Codec<SecretRealm> DIRECT_CODEC = RecordCodecBuilder.<SecretRealm>create(i -> i.group(
             ItemQuality.CODEC.optionalFieldOf("quality").forGetter(SecretRealm::quality),
             SecretRealmGeneration.CODEC.fieldOf("generation").forGetter(SecretRealm::generation),
             Codec.LONG.optionalFieldOf("seed", 0L).forGetter(SecretRealm::seed),

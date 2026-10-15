@@ -1,7 +1,6 @@
 package com.iafenvoy.mxt.runtime.creature;
 
 import com.iafenvoy.mxt.data.creature.ContractType;
-import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.util.codec.CollectionCodecs;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
@@ -9,7 +8,6 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
 import net.minecraft.core.UUIDUtil;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.resources.RegistryFixedCodec;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.Level;
 
@@ -71,7 +69,7 @@ public final class BoundBeastsAttachment {
         public static final Codec<Entry> CODEC = RecordCodecBuilder.create(i -> i.group(
                 UUIDUtil.CODEC.fieldOf("owner").forGetter(Entry::owner),
                 UUIDUtil.CODEC.fieldOf("beast").forGetter(Entry::beast),
-                RegistryFixedCodec.create(MxtResourceKeys.CONTRACT_TYPE).fieldOf("type").forGetter(Entry::type),
+                ContractType.CODEC.fieldOf("type").forGetter(Entry::type),
                 ResourceKey.codec(Registries.DIMENSION).fieldOf("dimension").forGetter(Entry::dimension),
                 Codec.LONG.optionalFieldOf("bound_at", -1L).forGetter(Entry::boundAt)
         ).apply(i, Entry::new));

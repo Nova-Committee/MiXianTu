@@ -6,10 +6,8 @@ import com.iafenvoy.mxt.data.context.action.BlockActionContext;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Holder;
-import net.minecraft.core.registries.Registries;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.resources.RegistryFixedCodec;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.ProblemReporter;
 import net.minecraft.world.entity.Entity;
@@ -24,10 +22,10 @@ import java.util.Optional;
 /**
  * Spawns an entity at the acted block position and applies an optional entity action.
  */
-public record SpawnEntityAction(Holder<EntityType<?>> entityType, Optional<CompoundTag> tag,
+public record SpawnEntityAction(EntityType<?> entityType, Optional<CompoundTag> tag,
                                 EntityAction entityAction) implements BlockAction {
     public static final MapCodec<SpawnEntityAction> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
-            RegistryFixedCodec.create(Registries.ENTITY_TYPE).fieldOf("entity_type").forGetter(SpawnEntityAction::entityType),
+            BuiltInRegistries.ENTITY_TYPE.byNameCodec().fieldOf("entity_type").forGetter(SpawnEntityAction::entityType),
             CompoundTag.CODEC.optionalFieldOf("tag").forGetter(SpawnEntityAction::tag),
             EntityAction.optionalCodec("entity_action").forGetter(SpawnEntityAction::entityAction)
     ).apply(i, SpawnEntityAction::new));
@@ -37,7 +35,7 @@ public record SpawnEntityAction(Holder<EntityType<?>> entityType, Optional<Compo
         Level level = ctx.level();
         BlockPos pos = ctx.pos();
         if (!(level instanceof ServerLevel serverLevel) || !level.isLoaded(pos)) return;
-        Entity entity = this.entityType.value().create(serverLevel, EntitySpawnReason.TRIGGERED);
+        Entity entity = this.entityType.create(serverLevel, EntitySpawnReason.TRIGGERED);
         if (entity == null) return;
         this.tag.ifPresent(value -> entity.load(TagValueInput.create(ProblemReporter.DISCARDING, serverLevel.registryAccess(), value.copy())));
         entity.setPos(pos.getX() + 0.5D, pos.getY(), pos.getZ() + 0.5D);

@@ -6,6 +6,7 @@ import com.iafenvoy.mxt.data.cultivation.Element;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.damage.DamageCalculationService;
 import com.iafenvoy.mxt.runtime.damage.DamageElements;
+import com.iafenvoy.mxt.util.MiscUtil;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
@@ -39,10 +40,10 @@ public record DamageTargetBiEntityAction(NumberProvider amount, Optional<Holder<
     public void execute(@NonNull BiEntityActionContext ctx) {
         Entity target = ctx.target();
         FormulaContext context = ctx.formula();
-        double amount = this.amount.evaluate(context);
+        double amount = MiscUtil.positive(this.amount.evaluate(context));
         // Server only: the deprecated Entity#hurt only ever applied on a server anyway.
         if (!(target.level() instanceof ServerLevel)) return;
-        if (!Double.isFinite(amount) || amount <= 0.0D) return;
+        if (amount <= 0.0D) return;
         DamageCalculationService.deal(ctx.actor(), target, amount, this.resolvedType(target.level()), context);
     }
 

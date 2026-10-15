@@ -112,10 +112,8 @@ public record SpiritHerb(List<Either<Holder<Block>, TagKey<Block>>> blocks, int 
      * never-sown plant starts at, rolled once and stored as a negative value so the row's sign says which it is.
      * {@code drops} claims the stacks that are this herb's fruit, and breaking one stamps its age onto them.
      */
-    public record Growth(int matureAge, int maxAge, NumberProvider growthRate,
-                         BlockCondition condition, List<Cost> costs,
-                         List<Either<Holder<Item>, TagKey<Item>>> drops,
-                         NumberProvider wildAge) {
+    public record Growth(int matureAge, int maxAge, NumberProvider growthRate, BlockCondition condition,
+                         List<Cost> costs, List<Either<Holder<Item>, TagKey<Item>>> drops, NumberProvider wildAge) {
         public static final Codec<Growth> CODEC = RecordCodecBuilder.<Growth>create(i -> i.group(
                 Codec.intRange(1, Integer.MAX_VALUE).fieldOf("mature_age").forGetter(Growth::matureAge),
                 Codec.intRange(1, Integer.MAX_VALUE).fieldOf("max_age").forGetter(Growth::maxAge),

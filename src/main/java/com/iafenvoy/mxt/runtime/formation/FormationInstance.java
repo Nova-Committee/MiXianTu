@@ -1,6 +1,7 @@
 package com.iafenvoy.mxt.runtime.formation;
 
 import com.iafenvoy.mxt.data.aura.Aura;
+import com.iafenvoy.mxt.util.MiscUtil;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -39,7 +40,7 @@ public final class FormationInstance {
     // Reports the problem instead of throwing it, so one malformed row does not fail the whole attachment by
     // escaping the tolerant list decoder that is supposed to skip bad rows.
     private static DataResult<FormationInstance> validate(FormationInstance instance) {
-        if (!Double.isFinite(instance.radius) || instance.radius <= 0.0D)
+        if (MiscUtil.positive(instance.radius) <= 0.0D)
             return DataResult.error(() -> "Formation radius must be finite and positive: " + instance.radius);
         if (instance.maintenanceCount < 0L)
             return DataResult.error(() -> "Formation upkeep count must not be negative: " + instance.maintenanceCount);
@@ -134,7 +135,7 @@ public final class FormationInstance {
     // it was already applied when the amount was worked out.
     void deposit(Map<Holder<Aura>, Double> amounts) {
         amounts.forEach((resource, amount) -> {
-            if (resource == null || amount == null || !Double.isFinite(amount) || amount <= 0.0D) return;
+            if (resource == null || amount == null || MiscUtil.positive(amount) <= 0.0D) return;
             double total = this.stored.getOrDefault(resource, 0.0D) + amount;
             if (total <= 0.0D) this.stored.remove(resource);
             else this.stored.put(resource, total);
@@ -145,7 +146,7 @@ public final class FormationInstance {
     // entry keeps it out of the save.
     void withdraw(Map<Holder<Aura>, Double> amounts) {
         amounts.forEach((resource, amount) -> {
-            if (resource == null || amount == null || !Double.isFinite(amount) || amount <= 0.0D) return;
+            if (resource == null || amount == null || MiscUtil.positive(amount) <= 0.0D) return;
             double left = this.stored.getOrDefault(resource, 0.0D) - amount;
             if (left <= 0.0D) this.stored.remove(resource);
             else this.stored.put(resource, left);

@@ -6,6 +6,7 @@ import com.iafenvoy.mxt.data.curse.Curse;
 import com.iafenvoy.mxt.data.curse.CurseType;
 import com.iafenvoy.mxt.data.curse.builtin.TriggeredCurseType;
 import com.iafenvoy.mxt.registry.MxtAttachments;
+import com.iafenvoy.mxt.util.MiscUtil;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.Holder;
 import net.minecraft.server.level.ServerLevel;
@@ -71,8 +72,8 @@ public final class CurseScheduler {
             // A triggered curse waits for its triggers and an inert one never acts, so neither is woken for a
             // periodic effect; both still wake for their expiry, which the branch above took into account.
             if (type.inert() || type instanceof TriggeredCurseType) continue;
-            double intervalValue = entry.getKey().value().tickInterval().evaluate(context);
-            if (!Double.isFinite(intervalValue) || intervalValue <= 0.0D) continue;
+            double intervalValue = MiscUtil.positive(entry.getKey().value().tickInterval().evaluate(context));
+            if (intervalValue <= 0.0D) continue;
             long interval = Math.max(1L, Math.round(intervalValue));
             long elapsed = Math.max(0L, gameTime - state.appliedAt());
             long next = state.appliedAt() + (Math.floorDiv(elapsed, interval) + 1L) * interval;

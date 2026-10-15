@@ -21,6 +21,7 @@ import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.energy.ArtifactSpiritEnergy;
 import com.iafenvoy.mxt.runtime.energy.ISpiritEnergy;
 import com.iafenvoy.mxt.util.HolderHelper;
+import com.iafenvoy.mxt.util.MiscUtil;
 import com.iafenvoy.mxt.util.PlayerNames;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
@@ -240,8 +241,8 @@ public final class ArtifactService {
                 .map(holder -> holder.value().spiritCapacity().get(aura))
                 .map(provider -> evaluate(provider, context))
                 .orElse(0.0D);
-        if (!Double.isFinite(declared) || declared <= 0.0D) declared = fallbackCapacity;
-        if (!Double.isFinite(declared) || declared <= 0.0D) return 0;
+        if (MiscUtil.positive(declared) <= 0.0D) declared = MiscUtil.positive(fallbackCapacity);
+        if (declared <= 0.0D) return 0;
         double resolved = declared * (1.0D + NOURISHMENT_CAPACITY_BONUS * Math.clamp(state(stack).nourishment(), 0.0D, MAX_NOURISHMENT));
         // Saturate rather than hand an infinity to a store that would have to reject it.
         return Double.isFinite(resolved) ? (int) Math.clamp(Math.floor(resolved), 0.0D, Integer.MAX_VALUE) : Integer.MAX_VALUE;
@@ -271,7 +272,8 @@ public final class ArtifactService {
     // performed. Amounts are fractions, not whole units: the store is a double and a formula may price a part.
     public static double addEnergy(Provider access, ItemStack stack, Holder<Aura> aura, double amount,
                                    double fallbackCapacity, FormulaContext context) {
-        if (!Double.isFinite(amount) || amount <= 0.0D) return 0.0D;
+        amount = MiscUtil.positive(amount);
+        if (amount <= 0.0D) return 0.0D;
         double capacity = capacity(access, stack, aura, fallbackCapacity, context);
         double stored = stored(stack, aura);
         double accepted = Math.min(amount, Math.max(0.0D, capacity - stored));
@@ -282,7 +284,8 @@ public final class ArtifactService {
     }
 
     public static double consumeEnergy(ItemStack stack, Holder<Aura> aura, double amount) {
-        if (!Double.isFinite(amount) || amount <= 0.0D) return 0.0D;
+        amount = MiscUtil.positive(amount);
+        if (amount <= 0.0D) return 0.0D;
         double stored = stored(stack, aura);
         double extracted = Math.min(amount, Math.max(0.0D, stored));
         if (extracted > 0.0D) setEnergy(stack, aura, stored - extracted);
@@ -291,7 +294,8 @@ public final class ArtifactService {
 
     // Never lowered: an artifact keeps what it was fed after the aura it took in is spent again.
     private static void feed(ItemStack stack, double share) {
-        if (!Double.isFinite(share) || share <= 0.0D) return;
+        share = MiscUtil.positive(share);
+        if (share <= 0.0D) return;
         ArtifactStateComponent current = state(stack);
         double raised = Math.clamp(current.nourishment() + share, 0.0D, MAX_NOURISHMENT);
         if (raised <= current.nourishment()) return;

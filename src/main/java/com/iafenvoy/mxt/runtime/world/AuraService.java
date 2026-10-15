@@ -16,6 +16,7 @@ import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.world.AuraQueryCache.AuraLocation;
 import com.iafenvoy.mxt.runtime.world.AuraQueryCache.AvailabilityKey;
 import com.iafenvoy.mxt.runtime.world.AuraResult.SourceKind;
+import com.iafenvoy.mxt.util.MiscUtil;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap.Entry;
@@ -102,16 +103,13 @@ public final class AuraService {
     }
 
     private static AuraResult preview(@Nullable Resolved resolved, Level level, BlockPos pos) {
-        return resolved == null ? zoneless(Map.of())
-                : new AuraResult(pools(level, resolved.zone, pos, level.getGameTime()), resolved);
+        return resolved == null ? zoneless(Map.of()) : new AuraResult(pools(level, resolved.zone, pos, level.getGameTime()), resolved);
     }
 
     // The answer for a position no zone covers: the default rules, no source holder to name, and only the pools
     // the caller passes in. EMPTY_ZONE supplies exactly those defaults, so it remains the one place they live.
     private static AuraResult zoneless(Map<Holder<Aura>, AuraPool> pools) {
-        return new AuraResult(pools, EMPTY_ZONE.rules(), EMPTY_ZONE.elementFitBonus(),
-                EMPTY_ZONE.elementConflictPenalty(), EMPTY_ZONE.cultivateCondition(), EMPTY_ZONE.distribution(),
-                null, SourceKind.CHUNK);
+        return new AuraResult(pools, EMPTY_ZONE, null, SourceKind.CHUNK);
     }
 
     // All-or-nothing: nothing is consumed unless every requested amount is available.
@@ -132,13 +130,10 @@ public final class AuraService {
         if (resolved == null) {
             chunk.initializeAuras(Map.of());
             chunk.clearTemplate();
-            chunk.setInitialized(true);
-            return;
+        }else {
+            chunk.initializeAuras(computePools(resolved.zone.value(), pos, 0L));
+            chunk.setTemplate(resolved.zone);
         }
-        AuraZone zone = resolved.zone.value();
-        Map<Holder<Aura>, AuraPool> pools = computePools(zone, pos, 0L);
-        chunk.initializeAuras(pools);
-        chunk.setTemplate(resolved.zone);
         chunk.setInitialized(true);
     }
 
@@ -169,8 +164,7 @@ public final class AuraService {
     }
 
     private static Optional<Reference<AuraZone>> best(Level level, Predicate<Reference<AuraZone>> matches) {
-        return pickHighestPriority(MxtDatapackRegistries.holders(level.registryAccess(), MxtResourceKeys.AURA_ZONE)
-                .filter(matches));
+        return pickHighestPriority(MxtDatapackRegistries.holders(level.registryAccess(), MxtResourceKeys.AURA_ZONE).filter(matches));
     }
 
     // Highest priority wins, then registry ID ascending, so two zones cannot resolve differently
@@ -183,10 +177,11 @@ public final class AuraService {
     // Dimension stems are a writable registry that is not synced to clients, so only the server may expand a
     // dimension tag through LEVEL_STEM; a secret realm has no level stem of its own, so it also matches aliases.
     private static boolean matchesDimension(Level level, AuraZone zone, Identifier dimension) {
-        if (!(level instanceof ServerLevel server)) return RegistryCodecs.matchesKey(zone.dimensions(), dimension);
+        if (!(level instanceof ServerLevel server))
+            return RegistryCodecs.matches(zone.dimensions(), level.registryAccess().lookupOrThrow(Registries.LEVEL_STEM), dimension);
         Registry<LevelStem> registry = server.registryAccess().lookupOrThrow(Registries.LEVEL_STEM);
-        if (RegistryCodecs.matchesKey(zone.dimensions(), registry, dimension)) return true;
-        return SecretRealmRegistry.aliases(dimension).anyMatch(alias -> RegistryCodecs.matchesKey(zone.dimensions(), registry, alias));
+        if (RegistryCodecs.matches(zone.dimensions(), registry, dimension)) return true;
+        return SecretRealmRegistry.aliases(dimension).anyMatch(alias -> RegistryCodecs.matches(zone.dimensions(), registry, alias));
     }
 
     private static Optional<Resolved> customZone(Level level, BlockPos pos) {
@@ -221,8 +216,8 @@ public final class AuraService {
     private static Map<Holder<Aura>, Double> maximumBonus(Formation formation, FormulaContext context) {
         Map<Holder<Aura>, Double> values = new LinkedHashMap<>();
         buffModules(formation).forEach(buff -> buff.maxBonus().forEach((aura, provider) -> {
-            double value = provider.evaluate(context);
-            if (Double.isFinite(value) && value > 0.0D) values.merge(aura, value, Math::max);
+            double value = MiscUtil.positive(provider.evaluate(context));
+            if (value > 0.0D) values.merge(aura, value, Math::max);
         }));
         return values;
     }
@@ -238,8 +233,7 @@ public final class AuraService {
                 pool.maximum() == Double.POSITIVE_INFINITY ? pool : pool.withMaximum(pool.maximum() + bonus)));
     }
 
-    private static final int BLOCK_SEARCH_RADIUS = 3;
-    private static final int BLOCK_EXACT_RADIUS = 1;
+    private static final int BLOCK_SEARCH_RADIUS = 3, BLOCK_EXACT_RADIUS = 1;
 
     // Nearby (3x3x3) sections use real source positions, the rest their centre with inverse-square falloff,
     // and a source section is only read when its chunk is already loaded.
@@ -270,19 +264,13 @@ public final class AuraService {
                             && Math.abs(sectionDz) <= BLOCK_EXACT_RADIUS;
                     if (exact) {
                         for (BlockAuraContribution source : section.sources()) {
-                            double falloff = 1.0D / Math.max(1.0D,
-                                    distanceSquaredToBlockCenters(source.position(), query));
-                            addWeighted(weighted, sourceAttachment, source.aura(), source.position(),
-                                    falloff, level, gameTime);
+                            double falloff = 1.0D / Math.max(1.0D, distanceSquaredToBlockCenters(source.position(), query));
+                            addWeighted(weighted, sourceAttachment, source.aura(), source.position(), falloff, level, gameTime);
                         }
                     } else {
-                        double falloff = 1.0D / Math.max(1.0D,
-                                distanceSquaredToSectionCenter(sectionPosition, query));
-                        BlockPos sectionCenter = new BlockPos(SectionPos.sectionToBlockCoord(sectionPosition.x()) + 8,
-                                SectionPos.sectionToBlockCoord(sectionPosition.y()) + 8,
-                                SectionPos.sectionToBlockCoord(sectionPosition.z()) + 8);
-                        addWeighted(weighted, sourceAttachment, section.aura(), sectionCenter,
-                                falloff, level, gameTime);
+                        double falloff = 1.0D / Math.max(1.0D, distanceSquaredToSectionCenter(sectionPosition, query));
+                        BlockPos sectionCenter = new BlockPos(SectionPos.sectionToBlockCoord(sectionPosition.x()) + 8, SectionPos.sectionToBlockCoord(sectionPosition.y()) + 8, SectionPos.sectionToBlockCoord(sectionPosition.z()) + 8);
+                        addWeighted(weighted, sourceAttachment, section.aura(), sectionCenter, falloff, level, gameTime);
                     }
                 }
             }
@@ -300,19 +288,14 @@ public final class AuraService {
             AuraValue aggregate = currentBlock.getOrDefault(aura, AuraValue.ZERO);
             double aggregateAmount = aggregate.amount();
             double aggregateMaximum = aggregate.max().resolve(aggregate.amount());
-            double baseAmount = shared == null ? environment.getOrDefault(aura, zeroPool()).amount()
-                    : Math.max(0.0D, shared.amount() - aggregateAmount);
-            double baseMaximum = shared == null ? environment.getOrDefault(aura, zeroPool()).maximum()
-                    : subtractMaximum(shared.maximum(), aggregateMaximum);
-            double baseRegen = shared == null ? environment.getOrDefault(aura, zeroPool()).regenPerTick()
-                    : Math.max(0.0D, shared.regenPerTick() - aggregate.regenPerTick());
+            double baseAmount = shared == null ? environment.getOrDefault(aura, zeroPool()).amount() : Math.max(0.0D, shared.amount() - aggregateAmount);
+            double baseMaximum = shared == null ? environment.getOrDefault(aura, zeroPool()).maximum() : subtractMaximum(shared.maximum(), aggregateMaximum);
+            double baseRegen = shared == null ? environment.getOrDefault(aura, zeroPool()).regenPerTick() : Math.max(0.0D, shared.regenPerTick() - aggregate.regenPerTick());
             double[] contribution = weighted.getOrDefault(aura, new double[3]);
-            double maximum = baseMaximum == Double.POSITIVE_INFINITY || Double.isInfinite(contribution[1])
-                    ? Double.POSITIVE_INFINITY : baseMaximum + contribution[1];
+            double maximum = baseMaximum == Double.POSITIVE_INFINITY || Double.isInfinite(contribution[1]) ? Double.POSITIVE_INFINITY : baseMaximum + contribution[1];
             // The block part of this pool is supplied, not environment: a consumer allowed to spend the
             // ground it stands on must not also spend the field aura it is itself emitting.
-            pools.put(aura, new AuraPool(baseAmount + contribution[0], maximum, baseRegen + contribution[2],
-                    contribution[0]));
+            pools.put(aura, new AuraPool(baseAmount + contribution[0], maximum, baseRegen + contribution[2], contribution[0]));
         }
     }
 
@@ -444,10 +427,6 @@ public final class AuraService {
 
     private static double lerp(double a, double b, double delta) {
         return a + delta * (b - a);
-    }
-
-    private static double positive(double value) {
-        return Double.isFinite(value) && value > 0.0D ? value : 0.0D;
     }
 
     public record Resolved(Holder<AuraZone> zone, SourceKind kind, Map<Holder<Aura>, Double> maxBonus) {

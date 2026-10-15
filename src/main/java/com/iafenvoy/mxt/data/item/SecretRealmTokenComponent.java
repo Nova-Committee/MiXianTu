@@ -30,7 +30,7 @@ import java.util.function.Consumer;
 public record SecretRealmTokenComponent(Optional<Holder<SecretRealm>> realm) implements TooltipProvider {
     public static final SecretRealmTokenComponent EMPTY = new SecretRealmTokenComponent(Optional.empty());
     public static final Codec<SecretRealmTokenComponent> CODEC = RecordCodecBuilder.create(i -> i.group(
-            RegistryFixedCodec.create(MxtResourceKeys.SECRET_REALM).optionalFieldOf("realm").forGetter(SecretRealmTokenComponent::realm)
+            SecretRealm.CODEC.optionalFieldOf("realm").forGetter(SecretRealmTokenComponent::realm)
     ).apply(i, SecretRealmTokenComponent::new));
 
     @SubscribeEvent

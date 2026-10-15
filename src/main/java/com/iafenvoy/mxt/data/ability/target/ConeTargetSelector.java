@@ -1,6 +1,7 @@
 package com.iafenvoy.mxt.data.ability.target;
 
 import com.iafenvoy.mxt.data.ability.TargetSelector;
+import com.iafenvoy.mxt.util.MiscUtil;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.iafenvoy.mxt.util.formula.number.Constant;
@@ -36,7 +37,7 @@ public record ConeTargetSelector(NumberProvider length, NumberProvider angle, bo
     private static DataResult<ConeTargetSelector> validate(ConeTargetSelector selector) {
         if (selector.limit < 0)
             return DataResult.error(() -> "A target limit must not be negative: " + selector.limit);
-        if (selector.length instanceof Constant(double value) && (!Double.isFinite(value) || value <= 0.0D))
+        if (selector.length instanceof Constant(double value) && (MiscUtil.positive(value) <= 0.0D))
             return DataResult.error(() -> "A cone length must be finite and positive: " + value);
         if (selector.angle instanceof Constant(
                 double value

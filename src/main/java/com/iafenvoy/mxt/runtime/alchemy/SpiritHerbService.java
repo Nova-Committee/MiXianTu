@@ -8,6 +8,7 @@ import com.iafenvoy.mxt.recipe.AlchemyRole;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.util.MiscUtil;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
@@ -78,7 +79,7 @@ public final class SpiritHerbService {
 
     private static boolean matchesDrops(SpiritHerb herb, ItemStack stack) {
         return herb.growth()
-                .filter(growth -> RegistryCodecs.matchesValue(growth.drops(), BuiltInRegistries.ITEM, stack.getItem()))
+                .filter(growth -> RegistryCodecs.matches(growth.drops(), BuiltInRegistries.ITEM, stack.getItem()))
                 .isPresent();
     }
 
@@ -95,7 +96,7 @@ public final class SpiritHerbService {
         if (state == null || state.isAir()) return Optional.empty();
         Block block = state.getBlock();
         return MxtDatapackRegistries.holders(access, MxtResourceKeys.SPIRIT_HERB)
-                .filter(holder -> RegistryCodecs.matchesValue(holder.value().blocks(), BuiltInRegistries.BLOCK, block))
+                .filter(holder -> RegistryCodecs.matches(holder.value().blocks(), BuiltInRegistries.BLOCK, block))
                 .min(Comparator.comparing(Holder::value, ORDER))
                 .map(holder -> (Holder<SpiritHerb>) holder);
     }
@@ -126,7 +127,7 @@ public final class SpiritHerbService {
         FormulaContext aged = context.with(HERB_AGE, years);
         double bias = value.thermalBias();
         if (role == AlchemyRole.CATALYST) {
-            double catalyst = positive(value.catalystPower().evaluate(aged));
+            double catalyst = MiscUtil.positive(value.catalystPower().evaluate(aged));
             return new HerbPotency(herb, years, Map.of(), catalyst, bias, catalyst);
         }
         Map<Holder<MedicinalProperty>, NumberProvider> source = role == AlchemyRole.MAIN ? value.mainEffects() : value.auxiliaryEffects();
@@ -151,7 +152,7 @@ public final class SpiritHerbService {
         double raw = rate.evaluate(context);
         if (!Double.isFinite(raw) || raw < 0.0D) return 0.0D;
         double amount = raw * Math.max(0.0D, 1.0D + safeBonus);
-        return Double.isFinite(amount) && amount > 0.0D ? amount : 0.0D;
+        return MiscUtil.positive(amount);
     }
 
     /**
@@ -187,10 +188,6 @@ public final class SpiritHerbService {
         List<Either<Holder<Item>, TagKey<Item>>> a = first.growth().map(Growth::drops).orElse(List.of());
         List<Either<Holder<Item>, TagKey<Item>>> b = second.growth().map(Growth::drops).orElse(List.of());
         return a.stream().anyMatch(b::contains);
-    }
-
-    private static double positive(double value) {
-        return Double.isFinite(value) && value > 0.0D ? value : 0.0D;
     }
 
     /**

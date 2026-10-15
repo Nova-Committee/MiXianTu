@@ -2,6 +2,7 @@ package com.iafenvoy.mxt.runtime.world;
 
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.aura.AuraZone;
+import com.iafenvoy.mxt.util.MiscUtil;
 import net.minecraft.core.Holder;
 
 import java.util.*;
@@ -37,11 +38,11 @@ public final class AuraClientState {
         Map<Holder<Aura>, AuraPool> sanitized = new LinkedHashMap<>();
         aura.forEach((holder, pool) -> {
             if (holder == null || pool == null) return;
-            double amount = Double.isFinite(pool.amount()) ? Math.max(0.0D, pool.amount()) : 0.0D;
+            double amount = MiscUtil.positive(pool.amount());
             double maximum = Double.isFinite(pool.maximum()) || pool.maximum() == Double.POSITIVE_INFINITY
                     ? Math.max(0.0D, pool.maximum()) : 0.0D;
             double regen = Double.isFinite(pool.regenPerTick()) ? pool.regenPerTick() : 0.0D;
-            double supplied = Double.isFinite(pool.supplied()) ? Math.max(0.0D, pool.supplied()) : 0.0D;
+            double supplied = MiscUtil.positive(pool.supplied());
             sanitized.put(holder, new AuraPool(amount, maximum, regen, supplied));
         });
         return Map.copyOf(sanitized);

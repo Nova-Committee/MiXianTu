@@ -12,6 +12,7 @@ import com.iafenvoy.mxt.event.CurseRemoveEvent.Pre;
 import com.iafenvoy.mxt.event.CurseRemoveEvent.Reason;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.util.HolderHelper;
+import com.iafenvoy.mxt.util.MiscUtil;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
@@ -243,7 +244,7 @@ public final class CurseService {
             // A triggered curse waits for its triggers, so this loop never runs its effect.
             if (definition.typedType() instanceof TriggeredCurseType) continue;
             double interval = definition.tickInterval().evaluate(context);
-            if (Double.isFinite(interval) && interval > 0.0D
+            if (MiscUtil.positive(interval) > 0.0D
                     && gameTime >= state.appliedAt()
                     && (gameTime - state.appliedAt()) % Math.max(1L, Math.round(interval)) == 0L) {
                 definition.onTick().execute(target, context);

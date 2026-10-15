@@ -17,6 +17,7 @@ import com.iafenvoy.mxt.runtime.hold.HoldSource;
 import com.iafenvoy.mxt.runtime.resource.ResourceService;
 import com.iafenvoy.mxt.runtime.resource.ResourceService.Result;
 import com.iafenvoy.mxt.runtime.spirit.SpiritPour.Entry;
+import com.iafenvoy.mxt.util.MiscUtil;
 import com.iafenvoy.mxt.util.TooltipText;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.ChatFormatting;
@@ -161,9 +162,9 @@ public final class SpiritChargeService {
         int capacity = ItemAuraService.capacity(registries, stack, context);
         if (capacity <= 0) return null;
         int count = Math.max(1, stack.getCount());
-        double intakeSpeed = definition.value().consumeSpeed().evaluate(context) * count;
+        double intakeSpeed = MiscUtil.positive(definition.value().consumeSpeed().evaluate(context) * count);
         double costSpeed = definition.value().releaseSpeed().evaluate(context) * count;
-        if (!Double.isFinite(intakeSpeed) || intakeSpeed <= 0.0D) return null;
+        if (intakeSpeed <= 0.0D) return null;
         // A written store files its amounts under the auras they count, so a re-typed definition simply stops
         // matching them; a store holding nothing leaves the declaration to say which aura this is.
         SpiritStorageComponent component = stack.get(MxtDataComponents.SPIRIT_STORAGE);
@@ -171,7 +172,7 @@ public final class SpiritChargeService {
                 .orElse(definition.value().type());
         int stored = component == null ? capacity : (int) Math.clamp(Math.floor(component.get(aura)), 0.0D, capacity);
         // What one whole unit costs: the ratio of the two speeds, the same for one item and for a stack.
-        double unitCost = !Double.isFinite(costSpeed) || costSpeed <= 0.0D ? 0.0D : costSpeed / intakeSpeed;
+        double unitCost = MiscUtil.positive(costSpeed) <= 0.0D ? 0.0D : costSpeed / intakeSpeed;
         return new Charge(aura, stored, capacity,
                 Math.max(1, (int) Math.floor(intakeSpeed)), unitCost);
     }

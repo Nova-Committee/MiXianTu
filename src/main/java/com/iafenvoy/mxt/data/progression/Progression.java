@@ -24,7 +24,7 @@ public record Progression(Optional<Holder<Progression>> nextLevel, NumberProvide
                           double damageMultiplier) implements ChainNode<Progression> {
     public static final Codec<Holder<Progression>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.PROGRESSION);
     public static final Codec<Progression> DIRECT_CODEC = RecordCodecBuilder.<Progression>create(i -> i.group(
-            RegistryFixedCodec.create(MxtResourceKeys.PROGRESSION).optionalFieldOf("next_level").forGetter(Progression::nextLevel),
+            CODEC.optionalFieldOf("next_level").forGetter(Progression::nextLevel),
             NumberProvider.CODEC.optionalFieldOf("mastery", new Constant(0.0D)).forGetter(Progression::mastery),
             Codec.DOUBLE.optionalFieldOf("damage_multiplier", 1.0D).forGetter(Progression::damageMultiplier)
     ).apply(i, Progression::new)).validate(Progression::validate);

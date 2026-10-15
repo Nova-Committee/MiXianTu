@@ -57,6 +57,6 @@ public interface Contractable extends OwnableEntity {
         if (id == null) return true;
         Optional<HolderSet.Named<EntityType<?>>> allowed = BuiltInRegistries.ENTITY_TYPE.get(TagKey.create(Registries.ENTITY_TYPE, id.withPath(path -> "contract/" + path)));
         if (allowed.isEmpty() || allowed.get().size() == 0) return true;
-        return allowed.get().stream().anyMatch(holder -> holder.is(BuiltInRegistries.ENTITY_TYPE.wrapAsHolder(context.self().getType())));
+        return allowed.get().stream().anyMatch(BuiltInRegistries.ENTITY_TYPE.wrapAsHolder(context.self().getType())::equals);
     }
 }

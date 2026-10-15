@@ -11,6 +11,7 @@ import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.runtime.item.QualityService;
 import com.iafenvoy.mxt.runtime.world.AuraService;
+import com.iafenvoy.mxt.util.MiscUtil;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.BlockPos;
@@ -92,7 +93,7 @@ public final class SpiritHerbGrowthService {
         int years = (int) Math.floor(Math.max(0.0D, age));
         for (ItemEntity entity : drops) {
             ItemStack stack = entity.getItem();
-            if (!RegistryCodecs.matchesValue(growth.drops(), BuiltInRegistries.ITEM, stack.getItem())) continue;
+            if (!RegistryCodecs.matches(growth.drops(), BuiltInRegistries.ITEM, stack.getItem())) continue;
             stack.set(MxtDataComponents.HERB_AGE.get(), years);
             herb.get().value().qualityFor(years).ifPresent(quality -> QualityService.set(stack, quality));
         }
@@ -179,8 +180,8 @@ public final class SpiritHerbGrowthService {
     // The wild roll: what a plant that was never placed starts at. Evaluated against the position's own aura, then
     // walked forward from game time 0 so a plant in a rich spot has had the whole world's time to grow.
     private static double wildAge(ServerLevel level, BlockPos pos, Growth growth) {
-        double rolled = growth.wildAge().evaluate(FormulaContext.of(level));
-        if (!Double.isFinite(rolled) || rolled <= 0.0D) return 0.0D;
+        double rolled = MiscUtil.positive(growth.wildAge().evaluate(FormulaContext.of(level)));
+        if (rolled <= 0.0D) return 0.0D;
         double start = Math.min(rolled, growth.maxAge());
         return advance(level, pos, growth, start, Math.min(level.getGameTime() / PERIOD, catchUpPeriods()));
     }

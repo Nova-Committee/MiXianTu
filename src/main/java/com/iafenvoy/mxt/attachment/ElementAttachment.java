@@ -2,6 +2,7 @@ package com.iafenvoy.mxt.attachment;
 
 import com.iafenvoy.mxt.data.cultivation.Element;
 import com.iafenvoy.mxt.util.AbstractChangeTrackable;
+import com.iafenvoy.mxt.util.MiscUtil;
 import com.iafenvoy.mxt.util.codec.CollectionCodecs;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
@@ -66,6 +67,7 @@ public final class ElementAttachment extends AbstractChangeTrackable {
     }
 
     private void put(Holder<Element> element, double value) {
-        if (Double.isFinite(value) && value > 0.0D) this.amounts.put(element, value);
+        double amount = MiscUtil.positive(value);
+        if (amount > 0.0D) this.amounts.put(element, amount);
     }
 }

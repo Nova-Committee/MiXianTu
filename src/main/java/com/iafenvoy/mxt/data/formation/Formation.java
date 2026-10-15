@@ -18,8 +18,10 @@ import net.minecraft.core.Holder;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.RegistryFixedCodec;
+import net.minecraft.util.StringRepresentable;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
+import org.jspecify.annotations.NonNull;
 
 import java.util.List;
 import java.util.Locale;
@@ -68,16 +70,14 @@ public record Formation(Optional<Holder<ItemQuality>> quality, Optional<Identifi
      * Whether standing on the right blocks is part of raising this array at all. {@code always} is for an array
      * that is meant to stand anywhere, and it refuses a declared structure rather than ignoring one.
      */
-    public enum StructureCheck {
+    public enum StructureCheck implements StringRepresentable {
         STRUCTURE, ALWAYS;
+        public static final Codec<StructureCheck> CODEC = StringRepresentable.fromValues(StructureCheck::values);
 
-        public static final Codec<StructureCheck> CODEC = Codec.STRING.comapFlatMap(value -> {
-            try {
-                return DataResult.success(valueOf(value.toUpperCase(Locale.ROOT)));
-            } catch (IllegalArgumentException exception) {
-                return DataResult.error(() -> "Unknown structure check " + value);
-            }
-        }, value -> value.name().toLowerCase(Locale.ROOT));
+        @Override
+        public @NonNull String getSerializedName() {
+            return this.name().toLowerCase(Locale.ROOT);
+        }
     }
 
     /**

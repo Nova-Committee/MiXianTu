@@ -1,11 +1,15 @@
 package com.iafenvoy.mxt.data.talisman;
 
+import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.data.cost.Cost;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.resources.RegistryFixedCodec;
 
 import java.util.List;
@@ -32,4 +36,5 @@ public record Talisman(TalismanType type, double capacity, EntityCondition condi
             EntityCondition.optionalCodec("condition").forGetter(Talisman::condition),
             Cost.LIST_CODEC.optionalFieldOf("costs", List.of()).forGetter(Talisman::costs)
     ).apply(i, Talisman::new));
+    public static final StreamCodec<RegistryFriendlyByteBuf, Holder<Talisman>> STREAM_CODEC = ByteBufCodecs.holderRegistry(MxtResourceKeys.TALISMAN);
 }

@@ -86,11 +86,11 @@ public final class MxtDatapackRegistries {
         register(event, MxtResourceKeys.DEFAULT_QUALITY, DefaultQuality.DIRECT_CODEC);
         register(event, MxtResourceKeys.TRIGGER, TriggerRule.DIRECT_CODEC);
         register(event, MxtResourceKeys.TALISMAN, Talisman.DIRECT_CODEC);
+        register(event, MxtResourceKeys.CREATURE_PROFILE, CreatureProfile.DIRECT_CODEC);
+        register(event, MxtResourceKeys.CONTRACT_TYPE, ContractType.DIRECT_CODEC);
+        register(event, MxtResourceKeys.SECRET_REALM, SecretRealm.DIRECT_CODEC);
 
         register(event, MxtResourceKeys.BLOCK_AURA, BlockAura.CODEC);
-        register(event, MxtResourceKeys.CREATURE_PROFILE, CreatureProfile.CODEC);
-        register(event, MxtResourceKeys.CONTRACT_TYPE, ContractType.CODEC);
-        register(event, MxtResourceKeys.SECRET_REALM, SecretRealm.CODEC);
         register(event, MxtResourceKeys.CURRENCY, CurrencyValue.CODEC);
         register(event, MxtResourceKeys.ITEM_BINDING, ItemBinding.CODEC);
         register(event, MxtResourceKeys.WEAPON_BINDING, WeaponBinding.CODEC);

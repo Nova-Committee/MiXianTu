@@ -22,7 +22,11 @@ public record AuraResult(Map<Holder<Aura>, AuraPool> aura, Rules rules, double e
     }
 
     public AuraResult(Map<Holder<Aura>, AuraPool> aura, AuraZone zone, AuraService.Resolved resolved) {
-        this(aura, zone.rules(), zone.elementFitBonus(), zone.elementConflictPenalty(), zone.cultivateCondition(), zone.distribution(), resolved.zone(), resolved.kind());
+        this(aura, zone, resolved.zone(), resolved.kind());
+    }
+
+    public AuraResult(Map<Holder<Aura>, AuraPool> aura, AuraZone zone, Holder<AuraZone> source, SourceKind sourceKind) {
+        this(aura, zone.rules(), zone.elementFitBonus(), zone.elementConflictPenalty(), zone.cultivateCondition(), zone.distribution(), source, sourceKind);
     }
 
     public AuraResult copy(Map<Holder<Aura>, AuraPool> aura) {
