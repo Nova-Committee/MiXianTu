@@ -903,6 +903,8 @@
   "mxt.talisman_type.mxt.empty": "未指定使用方式：这张符不会产生任何效果",
   "mxt.talisman_type.mxt.self": "自己身上使用：右键发动，效果只作用在自己身上",
   "mxt.talisman_type.mxt.thrown": "丢掷使用：把符丢出去，命中谁就作用在谁身上（扔出去就消耗这张纸）",
+  "mxt.technique.mxt.higher_mathematics": "高等数学",
+  "mxt.technique.mxt.higher_mathematics.description": "万物皆可微分，唯天道不可积分。",
   "overlay.mxt.tribulation.windup": "天劫将至：%s 秒",
   "screen.mxt.alchemy.abort": "终止",
   "screen.mxt.alchemy.apply": "设定",

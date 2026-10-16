@@ -11,8 +11,8 @@ import net.neoforged.neoforge.registries.DeferredRegister.Items;
 
 /**
  * The two sample cultivation manuals, carrying no behaviour beyond a plain {@link Item} plus a datapack
- * binding: one is held and one instant (both {@code TechniqueBinding.requiresHold} branches), the held one
- * declaring a hold_animation. Living here keeps two unfinished props out of the creative menu.
+ * binding: one teaches a technique that declares a hold and one an instant technique (both
+ * {@code TechniqueReading.requiresHold} branches). Living here keeps two unfinished props out of the creative menu.
  */
 public final class MxtTestTechniqueItems {
     public static final Items REGISTRY = DeferredRegister.createItems(MxtTestMod.MOD_ID);

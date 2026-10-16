@@ -48,7 +48,7 @@ public final class SpiritHerbService {
         return MxtDatapackRegistries.holders(access, MxtResourceKeys.SPIRIT_HERB)
                 .filter(holder -> claims(access, holder.value(), stack))
                 .min(Comparator.comparing(Holder::value, ORDER))
-                .map(holder -> (Holder<SpiritHerb>) holder);
+                .map(holder -> holder);
     }
 
     /**
@@ -98,7 +98,7 @@ public final class SpiritHerbService {
         return MxtDatapackRegistries.holders(access, MxtResourceKeys.SPIRIT_HERB)
                 .filter(holder -> RegistryCodecs.matches(holder.value().blocks(), BuiltInRegistries.BLOCK, block))
                 .min(Comparator.comparing(Holder::value, ORDER))
-                .map(holder -> (Holder<SpiritHerb>) holder);
+                .map(holder -> holder);
     }
 
     private static final Comparator<SpiritHerb> ORDER =

@@ -1,8 +1,6 @@
 {
   "technique": "mxt_test:azure_water_manual",
   "carrier_item": "mxt_test:azure_water_manual",
-  "learn_time": 60,
-  "hold_animation": "bundle",
   "conditions": [
     {"type": "mxt:always"}
   ]

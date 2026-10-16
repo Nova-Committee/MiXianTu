@@ -5,6 +5,7 @@ import com.iafenvoy.mxt.config.MxtServerConfig;
 import com.iafenvoy.mxt.data.cultivation.Technique;
 import com.iafenvoy.mxt.data.item.HoldBinding;
 import com.iafenvoy.mxt.data.item.TechniqueBinding;
+import com.iafenvoy.mxt.data.item.TechniqueReading;
 import com.iafenvoy.mxt.item.ItemReading;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
@@ -44,10 +45,10 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * Server-side use path for books, jade slips and other technique items: a matching binding claims the
  * interaction, and a refusal is reported on the action bar since it changes nothing else. The hold gesture
- * itself belongs to the hold module, which drives it without knowing what a technique is; this class only
- * declares how long a read lasts and answers what only this module can - which of its own holds this item is,
- * how far through it is, what to teach and what to report afterwards. {@link QualityService} watches the
- * same interaction at a higher priority, so the gate check in {@link #use} speaks for direct callers.
+ * itself belongs to the hold module, which drives it without knowing what a technique is; this class is the only
+ * one that answers what only this module can - which of its own holds this item is, how far through it is, what to
+ * teach and what to report afterwards. {@link QualityService} watches the same interaction at a higher priority,
+ * so the gate check in {@link #use} speaks for direct callers.
  */
 @EventBusSubscriber
 public final class TechniqueItemService {
@@ -55,8 +56,12 @@ public final class TechniqueItemService {
     // identical from outside, and only the ticks still left tell them apart.
     private static final Map<UUID, String> LAST_ENDING = new ConcurrentHashMap<>();
 
-    // The last percentage shown to each player, so the action bar is rewritten only when the number moves.
-    private static final Map<UUID, Integer> LAST_PROGRESS = new ConcurrentHashMap<>();
+    // What each player's action bar last showed, and when: the number moves rarely on a long read, but the client
+    // drops an overlay message 60 ticks after it arrives, so the same text is sent again before that happens.
+    private static final Map<UUID, ShownProgress> LAST_PROGRESS = new ConcurrentHashMap<>();
+
+    // Comfortably inside the client's 60-tick overlay lifetime.
+    private static final int PROGRESS_KEEP_ALIVE_TICKS = 40;
 
     // Wall-clock and tick counts for a read in progress: a read is measured in ticks but experienced in
     // seconds, and the two agree only while the server keeps up.
@@ -75,6 +80,9 @@ public final class TechniqueItemService {
         HoldTiming ticked(int remaining) {
             return new HoldTiming(this.startNanos, this.ticks + 1, this.firstRemaining, remaining);
         }
+    }
+
+    private record ShownProgress(int percent, long tick) {
     }
 
     // The whole wiring between the two modules, done once at construction: the hold module drives the gesture
@@ -112,8 +120,10 @@ public final class TechniqueItemService {
                 (existing, added) -> existing.ticked(remaining));
         if (!(entity instanceof ServerPlayer player)) return;
         int percent = HoldService.displayPercent(learnTime(entity, event.getItem()), remaining);
-        if (LAST_PROGRESS.getOrDefault(player.getUUID(), -1) == percent) return;
-        LAST_PROGRESS.put(player.getUUID(), percent);
+        long now = entity.level().getGameTime();
+        ShownProgress shown = LAST_PROGRESS.get(player.getUUID());
+        if (shown != null && shown.percent() == percent && now - shown.tick() < PROGRESS_KEEP_ALIVE_TICKS) return;
+        LAST_PROGRESS.put(player.getUUID(), new ShownProgress(percent, now));
         player.sendSystemMessage(Component.translatable("actionbar.mxt.technique.holding", bar(percent), percent)
                 .withStyle(ChatFormatting.AQUA), true);
     }
@@ -138,8 +148,8 @@ public final class TechniqueItemService {
             return;
         }
         TechniqueBinding value = binding.orElseThrow();
-        if (!value.requiresHold()) {
-            record(entity, "Finish, but the binding declares no hold");
+        if (!requiresHold(entity, stack)) {
+            record(entity, "Finish, but the technique declares no hold");
             return;
         }
         record(entity, "Finish and taught");
@@ -158,15 +168,25 @@ public final class TechniqueItemService {
         // The bar is left where it stopped otherwise, and an overlay message lingers for seconds after its
         // last update, so a cancelled read would keep showing a half-filled bar as if it were still going.
         if (entity instanceof ServerPlayer player) player.sendSystemMessage(Component.empty(), true);
-        // The declaration's own duration rather than the stack's use state: the component carrying the cycle was
+        // The technique's own duration rather than the stack's use state: the component carrying the cycle was
         // taken off when the read started, so asking the stack here would report a total of zero.
         record(entity, "Released early with " + entity.getUseItemRemainingTicks() + " of "
                 + learnTime(entity, event.getItem()) + " ticks left");
     }
 
-    // How long a read of this stack lasts, which the progress bar and the diagnostic both report.
+    // How long a read of this stack lasts, which the progress bar and the diagnostic both report. The length is a
+    // formula over the reader, so it is asked again every tick.
     private static int learnTime(LivingEntity entity, ItemStack stack) {
-        return ItemBindingService.technique(entity.level().registryAccess(), stack).map(TechniqueBinding::learnTime).orElse(0);
+        return reading(entity, stack).map(reading -> reading.holdTicks(FormulaContext.of(entity))).orElse(0);
+    }
+
+    // Whether reading this stack is a hold: the technique declares it, and the stack's component may override it.
+    private static boolean requiresHold(LivingEntity entity, ItemStack stack) {
+        return reading(entity, stack).map(reading -> reading.requiresHold(FormulaContext.of(entity))).orElse(false);
+    }
+
+    private static Optional<TechniqueReading> reading(LivingEntity entity, ItemStack stack) {
+        return ItemBindingService.reading(entity.level().registryAccess(), stack);
     }
 
     // Wider than a player because {@link #record} keys any entity that reads, and the audit drives a hold on
@@ -184,10 +204,8 @@ public final class TechniqueItemService {
         HoldTiming timing = HOLD_TIMING.remove(entity.getUUID());
         if (timing == null) return;
         long millis = (System.nanoTime() - timing.startNanos()) / 1_000_000L;
-        LOGGER.info("[mxt] read {}: {} server ticks in {} ms ({} ms per tick; 50 ms per tick is 20 tps), "
-                        + "first tick reported {} remaining, last reported {}",
-                ending, timing.ticks(), millis, timing.ticks() == 0 ? 0 : millis / timing.ticks(),
-                timing.firstRemaining(), timing.lastRemaining());
+        LOGGER.debug("[mxt] read {}: {} server ticks in {} ms ({} ms per tick; 50 ms per tick is 20 tps), first tick reported {} remaining, last reported {}",
+                ending, timing.ticks(), millis, timing.ticks() == 0 ? 0 : millis / timing.ticks(), timing.firstRemaining(), timing.lastRemaining());
     }
 
     // A matching binding claims the interaction even when learning is rejected by its conditions; a binding
@@ -204,7 +222,7 @@ public final class TechniqueItemService {
         }
         // A hold manual must not also teach on the click that starts it, but it still says what it is on that click.
         readOut(entity, stack, value.technique());
-        if (value.requiresHold()) return false;
+        if (requiresHold(entity, stack)) return false;
         learn(entity, stack, value);
         return true;
     }

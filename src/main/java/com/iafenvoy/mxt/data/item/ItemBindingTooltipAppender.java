@@ -155,5 +155,9 @@ public final class ItemBindingTooltipAppender {
     private static void appendTechnique(Consumer<Component> builder, TechniqueBinding technique) {
         builder.accept(Component.translatable("tooltip.mxt.item.technique",
                 DefinitionText.nameOrId(technique.technique())).withStyle(ChatFormatting.GREEN));
+        // Drawn only when the pack translated the generated key, the same gate the chat read-out passes: a tooltip
+        // line that is a raw key is worse than no line.
+        DefinitionText.resolved(DefinitionText.description(technique.technique()))
+                .ifPresent(text -> builder.accept(text.withStyle(ChatFormatting.GRAY)));
     }
 }

@@ -22,6 +22,9 @@ import java.util.List;
  */
 public interface HoldBinding extends ItemMatcher {
     int NO_HOLD = 0;
+    // The pose a reading falls back to, and the one the built-in book is pinned to: the eating motion, whose
+    // first-person transform is what makes a reading look like one.
+    ItemUseAnimation DEFAULT_HOLD_ANIMATION = ItemUseAnimation.BOW;
     Holder<SoundEvent> DEFAULT_HOLD_SOUND = BuiltInRegistries.SOUND_EVENT.wrapAsHolder(SoundEvents.BOOK_PAGE_TURN);
     // The poses a reading may ask for. The charged ones are refused because a reading has no charge to scale by;
     // eat and drink are here because the built-in book reads with the eating motion.

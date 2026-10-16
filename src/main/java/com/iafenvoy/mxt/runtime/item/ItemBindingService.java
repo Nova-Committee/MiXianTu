@@ -120,10 +120,20 @@ public final class ItemBindingService {
     }
 
     // What a stack teaches is the stack's own mxt:technique component; the declaration for that technique only
-    // says how reading one feels, and a technique with no declaration is still read, with the defaults. A stack
-    // carrying no component is read as whatever a declaration claiming it names.
+    // says which stacks are its manuals. A stack carrying no component is read as whatever a declaration claiming
+    // it names.
     public static Optional<TechniqueBinding> technique(Provider access, ItemStack stack) {
         return technique(MxtDatapackRegistries.holders(access, MxtResourceKeys.TECHNIQUE_BINDING), stack);
+    }
+
+    // How long reading this stack takes and how it looks: the technique's own declaration, overridden field by
+    // field by the stack's mxt:technique_reading component. Empty for a stack that is no manual at all.
+    public static Optional<TechniqueReading> reading(Provider access, ItemStack stack) {
+        Optional<TechniqueBinding> binding = technique(access, stack);
+        if (binding.isEmpty()) return Optional.empty();
+        TechniqueReading base = TechniqueReading.of(binding.orElseThrow().technique());
+        TechniqueReadingComponent component = stack.get(MxtDataComponents.TECHNIQUE_READING.get());
+        return Optional.of(component == null ? base : component.applyTo(base));
     }
 
     // The carrier the mod offers for a technique: the item a declaration claims for it, the item that declaration
@@ -163,14 +173,12 @@ public final class ItemBindingService {
     private static Optional<TechniqueBinding> technique(Stream<Reference<TechniqueBinding>> declarations, ItemStack stack) {
         if (stack.isEmpty()) return Optional.empty();
         Holder<Technique> taught = stack.get(MxtDataComponents.TECHNIQUE.get());
-        Optional<TechniqueBinding> declared = taught == null
+        return taught == null
                 ? ItemMatcher.find(declarations.map(Reference::value), stack)
                 : declarations.map(Reference::value)
                 .filter(binding -> binding.technique().equals(taught))
                 .findFirst()
                 .or(() -> Optional.of(TechniqueBinding.defaults(taught)));
-        TechniqueReadingComponent reading = stack.get(MxtDataComponents.TECHNIQUE_READING.get());
-        return reading == null ? declared : declared.map(reading::applyTo);
     }
 
     public static ResolvedBindings resolve(Provider access, ItemStack stack) {

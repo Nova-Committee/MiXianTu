@@ -2,6 +2,7 @@
   "primary_color": "#7A4FBF",
   "secondary_color": "#E9DBFF",
   "learn_condition": { "type": "mxt:health", "comparison": ">=", "compare_to": 1 },
+  "learn_time": 40,
   "exclusive_tags": ["mxt_test:technique/offhand_flight"],
   "granted_abilities": ["mxt_test:offhand_flight"]
 }

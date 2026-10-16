@@ -18,6 +18,7 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.living.LivingEntityUseItemEvent.Start;
 import net.neoforged.neoforge.event.entity.living.LivingEntityUseItemEvent.Tick;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent.RightClickItem;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 import java.util.Objects;
@@ -32,12 +33,19 @@ import java.util.Objects;
  * that component back off the moment the cycle has started (after the duration was read), so
  * {@code Item.finishUsingItem} finds nothing to eat. A stack carrying a use component of its own is never written
  * over: that component is what makes the item edible, drinkable or throwable.
+ *
+ * <p>The component it writes is silent, and this class plays the sound itself: vanilla sounds a component only after
+ * 21.875% of its duration has run out, which is days away for a read long enough to be a joke.
  */
 @EventBusSubscriber
 public final class HoldService {
-    // The server's copy only answers "how long" and "which pose" before it is taken off again, so it stays quiet:
-    // both copies making the sound would be heard twice.
+    // Nothing comes off the component: it is written to answer the duration and the pose, and both copies stay
+    // silent because playHoldSound owns the sound.
     private static final Holder<SoundEvent> SILENT_SOUND = BuiltInRegistries.SOUND_EVENT.wrapAsHolder(SoundEvents.EMPTY);
+
+    // Ours rather than vanilla's fraction of the duration, so the cadence does not depend on how long a hold is;
+    // the first sound lands one interval in.
+    private static final int SOUND_INTERVAL_TICKS = 4;
 
     // Ours rather than vanilla's: reaching for vanilla's volume and pitch would mean copying the private
     // randomisation inside Consumable.emitParticlesAndSounds. The pitch wanders because the sound repeats.
@@ -65,10 +73,7 @@ public final class HoldService {
         // An item that declares its own use keeps it. Nothing is armed here, which also means nothing is taken
         // off it later: the hold module only ever takes back the component it wrote itself.
         if (stack.has(DataComponents.CONSUMABLE) && !ours(stack, registries, hold)) return;
-        // The reader's copy is the one that makes the sound, so it carries the declaration's own; the server's
-        // copy only has to answer "how long" and "which pose" before it is taken off again, so it stays quiet.
-        if (entity.level().isClientSide()) arm(registries, entity, stack, hold);
-        else armQuietly(registries, entity, stack, hold);
+        arm(registries, entity, stack, hold);
     }
 
     // Only the server's copy is touched (the client needs its own for the pose), and only the component this module
@@ -89,6 +94,15 @@ public final class HoldService {
             // holds now - a slot sync can replace the latter mid-read, and the pose is drawn from it.
             keepArmed(registries, entity, event.getItem());
             keepArmed(registries, entity, entity.getItemInHand(entity.getUsedItemHand()));
+            // The reader hears their own sound from here, where it lines up with the pose their client is drawing;
+            // the server's broadcast below leaves them out so nobody hears it twice. Another player's read is only
+            // ever heard from that broadcast, since their stack is re-armed on this client too.
+            if (entity instanceof Player player && player.isLocalPlayer()) {
+                ItemStack stack = event.getItem();
+                HoldBinding hold = HoldLookup.hold(stack);
+                if (hold != null && hold.claims(entity, registries, stack))
+                    playHoldSound(entity, hold, stack, event.getDuration(), null);
+            }
             return;
         }
         ItemStack stack = event.getItem();
@@ -97,49 +111,30 @@ public final class HoldService {
         // A stack that still carries a use component on this side is one this module did not arm - it was never
         // claimed, or it declares its own use - and it is not a hold of ours to make a sound for.
         if (stack.has(DataComponents.CONSUMABLE)) return;
-        // The sound belongs to the read rather than to the reader: played from here so the server plays it for
-        // the players around the reader, since the server's own stack carries no component to play it from.
-        playHoldSound(entity, hold, stack, event.getDuration());
+        playHoldSound(entity, hold, stack, event.getDuration(), entity instanceof Player reader ? reader : null);
     }
 
     // The vanilla component the use cycle reads: duration and pose both come from it, so a hold needs no Item
-    // subclass. This is the reader's copy, so it carries the declaration's own sound - the reader's client is the
-    // one place that can be relied on to hear it.
+    // subclass. It is silent on purpose, and the particle flag is off because the component's own emitter also
+    // throws item particles, which none of the poses want.
     public static void arm(Provider registries, LivingEntity holder, ItemStack stack, HoldBinding hold) {
-        arm(registries, holder, stack, hold, hold.holdSound(registries, stack));
-    }
-
-    // The server's copy only has to answer the duration and the pose; the sound for everyone else is played by the
-    // server itself (playHoldSound) rather than from a stack's component.
-    public static void armQuietly(Provider registries, LivingEntity holder, ItemStack stack, HoldBinding hold) {
-        arm(registries, holder, stack, hold, SILENT_SOUND);
-    }
-
-    private static void arm(Provider registries, LivingEntity holder, ItemStack stack, HoldBinding hold, Holder<SoundEvent> sound) {
         // The same refusal the click path makes, so the hold module cannot take an item's own use away from it.
         if (stack.has(DataComponents.CONSUMABLE) && !ours(stack, registries, hold)) return;
         TemporaryUseComponent.write(holder, stack,
-                consumable(hold, registries, stack, sound, hold.holdTicks(holder, registries, stack)),
+                new Consumable(consumeSeconds(hold.holdTicks(holder, registries, stack)),
+                        hold.holdAnimation(registries, stack), SILENT_SOUND, false, List.of()),
                 TemporaryUseComponent.Owner.HOLD);
-    }
-
-    private static Consumable consumable(HoldBinding hold, Provider registries, ItemStack stack, Holder<SoundEvent> sound, int ticks) {
-        // The particle flag is off because the component's own emitter also throws item particles, which none of
-        // the poses want.
-        return new Consumable(consumeSeconds(ticks), hold.holdAnimation(registries, stack), sound, false, List.of());
     }
 
     // An item's own component - food, a potion - is not ours, and is left exactly as found: reading it is what
     // distinguishes the two, since nothing on the stack records who wrote it. The duration is deliberately not
-    // compared: a declaration may size the component from the stack, whose count can change mid-read. The sound is
-    // compared as a holder, not by its value: a declaration may name an inline definition, which decodes to a holder
-    // with no registry key, so the identity of the written instance is the only thing there is to compare.
+    // compared: a declaration may size the component from the stack, whose count can change mid-read.
     private static boolean ours(ItemStack stack, Provider registries, HoldBinding hold) {
         Consumable component = stack.get(DataComponents.CONSUMABLE);
         if (component == null) return false;
         return !component.hasConsumeParticles() && component.onConsumeEffects().isEmpty()
-                && component.animation() == hold.holdAnimation(registries, stack)
-                && (Objects.equals(component.sound(), SILENT_SOUND) || Objects.equals(component.sound(), hold.holdSound(registries, stack)));
+                && Objects.equals(component.sound(), SILENT_SOUND)
+                && component.animation() == hold.holdAnimation(registries, stack);
     }
 
     // The component counts in seconds and truncates back to ticks, so a plain division lands a tick short on some
@@ -157,26 +152,26 @@ public final class HoldService {
         if (hold != null && hold.claims(holder, registries, stack)) arm(registries, holder, stack, hold);
     }
 
-    // On the ticks vanilla would play it. Vanilla would play it from the stack's own component, but the server's
-    // copy never has one, so vanilla's own predicate is asked and the play is made here. The reader is left out on
-    // purpose: their client plays the same sound off their own copy. Returns whether it played.
-    public static boolean playHoldSound(LivingEntity entity, HoldBinding hold, ItemStack stack, int remaining) {
+    // On an interval of ours rather than vanilla's wait, and played from here rather than off the component, which
+    // is silent: the reader is left out on purpose, because their own client plays the same sound in step with the
+    // pose it is drawing. Returns whether it played.
+    public static boolean playHoldSound(LivingEntity entity, HoldBinding hold, ItemStack stack, int remaining,
+                                        @Nullable Player except) {
         Provider registries = entity.level().registryAccess();
+        int elapsed = hold.holdTicks(entity, registries, stack) - remaining;
+        if (elapsed <= 0 || elapsed % SOUND_INTERVAL_TICKS != 0) return false;
         Holder<SoundEvent> sound = hold.holdSound(registries, stack);
-        int ticks = hold.holdTicks(entity, registries, stack);
-        Consumable emitter = consumable(hold, registries, stack, sound, ticks);
-        if (!emitter.shouldEmitParticlesAndSounds(remaining)) return false;
-        entity.level().playSound(entity instanceof Player reader ? reader : null,
-                entity.getX(), entity.getY(), entity.getZ(), sound.value(), entity.getSoundSource(),
-                SOUND_VOLUME, entity.getRandom().triangle(1.0F, SOUND_PITCH_SPREAD));
+        entity.level().playSound(except, entity.getX(), entity.getY(), entity.getZ(), sound.value(),
+                entity.getSoundSource(), SOUND_VOLUME, entity.getRandom().triangle(1.0F, SOUND_PITCH_SPREAD));
         return true;
     }
 
     // Public because the edges matter: a non-positive duration must not divide by zero, and the ends must not read
-    // one percent off.
+    // one percent off. The product is widened because a duration has no ceiling: ticks * 100 overflows an int after
+    // about two weeks of holding, and the bar would go backwards there.
     public static int holdPercent(int total, int remaining) {
         if (total <= 0) return 100;
-        return Mth.clamp((total - remaining) * 100 / total, 0, 100);
+        return (int) Mth.clamp((total - remaining) * 100L / total, 0L, 100L);
     }
 
     // The tick event fires with one tick still to run, and reporting that honestly would leave a one-percent-short

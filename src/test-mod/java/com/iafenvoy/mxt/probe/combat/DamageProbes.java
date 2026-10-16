@@ -4,7 +4,7 @@ import com.iafenvoy.mxt.attachment.TechniqueAttachment;
 import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.cultivation.Element;
 import com.iafenvoy.mxt.data.cultivation.Technique;
-import com.iafenvoy.mxt.data.item.TechniqueBinding;
+import com.iafenvoy.mxt.data.item.HoldBinding;
 import com.iafenvoy.mxt.event.AbilityUseEvent.Pre;
 import com.iafenvoy.mxt.probe.Probe;
 import com.iafenvoy.mxt.probe.ProbeContext;
@@ -163,16 +163,18 @@ public final class DamageProbes {
                 && customCarrier.is(MxtTestTechniqueItems.AZURE_WATER_MANUAL.get())
                 && blankless
                 && ItemBindingService.technique(context.registries(), generated)
-                // This declaration asks for a pose of its own, which the built-in book ignores.
-                .filter(binding -> HolderHelper.id(binding.technique()).equals(ProbeDefinitions.TECHNIQUE) && binding.learnTime() == 40
-                        && binding.holdAnimation() == ItemUseAnimation.BLOCK)
+                .filter(binding -> HolderHelper.id(binding.technique()).equals(ProbeDefinitions.TECHNIQUE))
                 .isPresent()
-                && ItemBindingService.technique(context.registries(), customCarrier)
-                // An item a declaration names itself keeps the pose that declaration asks for.
-                .filter(binding -> binding.holdAnimation() == ItemUseAnimation.BUNDLE)
+                // The technique asks for a hold of its own, which the built-in book reads in its pinned pose.
+                && ItemBindingService.reading(context.registries(), generated)
+                .filter(reading -> reading.holdTicks(FormulaContext.EMPTY) == 40 && reading.holdAnimation() == ItemUseAnimation.BLOCK)
+                .isPresent()
+                // A manual that brings an item of its own keeps the pose its technique asks for.
+                && ItemBindingService.reading(context.registries(), customCarrier)
+                .filter(reading -> reading.holdAnimation() == ItemUseAnimation.BUNDLE)
                 .isPresent()
                 && HoldLookup.hold(generated) instanceof TechniqueHold bookHold
-                && bookHold.holdAnimation(context.registries(), generated) == TechniqueBinding.DEFAULT_HOLD_ANIMATION
+                && bookHold.holdAnimation(context.registries(), generated) == HoldBinding.DEFAULT_HOLD_ANIMATION
                 && HoldLookup.hold(blankBook) == null;
         String report = "technique probe: blank_teaches=" + !blankless
                 + " generated=" + generated.getItem() + " custom=" + customCarrier.getItem();

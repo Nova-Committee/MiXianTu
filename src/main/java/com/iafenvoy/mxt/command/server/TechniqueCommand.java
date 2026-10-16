@@ -4,6 +4,7 @@ import com.iafenvoy.mxt.attachment.TechniqueAttachment;
 import com.iafenvoy.mxt.command.ServerCommandManager;
 import com.iafenvoy.mxt.data.cultivation.Technique;
 import com.iafenvoy.mxt.data.item.TechniqueBinding;
+import com.iafenvoy.mxt.data.item.TechniqueReading;
 import com.iafenvoy.mxt.data.progression.Progression;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
@@ -79,9 +80,11 @@ public final class TechniqueCommand {
             return 1;
         }
         TechniqueBinding value = binding.orElseThrow();
+        // Present whenever the binding is: both answer off the same stack and the same registries.
+        TechniqueReading reading = ItemBindingService.reading(player.level().registryAccess(), stack).orElseThrow();
         source.sendSuccess(() -> Component.translatable("command.mxt.technique.diagnose.binding",
                 value.technique().unwrapKey().orElseThrow().identifier().toString(),
-                value.learnTime(), value.holdAnimation().getSerializedName()), false);
+                reading.holdTicks(FormulaContext.of(player)), reading.holdAnimation().getSerializedName()), false);
 
         // This gate cancels Start and Tick, so a refusal here is what a pose that appears and then aborts looks like.
         Optional<Failure> refusal = QualityService.check(player, stack);

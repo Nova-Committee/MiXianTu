@@ -1,6 +1,8 @@
 {
   "icon": "mxt_test:textures/item/qingxiao_spirit_crystal.png",
   "learn_condition": { "type": "mxt:health", "comparison": ">=", "compare_to": 1 },
+  "learn_time": 60,
+  "hold_animation": "bundle",
   "exclusive_tags": ["mxt_test:technique/azure_water"],
   "cultivation_modifier": 1.35,
   "passive_modifiers": [

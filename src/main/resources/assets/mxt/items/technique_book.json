@@ -17,7 +17,7 @@
       ]
     },
     "on_true": {
-      "type": "minecraft:model",
+      "type": "mxt:technique_textures",
       "model": "mxt:item/technique_book_reading",
       "tints": [
         {
@@ -28,7 +28,11 @@
           "type": "mxt:technique",
           "layer": "secondary"
         }
-      ]
+      ],
+      "pages": {
+        "left": "3",
+        "right": "4"
+      }
     }
   }
 }

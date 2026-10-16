@@ -1,6 +1,5 @@
 package com.iafenvoy.mxt.data.talisman;
 
-import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.data.cost.Cost;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;

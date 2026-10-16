@@ -564,10 +564,9 @@ public final class ContractProbes {
                     new BlockHitResult(Vec3.atBottomCenterOf(releaseAt), Direction.UP, releaseAt, false));
             bagStack.getItem().useOn(release);
             // The bag gave the creature back as a fresh entity, which this body has to clean up like any other.
-            ProbeBeast restored = level.getEntitiesOfClass(ProbeBeast.class, player.getBoundingBox().inflate(2.0D)).stream()
+            level.getEntitiesOfClass(ProbeBeast.class, player.getBoundingBox().inflate(2.0D)).stream()
                     .filter(candidate -> candidate != beast && candidate != first)
-                    .findFirst().orElse(null);
-            if (restored != null) spawned.add(restored);
+                    .findFirst().ifPresent(spawned::add);
 
             int rowsBefore = BoundBeastService.of(server, player.getUUID()).size();
             beast.hurtServer(level, level.damageSources().genericKill(), Float.MAX_VALUE);

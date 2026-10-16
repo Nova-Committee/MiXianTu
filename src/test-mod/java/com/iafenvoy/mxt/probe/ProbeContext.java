@@ -18,10 +18,10 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.CommonListenerCookie;
-import net.minecraft.world.entity.Relative;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.network.registration.NetworkRegistry;
+import org.jspecify.annotations.NonNull;
 import org.slf4j.Logger;
 
 import java.util.*;
@@ -228,7 +228,7 @@ public final class ProbeContext {
         CommonListenerCookie cookie = CommonListenerCookie.createInitial(profile, false);
         ServerPlayer created = new ServerPlayer(server, this.level, profile, cookie.clientInformation()) {
             @Override
-            public GameType gameMode() {
+            public @NonNull GameType gameMode() {
                 return GameType.SURVIVAL;
             }
         };
@@ -268,7 +268,7 @@ public final class ProbeContext {
     private static void retireLive() {
         for (ServerPlayer retired : LIVE) {
             MinecraftServer server = retired.level().getServer();
-            if (server != null) server.getPlayerList().remove(retired);
+            server.getPlayerList().remove(retired);
             retired.discard();
         }
         LIVE.clear();

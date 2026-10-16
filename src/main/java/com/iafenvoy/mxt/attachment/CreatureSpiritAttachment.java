@@ -2,13 +2,11 @@ package com.iafenvoy.mxt.attachment;
 
 import com.iafenvoy.mxt.data.creature.CreatureProfile;
 import com.iafenvoy.mxt.data.progression.ProgressionHolder;
-import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.util.AbstractChangeTrackable;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
-import net.minecraft.resources.RegistryFixedCodec;
 import net.minecraft.world.item.ItemStack;
 
 import java.util.Optional;

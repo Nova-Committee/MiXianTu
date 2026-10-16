@@ -903,6 +903,8 @@
   "mxt.talisman_type.mxt.empty": "No use specified: this talisman has no effect at all",
   "mxt.talisman_type.mxt.self": "Self use: right-click to invoke it, and the effect lands on you alone",
   "mxt.talisman_type.mxt.thrown": "Thrown use: throw the talisman and it lands on whatever it hits (throwing spends the paper)",
+  "mxt.technique.mxt.higher_mathematics": "Higher Mathematics",
+  "mxt.technique.mxt.higher_mathematics.description": "Everything differentiates; the Dao does not integrate.",
   "overlay.mxt.tribulation.windup": "Tribulation in %s s",
   "screen.mxt.alchemy.abort": "Abort",
   "screen.mxt.alchemy.apply": "Set",

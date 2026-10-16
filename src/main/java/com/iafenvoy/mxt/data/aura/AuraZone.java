@@ -3,7 +3,6 @@ package com.iafenvoy.mxt.data.aura;
 import com.iafenvoy.mxt.data.ParticleEffect;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.data.resource.ResourceBar.Anchor;
-import com.iafenvoy.mxt.data.talisman.Talisman;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.util.MiscUtil;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;

@@ -1,21 +1,14 @@
 package com.iafenvoy.mxt.util.codec;
 
-import com.google.common.collect.ImmutableListMultimap;
-import com.google.common.collect.ImmutableListMultimap.Builder;
-import com.google.common.collect.Multimap;
-import com.google.common.collect.Multimaps;
 import com.mojang.serialization.Codec;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.*;
 
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 
 /**
  * Codec adapters for the immutable collections produced by datapack codecs.
