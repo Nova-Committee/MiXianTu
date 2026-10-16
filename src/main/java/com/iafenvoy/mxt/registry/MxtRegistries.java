@@ -12,6 +12,7 @@ import com.iafenvoy.mxt.data.condition.*;
 import com.iafenvoy.mxt.data.cost.Cost;
 import com.iafenvoy.mxt.data.curse.CurseType;
 import com.iafenvoy.mxt.data.formation.FormationActionType;
+import com.iafenvoy.mxt.data.formation.FormationStroke;
 import com.iafenvoy.mxt.data.resource.ResourceValueProvider;
 import com.iafenvoy.mxt.data.resourcebar.ResourceBarContext;
 import com.iafenvoy.mxt.data.resourcebar.ResourceBarRenderData;
@@ -68,7 +69,8 @@ public final class MxtRegistries {
     public static final DefaultedRegistry<ResourceBarContext> RESOURCE_BAR_CONTEXT = create("self_hud", MxtResourceKeys.RESOURCE_BAR_CONTEXT);
     public static final DefaultedRegistry<MapCodec<? extends ResourceBarVisibility>> RESOURCE_BAR_VISIBILITY_TYPE = create("always", MxtResourceKeys.RESOURCE_BAR_VISIBILITY_TYPE);
     public static final DefaultedRegistry<MapCodec<? extends Entry>> ITEM_MATCHER_ENTRY_TYPE = create("item", MxtResourceKeys.ITEM_MATCHER_ENTRY_TYPE);
-    public static final DefaultedRegistry<MapCodec<? extends FormationActionType>> FORMATION_ACTION_TYPE = create("none", MxtResourceKeys.FORMATION_ACTION_TYPE);
+    public static final DefaultedRegistry<MapCodec<? extends FormationActionType>> FORMATION_ACTION_TYPE = create("empty", MxtResourceKeys.FORMATION_ACTION_TYPE);
+    public static final DefaultedRegistry<MapCodec<? extends FormationStroke>> FORMATION_STROKE_TYPE = create("circle", MxtResourceKeys.FORMATION_STROKE_TYPE);
     public static final DefaultedRegistry<MapCodec<? extends TimelineEntry>> TIMELINE_ENTRY_TYPE = create("idle", MxtResourceKeys.TIMELINE_ENTRY_TYPE);
     public static final DefaultedRegistry<MapCodec<? extends SecretRealmGeneration>> SECRET_REALM_GENERATION_TYPE = create("stem", MxtResourceKeys.SECRET_REALM_GENERATION_TYPE);
 

@@ -42,16 +42,19 @@ public final class SpiritBeastBagItem extends Item {
                                                            @NotNull InteractionHand hand) {
         if (player.level().isClientSide()) return InteractionResult.SUCCESS;
         if (!(player instanceof ServerPlayer owner) || !(target instanceof Mob mob)) {
-            ItemFeedback.send(player, ContractFeedback.of(ContractService.Failure.NOT_CONTRACTABLE));
+            Component message = ContractFeedback.of(ContractService.Failure.NOT_CONTRACTABLE);
+            if (player instanceof ServerPlayer serverPlayer) serverPlayer.sendSystemMessage(message, true);
             return InteractionResult.FAIL;
         }
         if (stack.getOrDefault(MxtDataComponents.SPIRIT_BEAST, SpiritBeastComponent.EMPTY).stored()) {
-            ItemFeedback.send(player, Component.translatable("item.mxt.spirit_beast_bag.occupied"));
+            Component message = Component.translatable("item.mxt.spirit_beast_bag.occupied");
+            if (player instanceof ServerPlayer serverPlayer) serverPlayer.sendSystemMessage(message, true);
             return InteractionResult.FAIL;
         }
         ContractAttachment contract = mob.getData(MxtAttachments.CONTRACT);
         if (!contract.bound() || Contracts.ownerOf(mob).filter(player.getUUID()::equals).isEmpty()) {
-            ItemFeedback.send(player, ContractFeedback.of(ContractService.Failure.NOT_BOUND));
+            Component message = ContractFeedback.of(ContractService.Failure.NOT_BOUND);
+            if (player instanceof ServerPlayer serverPlayer) serverPlayer.sendSystemMessage(message, true);
             return InteractionResult.FAIL;
         }
         // Told before the entity leaves the world, so anything it wants to shut down on the way out still has a
@@ -59,7 +62,8 @@ public final class SpiritBeastBagItem extends Item {
         Contracts.captureListener(mob).ifPresent(listener -> listener.onCaptured(owner));
         stack.set(MxtDataComponents.SPIRIT_BEAST, SpiritBeastComponent.capture(mob, contract.contractType().orElseThrow(), owner));
         mob.discard();
-        ItemFeedback.send(player, Component.translatable("item.mxt.spirit_beast_bag.stored"));
+        Component message = Component.translatable("item.mxt.spirit_beast_bag.stored");
+        if (player instanceof ServerPlayer serverPlayer) serverPlayer.sendSystemMessage(message, true);
         return InteractionResult.SUCCESS;
     }
 
@@ -86,7 +90,8 @@ public final class SpiritBeastBagItem extends Item {
         if (restored instanceof Mob mob)
             Contracts.captureListener(mob).ifPresent(listener -> listener.onReleased(player));
         stack.set(MxtDataComponents.SPIRIT_BEAST, SpiritBeastComponent.EMPTY);
-        ItemFeedback.send(player, Component.translatable("item.mxt.spirit_beast_bag.released"));
+        Component message = Component.translatable("item.mxt.spirit_beast_bag.released");
+        if (player instanceof ServerPlayer serverPlayer) serverPlayer.sendSystemMessage(message, true);
         return InteractionResult.SUCCESS_SERVER;
     }
 
@@ -95,12 +100,14 @@ public final class SpiritBeastBagItem extends Item {
     public @NotNull InteractionResult use(@NotNull Level level, @NotNull Player player, @NotNull InteractionHand hand) {
         SpiritBeastComponent stored = player.getItemInHand(hand).getOrDefault(MxtDataComponents.SPIRIT_BEAST, SpiritBeastComponent.EMPTY);
         if (level.isClientSide() || !stored.stored()) return InteractionResult.PASS;
-        ItemFeedback.send(player, Component.translatable("item.mxt.spirit_beast_bag.release_hint"));
+        Component message = Component.translatable("item.mxt.spirit_beast_bag.release_hint");
+        if (player instanceof ServerPlayer serverPlayer) serverPlayer.sendSystemMessage(message, true);
         return InteractionResult.SUCCESS;
     }
 
     private static InteractionResult failed(Player player) {
-        ItemFeedback.send(player, Component.translatable("item.mxt.spirit_beast_bag.release_failed"));
+        Component message = Component.translatable("item.mxt.spirit_beast_bag.release_failed");
+        if (player instanceof ServerPlayer serverPlayer) serverPlayer.sendSystemMessage(message, true);
         return InteractionResult.FAIL;
     }
 }

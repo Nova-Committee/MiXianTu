@@ -39,21 +39,25 @@ public final class BeastTamingBellItem extends Item {
     public @NotNull InteractionResult interactLivingEntity(@NotNull ItemStack stack, @NotNull Player player, @NotNull LivingEntity target, @NotNull InteractionHand hand) {
         if (player.level().isClientSide()) return InteractionResult.SUCCESS;
         if (!(player instanceof ServerPlayer owner) || !(target instanceof Mob beast)) {
-            ItemFeedback.send(player, ContractFeedback.of(ContractService.Failure.NOT_CONTRACTABLE));
+            Component message = ContractFeedback.of(ContractService.Failure.NOT_CONTRACTABLE);
+            if (player instanceof ServerPlayer serverPlayer) serverPlayer.sendSystemMessage(message, true);
             return InteractionResult.FAIL;
         }
         ContractAttachment contract = beast.getData(MxtAttachments.CONTRACT);
         if (!contract.bound() || Contracts.ownerOf(beast).filter(owner.getUUID()::equals).isEmpty()) {
-            ItemFeedback.send(player, ContractFeedback.of(ContractService.Failure.NOT_BOUND));
+            Component message = ContractFeedback.of(ContractService.Failure.NOT_BOUND);
+            if (player instanceof ServerPlayer serverPlayer) serverPlayer.sendSystemMessage(message, true);
             return InteractionResult.FAIL;
         }
         // A beast the framework cannot ask for anything is not a beast to point a bell at, even bound.
         if (Contracts.operations(beast).isEmpty()) {
-            ItemFeedback.send(player, ContractFeedback.of(ContractService.Failure.NOT_CONTRACTABLE));
+            Component message = ContractFeedback.of(ContractService.Failure.NOT_CONTRACTABLE);
+            if (player instanceof ServerPlayer serverPlayer) serverPlayer.sendSystemMessage(message, true);
             return InteractionResult.FAIL;
         }
         ContractBells.select(stack, beast);
-        ItemFeedback.send(player, Component.translatable("item.mxt.beast_taming_bell.selected", beast.getDisplayName()));
+        Component message = Component.translatable("item.mxt.beast_taming_bell.selected", beast.getDisplayName());
+        if (player instanceof ServerPlayer serverPlayer) serverPlayer.sendSystemMessage(message, true);
         return InteractionResult.SUCCESS;
     }
 

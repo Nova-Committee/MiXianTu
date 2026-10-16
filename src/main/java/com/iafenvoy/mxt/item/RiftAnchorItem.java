@@ -6,6 +6,7 @@ import com.iafenvoy.mxt.registry.MxtDataComponents;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
@@ -36,8 +37,10 @@ public final class RiftAnchorItem extends Item {
             if (!level.isClientSide()) {
                 rift.setTarget(component.target());
                 rift.setColor(component.color());
-                if (player != null)
-                    ItemFeedback.send(player, Component.translatable("block.mxt.rift.retargeted", component.target().toString()));
+                if (player != null) {
+                    Component message = Component.translatable("block.mxt.rift.retargeted", component.target().toString());
+                    if (player instanceof ServerPlayer serverPlayer) serverPlayer.sendSystemMessage(message, true);
+                }
             }
             return InteractionResult.SUCCESS;
         }
@@ -45,7 +48,8 @@ public final class RiftAnchorItem extends Item {
             if (!level.isClientSide()) {
                 Identifier dimension = level.dimension().identifier();
                 stack.set(MxtDataComponents.RIFT, component.withTarget(dimension));
-                ItemFeedback.send(player, Component.translatable("item.mxt.rift_anchor.bound", dimension.toString()));
+                Component message = Component.translatable("item.mxt.rift_anchor.bound", dimension.toString());
+                if (player instanceof ServerPlayer serverPlayer) serverPlayer.sendSystemMessage(message, true);
             }
             return InteractionResult.SUCCESS;
         }

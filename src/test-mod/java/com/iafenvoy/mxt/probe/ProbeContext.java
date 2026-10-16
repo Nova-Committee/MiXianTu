@@ -179,8 +179,7 @@ public final class ProbeContext {
      */
     public void done() {
         if (!this.failures.isEmpty()) {
-            List<String> reported = this.failures;
-            this.helper.fail(Component.literal(this.report(reported)));
+            this.helper.fail(Component.literal(this.report(this.failures)));
         } else {
             this.helper.succeed();
         }
@@ -202,7 +201,7 @@ public final class ProbeContext {
     private String report(List<String> reported) {
         StringBuilder builder = new StringBuilder();
         for (String failure : reported) {
-            if (builder.length() > 0) builder.append("; ");
+            if (!builder.isEmpty()) builder.append("; ");
             builder.append(failure);
         }
         return builder.length() > REPORT_LIMIT ? builder.substring(0, REPORT_LIMIT) + "..." : builder.toString();

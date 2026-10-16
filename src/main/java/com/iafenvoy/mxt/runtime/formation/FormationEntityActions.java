@@ -1,24 +1,15 @@
 package com.iafenvoy.mxt.runtime.formation;
 
-import com.iafenvoy.mxt.attachment.AbilityAttachment;
-import com.iafenvoy.mxt.data.action.EntityAction;
-import com.iafenvoy.mxt.data.action.NoOpAction;
-import com.iafenvoy.mxt.data.context.action.EntityActionContext;
 import com.iafenvoy.mxt.data.formation.Formation;
 import com.iafenvoy.mxt.registry.MxtAttachments;
-import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
-import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.Sources;
-import com.iafenvoy.mxt.runtime.ability.AbilityEventBridge;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.phys.Vec3;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -27,39 +18,14 @@ import java.util.Set;
 import java.util.UUID;
 
 /**
- * The per-entity side of a formation: who was inside it last tick, the context each per-entity action receives,
- * and how a formation-scoped grant is released. It lives outside the ticker because teardown can also be called
- * directly through {@link FormationWorldService}, which would otherwise leave the grants of the entities it was
- * tracking. The presence set is in memory only.
+ * The per-entity side of a formation: who was inside it on the last beat, and how a formation-scoped grant is released. It
+ * lives outside the ticker because teardown can also be called directly through {@link FormationWorldService}, which
+ * would otherwise leave the grants of the entities it was tracking. The presence set is in memory only.
  */
 final class FormationEntityActions {
     private static final Map<ResourceKey<Level>, Map<BlockPos, Set<UUID>>> PRESENCE = new HashMap<>();
 
     private FormationEntityActions() {
-    }
-
-    static EntityActionContext context(Entity entity, FormationCarrier carrier, double radius, double distanceSquared) {
-        Vec3 center = carrier.center();
-        FormulaContext formula = FormulaContext.of(entity, Map.of(
-                "formation_radius", radius,
-                "distance", Math.sqrt(distanceSquared),
-                "formation_x", center.x,
-                "formation_y", center.y,
-                "formation_z", center.z
-        ));
-        EntityActionContext context = new EntityActionContext(entity, formula);
-        context.set(FormationCarrier.KEY, carrier);
-        return context;
-    }
-
-    // The attachment is read without being created: most entities that walk through a formation never held a
-    // granted ability.
-    static void release(Entity entity, Identifier source) {
-        if (!(entity instanceof LivingEntity living)) return;
-        AbilityAttachment abilities = living.getExistingData(MxtAttachments.ABILITY_HOLDER).orElse(null);
-        if (abilities == null || !abilities.sources().heldBy(source)) return;
-        if (abilities.reconcileSource(source, Set.of()))
-            AbilityEventBridge.rebuildTriggerSubscriptions(living);
     }
 
     // One source covers every instance of a definition, so an entity leaving one instance still holds the grant
@@ -74,23 +40,23 @@ final class FormationEntityActions {
         return false;
     }
 
-    // Releases everything the formation handed to the entities it was tracking, then forgets them. The exit
-    // action runs as well, because the formation's own deactivate_action is a block action and cannot reach them.
-    static void releaseTracked(ServerLevel level, BlockPos controller, FormationInstance instance) {
+    // Releases everything the formation handed to the entities it was tracking, runs their leaving beat, then
+    // forgets them. The array's own closing beat is not here, because a block action cannot see entities - which is
+    // exactly why this runs before it.
+    static void releaseTracked(ServerLevel level, BlockPos controller, FormationInstance instance,
+                               @Nullable Formation definition) {
         Set<UUID> tracked = forget(level, controller);
         if (tracked.isEmpty()) return;
-        double radius = instance.radius();
-        FormationCarrier carrier = new FormationCarrier(instance.formation(), controller, radius, instance.owners());
+        FormationCarrier carrier = FormationActionContext.carrier(instance, controller);
         Identifier source = Sources.formation(instance.formation());
-        EntityAction exit = MxtDatapackRegistries.get(level.registryAccess(), MxtResourceKeys.FORMATION, instance.formation())
-                .map(Formation::entityExitAction).orElse(NoOpAction.INSTANCE);
         for (UUID id : tracked) {
             // An entity the level can no longer resolve has no attachments left to release, and counts as
             // newly arrived if it comes back.
             Entity entity = level.getEntities().get(id);
             if (entity == null) continue;
-            if (!coveredElsewhere(level, entity, instance.formation())) release(entity, source);
-            exit.execute(context(entity, carrier, radius, entity.distanceToSqr(carrier.center())));
+            if (!coveredElsewhere(level, entity, instance.formation())) FormationGrants.release(entity, source);
+            if (definition != null)
+                FormationActionRunner.inactivate(definition, new FormationActionContext(level, carrier, entity));
         }
     }
 

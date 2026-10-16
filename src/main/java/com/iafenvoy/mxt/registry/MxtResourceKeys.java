@@ -27,6 +27,8 @@ import com.iafenvoy.mxt.data.forging.ForgingMethod;
 import com.iafenvoy.mxt.data.forging.ToolBinding;
 import com.iafenvoy.mxt.data.formation.Formation;
 import com.iafenvoy.mxt.data.formation.FormationActionType;
+import com.iafenvoy.mxt.data.formation.FormationShape;
+import com.iafenvoy.mxt.data.formation.FormationStroke;
 import com.iafenvoy.mxt.data.item.*;
 import com.iafenvoy.mxt.data.progression.Progression;
 import com.iafenvoy.mxt.data.quality.DefaultQuality;
@@ -86,6 +88,7 @@ public final class MxtResourceKeys {
     public static final ResourceKey<Registry<MapCodec<? extends ResourceBarVisibility>>> RESOURCE_BAR_VISIBILITY_TYPE = create("resource_bar_visibility_type");
     public static final ResourceKey<Registry<MapCodec<? extends Entry>>> ITEM_MATCHER_ENTRY_TYPE = create("item_matcher_entry_type");
     public static final ResourceKey<Registry<MapCodec<? extends FormationActionType>>> FORMATION_ACTION_TYPE = create("formation_action_type");
+    public static final ResourceKey<Registry<MapCodec<? extends FormationStroke>>> FORMATION_STROKE_TYPE = create("formation_stroke_type");
     public static final ResourceKey<Registry<MapCodec<? extends TimelineEntry>>> TIMELINE_ENTRY_TYPE = create("timeline_entry_type");
     public static final ResourceKey<Registry<MapCodec<? extends SecretRealmGeneration>>> SECRET_REALM_GENERATION_TYPE = create("secret_realm_generation_type");
 
@@ -113,6 +116,7 @@ public final class MxtResourceKeys {
     public static final ResourceKey<Registry<AlchemyWallMaterial>> ALCHEMY_WALL_MATERIAL = create("alchemy_wall_material");
     public static final ResourceKey<Registry<HeatSource>> HEAT_SOURCE = create("heat_source");
     public static final ResourceKey<Registry<Formation>> FORMATION = create("formation");
+    public static final ResourceKey<Registry<FormationShape>> FORMATION_SHAPE = create("formation_shape");
     public static final ResourceKey<Registry<Tribulation>> TRIBULATION = create("tribulation");
     public static final ResourceKey<Registry<CreatureProfile>> CREATURE_PROFILE = create("creature_profile");
     public static final ResourceKey<Registry<ContractType>> CONTRACT_TYPE = create("contract_type");

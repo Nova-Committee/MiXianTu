@@ -62,7 +62,8 @@ public final class SpiritVesselItem extends Item implements ItemAuraAccess {
         // A sneaking click is never a hold, so it is left to whatever else the player is doing.
         if (player.isShiftKeyDown()) return InteractionResult.PASS;
         // Nothing was armed because there is nothing to pour, which is the one thing this click can say.
-        ItemFeedback.send(player, Component.translatable("item.mxt.spirit_vessel.release_failed"));
+        Component message = Component.translatable("item.mxt.spirit_vessel.release_failed");
+        if (player instanceof ServerPlayer serverPlayer) serverPlayer.sendSystemMessage(message, true);
         return InteractionResult.FAIL;
     }
 

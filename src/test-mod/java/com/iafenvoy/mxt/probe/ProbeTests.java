@@ -14,6 +14,7 @@ import com.iafenvoy.mxt.probe.creature.PerchProbes;
 import com.iafenvoy.mxt.probe.creature.ProgressionProbes;
 import com.iafenvoy.mxt.probe.cultivation.CultivationProbes;
 import com.iafenvoy.mxt.probe.cultivation.IdentityProbes;
+import com.iafenvoy.mxt.probe.formation.FormationProbes;
 import com.iafenvoy.mxt.probe.herb.HerbProbes;
 import com.iafenvoy.mxt.probe.item.DrawingProbes;
 import com.iafenvoy.mxt.probe.item.QualityProbes;
@@ -64,6 +65,7 @@ public final class ProbeTests {
     private static final List<Supplier<List<Probe>>> DOMAINS = List.of(
             SmokeProbes::probes,
             MessageProbes::probes,
+            FormationProbes::probes,
             PickerProbes::probes,
             SwordAuraProbes::probes,
             AlchemyGateProbes::probes,

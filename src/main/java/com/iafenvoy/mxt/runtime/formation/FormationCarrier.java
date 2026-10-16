@@ -10,9 +10,11 @@ import java.util.UUID;
 
 /**
  * The formation currently being evaluated, handed to every per-entity action as {@link Context} extension data:
- * which formation it is, where its centre is and who owns it. Numbers go into the formula's explicit value map.
+ * which formation it is, where its centre is, who owns it and when it was raised. Numbers go into the formula's
+ * explicit value map.
  */
-public record FormationCarrier(Identifier id, BlockPos controller, double radius, FormationOwners owners) {
+public record FormationCarrier(Identifier id, BlockPos controller, double radius, FormationOwners owners,
+                               long activatedAt) {
     // Read it through of(Context) rather than directly: the extension map is untyped.
     public static final String KEY = "mxt:formation";
 

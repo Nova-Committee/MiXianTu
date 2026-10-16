@@ -1,6 +1,6 @@
 # Tools
 
-Five scripts and one HTML tool live here, none of which is part of the mod build:
+Five scripts, two browser tools and one check script live here, none of which is part of the mod build:
 
 | File | What it is |
 | --- | --- |
@@ -10,6 +10,8 @@ Five scripts and one HTML tool live here, none of which is part of the mod build
 | `codex_token_usage.py` | Tallies Codex token spend from local rollout logs, filtered by working directory. |
 | `export_alchemy_furnace.py` | Splits the Blockbench furnace export into multiblock models, blockstates and matching Java collision shapes. |
 | `talisman_strokes.html` | A browser editor for a drawing recipe's `pattern.strokes`. Documented below. |
+| `formation_figure.html` | A browser editor for a formation's figure: the ring and the star an array draws. Documented below. |
+| `formation_figure_check.mjs` | Its check: `node tools/formation_figure_check.mjs` runs that page's own script against a stub DOM and compares the geometry with the mod's. |
 
 ## Alchemy Furnace (`export_alchemy_furnace.py`)
 
@@ -213,3 +215,115 @@ It is deliberately only the shape. The recipe still needs its `talisman`, its `r
 else it declares, and the tool does not write `pattern.tolerance` / `guide` / `show_order` — those are recipe
 fields, not strokes. Scoring resamples every 2 px and simplifies at `0.5 × tolerance` (6.3 px at the default
 `0.06`), so points closer together than that do not survive it.
+
+## Formation Figure (`formation_figure.html`)
+
+A single-file editor for a formation's figure — the ring plus the star an `mxt:particle` module draws. Open it straight
+from disk: `file://`, no build step, no server, no dependencies. The board is the array seen from straight above, in
+the mod's own coordinates: **+X to the right (east), +Z downwards (south), north up**, and the ring at r = 1 is the
+circle the array's `radius` draws. Each end of the two axes carries its compass letter and the coordinate it sits at
+(`1` on the ring, `-1` the same distance the other way), so the ring reads as the array's own edge. Coordinates are in
+**units of that radius**, so one figure scales with every array that reads it.
+
+**What it writes is one `mxt:formation_shape` entry**: save it as `data/<namespace>/mxt/formation_shape/<name>.json`
+and name it from an `mxt:particle` module's `shape`. `mxt:five` (the ring plus a pentagram), `mxt:six` and `mxt:eight`
+are the three the mod ships itself, and the board opens on `five`.
+
+**Two primitives only: polylines and circles.** That is not a UI simplification, it is the renderer's own vocabulary —
+`FormationShapePath` walks a circle by angle from due east and a polyline by arc length from its first point, and there
+is nothing else it can sample. A stroke's `type` is a registry id like any other, so it carries its namespace:
+
+```json
+{
+  "strokes": [
+    {"type": "mxt:circle", "radius": 1, "gradient": [{"at": 0, "color": "#80c0ff"}, {"at": 1, "color": "#ffffff"}]},
+    {"type": "mxt:polyline", "points": [[1, 0], [-0.809, 0.588], [0.309, -0.951], [0.309, 0.951], [-0.809, -0.588], [1, 0]], "color": "#ffd76a"}
+  ]
+}
+```
+
+A circle's optional `center` defaults to the controller, and both primitives start where the renderer starts them, so
+where a stroke begins is also how it grows; a circle begins due east unless its `start_angle` (degrees past east,
+positive towards +Z) says otherwise. **The namespace is required in the file** — a bare `"circle"` is
+`minecraft:circle` to the mod and fails the whole definition — but the editor reads one anyway and writes it back as
+`mxt:circle`, so a figure saved before the ids were namespaced loads and comes out fixed.
+
+Editing:
+
+* **Polyline** — click vertices, `Enter` / a right click / a double click ends the stroke, `Esc` drops it.
+* **Circle** — press where the centre goes and drag out the radius. The centre is **wherever you press**, so a circle
+  need not sit on the controller; the controller is a snap target of its own, so putting one there is still one click.
+  A circle is grabbed later by dragging **its centre or its start point**, both of which are drawn on the board: the
+  start point is also the rim, so dragging it out sets the radius and dragging it round turns the circle (snapping to
+  the divisions when those are on).
+* **Drag an existing vertex** to move it, `⇄` in the list reverses a stroke so it grows the other way, `✕` removes it,
+  `Ctrl+Z` / `Ctrl+Y` undo and redo, and `Load from JSON` takes back either a bare stroke list or a block that holds one.
+* **Snapping** is the three things that make a regular figure exact instead of nearly right: a 0.05 grid, the ring
+  (r = 1), and the **N divisions of the circle** — N rays out of the controller with **angle 0 due east**, one every
+  360/N degrees. The ring and the divisions beat the grid, so a vertex of a regular figure is not rounded twice, and a
+  click near a ray keeps its radius and lands exactly on the ray. `rays` draws them, `Rays` writes them out as strokes
+  (one two-point polyline each, out of the controller) — which is also the fastest way to author a spoke figure.
+* **`Star N/K`** writes the {N/K} star the way `FormationShape` builds it — one closed polyline per cycle of the step —
+  so `5/2` is `five`, `6/2` is `six` (two triangles), `8/2` is `eight` (two squares) and `K = 1` is the plain N-gon.
+  `N-gon` adds one closed polyline; all three generators are undoable.
+* **Paint** is per stroke and applies to what a stroke is drawn and grown as: `solid` (one hex) or `gradient` — a ramp
+  **along the stroke's own length**, `at` 0 at its first point and 1 at its last, held outside the outermost stops.
+  There is no figure-wide colour to fall back to, so a stroke always carries one of the two and a fresh stroke is
+  painted in the `new stroke colour`. The strip under the controls is that ramp (and the list carries a swatch of
+  it): **click the strip to add a stop, drag a marker to move one**, `+ stop` / `− stop` for the middle and the ends,
+  and select a stop to recolour it with the picker. A ramp is painted on the client in 32 flat steps rather than dot by
+  dot, which is indistinguishable at the size of a dust quad.
+* **`start` / `end`** are the window of the draw-in the selected stroke belongs to: the figure's progress is mapped
+  onto it, so `start: 0.5` keeps a stroke for the second half and `start: 0.5, end: 1` on one stroke with `end: 0.5` on
+  the next draws them one after another. A window has to open (`start` below `end`), so the two inputs never cross —
+  the one being typed in wins and the other moves out of the way. `start_angle` is a circle's start in degrees and is
+  disabled for a polyline, which starts at its first point.
+* **`spacing` / `size`** are the stroke's own too: how many blocks apart its dusts sit and how big each one is drawn,
+  standard (`0.33` and `2`) unless it says otherwise. A figure is therefore free to carry a sparse outer ring and a
+  dense inner detail, and both fields are left out of the file while they are the standard ones.
+
+What it shows, and why:
+
+* **The growth**, because the game's rule is not a tool setting: every stroke is cut at its own share of the progress
+  (its window, which is the whole draw-in unless it asks for less), so strokes written with the same window grow
+  together. The slider is that progress, and **`Play` runs the draw-in the way the game plays it** —
+  `duration_ticks` ticks at 20 a second, from the first point of the first stroke to the last of the last.
+* **The animation's own knobs are preview-only.** `speed` is the list `0.1× 0.25× 0.5× 1× 1.5× 2× 3× 4× 6× 8×` (the
+  default is the game's own 1×, which is why a `duration_ticks: 24000` draw-in is worth slowing down or, the other way,
+  a 20-tick one worth speeding up), `loop` repeats it with a short hold on the finished figure so the restart is not a
+  flicker, and the clock next to them reads off `elapsed / duration_ticks` — the ticks the game would have laid out by
+  now. Changing the speed or the duration while it runs keeps the picture where it is instead of jumping. **None of the
+  three is part of a figure and none of them is written to the file**; `duration_ticks` is the module's field and is.
+* **The cost** — points per stroke are the mod's own `ceil(length in blocks / that stroke's spacing) + 1`, counted
+  against the radius you type, so the readout is what one frame of that array asks the client for. The dots are painted
+  at the dust quad size that stroke's `size` asks for, so `size` reads the way it will in game.
+* **The lines animate too, not just the dust.** `lines` strokes each stroke from its own start to wherever the walk has
+  reached — a circle is swept by angle, a polyline is walked by arc length, both cut at the stroke's window — so with
+  `dust` off you are watching the figure being written rather than the figure being dusted. What has not been reached
+  yet stays on as a **ghost** at the same place, which is what keeps a half-drawn figure editable and stops progress 0
+  from being a blank board.
+* **The problems** — a stroke with no length, and a stroke that wants the whole `MAX_POINTS_PER_STROKE = 2048` ceiling
+  at this radius and its own spacing, after which its far end is dropped. A figure drawn past the ring is not one of
+  them: it is drawn past the array's edge, which is what the axis labels are there to show.
+
+**Nothing here is a plan.** `mxt:particle`'s `shape` names a `mxt:formation_shape`, and the mod reads exactly what this
+page writes: the two stroke ids, `[x, z]` in units of the array's radius, `center`, `points`, `start_angle`, the
+`start` / `end` window, `spacing`, `size`, `color` and the `{"at", "color"}` ramp stops. Only `radius` (the array's own)
+and the preview knobs belong to something other than the figure — they are inputs here so the preview and the count are
+honest, and `radius` never reaches the file either. A stroke must carry a colour **or** a ramp, never both and never
+neither, the stops have to be written in ascending order, the window has to open, a `start_angle` outside one turn
+either way is refused, and the spacing and size are bounded like the module's used to be: any of those fails the whole
+definition at load.
+
+`formation_figure_check.mjs` keeps the page honest: it runs the page's own script against a stub DOM and checks that its
+geometry agrees with the mod — the vertex convention, all three built-in shapes rebuilt from the {N/K} rule, the
+divisions and the ray snapping, the truncation at half progress, the windows (a stroke untouched before its window
+opens, half a stroke half way through one), the start angles, the per-stroke `spacing` and `size` (the count at 0.33, 1
+and 2, the fields written only when they are not the standard ones, and the load-time bounds), the animation (the clock
+at half a 60-tick draw-in, the hold and the loop, the ramp re-anchoring when the speed changes mid-play), **the line
+layer** (the stub canvas records every `arc` / `lineTo` with the style in force, so a half-drawn ring has to be half a
+turn of arc, a walked stroke has to end on its own halfway point, and a finished one has to be whole with no ghost
+left), the ramps and the JSON round trip (including the load-time refusals: a stroke with both a colour and a ramp, a
+stroke with neither, a ramp with fewer than two stops, a window that never opens, an angle past one turn), and the point
+counts the mod's own formation probe uses (52 points for the ring plus 78 for the pentagram at radius 8 and a spacing of
+1, which is the probe's 130).

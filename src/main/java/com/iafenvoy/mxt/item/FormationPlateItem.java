@@ -23,6 +23,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.context.UseOnContext;
 import org.jetbrains.annotations.NotNull;
@@ -57,22 +58,26 @@ public final class FormationPlateItem extends Item {
         if (selected.isPresent()) return activate(level, clicked, player, selected.get());
         // Two different situations: "pick a formation" against "this plate was bound to one it may not run".
         if (plate.formation().isPresent()) {
-            ItemFeedback.send(player, Component.translatable("item.mxt.formation_plate.not_allowed"));
+            Component message = Component.translatable("item.mxt.formation_plate.not_allowed");
+            if ((Player) player instanceof ServerPlayer serverPlayer) serverPlayer.sendSystemMessage(message, true);
             return InteractionResult.FAIL;
         }
         if (!MxtServerConfig.INSTANCE.formations.plateAutoDetect.getValue()) {
-            ItemFeedback.send(player, Component.translatable("item.mxt.formation_plate.unbound"));
+            Component message = Component.translatable("item.mxt.formation_plate.unbound");
+            if ((Player) player instanceof ServerPlayer serverPlayer) serverPlayer.sendSystemMessage(message, true);
             return InteractionResult.FAIL;
         }
         // Sorted, so two definitions describing the same structure resolve to the same one every time.
         List<Holder<Formation>> admissible = admissibleCandidates(plate, level.registryAccess());
         if (admissible.isEmpty()) {
-            ItemFeedback.send(player, Component.translatable("item.mxt.formation_plate.not_allowed"));
+            Component message = Component.translatable("item.mxt.formation_plate.not_allowed");
+            if ((Player) player instanceof ServerPlayer serverPlayer) serverPlayer.sendSystemMessage(message, true);
             return InteractionResult.FAIL;
         }
         Optional<Match> match = FormationCenters.resolveAny(level, clicked, admissible);
         if (match.isEmpty()) {
-            ItemFeedback.send(player, Component.translatable("item.mxt.formation_plate.no_structure"));
+            Component message = Component.translatable("item.mxt.formation_plate.no_structure");
+            if ((Player) player instanceof ServerPlayer serverPlayer) serverPlayer.sendSystemMessage(message, true);
             return InteractionResult.FAIL;
         }
         // The matched centre is the formation the identification found, so it is raised as it stands rather
@@ -101,11 +106,13 @@ public final class FormationPlateItem extends Item {
         Result result = FormationWorldService.activate(level, center, HolderHelper.id(formation),
                 formation.value(), player.getData(MxtAttachments.RESOURCE_HOLDER), FormulaContexts.forEntity(player), player.getUUID());
         if (!result.active()) {
-            ItemFeedback.send(player, Component.translatable("item.mxt.formation_plate.failed", failure(result.failure())));
+            Component message = Component.translatable("item.mxt.formation_plate.failed", failure(result.failure()));
+            if ((Player) player instanceof ServerPlayer serverPlayer) serverPlayer.sendSystemMessage(message, true);
             return InteractionResult.FAIL;
         }
-        ItemFeedback.send(player, Component.translatable("item.mxt.formation_plate.activated",
-                DefinitionText.nameOrId(formation)));
+        Component message = Component.translatable("item.mxt.formation_plate.activated",
+                DefinitionText.nameOrId(formation));
+        if ((Player) player instanceof ServerPlayer serverPlayer) serverPlayer.sendSystemMessage(message, true);
         return InteractionResult.SUCCESS;
     }
 
@@ -119,11 +126,13 @@ public final class FormationPlateItem extends Item {
         FormationInstance instance = level.getData(MxtAttachments.FORMATION_WORLD).get(controller).orElse(null);
         if (instance == null) return InteractionResult.FAIL;
         if (!FormationRelations.canDismantle(instance, player)) {
-            ItemFeedback.send(player, Component.translatable("item.mxt.formation_plate.denied"));
+            Component message = Component.translatable("item.mxt.formation_plate.denied");
+            if ((Player) player instanceof ServerPlayer serverPlayer) serverPlayer.sendSystemMessage(message, true);
             return InteractionResult.FAIL;
         }
         if (!FormationWorldService.deactivate(level, controller)) return InteractionResult.FAIL;
-        ItemFeedback.send(player, Component.translatable("item.mxt.formation_plate.deactivated"));
+        Component message = Component.translatable("item.mxt.formation_plate.deactivated");
+        if ((Player) player instanceof ServerPlayer serverPlayer) serverPlayer.sendSystemMessage(message, true);
         return InteractionResult.SUCCESS;
     }
 }

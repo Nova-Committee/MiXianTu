@@ -13,7 +13,7 @@
   "radius": 8,
   "actions": [
     {
-      "type": "mxt:buff",
+      "type": "mxt:aura",
       "max_bonus": { "mxt_test:spirit_power": 37.5 },
       "aura_zone": "mxt_test:spirit_gathering"
     }

@@ -1,0 +1,21 @@
+{
+  "structure": [
+    { "offset": [0, 0, 0], "state": "minecraft:amethyst_block" },
+    { "offset": [-1, 0, -1], "state": "minecraft:purpur_block" },
+    { "offset": [0, 0, -1], "state": "minecraft:purpur_block" },
+    { "offset": [1, 0, -1], "state": "minecraft:purpur_block" },
+    { "offset": [-1, 0, 0], "state": "minecraft:purpur_block" },
+    { "offset": [1, 0, 0], "state": "minecraft:purpur_block" },
+    { "offset": [-1, 0, 1], "state": "minecraft:purpur_block" },
+    { "offset": [0, 0, 1], "state": "minecraft:purpur_block" },
+    { "offset": [1, 0, 1], "state": "minecraft:purpur_block" }
+  ],
+  "radius": 8,
+  "actions": [
+    {
+      "type": "mxt:particle",
+      "shape": "mxt:eight",
+      "duration_ticks": 60
+    }
+  ]
+}

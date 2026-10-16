@@ -30,22 +30,26 @@ public final class ContractScrollItem extends Item {
         if (player.level().isClientSide()) return InteractionResult.SUCCESS;
         ContractScrollComponent scroll = stack.getOrDefault(MxtDataComponents.CONTRACT_SCROLL, ContractScrollComponent.EMPTY);
         if (scroll.contractType().isEmpty()) {
-            ItemFeedback.send(player, Component.translatable("item.mxt.contract_scroll.unbound"));
+            Component message = Component.translatable("item.mxt.contract_scroll.unbound");
+            if (player instanceof ServerPlayer serverPlayer) serverPlayer.sendSystemMessage(message, true);
             return InteractionResult.FAIL;
         }
         // Only a Mob can be a contract subject, and only a server player can own one; both are plain answers
         // rather than errors, so the scroll reports them the way it reports any other refusal.
         if (!(player instanceof ServerPlayer owner) || !(target instanceof Mob creature)) {
-            ItemFeedback.send(player, ContractFeedback.of(ContractService.Failure.NOT_CONTRACTABLE));
+            Component message = ContractFeedback.of(ContractService.Failure.NOT_CONTRACTABLE);
+            if (player instanceof ServerPlayer serverPlayer) serverPlayer.sendSystemMessage(message, true);
             return InteractionResult.FAIL;
         }
         Result result = ContractService.bind(scroll.contractType().orElseThrow(), owner, creature, false);
         if (!result.changed()) {
-            ItemFeedback.send(player, ContractFeedback.of(result.failure()));
+            Component message = ContractFeedback.of(result.failure());
+            if (player instanceof ServerPlayer serverPlayer) serverPlayer.sendSystemMessage(message, true);
             return InteractionResult.FAIL;
         }
         if (!player.getAbilities().instabuild) stack.shrink(1);
-        ItemFeedback.send(player, Component.translatable("item.mxt.contract_scroll.bound"));
+        Component message = Component.translatable("item.mxt.contract_scroll.bound");
+        if (player instanceof ServerPlayer serverPlayer) serverPlayer.sendSystemMessage(message, true);
         return InteractionResult.SUCCESS;
     }
 }

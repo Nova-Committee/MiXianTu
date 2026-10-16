@@ -1,8 +1,6 @@
 package com.iafenvoy.mxt.data.formation;
 
 import com.iafenvoy.mxt.api.QualityProvider;
-import com.iafenvoy.mxt.data.action.BlockAction;
-import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.cost.Cost;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
@@ -30,19 +28,18 @@ import java.util.Optional;
 import java.util.function.Function;
 
 /**
- * A formation's static shape, resource costs and lifecycle actions. The shape is declared one of two ways,
- * never both: {@code structure_template}, whose air entries are ignored so a template says what must be present
- * and never what must be absent, or {@code structure}, an inline list of required blocks at offsets from the
- * controller. {@code spare_friends} decides whether per-entity work goes to everyone the array covers or only to
- * those its owner does not recognise; what the array is for is its actions, not this field. {@code quality} is the
- * tier a plate carrying this array starts on, which several arrays sharing one built-in plate cannot state by item.
+ * A formation's static shape, its resource costs and what it does as a list of modules ({@code actions}); everything
+ * that happens at a beat is one of those modules. The shape is declared one of two ways, never both:
+ * {@code structure_template}, whose air entries are ignored so a template says what must be present and never what
+ * must be absent, or {@code structure}, an inline list of required blocks at offsets from the controller.
+ * {@code spare_friends} decides whether per-entity work goes to everyone the array covers or only to those its owner
+ * does not recognise; what the array is for is its actions, not this field. {@code quality} is the tier a plate
+ * carrying this array starts on, which several arrays sharing one built-in plate cannot state by item.
  */
 public record Formation(Optional<Holder<ItemQuality>> quality, Optional<Identifier> structureTemplate,
                         StructureCheck structureCheck, List<RequiredBlock> structure, NumberProvider radius,
                         List<Cost> activationCosts, List<Cost> maintenanceCosts, Optional<Storage> storage,
-                        List<FormationActionType> actions, boolean spareFriends, BlockAction activateAction,
-                        BlockAction tickAction, BlockAction deactivateAction, EntityAction entityTickAction,
-                        EntityAction entityEnterAction, EntityAction entityExitAction) implements QualityProvider {
+                        List<FormationActionType> actions, boolean spareFriends) implements QualityProvider {
     public static final Codec<Holder<Formation>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.FORMATION);
     public static final Codec<Formation> DIRECT_CODEC = RecordCodecBuilder.<Formation>create(i -> i.group(
             ItemQuality.CODEC.optionalFieldOf("quality").forGetter(Formation::quality),
@@ -57,13 +54,7 @@ public record Formation(Optional<Holder<ItemQuality>> quality, Optional<Identifi
             // and absent is the answer most arrays give, so this is one field rather than a module.
             Storage.CODEC.optionalFieldOf("storage").forGetter(Formation::storage),
             FormationActionType.CODEC.listOf().optionalFieldOf("actions", List.of()).forGetter(Formation::actions),
-            Codec.BOOL.optionalFieldOf("spare_friends", false).forGetter(Formation::spareFriends),
-            BlockAction.optionalCodec("activate_action").forGetter(Formation::activateAction),
-            BlockAction.optionalCodec("tick_action").forGetter(Formation::tickAction),
-            BlockAction.optionalCodec("deactivate_action").forGetter(Formation::deactivateAction),
-            EntityAction.optionalCodec("entity_tick_action").forGetter(Formation::entityTickAction),
-            EntityAction.optionalCodec("entity_enter_action").forGetter(Formation::entityEnterAction),
-            EntityAction.optionalCodec("entity_exit_action").forGetter(Formation::entityExitAction)
+            Codec.BOOL.optionalFieldOf("spare_friends", false).forGetter(Formation::spareFriends)
     ).apply(i, Formation::new)).flatXmap(Formation::validate, Formation::validate);
 
     /**

@@ -34,21 +34,24 @@ public final class SecretRealmTokenItem extends Item {
         SecretRealmTravelAttachment travel = serverPlayer.getData(MxtAttachments.SECRET_REALM_TRAVEL);
         if (travel.active()) {
             Result result = SecretRealmService.exit(serverPlayer);
-            ItemFeedback.send(player, result.changed()
+            Component message = result.changed()
                     ? Component.translatable("item.mxt.secret_realm_token.exited")
-                    : result.message().orElseGet(() -> Component.translatable("item.mxt.secret_realm_token.exit_failed")));
+                    : result.message().orElseGet(() -> Component.translatable("item.mxt.secret_realm_token.exit_failed"));
+            if (player instanceof ServerPlayer serverPlayer1) serverPlayer1.sendSystemMessage(message, true);
             return result.changed() ? InteractionResult.SUCCESS_SERVER : InteractionResult.FAIL;
         }
         SecretRealmTokenComponent token = stack.getOrDefault(MxtDataComponents.SECRET_REALM_TOKEN, SecretRealmTokenComponent.EMPTY);
         if (token.realm().isEmpty()) {
-            ItemFeedback.send(player, Component.translatable("item.mxt.secret_realm_token.unbound"));
+            Component message = Component.translatable("item.mxt.secret_realm_token.unbound");
+            if (player instanceof ServerPlayer serverPlayer1) serverPlayer1.sendSystemMessage(message, true);
             return InteractionResult.FAIL;
         }
         Holder<SecretRealm> realm = token.realm().orElseThrow();
         Result result = SecretRealmService.enter(serverPlayer, serverPlayer.level().getServer(), realm);
-        ItemFeedback.send(player, result.changed()
+        Component message = result.changed()
                 ? Component.translatable("item.mxt.secret_realm_token.entered")
-                : result.message().orElseGet(() -> Component.translatable("item.mxt.secret_realm_token.enter_failed", result.failure().name())));
+                : result.message().orElseGet(() -> Component.translatable("item.mxt.secret_realm_token.enter_failed", result.failure().name()));
+        if (player instanceof ServerPlayer serverPlayer1) serverPlayer1.sendSystemMessage(message, true);
         return result.changed() ? InteractionResult.SUCCESS_SERVER : InteractionResult.FAIL;
     }
 }

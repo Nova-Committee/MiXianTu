@@ -45,6 +45,7 @@ public final class MiXianTu {
         MxtEntityDataSerializers.REGISTRY.register(bus);
         MxtEntityTypes.REGISTRY.register(bus);
         MxtFormationActionTypes.REGISTRY.register(bus);
+        MxtFormationStrokeTypes.REGISTRY.register(bus);
         MxtFormulaFunctions.REGISTRY.register(bus);
         MxtFormulaVariables.REGISTRY.register(bus);
         MxtIngredientTypes.REGISTRY.register(bus);

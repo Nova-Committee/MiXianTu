@@ -29,6 +29,7 @@ public final class MxtTestMod {
         HerbTestBlocks.register(modBus);
         MxtTestEntities.REGISTRY.register(modBus);
         PillProbeActions.REGISTRY.register(modBus);
+        FormationProbeActions.REGISTRY.register(modBus);
         ProbeMountRenders.REGISTRY.register(modBus);
         modBus.addListener(MxtTestMod::registerAttributes);
         modBus.addListener(ProbeTests::registerFunctions);

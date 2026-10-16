@@ -55,28 +55,33 @@ public final class FormationWorldService {
         if (!activated.active()) return Result.rejected(Failure.ACTIVATION_FAILED, activated.failedResource());
         if (!world.put(controller, activated.instance()))
             throw new IllegalStateException("Formation controller became occupied during activation");
+        // Stamped before the opening beat, so a display module that animates from the moment of raising measures from
+        // this one rather than from whenever its own first beat happens to land.
+        activated.instance().activated(level.getGameTime());
         // A ward whose delegation cannot be honoured falls back to its own flags; the report belongs here,
         // where the definition was just chosen.
         FormationProtection.warnIfDelegationFallsBack(id, definition);
         // The formation now absorbs the block emitters inside its radius, so every chunk it reaches has to
         // rebuild its block aura, or the absorbed ones would be counted in the shared stock as well.
         invalidateAura(level, controller, activated.instance().radius());
-        definition.activateAction().execute(level, controller, context);
+        FormationActionRunner.activate(definition, FormationActionContext.array(level, controller, activated.instance()));
         return Result.activated(activated.instance());
     }
 
-    // The single teardown path, so the deactivate action and the Deactivate event cannot drift apart between
-    // callers. Entities the formation was tracking are released first, because deactivate_action is a block
-    // action and cannot see them.
+    // The single teardown path, so the closing beat and the Deactivate event cannot drift apart between callers.
+    // The entities the formation was tracking are released first, because its own closing beat is a block action and
+    // cannot see them.
     public static boolean deactivate(ServerLevel level, BlockPos controller) {
         FormationInstance instance = level.getData(MxtAttachments.FORMATION_WORLD).remove(controller).orElse(null);
         if (instance == null) return false;
         // The emitters this formation was absorbing return to the environment, so the chunks it covered
         // have to rebuild their block aura.
         invalidateAura(level, controller, instance.radius());
-        FormationEntityActions.releaseTracked(level, controller, instance);
-        MxtDatapackRegistries.get(level.registryAccess(), MxtResourceKeys.FORMATION, instance.formation())
-                .ifPresent(definition -> definition.deactivateAction().execute(level, controller, FormulaContext.of(level)));
+        Formation definition = MxtDatapackRegistries.get(level.registryAccess(), MxtResourceKeys.FORMATION, instance.formation())
+                .orElse(null);
+        FormationEntityActions.releaseTracked(level, controller, instance, definition);
+        if (definition != null)
+            FormationActionRunner.inactivate(definition, FormationActionContext.array(level, controller, instance));
         NeoForge.EVENT_BUS.post(new Deactivate(level, controller, instance));
         return true;
     }

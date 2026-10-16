@@ -5,9 +5,14 @@
     { "offset": [0, 0, 2], "state": "minecraft:iron_block" }
   ],
   "radius": 8,
-  "entity_tick_action": {
-    "type": "mxt:apply_effect",
-    "effect": "minecraft:glowing",
-    "duration_ticks": 200
-  }
+  "actions": [
+    {
+      "type": "mxt:tick",
+      "entity_action": {
+        "type": "mxt:apply_effect",
+        "effect": "minecraft:glowing",
+        "duration_ticks": 200
+      }
+    }
+  ]
 }

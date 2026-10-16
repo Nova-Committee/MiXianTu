@@ -50,14 +50,16 @@ public final class RewardBoxItem extends Item implements TooltipAppender {
         if (!(player instanceof ServerPlayer serverPlayer)) return InteractionResult.SUCCESS;
         ResourceKey<LootTable> key = stack.get(MxtDataComponents.REWARD_BOX);
         if (key == null) {
-            ItemFeedback.send(player, Component.translatable("item.mxt.reward_box.unbound"));
+            Component message = Component.translatable("item.mxt.reward_box.unbound");
+            if (player instanceof ServerPlayer serverPlayer1) serverPlayer1.sendSystemMessage(message, true);
             return InteractionResult.FAIL;
         }
         ServerLevel serverLevel = serverPlayer.level();
         LootTable table = serverLevel.getServer().reloadableRegistries().getLootTable(key);
         // A table nobody provides resolves to the empty one, which would roll nothing and take the box with it.
         if (table == LootTable.EMPTY) {
-            ItemFeedback.send(player, Component.translatable("item.mxt.reward_box.missing", key.identifier().toString()));
+            Component message = Component.translatable("item.mxt.reward_box.missing", key.identifier().toString());
+            if (player instanceof ServerPlayer serverPlayer1) serverPlayer1.sendSystemMessage(message, true);
             return InteractionResult.FAIL;
         }
         LootParams params = new LootParams.Builder(serverLevel)

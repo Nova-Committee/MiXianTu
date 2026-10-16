@@ -1,6 +1,8 @@
 package com.iafenvoy.mxt.registry;
 
 import com.iafenvoy.mxt.MiXianTu;
+import com.iafenvoy.mxt.particle.FormationParticleOptions;
+import com.iafenvoy.mxt.particle.FormationParticleType;
 import com.iafenvoy.mxt.particle.RiftParticleType;
 import com.iafenvoy.mxt.particle.SpiritWispParticleOptions;
 import com.iafenvoy.mxt.particle.SpiritWispParticleType;
@@ -17,4 +19,8 @@ public final class MxtParticleTypes {
     // The vanilla portal particle, but taking the colour of the rift it comes from instead of the portal's fixed
     // violet; the colour rides along as a ColorParticleOption, so a rift sends nothing extra for its particles.
     public static final DeferredHolder<ParticleType<?>, ParticleType<ColorParticleOption>> RIFT = REGISTRY.register("rift", RiftParticleType::new);
+    // The carrier of one order to draw a formation's figure, not a sprite and not a particle of its own: the client
+    // hands it to the figure it names and removes it, so it is registered without a sprite set and has no entry in the
+    // particle json folder.
+    public static final DeferredHolder<ParticleType<?>, ParticleType<FormationParticleOptions>> FORMATION = REGISTRY.register("formation", FormationParticleType::new);
 }

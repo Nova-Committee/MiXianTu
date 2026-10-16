@@ -4,6 +4,7 @@ import com.iafenvoy.mxt.data.item.IdentificationComponent;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
@@ -31,10 +32,12 @@ public final class IdentificationMirrorItem extends Item {
             ItemStack resolved = BuiltInRegistries.ITEM.getOptional(data.result()).map(item -> new ItemStack(item, target.getCount())).orElse(ItemStack.EMPTY);
             if (resolved.isEmpty()) continue;
             player.getInventory().setItem(slot, resolved);
-            ItemFeedback.send(player, Component.translatable("item.mxt.identification_mirror.identified"));
+            Component message = Component.translatable("item.mxt.identification_mirror.identified");
+            if (player instanceof ServerPlayer serverPlayer) serverPlayer.sendSystemMessage(message, true);
             return InteractionResult.SUCCESS_SERVER;
         }
-        ItemFeedback.send(player, Component.translatable("item.mxt.identification_mirror.none"));
+        Component message = Component.translatable("item.mxt.identification_mirror.none");
+        if (player instanceof ServerPlayer serverPlayer) serverPlayer.sendSystemMessage(message, true);
         return InteractionResult.FAIL;
     }
 }

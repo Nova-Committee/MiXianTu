@@ -170,14 +170,14 @@ public final class MessageProbes {
                 module instanceof SendMessageFormationAction);
         if (module instanceof SendMessageFormationAction(
                 Component message1, MessageChannel channel, EntityCondition recipients,
-                int intervalPeriods
+                int intervalTicks
         )) {
             context.expect("message probe: the formation module read its channel",
                     channel, MessageChannel.CHAT);
             context.expect("message probe: the formation module read its message",
                     message1.getString(), "probe");
-            context.expect("message probe: the formation module defaults to every period",
-                    intervalPeriods, 1);
+            context.expect("message probe: the formation module defaults to one upkeep period",
+                    intervalTicks, FormationIntervals.PERIOD);
             // An absent recipients condition must not filter anyone out.
             context.check("message probe: the module's absent recipient condition passes everyone",
                     recipients.test(context.player(), FormulaContext.EMPTY));
@@ -188,38 +188,47 @@ public final class MessageProbes {
     }
 
     // The throttle is the one part of the interval field that is pure logic, so it is pinned directly: the phase
-    // comes from the level clock, which makes two modules share a period and a module stateless across a reload.
+    // comes from the level clock, which makes two modules share a beat and a module stateless across a reload.
     private static void intervalGate(ProbeContext context) {
-        context.check("message probe: an interval of one is due on every period",
-                due(1, 0L) && due(1, 20L) && due(1, 40L));
-        context.check("message probe: an interval of three is due every third period",
-                due(3, 0L) && !due(3, 20L) && !due(3, 40L) && due(3, 60L));
+        context.check("message probe: an interval of one beat is due on every beat",
+                due(10, 0L) && due(10, 10L) && due(10, 20L));
+        context.check("message probe: a 30-tick interval is due every third beat",
+                due(30, 0L) && !due(30, 10L) && !due(30, 20L) && due(30, 30L));
         // Two definitions with the same interval must agree on the phase rather than drift apart: the gate reads
-        // the clock and nothing else, so the same period gives the same answer however often it is asked.
+        // the clock and nothing else, so the same beat gives the same answer however often it is asked.
         context.check("message probe: the phase is shared rather than counted per module",
-                due(3, 60L) && !due(3, 80L));
-        // Floor division rather than a modulo on a positive clock: 600 is a multiple of the 20-tick period and 3
-        // divides it, so the gate must open there and stay shut one period later.
-        context.check("message probe: the gate uses floor division on a late clock",
-                due(3, 600L) && !due(3, 620L));
+                due(30, 60L) && !due(30, 70L));
+        // The gate is a modulo on the world clock, so a late clock agrees with an early one at the same phase.
+        context.check("message probe: the gate agrees with itself on a late clock",
+                due(30, 600L) && !due(30, 610L));
+        // A tick count that is not a whole number of beats can never be honoured by a pass that only runs on the beat
+        // grid, so it is refused rather than silently rounded onto it.
+        context.check("message probe: an interval off the beat grid is refused",
+                !FormationIntervals.beatDue(15L));
         // The field has to be reachable from JSON, or the assertions above would hold for a field nothing sets.
         MapCodec<? extends FormationActionType> codec = MxtRegistries.FORMATION_ACTION_TYPE.getValue(id());
         JsonObject body = new JsonObject();
         body.addProperty("message", "probe");
-        body.addProperty("interval_periods", 5);
+        body.addProperty("interval_ticks", 50);
         FormationActionType module = decodeModule(context, codec, body);
-        context.expect("message probe: a module reads interval_periods from JSON",
-                module instanceof SendMessageFormationAction message ? message.intervalPeriods() : -1, 5);
-        // A zero or negative interval would divide by zero in the gate, so the range must refuse it at decode.
+        context.expect("message probe: a module reads interval_ticks from JSON",
+                module instanceof SendMessageFormationAction message ? message.intervalTicks() : -1, 50);
+        // A zero or negative interval would divide by zero in the gate, so the range must refuse it at decode; so must
+        // a value below the beat, which the pass could never reach.
         JsonObject zero = new JsonObject();
         zero.addProperty("message", "probe");
-        zero.addProperty("interval_periods", 0);
-        context.check("message probe: interval_periods of zero is refused",
+        zero.addProperty("interval_ticks", 0);
+        context.check("message probe: interval_ticks of zero is refused",
                 decodeModule(context, codec, zero) == null);
+        JsonObject offBeat = new JsonObject();
+        offBeat.addProperty("message", "probe");
+        offBeat.addProperty("interval_ticks", 15);
+        context.check("message probe: interval_ticks off the beat grid is refused",
+                decodeModule(context, codec, offBeat) == null);
     }
 
-    private static boolean due(int intervalPeriods, long gameTime) {
-        return FormationIntervals.due(intervalPeriods, gameTime, FormationWorldTicker.PERIOD);
+    private static boolean due(int intervalTicks, long gameTime) {
+        return FormationIntervals.due(intervalTicks, gameTime);
     }
 
     private static FormationActionType decodeModule(ProbeContext context,

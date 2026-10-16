@@ -1,6 +1,7 @@
 package com.iafenvoy.mxt.item;
 
-import com.iafenvoy.mxt.runtime.item.ItemBindingService;
+import com.iafenvoy.mxt.registry.MxtDataComponents;
+import com.iafenvoy.mxt.registry.MxtItems;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
@@ -21,17 +22,16 @@ public final class JadeSlipItem extends Item {
 
     @Override
     public @NotNull InteractionResult use(@NotNull Level level, @NotNull Player player, @NotNull InteractionHand hand) {
-        // The server-only registry read below is why the client answers with the vanilla use, which is also what
-        // starts a hold on a slip a technique binding has claimed.
         if (!(player instanceof ServerPlayer serverPlayer)) return super.use(level, player, hand);
         ItemStack stack = player.getItemInHand(hand);
-        // A claimed stack is a manual: the technique module prints it, and its hold is read off the vanilla
-        // component, so the vanilla use has to run rather than this class answering the click.
-        // FIXME::Remove old version compat
-        if (ItemBindingService.technique(level.registryAccess(), stack).isPresent())
-            return super.use(level, player, hand);
-        if (ItemReading.readInscription(serverPlayer, stack)) return InteractionResult.SUCCESS_SERVER;
-        ItemFeedback.send(player, Component.translatable("item.mxt.jade_slip.blank"));
-        return InteractionResult.FAIL;
+        Component content = stack.getOrDefault(MxtDataComponents.STORED_TEXT, Component.translatable("item.mxt.jade_slip.blank"));
+        serverPlayer.sendSystemMessage(content);
+        return InteractionResult.SUCCESS_SERVER;
+    }
+
+    public static ItemStack create(Component content) {
+        ItemStack stack = MxtItems.JADE_SLIP.toStack();
+        stack.set(MxtDataComponents.STORED_TEXT, content);
+        return stack;
     }
 }

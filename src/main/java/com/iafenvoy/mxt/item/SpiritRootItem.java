@@ -33,17 +33,20 @@ public final class SpiritRootItem extends Item {
         if (!(player instanceof ServerPlayer serverPlayer)) return InteractionResult.SUCCESS;
         Holder<SpiritRoot> root = stack.get(MxtDataComponents.SPIRIT_ROOT);
         if (root == null) {
-            ItemFeedback.send(player, Component.translatable("item.mxt.spirit_root.unbound"));
+            Component message = Component.translatable("item.mxt.spirit_root.unbound");
+            if (player instanceof ServerPlayer serverPlayer1) serverPlayer1.sendSystemMessage(message, true);
             return InteractionResult.FAIL;
         }
         Result result = CultivationIdentityService.grantSpiritRoot(serverPlayer, root);
         if (!result.changed()) {
-            ItemFeedback.send(player, failure(result.failure()));
+            Component message = failure(result.failure());
+            if (player instanceof ServerPlayer serverPlayer1) serverPlayer1.sendSystemMessage(message, true);
             return InteractionResult.FAIL;
         }
         // Only a root actually gained is spent, and a creative player keeps the stack so the picker can be used freely.
         if (!player.hasInfiniteMaterials()) stack.shrink(1);
-        ItemFeedback.send(player, Component.translatable("item.mxt.spirit_root.granted", DefinitionText.nameOrId(root)));
+        Component message = Component.translatable("item.mxt.spirit_root.granted", DefinitionText.nameOrId(root));
+        if (player instanceof ServerPlayer serverPlayer1) serverPlayer1.sendSystemMessage(message, true);
         return InteractionResult.SUCCESS_SERVER;
     }
 

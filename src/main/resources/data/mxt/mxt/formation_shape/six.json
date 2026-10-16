@@ -1,0 +1,29 @@
+{
+  "strokes": [
+    {
+      "type": "mxt:circle",
+      "radius": 1,
+      "color": "#ffffff"
+    },
+    {
+      "type": "mxt:polyline",
+      "points": [
+        [1, 0],
+        [-0.5, 0.866025404],
+        [-0.5, -0.866025404],
+        [1, 0]
+      ],
+      "color": "#ffffff"
+    },
+    {
+      "type": "mxt:polyline",
+      "points": [
+        [0.5, 0.866025404],
+        [-1, 0],
+        [0.5, -0.866025404],
+        [0.5, 0.866025404]
+      ],
+      "color": "#ffffff"
+    }
+  ]
+}

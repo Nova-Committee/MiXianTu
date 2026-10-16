@@ -3,19 +3,28 @@
   "radius": 8,
   "actions": [
     {
-      "type": "mxt:buff",
-      "max_bonus": { "mxt_test:spirit_power": 50 },
-      "aura_zone": "mxt_test:spirit_gathering"
+      "type": "mxt:aura",
+      "aura_zone": "mxt_test:spirit_gathering",
+      "max_bonus": { "mxt_test:spirit_power": 50 }
+    },
+    {
+      "type": "mxt:activate",
+      "block_action": { "type": "mxt:change_aura", "aura": { "mxt_test:spirit_power": 20 } }
+    },
+    {
+      "type": "mxt:tick",
+      "block_action": { "type": "mxt:change_aura", "aura": { "mxt_test:spirit_power": 2 } },
+      "entity_action": {
+        "type": "mxt:apply_effect",
+        "effect": "minecraft:regeneration",
+        "duration_ticks": 40
+      }
+    },
+    {
+      "type": "mxt:inactivate",
+      "block_action": { "type": "mxt:change_aura", "aura": { "mxt_test:spirit_power": -10 } }
     }
   ],
   "activation_costs": [{ "id": "mxt_test:spirit_power", "amount": 10 }],
-  "maintenance_costs": [{ "id": "mxt_test:spirit_power", "amount": 1 }],
-  "activate_action": { "type": "mxt:change_aura", "aura": { "mxt_test:spirit_power": 20 } },
-  "tick_action": { "type": "mxt:change_aura", "aura": { "mxt_test:spirit_power": 2 } },
-  "deactivate_action": { "type": "mxt:change_aura", "aura": { "mxt_test:spirit_power": -10 } },
-  "entity_tick_action": {
-    "type": "mxt:apply_effect",
-    "effect": "minecraft:regeneration",
-    "duration_ticks": 40
-  }
+  "maintenance_costs": [{ "id": "mxt_test:spirit_power", "amount": 1 }]
 }

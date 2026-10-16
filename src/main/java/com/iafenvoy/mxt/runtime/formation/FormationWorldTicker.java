@@ -3,8 +3,8 @@ package com.iafenvoy.mxt.runtime.formation;
 import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.config.MxtServerConfig;
 import com.iafenvoy.mxt.data.aura.Aura;
-import com.iafenvoy.mxt.data.context.action.EntityActionContext;
 import com.iafenvoy.mxt.data.formation.Formation;
+import com.iafenvoy.mxt.data.formation.FormationIntervals;
 import com.iafenvoy.mxt.event.FormationEvent.Tick;
 import com.iafenvoy.mxt.event.FormationEvent.TickEffects;
 import com.iafenvoy.mxt.event.FormationEvent.UpkeepFailed;
@@ -32,57 +32,60 @@ import java.util.*;
 import java.util.Map.Entry;
 
 /**
- * Low-frequency lifecycle dispatcher; it never scans unloaded chunks.
+ * Formation lifecycle dispatcher. It runs a module beat every {@link FormationIntervals#TICK} ticks and the paying
+ * period every {@link FormationIntervals#PERIOD}, so a module can be reached more finely than a bill is charged for.
+ * It never scans unloaded chunks.
  */
 @EventBusSubscriber
 public final class FormationWorldTicker {
-    public static final long PERIOD = 20L;
-
     private FormationWorldTicker() {
     }
 
     @SubscribeEvent
     public static void onLevelTick(Post event) {
-        if (!(event.getLevel() instanceof ServerLevel level) || !due(level.getGameTime())) return;
-        dispatch(level);
+        if (!(event.getLevel() instanceof ServerLevel level) || !FormationIntervals.beatDue(level.getGameTime())) return;
+        dispatch(level, level.getGameTime());
     }
 
-    // Also the granularity of the enter and exit actions, so it is the single knob that decides how long a
-    // formation can go without noticing a change.
-    public static boolean due(long gameTime) {
-        return gameTime % PERIOD == 0L;
-    }
-
-    // One dispatch pass over every active formation: validate, charge upkeep, run the per-entity actions, then
-    // the sweep that releases grants from formations a player has left.
-    public static void dispatch(ServerLevel level) {
+    // One dispatch pass over every active formation: validate, charge upkeep, run the modules, then the sweep that
+    // releases grants from formations a player has left. Only the first two are per period.
+    public static void dispatch(ServerLevel level, long gameTime) {
+        boolean period = FormationIntervals.periodDue(gameTime);
         FormationWorldAttachment world = level.getData(MxtAttachments.FORMATION_WORLD);
         for (Entry<BlockPos, FormationInstance> entry : world.formations().entrySet()) {
             Optional<Formation> definition = MxtDatapackRegistries.get(level.registryAccess(), MxtResourceKeys.FORMATION, entry.getValue().formation());
-            if (definition.isEmpty() || !FormationStructureValidator.of(definition.get()).matches(level, entry.getKey(), definition.get())) {
+            // A definition that no longer resolves is taken down at once; a standing structure is re-checked on its
+            // own period, because re-reading a template twice a second is not what a finer beat is for.
+            if (definition.isEmpty()) {
+                FormationWorldService.deactivate(level, entry.getKey());
+                continue;
+            }
+            if (period && !FormationStructureValidator.of(definition.get()).matches(level, entry.getKey(), definition.get())) {
                 FormationWorldService.deactivate(level, entry.getKey());
                 continue;
             }
             // The attachment holds the instance itself, so upkeep and its counter are updated in place:
             // there is no write-back that a later branch could skip and silently drop the payment.
             FormationInstance instance = entry.getValue();
-            if (!definition.get().maintenanceCosts().isEmpty() && !chargeUpkeep(level, entry.getKey(), instance, definition.get()))
-                continue;
-            // Settled and paid for, so observers see it. Cancelling TickEffects skips the work.
-            NeoForge.EVENT_BUS.post(new Tick(level, entry.getKey(), instance));
-            if (!NeoForge.EVENT_BUS.post(new TickEffects(level, entry.getKey(), instance)).isCanceled()) {
-                // Modules run before the definition's own hook here too, for the same reason they do per
-                // entity: a hook is the place to react to what the array did.
-                FormationActionRunner.perPeriod(level, definition.get(), instance, entry.getKey());
-                definition.get().tickAction().execute(level, entry.getKey(), FormulaContext.of(level));
-                executeEntityActions(level, entry.getKey(), instance, definition.get());
+            if (period) {
+                if (!definition.get().maintenanceCosts().isEmpty() && !chargeUpkeep(level, entry.getKey(), instance, definition.get()))
+                    continue;
+                NeoForge.EVENT_BUS.post(new Tick(level, entry.getKey(), instance));
             }
+            // Settled and paid for, so observers see it. Cancelling TickEffects skips the work of this one beat.
+            if (NeoForge.EVENT_BUS.post(new TickEffects(level, entry.getKey(), instance)).isCanceled()) continue;
+            // The array's own beat first, then the entities it covers: a per-entity module reads the state the
+            // array's own modules left behind.
+            FormationActionRunner.periodic(definition.get(),
+                    FormationActionContext.array(level, entry.getKey(), instance), gameTime);
+            executeEntityActions(level, entry.getKey(), instance, definition.get());
         }
-        for (ServerPlayer player : level.players()) releaseOutside(level, player);
+        if (period) for (ServerPlayer player : level.players()) releaseOutside(level, player);
     }
 
-    // Returns whether the period may continue; false means the formation was taken down, or a listener cancelled
-    // UpkeepFailed to let it stand through a period it could not pay for.
+    // Returns whether the beat may continue; false means the formation was taken down, or a listener cancelled
+    // UpkeepFailed to let it stand through a period it could not pay for. A forgiven period is not a frozen one: it
+    // pays nothing, and its remaining beats still run.
     private static boolean chargeUpkeep(ServerLevel level, BlockPos controller, FormationInstance instance, Formation definition) {
         Entity payer = instance.owners().primaryEntity(level);
         // A formation with a store can pay while its owner is absent, which is most of what storing aura is
@@ -133,11 +136,12 @@ public final class FormationWorldTicker {
         double radius = instance.radius();
         double radiusSquared = radius * radius;
         Vec3 center = controller.getCenter();
-        FormationCarrier carrier = new FormationCarrier(instance.formation(), controller, radius, instance.owners());
+        FormationCarrier carrier = FormationActionContext.carrier(instance, controller);
         Identifier source = Sources.formation(instance.formation());
         // Resolved once per formation rather than per entity: the id outlives the owner logging out and the
         // entity does not, so a manager-level source can still answer for an absent owner.
         FormationOwners owners = instance.owners();
+        long gameTime = level.getGameTime();
         Set<UUID> previous = FormationEntityActions.tracked(level, controller);
         Set<UUID> present = new HashSet<>();
         for (Entity entity : level.getEntities(null, AABB.ofSize(center, radius * 2.0D, radius * 2.0D, radius * 2.0D))) {
@@ -147,23 +151,19 @@ public final class FormationWorldTicker {
             // formation-scoped grant is released, and a spared entity must not keep one.
             if (!FormationRelations.affects(definition, owners, level, entity)) continue;
             present.add(entity.getUUID());
-            EntityActionContext context = FormationEntityActions.context(entity, carrier, radius, distanceSquared);
+            FormationActionContext context = new FormationActionContext(level, carrier, entity);
             // A freshly activated formation has no previous set, so everything already inside receives an
-            // enter action - which is why enter actions must be idempotent.
-            if (!previous.contains(entity.getUUID())) definition.entityEnterAction().execute(context);
-            // The function modules run before the definition's own hook, so a pack customising the tick
-            // sees the state the array left behind rather than the state before it acted.
-            FormationActionRunner.perEntity(definition, instance, entity, context, owners);
-            definition.entityTickAction().execute(context);
+            // arriving beat - which is why one must be idempotent.
+            if (!previous.contains(entity.getUUID())) FormationActionRunner.activate(definition, context);
+            FormationActionRunner.periodic(definition, context, gameTime);
         }
         FormationEntityActions.remember(level, controller, present);
         for (UUID departed : previous) {
             if (present.contains(departed)) continue;
             Entity entity = level.getEntities().get(departed);
             if (entity == null) continue;
-            FormationEntityActions.release(entity, source);
-            definition.entityExitAction()
-                    .execute(FormationEntityActions.context(entity, carrier, radius, entity.distanceToSqr(center)));
+            FormationGrants.release(entity, source);
+            FormationActionRunner.inactivate(definition, new FormationActionContext(level, carrier, entity));
         }
     }
 
@@ -185,6 +185,6 @@ public final class FormationWorldTicker {
                 covered.add(definition);
         }
         present.removeAll(covered);
-        for (Identifier definition : present) FormationEntityActions.release(player, Sources.formation(definition));
+        for (Identifier definition : present) FormationGrants.release(player, Sources.formation(definition));
     }
 }

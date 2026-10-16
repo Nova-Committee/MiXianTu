@@ -29,7 +29,8 @@ public final class TechniqueBookItem extends Item {
         if (ItemBindingService.technique(level.registryAccess(), stack).isPresent())
             return super.use(level, player, hand);
         if (ItemReading.readInscription(serverPlayer, stack)) return InteractionResult.SUCCESS_SERVER;
-        ItemFeedback.send(player, Component.translatable("item.mxt.technique_book.unbound"));
+        Component message = Component.translatable("item.mxt.technique_book.unbound");
+        if (player instanceof ServerPlayer serverPlayer1) serverPlayer1.sendSystemMessage(message, true);
         return InteractionResult.FAIL;
     }
 }

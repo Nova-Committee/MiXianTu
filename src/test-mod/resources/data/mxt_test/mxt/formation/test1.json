@@ -1,0 +1,21 @@
+{
+  "structure": [
+    { "offset": [0, 0, 0], "state": "minecraft:netherite_block" },
+    { "offset": [-1, 0, -1], "state": "minecraft:prismarine_bricks" },
+    { "offset": [0, 0, -1], "state": "minecraft:prismarine_bricks" },
+    { "offset": [1, 0, -1], "state": "minecraft:prismarine_bricks" },
+    { "offset": [-1, 0, 0], "state": "minecraft:prismarine_bricks" },
+    { "offset": [1, 0, 0], "state": "minecraft:prismarine_bricks" },
+    { "offset": [-1, 0, 1], "state": "minecraft:prismarine_bricks" },
+    { "offset": [0, 0, 1], "state": "minecraft:prismarine_bricks" },
+    { "offset": [1, 0, 1], "state": "minecraft:prismarine_bricks" }
+  ],
+  "radius": 8,
+  "actions": [
+    {
+      "type": "mxt:particle",
+      "shape": "mxt_test:test1",
+      "duration_ticks": 60
+    }
+  ]
+}

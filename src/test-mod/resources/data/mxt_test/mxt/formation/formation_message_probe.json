@@ -16,7 +16,7 @@
       "type": "mxt:send_message",
       "message": "mxt_test.formation.message",
       "channel": "action_bar",
-      "interval_periods": 3
+      "interval_ticks": 60
     }
   ]
 }

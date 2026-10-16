@@ -8,7 +8,7 @@ import com.iafenvoy.mxt.data.aura.AuraZone;
 import com.iafenvoy.mxt.data.aura.AuraZone.*;
 import com.iafenvoy.mxt.data.condition.AlwaysCondition;
 import com.iafenvoy.mxt.data.formation.Formation;
-import com.iafenvoy.mxt.data.formation.builtin.BuffFormationAction;
+import com.iafenvoy.mxt.data.formation.builtin.AuraFormationAction;
 import com.iafenvoy.mxt.event.AuraZoneEvent;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
@@ -28,6 +28,7 @@ import net.minecraft.core.SectionPos;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.util.Mth;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.chunk.LevelChunk;
@@ -130,7 +131,7 @@ public final class AuraService {
         if (resolved == null) {
             chunk.initializeAuras(Map.of());
             chunk.clearTemplate();
-        }else {
+        } else {
             chunk.initializeAuras(computePools(resolved.zone.value(), pos, 0L));
             chunk.setTemplate(resolved.zone);
         }
@@ -211,22 +212,22 @@ public final class AuraService {
 
     // A formation's aura zone is a module parameter; one without such a module declares no override.
     private static Optional<Holder<AuraZone>> auraZone(Formation formation) {
-        return buffModules(formation).map(BuffFormationAction::auraZone).flatMap(Optional::stream).findFirst();
+        return auraModules(formation).map(AuraFormationAction::auraZone).findFirst();
     }
 
     private static Map<Holder<Aura>, Double> maximumBonus(Formation formation, FormulaContext context) {
         Map<Holder<Aura>, Double> values = new LinkedHashMap<>();
-        buffModules(formation).forEach(buff -> buff.maxBonus().forEach((aura, provider) -> {
+        auraModules(formation).forEach(aura -> aura.maxBonus().forEach((resource, provider) -> {
             double value = MiscUtil.positive(provider.evaluate(context));
-            if (value > 0.0D) values.merge(aura, value, Math::max);
+            if (value > 0.0D) values.merge(resource, value, Math::max);
         }));
         return values;
     }
 
-    private static Stream<BuffFormationAction> buffModules(Formation formation) {
+    private static Stream<AuraFormationAction> auraModules(Formation formation) {
         return formation.actions().stream()
-                .filter(BuffFormationAction.class::isInstance)
-                .map(BuffFormationAction.class::cast);
+                .filter(AuraFormationAction.class::isInstance)
+                .map(AuraFormationAction.class::cast);
     }
 
     private static void applyMaximumBonus(Map<Holder<Aura>, AuraPool> pools, Map<Holder<Aura>, Double> bonuses) {
@@ -382,7 +383,7 @@ public final class AuraService {
         double u = fade(fx), v = fade(fz);
         double a = gradient(noise.seed(), x0, z0, fx, fz), b = gradient(noise.seed(), x0 + 1, z0, fx - 1, fz);
         double c = gradient(noise.seed(), x0, z0 + 1, fx, fz - 1), d = gradient(noise.seed(), x0 + 1, z0 + 1, fx - 1, fz - 1);
-        return lerp(lerp(a, b, u), lerp(c, d, u), v) * noise.amplitude();
+        return Mth.lerp(v, Mth.lerp(u, a, b), Mth.lerp(u, c, d)) * noise.amplitude();
     }
 
     // A pure function of the zone, the position and the tick, but one block-emitter query asks for it once per
@@ -424,10 +425,6 @@ public final class AuraService {
 
     private static double fade(double value) {
         return value * value * value * (value * (value * 6.0D - 15.0D) + 10.0D);
-    }
-
-    private static double lerp(double a, double b, double delta) {
-        return a + delta * (b - a);
     }
 
     public record Resolved(Holder<AuraZone> zone, SourceKind kind, Map<Holder<Aura>, Double> maxBonus) {

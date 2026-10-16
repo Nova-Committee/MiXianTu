@@ -1,7 +1,6 @@
 package com.iafenvoy.mxt.item.block;
 
 import com.iafenvoy.mxt.data.item.RiftComponent;
-import com.iafenvoy.mxt.item.ItemFeedback;
 import com.iafenvoy.mxt.item.block.entity.RiftBlockEntity;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.registry.MxtParticleTypes;
@@ -13,6 +12,7 @@ import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.particles.ColorParticleOption;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
@@ -82,7 +82,8 @@ public final class RiftBlock extends BaseEntityBlock implements Portal {
         if (!level.isClientSide()) {
             rift.setColor(0xFF000000 | dye.getTextureDiffuseColor());
             if (!player.hasInfiniteMaterials()) stack.shrink(1);
-            ItemFeedback.send(player, Component.translatable("block.mxt.rift.recolored", RiftColors.format(rift.color())));
+            Component message = Component.translatable("block.mxt.rift.recolored", RiftColors.format(rift.color()));
+            if (player instanceof ServerPlayer serverPlayer) serverPlayer.sendSystemMessage(message, true);
         }
         return InteractionResult.SUCCESS;
     }

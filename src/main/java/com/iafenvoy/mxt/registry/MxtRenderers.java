@@ -11,6 +11,7 @@ import com.iafenvoy.mxt.render.accessory.BeltWeaponRenderer;
 import com.iafenvoy.mxt.render.cultivation.CultivationItemRenderer;
 import com.iafenvoy.mxt.render.lightning.ColoredLightningBoltRenderer;
 import com.iafenvoy.mxt.render.mount.MountRenderers;
+import com.iafenvoy.mxt.render.particle.FormationParticle;
 import com.iafenvoy.mxt.render.particle.RiftParticle.Provider;
 import com.iafenvoy.mxt.render.particle.SpiritWispParticle;
 import com.iafenvoy.mxt.render.sword.SwordAuraRenderer;
@@ -60,6 +61,8 @@ public final class MxtRenderers {
     public static void registerParticleProviders(RegisterParticleProvidersEvent event) {
         event.registerSpriteSet(MxtParticleTypes.SPIRIT_WISP.get(), SpiritWispParticle.Provider::new);
         event.registerSpriteSet(MxtParticleTypes.RIFT.get(), Provider::new);
+        // Special rather than sprite-set: this one never draws itself, it expands into dust.
+        event.registerSpecial(MxtParticleTypes.FORMATION.get(), new FormationParticle.Provider());
     }
 
     @SubscribeEvent

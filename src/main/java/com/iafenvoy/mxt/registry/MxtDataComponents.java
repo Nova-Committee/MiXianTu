@@ -19,6 +19,7 @@ import com.iafenvoy.mxt.data.forging.ForgingMethod;
 import com.iafenvoy.mxt.data.item.*;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.data.storage.DataStorageHolder;
+import com.iafenvoy.mxt.util.codec.MiscCodecs;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import com.iafenvoy.mxt.util.codec.TolerantListCodec;
 import com.mojang.datafixers.util.Either;
@@ -26,6 +27,7 @@ import com.mojang.serialization.Codec;
 import net.minecraft.core.Holder;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.registries.Registries;
+import net.minecraft.network.chat.Component;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.tags.TagKey;
@@ -76,6 +78,7 @@ public final class MxtDataComponents {
     public static final DeferredHolder<DataComponentType<?>, DataComponentType<Integer>> BRUSH_PIGMENT = register("brush_pigment", Codec.intRange(0, Integer.MAX_VALUE));
     public static final DeferredHolder<DataComponentType<?>, DataComponentType<Holder<AlchemyFurnaceDefinition>>> ALCHEMY_FURNACE = register("alchemy_furnace", AlchemyFurnaceDefinition.CODEC);
     public static final DeferredHolder<DataComponentType<?>, DataComponentType<Holder<AlchemyWallMaterial>>> ALCHEMY_WALL_MATERIAL = register("alchemy_wall_material", AlchemyWallMaterial.CODEC);
+    public static final DeferredHolder<DataComponentType<?>, DataComponentType<Component>> STORED_TEXT = register("stored_text", MiscCodecs.TRANSLATABLE_COMPONENT);
 
     private static <T> DeferredHolder<DataComponentType<?>, DataComponentType<T>> register(String id, Codec<T> codec) {
         return REGISTRY.registerComponentType(id, b -> b.persistent(codec).networkSynchronized(ByteBufCodecs.fromCodecWithRegistries(codec)));

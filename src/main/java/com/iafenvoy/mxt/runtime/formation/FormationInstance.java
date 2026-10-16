@@ -30,6 +30,9 @@ public final class FormationInstance {
             // The shape of the one field an older save has; read so an existing array keeps its owner.
             UUIDUtil.CODEC.lenientOptionalFieldOf("owner").forGetter(instance -> Optional.empty()),
             Codec.LONG.lenientOptionalFieldOf("maintenance_count", 0L).forGetter(FormationInstance::maintenanceCount),
+            // Kept so a display module can time an animation from the moment the array was raised. A row without it
+            // reads as raised at time zero, which puts any animation already past its end.
+            Codec.LONG.lenientOptionalFieldOf("activated_at", 0L).forGetter(FormationInstance::activatedAt),
             // Written only when something is banked, so a save of the common case does not grow a field. Strict
             // rather than tolerant: this map is written by the mod itself, so a row that does not read back is a
             // bug worth seeing, not a row to drop silently.
@@ -57,29 +60,31 @@ public final class FormationInstance {
     private final double radius;
     private FormationOwners owners;
     private long maintenanceCount;
+    private long activatedAt;
     private final Map<Holder<Aura>, Double> stored;
 
     FormationInstance(Identifier formation, double radius) {
-        this(formation, radius, FormationOwners.NONE, 0L, Map.of());
+        this(formation, radius, FormationOwners.NONE, 0L, 0L, Map.of());
     }
 
     FormationInstance(Identifier formation, double radius, UUID owner) {
-        this(formation, radius, FormationOwners.of(owner), 0L, Map.of());
+        this(formation, radius, FormationOwners.of(owner), 0L, 0L, Map.of());
     }
 
     private FormationInstance(@NotNull Identifier formation, double radius, @NotNull FormationOwners owners,
-                              @NotNull Optional<UUID> legacyOwner, long maintenanceCount,
+                              @NotNull Optional<UUID> legacyOwner, long maintenanceCount, long activatedAt,
                               @NotNull Optional<Map<Holder<Aura>, Double>> stored) {
         this(formation, radius, owners.isEmpty() && legacyOwner.isPresent() ? FormationOwners.of(legacyOwner.get()) : owners,
-                maintenanceCount, stored.orElse(Map.of()));
+                maintenanceCount, activatedAt, stored.orElse(Map.of()));
     }
 
     private FormationInstance(@NotNull Identifier formation, double radius, @NotNull FormationOwners owners,
-                              long maintenanceCount, @NotNull Map<Holder<Aura>, Double> stored) {
+                              long maintenanceCount, long activatedAt, @NotNull Map<Holder<Aura>, Double> stored) {
         this.formation = formation;
         this.radius = radius;
         this.owners = owners;
         this.maintenanceCount = maintenanceCount;
+        this.activatedAt = activatedAt;
         this.stored = new LinkedHashMap<>(stored);
     }
 
@@ -119,6 +124,16 @@ public final class FormationInstance {
 
     public long maintenanceCount() {
         return this.maintenanceCount;
+    }
+
+    // The world clock when the array was raised, stamped by the service that put it into the level index. Written
+    // after that put rather than at construction, because the instance is built where no level is at hand.
+    public long activatedAt() {
+        return this.activatedAt;
+    }
+
+    void activated(long gameTime) {
+        this.activatedAt = gameTime;
     }
 
     // The live map the upkeep pass reads and writes through {@link #deposit} / {@link #withdraw}; empty for a

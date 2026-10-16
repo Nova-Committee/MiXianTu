@@ -18,6 +18,7 @@ import com.iafenvoy.mxt.data.forging.ForgingBlueprint;
 import com.iafenvoy.mxt.data.forging.ForgingMethod;
 import com.iafenvoy.mxt.data.forging.ToolBinding;
 import com.iafenvoy.mxt.data.formation.Formation;
+import com.iafenvoy.mxt.data.formation.FormationShape;
 import com.iafenvoy.mxt.data.item.*;
 import com.iafenvoy.mxt.data.progression.Progression;
 import com.iafenvoy.mxt.data.quality.DefaultQuality;
@@ -77,6 +78,7 @@ public final class MxtDatapackRegistries {
         register(event, MxtResourceKeys.ALCHEMY_WALL_MATERIAL, AlchemyWallMaterial.DIRECT_CODEC);
         register(event, MxtResourceKeys.HEAT_SOURCE, HeatSource.DIRECT_CODEC);
         register(event, MxtResourceKeys.FORMATION, Formation.DIRECT_CODEC);
+        register(event, MxtResourceKeys.FORMATION_SHAPE, FormationShape.DIRECT_CODEC);
         register(event, MxtResourceKeys.TRIBULATION, Tribulation.DIRECT_CODEC);
         register(event, MxtResourceKeys.PILL, Pill.DIRECT_CODEC);
         register(event, MxtResourceKeys.PILL_BINDING, PillBinding.DIRECT_CODEC);

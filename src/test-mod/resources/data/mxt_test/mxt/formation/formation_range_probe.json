@@ -13,11 +13,10 @@
   "radius": 8,
   "actions": [
     {
-      "type": "mxt:range_display",
-      "particle": { "type": "minecraft:end_rod" },
-      "shape": "sphere",
-      "points": 24,
-      "interval_periods": 2
+      "type": "mxt:particle",
+      "shape": "mxt:five",
+      "duration_ticks": 60,
+      "interval_ticks": 40
     }
   ]
 }

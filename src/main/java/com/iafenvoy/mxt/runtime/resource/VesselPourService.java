@@ -1,6 +1,5 @@
 package com.iafenvoy.mxt.runtime.resource;
 
-import com.iafenvoy.mxt.item.ItemFeedback;
 import com.iafenvoy.mxt.item.SpiritVesselItem;
 import com.iafenvoy.mxt.runtime.ModuleHooks;
 import com.iafenvoy.mxt.runtime.hold.HoldLookup;
@@ -8,6 +7,7 @@ import com.iafenvoy.mxt.runtime.hold.HoldSource;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -38,7 +38,9 @@ public final class VesselPourService {
         if (!SpiritVesselItem.pourTick(holder, stack)) return;
         // Said once, on the first tick that really moved something: a hold that poured nothing stays quiet, and the
         // pour itself is silent apart from the gesture's own sound.
-        if (holder instanceof ServerPlayer player && event.getDuration() == hold.holdTicks(holder.level().registryAccess(), stack))
-            ItemFeedback.send(player, Component.translatable("item.mxt.spirit_vessel.released"));
+        if (holder instanceof ServerPlayer player && event.getDuration() == hold.holdTicks(holder.level().registryAccess(), stack)) {
+            Component message = Component.translatable("item.mxt.spirit_vessel.released");
+            if ((Player) player instanceof ServerPlayer serverPlayer) serverPlayer.sendSystemMessage(message, true);
+        }
     }
 }

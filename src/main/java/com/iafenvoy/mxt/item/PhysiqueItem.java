@@ -35,17 +35,20 @@ public final class PhysiqueItem extends Item {
         if (!(player instanceof ServerPlayer serverPlayer)) return InteractionResult.SUCCESS;
         Holder<Physique> physique = stack.get(MxtDataComponents.PHYSIQUE);
         if (physique == null) {
-            ItemFeedback.send(player, Component.translatable("item.mxt.physique.unbound"));
+            Component message = Component.translatable("item.mxt.physique.unbound");
+            if (player instanceof ServerPlayer serverPlayer1) serverPlayer1.sendSystemMessage(message, true);
             return InteractionResult.FAIL;
         }
         Result result = CultivationIdentityService.grantPhysique(serverPlayer, physique, FormulaContext.of(serverPlayer));
         if (!result.changed()) {
-            ItemFeedback.send(player, failure(result.failure()));
+            Component message = failure(result.failure());
+            if (player instanceof ServerPlayer serverPlayer1) serverPlayer1.sendSystemMessage(message, true);
             return InteractionResult.FAIL;
         }
         // Only a physique actually gained is spent, and a creative player keeps it so the picker can be used freely.
         if (!player.hasInfiniteMaterials()) stack.shrink(1);
-        ItemFeedback.send(player, Component.translatable("item.mxt.physique.granted", DefinitionText.nameOrId(physique)));
+        Component message = Component.translatable("item.mxt.physique.granted", DefinitionText.nameOrId(physique));
+        if (player instanceof ServerPlayer serverPlayer1) serverPlayer1.sendSystemMessage(message, true);
         return InteractionResult.SUCCESS_SERVER;
     }
 
