@@ -9,8 +9,11 @@ in vec2 surfaceUV;
 flat in int itemIndex;
 out vec4 fragColor;
 void main() {
+    float depthFade = softFlame();
+    if (depthFade <= 0.0) discard;
     FlameItem item = Items[itemIndex];
     vec4 field = fluidAt(surfaceUV, item);
+    if (field.b * item.tint.a * RenderInfo.z * FrameInfo.z < 0.002) discard;
     float time = item.centerAge.w;
     vec2 uv = surfaceUV * vec2(9, 16);
     if (!isRadialFlame(item)) {
@@ -28,6 +31,6 @@ void main() {
     }
     float noise = flameNoise(vec3(uv, time * 0.7 + item.style.z * 17.0));
     float tongues = smoothstep(0.27, 0.72, noise + field.b * 0.15);
-    float alpha = tongues * field.b * item.tint.a * RenderInfo.z * FrameInfo.z * softFlame();
+    float alpha = tongues * field.b * item.tint.a * RenderInfo.z * FrameInfo.z * depthFade;
     fragColor = vec4(flameTint(item.tint.rgb, field.r, 0.2), clamp(alpha, 0.0, 0.65));
 }

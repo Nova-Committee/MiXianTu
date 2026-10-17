@@ -6,6 +6,8 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.phys.Vec3;
 
+import java.util.OptionalDouble;
+
 /**
  * Sends one frame of a formation's figure to the players who are close enough to be looking at it. The vanilla
  * broadcast helper is not used because its own cutoff is a flat 32 blocks, which would clip the outline of any larger
@@ -14,7 +16,8 @@ import net.minecraft.world.phys.Vec3;
  */
 public final class FormationShapeDisplay {
     /**
-     * How far past its own radius a formation still draws for.
+     * The least a formation draws for past its own radius, used only when the server's view distance is shorter than
+     * this. Beyond that, the reach is the view distance: a player cannot see ground the client never loaded.
      */
     public static final double VISIBLE_MARGIN = 32.0D;
     /**
@@ -31,19 +34,29 @@ public final class FormationShapeDisplay {
         return new Vec3(controller.getX() + 0.5D, controller.getY() + DRAW_HEIGHT, controller.getZ() + 0.5D);
     }
 
-    public static void draw(ServerLevel level, BlockPos controller, FormationParticleOptions frame) {
+    public static void draw(ServerLevel level, BlockPos controller, FormationParticleOptions frame, OptionalDouble limit) {
         Vec3 center = center(controller);
+        double margin = margin(level, limit);
         for (ServerPlayer player : level.players()) {
-            if (!visible(center, frame.radius(), player.position())) continue;
+            if (!visible(center, frame.radius(), player.position(), margin)) continue;
             level.sendParticles(player, frame, true, false,
                     center.x, center.y, center.z, 1, 0.0D, 0.0D, 0.0D, 0.0D);
         }
     }
 
-    // Reach is the radius plus a fixed margin, because standing at the edge of an array is exactly when a player wants
-    // to see where it ends.
-    public static boolean visible(Vec3 center, double radius, Vec3 position) {
-        double reach = radius + VISIBLE_MARGIN;
+    // Reach is the radius plus how far this server draws, because standing at the edge of an array is exactly when a
+    // player wants to see where it ends - and the far edge of a big array is the case a flat 32 was cutting off.
+    public static boolean visible(Vec3 center, double radius, Vec3 position, double margin) {
+        double reach = radius + margin;
         return position.distanceToSqr(center) <= reach * reach;
+    }
+
+    /**
+     * How far past its own radius a figure keeps being drawn: the view distance unless the figure's own module asks for
+     * less. A world can only show what it sends chunks of, so drawing further would place dust nobody can see.
+     */
+    public static double margin(ServerLevel level, OptionalDouble limit) {
+        double margin = Math.max(VISIBLE_MARGIN, level.getServer().getPlayerList().getViewDistance() * 16.0D);
+        return limit.isPresent() ? Math.min(margin, limit.getAsDouble()) : margin;
     }
 }

@@ -159,6 +159,21 @@ public final class BurningItemManager {
             this.seed = ((id * 0x9E3779B9) >>> 8) / 16777216.0F;
         }
 
+        float flameDistanceLimit(CameraRenderState camera) {
+            double x = this.state.x - camera.pos.x;
+            double y = this.state.y + this.state.centerOffsetY - camera.pos.y;
+            double z = this.state.z - camera.pos.z;
+            double reach;
+            if (this.state.meteor) reach = (this.state.flameShape.x * 4.0 + this.state.flameShape.y * 2.0) * this.state.scale;
+            else {
+                // Include source geometry, normal lift, stretched billboards, and the capped world-space wind drift.
+                double billboard = Math.sqrt(200.0 / Math.max(1, LODController.particles(this.lod)));
+                reach = (this.state.flameShape.x + this.state.flameShape.w + this.state.flameSurfaceWidth
+                        + this.state.flameShape.y + this.state.flameShape.z + 1.5 + billboard) * this.state.scale + 4.0;
+            }
+            return (float) (Math.sqrt(x * x + y * y + z * z) + reach + 1.0);
+        }
+
         void write(ByteBuffer buffer, CameraRenderState camera) {
             MxtClientConfig.Flames config = MxtClientConfig.INSTANCE.flames;
             put(buffer, (float) (this.state.x - camera.pos.x), (float) (this.state.y + this.state.centerOffsetY - camera.pos.y),

@@ -2,6 +2,7 @@
 // Also provides noise functions and conversions between sword-local and world space.
 #ifndef MXT_FLAME_DATA
 #define MXT_FLAME_DATA
+#moj_import <mxt:flame_frame.glsl>
 struct FlameItem {
     vec4 centerAge;
     vec4 basisX;
@@ -15,14 +16,6 @@ struct FlameItem {
 };
 layout(std140) uniform FlameItems {
     FlameItem Items[64];
-};
-layout(std140) uniform FlameFrame {
-    mat4 ViewRotation;
-    vec4 CameraRight;
-    vec4 CameraUp;
-    vec4 FrameInfo;
-    vec4 RenderInfo;
-    vec4 ParticleCounts;
 };
 uniform sampler2D FluidField;
 

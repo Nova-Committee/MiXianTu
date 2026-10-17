@@ -12,6 +12,7 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.textures.FilterMode;
 import com.mojang.blaze3d.textures.GpuTexture;
 import com.mojang.blaze3d.textures.GpuTextureView;
+import com.mojang.blaze3d.textures.TextureFormat;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MappableRingBuffer;
 import net.minecraft.client.renderer.state.level.CameraRenderState;
@@ -20,15 +21,16 @@ import org.lwjgl.system.MemoryUtil;
 
 import java.nio.ByteBuffer;
 import java.util.List;
-import java.util.OptionalDouble;
 import java.util.OptionalInt;
 
 public final class FlameRenderer implements AutoCloseable {
     // 64 * 9 vec4 stays below the OpenGL 3.3 minimum uniform-block limit (16 KiB).
     private static final int BATCH_SIZE = 64;
     private static final int ITEM_BYTES = 9 * 16;
-    private static final int FRAME_BYTES = 64 + 5 * 16;
+    private static final int FRAME_BYTES = 64 + 6 * 16;
     private static final int MAX_BATCHES = SurfaceFluidSimulation.CAPACITY / BATCH_SIZE + 6;
+    private static final int MAX_RENDER_WIDTH = 960;
+    private static final int MAX_RENDER_HEIGHT = 540;
     private static final int[] GROUP_ORDER = {0, 3, 1, 4, 2, 5};
     private final int batchStride;
     private final int itemStart;
@@ -43,6 +45,8 @@ public final class FlameRenderer implements AutoCloseable {
     private final Vector3f axis = new Vector3f();
     private GpuTexture depthCopy;
     private GpuTextureView depthView;
+    private GpuTexture flameColor;
+    private GpuTextureView flameView;
     private boolean invalidLogged;
 
     public FlameRenderer() {
@@ -62,7 +66,8 @@ public final class FlameRenderer implements AutoCloseable {
         if (!device.precompilePipeline(FlamePipelines.FLUID).isValid()
                 || !device.precompilePipeline(FlamePipelines.SURFACE).isValid()
                 || !device.precompilePipeline(FlamePipelines.PARTICLES).isValid()
-                || !device.precompilePipeline(FlamePipelines.METEOR).isValid()) {
+                || !device.precompilePipeline(FlamePipelines.METEOR).isValid()
+                || !device.precompilePipeline(FlamePipelines.COMPOSITE).isValid()) {
             if (!this.invalidLogged)
                 MiXianTu.LOGGER.error("Projectile flame shader compilation failed; inspect the preceding shader diagnostics");
             this.invalidLogged = true;
@@ -72,6 +77,7 @@ public final class FlameRenderer implements AutoCloseable {
         RenderTarget target = Minecraft.getInstance().getMainRenderTarget();
         if (target.getColorTextureView() == null || target.getDepthTexture() == null) return false;
         this.ensureDepth(target.getDepthTexture());
+        this.ensureFlameTarget(target.width, target.height);
         CommandEncoder encoder = device.createCommandEncoder();
         // Sampling the attached depth texture is undefined; use a snapshot taken after world transparency.
         encoder.copyTextureToTexture(target.getDepthTexture(), this.depthCopy, 0, 0, 0, 0, 0, target.width, target.height);
@@ -84,10 +90,15 @@ public final class FlameRenderer implements AutoCloseable {
         camera.orientation.transform(this.axis.set(0, 1, 0));
         this.vector(this.axis.x, this.axis.y, this.axis.z, 0);
         MxtClientConfig.Flames config = MxtClientConfig.INSTANCE.flames;
-        this.vector(time, delta, config.intensity.getValue().floatValue(), 0);
+        float flameDistanceLimit = 0;
+        for (List<BurningItemManager.Entry> group : visible)
+            for (BurningItemManager.Entry entry : group)
+                flameDistanceLimit = Math.max(flameDistanceLimit, entry.flameDistanceLimit(camera));
+        this.vector(time, delta, config.intensity.getValue().floatValue(), flameDistanceLimit);
         this.vector(config.softDistance.getValue().floatValue(), device.isZZeroToOne() ? 1 : 0,
                 config.surfaceOpacity.getValue().floatValue(), 0);
         this.vector(LODController.particles(0), LODController.particles(1), LODController.particles(2), 0);
+        this.vector(this.flameColor.getWidth(0), this.flameColor.getHeight(0), target.width, target.height);
         int batchCount = 0;
         // Group by distance first, then shape, so all fluid-backed batches precede distant batches.
         for (int groupIndex : GROUP_ORDER) {
@@ -112,8 +123,7 @@ public final class FlameRenderer implements AutoCloseable {
         int fluidBatches = 0;
         while (fluidBatches < batchCount && this.lods[fluidBatches] < 2) fluidBatches++;
         if (fluidBatches > 0) this.fluid.update(encoder, this.sampler, frame, this.batches, this.counts, fluidBatches);
-        try (RenderPass pass = encoder.createRenderPass(() -> "Projectile flames", target.getColorTextureView(), OptionalInt.empty(),
-                target.getDepthTextureView(), OptionalDouble.empty())) {
+        try (RenderPass pass = encoder.createRenderPass(() -> "Projectile flames", this.flameView, OptionalInt.of(0))) {
             RenderSystem.bindDefaultUniforms(pass);
             pass.setUniform("FlameFrame", frame);
             pass.bindTexture("FluidField", this.fluid.field(), RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR));
@@ -137,8 +147,33 @@ public final class FlameRenderer implements AutoCloseable {
                 pass.drawIndexed(0, 0, LODController.particles(this.lods[i]) * 6, this.counts[i]);
             }
         }
+        try (RenderPass pass = encoder.createRenderPass(() -> "Projectile flame composite", target.getColorTextureView(), OptionalInt.empty())) {
+            pass.setPipeline(FlamePipelines.COMPOSITE);
+            RenderSystem.bindDefaultUniforms(pass);
+            pass.setUniform("FlameFrame", frame);
+            pass.bindTexture("FlameColor", this.flameView, RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST));
+            pass.bindTexture("SceneDepth", this.depthView, RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST));
+            pass.setVertexBuffer(0, this.sampler.tile());
+            pass.setIndexBuffer(this.sampler.indices(), this.sampler.indexType());
+            pass.drawIndexed(0, 0, 6, 1);
+        }
         this.uniforms.rotate();
         return true;
+    }
+
+    private void ensureFlameTarget(int width, int height) {
+        // Bound transparent overdraw independently of window resolution, including when the camera is inside a flame.
+        double resolution = Math.min(0.5, Math.min((double) MAX_RENDER_WIDTH / width, (double) MAX_RENDER_HEIGHT / height));
+        int renderWidth = Math.max(1, (int) Math.ceil(width * resolution));
+        int renderHeight = Math.max(1, (int) Math.ceil(height * resolution));
+        if (this.flameColor != null && this.flameColor.getWidth(0) == renderWidth && this.flameColor.getHeight(0) == renderHeight)
+            return;
+        if (this.flameView != null) this.flameView.close();
+        if (this.flameColor != null) this.flameColor.close();
+        this.flameColor = RenderSystem.getDevice().createTexture("Projectile flame color",
+                GpuTexture.USAGE_RENDER_ATTACHMENT | GpuTexture.USAGE_TEXTURE_BINDING,
+                TextureFormat.RGBA8, renderWidth, renderHeight, 1, 1);
+        this.flameView = RenderSystem.getDevice().createTextureView(this.flameColor);
     }
 
     private void vector(float x, float y, float z, float w) {
@@ -163,6 +198,8 @@ public final class FlameRenderer implements AutoCloseable {
 
     @Override
     public void close() {
+        if (this.flameView != null) this.flameView.close();
+        if (this.flameColor != null) this.flameColor.close();
         if (this.depthView != null) this.depthView.close();
         if (this.depthCopy != null) this.depthCopy.close();
         this.fluid.close();

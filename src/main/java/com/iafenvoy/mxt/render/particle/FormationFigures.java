@@ -129,9 +129,8 @@ public final class FormationFigures {
             if (this.refresh-- <= 0) {
                 this.layOut(level, 0.0F, target);
                 this.refresh = REFRESH_TICKS;
-            } else if (target > this.laid) {
+            } else if (target > this.laid)
                 this.layOut(level, this.laid, target);
-            }
             this.laid = target;
         }
 
@@ -146,14 +145,11 @@ public final class FormationFigures {
         }
 
         private void layOut(ClientLevel level, float from, float to) {
-            for (FormationShapePath.Dot dot : FormationShapePath.band(this.options.shape().value(), this.center,
-                    this.options.radius(), from, to)) {
+            for (FormationShapePath.Dot dot : FormationShapePath.band(this.options.shape().value(), this.center, this.options.radius(), from, to))
                 // One dust per point, because a stroke has the colour and the size it asked for: both travel on the
                 // point. The limiter is bypassed on purpose: the distance the client would measure is the camera's, and
                 // the far side of a formation is beyond it whenever the array is bigger than 32 blocks.
-                level.addParticle(new DustParticleOptions(dot.color(), dot.size()), true, false,
-                        dot.position().x, dot.position().y, dot.position().z, 0.0D, 0.0D, 0.0D);
-            }
+                level.addParticle(new DustParticleOptions(dot.color(), dot.size()), true, false, dot.position().x, dot.position().y, dot.position().z, 0.0D, 0.0D, 0.0D);
         }
     }
 }

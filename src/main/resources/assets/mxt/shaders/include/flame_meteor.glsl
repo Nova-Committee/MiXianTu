@@ -7,11 +7,12 @@ float meteorTailLength(FlameItem item) {
 }
 vec3 meteorBoundsMin(FlameItem item) {
     float radius = item.shape.x;
-    return vec3(-radius * 3.0, -meteorTailLength(item) - radius * 1.6, -radius * 3.0);
+    return vec3(-radius * 2.0, -max(meteorTailLength(item), radius * 1.4), -radius * 2.0);
 }
 vec3 meteorBoundsMax(FlameItem item) {
     float radius = item.shape.x;
-    return vec3(radius * 3.0, radius * 1.6, radius * 3.0);
+    // With local wind capped at 12, the tail's bend and taper stay inside two radii.
+    return vec3(radius * 2.0, radius * 1.4, radius * 2.0);
 }
 vec2 meteorBend(FlameItem item, float progress) {
     float time = item.centerAge.w;
@@ -23,18 +24,24 @@ float meteorDensity(vec3 position, FlameItem item, out float heat) {
     float radius = item.shape.x;
     float time = item.centerAge.w;
     float progress = clamp(-position.y / meteorTailLength(item), 0.0, 1.0);
+    float width = max(radius * 0.02, radius * pow(1.0 - progress, 0.65));
+    vec2 offset = position.xz - meteorBend(item, progress);
+    heat = 0.0;
+    // Reject empty space before noise and fluid sampling; both limits include maximum noise distortion.
+    if (dot(position, position) > radius * radius * 1.8769
+            && (position.y > 0.0 || progress >= 1.0 || dot(offset, offset) > width * width * 3.8025)) return 0.0;
     vec3 noisePosition = position / radius * 2.8
             + vec3(-item.wind.x * 0.08, 3.5, -item.wind.z * 0.08) * time;
     float noise = flameNoise(noisePosition + item.style.z * 37.0);
     if (item.style.w < 1.5) noise = noise * 0.7 + flameNoise(noisePosition * 2.13 - time) * 0.3;
     float head = 1.0 - smoothstep(0.40, 1.18, length(position) / radius + (noise - 0.5) * 0.38);
-    float width = max(radius * 0.02, radius * pow(1.0 - progress, 0.65));
     width *= 0.78 + 0.22 * sin(progress * 17.0 - time * 6.0 + noise * 5.0);
-    float distance = length(position.xz - meteorBend(item, progress)) / width;
+    float distance = length(offset) / width;
     float tail = (1.0 - smoothstep(0.25, 1.25, distance + (noise - 0.5) * 1.4));
     tail *= (1.0 - smoothstep(0.65, 1.0, progress)) * step(position.y, 0.0);
     tail *= mix(1.0, smoothstep(0.22, 0.68, noise), progress);
     float density = max(head, tail * (1.0 - progress * 0.65));
+    if (density <= 0.0) return 0.0;
     vec2 uv = vec2(atan(position.z, position.x) / 6.2831853,
                    clamp(position.y / (radius * 2.0) + 0.5, 0.0, 1.0));
     vec4 field = item.style.w > 1.5 ? vec4(0.75, 1, 0.65, 1) : fluidAt(uv, item);

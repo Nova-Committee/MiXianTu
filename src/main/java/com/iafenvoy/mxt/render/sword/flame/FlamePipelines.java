@@ -3,9 +3,7 @@ package com.iafenvoy.mxt.render.sword.flame;
 import com.iafenvoy.mxt.MiXianTu;
 import com.mojang.blaze3d.pipeline.BlendFunction;
 import com.mojang.blaze3d.pipeline.ColorTargetState;
-import com.mojang.blaze3d.pipeline.DepthStencilState;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
-import com.mojang.blaze3d.platform.CompareOp;
 import com.mojang.blaze3d.platform.DestFactor;
 import com.mojang.blaze3d.platform.SourceFactor;
 import com.mojang.blaze3d.shaders.UniformType;
@@ -32,9 +30,18 @@ public final class FlamePipelines {
     public static final RenderPipeline SURFACE = world("sword_flame_surface").build();
     public static final RenderPipeline PARTICLES = world("sword_flame_particle").build();
 
-    // The volume integrates scene-depth clipping per sample rather than testing its screen quad.
-    public static final RenderPipeline METEOR = world("meteor_flame")
-            .withDepthStencilState(Optional.empty()).build();
+    public static final RenderPipeline METEOR = world("meteor_flame").build();
+    public static final RenderPipeline COMPOSITE = RenderPipeline.builder(PROJECTION_ONLY)
+            .withLocation(id("pipeline/flame_composite"))
+            .withVertexShader(id("core/flame_composite"))
+            .withFragmentShader(id("core/flame_composite"))
+            .withUniform("FlameFrame", UniformType.UNIFORM_BUFFER)
+            .withSampler("FlameColor").withSampler("SceneDepth")
+            .withVertexFormat(DefaultVertexFormat.POSITION, VertexFormat.Mode.QUADS)
+            .withDepthStencilState(Optional.empty()).withCull(false)
+            .withColorTargetState(new ColorTargetState(Optional.of(new BlendFunction(
+                    SourceFactor.ONE, DestFactor.ONE, SourceFactor.ZERO, DestFactor.ONE)), ColorTargetState.WRITE_COLOR))
+            .build();
 
     private FlamePipelines() {
     }
@@ -54,7 +61,8 @@ public final class FlamePipelines {
         return base(name)
                 .withSampler("FluidField")
                 .withSampler("SceneDepth")
-                .withDepthStencilState(new DepthStencilState(CompareOp.LESS_THAN_OR_EQUAL, false))
+                // Flame targets have no depth attachment; shaders test the full-resolution scene snapshot.
+                .withDepthStencilState(Optional.empty())
                 .withColorTargetState(new ColorTargetState(Optional.of(new BlendFunction(
                         SourceFactor.SRC_ALPHA, DestFactor.ONE, SourceFactor.ZERO, DestFactor.ONE)), ColorTargetState.WRITE_COLOR));
     }
@@ -69,5 +77,6 @@ public final class FlamePipelines {
         event.registerPipeline(SURFACE);
         event.registerPipeline(PARTICLES);
         event.registerPipeline(METEOR);
+        event.registerPipeline(COMPOSITE);
     }
 }

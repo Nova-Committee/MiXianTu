@@ -30,6 +30,7 @@ import net.minecraft.resources.RegistryOps;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.List;
+import java.util.OptionalDouble;
 import java.util.UUID;
 
 /**
@@ -176,11 +177,21 @@ public final class FormationProbes {
                 "{\"shape\": \"mxt:eight\", \"duration_ticks\": 60, \"interval_ticks\": 30}");
         context.check("formation probe: the display module reads its own fields",
                 module instanceof ParticleFormationAction(
-                        Holder<FormationShape> shape, int durationTicks, int intervalTicks
+                        Holder<FormationShape> shape, int durationTicks, int intervalTicks, OptionalDouble displayDistance
                 )
                         && HolderHelper.id(shape).equals(Identifier.parse("mxt:eight"))
                         && durationTicks == 60
-                        && intervalTicks == 30);
+                        && intervalTicks == 30
+                        && displayDistance.isEmpty());
+        // The reach a figure may tighten is its own field, so a formation that wants to be seen from up close says so
+        // on the module; outside one block to 4096 the definition is refused rather than clamped.
+        FormationActionType limited = module(context, "mxt:particle",
+                "{\"shape\": \"mxt:eight\", \"display_distance\": 64}");
+        context.check("formation probe: the display module reads its own draw distance",
+                limited instanceof ParticleFormationAction display
+                        && display.displayDistance().orElseThrow() == 64.0D);
+        context.check("formation probe: a draw distance below one block is refused",
+                module(context, "mxt:particle", "{\"shape\": \"mxt:eight\", \"display_distance\": 0}") == null);
         // The figure is the whole of what the module draws, so there is no meaningful default for it; a figure no pack
         // provides is a load error rather than an empty outline.
         context.check("formation probe: the display module requires a shape",

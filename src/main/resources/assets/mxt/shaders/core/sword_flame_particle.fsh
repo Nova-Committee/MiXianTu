@@ -9,6 +9,9 @@ flat in float particleLOD;
 flat in float particlePhase;
 out vec4 fragColor;
 void main() {
+    if (particleColor.a < 0.002) discard;
+    float depthFade = softFlame();
+    if (depthFade <= 0.0) discard;
     vec2 uv = particleUV;
     float time = FrameInfo.x;
     float noise = particleLOD > 1.5 ? 0.55 : flameNoise(vec3(uv * vec2(5,7)
@@ -18,7 +21,7 @@ void main() {
     float shape = 1.0 - smoothstep(width * 0.35, width, abs(uv.x - 0.5));
     shape *= smoothstep(0.0, 0.16, uv.y) * (1.0 - smoothstep(0.65, 1.0, uv.y));
     float tear = particleLOD > 1.5 ? 1.0 : smoothstep(0.15, 0.65, noise + (1.0 - uv.y) * 0.3);
-    float alpha = particleColor.a * shape * tear * softFlame();
+    float alpha = particleColor.a * shape * tear * depthFade;
     if (alpha < 0.002) discard;
     fragColor = vec4(particleColor.rgb, min(alpha, 0.65));
 }
