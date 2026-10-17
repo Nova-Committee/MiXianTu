@@ -32,6 +32,10 @@ public final class FlamePipelines {
     public static final RenderPipeline SURFACE = world("sword_flame_surface").build();
     public static final RenderPipeline PARTICLES = world("sword_flame_particle").build();
 
+    // The volume integrates scene-depth clipping per sample rather than testing its screen quad.
+    public static final RenderPipeline METEOR = world("meteor_flame")
+            .withDepthStencilState(Optional.empty()).build();
+
     private FlamePipelines() {
     }
 
@@ -64,5 +68,6 @@ public final class FlamePipelines {
         event.registerPipeline(FLUID);
         event.registerPipeline(SURFACE);
         event.registerPipeline(PARTICLES);
+        event.registerPipeline(METEOR);
     }
 }

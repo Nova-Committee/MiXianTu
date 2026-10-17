@@ -28,7 +28,8 @@ public final class FlameRenderer implements AutoCloseable {
     private static final int BATCH_SIZE = 64;
     private static final int ITEM_BYTES = 9 * 16;
     private static final int FRAME_BYTES = 64 + 5 * 16;
-    private static final int MAX_BATCHES = SurfaceFluidSimulation.CAPACITY / BATCH_SIZE + 3;
+    private static final int MAX_BATCHES = SurfaceFluidSimulation.CAPACITY / BATCH_SIZE + 6;
+    private static final int[] GROUP_ORDER = {0, 3, 1, 4, 2, 5};
     private final int batchStride;
     private final int itemStart;
     private final MappableRingBuffer uniforms;
@@ -36,6 +37,7 @@ public final class FlameRenderer implements AutoCloseable {
     private final GpuBufferSlice[] batches = new GpuBufferSlice[MAX_BATCHES];
     private final int[] counts = new int[MAX_BATCHES];
     private final int[] lods = new int[MAX_BATCHES];
+    private final boolean[] meteors = new boolean[MAX_BATCHES];
     private final ParticleSampler sampler;
     private final SurfaceFluidSimulation fluid;
     private final Vector3f axis = new Vector3f();
@@ -49,7 +51,7 @@ public final class FlameRenderer implements AutoCloseable {
         this.itemStart = align(FRAME_BYTES, alignment);
         int bytes = this.itemStart + this.batchStride * MAX_BATCHES;
         this.staging = MemoryUtil.memCalloc(bytes);
-        this.uniforms = new MappableRingBuffer(() -> "Sword flame records",
+        this.uniforms = new MappableRingBuffer(() -> "Projectile flame records",
                 GpuBuffer.USAGE_UNIFORM | GpuBuffer.USAGE_MAP_WRITE | GpuBuffer.USAGE_COPY_DST, bytes);
         this.sampler = new ParticleSampler();
         this.fluid = new SurfaceFluidSimulation();
@@ -59,9 +61,10 @@ public final class FlameRenderer implements AutoCloseable {
         GpuDevice device = RenderSystem.getDevice();
         if (!device.precompilePipeline(FlamePipelines.FLUID).isValid()
                 || !device.precompilePipeline(FlamePipelines.SURFACE).isValid()
-                || !device.precompilePipeline(FlamePipelines.PARTICLES).isValid()) {
+                || !device.precompilePipeline(FlamePipelines.PARTICLES).isValid()
+                || !device.precompilePipeline(FlamePipelines.METEOR).isValid()) {
             if (!this.invalidLogged)
-                MiXianTu.LOGGER.error("Sword flame shader compilation failed; inspect the preceding shader diagnostics");
+                MiXianTu.LOGGER.error("Projectile flame shader compilation failed; inspect the preceding shader diagnostics");
             this.invalidLogged = true;
             return false;
         }
@@ -86,8 +89,10 @@ public final class FlameRenderer implements AutoCloseable {
                 config.surfaceOpacity.getValue().floatValue(), 0);
         this.vector(LODController.particles(0), LODController.particles(1), LODController.particles(2), 0);
         int batchCount = 0;
-        for (int lod = 0; lod < visible.size(); lod++) {
-            List<BurningItemManager.Entry> group = visible.get(lod);
+        // Group by distance first, then shape, so all fluid-backed batches precede distant batches.
+        for (int groupIndex : GROUP_ORDER) {
+            int lod = groupIndex % 3;
+            List<BurningItemManager.Entry> group = visible.get(groupIndex);
             for (int start = 0; start < group.size(); start += BATCH_SIZE) {
                 int offset = this.itemStart + this.batchStride * batchCount;
                 this.staging.position(offset);
@@ -97,6 +102,7 @@ public final class FlameRenderer implements AutoCloseable {
                 while (this.staging.position() < offset + BATCH_SIZE * ITEM_BYTES) this.staging.putFloat(0);
                 this.batches[batchCount] = buffer.slice(offset, BATCH_SIZE * ITEM_BYTES);
                 this.counts[batchCount] = count;
+                this.meteors[batchCount] = groupIndex >= 3;
                 this.lods[batchCount++] = lod;
             }
         }
@@ -106,7 +112,7 @@ public final class FlameRenderer implements AutoCloseable {
         int fluidBatches = 0;
         while (fluidBatches < batchCount && this.lods[fluidBatches] < 2) fluidBatches++;
         if (fluidBatches > 0) this.fluid.update(encoder, this.sampler, frame, this.batches, this.counts, fluidBatches);
-        try (RenderPass pass = encoder.createRenderPass(() -> "Sword flames", target.getColorTextureView(), OptionalInt.empty(),
+        try (RenderPass pass = encoder.createRenderPass(() -> "Projectile flames", target.getColorTextureView(), OptionalInt.empty(),
                 target.getDepthTextureView(), OptionalDouble.empty())) {
             RenderSystem.bindDefaultUniforms(pass);
             pass.setUniform("FlameFrame", frame);
@@ -115,6 +121,12 @@ public final class FlameRenderer implements AutoCloseable {
             pass.setIndexBuffer(this.sampler.indices(), this.sampler.indexType());
             for (int i = 0; i < batchCount; i++) {
                 pass.setUniform("FlameItems", this.batches[i]);
+                if (this.meteors[i]) {
+                    pass.setPipeline(FlamePipelines.METEOR);
+                    pass.setVertexBuffer(0, this.sampler.tile());
+                    pass.drawIndexed(0, 0, 6, this.counts[i]);
+                    continue;
+                }
                 if (this.lods[i] < 2 && config.surfaceOpacity.getValue() > 0) {
                     pass.setPipeline(FlamePipelines.SURFACE);
                     pass.setVertexBuffer(0, this.sampler.surface());
@@ -140,7 +152,7 @@ public final class FlameRenderer implements AutoCloseable {
                 && this.depthCopy.getFormat() == source.getFormat()) return;
         if (this.depthView != null) this.depthView.close();
         if (this.depthCopy != null) this.depthCopy.close();
-        this.depthCopy = RenderSystem.getDevice().createTexture("Sword flame soft depth",
+        this.depthCopy = RenderSystem.getDevice().createTexture("Projectile flame soft depth",
                 GpuTexture.USAGE_COPY_DST | GpuTexture.USAGE_TEXTURE_BINDING, source.getFormat(), width, height, 1, 1);
         this.depthView = RenderSystem.getDevice().createTextureView(this.depthCopy);
     }

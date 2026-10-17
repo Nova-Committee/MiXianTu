@@ -18,14 +18,14 @@ void main() {
         return;
     }
     vec3 normal;
-    vec3 position = swordSurface(surfaceUV, item, normal);
+    vec3 position = flameSurface(surfaceUV, item, normal);
     vec3 tangent = vec3(normal.z, 0, -normal.x);
     vec3 flowDirection = flameFlowDirection(item, position, normal);
-    float perimeter = max(0.15, 2.0 * (item.shape.y + item.shape.z));
-    vec2 surfaceWind = vec2(dot(item.wind.xyz, tangent) / perimeter, item.wind.y / swordSpan(item));
+    float perimeter = flamePerimeter(item);
+    vec2 surfaceWind = vec2(dot(item.wind.xyz, tangent) / perimeter, item.wind.y / flameSpan(item));
     surfaceWind = clamp(surfaceWind * 0.10, vec2(-2), vec2(2));
     vec2 flow = vec2(dot(flowDirection, tangent) / perimeter,
-                     flowDirection.y / swordSpan(item));
+                     flowDirection.y / flameSpan(item));
     vec2 swirl = vec2(sin(surfaceUV.y * 24.0 + time * 2.4), cos(surfaceUV.x * 19.0 - time * 3.1)) * 0.035;
     float dt = item.tile.w;
     vec2 advectedUV = surfaceUV - (surfaceWind + flow * 0.04 + swirl) * dt;

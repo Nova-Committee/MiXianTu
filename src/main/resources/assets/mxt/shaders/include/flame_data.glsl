@@ -26,6 +26,10 @@ layout(std140) uniform FlameFrame {
 };
 uniform sampler2D FluidField;
 
+bool isMeteorFlame(FlameItem item) {
+    return item.wind.w > 0.5;
+}
+
 float flameHash(vec3 p) {
     p = fract(p * 0.1031);
     p += dot(p, p.yzx + 33.33);

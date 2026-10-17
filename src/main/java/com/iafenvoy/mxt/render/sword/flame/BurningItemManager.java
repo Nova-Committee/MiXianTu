@@ -1,7 +1,6 @@
 package com.iafenvoy.mxt.render.sword.flame;
 
 import com.iafenvoy.mxt.config.MxtClientConfig;
-import com.iafenvoy.mxt.render.sword.SwordAuraRenderState;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.state.level.CameraRenderState;
@@ -22,7 +21,8 @@ public final class BurningItemManager {
     private static final BurningItemManager INSTANCE = new BurningItemManager();
     private final Map<Integer, Entry> entries = new HashMap<>();
     private final BitSet slots = new BitSet(SurfaceFluidSimulation.CAPACITY);
-    private final List<List<Entry>> visible = List.of(new ArrayList<>(), new ArrayList<>(), new ArrayList<>());
+    private final List<List<Entry>> visible = List.of(new ArrayList<>(), new ArrayList<>(), new ArrayList<>(),
+            new ArrayList<>(), new ArrayList<>(), new ArrayList<>());
     private ClientLevel level;
     private FlameRenderer renderer;
     private CameraRenderState camera;
@@ -71,11 +71,11 @@ public final class BurningItemManager {
         }
     }
 
-    public static void submit(SwordAuraRenderState state, Quaternionf rotation, CameraRenderState camera) {
+    public static void submit(FlameRenderState state, Quaternionf rotation, CameraRenderState camera) {
         INSTANCE.collect(state, rotation, camera);
     }
 
-    private void collect(SwordAuraRenderState state, Quaternionf rotation, CameraRenderState camera) {
+    private void collect(FlameRenderState state, Quaternionf rotation, CameraRenderState camera) {
         if (this.level == null || !MxtClientConfig.INSTANCE.flames.enabled.getValue()
                 || ((state.auraColor >>> 24) & 0xFF) == 0) return;
         int lod = LODController.level(state.distanceToCameraSq);
@@ -109,7 +109,7 @@ public final class BurningItemManager {
         entry.update = entry.reset || (this.delta > 0 && (lod == 0 || (this.frame & 1) == 0));
         entry.step = entry.reset ? 1 / 60.0F : Math.clamp(this.time - entry.lastUpdateTime, 0, 0.05F);
         this.camera = camera;
-        this.visible.get(lod).add(entry);
+        this.visible.get(lod + (state.meteor ? 3 : 0)).add(entry);
     }
 
     private void render() {
@@ -145,7 +145,7 @@ public final class BurningItemManager {
         final float seed;
         final Quaternionf rotation = new Quaternionf();
         final Vector3f scratch = new Vector3f();
-        SwordAuraRenderState state;
+        FlameRenderState state;
         int slot = -1;
         int lastSeen = -1;
         int lod = 2;
@@ -166,8 +166,8 @@ public final class BurningItemManager {
             this.axis(buffer, 1, 0, 0);
             this.axis(buffer, 0, 1, 0);
             this.axis(buffer, 0, 0, 1);
-            put(buffer, this.state.length, this.state.bladeWidth, this.state.thickness, this.state.handleLength);
-            put(buffer, this.state.guardWidth, this.state.radialFlame ? 1.0F : 0.0F, this.seed, this.lod);
+            put(buffer, this.state.flameShape.x, this.state.flameShape.y, this.state.flameShape.z, this.state.flameShape.w);
+            put(buffer, this.state.flameSurfaceWidth, this.state.radialFlame ? 1.0F : 0.0F, this.seed, this.lod);
             this.scratch.set((float) (config.windX.getValue() - this.state.velocity.x * 20),
                     (float) (config.windY.getValue() - this.state.velocity.y * 20),
                     (float) (config.windZ.getValue() - this.state.velocity.z * 20));
@@ -175,7 +175,8 @@ public final class BurningItemManager {
             if (this.scratch.lengthSquared() > 144) this.scratch.normalize(12);
             this.rotation.transformInverse(this.scratch);
             this.scratch.div(this.state.scale);
-            put(buffer, this.scratch.x, this.scratch.y, this.scratch.z, 0);
+            if (this.state.meteor && this.scratch.lengthSquared() > 144) this.scratch.normalize(12);
+            put(buffer, this.scratch.x, this.scratch.y, this.scratch.z, this.state.meteor ? 1 : 0);
             put(buffer, this.slot, this.reset ? 1 : 0, this.update ? 1 : 0, this.step);
             put(buffer, ((this.state.auraColor >>> 16) & 255) / 255.0F,
                     ((this.state.auraColor >>> 8) & 255) / 255.0F,

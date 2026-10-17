@@ -1,5 +1,5 @@
 // Selects the flame's travel direction relative to the sword surface.
-// Supports upward flow and radial flow toward the sword's center.
+// Supports upward/radial sword flames and a meteor plume opposite its local +Y motion.
 #ifndef MXT_FLAME_FLOW
 #define MXT_FLAME_FLOW
 bool isRadialFlame(FlameItem item) {
@@ -7,6 +7,7 @@ bool isRadialFlame(FlameItem item) {
 }
 
 vec3 flameFlowDirection(FlameItem item, vec3 surface, vec3 normal) {
+    if (isMeteorFlame(item)) return vec3(0, -1, 0);
     vec3 upward = worldVectorToLocal(vec3(0, 1, 0), item);
     if (!isRadialFlame(item)) return upward;
 

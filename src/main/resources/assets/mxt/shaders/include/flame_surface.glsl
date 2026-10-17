@@ -1,5 +1,5 @@
-// Defines the sword's local surface geometry from its blade and hilt dimensions.
-// Used to place the surface flame and sample the fluid field along the sword.
+// Maps sword geometry and meteor spheres to the shared fluid-field coordinates.
+// Sword-only helpers also position the blade's surface flame and particle sources.
 #ifndef MXT_FLAME_SURFACE
 #define MXT_FLAME_SURFACE
 float swordBottom(FlameItem item) {
@@ -70,5 +70,19 @@ vec3 swordSurface(vec2 uv, FlameItem item, out vec3 normal) {
     normal = dot(faceNormal, faceNormal) > 1e-10 ? normalize(faceNormal) : vec3(1,0,0);
     vec2 crossSection = mix(a, b, fract(around));
     return vec3(crossSection.x, y, crossSection.y);
+}
+vec3 flameSurface(vec2 uv, FlameItem item, out vec3 normal) {
+    if (!isMeteorFlame(item)) return swordSurface(uv, item, normal);
+    float y = clamp(uv.y, 0.0, 1.0) * 2.0 - 1.0;
+    float ring = sqrt(max(0.0, 1.0 - y * y));
+    float angle = uv.x * 6.2831853;
+    normal = vec3(cos(angle) * ring, y, sin(angle) * ring);
+    return normal * item.shape.x;
+}
+float flameSpan(FlameItem item) {
+    return isMeteorFlame(item) ? item.shape.x * 2.0 : swordSpan(item);
+}
+float flamePerimeter(FlameItem item) {
+    return max(0.15, isMeteorFlame(item) ? item.shape.x * 6.2831853 : 2.0 * (item.shape.y + item.shape.z));
 }
 #endif

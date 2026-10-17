@@ -47,6 +47,8 @@ public final class SwordAuraRenderer extends EntityRenderer<SwordAuraEntity, Swo
         state.handleLength = entity.getHandleLength();
         state.guardWidth = entity.getGuardWidth();
         state.scale = entity.getScale();
+        state.flameShape.set(state.length, state.bladeWidth, state.thickness, state.handleLength);
+        state.flameSurfaceWidth = state.guardWidth;
     }
 
     @Override

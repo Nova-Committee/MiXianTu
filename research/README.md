@@ -38,6 +38,7 @@
 | `72_来源身份与模块钩子统一设计.md` | **把"来源"统一**（用户要求）：一个注册骨架 `runtime/ModuleHooks`（capability 接口当键）＋ 一个启动口，把六份同骨架注册表（`AbilityGrantSources` / `PassiveAttributeSources` / `ProgressionSources` / `HoldLookup` / `TriggerRehydrators` / `EntityTickStages`）收成一处；一份实体来源契约 `runtime/EntitySources`（`Grants` / `Attributes` / `Owns`）；来源 id 只由 `runtime/Sources` 生成（两个闭集枚举 `Grant` / `Declaration`）；每个模块一份 `Hooks` 类；删掉"静态块注册 + 空 `initialize()` 强制类初始化" | 已落地（2026-10-04，用户拍板"顺带统一所有同骨架注册点"；§5 是落地记录，形状以代码为准） |
 | `73_剑气表面流体与GPU粒子设计.md` | 剑气外层替换为 64×64 表面反应/对流场、Halton GPU 粒子及距离 LOD；使用原生 RenderPipeline / FBO，无额外 GPU 依赖 | 已落地；视觉与性能待实机验证 |
 | `74_消耗草稿与统一执行设计.md` | **消耗改由草稿执行**（用户给定形状）：`CostDraftManager` 只登记"Cost 类型 ↔ `CostDraft<T>` 工厂"并按类型造草稿，`CostPayment` 才是一次处理（装入 / test / commit，前三步可合并执行；构造即快照、`reset` 只还原真正写下的部分）；`Cost` 只剩 `codec` / `test` / `commit`，没登记草稿的类型（`mxt:js`）直接走它自己的两个方法；`Charge` 与 `CostTransaction` 删除，多笔边界改由 `CostPayment.payAll` 的草稿回退承担 | 已落地（2026-10-05；只编译，探针未实跑）；取代 `39` 的 `charge` + `plan/commit` 那一层 |
+| `89_流星实体与整体火焰设计.md` | 新增 `mxt:meteor`，与剑气共用运动、寿命与撞击逻辑；复用流体图集和 GLSL 工具，用一个连续体积绘制火核与受相对风影响的尾焰 | 已落地；Java 编译、四组 GLSL 链接、九组离屏绘制及文档检查通过；未实机 |
 
 ### B. 数据定义与系统内核
 
