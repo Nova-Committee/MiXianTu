@@ -16,9 +16,7 @@ import org.jetbrains.annotations.Nullable;
  */
 public final class TriggerContext extends Context {
     @Nullable
-    private Entity actor;
-    @Nullable
-    private Entity target;
+    private Entity actor, target;
     @Nullable
     private Level level;
     @Nullable

@@ -37,7 +37,10 @@ import net.neoforged.neoforge.event.entity.living.LivingEntityUseItemEvent.Tick;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent.RightClickItem;
 import org.slf4j.Logger;
 
-import java.util.*;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -89,7 +92,7 @@ public final class TechniqueItemService {
     @SubscribeEvent
     public static void onCollectHolds(CollectHoldBindingsEvent event) {
         event.add(TechniqueHold.INSTANCE);
-        MxtDatapackRegistries.holders(event.registries(), MxtResourceKeys.TECHNIQUE_BINDING)
+        MxtDatapackRegistries.holders(event.getRegistries(), MxtResourceKeys.TECHNIQUE_BINDING)
                 .map(Reference::value)
                 .filter(binding -> !binding.entries().isEmpty())
                 .forEach(binding -> event.add(new TechniqueHold(binding.entries())));

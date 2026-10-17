@@ -100,7 +100,7 @@ public final class PassiveAttributeService {
 
         // Everything a datapack declares comes from the registered providers; a body with none of them has no
         // entries beyond its own abilities.
-        NeoForge.EVENT_BUS.post(new CollectPassiveAttributesEvent(entity, entries));
+        entries.addAll(NeoForge.EVENT_BUS.post(new CollectPassiveAttributesEvent(entity)).getEntries());
         return entries;
     }
 

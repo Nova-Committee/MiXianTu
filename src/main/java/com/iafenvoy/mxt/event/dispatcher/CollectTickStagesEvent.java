@@ -1,5 +1,6 @@
 package com.iafenvoy.mxt.event.dispatcher;
 
+import com.iafenvoy.mxt.runtime.EntityTickStages;
 import net.minecraft.world.entity.LivingEntity;
 import net.neoforged.bus.api.Event;
 

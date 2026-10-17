@@ -22,8 +22,8 @@ final class FtbTeamsRelation {
         // The manager does not exist until the server is about to start.
         if (!FTBTeamsAPI.api().isManagerLoaded()) return;
         // An id FTB Teams has never seen has no team, and neither has a formation with no recorded owner.
-        Team team = FTBTeamsAPI.api().getManager().getTeamForPlayerID(event.judgeId()).orElse(null);
-        if (team != null && friendly(team, event.candidate().getUUID())) event.setResult(TriState.TRUE);
+        Team team = FTBTeamsAPI.api().getManager().getTeamForPlayerID(event.getJudgeId()).orElse(null);
+        if (team != null && friendly(team, event.getCandidate().getUUID())) event.setResult(TriState.TRUE);
     }
 
     // Membership is not configurable; the two outsider ranks are, because "with us" is a server's call.

@@ -43,7 +43,8 @@ public final class FormationWorldTicker {
 
     @SubscribeEvent
     public static void onLevelTick(Post event) {
-        if (!(event.getLevel() instanceof ServerLevel level) || !FormationIntervals.beatDue(level.getGameTime())) return;
+        if (!(event.getLevel() instanceof ServerLevel level) || !FormationIntervals.beatDue(level.getGameTime()))
+            return;
         dispatch(level, level.getGameTime());
     }
 

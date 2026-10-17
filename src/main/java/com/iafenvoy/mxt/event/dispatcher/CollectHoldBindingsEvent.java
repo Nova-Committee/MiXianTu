@@ -5,6 +5,7 @@ import net.minecraft.core.RegistryAccess;
 import net.neoforged.bus.api.Event;
 
 import java.util.Collection;
+import java.util.LinkedList;
 import java.util.List;
 
 /**
@@ -13,15 +14,18 @@ import java.util.List;
  */
 public final class CollectHoldBindingsEvent extends Event {
     private final RegistryAccess registries;
-    private final List<HoldBinding> bindings;
+    private final List<HoldBinding> bindings = new LinkedList<>();
 
-    public CollectHoldBindingsEvent(RegistryAccess registries, List<HoldBinding> bindings) {
+    public CollectHoldBindingsEvent(RegistryAccess registries) {
         this.registries = registries;
-        this.bindings = bindings;
     }
 
-    public RegistryAccess registries() {
+    public RegistryAccess getRegistries() {
         return this.registries;
+    }
+
+    public List<HoldBinding> getBindings() {
+        return List.copyOf(this.bindings);
     }
 
     public void add(HoldBinding binding) {

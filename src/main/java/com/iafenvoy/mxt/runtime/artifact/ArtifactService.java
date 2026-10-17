@@ -72,14 +72,14 @@ public final class ArtifactService {
     // it). Display-only - every ownership question is asked of the UUID.
     public static RefineResult refine(ItemStack stack, Entity owner) {
         UUID ownerUuid = owner.getUUID();
-        if (NeoForge.EVENT_BUS.post(new Pre(stack, ownerUuid)).isCanceled())
+        if (NeoForge.EVENT_BUS.post(new Pre(owner, stack)).isCanceled())
             return RefineResult.CANCELLED;
         ArtifactStateComponent current = state(stack);
         String requestedOwner = ownerUuid.toString();
         if (current.ownerUuid().isPresent() && !current.ownerUuid().get().equals(requestedOwner))
             return RefineResult.OWNED_BY_OTHER;
         stack.set(MxtDataComponents.ARTIFACT_STATE, current.withOwner(requestedOwner, PlayerNames.displayName(owner)));
-        NeoForge.EVENT_BUS.post(new Post(stack, ownerUuid));
+        NeoForge.EVENT_BUS.post(new Post(owner, stack));
         // Runs only for a binding that was really written, and deliberately not checked against the holder first:
         // refusing a claim the price would kill is not this method's business, and every writer of a binding pays
         // the same price.

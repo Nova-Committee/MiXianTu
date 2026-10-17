@@ -117,7 +117,7 @@ final class MxtKubeJsEventDispatcher implements Dispatcher {
         }
 
         public String getAbility() {
-            return HolderHelper.id(this.event.ability()).toString();
+            return HolderHelper.id(this.event.getAbility()).toString();
         }
 
         public boolean isPre() {
@@ -126,7 +126,7 @@ final class MxtKubeJsEventDispatcher implements Dispatcher {
 
         public Map<String, Double> getPaidCosts() {
             if (!(this.event instanceof Post post)) return Map.of();
-            return post.paidCosts().entrySet().stream().collect(Collectors.toUnmodifiableMap(entry -> entry.getKey().toString(), Entry::getValue));
+            return post.getPaidCosts().entrySet().stream().collect(Collectors.toUnmodifiableMap(entry -> entry.getKey().toString(), Entry::getValue));
         }
     }
 
@@ -141,7 +141,7 @@ final class MxtKubeJsEventDispatcher implements Dispatcher {
         }
 
         public String getCurse() {
-            return HolderHelper.id(this.event.curse()).toString();
+            return HolderHelper.id(this.event.getCurse()).toString();
         }
 
         public boolean isPre() {
@@ -149,7 +149,7 @@ final class MxtKubeJsEventDispatcher implements Dispatcher {
         }
 
         public int getStacks() {
-            return this.pre().stacks();
+            return this.pre().getStacks();
         }
 
         public void setStacks(int stacks) {
@@ -158,7 +158,7 @@ final class MxtKubeJsEventDispatcher implements Dispatcher {
 
         // A string so a script can compare and replace it directly.
         public String getSource() {
-            return this.pre().source().toString();
+            return this.pre().getSource().toString();
         }
 
         public void setSource(String source) {
@@ -188,7 +188,7 @@ final class MxtKubeJsEventDispatcher implements Dispatcher {
         }
 
         public Map<String, Double> getAmounts() {
-            return this.event.amounts().entrySet().stream().collect(Collectors.toUnmodifiableMap(entry -> entry.getKey().toString(), Entry::getValue));
+            return this.event.getAmounts().entrySet().stream().collect(Collectors.toUnmodifiableMap(entry -> entry.getKey().toString(), Entry::getValue));
         }
 
         public void setAmount(String resource, double amount) {
@@ -220,19 +220,19 @@ final class MxtKubeJsEventDispatcher implements Dispatcher {
         // A holder's own toString is a debug string, so the id is what a script can compare against; a position
         // no zone covers has no source at all.
         public String getSource() {
-            return this.event.result().source() == null ? "" : HolderHelper.id(this.event.result().source()).toString();
+            return this.event.getResult().source() == null ? "" : HolderHelper.id(this.event.getResult().source()).toString();
         }
 
         public double getConcentration() {
-            return this.event.result().concentration();
+            return this.event.getResult().concentration();
         }
 
         public boolean isCultivationSuppressed() {
-            return this.event.result().suppressCultivate();
+            return this.event.getResult().suppressCultivate();
         }
 
         public String getOverrideZone() {
-            return this.event instanceof AuraZoneEvent.Override override ? HolderHelper.id(override.zone()).toString() : "";
+            return this.event instanceof AuraZoneEvent.Override override ? HolderHelper.id(override.getZone()).toString() : "";
         }
     }
 
@@ -249,33 +249,33 @@ final class MxtKubeJsEventDispatcher implements Dispatcher {
         }
 
         public String getJudgeId() {
-            return this.event.judgeId().toString();
+            return this.event.getJudgeId().toString();
         }
 
         /**
          * The judge entity, or {@code null} while that player is offline.
          */
         public Entity getJudge() {
-            return this.event.judge().orElse(null);
+            return this.event.getJudge().orElse(null);
         }
 
         public boolean hasJudge() {
-            return this.event.judge().isPresent();
+            return this.event.getJudge().isPresent();
         }
 
         public Entity getCandidate() {
-            return this.event.candidate();
+            return this.event.getCandidate();
         }
 
         /**
          * {@code "true"}, {@code "false"} or {@code "default"}, matching the Java {@link TriState}.
          */
         public String getResult() {
-            return this.event.result().getSerializedName();
+            return this.event.getResult().getSerializedName();
         }
 
         public boolean isAnswered() {
-            return this.event.answered();
+            return this.event.isAnswered();
         }
 
         public void setFriend(boolean friend) {
@@ -318,16 +318,16 @@ final class MxtKubeJsEventDispatcher implements Dispatcher {
 
         public String getSignalType() {
             return this.event instanceof AbilityTriggeredEvent trigger
-                    ? trigger.signalType().toString() : "";
+                    ? trigger.getSignalType().toString() : "";
         }
 
         public String getAbility() {
             return this.event instanceof AbilityTriggeredEvent trigger
-                    ? HolderHelper.id(trigger.ability()).toString() : "";
+                    ? HolderHelper.id(trigger.getAbility()).toString() : "";
         }
 
         public Object getContext() {
-            return this.event instanceof AbilityTriggeredEvent trigger ? trigger.context() : null;
+            return this.event instanceof AbilityTriggeredEvent trigger ? trigger.getContext() : null;
         }
     }
 }

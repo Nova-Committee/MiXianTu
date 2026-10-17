@@ -26,19 +26,19 @@ public abstract class SpiritContractEvent extends Event {
         this.action = action;
     }
 
-    public ContractAttachment contract() {
+    public ContractAttachment getContract() {
         return this.contract;
     }
 
-    public Optional<Holder<ContractType>> contractType() {
+    public Optional<Holder<ContractType>> getContractType() {
         return this.contractType;
     }
 
-    public UUID requester() {
+    public UUID getRequester() {
         return this.requester;
     }
 
-    public Action action() {
+    public Action getAction() {
         return this.action;
     }
 

@@ -2,7 +2,6 @@ package com.iafenvoy.mxt.runtime.progression;
 
 import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.progression.Progression;
-import com.iafenvoy.mxt.event.dispatcher.EntitySources;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.world.entity.LivingEntity;
@@ -21,7 +20,7 @@ public final class ProgressionDamageMultiplier {
     public static double of(LivingEntity holder, Holder<Ability> ability) {
         Provider access = holder.level().registryAccess();
         double best = 1.0D;
-        for (EntitySources.Owner<?> owner : EntitySources.heldBy(holder)) {
+        for (ProgressionOwners.Owner<?> owner : ProgressionOwners.heldBy(holder)) {
             Holder<Progression> current = ProgressionService.current(owner).orElse(null);
             if (current == null) continue;
             boolean grants = ProgressionService.grantedAbilities(owner.definition(), current, access).stream()

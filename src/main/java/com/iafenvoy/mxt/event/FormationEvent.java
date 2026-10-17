@@ -25,15 +25,15 @@ public abstract class FormationEvent extends Event {
         this.instance = instance;
     }
 
-    public ServerLevel level() {
+    public ServerLevel getLevel() {
         return this.level;
     }
 
-    public BlockPos controller() {
+    public BlockPos getController() {
         return this.controller;
     }
 
-    public FormationInstance instance() {
+    public FormationInstance getInstance() {
         return this.instance;
     }
 
@@ -81,20 +81,19 @@ public abstract class FormationEvent extends Event {
         private final Optional<Entity> payer;
         private final Optional<Identifier> failedResource;
 
-        public UpkeepFailed(ServerLevel level, BlockPos pos, FormationInstance instance, Optional<Entity> payer,
-                            Optional<Identifier> failedResource) {
+        public UpkeepFailed(ServerLevel level, BlockPos pos, FormationInstance instance, Optional<Entity> payer, Optional<Identifier> failedResource) {
             super(level, pos, instance);
             this.payer = payer;
             this.failedResource = failedResource;
         }
 
         // Empty when the owner is missing: offline, dead, or never recorded.
-        public Optional<Entity> payer() {
+        public Optional<Entity> getPayer() {
             return this.payer;
         }
 
         // Empty when there was nobody to pay at all.
-        public Optional<Identifier> failedResource() {
+        public Optional<Identifier> getFailedResource() {
             return this.failedResource;
         }
     }

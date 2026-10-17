@@ -23,15 +23,15 @@ public abstract class AbilityTriggeredEvent extends EntityEvent {
         this.context = context;
     }
 
-    public Holder<Ability> ability() {
+    public Holder<Ability> getAbility() {
         return this.ability;
     }
 
-    public Identifier signalType() {
+    public Identifier getSignalType() {
         return this.signalType;
     }
 
-    public TriggerContext context() {
+    public TriggerContext getContext() {
         return this.context;
     }
 

@@ -122,7 +122,7 @@ public final class CultivationService {
         if (refusal.isPresent()) return BreakthroughResult.rejected(failure(refusal.get()), null);
         Pre event = new Pre(spirit, resources, stage, context, minimum, plan.resources());
         if (NeoForge.EVENT_BUS.post(event).isCanceled()) return BreakthroughResult.rejected(Failure.CANCELLED, null);
-        plan.reprice(event.costs());
+        plan.reprice(event.getCosts());
         CostPayment.Result payment = plan.commit();
         if (!payment.paid()) return BreakthroughResult.rejected(failure(payment.failure()), payment.failedResource());
         spirit.setRealmStage(stage);

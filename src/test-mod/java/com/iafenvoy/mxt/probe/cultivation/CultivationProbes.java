@@ -516,9 +516,9 @@ public final class CultivationProbes {
     // friend pool, which answers by pair and therefore always answers symmetrically.
     private static Consumer<FriendEvent.Relation> relations(Set<UUID> friends, Set<String> refused) {
         return event -> {
-            if (refused.contains(event.judgeId() + ">" + event.candidate().getUUID()))
+            if (refused.contains(event.getJudgeId() + ">" + event.getCandidate().getUUID()))
                 event.setResult(TriState.FALSE);
-            else if (friends.contains(event.judgeId()) && friends.contains(event.candidate().getUUID()))
+            else if (friends.contains(event.getJudgeId()) && friends.contains(event.getCandidate().getUUID()))
                 event.setResult(TriState.TRUE);
         };
     }

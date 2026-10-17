@@ -1,7 +1,5 @@
 package com.iafenvoy.mxt.runtime.ability;
 
-import com.google.common.collect.ImmutableSetMultimap;
-import com.google.common.collect.LinkedHashMultimap;
 import com.google.common.collect.SetMultimap;
 import com.iafenvoy.mxt.attachment.AbilityAttachment;
 import com.iafenvoy.mxt.data.ability.Ability;
@@ -30,8 +28,7 @@ public final class AbilityGrantService {
     public static Result recalculate(LivingEntity entity) {
         // Grants are state, so only the server rebuilds them; a client reads what it was sent.
         if (entity.level().isClientSide()) return new Result(0, 0);
-        SetMultimap<Identifier, Holder<Ability>> desired = LinkedHashMultimap.create();
-        NeoForge.EVENT_BUS.post(new CollectAbilityGrantsEvent(entity, desired));
+        SetMultimap<Identifier, Holder<Ability>> desired = NeoForge.EVENT_BUS.post(new CollectAbilityGrantsEvent(entity)).getDesired();
         int granted = 0;
         int revoked = 0;
         AbilityAttachment abilities = entity.getData(MxtAttachments.ABILITY_HOLDER);

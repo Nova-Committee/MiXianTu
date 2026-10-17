@@ -22,7 +22,6 @@ import com.iafenvoy.mxt.data.quality.QualityLadders;
 import com.iafenvoy.mxt.data.quality.QualityRequirement;
 import com.iafenvoy.mxt.data.trigger.TriggerContext;
 import com.iafenvoy.mxt.event.CurseRemoveEvent.Reason;
-import com.iafenvoy.mxt.event.dispatcher.EntitySources;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
@@ -42,6 +41,7 @@ import com.iafenvoy.mxt.runtime.item.QualityService;
 import com.iafenvoy.mxt.runtime.item.QualityUpgradeService;
 import com.iafenvoy.mxt.runtime.progression.ProgressionAdminService;
 import com.iafenvoy.mxt.runtime.progression.ProgressionMastery;
+import com.iafenvoy.mxt.runtime.progression.ProgressionOwners;
 import com.iafenvoy.mxt.runtime.progression.ProgressionService;
 import com.iafenvoy.mxt.runtime.resource.ResourceTransactions.Result;
 import com.iafenvoy.mxt.runtime.trigger.TriggerDispatcher;
@@ -435,7 +435,7 @@ public final class MxtKubeJsApi {
      * The progression level that owner has reached, or {@code null} when the entity has no record for it yet.
      */
     public static @Nullable Identifier progressionLevel(@NotNull Entity entity, Identifier owner) {
-        return EntitySources.held(entity, owner)
+        return ProgressionOwners.held(entity, owner)
                 .flatMap(ProgressionService::recorded).map(HolderHelper::id).orElse(null);
     }
 
@@ -444,7 +444,7 @@ public final class MxtKubeJsApi {
      * advanced. Null when the entity does not hold that owner at all.
      */
     public static @Nullable Identifier progressionCurrent(@NotNull Entity entity, Identifier owner) {
-        return EntitySources.held(entity, owner)
+        return ProgressionOwners.held(entity, owner)
                 .flatMap(ProgressionService::current).map(HolderHelper::id).orElse(null);
     }
 
@@ -452,7 +452,7 @@ public final class MxtKubeJsApi {
      * The level after the current one on the same chain, or {@code null} at the top of the chain.
      */
     public static @Nullable Identifier progressionNext(@NotNull Entity entity, Identifier owner) {
-        return EntitySources.held(entity, owner)
+        return ProgressionOwners.held(entity, owner)
                 .flatMap(ProgressionService::next).map(HolderHelper::id).orElse(null);
     }
 
@@ -461,7 +461,7 @@ public final class MxtKubeJsApi {
      * the owner measures no mastery at all. A mastery formula that cannot be evaluated answers null rather than 0.
      */
     public static @Nullable ProgressionMastery progressionMastery(@NotNull Entity entity, Identifier owner) {
-        return EntitySources.held(entity, owner).flatMap(held -> ProgressionService.masteryOf(entity, held)).orElse(null);
+        return ProgressionOwners.held(entity, owner).flatMap(held -> ProgressionService.masteryOf(entity, held)).orElse(null);
     }
 
     /**

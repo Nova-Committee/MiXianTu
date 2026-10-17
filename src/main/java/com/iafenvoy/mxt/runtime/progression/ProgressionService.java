@@ -10,7 +10,6 @@ import com.iafenvoy.mxt.data.progression.ProgressionOwner;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.data.trigger.TriggerContext;
 import com.iafenvoy.mxt.data.trigger.TriggerSignals;
-import com.iafenvoy.mxt.event.dispatcher.EntitySources;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.DatapackCache;
@@ -31,7 +30,7 @@ import java.util.Optional;
 /**
  * The owner-agnostic half of every progression: where a holder stands, what the next level is, what each level grants
  * and whether it may be entered. Which owners a body holds, when it advances and what happens then belong to the
- * owning module. Every question is asked of an {@link EntitySources.Owner}, so it reaches the holder of that owner's
+ * owning module. Every question is asked of an {@link ProgressionOwners.Owner}, so it reaches the holder of that owner's
  * own sort and never another sort's records. Ordering comes from {@link DatapackCache}.
  */
 public final class ProgressionService {
@@ -39,43 +38,41 @@ public final class ProgressionService {
     }
 
     // Where the owner stands: its record, or its own entry level while it never advanced.
-    public static <T extends ProgressionOwner> Optional<Holder<Progression>> current(EntitySources.Owner<T> owner) {
+    public static <T extends ProgressionOwner> Optional<Holder<Progression>> current(ProgressionOwners.Owner<T> owner) {
         return owner.levels().current(owner.holder());
     }
 
     // The level the owner actually recorded, so an owner still standing on its entry level answers empty.
-    public static <T extends ProgressionOwner> Optional<Holder<Progression>> recorded(EntitySources.Owner<T> owner) {
+    public static <T extends ProgressionOwner> Optional<Holder<Progression>> recorded(ProgressionOwners.Owner<T> owner) {
         return owner.levels().recorded(owner.holder());
     }
 
-    public static <T extends ProgressionOwner> Optional<Holder<Progression>> next(EntitySources.Owner<T> owner) {
+    public static <T extends ProgressionOwner> Optional<Holder<Progression>> next(ProgressionOwners.Owner<T> owner) {
         return owner.levels().next(owner.holder());
     }
 
-    public static <T extends ProgressionOwner> boolean set(EntitySources.Owner<T> owner,
-                                                           Holder<Progression> level) {
+    public static <T extends ProgressionOwner> boolean set(ProgressionOwners.Owner<T> owner, Holder<Progression> level) {
         return owner.levels().set(owner.holder(), level);
     }
 
     // One step along the owner's own chain; both bounds and the record itself are the holder's business, so a
     // caller only says which direction.
-    public static <T extends ProgressionOwner> boolean promote(EntitySources.Owner<T> owner) {
+    public static <T extends ProgressionOwner> boolean promote(ProgressionOwners.Owner<T> owner) {
         return owner.levels().promote(owner.holder());
     }
 
-    public static <T extends ProgressionOwner> boolean demote(EntitySources.Owner<T> owner) {
+    public static <T extends ProgressionOwner> boolean demote(ProgressionOwners.Owner<T> owner) {
         return owner.levels().demote(owner.holder());
     }
 
-    public static <T extends ProgressionOwner> boolean follows(EntitySources.Owner<T> owner,
-                                                               Holder<Progression> level) {
+    public static <T extends ProgressionOwner> boolean follows(ProgressionOwners.Owner<T> owner, Holder<Progression> level) {
         return owner.levels().follows(owner.holder(), level);
     }
 
     // What the next level asks for and what the body already has of the resource that measures it. A mastery
     // formula that cannot be evaluated answers empty rather than zero, so a caller never reads a false "done".
     public static <T extends ProgressionOwner> Optional<ProgressionMastery> masteryOf(Entity entity,
-                                                                                      EntitySources.Owner<T> owner) {
+                                                                                      ProgressionOwners.Owner<T> owner) {
         Holder<Resource> mastery = owner.definition().masteryResource().orElse(null);
         if (mastery == null) return Optional.empty();
         Holder<Progression> target = next(owner).orElse(null);
@@ -129,7 +126,7 @@ public final class ProgressionService {
      */
     public static int pruneForeignLevels(Entity entity) {
         int cleared = 0;
-        for (EntitySources.Owner<?> owner : EntitySources.heldBy(entity)) {
+        for (ProgressionOwners.Owner<?> owner : ProgressionOwners.heldBy(entity)) {
             Holder<Progression> stored = recorded(owner).orElse(null);
             if (stored == null || !prune(owner)) continue;
             MiXianTu.LOGGER.warn("Dropped progression level {} for owner {} on {}: not reachable from that owner's entry level",
@@ -140,7 +137,7 @@ public final class ProgressionService {
     }
 
     // Reachability is the owner's own chain's question, so the answer comes from the holder that keeps its records.
-    public static <T extends ProgressionOwner> boolean prune(EntitySources.Owner<T> owner) {
+    public static <T extends ProgressionOwner> boolean prune(ProgressionOwners.Owner<T> owner) {
         return owner.levels().prune(owner.holder());
     }
 }

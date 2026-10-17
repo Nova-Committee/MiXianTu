@@ -35,7 +35,7 @@ public final class FriendService {
     public static TriState identify(UUID judgeId, @Nullable Entity judge, Entity candidate) {
         Relation event = new Relation(judgeId, judge, candidate);
         NeoForge.EVENT_BUS.post(event);
-        return event.answered() ? event.result() : builtin(judgeId, judge, candidate);
+        return event.isAnswered() ? event.getResult() : builtin(judgeId, judge, candidate);
     }
 
     // Safe to call from inside a Relation listener, which is what makes "the lists, plus my own additions"

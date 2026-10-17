@@ -7,11 +7,11 @@ import com.iafenvoy.mxt.data.creature.ContractBehavior;
 import com.iafenvoy.mxt.data.creature.ContractBehaviors;
 import com.iafenvoy.mxt.data.creature.ContractType;
 import com.iafenvoy.mxt.data.progression.Progression;
-import com.iafenvoy.mxt.event.dispatcher.EntitySources;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.creature.*;
 import com.iafenvoy.mxt.runtime.progression.ProgressionAdminService;
+import com.iafenvoy.mxt.runtime.progression.ProgressionOwners;
 import com.iafenvoy.mxt.runtime.progression.ProgressionService;
 import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.HolderHelper;
@@ -128,7 +128,7 @@ public final class ContractCommand {
         source.sendSuccess(() -> Component.translatable("command.mxt.contract.info.behavior", contract.behavior().name()), false);
         // A profile that owns a chain makes this creature a progression owner; a profile that owns none reports
         // nothing, so a plain stat block reads exactly as it did before.
-        EntitySources.held(mob, mob.getExistingData(MxtAttachments.CREATURE_SPIRIT)
+        ProgressionOwners.held(mob, mob.getExistingData(MxtAttachments.CREATURE_SPIRIT)
                         .flatMap(CreatureSpiritAttachment::profile).map(HolderHelper::id).orElse(null))
                 .ifPresent(held -> ProgressionService.current(held).ifPresent(current -> {
                     Component next = ProgressionService.next(held).map(DefinitionText::nameOrId)
@@ -237,7 +237,7 @@ public final class ContractCommand {
         ProgressionAdminService.Result result = living.getExistingData(MxtAttachments.CREATURE_SPIRIT)
                 .flatMap(CreatureSpiritAttachment::profile)
                 .map(profile -> ProgressionAdminService.setLevel(living,
-                        new EntitySources.Owner<>(profile, living.getData(MxtAttachments.CREATURE_SPIRIT).profileLevels()),
+                        new ProgressionOwners.Owner<>(profile, living.getData(MxtAttachments.CREATURE_SPIRIT).profileLevels()),
                         level, force))
                 .orElseGet(() -> ProgressionAdminService.Result.rejected(ProgressionAdminService.Failure.UNKNOWN_OWNER));
         if (!result.changed()) {

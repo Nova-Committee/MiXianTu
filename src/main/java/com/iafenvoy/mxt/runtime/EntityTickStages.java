@@ -1,5 +1,6 @@
-package com.iafenvoy.mxt.event.dispatcher;
+package com.iafenvoy.mxt.runtime;
 
+import com.iafenvoy.mxt.event.dispatcher.CollectTickStagesEvent;
 import net.minecraft.world.entity.LivingEntity;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -44,16 +45,12 @@ public final class EntityTickStages {
 
     private static List<Stage> ordered() {
         List<Stage> stages = ordered;
-        if (stages == null) {
-            CollectTickStagesEvent collected = new CollectTickStagesEvent();
-            NeoForge.EVENT_BUS.post(collected);
-            ordered = stages = collected.stages().stream()
-                    .sorted(Comparator.comparingInt(Stage::order)).toList();
-        }
+        if (stages == null)
+            ordered = stages = NeoForge.EVENT_BUS.post(new CollectTickStagesEvent()).stages().stream().sorted(Comparator.comparingInt(Stage::order)).toList();
         return stages;
     }
 
     // One stage: the id names it in a report, the order places it, and the handler does the work.
-    record Stage(String id, int order, Consumer<LivingEntity> handler) {
+    public record Stage(String id, int order, Consumer<LivingEntity> handler) {
     }
 }

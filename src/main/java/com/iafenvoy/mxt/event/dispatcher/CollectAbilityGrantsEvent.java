@@ -1,5 +1,7 @@
 package com.iafenvoy.mxt.event.dispatcher;
 
+import com.google.common.collect.LinkedHashMultimap;
+import com.google.common.collect.Multimaps;
 import com.google.common.collect.SetMultimap;
 import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
@@ -18,11 +20,14 @@ import java.util.List;
  * system stops naming is released.
  */
 public final class CollectAbilityGrantsEvent extends LivingEvent {
-    private final SetMultimap<Identifier, Holder<Ability>> desired;
+    private final SetMultimap<Identifier, Holder<Ability>> desired = LinkedHashMultimap.create();
 
-    public CollectAbilityGrantsEvent(LivingEntity entity, SetMultimap<Identifier, Holder<Ability>> desired) {
+    public CollectAbilityGrantsEvent(LivingEntity entity) {
         super(entity);
-        this.desired = desired;
+    }
+
+    public SetMultimap<Identifier, Holder<Ability>> getDesired() {
+        return Multimaps.unmodifiableSetMultimap(this.desired);
     }
 
     public void want(Identifier source, Holder<Ability> ability) {

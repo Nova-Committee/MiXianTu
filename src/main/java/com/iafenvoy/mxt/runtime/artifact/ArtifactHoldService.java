@@ -73,7 +73,7 @@ public final class ArtifactHoldService {
     // Every artifact definition that declares a gesture, contributed to the hold module.
     @SubscribeEvent
     public static void onCollectHolds(CollectHoldBindingsEvent event) {
-        event.addAll(MxtDatapackRegistries.holders(event.registries(), MxtResourceKeys.ARTIFACT)
+        event.addAll(MxtDatapackRegistries.holders(event.getRegistries(), MxtResourceKeys.ARTIFACT)
                 .map(Reference::value)
                 .map(ArtifactHold::new)
                 .filter(ArtifactHold::requiresHold)

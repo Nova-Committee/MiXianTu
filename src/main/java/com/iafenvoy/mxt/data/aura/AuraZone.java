@@ -35,7 +35,8 @@ import java.util.Optional;
  * loaded in the layer after the one this registry is loaded in, so a holder could never be resolved while a pack
  * decodes and every entry would be dropped. The id is resolved where the zone is matched instead.
  */
-public record AuraZone(Map<Holder<Aura>, AuraValue> aura, List<Either<ResourceKey<LevelStem>, TagKey<LevelStem>>> dimensions,
+public record AuraZone(Map<Holder<Aura>, AuraValue> aura,
+                       List<Either<ResourceKey<LevelStem>, TagKey<LevelStem>>> dimensions,
                        List<Either<Holder<Biome>, TagKey<Biome>>> biomes, Fluctuation fluctuation, Rules rules,
                        EntityCondition cultivateCondition, Distribution distribution, double elementFitBonus,
                        double elementConflictPenalty, Noise noise, Optional<ParticleEffect> particle,

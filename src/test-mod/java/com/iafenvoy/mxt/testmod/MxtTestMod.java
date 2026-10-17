@@ -44,6 +44,6 @@ public final class MxtTestMod {
 
     // Nothing in the mod logs a removal by itself, and the reason is the one part no data pack can observe.
     private static void logCurseRemovals(Post event) {
-        LOGGER.info("curse removed: {} reason={} stacks={} sources={}", HolderHelper.id(event.curse()), event.reason(), event.state().stacks(), event.sources().stream().map(Identifier::toString).sorted().toList());
+        LOGGER.info("curse removed: {} reason={} stacks={} sources={}", HolderHelper.id(event.getCurse()), event.getReason(), event.getState().stacks(), event.getSources().stream().map(Identifier::toString).sorted().toList());
     }
 }

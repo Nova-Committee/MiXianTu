@@ -23,7 +23,9 @@ import java.util.*;
  * item carrying an equal component of its own is never touched.
  */
 public final class TemporaryUseComponent {
-    /** Which module opened a cycle. It is the only thing keeping two of them on one body apart. */
+    /**
+     * Which module opened a cycle. It is the only thing keeping two of them on one body apart.
+     */
     public enum Owner {
         HOLD,
         PILL

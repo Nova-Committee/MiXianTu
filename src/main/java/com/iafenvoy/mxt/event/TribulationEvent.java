@@ -20,11 +20,11 @@ public abstract class TribulationEvent extends Event {
         this.tribulation = tribulation;
     }
 
-    public TribulationAttachment data() {
+    public TribulationAttachment getData() {
         return this.data;
     }
 
-    public Holder<Tribulation> tribulation() {
+    public Holder<Tribulation> getTribulation() {
         return this.tribulation;
     }
 
@@ -45,18 +45,17 @@ public abstract class TribulationEvent extends Event {
         private final int index;
         private final TimelineEntry entry;
 
-        protected EntryEvent(@NotNull TribulationAttachment data, @NotNull Holder<Tribulation> tribulation, int index,
-                             @NotNull TimelineEntry entry) {
+        protected EntryEvent(@NotNull TribulationAttachment data, @NotNull Holder<Tribulation> tribulation, int index, @NotNull TimelineEntry entry) {
             super(data, tribulation);
             this.index = index;
             this.entry = entry;
         }
 
-        public int index() {
+        public int getIndex() {
             return this.index;
         }
 
-        public TimelineEntry entry() {
+        public TimelineEntry getEntry() {
             return this.entry;
         }
     }

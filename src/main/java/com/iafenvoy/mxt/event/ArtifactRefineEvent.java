@@ -1,37 +1,31 @@
 package com.iafenvoy.mxt.event;
 
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.bus.api.Event;
 import net.neoforged.bus.api.ICancellableEvent;
+import net.neoforged.neoforge.event.entity.EntityEvent;
 
-import java.util.UUID;
-
-public abstract class ArtifactRefineEvent extends Event {
+public abstract class ArtifactRefineEvent extends EntityEvent {
     private final ItemStack stack;
-    private final UUID owner;
 
-    protected ArtifactRefineEvent(ItemStack stack, UUID owner) {
+    protected ArtifactRefineEvent(Entity owner, ItemStack stack) {
+        super(owner);
         this.stack = stack;
-        this.owner = owner;
     }
 
-    public ItemStack stack() {
+    public ItemStack getStack() {
         return this.stack;
     }
 
-    public UUID owner() {
-        return this.owner;
-    }
-
     public static final class Pre extends ArtifactRefineEvent implements ICancellableEvent {
-        public Pre(ItemStack stack, UUID owner) {
-            super(stack, owner);
+        public Pre(Entity owner, ItemStack stack) {
+            super(owner, stack);
         }
     }
 
     public static final class Post extends ArtifactRefineEvent {
-        public Post(ItemStack stack, UUID owner) {
-            super(stack, owner);
+        public Post(Entity owner, ItemStack stack) {
+            super(owner, stack);
         }
     }
 }

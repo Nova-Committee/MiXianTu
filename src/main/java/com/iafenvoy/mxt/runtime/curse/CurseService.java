@@ -58,12 +58,12 @@ public final class CurseService {
         State displaced = curse.value().stackingMode() == StackingMode.REPLACE ? data.instances().get(curse) : null;
         Set<Identifier> displacedFrom = data.sources().of(curse);
         CurseLedger ledger = read(data);
-        Optional<CurseInstance> applied = ledger.apply(curse, event.stacks(), gameTime, context, durationOverride);
+        Optional<CurseInstance> applied = ledger.apply(curse, event.getStacks(), gameTime, context, durationOverride);
         if (applied.isEmpty()) return ApplyResult.rejected(ApplyFailure.INVALID_DURATION);
         CurseInstance result = applied.get();
         write(data, ledger);
         // The shared rule with ability grants: a source leaving cannot remove another source's curse.
-        data.sources().grant(curse, event.source());
+        data.sources().grant(curse, event.getSource());
         data.markKnown(curse);
         if (displaced != null)
             eventBus.post(new Post(data, curse, displaced, displacedFrom, Reason.REPLACED, gameTime));

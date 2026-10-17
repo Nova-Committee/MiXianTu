@@ -12,9 +12,9 @@ import com.iafenvoy.mxt.data.progression.ProgressionHolder;
 import com.iafenvoy.mxt.event.dispatcher.CollectAbilityGrantsEvent;
 import com.iafenvoy.mxt.event.dispatcher.CollectPassiveAttributesEvent;
 import com.iafenvoy.mxt.event.dispatcher.CollectProgressionOwnersEvent;
-import com.iafenvoy.mxt.event.dispatcher.EntitySources;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.Sources;
+import com.iafenvoy.mxt.runtime.progression.ProgressionOwners;
 import com.iafenvoy.mxt.runtime.progression.ProgressionService;
 import com.iafenvoy.mxt.util.HolderHelper;
 import net.minecraft.core.Holder;
@@ -90,6 +90,6 @@ public final class CultivationHooks {
         if (techniques == null) return;
         ProgressionHolder<Technique> levels = techniques.techniqueLevels();
         for (Holder<Technique> technique : techniques.learnedTechniques())
-            event.add(new EntitySources.Owner<>(technique, levels));
+            event.add(new ProgressionOwners.Owner<>(technique, levels));
     }
 }

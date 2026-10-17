@@ -32,23 +32,23 @@ public abstract class CultivationBreakEvent extends Event {
         this.threshold = threshold;
     }
 
-    public CultivationAttachment spirit() {
+    public CultivationAttachment getSpirit() {
         return this.spirit;
     }
 
-    public ResourceHolderAttachment resources() {
+    public ResourceHolderAttachment getResource() {
         return this.resources;
     }
 
-    public Holder<RealmStage> target() {
+    public Holder<RealmStage> getTarget() {
         return this.target;
     }
 
-    public FormulaContext context() {
+    public FormulaContext getContext() {
         return this.context;
     }
 
-    public double threshold() {
+    public double getThreshold() {
         return this.threshold;
     }
 
@@ -62,11 +62,11 @@ public abstract class CultivationBreakEvent extends Event {
             this.costs = new LinkedHashMap<>(costs);
         }
 
-        public Map<Identifier, Double> originalCosts() {
+        public Map<Identifier, Double> getOriginalCosts() {
             return this.originalCosts;
         }
 
-        public Map<Identifier, Double> costs() {
+        public Map<Identifier, Double> getCosts() {
             return this.costs;
         }
 
@@ -82,10 +82,10 @@ public abstract class CultivationBreakEvent extends Event {
 
         public Post(CultivationAttachment spirit, ResourceHolderAttachment resources, Holder<RealmStage> target, FormulaContext context, double threshold, Map<Identifier, Double> paidCosts) {
             super(spirit, resources, target, context, threshold);
-            this.paidCosts = new LinkedHashMap<>(paidCosts);
+            this.paidCosts = Map.copyOf(paidCosts);
         }
 
-        public Map<Identifier, Double> paidCosts() {
+        public Map<Identifier, Double> getPaidCosts() {
             return this.paidCosts;
         }
     }

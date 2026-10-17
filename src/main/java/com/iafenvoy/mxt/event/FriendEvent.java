@@ -9,7 +9,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 /**
- * Identification hooks for the friend system: who counts as whose. The judge is named by {@link #judgeId()} with the
+ * Identification hooks for the friend system: who counts as whose. The judge is named by {@link #getJudgeId()} with the
  * entity along only when it is loaded, so a source that keeps its own data per player can answer for somebody who is
  * offline; asking only with an entity would make that case unanswerable.
  */
@@ -24,16 +24,16 @@ public abstract class FriendEvent extends Event {
         this.candidate = candidate;
     }
 
-    public UUID judgeId() {
+    public UUID getJudgeId() {
         return this.judgeId;
     }
 
     // Empty while the judge is offline, which a manager-level source can still answer and a friend list cannot.
-    public Optional<Entity> judge() {
+    public Optional<Entity> getJudge() {
         return Optional.ofNullable(this.judge);
     }
 
-    public Entity candidate() {
+    public Entity getCandidate() {
         return this.candidate;
     }
 
@@ -55,7 +55,7 @@ public abstract class FriendEvent extends Event {
         }
 
         // DEFAULT while nobody has claimed the question.
-        public TriState result() {
+        public TriState getResult() {
             return this.result;
         }
 
@@ -64,7 +64,7 @@ public abstract class FriendEvent extends Event {
             this.result = result;
         }
 
-        public boolean answered() {
+        public boolean isAnswered() {
             return this.result != TriState.DEFAULT;
         }
     }

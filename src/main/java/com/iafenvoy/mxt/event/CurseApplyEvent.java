@@ -28,19 +28,19 @@ public abstract class CurseApplyEvent extends Event {
         this.context = context;
     }
 
-    public CurseHolderAttachment holder() {
+    public CurseHolderAttachment getHolder() {
         return this.holder;
     }
 
-    public Holder<Curse> curse() {
+    public Holder<Curse> getCurse() {
         return this.curse;
     }
 
-    public long gameTime() {
+    public long getGameTime() {
         return this.gameTime;
     }
 
-    public FormulaContext context() {
+    public FormulaContext getContext() {
         return this.context;
     }
 
@@ -54,12 +54,12 @@ public abstract class CurseApplyEvent extends Event {
             this.setSource(source);
         }
 
-        public int stacks() {
+        public int getStacks() {
             return this.stacks;
         }
 
         // A listener may change it, which decides which source the new instance is credited to.
-        public Identifier source() {
+        public Identifier getSource() {
             return this.source;
         }
 
@@ -81,7 +81,7 @@ public abstract class CurseApplyEvent extends Event {
             this.instance = instance;
         }
 
-        public CurseInstance instance() {
+        public CurseInstance getInstance() {
             return this.instance;
         }
     }

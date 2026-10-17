@@ -203,7 +203,7 @@ public final class LifespanProbes {
             settings.onExpire.setValue(LifespanOutcome.NONE);
             LifeSpanService.set(settled, 25L);
             List<LifespanOutcome> outcomes = new ArrayList<>();
-            Consumer<LifeSpanEndEvent.Post> recorder = event -> outcomes.add(event.outcome());
+            Consumer<LifeSpanEndEvent.Post> recorder = event -> outcomes.add(event.getOutcome());
             NeoForge.EVENT_BUS.addListener(recorder);
             boolean decremented;
             boolean expired;
@@ -241,7 +241,7 @@ public final class LifespanProbes {
             Consumer<LifeSpanEndEvent.Pre> refuse = event -> event.setCanceled(true);
             Consumer<LifeSpanEndEvent.Pre> extend = event -> {
                 event.setCanceled(true);
-                if (event.entity() instanceof LivingEntity living) LifeSpanService.add(living, 50L);
+                if (event.getEntity() instanceof LivingEntity living) LifeSpanService.add(living, 50L);
             };
             LifeSpanService.set(cancelled, 5L);
             NeoForge.EVENT_BUS.addListener(refuse);

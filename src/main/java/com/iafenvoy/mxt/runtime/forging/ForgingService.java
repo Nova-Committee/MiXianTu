@@ -60,7 +60,7 @@ public final class ForgingService {
         if (refusal != null) return StrikeResult.rejected(refusal, null);
         CostContext costContext = CostContext.of(player, context, CostOrigin.FORGING);
         CostPayment plan = CostPayment.of(costContext);
-        if (plan.loadAndTest(event.costs()).isPresent()) return StrikeResult.rejected(Failure.INVALID_FORMULA, null);
+        if (plan.loadAndTest(event.getCosts()).isPresent()) return StrikeResult.rejected(Failure.INVALID_FORMULA, null);
         CostPayment.Result payment = plan.commit();
         if (!payment.paid()) return StrikeResult.rejected(Failure.INSUFFICIENT_RESOURCE, payment.failedResource());
         if (!session.strike(method))

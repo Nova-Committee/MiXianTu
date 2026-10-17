@@ -3,8 +3,8 @@ package com.iafenvoy.mxt.data.condition.builtin.entity;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.data.context.condition.EntityConditionContext;
 import com.iafenvoy.mxt.data.progression.Progression;
-import com.iafenvoy.mxt.event.dispatcher.EntitySources;
 import com.iafenvoy.mxt.runtime.DatapackCache;
+import com.iafenvoy.mxt.runtime.progression.ProgressionOwners;
 import com.iafenvoy.mxt.runtime.progression.ProgressionService;
 import com.iafenvoy.mxt.util.math.CompareOperation;
 import com.mojang.datafixers.util.Either;
@@ -35,7 +35,7 @@ public record ProgressionEntityCondition(Holder<Progression> level, CompareOpera
 
     @Override
     public boolean test(@NonNull EntityConditionContext ctx) {
-        for (EntitySources.Owner<?> held : EntitySources.heldBy(ctx.entity())) {
+        for (ProgressionOwners.Owner<?> held : ProgressionOwners.heldBy(ctx.entity())) {
             if (!this.owner.isEmpty() && !this.owner.contains(held.id())) continue;
             Holder<Progression> current = ProgressionService.current(held).orElse(null);
             if (current != null && this.reached(current)) return true;

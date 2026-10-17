@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.runtime.progression;
 
 import com.iafenvoy.mxt.event.dispatcher.CollectTickStagesEvent;
-import com.iafenvoy.mxt.event.dispatcher.EntityTickStages;
+import com.iafenvoy.mxt.runtime.EntityTickStages;
 import com.iafenvoy.mxt.runtime.ability.AbilityGrantService;
 import net.minecraft.world.entity.LivingEntity;
 import net.neoforged.bus.api.SubscribeEvent;

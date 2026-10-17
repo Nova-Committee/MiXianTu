@@ -8,7 +8,6 @@ import net.minecraft.world.entity.Entity;
 import net.neoforged.bus.api.ICancellableEvent;
 import net.neoforged.neoforge.event.entity.EntityEvent;
 
-import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
@@ -25,11 +24,11 @@ public abstract class AbilityUseEvent extends EntityEvent {
         this.context = context;
     }
 
-    public Holder<Ability> ability() {
+    public Holder<Ability> getAbility() {
         return this.ability;
     }
 
-    public FormulaContext context() {
+    public FormulaContext getContext() {
         return this.context;
     }
 
@@ -44,10 +43,10 @@ public abstract class AbilityUseEvent extends EntityEvent {
 
         public Post(Entity entity, Holder<Ability> ability, FormulaContext context, Map<Identifier, Double> paidCosts) {
             super(entity, ability, context);
-            this.paidCosts = new LinkedHashMap<>(paidCosts);
+            this.paidCosts = Map.copyOf(paidCosts);
         }
 
-        public Map<Identifier, Double> paidCosts() {
+        public Map<Identifier, Double> getPaidCosts() {
             return this.paidCosts;
         }
     }

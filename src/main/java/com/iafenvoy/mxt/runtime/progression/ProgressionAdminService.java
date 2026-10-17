@@ -2,7 +2,6 @@ package com.iafenvoy.mxt.runtime.progression;
 
 import com.iafenvoy.mxt.data.progression.Progression;
 import com.iafenvoy.mxt.data.progression.ProgressionOwner;
-import com.iafenvoy.mxt.event.dispatcher.EntitySources;
 import com.iafenvoy.mxt.runtime.ability.AbilityGrantService;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
@@ -18,12 +17,12 @@ public final class ProgressionAdminService {
     }
 
     public static Result setLevel(LivingEntity entity, Identifier owner, Holder<Progression> level, boolean force) {
-        return EntitySources.held(entity, owner)
+        return ProgressionOwners.held(entity, owner)
                 .map(held -> setLevel(entity, held, level, force))
                 .orElseGet(() -> Result.rejected(Failure.UNKNOWN_OWNER));
     }
 
-    public static <T extends ProgressionOwner> Result setLevel(LivingEntity entity, EntitySources.Owner<T> owner,
+    public static <T extends ProgressionOwner> Result setLevel(LivingEntity entity, ProgressionOwners.Owner<T> owner,
                                                                Holder<Progression> level, boolean force) {
         if (owner.definition().entryLevel().isEmpty()) return Result.rejected(Failure.UNKNOWN_OWNER);
         // A level from another chain compares against nothing, so the stored order would refuse both bounds.

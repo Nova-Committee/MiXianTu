@@ -29,19 +29,19 @@ public abstract class AlchemyCraftEvent extends Event {
         this.operator = operator;
     }
 
-    public RecipeHolder<AlchemyRecipe> recipe() {
+    public RecipeHolder<AlchemyRecipe> getRecipe() {
         return this.recipe;
     }
 
-    public BlockPos pos() {
+    public BlockPos getPos() {
         return this.pos;
     }
 
-    public UUID operator() {
+    public UUID getOperator() {
         return this.operator;
     }
 
-    public Optional<ServerPlayer> player() {
+    public Optional<ServerPlayer> getPlayer() {
         return Optional.empty();
     }
 
@@ -60,12 +60,12 @@ public abstract class AlchemyCraftEvent extends Event {
         /**
          * Role copies. Mutating a stack or the list does not change what start consumes.
          */
-        public List<InputCopy> inputs() {
+        public List<InputCopy> getInputs() {
             return this.inputs;
         }
 
         @Override
-        public Optional<ServerPlayer> player() {
+        public Optional<ServerPlayer> getPlayer() {
             return Optional.of(this.player);
         }
     }
@@ -76,8 +76,7 @@ public abstract class AlchemyCraftEvent extends Event {
         private final List<ItemStack> outputs;
         private final ServerPlayer player;
 
-        public Post(RecipeHolder<AlchemyRecipe> recipe, BlockPos pos, UUID operator, ServerPlayer player,
-                    boolean success, AlchemyFailure reason, List<ItemStack> outputs) {
+        public Post(RecipeHolder<AlchemyRecipe> recipe, BlockPos pos, UUID operator, ServerPlayer player, boolean success, AlchemyFailure reason, List<ItemStack> outputs) {
             super(recipe, pos, operator);
             this.player = player;
             this.success = success;
@@ -87,20 +86,20 @@ public abstract class AlchemyCraftEvent extends Event {
             this.outputs = List.copyOf(copies);
         }
 
-        public boolean success() {
+        public boolean isSuccess() {
             return this.success;
         }
 
-        public Optional<AlchemyFailure> reason() {
+        public Optional<AlchemyFailure> getReason() {
             return Optional.ofNullable(this.reason);
         }
 
-        public List<ItemStack> outputs() {
+        public List<ItemStack> getOutputs() {
             return this.outputs;
         }
 
         @Override
-        public Optional<ServerPlayer> player() {
+        public Optional<ServerPlayer> getPlayer() {
             return Optional.ofNullable(this.player);
         }
     }

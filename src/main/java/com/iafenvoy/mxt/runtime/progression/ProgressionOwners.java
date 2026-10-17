@@ -1,35 +1,27 @@
-package com.iafenvoy.mxt.event.dispatcher;
+package com.iafenvoy.mxt.runtime.progression;
 
-import com.iafenvoy.mxt.data.AttributeEntry;
-import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.progression.ProgressionHolder;
 import com.iafenvoy.mxt.data.progression.ProgressionOwner;
-import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.runtime.Sources;
+import com.iafenvoy.mxt.event.dispatcher.CollectProgressionOwnersEvent;
 import com.iafenvoy.mxt.util.HolderHelper;
-import com.iafenvoy.mxt.util.codec.RegistryCodecs;
-import com.mojang.datafixers.util.Either;
 import net.minecraft.core.Holder;
-import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.resources.Identifier;
-import net.minecraft.tags.TagKey;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.LivingEntity;
 import net.neoforged.neoforge.common.NeoForge;
 
 import java.util.List;
 import java.util.Optional;
 
 /**
- * The answers a body's own sources give, and the queries over them. The questions are the {@code Collect*} events, so
- * a module contributes by listening and the service that applies the answers knows none of them.
+ * The owners a body holds: one definition together with the holder that keeps its levels. The question itself is the
+ * {@link CollectProgressionOwnersEvent}, so a system contributes by listening and this class knows none of them.
  */
-public final class EntitySources {
-    private EntitySources() {
+public final class ProgressionOwners {
+    private ProgressionOwners() {
     }
 
-    // One owner a body holds, together with the holder that keeps its levels. The holder is what makes the sort part
-    // of the address: a technique and a creature profile sharing an id are two owners with a slot each.
+    // The holder is what makes the sort part of the address: a technique and a creature profile sharing an id are two
+    // owners with a slot each.
     public record Owner<T extends ProgressionOwner>(Holder<T> holder, ProgressionHolder<T> levels) {
         public Identifier id() {
             return HolderHelper.id(this.holder);
@@ -42,9 +34,7 @@ public final class EntitySources {
 
     // Every owner the body holds right now, from every listening system.
     public static List<Owner<?>> heldBy(Entity entity) {
-        CollectProgressionOwnersEvent event = new CollectProgressionOwnersEvent(entity);
-        NeoForge.EVENT_BUS.post(event);
-        return event.owners();
+        return NeoForge.EVENT_BUS.post(new CollectProgressionOwnersEvent(entity)).getOwners();
     }
 
     // The one owner a body holds under that id, if it holds it at all: reads and administrative writes both ask this

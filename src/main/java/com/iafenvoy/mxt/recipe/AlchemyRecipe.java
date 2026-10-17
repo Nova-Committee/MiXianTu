@@ -87,7 +87,7 @@ public record AlchemyRecipe(Map<Holder<MedicinalProperty>, NumberProvider> mainR
             INPUT_QUALITY_FIELD.forGetter(AlchemyRecipe::inputQuality),
             Guide.CODEC.optionalFieldOf("guide").forGetter(AlchemyRecipe::guide)
     ).apply(i, (main, auxiliary, catalyst, balance, target, tolerance, duration, badTicks, aura,
-                success, failure, actions, blocks, qualities1,qualities2, furnace) -> new AlchemyRecipe(
+                success, failure, actions, blocks, qualities1, qualities2, furnace) -> new AlchemyRecipe(
             main, auxiliary, catalyst, balance, target, tolerance, duration, badTicks, aura,
             success, failure, actions.getFirst(), actions.getSecond(), blocks.getFirst(), blocks.getSecond(),
             qualities1, qualities2, furnace)));

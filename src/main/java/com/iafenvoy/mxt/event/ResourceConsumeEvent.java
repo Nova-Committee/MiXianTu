@@ -22,11 +22,11 @@ public abstract class ResourceConsumeEvent extends Event {
         this.amounts.forEach(ResourceConsumeEvent::validate);
     }
 
-    public ResourceHolderAttachment holder() {
+    public ResourceHolderAttachment getHolder() {
         return this.holder;
     }
 
-    public Map<Identifier, Double> amounts() {
+    public Map<Identifier, Double> getAmounts() {
         return this.amounts;
     }
 
@@ -45,6 +45,7 @@ public abstract class ResourceConsumeEvent extends Event {
             super(holder, amounts);
         }
 
+        // Widened here so a listener outside this package can change what is paid; a post event stays read-only.
         @Override
         public void setAmount(Identifier id, double amount) {
             super.setAmount(id, amount);

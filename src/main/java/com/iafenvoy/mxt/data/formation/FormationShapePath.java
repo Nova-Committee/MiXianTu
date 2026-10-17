@@ -123,7 +123,8 @@ public final class FormationShapePath {
 
     private static double length(List<Vec3> vertices) {
         double total = 0.0D;
-        for (int index = 1; index < vertices.size(); index++) total += vertices.get(index - 1).distanceTo(vertices.get(index));
+        for (int index = 1; index < vertices.size(); index++)
+            total += vertices.get(index - 1).distanceTo(vertices.get(index));
         return total;
     }
 

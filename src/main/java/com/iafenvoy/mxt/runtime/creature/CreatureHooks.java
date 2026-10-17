@@ -4,9 +4,9 @@ import com.iafenvoy.mxt.attachment.CreatureSpiritAttachment;
 import com.iafenvoy.mxt.data.creature.ContractType;
 import com.iafenvoy.mxt.event.dispatcher.CollectAbilityGrantsEvent;
 import com.iafenvoy.mxt.event.dispatcher.CollectProgressionOwnersEvent;
-import com.iafenvoy.mxt.event.dispatcher.EntitySources;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.Sources;
+import com.iafenvoy.mxt.runtime.progression.ProgressionOwners;
 import com.iafenvoy.mxt.runtime.progression.ProgressionService;
 import com.iafenvoy.mxt.util.HolderHelper;
 import net.minecraft.core.Holder;
@@ -55,6 +55,6 @@ public final class CreatureHooks {
         if (spirit == null) return;
         spirit.profile()
                 .filter(profile -> profile.value().entryLevel().isPresent())
-                .ifPresent(profile -> event.add(new EntitySources.Owner<>(profile, spirit.profileLevels())));
+                .ifPresent(profile -> event.add(new ProgressionOwners.Owner<>(profile, spirit.profileLevels())));
     }
 }

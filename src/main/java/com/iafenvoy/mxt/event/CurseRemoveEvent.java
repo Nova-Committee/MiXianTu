@@ -22,8 +22,7 @@ public abstract class CurseRemoveEvent extends Event {
     private final Reason reason;
     private final long gameTime;
 
-    protected CurseRemoveEvent(@NotNull CurseHolderAttachment holder, @NotNull Holder<Curse> curse, @NotNull State state,
-                               @NotNull Set<Identifier> sources, @NotNull Reason reason, long gameTime) {
+    protected CurseRemoveEvent(@NotNull CurseHolderAttachment holder, @NotNull Holder<Curse> curse, @NotNull State state, @NotNull Set<Identifier> sources, @NotNull Reason reason, long gameTime) {
         this.holder = holder;
         this.curse = curse;
         this.state = state;
@@ -32,29 +31,29 @@ public abstract class CurseRemoveEvent extends Event {
         this.gameTime = gameTime;
     }
 
-    public CurseHolderAttachment holder() {
+    public CurseHolderAttachment getHolder() {
         return this.holder;
     }
 
-    public Holder<Curse> curse() {
+    public Holder<Curse> getCurse() {
         return this.curse;
     }
 
-    public State state() {
+    public State getState() {
         return this.state;
     }
 
     // Captured before the transaction erased them: a release that emptied the ledger reports nothing, which is
     // exactly what "no source holds it any more" means, while a whole-instance removal reports what it took away.
-    public Set<Identifier> sources() {
+    public Set<Identifier> getSources() {
         return this.sources;
     }
 
-    public Reason reason() {
+    public Reason getReason() {
         return this.reason;
     }
 
-    public long gameTime() {
+    public long getGameTime() {
         return this.gameTime;
     }
 

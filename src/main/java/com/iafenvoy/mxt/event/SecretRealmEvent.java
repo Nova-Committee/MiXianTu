@@ -22,8 +22,7 @@ public abstract class SecretRealmEvent extends Event {
     private final int index;
     private final Optional<UUID> owner;
 
-    protected SecretRealmEvent(MinecraftServer server, Holder<SecretRealm> definition, ResourceKey<Level> dimension,
-                               int index, Optional<UUID> owner) {
+    protected SecretRealmEvent(MinecraftServer server, Holder<SecretRealm> definition, ResourceKey<Level> dimension, int index, Optional<UUID> owner) {
         this.server = server;
         this.definition = definition;
         this.dimension = dimension;
@@ -31,36 +30,34 @@ public abstract class SecretRealmEvent extends Event {
         this.owner = owner;
     }
 
-    public MinecraftServer server() {
+    public MinecraftServer getServer() {
         return this.server;
     }
 
-    public Holder<SecretRealm> definition() {
+    public Holder<SecretRealm> getDefinition() {
         return this.definition;
     }
 
-    public ResourceKey<Level> dimension() {
+    public ResourceKey<Level> getDimension() {
         return this.dimension;
     }
 
-    public int index() {
+    public int getIndex() {
         return this.index;
     }
 
-    public Optional<UUID> owner() {
+    public Optional<UUID> getOwner() {
         return this.owner;
     }
 
     public static final class Create extends SecretRealmEvent {
-        public Create(MinecraftServer server, Holder<SecretRealm> definition, ResourceKey<Level> dimension, int index,
-                      Optional<UUID> owner) {
+        public Create(MinecraftServer server, Holder<SecretRealm> definition, ResourceKey<Level> dimension, int index, Optional<UUID> owner) {
             super(server, definition, dimension, index, owner);
         }
     }
 
     public static final class Destroy extends SecretRealmEvent {
-        public Destroy(MinecraftServer server, Holder<SecretRealm> definition, ResourceKey<Level> dimension, int index,
-                       Optional<UUID> owner) {
+        public Destroy(MinecraftServer server, Holder<SecretRealm> definition, ResourceKey<Level> dimension, int index, Optional<UUID> owner) {
             super(server, definition, dimension, index, owner);
         }
     }
@@ -74,7 +71,7 @@ public abstract class SecretRealmEvent extends Event {
             this.member = member;
         }
 
-        public UUID member() {
+        public UUID getMember() {
             return this.member;
         }
     }

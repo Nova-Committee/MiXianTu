@@ -15,11 +15,11 @@ public abstract class TechniqueLearnEvent extends Event {
         this.technique = technique;
     }
 
-    public TechniqueAttachment spirit() {
+    public TechniqueAttachment getSpirit() {
         return this.spirit;
     }
 
-    public Holder<Technique> technique() {
+    public Holder<Technique> getTechnique() {
         return this.technique;
     }
 

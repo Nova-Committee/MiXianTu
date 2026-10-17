@@ -1457,25 +1457,25 @@ public final class AlchemyProbes {
         @SubscribeEvent
         public void pre(AlchemyCraftEvent.Pre event) {
             if (this.cancel) event.setCanceled(true);
-            if (this.mutate) for (AlchemyCraftEvent.InputCopy copy : event.inputs()) copy.stack().setCount(99);
-            if (this.reenter && this.primary != null && event.pos().equals(this.primary.getBlockPos())) {
+            if (this.mutate) for (AlchemyCraftEvent.InputCopy copy : event.getInputs()) copy.stack().setCount(99);
+            if (this.reenter && this.primary != null && event.getPos().equals(this.primary.getBlockPos())) {
                 this.reenter = false;
                 AlchemyWorkstationService.start(this.player, this.other);
                 this.reentered = AlchemyWorkstationService.start(this.player, this.primary);
             }
-            if (this.move && this.primary != null && event.pos().equals(this.primary.getBlockPos())) {
+            if (this.move && this.primary != null && event.getPos().equals(this.primary.getBlockPos())) {
                 ItemStack taken = this.primary.container().removeItem(0, this.primary.container().getItem(0).getCount());
                 if (!taken.isEmpty()) this.player.getInventory().add(taken);
             }
-            if (this.removeHeat && this.primary != null && event.pos().equals(this.primary.getBlockPos()))
+            if (this.removeHeat && this.primary != null && event.getPos().equals(this.primary.getBlockPos()))
                 this.level.setBlockAndUpdate(this.primary.heatSourcePos(), Blocks.AIR.defaultBlockState());
         }
 
         @SubscribeEvent
         public void post(AlchemyCraftEvent.Post event) {
             this.posts++;
-            this.postOperator = event.operator();
-            if (this.restart && this.primary != null && event.pos().equals(this.primary.getBlockPos())) {
+            this.postOperator = event.getOperator();
+            if (this.restart && this.primary != null && event.getPos().equals(this.primary.getBlockPos())) {
                 this.restart = false;
                 this.restarted = true;
                 this.primary.container().setItem(0, new ItemStack(Items.ALLIUM, 2));
@@ -1497,9 +1497,9 @@ public final class AlchemyProbes {
 
         @SubscribeEvent
         public void post(AlchemyCraftEvent.Post event) {
-            if (!this.pos.equals(event.pos())) return;
+            if (!this.pos.equals(event.getPos())) return;
             this.posts++;
-            this.failure = !event.success() && event.reason().orElse(null) == AlchemyFailure.TEMPERATURE;
+            this.failure = !event.isSuccess() && event.getReason().orElse(null) == AlchemyFailure.TEMPERATURE;
         }
     }
 }

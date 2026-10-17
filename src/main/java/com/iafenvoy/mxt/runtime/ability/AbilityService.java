@@ -213,7 +213,7 @@ public final class AbilityService {
         Pre resourceEvent = new Pre(resources, preparedUse.payment().resources());
         if (NeoForge.EVENT_BUS.post(resourceEvent).isCanceled()) return UseResult.rejected(Failure.CANCELLED, null);
         // The event owns the amounts from here on: the payment being made is the one it handed back.
-        preparedUse.payment().reprice(resourceEvent.amounts());
+        preparedUse.payment().reprice(resourceEvent.getAmounts());
         CommitResult committed = commit(preparedUse, abilities, gameTime);
         if (!committed.committed()) return UseResult.rejected(committed.failure(), committed.failedResource());
         if (definition.type() instanceof ChannelSource) {
@@ -306,7 +306,7 @@ public final class AbilityService {
             stopChannel(abilities);
             return ChannelResult.stopped(Failure.CANCELLED);
         }
-        upkeep.reprice(resourceEvent.amounts());
+        upkeep.reprice(resourceEvent.getAmounts());
         CostPayment.Result payment = upkeep.commit();
         if (!payment.paid()) {
             stopChannel(abilities);
@@ -412,10 +412,10 @@ public final class AbilityService {
             if (unreached != null) return UseResult.rejected(unreached, null);
             Pre resourceEvent = new Pre(resources, prepared.use().payment().resources());
             if (NeoForge.EVENT_BUS.post(resourceEvent).isCanceled()) return UseResult.rejected(Failure.CANCELLED, null);
-            prepared.use().payment().reprice(resourceEvent.amounts());
+            prepared.use().payment().reprice(resourceEvent.getAmounts());
             applyAbilityState(prepared.use(), abilityDraft, gameTime);
-            resourceEvent.amounts().forEach((id, amount) -> paid.merge(id, amount, Double::sum));
-            steps.add(new CompositeStep(childHolder, prepared.use(), childContext, Map.copyOf(resourceEvent.amounts())));
+            resourceEvent.getAmounts().forEach((id, amount) -> paid.merge(id, amount, Double::sum));
+            steps.add(new CompositeStep(childHolder, prepared.use(), childContext, Map.copyOf(resourceEvent.getAmounts())));
         }
         // One boundary for every child: a child that refuses - whether its store is short or its items do not fit -
         // puts back what the earlier ones took, and no child's cooldown or charges is written before the whole group

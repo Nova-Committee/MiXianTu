@@ -34,13 +34,13 @@ public abstract class ForgingEvent extends Event {
 
     // Not a security boundary - the server acts against its own state - but what a listener needs to react as
     // something other than a global rule.
-    public ServerPlayer player() {
+    public ServerPlayer getPlayer() {
         return this.player;
     }
 
     // The position rather than the surface, so a listener can name the table without being handed its writable
     // container and session state.
-    public BlockPos pos() {
+    public BlockPos getPos() {
         return this.pos;
     }
 
@@ -52,7 +52,7 @@ public abstract class ForgingEvent extends Event {
             this.blueprint = blueprint;
         }
 
-        public ForgingBlueprint blueprint() {
+        public ForgingBlueprint getBlueprint() {
             return this.blueprint;
         }
     }
@@ -65,7 +65,7 @@ public abstract class ForgingEvent extends Event {
             this.session = session;
         }
 
-        public ForgingSessionView session() {
+        public ForgingSessionView getSession() {
             return this.session;
         }
     }
@@ -78,7 +78,7 @@ public abstract class ForgingEvent extends Event {
             this.session = session;
         }
 
-        public ForgingSessionView session() {
+        public ForgingSessionView getSession() {
             return this.session;
         }
     }
@@ -90,8 +90,7 @@ public abstract class ForgingEvent extends Event {
         private final FormulaContext context;
         private List<Cost> costs;
 
-        public StrikePre(ServerPlayer player, BlockPos pos, ForgingSessionView session, Holder<ForgingMethod> method,
-                         ResourceHolderAttachment resources, FormulaContext context) {
+        public StrikePre(ServerPlayer player, BlockPos pos, ForgingSessionView session, Holder<ForgingMethod> method, ResourceHolderAttachment resources, FormulaContext context) {
             super(player, pos);
             this.session = session;
             this.method = method;
@@ -100,23 +99,23 @@ public abstract class ForgingEvent extends Event {
             this.costs = new LinkedList<>(method.value().costs());
         }
 
-        public ForgingSessionView session() {
+        public ForgingSessionView getSession() {
             return this.session;
         }
 
-        public Holder<ForgingMethod> method() {
+        public Holder<ForgingMethod> getMethod() {
             return this.method;
         }
 
-        public ResourceHolderAttachment resources() {
+        public ResourceHolderAttachment getResources() {
             return this.resources;
         }
 
-        public FormulaContext context() {
+        public FormulaContext getContext() {
             return this.context;
         }
 
-        public List<Cost> costs() {
+        public List<Cost> getCosts() {
             return this.costs;
         }
 
@@ -133,7 +132,7 @@ public abstract class ForgingEvent extends Event {
             this.session = session;
         }
 
-        public ForgingSessionView session() {
+        public ForgingSessionView getSession() {
             return this.session;
         }
     }
@@ -148,11 +147,11 @@ public abstract class ForgingEvent extends Event {
             this.session = session;
         }
 
-        public Holder<ForgingBlueprint> blueprint() {
+        public Holder<ForgingBlueprint> getBlueprint() {
             return this.blueprint;
         }
 
-        public ForgingSessionView session() {
+        public ForgingSessionView getSession() {
             return this.session;
         }
     }
@@ -172,21 +171,21 @@ public abstract class ForgingEvent extends Event {
             this.quality = quality;
         }
 
-        public Holder<ForgingBlueprint> blueprint() {
+        public Holder<ForgingBlueprint> getBlueprint() {
             return this.blueprint;
         }
 
-        public ForgingSessionView session() {
+        public ForgingSessionView getSession() {
             return this.session;
         }
 
-        public ForgingResultComponent result() {
+        public ForgingResultComponent getResult() {
             return this.result;
         }
 
         // Read here rather than off the result: the tier goes to the item's quality component, and a listener runs
         // before the workstation writes it.
-        public Holder<ItemQuality> quality() {
+        public Holder<ItemQuality> getQuality() {
             return this.quality;
         }
     }

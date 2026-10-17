@@ -14,24 +14,24 @@ import net.neoforged.bus.api.ICancellableEvent;
  */
 public abstract class AuraZoneEvent extends Event {
     private final ServerLevel level;
-    private final BlockPos position;
+    private final BlockPos pos;
     private final AuraResult result;
 
-    protected AuraZoneEvent(ServerLevel level, BlockPos position, AuraResult result) {
+    protected AuraZoneEvent(ServerLevel level, BlockPos pos, AuraResult result) {
         this.level = level;
-        this.position = position;
+        this.pos = pos;
         this.result = result;
     }
 
-    public ServerLevel level() {
+    public ServerLevel getLevel() {
         return this.level;
     }
 
-    public BlockPos position() {
-        return this.position;
+    public BlockPos getPos() {
+        return this.pos;
     }
 
-    public AuraResult result() {
+    public AuraResult getResult() {
         return this.result;
     }
 
@@ -43,7 +43,7 @@ public abstract class AuraZoneEvent extends Event {
             this.entity = e;
         }
 
-        public Entity entity() {
+        public Entity getEntity() {
             return this.entity;
         }
     }
@@ -56,7 +56,7 @@ public abstract class AuraZoneEvent extends Event {
             this.entity = e;
         }
 
-        public Entity entity() {
+        public Entity getEntity() {
             return this.entity;
         }
     }
@@ -75,7 +75,7 @@ public abstract class AuraZoneEvent extends Event {
             this.zone = zone;
         }
 
-        public Holder<AuraZone> zone() {
+        public Holder<AuraZone> getZone() {
             return this.zone;
         }
     }

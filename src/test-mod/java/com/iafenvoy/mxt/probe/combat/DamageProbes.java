@@ -129,7 +129,7 @@ public final class DamageProbes {
             double masteryLost = masteryBefore - masteryDefender.getHealth();
             double[] dispatched = {Double.NaN};
             Consumer<Pre> listener = event ->
-                    dispatched[0] = event.context().explicit(DamageCalculationService.DAMAGE_MULTIPLIER);
+                    dispatched[0] = event.getContext().explicit(DamageCalculationService.DAMAGE_MULTIPLIER);
             NeoForge.EVENT_BUS.addListener(listener);
             try {
                 AbilityService.useCarried(ability, attacker,
@@ -256,7 +256,7 @@ public final class DamageProbes {
             double affinityLost = affinityBefore - affinityDefender.getHealth();
             double[] castAffinity = {Double.NaN};
             Consumer<Pre> affinityListener = event ->
-                    castAffinity[0] = event.context().explicit(DamageCalculationService.ELEMENT_MODIFIER);
+                    castAffinity[0] = event.getContext().explicit(DamageCalculationService.ELEMENT_MODIFIER);
             NeoForge.EVENT_BUS.addListener(affinityListener);
             try {
                 Holder<Ability> affinityAbility = context.require(MxtResourceKeys.ABILITY, ProbeDefinitions.PROBE_AFFINITY_ABILITY);

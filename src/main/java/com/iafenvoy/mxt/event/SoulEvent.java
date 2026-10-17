@@ -2,23 +2,18 @@ package com.iafenvoy.mxt.event;
 
 import com.iafenvoy.mxt.attachment.SoulAttachment;
 import net.minecraft.world.entity.Entity;
-import net.neoforged.bus.api.Event;
 import net.neoforged.bus.api.ICancellableEvent;
+import net.neoforged.neoforge.event.entity.EntityEvent;
 
-public abstract class SoulEvent extends Event {
-    private final Entity entity;
+public abstract class SoulEvent extends EntityEvent {
     private final SoulAttachment soul;
 
     protected SoulEvent(Entity entity, SoulAttachment soul) {
-        this.entity = entity;
+        super(entity);
         this.soul = soul;
     }
 
-    public Entity entity() {
-        return this.entity;
-    }
-
-    public SoulAttachment soul() {
+    public SoulAttachment getSoul() {
         return this.soul;
     }
 

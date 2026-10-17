@@ -70,8 +70,9 @@ public abstract class VisualProjectileEntity extends Entity implements OwnableEn
                 ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, this));
         Vec3 hit;
         if (result.getType() != HitResult.Type.MISS) hit = result.getLocation();
-        // noPhysics leaves no collision flag, so also check the volume swept by the collision box.
-        else if (this.level().getBlockCollisions(this, this.getBoundingBox().expandTowards(velocity)).iterator().hasNext()) hit = from;
+            // noPhysics leaves no collision flag, so also check the volume swept by the collision box.
+        else if (this.level().getBlockCollisions(this, this.getBoundingBox().expandTowards(velocity)).iterator().hasNext())
+            hit = from;
         else return false;
         LivingEntity caster = EntityReference.getLivingEntity(this.owner, this.level());
         if (caster != null) this.collideAction.execute(new EntityActionContext(caster, FormulaContext.of(caster), hit));

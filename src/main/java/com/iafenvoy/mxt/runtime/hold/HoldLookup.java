@@ -13,7 +13,6 @@ import net.neoforged.neoforge.event.TagsUpdatedEvent;
 import net.neoforged.neoforge.event.server.ServerStartedEvent;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -66,12 +65,8 @@ public final class HoldLookup {
 
     // Public so the server audit can drive it directly.
     public static void rebuild(RegistryAccess access) {
-        List<HoldBinding> bindings = new LinkedList<>();
-        NeoForge.EVENT_BUS.post(new CollectHoldBindingsEvent(access, bindings));
-        holds = bindings.stream()
-                .filter(HoldBinding::requiresHold)
-                .sorted(ItemMatcher.ORDER)
-                .toList();
+        holds = NeoForge.EVENT_BUS.post(new CollectHoldBindingsEvent(access)).getBindings().stream()
+                .filter(HoldBinding::requiresHold).sorted(ItemMatcher.ORDER).toList();
         ITEM_MATCHED.clear();
     }
 }

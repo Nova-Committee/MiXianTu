@@ -13,7 +13,6 @@ import com.iafenvoy.mxt.data.progression.Progression;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.data.trigger.TriggerSignals;
 import com.iafenvoy.mxt.data.trigger.builtin.BuiltinTrigger;
-import com.iafenvoy.mxt.event.dispatcher.EntitySources;
 import com.iafenvoy.mxt.probe.Probe;
 import com.iafenvoy.mxt.probe.ProbeContext;
 import com.iafenvoy.mxt.probe.ProbeDefinitions;
@@ -25,6 +24,7 @@ import com.iafenvoy.mxt.runtime.creature.ContractService;
 import com.iafenvoy.mxt.runtime.progression.ProgressionAdminService;
 import com.iafenvoy.mxt.runtime.progression.ProgressionDamageMultiplier;
 import com.iafenvoy.mxt.runtime.progression.ProgressionDriver;
+import com.iafenvoy.mxt.runtime.progression.ProgressionOwners;
 import com.iafenvoy.mxt.runtime.progression.ProgressionService;
 import com.iafenvoy.mxt.runtime.trigger.TriggerDispatcher;
 import com.iafenvoy.mxt.runtime.trigger.TriggerSubscription;
@@ -80,7 +80,7 @@ public final class ProgressionProbes {
             spawned.add(beast);
             AbilityAttachment abilities = beast.getData(MxtAttachments.ABILITY_HOLDER);
             boolean entry = stoodOn(beast, ProbeDefinitions.BEAST_1)
-                    && EntitySources.held(beast, ProbeDefinitions.PROBE_BEAST_PROFILE)
+                    && ProgressionOwners.held(beast, ProbeDefinitions.PROBE_BEAST_PROFILE)
                     .flatMap(ProgressionService::next)
                     .map(held -> HolderHelper.id(held).equals(ProbeDefinitions.BEAST_2)).orElse(false)
                     && beast.getData(MxtAttachments.CREATURE_SPIRIT).profileLevels().levels().isEmpty()
@@ -270,10 +270,10 @@ public final class ProgressionProbes {
             spawned.add(beast);
             // The demotion walks down from the top of the chain, so the creature is put there first.
             ProgressionAdminService.setLevel(beast, ProbeDefinitions.PROBE_BEAST_PROFILE, third, false);
-            boolean demoted = EntitySources.held(beast, ProbeDefinitions.PROBE_BEAST_PROFILE)
+            boolean demoted = ProgressionOwners.held(beast, ProbeDefinitions.PROBE_BEAST_PROFILE)
                     .map(ProgressionService::demote).orElse(false)
                     && stoodOn(beast, ProbeDefinitions.BEAST_2) && close(ProgressionDamageMultiplier.of(beast, growthAbility), 1.5D);
-            boolean atEntry = EntitySources.held(beast, ProbeDefinitions.PROBE_BEAST_PROFILE)
+            boolean atEntry = ProgressionOwners.held(beast, ProbeDefinitions.PROBE_BEAST_PROFILE)
                     .map(ProgressionService::demote).orElse(false)
                     && stoodOn(beast, ProbeDefinitions.BEAST_1)
                     && beast.getData(MxtAttachments.CREATURE_SPIRIT).profileLevels().levels().isEmpty();
@@ -399,7 +399,7 @@ public final class ProgressionProbes {
 
     // The level the creature answers with for its own profile: the record, or the entry level it never left.
     private static boolean stoodOn(Mob creature, Identifier level) {
-        return EntitySources.held(creature, ProbeDefinitions.PROBE_BEAST_PROFILE)
+        return ProgressionOwners.held(creature, ProbeDefinitions.PROBE_BEAST_PROFILE)
                 .flatMap(ProgressionService::current)
                 .map(held -> HolderHelper.id(held).equals(level)).orElse(false);
     }

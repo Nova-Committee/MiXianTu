@@ -1,11 +1,7 @@
 package com.iafenvoy.mxt.registry;
 
 import com.iafenvoy.mxt.MiXianTu;
-import com.iafenvoy.mxt.particle.FormationParticleOptions;
-import com.iafenvoy.mxt.particle.FormationParticleType;
-import com.iafenvoy.mxt.particle.RiftParticleType;
-import com.iafenvoy.mxt.particle.SpiritWispParticleOptions;
-import com.iafenvoy.mxt.particle.SpiritWispParticleType;
+import com.iafenvoy.mxt.particle.*;
 import net.minecraft.core.particles.ColorParticleOption;
 import net.minecraft.core.particles.ParticleType;
 import net.minecraft.core.registries.BuiltInRegistries;

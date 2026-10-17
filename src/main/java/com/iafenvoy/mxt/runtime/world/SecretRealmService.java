@@ -304,7 +304,8 @@ public final class SecretRealmService {
      * non-player that crosses a dimension, so a caller that means to keep holding the traveller has to take this one.
      * Empty when nothing moved, which is every refusal.
      */
-    public record Result(boolean changed, Failure failure, Optional<Component> message, Optional<LivingEntity> traveller) {
+    public record Result(boolean changed, Failure failure, Optional<Component> message,
+                         Optional<LivingEntity> traveller) {
         static Result entered(LivingEntity traveller) {
             return new Result(true, null, Optional.empty(), Optional.of(traveller));
         }
