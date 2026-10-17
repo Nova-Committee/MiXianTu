@@ -1,4 +1,4 @@
-package com.iafenvoy.mxt.runtime.projectile;
+package com.iafenvoy.mxt.entity;
 
 import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.context.action.EntityActionContext;

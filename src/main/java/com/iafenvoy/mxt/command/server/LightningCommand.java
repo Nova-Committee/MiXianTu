@@ -2,7 +2,7 @@ package com.iafenvoy.mxt.command.server;
 
 import com.iafenvoy.mxt.command.ServerCommandManager;
 import com.iafenvoy.mxt.registry.MxtEntityTypes;
-import com.iafenvoy.mxt.runtime.lightning.ColoredLightningBolt;
+import com.iafenvoy.mxt.entity.ColoredLightningBolt;
 import com.mojang.brigadier.arguments.DoubleArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;

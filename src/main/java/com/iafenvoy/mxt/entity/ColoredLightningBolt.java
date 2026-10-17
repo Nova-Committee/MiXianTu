@@ -1,4 +1,4 @@
-package com.iafenvoy.mxt.runtime.lightning;
+package com.iafenvoy.mxt.entity;
 
 import com.iafenvoy.mxt.registry.MxtEntityDataSerializers;
 import net.minecraft.network.syncher.EntityDataAccessor;

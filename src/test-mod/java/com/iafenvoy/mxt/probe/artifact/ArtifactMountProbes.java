@@ -19,7 +19,7 @@ import com.iafenvoy.mxt.probe.ProbeDefinitions;
 import com.iafenvoy.mxt.registry.MxtMountRenders;
 import com.iafenvoy.mxt.registry.MxtRegistries;
 import com.iafenvoy.mxt.runtime.artifact.FlightService;
-import com.iafenvoy.mxt.runtime.artifact.FlyingSwordEntity;
+import com.iafenvoy.mxt.entity.FlyingSwordEntity;
 import com.iafenvoy.mxt.testmod.MxtTestEntities;
 import com.iafenvoy.mxt.testmod.ProbeMount;
 import com.iafenvoy.mxt.testmod.ProbeMountRenders;

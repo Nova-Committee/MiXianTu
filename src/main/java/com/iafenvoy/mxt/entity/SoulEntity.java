@@ -1,4 +1,4 @@
-package com.iafenvoy.mxt.runtime.world;
+package com.iafenvoy.mxt.entity;
 
 import net.minecraft.core.UUIDUtil;
 import net.minecraft.network.syncher.SynchedEntityData.Builder;

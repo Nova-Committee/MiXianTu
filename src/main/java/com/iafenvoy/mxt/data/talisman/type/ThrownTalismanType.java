@@ -10,7 +10,7 @@ import com.iafenvoy.mxt.data.context.action.BiEntityActionContext;
 import com.iafenvoy.mxt.data.context.action.BlockActionContext;
 import com.iafenvoy.mxt.data.talisman.TalismanType;
 import com.iafenvoy.mxt.data.talisman.TalismanUse;
-import com.iafenvoy.mxt.runtime.talisman.TalismanProjectileEntity;
+import com.iafenvoy.mxt.entity.TalismanProjectileEntity;
 import com.iafenvoy.mxt.util.MiscUtil;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.NumberProvider;

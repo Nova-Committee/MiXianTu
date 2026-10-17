@@ -1,4 +1,4 @@
-package com.iafenvoy.mxt.runtime.spirit;
+package com.iafenvoy.mxt.entity;
 
 import com.iafenvoy.mxt.api.AuraAccess;
 import com.iafenvoy.mxt.data.aura.Aura;

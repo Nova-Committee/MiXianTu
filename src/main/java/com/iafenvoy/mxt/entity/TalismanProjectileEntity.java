@@ -1,4 +1,4 @@
-package com.iafenvoy.mxt.runtime.talisman;
+package com.iafenvoy.mxt.entity;
 
 import com.iafenvoy.mxt.data.talisman.Talisman;
 import com.iafenvoy.mxt.data.talisman.TalismanUse;

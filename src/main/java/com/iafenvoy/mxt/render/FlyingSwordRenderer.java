@@ -10,7 +10,7 @@ import com.iafenvoy.mxt.data.ability.type.FlightDisplay;
 import com.iafenvoy.mxt.data.ability.type.MountAbilityType;
 import com.iafenvoy.mxt.render.mount.MountContext;
 import com.iafenvoy.mxt.render.mount.MountRenderers;
-import com.iafenvoy.mxt.runtime.artifact.FlyingSwordEntity;
+import com.iafenvoy.mxt.entity.FlyingSwordEntity;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
 import net.minecraft.client.renderer.SubmitNodeCollector;

@@ -22,7 +22,7 @@ import com.iafenvoy.mxt.runtime.alchemy.*;
 import com.iafenvoy.mxt.runtime.alchemy.AlchemyResolver.Candidate;
 import com.iafenvoy.mxt.runtime.alchemy.AlchemyWorkstationService.AlchemyPreview;
 import com.iafenvoy.mxt.runtime.alchemy.AlchemyWorkstationService.StartResult;
-import com.iafenvoy.mxt.runtime.spirit.SpiritBurstEntity;
+import com.iafenvoy.mxt.entity.SpiritBurstEntity;
 import com.iafenvoy.mxt.screen.menu.AlchemyFurnaceMenu;
 import com.iafenvoy.mxt.testmod.AlchemyTestHeatBlocks;
 import com.iafenvoy.mxt.util.HolderHelper;

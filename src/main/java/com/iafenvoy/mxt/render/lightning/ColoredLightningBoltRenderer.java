@@ -1,6 +1,6 @@
 package com.iafenvoy.mxt.render.lightning;
 
-import com.iafenvoy.mxt.runtime.lightning.ColoredLightningBolt;
+import com.iafenvoy.mxt.entity.ColoredLightningBolt;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.renderer.SubmitNodeCollector;

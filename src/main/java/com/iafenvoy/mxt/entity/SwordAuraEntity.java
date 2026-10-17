@@ -1,7 +1,6 @@
-package com.iafenvoy.mxt.runtime.sword;
+package com.iafenvoy.mxt.entity;
 
 import com.iafenvoy.mxt.registry.MxtEntityTypes;
-import com.iafenvoy.mxt.runtime.projectile.VisualProjectileEntity;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;

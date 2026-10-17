@@ -3,7 +3,7 @@ package com.iafenvoy.mxt.probe.ability;
 import com.iafenvoy.mxt.probe.Probe;
 import com.iafenvoy.mxt.probe.ProbeContext;
 import com.iafenvoy.mxt.registry.MxtEntityTypes;
-import com.iafenvoy.mxt.runtime.sword.SwordAuraEntity;
+import com.iafenvoy.mxt.entity.SwordAuraEntity;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.phys.Vec3;

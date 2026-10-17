@@ -1,6 +1,6 @@
 package com.iafenvoy.mxt.render.talisman;
 
-import com.iafenvoy.mxt.runtime.talisman.TalismanProjectileEntity;
+import com.iafenvoy.mxt.entity.TalismanProjectileEntity;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.entity.EntityRenderer;

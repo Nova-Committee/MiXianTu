@@ -1,6 +1,6 @@
 package com.iafenvoy.mxt.render.lightning;
 
-import com.iafenvoy.mxt.runtime.lightning.ColoredLightningBolt;
+import com.iafenvoy.mxt.entity.ColoredLightningBolt;
 import net.minecraft.client.renderer.entity.state.LightningBoltRenderState;
 
 import java.util.List;
