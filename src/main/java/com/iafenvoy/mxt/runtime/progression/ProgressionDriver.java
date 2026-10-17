@@ -4,8 +4,8 @@ import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.data.progression.Progression;
 import com.iafenvoy.mxt.data.progression.ProgressionOwner;
 import com.iafenvoy.mxt.data.resource.Resource;
+import com.iafenvoy.mxt.event.dispatcher.EntitySources;
 import com.iafenvoy.mxt.registry.MxtAttachments;
-import com.iafenvoy.mxt.runtime.EntitySources;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.Holder;
 import net.minecraft.world.entity.LivingEntity;
@@ -15,9 +15,9 @@ import java.util.List;
 /**
  * Advances every progression a body holds: the level's {@code mastery} says how much of the owner's mastery resource
  * is needed, its {@code condition} says what else it takes, and the signal is published after the record is written.
- * Which owners a body holds comes from {@link EntitySources.Owns}, so this knows nothing about techniques or creature
- * profiles; what a level means stays in the owner's own definition, and where the record lives stays in the holder
- * the owner came with.
+ * Which owners a body holds comes from {@link com.iafenvoy.mxt.event.dispatcher.CollectProgressionOwnersEvent}, so
+ * this knows nothing about techniques or creature profiles; what a level means stays in the owner's own definition,
+ * and where the record lives stays in the holder the owner came with.
  */
 public final class ProgressionDriver {
     // Bound on how many levels one pass may climb, so a misconfigured chain cannot stall a tick.

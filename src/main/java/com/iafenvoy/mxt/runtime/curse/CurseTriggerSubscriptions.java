@@ -6,16 +6,16 @@ import com.iafenvoy.mxt.data.curse.Curse;
 import com.iafenvoy.mxt.data.curse.builtin.TriggeredCurseType;
 import com.iafenvoy.mxt.data.trigger.Trigger;
 import com.iafenvoy.mxt.data.trigger.TriggerSignal;
+import com.iafenvoy.mxt.event.dispatcher.TriggerRehydrateEvent;
 import com.iafenvoy.mxt.registry.MxtAttachments;
-import com.iafenvoy.mxt.runtime.ModuleHooks;
 import com.iafenvoy.mxt.runtime.trigger.TriggerDispatcher;
-import com.iafenvoy.mxt.runtime.trigger.TriggerRehydrator;
 import com.iafenvoy.mxt.runtime.trigger.TriggerSubscription;
 import com.iafenvoy.mxt.util.HolderHelper;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.LivingEntity;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
 
 import java.util.List;
 import java.util.Map.Entry;
@@ -27,26 +27,19 @@ import java.util.Map.Entry;
  * Subscriptions are runtime-only and rebuilt from the persisted attachment, exactly like every other module's;
  * rebuilding is idempotent, so applying, removing, expiring and rehydrating can all ask for it.
  */
+@EventBusSubscriber
 public final class CurseTriggerSubscriptions {
     private static final String MODULE = "curse";
 
     private CurseTriggerSubscriptions() {
     }
 
-    // Called once from ModuleHooks.initialize().
-    public static void register() {
-        ModuleHooks.register(TriggerRehydrator.class, new TriggerRehydrator() {
-            @Override
-            public String module() {
-                return MODULE;
-            }
-
-            @Override
-            public void rehydrate(LivingEntity entity) {
-                // A definition that came back has to be scheduled again as well as subscribed.
-                CurseScheduler.reschedule(entity);
-                rebuild(entity);
-            }
+    @SubscribeEvent
+    public static void onRehydrate(TriggerRehydrateEvent event) {
+        // A definition that came back has to be scheduled again as well as subscribed.
+        event.rehydrate(MODULE, entity -> {
+            CurseScheduler.reschedule(entity);
+            rebuild(entity);
         });
     }
 

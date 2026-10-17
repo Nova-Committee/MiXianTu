@@ -2,7 +2,7 @@ package com.iafenvoy.mxt.runtime.progression;
 
 import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.progression.Progression;
-import com.iafenvoy.mxt.runtime.EntitySources;
+import com.iafenvoy.mxt.event.dispatcher.EntitySources;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.world.entity.LivingEntity;

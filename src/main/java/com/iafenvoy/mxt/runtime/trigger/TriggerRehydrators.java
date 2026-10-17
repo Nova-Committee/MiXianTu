@@ -1,15 +1,15 @@
 package com.iafenvoy.mxt.runtime.trigger;
 
 import com.iafenvoy.mxt.MiXianTu;
-import com.iafenvoy.mxt.runtime.ModuleHooks;
+import com.iafenvoy.mxt.event.dispatcher.TriggerRehydrateEvent;
 import net.minecraft.world.entity.LivingEntity;
+import net.neoforged.neoforge.common.NeoForge;
 
 import java.util.UUID;
 
 /**
- * Registry of module-specific trigger rehydrators: each module's subscription index is runtime-only, and this is
- * what rebuilds it from the persisted attachment. A module whose rebuild throws is cleared rather than left with a
- * half-built index.
+ * Drives the trigger rehydration of every module for one loaded body. Each module's subscription index is runtime-only
+ * and rebuilt from its own attachment, and {@link TriggerRehydrateEvent#rehydrate} is what isolates a module that throws.
  */
 public final class TriggerRehydrators {
     private TriggerRehydrators() {
@@ -18,15 +18,7 @@ public final class TriggerRehydrators {
     public static void rehydrate(LivingEntity entity) {
         if (entity.level().isClientSide()) return;
         int before = TriggerDispatcher.subscriptionCount(entity.getUUID());
-        for (TriggerRehydrator rehydrator : ModuleHooks.all(TriggerRehydrator.class)) {
-            try {
-                rehydrator.rehydrate(entity);
-            } catch (RuntimeException exception) {
-                MiXianTu.LOGGER.error("Failed to rehydrate trigger module {} for entity {}",
-                        rehydrator.module(), entity.getUUID(), exception);
-                TriggerDispatcher.clearModule(entity.getUUID(), rehydrator.module());
-            }
-        }
+        NeoForge.EVENT_BUS.post(new TriggerRehydrateEvent(entity));
         MiXianTu.LOGGER.debug("Rehydrated trigger subscriptions for {}: {} -> {}",
                 entity.getUUID(), before, TriggerDispatcher.subscriptionCount(entity.getUUID()));
     }

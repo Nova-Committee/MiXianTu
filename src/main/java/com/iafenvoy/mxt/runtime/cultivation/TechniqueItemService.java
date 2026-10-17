@@ -3,18 +3,16 @@ package com.iafenvoy.mxt.runtime.cultivation;
 import com.iafenvoy.mxt.attachment.TechniqueAttachment;
 import com.iafenvoy.mxt.config.MxtServerConfig;
 import com.iafenvoy.mxt.data.cultivation.Technique;
-import com.iafenvoy.mxt.data.item.HoldBinding;
 import com.iafenvoy.mxt.data.item.TechniqueBinding;
 import com.iafenvoy.mxt.data.item.TechniqueReading;
+import com.iafenvoy.mxt.event.dispatcher.CollectHoldBindingsEvent;
 import com.iafenvoy.mxt.item.ItemReading;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.runtime.ModuleHooks;
 import com.iafenvoy.mxt.runtime.cultivation.TechniqueService.Result;
 import com.iafenvoy.mxt.runtime.hold.HoldLookup;
 import com.iafenvoy.mxt.runtime.hold.HoldService;
-import com.iafenvoy.mxt.runtime.hold.HoldSource;
 import com.iafenvoy.mxt.runtime.item.ItemBindingService;
 import com.iafenvoy.mxt.runtime.item.QualityService;
 import com.iafenvoy.mxt.runtime.item.QualityService.Failure;
@@ -85,19 +83,16 @@ public final class TechniqueItemService {
     private record ShownProgress(int percent, long tick) {
     }
 
-    // The whole wiring between the two modules, done once at construction: the hold module drives the gesture
-    // and never learns what a technique is, and this module never touches the use cycle. A declaration that claims
-    // items is registered as a second hold over them, so those items are read without carrying any component.
-    public static void register() {
-        ModuleHooks.register(HoldSource.class, registries -> {
-            List<HoldBinding> holds = new ArrayList<>();
-            holds.add(TechniqueHold.INSTANCE);
-            MxtDatapackRegistries.holders(registries, MxtResourceKeys.TECHNIQUE_BINDING)
-                    .map(Reference::value)
-                    .filter(binding -> !binding.entries().isEmpty())
-                    .forEach(binding -> holds.add(new TechniqueHold(binding.entries())));
-            return List.copyOf(holds);
-        });
+    // The hold module drives the gesture and never learns what a technique is, and this module never touches the use
+    // cycle. A declaration that claims items is contributed as a second hold over them, so those items are read
+    // without carrying any component.
+    @SubscribeEvent
+    public static void onCollectHolds(CollectHoldBindingsEvent event) {
+        event.add(TechniqueHold.INSTANCE);
+        MxtDatapackRegistries.holders(event.registries(), MxtResourceKeys.TECHNIQUE_BINDING)
+                .map(Reference::value)
+                .filter(binding -> !binding.entries().isEmpty())
+                .forEach(binding -> event.add(new TechniqueHold(binding.entries())));
     }
 
     // A binding that asks for a hold answers false, so the click falls through to the hold module, which arms

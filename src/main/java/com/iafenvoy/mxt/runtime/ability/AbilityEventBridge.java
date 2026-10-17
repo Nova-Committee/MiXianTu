@@ -14,11 +14,12 @@ import com.iafenvoy.mxt.data.trigger.TriggerContext;
 import com.iafenvoy.mxt.data.trigger.TriggerSignals;
 import com.iafenvoy.mxt.event.AbilityTriggeredEvent.Post;
 import com.iafenvoy.mxt.event.AbilityTriggeredEvent.Pre;
+import com.iafenvoy.mxt.event.dispatcher.CollectTickStagesEvent;
+import com.iafenvoy.mxt.event.dispatcher.EntityTickStages;
+import com.iafenvoy.mxt.event.dispatcher.TriggerRehydrateEvent;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.runtime.EntityTickStages;
-import com.iafenvoy.mxt.runtime.ModuleHooks;
 import com.iafenvoy.mxt.runtime.Sources;
 import com.iafenvoy.mxt.runtime.ability.AbilityService.UseResult;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactService;
@@ -26,7 +27,6 @@ import com.iafenvoy.mxt.runtime.item.QualityService;
 import com.iafenvoy.mxt.runtime.resource.ResourceService;
 import com.iafenvoy.mxt.runtime.trigger.TriggerDispatcher;
 import com.iafenvoy.mxt.runtime.trigger.TriggerPublishing;
-import com.iafenvoy.mxt.runtime.trigger.TriggerRehydrator;
 import com.iafenvoy.mxt.runtime.trigger.TriggerSubscription;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
@@ -61,32 +61,28 @@ import java.util.function.Consumer;
 public final class AbilityEventBridge {
     // Guards one entity/ability pair against re-entering itself through an effect its own use publishes.
     private static final ThreadLocal<Set<DispatchKey>> DISPATCHING = ThreadLocal.withInitial(HashSet::new);
+    // The trigger subscription index this module owns; every subscription and clear is filed under it.
+    private static final String MODULE = "ability";
 
     private AbilityEventBridge() {
     }
 
-    // Called once from ModuleHooks.initialize(): the stages this module owns, in the order {@link EntityTickStages}
-    // declares them, plus its trigger rehydrator. Everything else the bridge does is a vanilla-event subscription;
-    // the per-entity tick is a table, not a method body.
-    public static void register() {
-        ModuleHooks.register(TriggerRehydrator.class, new TriggerRehydrator() {
-            @Override
-            public String module() {
-                return "ability";
-            }
+    // The stages this module owns, in the order {@link EntityTickStages} declares them: the per-entity tick is a
+    // table, not a method body. Everything else the bridge does is a vanilla-event subscription.
+    @SubscribeEvent
+    public static void onCollectStages(CollectTickStagesEvent event) {
+        event.add("ability_resources", EntityTickStages.RESOURCES, AbilityEventBridge::tickResources);
+        event.add("ability_signals", EntityTickStages.TRIGGERS, AbilityEventBridge::tickSignals);
+        event.add("ability_attributes", EntityTickStages.ATTRIBUTES, PassiveAttributeService::tick);
+        event.add("ability_curios", EntityTickStages.CURIOS, AbilityEventBridge::tickCurios);
+        event.add("ability_lifecycle", EntityTickStages.ABILITIES, AbilityEventBridge::tickLifecycle);
+        event.add("ability_casts", EntityTickStages.CASTS, AbilityEventBridge::tickCasts);
+        event.add("ability_channel", EntityTickStages.CHANNEL, AbilityEventBridge::tickChannel);
+    }
 
-            @Override
-            public void rehydrate(LivingEntity entity) {
-                rebuildTriggerSubscriptions(entity);
-            }
-        });
-        EntityTickStages.register("ability_resources", EntityTickStages.RESOURCES, AbilityEventBridge::tickResources);
-        EntityTickStages.register("ability_signals", EntityTickStages.TRIGGERS, AbilityEventBridge::tickSignals);
-        EntityTickStages.register("ability_attributes", EntityTickStages.ATTRIBUTES, PassiveAttributeService::tick);
-        EntityTickStages.register("ability_curios", EntityTickStages.CURIOS, AbilityEventBridge::tickCurios);
-        EntityTickStages.register("ability_lifecycle", EntityTickStages.ABILITIES, AbilityEventBridge::tickLifecycle);
-        EntityTickStages.register("ability_casts", EntityTickStages.CASTS, AbilityEventBridge::tickCasts);
-        EntityTickStages.register("ability_channel", EntityTickStages.CHANNEL, AbilityEventBridge::tickChannel);
+    @SubscribeEvent
+    public static void onRehydrate(TriggerRehydrateEvent event) {
+        event.rehydrate(MODULE, AbilityEventBridge::rebuildTriggerSubscriptions);
     }
 
     @SubscribeEvent
@@ -303,7 +299,7 @@ public final class AbilityEventBridge {
     private static void syncAbilitySubscriptions(LivingEntity entity) {
         AbilityAttachment abilities = entity.getData(MxtAttachments.ABILITY_HOLDER);
         ResourceHolderAttachment resources = entity.getData(MxtAttachments.RESOURCE_HOLDER);
-        TriggerDispatcher.clearModule(entity.getUUID(), "ability");
+        TriggerDispatcher.clearModule(entity.getUUID(), MODULE);
         for (Holder<Ability> ability : abilities.sources().keys()) {
             Ability definition = ability.value();
             if (!(definition.type() instanceof TriggerSource source)) continue;
@@ -312,7 +308,7 @@ public final class AbilityEventBridge {
             int triggerIndex = 0;
             for (Trigger trigger : source.triggers()) {
                 String identity = abilityId + "/" + triggerIndex++;
-                TriggerDispatcher.register(new TriggerSubscription(entity.getUUID(), "ability", identity,
+                TriggerDispatcher.register(new TriggerSubscription(entity.getUUID(), MODULE, identity,
                         trigger, signal -> true,
                         signal -> {
                             FormulaContext formula = signal.context().formula();

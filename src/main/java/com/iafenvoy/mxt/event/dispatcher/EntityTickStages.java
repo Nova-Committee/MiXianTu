@@ -1,8 +1,9 @@
-package com.iafenvoy.mxt.runtime;
+package com.iafenvoy.mxt.event.dispatcher;
 
 import net.minecraft.world.entity.LivingEntity;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.tick.EntityTickEvent;
 
 import java.util.Comparator;
@@ -10,10 +11,9 @@ import java.util.List;
 import java.util.function.Consumer;
 
 /**
- * The per-entity tick of the pipeline modules, running the stages they registered in a declared order. A module
- * registers into a named slot instead of relying on the order its own event handler happens to be called in; the
- * order is part of the table below, so moving a stage is a visible edit rather than a side effect of where a call
- * was added.
+ * The per-entity tick of the pipeline modules, running the stages they contribute in a declared order. A module names a
+ * slot instead of relying on the order its own event handler happens to be called in; the order is part of the table
+ * below, so moving a stage is a visible edit rather than a side effect of where a subscription was added.
  *
  * <p>Server side only, once per living entity per tick.
  */
@@ -30,14 +30,10 @@ public final class EntityTickStages {
     public static final int CASTS = 700;
     public static final int CHANNEL = 800;
 
-    // Ordered on the first server tick, which is after every module has registered; server thread only.
+    // Collected on the first server tick, which is after every module has subscribed; server thread only.
     private static List<Stage> ordered;
 
     private EntityTickStages() {
-    }
-
-    public static void register(String id, int order, Consumer<LivingEntity> handler) {
-        ModuleHooks.register(Stage.class, new Stage(id, order, handler));
     }
 
     @SubscribeEvent
@@ -48,9 +44,12 @@ public final class EntityTickStages {
 
     private static List<Stage> ordered() {
         List<Stage> stages = ordered;
-        if (stages == null)
-            ordered = stages = ModuleHooks.all(Stage.class).stream()
+        if (stages == null) {
+            CollectTickStagesEvent collected = new CollectTickStagesEvent();
+            NeoForge.EVENT_BUS.post(collected);
+            ordered = stages = collected.stages().stream()
                     .sorted(Comparator.comparingInt(Stage::order)).toList();
+        }
         return stages;
     }
 

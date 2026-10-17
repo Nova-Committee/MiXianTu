@@ -1,0 +1,31 @@
+{
+	"format_version": "1.8.0",
+	"animations": {
+		"animation.mxt.jade_slip_reading": {
+			"loop": true,
+			"bones": {
+				"right_arm": {
+					"rotation": {
+						"vector": [-116, -13, 6]
+					},
+					"bend": {
+						"vector": [-45, 0, 0]
+					}
+				},
+				"right_item": {
+					"rotation": {
+						"vector": [-46.1821, -4.981, 105.3784]
+					}
+				},
+				"left_arm": {
+					"rotation": {
+						"vector": [-116, 13, -6]
+					},
+					"bend": {
+						"vector": [-45, 0, 0]
+					}
+				}
+			}
+		}
+	}
+}

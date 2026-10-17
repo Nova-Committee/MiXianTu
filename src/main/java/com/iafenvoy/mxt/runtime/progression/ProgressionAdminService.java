@@ -2,7 +2,7 @@ package com.iafenvoy.mxt.runtime.progression;
 
 import com.iafenvoy.mxt.data.progression.Progression;
 import com.iafenvoy.mxt.data.progression.ProgressionOwner;
-import com.iafenvoy.mxt.runtime.EntitySources;
+import com.iafenvoy.mxt.event.dispatcher.EntitySources;
 import com.iafenvoy.mxt.runtime.ability.AbilityGrantService;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;

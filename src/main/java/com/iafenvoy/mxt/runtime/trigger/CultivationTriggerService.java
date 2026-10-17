@@ -5,10 +5,10 @@ import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.cultivation.CultivateConditions;
 import com.iafenvoy.mxt.data.trigger.Trigger;
+import com.iafenvoy.mxt.event.dispatcher.TriggerRehydrateEvent;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.runtime.ModuleHooks;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService.BreakthroughResult;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService.BreakthroughStatus;
@@ -17,30 +17,23 @@ import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
 import net.minecraft.world.entity.LivingEntity;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
 
 /**
  * Rebuilds cultivation trigger subscriptions from persisted cultivation state: only the waiting transition is
  * saved, the subscriptions are runtime cache.
  */
+@EventBusSubscriber
 public final class CultivationTriggerService {
     private static final String MODULE = "cultivation";
 
     private CultivationTriggerService() {
     }
 
-    // Called once from ModuleHooks.initialize().
-    public static void register() {
-        ModuleHooks.register(TriggerRehydrator.class, new TriggerRehydrator() {
-            @Override
-            public String module() {
-                return MODULE;
-            }
-
-            @Override
-            public void rehydrate(LivingEntity entity) {
-                refresh(entity);
-            }
-        });
+    @SubscribeEvent
+    public static void onRehydrate(TriggerRehydrateEvent event) {
+        event.rehydrate(MODULE, CultivationTriggerService::refresh);
     }
 
     // Idempotent: the module is always cleared first, so stopping cultivation or changing the selected action

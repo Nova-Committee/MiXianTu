@@ -79,6 +79,9 @@ public final class MxtDataComponents {
     public static final DeferredHolder<DataComponentType<?>, DataComponentType<Holder<AlchemyFurnaceDefinition>>> ALCHEMY_FURNACE = register("alchemy_furnace", AlchemyFurnaceDefinition.CODEC);
     public static final DeferredHolder<DataComponentType<?>, DataComponentType<Holder<AlchemyWallMaterial>>> ALCHEMY_WALL_MATERIAL = register("alchemy_wall_material", AlchemyWallMaterial.CODEC);
     public static final DeferredHolder<DataComponentType<?>, DataComponentType<Component>> STORED_TEXT = register("stored_text", MiscCodecs.TRANSLATABLE_COMPONENT);
+    // How long holding a jade slip takes. Written only when a slip should be read faster or slower than the standard
+    // two seconds, which is the default the item applies when the component is absent.
+    public static final DeferredHolder<DataComponentType<?>, DataComponentType<Integer>> JADE_SLIP_READING = register("jade_slip_reading", Codec.intRange(0, Integer.MAX_VALUE));
 
     private static <T> DeferredHolder<DataComponentType<?>, DataComponentType<T>> register(String id, Codec<T> codec) {
         return REGISTRY.registerComponentType(id, b -> b.persistent(codec).networkSynchronized(ByteBufCodecs.fromCodecWithRegistries(codec)));

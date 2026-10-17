@@ -1,17 +1,19 @@
 package com.iafenvoy.mxt.runtime.hold;
 
 import com.iafenvoy.mxt.data.item.HoldBinding;
-import com.iafenvoy.mxt.runtime.ModuleHooks;
+import com.iafenvoy.mxt.event.dispatcher.CollectHoldBindingsEvent;
 import com.iafenvoy.mxt.util.matcher.ItemMatcher;
-import net.minecraft.core.HolderLookup.Provider;
+import net.minecraft.core.RegistryAccess;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.TagsUpdatedEvent;
 import net.neoforged.neoforge.event.server.ServerStartedEvent;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -20,7 +22,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * Which items are used by holding them down, and what each one's hold looks like. The question is asked from paths
  * that run while a gesture is live, so declarations answering from the item's identity are cached per item; one
  * that reads the stack - a manual, whose technique is its own component - is asked about every stack. The
- * declarations come from the registered {@link HoldSource}s, and this class knows none of them.
+ * declarations come from the modules that answer {@link CollectHoldBindingsEvent}, and this class knows none of them.
  *
  * <p>The cache is captured on {@link TagsUpdatedEvent} and {@link ServerStartedEvent} rather than by walking every
  * registered item up front, because building an {@code ItemStack} during a pack load reads unbound component maps
@@ -30,7 +32,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public final class HoldLookup {
     // Keyed by item, and only ever holding the declarations that match on the item's identity.
     private static final Map<Item, List<HoldBinding>> ITEM_MATCHED = new ConcurrentHashMap<>();
-    // Sorted by the priority each declaration carries, then by the order the sources registered in, which is who
+    // Sorted by the priority each declaration carries, then by the order the listeners ran in, which is who
     // drives a stack two of them claim.
     private static volatile List<HoldBinding> holds = List.of();
 
@@ -63,8 +65,10 @@ public final class HoldLookup {
     }
 
     // Public so the server audit can drive it directly.
-    public static void rebuild(Provider access) {
-        holds = ModuleHooks.all(HoldSource.class).stream().flatMap(source -> source.holds(access).stream())
+    public static void rebuild(RegistryAccess access) {
+        List<HoldBinding> bindings = new LinkedList<>();
+        NeoForge.EVENT_BUS.post(new CollectHoldBindingsEvent(access, bindings));
+        holds = bindings.stream()
                 .filter(HoldBinding::requiresHold)
                 .sorted(ItemMatcher.ORDER)
                 .toList();

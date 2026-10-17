@@ -16,8 +16,8 @@ import java.util.List;
 
 /**
  * What the hold module needs about an item used by holding it down. A module implements this on its own binding
- * record and registers a {@code HoldSource}; from then on the hold module drives the entire gesture without ever
- * reading that module's registries. Extending {@link ItemMatcher} is what lets a source hand over matchers and
+ * record and answers {@code CollectHoldBindingsEvent}; from then on the hold module drives the entire gesture without
+ * ever reading that module's registries. Extending {@link ItemMatcher} is what lets a source hand over matchers and
  * holds in one object.
  */
 public interface HoldBinding extends ItemMatcher {

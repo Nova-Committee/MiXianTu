@@ -3,15 +3,13 @@ package com.iafenvoy.mxt.runtime.artifact;
 import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.data.artifact.Artifact;
 import com.iafenvoy.mxt.data.aura.Aura;
-import com.iafenvoy.mxt.data.item.HoldBinding;
 import com.iafenvoy.mxt.data.resource.Resource;
+import com.iafenvoy.mxt.event.dispatcher.CollectHoldBindingsEvent;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.runtime.ModuleHooks;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactService.RefineResult;
 import com.iafenvoy.mxt.runtime.hold.HoldLookup;
-import com.iafenvoy.mxt.runtime.hold.HoldSource;
 import com.iafenvoy.mxt.runtime.resource.ResourceService;
 import com.iafenvoy.mxt.runtime.resource.ResourceService.Result;
 import com.iafenvoy.mxt.util.DefinitionText;
@@ -72,13 +70,13 @@ public final class ArtifactHoldService {
     private ArtifactHoldService() {
     }
 
-    // Every artifact definition that declares a gesture, handed to the hold module once at construction.
-    public static void register() {
-        ModuleHooks.register(HoldSource.class, registries -> MxtDatapackRegistries.holders(registries, MxtResourceKeys.ARTIFACT)
+    // Every artifact definition that declares a gesture, contributed to the hold module.
+    @SubscribeEvent
+    public static void onCollectHolds(CollectHoldBindingsEvent event) {
+        event.addAll(MxtDatapackRegistries.holders(event.registries(), MxtResourceKeys.ARTIFACT)
                 .map(Reference::value)
                 .map(ArtifactHold::new)
                 .filter(ArtifactHold::requiresHold)
-                .map(HoldBinding.class::cast)
                 .toList());
     }
 

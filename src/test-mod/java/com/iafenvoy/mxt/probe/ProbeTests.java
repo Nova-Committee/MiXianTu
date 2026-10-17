@@ -17,6 +17,7 @@ import com.iafenvoy.mxt.probe.cultivation.IdentityProbes;
 import com.iafenvoy.mxt.probe.formation.FormationProbes;
 import com.iafenvoy.mxt.probe.herb.HerbProbes;
 import com.iafenvoy.mxt.probe.item.DrawingProbes;
+import com.iafenvoy.mxt.probe.item.JadeSlipProbes;
 import com.iafenvoy.mxt.probe.item.QualityProbes;
 import com.iafenvoy.mxt.probe.item.WeaponBindingProbes;
 import com.iafenvoy.mxt.probe.lifespan.LifespanProbes;
@@ -81,6 +82,7 @@ public final class ProbeTests {
             IdentityProbes::probes,
             HerbProbes::probes,
             DrawingProbes::probes,
+            JadeSlipProbes::probes,
             QualityProbes::probes,
             WeaponBindingProbes::probes,
             LifespanProbes::probes,

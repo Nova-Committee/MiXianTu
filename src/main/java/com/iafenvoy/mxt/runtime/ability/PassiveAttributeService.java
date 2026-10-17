@@ -3,9 +3,8 @@ package com.iafenvoy.mxt.runtime.ability;
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.data.AttributeEntry;
 import com.iafenvoy.mxt.data.ability.Ability;
+import com.iafenvoy.mxt.event.dispatcher.CollectPassiveAttributesEvent;
 import com.iafenvoy.mxt.registry.MxtAttachments;
-import com.iafenvoy.mxt.runtime.EntitySources;
-import com.iafenvoy.mxt.runtime.ModuleHooks;
 import com.iafenvoy.mxt.runtime.Sources;
 import com.iafenvoy.mxt.runtime.ability.AbilityModifierService.ResolvedModifier;
 import com.iafenvoy.mxt.util.HolderHelper;
@@ -19,6 +18,7 @@ import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent.Clone;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerLoggedInEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerRespawnEvent;
@@ -90,22 +90,17 @@ public final class PassiveAttributeService {
     }
 
     private static List<Entry> entries(LivingEntity entity) {
-        List<Entry> entries = new ArrayList<>();
+        List<Entry> entries = new LinkedList<>();
         Map<Holder<Ability>, Integer> abilityIndices = new HashMap<>();
         for (ResolvedModifier value : AbilityModifierService.resolve(entity, entity.getData(MxtAttachments.ABILITY_HOLDER))) {
             int index = abilityIndices.merge(value.ability(), 1, Integer::sum) - 1;
-            AttributeEntry definition = value.modifier();
             // An attribute modifier id is persisted by vanilla, so the ability's own id is what it is built from.
-            Identifier abilityId = HolderHelper.id(value.ability());
-            entries.add(new Entry(Sources.Declaration.ABILITY, abilityId, index, definition,
-                    modifierId(Sources.Declaration.ABILITY, abilityId, index, definition.modifier())));
+            entries.add(new Entry(Sources.Declaration.ABILITY, HolderHelper.id(value.ability()), index, value.modifier()));
         }
 
         // Everything a datapack declares comes from the registered providers; a body with none of them has no
         // entries beyond its own abilities.
-        EntitySources.AttributeSink sink = (kind, source, values) -> addAll(entries, kind, source, values);
-        for (EntitySources.Attributes source : ModuleHooks.all(EntitySources.Attributes.class))
-            source.collect(entity, sink);
+        NeoForge.EVENT_BUS.post(new CollectPassiveAttributesEvent(entity, entries));
         return entries;
     }
 
@@ -130,14 +125,6 @@ public final class PassiveAttributeService {
         return holders;
     }
 
-    private static void addAll(List<Entry> target, Sources.Declaration kind, Identifier source, List<AttributeEntry> values) {
-        for (int index = 0; index < values.size(); index++) {
-            AttributeEntry definition = values.get(index);
-            target.add(new Entry(kind, source, index, definition,
-                    modifierId(kind, source, index, definition.modifier())));
-        }
-    }
-
     private static void apply(LivingEntity entity, Entry entry, @Nullable FormulaContext context) {
         AttributeEntry definition = entry.definition();
         Holder<Attribute> attribute = definition.attribute();
@@ -152,23 +139,19 @@ public final class PassiveAttributeService {
         if (!Double.isFinite(amount)) return;
         Identifier id = entry.id();
         AttributeModifier current = instance.getModifier(id);
-        if (current == null || Double.compare(current.amount(), amount) != 0
-                || current.operation() != definition.modifier().operation()) {
+        if (current == null || Double.compare(current.amount(), amount) != 0 || current.operation() != definition.modifier().operation()) {
             instance.addOrUpdateTransientModifier(new AttributeModifier(id, amount, definition.modifier().operation()));
             // Recorded only where a modifier is really written, so the cleanup pass knows where to look for it.
             WRITTEN_ATTRIBUTES.add(attribute);
         }
     }
 
-    // Computed while the entry is collected, not on every tick.
-    private static Identifier modifierId(Sources.Declaration kind, Identifier source, int index, AttributeModifier definition) {
-        String origin = source.getNamespace() + "/" + source.getPath();
-        String original = definition.id().getNamespace() + "/" + definition.id().getPath();
-        return Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID,
-                PREFIX + kind.path() + "/" + origin + "/" + index + "/" + original);
-    }
-
-    private record Entry(Sources.Declaration kind, Identifier source, int index, AttributeEntry definition,
-                         Identifier id) {
+    public record Entry(Sources.Declaration kind, Identifier source, int index, AttributeEntry definition) {
+        public Identifier id() {
+            String origin = this.source.getNamespace() + "/" + this.source.getPath();
+            Identifier originalId = this.definition.modifier().id();
+            String original = originalId.getNamespace() + "/" + originalId.getPath();
+            return Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, PREFIX + this.kind.path() + "/" + origin + "/" + this.index + "/" + original);
+        }
     }
 }

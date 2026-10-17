@@ -1,9 +1,8 @@
 package com.iafenvoy.mxt.runtime.resource;
 
+import com.iafenvoy.mxt.event.dispatcher.CollectHoldBindingsEvent;
 import com.iafenvoy.mxt.item.SpiritVesselItem;
-import com.iafenvoy.mxt.runtime.ModuleHooks;
 import com.iafenvoy.mxt.runtime.hold.HoldLookup;
-import com.iafenvoy.mxt.runtime.hold.HoldSource;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
@@ -12,8 +11,6 @@ import net.minecraft.world.item.ItemStack;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.living.LivingEntityUseItemEvent.Tick;
-
-import java.util.List;
 
 /**
  * Pours a vessel out while it is held down: one tick of the hold moves one unit of each resource inside into the
@@ -25,8 +22,9 @@ public final class VesselPourService {
     private VesselPourService() {
     }
 
-    public static void register() {
-        ModuleHooks.register(HoldSource.class, registries -> List.of(VesselPourHold.INSTANCE));
+    @SubscribeEvent
+    public static void onCollectHolds(CollectHoldBindingsEvent event) {
+        event.add(VesselPourHold.INSTANCE);
     }
 
     @SubscribeEvent

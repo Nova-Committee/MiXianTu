@@ -3,26 +3,31 @@ package com.iafenvoy.mxt.runtime.resource;
 import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.resource.Resource;
+import com.iafenvoy.mxt.event.dispatcher.CollectTickStagesEvent;
+import com.iafenvoy.mxt.event.dispatcher.EntityTickStages;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.runtime.EntityTickStages;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationMethodService;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
 import net.minecraft.world.entity.LivingEntity;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
 
 /**
  * The natural regeneration of every profiled resource a body holds. A value the body's cultivation regenerates
  * itself is left alone: the aura a cultivator breathes in comes out of the ground, not out of this loop.
  */
+@EventBusSubscriber
 public final class ResourceRegenStage {
     private ResourceRegenStage() {
     }
 
-    public static void register() {
-        EntityTickStages.register("resource_regen", EntityTickStages.AURA_REGEN, ResourceRegenStage::tick);
+    @SubscribeEvent
+    public static void onCollectStages(CollectTickStagesEvent event) {
+        event.add("resource_regen", EntityTickStages.AURA_REGEN, ResourceRegenStage::tick);
     }
 
     private static void tick(LivingEntity entity) {

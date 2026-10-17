@@ -26,7 +26,8 @@ import java.util.Objects;
 /**
  * Drives a hold end to end for every module that declares one: arms the use cycle, answers what vanilla asks
  * while it runs, plays the sound and hands the item back untouched. A module plugs in by implementing
- * {@link HoldBinding} and registering a {@link HoldSource}; this class knows no module's registries.
+ * {@link HoldBinding} and answering {@link com.iafenvoy.mxt.event.dispatcher.CollectHoldBindingsEvent}; this class
+ * knows no module's registries.
  *
  * <p>It writes the vanilla {@code minecraft:consumable} component for a hold - {@code PillUseService} writes one for
  * a bound pill whose item has no use of its own, and both go through {@link TemporaryUseComponent} - and it takes

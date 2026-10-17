@@ -8,12 +8,11 @@ import com.iafenvoy.mxt.data.aura.ItemAura;
 import com.iafenvoy.mxt.data.aura.SpiritStorageComponent;
 import com.iafenvoy.mxt.data.item.HoldBinding;
 import com.iafenvoy.mxt.data.resource.Resource;
+import com.iafenvoy.mxt.event.dispatcher.CollectHoldBindingsEvent;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
-import com.iafenvoy.mxt.runtime.ModuleHooks;
 import com.iafenvoy.mxt.runtime.cultivation.ItemAuraService;
 import com.iafenvoy.mxt.runtime.hold.HoldLookup;
-import com.iafenvoy.mxt.runtime.hold.HoldSource;
 import com.iafenvoy.mxt.runtime.resource.ResourceService;
 import com.iafenvoy.mxt.runtime.resource.ResourceService.Result;
 import com.iafenvoy.mxt.runtime.spirit.SpiritPour.Entry;
@@ -34,7 +33,6 @@ import net.neoforged.neoforge.event.entity.living.LivingEntityUseItemEvent.Tick;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent.RightClickItem;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -58,9 +56,10 @@ public final class SpiritChargeService {
     private SpiritChargeService() {
     }
 
-    // Registered once, at construction: the hold module drives the gesture and never learns what an item aura is.
-    public static void register() {
-        ModuleHooks.register(HoldSource.class, registries -> List.of(SpiritChargeHold.INSTANCE));
+    // The hold module drives the gesture and never learns what an item aura is.
+    @SubscribeEvent
+    public static void onCollectHolds(CollectHoldBindingsEvent event) {
+        event.add(SpiritChargeHold.INSTANCE);
     }
 
     // This never cancels: an item that is also a technique manual, carries a talisman's invocation or declares
