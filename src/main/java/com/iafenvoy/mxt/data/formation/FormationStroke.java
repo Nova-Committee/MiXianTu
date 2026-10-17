@@ -2,16 +2,17 @@ package com.iafenvoy.mxt.data.formation;
 
 import com.iafenvoy.mxt.registry.MxtRegistries;
 import com.iafenvoy.mxt.util.codec.MiscCodecs;
+import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.particles.ScalableParticleOptionsBase;
+import net.minecraft.util.ARGB;
 import net.minecraft.util.ExtraCodecs;
 import net.minecraft.world.phys.Vec2;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.function.Function;
 
 /**
@@ -42,12 +43,12 @@ public sealed interface FormationStroke permits FormationStroke.Circle, Formatio
 
     Common common();
 
-    default Optional<Integer> color() {
+    /**
+     * The paint this stroke is drawn in: one colour flat along it, or a {@link Gradient} ramp. A stroke has no colour to
+     * fall back to, so one of the two is always there.
+     */
+    default Either<Integer, Gradient> color() {
         return this.common().color();
-    }
-
-    default Optional<Gradient> gradient() {
-        return this.common().gradient();
     }
 
     /**
@@ -83,10 +84,7 @@ public sealed interface FormationStroke permits FormationStroke.Circle, Formatio
      * its end colours outside its outermost stops, so it need not reach either end of the stroke.
      */
     default int colorAt(double along) {
-        Gradient gradient = this.gradient().orElse(null);
-        if (gradient != null) return gradient.colorAt(along);
-        // Paint is required at decode; the default only covers a stroke assembled in code.
-        return this.color().orElse(0xFFFFFF);
+        return this.color().map(Function.identity(), gradient -> gradient.colorAt(along));
     }
 
     /**
@@ -94,35 +92,30 @@ public sealed interface FormationStroke permits FormationStroke.Circle, Formatio
      * window of the figure's progress it is drawn over. Its fields are written next to the geometry's own, so a circle
      * and a polyline take them the same way.
      */
-    record Common(Optional<Integer> color, Optional<Gradient> gradient, float size, double spacing, double start,
-                  double end) {
+    record Common(Either<Integer, Gradient> color, float size, double spacing, double start, double end) {
         /**
          * What a stroke that says nothing about its layout gets: the density and the dust size a plain outline wants.
          */
         public static final float DEFAULT_SIZE = 2.0F;
         public static final double DEFAULT_SPACING = 0.33D;
         public static final MapCodec<Common> CODEC = RecordCodecBuilder.<Common>mapCodec(i -> i.group(
-                ExtraCodecs.STRING_RGB_COLOR.optionalFieldOf("color").forGetter(Common::color),
-                Gradient.CODEC.optionalFieldOf("gradient").forGetter(Common::gradient),
-                Codec.floatRange(ScalableParticleOptionsBase.MIN_SCALE, ScalableParticleOptionsBase.MAX_SCALE)
-                        .optionalFieldOf("size", DEFAULT_SIZE).forGetter(Common::size),
+                Codec.either(ExtraCodecs.STRING_RGB_COLOR, Gradient.CODEC).fieldOf("color").forGetter(Common::color),
+                Codec.floatRange(ScalableParticleOptionsBase.MIN_SCALE, ScalableParticleOptionsBase.MAX_SCALE).optionalFieldOf("size", DEFAULT_SIZE).forGetter(Common::size),
                 Codec.doubleRange(0.01D, 64.0D).optionalFieldOf("spacing", DEFAULT_SPACING).forGetter(Common::spacing),
                 Codec.doubleRange(0.0D, 1.0D).optionalFieldOf("start", 0.0D).forGetter(Common::start),
                 Codec.doubleRange(0.0D, 1.0D).optionalFieldOf("end", 1.0D).forGetter(Common::end)
         ).apply(i, Common::new)).validate(Common::validate);
 
         public Common {
-            // The colour is authored as a hex string, which carries an alpha byte; dust is RGB24, so the alpha is
+            // The color is authored as a hex string, which carries an alpha byte; dust is RGB24, so the alpha is
             // dropped here instead of at the draw call.
-            color = color.map(rgb -> rgb & 0xFFFFFF);
+            color = color.mapLeft(ARGB::transparent);
         }
 
-        // Reported as a decode error rather than thrown from the constructor, so the file can be named. A stroke has no
-        // colour to fall back to, and a window that never opens is a stroke that can never be drawn.
+        // Reported as a decode error rather than thrown from the constructor, so the file can be named: a window that
+        // never opens is a stroke that can never be drawn.
         private static DataResult<Common> validate(Common common) {
-            if (common.color().isPresent() == common.gradient().isPresent())
-                return DataResult.error(() -> "A stroke takes either a color or a gradient, exactly one of them");
-            if (!(common.end() > common.start()))
+            if (common.end() <= common.start())
                 return DataResult.error(() -> "A stroke has to be drawn after it starts: `end` above `start`");
             return DataResult.success(common);
         }
@@ -237,7 +230,7 @@ public sealed interface FormationStroke permits FormationStroke.Circle, Formatio
         ).apply(i, Stop::new));
 
         public Stop {
-            color &= 0xFFFFFF;
+            color = ARGB.transparent(color);
         }
     }
 }

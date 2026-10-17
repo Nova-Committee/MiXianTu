@@ -5,7 +5,6 @@ import com.iafenvoy.mxt.util.formula.number.Constant;
 import com.iafenvoy.mxt.util.formula.number.Expression;
 import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
-import com.mojang.serialization.DataResult;
 import com.mojang.serialization.MapCodec;
 
 import java.util.function.Function;
@@ -14,7 +13,6 @@ import java.util.function.Function;
  * A number that can be a JSON constant, an exp4j expression, or one of the built-in structured providers.
  */
 public interface NumberProvider {
-    Codec<Double> FINITE_DOUBLE_CODEC = Codec.DOUBLE.validate(value -> Double.isFinite(value) ? DataResult.success(value) : DataResult.error(() -> "Number provider value must be finite: " + value));
     Codec<NumberProvider> TYPED_CODEC = MxtRegistries.NUMBER_PROVIDER_TYPE.byNameCodec().dispatch("type", NumberProvider::codec, Function.identity());
     Codec<NumberProvider> SHORTCUT_CODEC = Codec.either(Codec.DOUBLE, Codec.STRING).xmap(
             e -> e.map(Constant::new, Expression::new),

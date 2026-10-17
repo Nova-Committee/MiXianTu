@@ -83,13 +83,14 @@ public record AlchemyRecipe(Map<Holder<MedicinalProperty>, NumberProvider> mainR
             MiscCodecs.pair(BlockAction.optionalCodec("success_block_action"), BlockAction.optionalCodec("failure_block_action"))
                     .forGetter(recipe -> Pair.of(recipe.successBlockAction(), recipe.failureBlockAction())),
             // Both tier requirements read as one group: the third pair is what keeps the group at fifteen components.
-            MiscCodecs.pair(FURNACE_QUALITY_FIELD, INPUT_QUALITY_FIELD).forGetter(recipe -> Pair.of(recipe.furnaceQuality(), recipe.inputQuality())),
+            FURNACE_QUALITY_FIELD.forGetter(AlchemyRecipe::furnaceQuality),
+            INPUT_QUALITY_FIELD.forGetter(AlchemyRecipe::inputQuality),
             Guide.CODEC.optionalFieldOf("guide").forGetter(AlchemyRecipe::guide)
     ).apply(i, (main, auxiliary, catalyst, balance, target, tolerance, duration, badTicks, aura,
-                success, failure, actions, blocks, qualities, furnace) -> new AlchemyRecipe(
+                success, failure, actions, blocks, qualities1,qualities2, furnace) -> new AlchemyRecipe(
             main, auxiliary, catalyst, balance, target, tolerance, duration, badTicks, aura,
             success, failure, actions.getFirst(), actions.getSecond(), blocks.getFirst(), blocks.getSecond(),
-            qualities.getFirst(), qualities.getSecond(), furnace)));
+            qualities1, qualities2, furnace)));
     public static final StreamCodec<RegistryFriendlyByteBuf, AlchemyRecipe> PACKET_CODEC = ByteBufCodecs.fromCodecWithRegistries(CODEC.codec());
 
     @Override

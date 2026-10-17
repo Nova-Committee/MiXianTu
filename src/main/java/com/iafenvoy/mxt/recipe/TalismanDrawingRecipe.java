@@ -11,6 +11,7 @@ import com.iafenvoy.mxt.registry.MxtRecipeTypes;
 import com.iafenvoy.mxt.runtime.talisman.TalismanDrawingScorer;
 import com.iafenvoy.mxt.runtime.talisman.TalismanDrawingScorer.Point;
 import com.iafenvoy.mxt.runtime.talisman.TalismanDrawingScorer.Stroke;
+import com.iafenvoy.mxt.util.codec.MiscCodecs;
 import com.iafenvoy.mxt.util.formula.FormulaVariables;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.iafenvoy.mxt.util.formula.number.*;
@@ -201,7 +202,7 @@ public record TalismanDrawingRecipe(EntityCondition unlockCondition, Holder<Tali
         public static final Codec<Pattern> CODEC = RecordCodecBuilder.create(i -> i.group(
                 Guide.CODEC.optionalFieldOf("guide", Guide.FADE).forGetter(Pattern::guide),
                 Codec.BOOL.optionalFieldOf("show_order", false).forGetter(Pattern::showOrder),
-                NumberProvider.FINITE_DOUBLE_CODEC.validate(value -> value > 0.0D
+                MiscCodecs.FINITE.validate(value -> value > 0.0D
                                 ? DataResult.success(value)
                                 : DataResult.error(() -> "pattern.tolerance must be positive"))
                         .optionalFieldOf("tolerance", DEFAULT_TOLERANCE).forGetter(Pattern::tolerance),
@@ -210,19 +211,19 @@ public record TalismanDrawingRecipe(EntityCondition unlockCondition, Holder<Tali
     }
 
     private static MapCodec<Double> positive(String name, double fallback) {
-        return NumberProvider.FINITE_DOUBLE_CODEC.validate(value -> value > 0.0D
+        return MiscCodecs.FINITE.validate(value -> value > 0.0D
                 ? DataResult.success(value)
                 : DataResult.error(() -> name + " must be positive")).optionalFieldOf(name, fallback);
     }
 
     private static MapCodec<Double> weight(String name) {
-        return NumberProvider.FINITE_DOUBLE_CODEC.validate(value -> value >= 0.0D
+        return MiscCodecs.FINITE.validate(value -> value >= 0.0D
                 ? DataResult.success(value)
                 : DataResult.error(() -> name + " must not be negative")).optionalFieldOf(name, 0.25D);
     }
 
     private static MapCodec<Double> nonNegative(String name, double fallback) {
-        return NumberProvider.FINITE_DOUBLE_CODEC.validate(value -> value >= 0.0D
+        return MiscCodecs.FINITE.validate(value -> value >= 0.0D
                 ? DataResult.success(value)
                 : DataResult.error(() -> name + " must not be negative")).optionalFieldOf(name, fallback);
     }
@@ -267,7 +268,7 @@ public record TalismanDrawingRecipe(EntityCondition unlockCondition, Holder<Tali
                         Optional<NumberProvider> maxDamage, NumberProvider chargeRatio,
                         List<ItemStackTemplate> outputs) {
         public static final Codec<Grade> CODEC = RecordCodecBuilder.create(i -> i.group(
-                NumberProvider.FINITE_DOUBLE_CODEC.validate(value -> value >= 0.0D && value <= 1.0D
+                MiscCodecs.FINITE.validate(value -> value >= 0.0D && value <= 1.0D
                                 ? DataResult.success(value)
                                 : DataResult.error(() -> "min_completion must be in [0, 1]"))
                         .fieldOf("min_completion").forGetter(Grade::minCompletion),

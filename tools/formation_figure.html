@@ -305,11 +305,11 @@
             towards +Z) says otherwise; a polyline starts at its first point. A stroke asks for
             <code>ceil(length in blocks / its spacing) + 1</code> points, so this figure wants
             <code id="hint_points">—</code> at <code id="hint_array">—</code>, and one stroke is capped at
-            <code id="hint_cap">—</code> points, after which its far end is dropped. Every stroke carries its own paint —
-            <code>"color": "#80c0ff"</code>, or
-            <code>"gradient": [{"at": 0, "color": "#80c0ff"}, {"at": 1, "color": "#ffffff"}]</code> run along its own
-            length from its first point to its last — and there is no figure-wide colour to fall back to, so one of the
-            two is required. The strip above is that ramp: click it to add a stop, drag a marker to move one.
+            <code id="hint_cap">—</code> points, after which its far end is dropped. Every stroke carries its own paint in
+            one field — <code>"color": "#80c0ff"</code>, or
+            <code>"color": [{"at": 0, "color": "#80c0ff"}, {"at": 1, "color": "#ffffff"}]</code> to run a ramp along its
+            own length from its first point to its last — and there is no figure-wide colour to fall back to, so the
+            field is required. The strip above is that ramp: click it to add a stop, drag a marker to move one.
             <code>start</code> and <code>end</code> are the window of the draw-in this stroke belongs to: the figure's
             progress is mapped onto it, so <code>start: 0.5</code> keeps a stroke for the second half. The last two
             belong to the stroke as well: <code>spacing</code> is how many blocks apart its dusts sit and
@@ -370,8 +370,9 @@ const INK = {
 };
 
 // ── state ────────────────────────────────────────────────────────────────────────────────────────────────────
-// Strokes live in radius units; the JSON is these numbers, rounded on the way out. Every stroke carries a `color` or a
-// `gradient` — the mod refuses one with neither — and a `start`/`end` window of the draw-in it is drawn over.
+// Strokes live in radius units; the JSON is these numbers, rounded on the way out. Every stroke carries a `color` — one
+// hex, or a list of stops for a ramp, which the mod reads as the same field — and a `start`/`end` window of the draw-in
+// it is drawn over.
 let strokes = [];
 let current = null;
 let drag = null;
@@ -1255,10 +1256,11 @@ function waypoint(point) {
     return '[' + number(point.x) + ', ' + number(point.z) + ']';
 }
 
-// Paint is required, so a stroke that somehow carries none is still written in the colour the array group hands out.
+// Paint is required, so a stroke that somehow carries none is still written in the colour the array group hands out. A
+// ramp and a flat colour are one field in the mod, so a ramp is written as that field's list of stops.
 function paintOf(stroke) {
     if (paintKind(stroke) === 'gradient')
-        return ', "gradient": [' + stroke.gradient
+        return ', "color": [' + stroke.gradient
             .map(stop => '{"at": ' + number(stop.at) + ', "color": "' + stop.color + '"}').join(', ') + ']';
     return ', "color": "' + (paintKind(stroke) === 'solid' ? stroke.color : colourBox.value) + '"';
 }
@@ -1833,11 +1835,10 @@ function readStroke(row) {
     if (!row || typeof row !== 'object') return 'every stroke has to be an object';
     const kind = strokeKind(row.type);
     if (kind === null) return 'every stroke needs a "type" of "mxt:polyline" or "mxt:circle"';
-    // There is no figure-wide colour to fall back to, so one of the two paints is part of the format.
-    if (row.color === undefined && row.gradient === undefined)
-        return 'a stroke needs a "color" or a "gradient"';
-    if (row.color !== undefined && row.gradient !== undefined)
-        return 'a stroke takes a colour or a ramp, not both';
+    // There is no figure-wide colour to fall back to, so the paint is part of the format: one field, written either as
+    // a hex colour or as a ramp's stops.
+    if (row.color === undefined)
+        return 'a stroke needs a "color", one hex or a list of stops';
     let stroke;
     if (kind === 'circle') {
         if (!Number.isFinite(row.radius) || row.radius <= 0) return 'a circle needs a positive radius';
@@ -1874,17 +1875,11 @@ function readStroke(row) {
         return 'a stroke size is a number from 0.01 to 4';
     stroke.spacing = spacing;
     stroke.size = size;
-    if (row.color !== undefined) {
-        const color = readColour(row.color);
-        if (!color) return 'a stroke colour has to be a hex colour like "#80c0ff"';
-        stroke.color = color;
-        delete stroke.gradient;
-    }
-    if (row.gradient !== undefined) {
-        if (!Array.isArray(row.gradient) || row.gradient.length < 2)
+    if (Array.isArray(row.color)) {
+        if (row.color.length < 2)
             return 'a ramp needs at least two stops';
         const stops = [];
-        for (const entry of row.gradient) {
+        for (const entry of row.color) {
             if (!entry || typeof entry !== 'object' || !Number.isFinite(entry.at)
                 || entry.at < 0 || entry.at > 1)
                 return 'every stop has to be {"at": …, "color": "#…"} with at between 0 and 1';
@@ -1895,6 +1890,11 @@ function readStroke(row) {
         sortStops(stops);
         stroke.gradient = stops;
         delete stroke.color;
+    } else {
+        const color = readColour(row.color);
+        if (!color) return 'a stroke colour has to be a hex colour like "#80c0ff"';
+        stroke.color = color;
+        delete stroke.gradient;
     }
     return stroke;
 }

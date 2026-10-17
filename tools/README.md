@@ -236,7 +236,7 @@ is nothing else it can sample. A stroke's `type` is a registry id like any other
 ```json
 {
   "strokes": [
-    {"type": "mxt:circle", "radius": 1, "gradient": [{"at": 0, "color": "#80c0ff"}, {"at": 1, "color": "#ffffff"}]},
+    {"type": "mxt:circle", "radius": 1, "color": [{"at": 0, "color": "#80c0ff"}, {"at": 1, "color": "#ffffff"}]},
     {"type": "mxt:polyline", "points": [[1, 0], [-0.809, 0.588], [0.309, -0.951], [0.309, 0.951], [-0.809, -0.588], [1, 0]], "color": "#ffd76a"}
   ]
 }
@@ -268,11 +268,12 @@ Editing:
   `N-gon` adds one closed polyline; all three generators are undoable.
 * **Paint** is per stroke and applies to what a stroke is drawn and grown as: `solid` (one hex) or `gradient` — a ramp
   **along the stroke's own length**, `at` 0 at its first point and 1 at its last, held outside the outermost stops.
-  There is no figure-wide colour to fall back to, so a stroke always carries one of the two and a fresh stroke is
-  painted in the `new stroke colour`. The strip under the controls is that ramp (and the list carries a swatch of
-  it): **click the strip to add a stop, drag a marker to move one**, `+ stop` / `− stop` for the middle and the ends,
-  and select a stop to recolour it with the picker. A ramp is painted on the client in 32 flat steps rather than dot by
-  dot, which is indistinguishable at the size of a dust quad.
+  Both are the **same `color` field** in the file — a hex colour, or a list of stops — because a stroke is painted one
+  way or the other and never both. There is no figure-wide colour to fall back to, so a stroke always carries paint and
+  a fresh stroke is painted in the `new stroke colour`. The strip under the controls is that ramp (and the list carries
+  a swatch of it): **click the strip to add a stop, drag a marker to move one**, `+ stop` / `− stop` for the middle and
+  the ends, and select a stop to recolour it with the picker. A ramp is painted on the client in 32 flat steps rather
+  than dot by dot, which is indistinguishable at the size of a dust quad.
 * **`start` / `end`** are the window of the draw-in the selected stroke belongs to: the figure's progress is mapped
   onto it, so `start: 0.5` keeps a stroke for the second half and `start: 0.5, end: 1` on one stroke with `end: 0.5` on
   the next draws them one after another. A window has to open (`start` below `end`), so the two inputs never cross —
@@ -308,12 +309,12 @@ What it shows, and why:
 
 **Nothing here is a plan.** `mxt:particle`'s `shape` names a `mxt:formation_shape`, and the mod reads exactly what this
 page writes: the two stroke ids, `[x, z]` in units of the array's radius, `center`, `points`, `start_angle`, the
-`start` / `end` window, `spacing`, `size`, `color` and the `{"at", "color"}` ramp stops. Only `radius` (the array's own)
-and the preview knobs belong to something other than the figure — they are inputs here so the preview and the count are
-honest, and `radius` never reaches the file either. A stroke must carry a colour **or** a ramp, never both and never
-neither, the stops have to be written in ascending order, the window has to open, a `start_angle` outside one turn
-either way is refused, and the spacing and size are bounded like the module's used to be: any of those fails the whole
-definition at load.
+`start` / `end` window, `spacing`, `size`, and `color` — one hex, or the `{"at", "color"}` ramp stops the same field
+takes. Only `radius` (the array's own) and the preview knobs belong to something other than the figure — they are
+inputs here so the preview and the count are honest, and `radius` never reaches the file either. A stroke must carry
+its paint, written one way or the other and never both or neither, the stops have to be written in ascending order,
+the window has to open, a `start_angle` outside one turn either way is refused, and the spacing and size are bounded
+like the module's used to be: any of those fails the whole definition at load.
 
 `formation_figure_check.mjs` keeps the page honest: it runs the page's own script against a stub DOM and checks that its
 geometry agrees with the mod — the vertex convention, all three built-in shapes rebuilt from the {N/K} rule, the

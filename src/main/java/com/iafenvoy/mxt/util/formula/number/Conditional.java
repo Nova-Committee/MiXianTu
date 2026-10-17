@@ -1,6 +1,7 @@
 package com.iafenvoy.mxt.util.formula.number;
 
 import com.iafenvoy.mxt.data.condition.EntityCondition;
+import com.iafenvoy.mxt.util.codec.MiscCodecs;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.mojang.datafixers.util.Either;
@@ -19,7 +20,7 @@ import java.util.Optional;
  * scope or no branch matches.
  */
 public record Conditional(List<Branch> branches, Optional<NumberProvider> fallback) implements NumberProvider {
-    private static final Codec<NumberProvider> SCALAR_CODEC = Codec.either(FINITE_DOUBLE_CODEC, Codec.STRING).flatXmap(
+    private static final Codec<NumberProvider> SCALAR_CODEC = Codec.either(MiscCodecs.FINITE, Codec.STRING).flatXmap(
             value -> value.map(
                     number -> DataResult.success(new Constant(number)),
                     expression -> Expression.decode(expression).map(provider -> (NumberProvider) provider)),

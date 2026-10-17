@@ -252,25 +252,25 @@ check('a stroke is solid, ramped or has no paint of its own',
     sandbox.paintKind({color: '#123456'}) === 'solid' && sandbox.paintKind(rampStroke) === 'gradient'
     && sandbox.paintKind({}) === 'default');
 check('the writer emits the paint the reader takes back',
-    sandbox.paintOf(rampStroke) === ', "gradient": [{"at": 0, "color": "#ff0000"}, {"at": 1, "color": "#0000ff"}]'
+    sandbox.paintOf(rampStroke) === ', "color": [{"at": 0, "color": "#ff0000"}, {"at": 1, "color": "#0000ff"}]'
     && sandbox.paintOf({color: '#123456'}) === ', "color": "#123456"'
     // Paint is required, so even a stroke that carries none is written in the colour a fresh one gets.
     && sandbox.paintOf({}) === ', "color": "#80c0ff"',
     sandbox.paintOf(rampStroke));
 const painted = sandbox.readStroke({type: 'mxt:circle', radius: 0.5, center: [0.2, -0.1],
-    gradient: [{at: 1, color: '#0000FF'}, {at: 0, color: '#f00'}]});
+    color: [{at: 1, color: '#0000FF'}, {at: 0, color: '#f00'}]});
 check('the reader takes a ramp back, sorts it and normalises the colours',
     typeof painted === 'object' && painted.center.x === 0.2 && painted.center.z === -0.1
     && painted.gradient.length === 2 && painted.gradient[0].color === '#ff0000'
     && painted.gradient[1].color === '#0000ff' && painted.gradient[0].at === 0 && painted.gradient[1].at === 1,
     JSON.stringify(painted));
-check('a stroke cannot be both painted and ramped, and a ramp needs two stops',
-    typeof sandbox.readStroke({type: 'mxt:circle', radius: 1, color: '#ffffff',
-        gradient: [{at: 0, color: '#fff'}, {at: 1, color: '#000'}]}) === 'string'
-    && typeof sandbox.readStroke({type: 'mxt:circle', radius: 1, gradient: [{at: 0, color: '#fff'}]}) === 'string'
+// One field, so a colour and a ramp cannot both be written: a list of stops is a ramp and anything else is a colour.
+check('a ramp is the paint field written as stops, and needs two of them in order',
+    typeof sandbox.readStroke({type: 'mxt:circle', radius: 1, color: [{at: 0, color: '#fff'}]}) === 'string'
     && typeof sandbox.readStroke({type: 'mxt:circle', radius: 1,
-        gradient: [{at: 2, color: '#fff'}, {at: 1, color: '#000'}]}) === 'string'
-    && typeof sandbox.readStroke({type: 'mxt:circle', radius: 1, color: 'red'}) === 'string');
+        color: [{at: 2, color: '#fff'}, {at: 1, color: '#000'}]}) === 'string'
+    && typeof sandbox.readStroke({type: 'mxt:circle', radius: 1, color: 'red'}) === 'string'
+    && typeof sandbox.readStroke({type: 'mxt:circle', radius: 1, color: 7}) === 'string');
 
 // Painting the selected stroke runs the whole path: selection, the ramp strip, the writer and the swatch.
 sandbox.select(1);
@@ -290,14 +290,14 @@ check('the paint controls follow the selection',
 sandbox.addStop();
 const ramped = JSON.parse(toJson()).strokes;
 check('adding a stop turns the stroke into a ramp of three',
-    ramped[1].color === undefined && ramped[1].gradient.length === 3
-    && JSON.stringify(ramped[1].gradient[0]) === '{"at":0,"color":"#ff0000"}'
-    && JSON.stringify(ramped[1].gradient[1]) === '{"at":0.5,"color":"#ff4040"}'
-    && JSON.stringify(ramped[1].gradient[2]) === '{"at":1,"color":"#ff8080"}',
-    JSON.stringify(ramped[1].gradient));
+    Array.isArray(ramped[1].color) && ramped[1].color.length === 3
+    && JSON.stringify(ramped[1].color[0]) === '{"at":0,"color":"#ff0000"}'
+    && JSON.stringify(ramped[1].color[1]) === '{"at":0.5,"color":"#ff4040"}'
+    && JSON.stringify(ramped[1].color[2]) === '{"at":1,"color":"#ff8080"}',
+    JSON.stringify(ramped[1].color));
 check('a ramp can lose a stop but not its ends',
     document.getElementById('stopdrop').disabled === false
-    && (sandbox.dropStop(), JSON.parse(toJson()).strokes[1].gradient.length === 2),
+    && (sandbox.dropStop(), JSON.parse(toJson()).strokes[1].color.length === 2),
     document.getElementById('stopdrop').disabled);
 check('a ramp reads back as the figure it was',
     typeof sandbox.readStroke(JSON.parse(toJson()).strokes[1]) === 'object');

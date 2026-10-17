@@ -18,7 +18,6 @@ import com.iafenvoy.mxt.data.formation.builtin.SendMessageFormationAction;
 import com.iafenvoy.mxt.probe.Probe;
 import com.iafenvoy.mxt.probe.ProbeContext;
 import com.iafenvoy.mxt.registry.MxtRegistries;
-import com.iafenvoy.mxt.runtime.formation.FormationWorldTicker;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.JsonOps;
 import com.mojang.serialization.MapCodec;

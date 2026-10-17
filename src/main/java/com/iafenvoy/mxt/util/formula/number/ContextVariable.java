@@ -1,5 +1,6 @@
 package com.iafenvoy.mxt.util.formula.number;
 
+import com.iafenvoy.mxt.util.codec.MiscCodecs;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.FormulaVariables;
 import com.iafenvoy.mxt.util.formula.FormulaVariables.Binding;
@@ -16,7 +17,7 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 public final class ContextVariable implements NumberProvider {
     private static final MapCodec<ContextVariable> RAW_CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             Codec.STRING.fieldOf("variable").forGetter(ContextVariable::variable),
-            FINITE_DOUBLE_CODEC.optionalFieldOf("fallback", 0.0D).forGetter(ContextVariable::fallback)
+            MiscCodecs.FINITE.optionalFieldOf("fallback", 0.0D).forGetter(ContextVariable::fallback)
     ).apply(i, ContextVariable::new));
 
     public static final MapCodec<ContextVariable> MAP_CODEC = RAW_CODEC.validate(variable -> variable.variable().isBlank()

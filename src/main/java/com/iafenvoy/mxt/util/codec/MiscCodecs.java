@@ -15,6 +15,7 @@ import java.util.function.Function;
 
 public final class MiscCodecs {
     public static final Codec<Double> NON_NEGATIVE = Codec.doubleRange(0.0D, Double.MAX_VALUE);
+    public static final Codec<Double> FINITE = Codec.DOUBLE.validate(value -> Double.isFinite(value) ? DataResult.success(value) : DataResult.error(() -> "Number value must be finite: " + value));
 
     // Two element [x, z]; secret realm borders use it for their center.
     public static final Codec<Vec2> HORIZONTAL_PAIR = Codec.DOUBLE.listOf().comapFlatMap(

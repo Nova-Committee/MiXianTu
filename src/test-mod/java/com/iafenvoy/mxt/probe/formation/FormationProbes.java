@@ -3,33 +3,20 @@ package com.iafenvoy.mxt.probe.formation;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
 import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
+import com.iafenvoy.mxt.data.action.BlockAction;
+import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.action.NoOpAction;
 import com.iafenvoy.mxt.data.action.builtin.block.ChangeAuraBlockAction;
 import com.iafenvoy.mxt.data.action.builtin.entity.ApplyEffectAction;
-import com.iafenvoy.mxt.data.formation.Formation;
-import com.iafenvoy.mxt.data.formation.FormationActionType;
-import com.iafenvoy.mxt.data.formation.FormationDrawIn;
-import com.iafenvoy.mxt.data.formation.FormationIntervals;
-import com.iafenvoy.mxt.data.formation.FormationShape;
-import com.iafenvoy.mxt.data.formation.FormationShapePath;
-import com.iafenvoy.mxt.data.formation.FormationStroke;
-import com.iafenvoy.mxt.data.formation.builtin.ActivateFormationAction;
-import com.iafenvoy.mxt.data.formation.builtin.AuraFormationAction;
-import com.iafenvoy.mxt.data.formation.builtin.BuffFormationAction;
-import com.iafenvoy.mxt.data.formation.builtin.InactivateFormationAction;
-import com.iafenvoy.mxt.data.formation.builtin.ParticleFormationAction;
-import com.iafenvoy.mxt.data.formation.builtin.TickFormationAction;
+import com.iafenvoy.mxt.data.formation.*;
+import com.iafenvoy.mxt.data.formation.builtin.*;
 import com.iafenvoy.mxt.probe.Probe;
 import com.iafenvoy.mxt.probe.ProbeContext;
 import com.iafenvoy.mxt.probe.ProbeDefinitions;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.runtime.formation.FormationActionContext;
-import com.iafenvoy.mxt.runtime.formation.FormationActionRunner;
-import com.iafenvoy.mxt.runtime.formation.FormationInstance;
-import com.iafenvoy.mxt.runtime.formation.FormationShapeDisplay;
-import com.iafenvoy.mxt.runtime.formation.FormationWorldService;
+import com.iafenvoy.mxt.runtime.formation.*;
 import com.iafenvoy.mxt.runtime.formation.FormationWorldService.Result;
 import com.iafenvoy.mxt.testmod.FormationProbeActions;
 import com.iafenvoy.mxt.util.HolderHelper;
@@ -37,6 +24,7 @@ import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.JsonOps;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.RegistryOps;
 import net.minecraft.world.phys.Vec3;
@@ -135,20 +123,20 @@ public final class FormationProbes {
         FormationActionType inactivate = module(context, "mxt:inactivate", "{}");
         context.check("formation probe: an empty activate module is a pair of no-ops",
                 activate instanceof ActivateFormationAction(
-                        com.iafenvoy.mxt.data.action.BlockAction blockAction,
-                        com.iafenvoy.mxt.data.action.EntityAction entityAction
+                        BlockAction blockAction,
+                        EntityAction entityAction
                 )
                         && blockAction == NoOpAction.INSTANCE && entityAction == NoOpAction.INSTANCE);
         context.check("formation probe: an empty tick module is a pair of no-ops",
                 tick instanceof TickFormationAction(
-                        com.iafenvoy.mxt.data.action.BlockAction blockAction,
-                        com.iafenvoy.mxt.data.action.EntityAction entityAction
+                        BlockAction blockAction,
+                        EntityAction entityAction
                 )
                         && blockAction == NoOpAction.INSTANCE && entityAction == NoOpAction.INSTANCE);
         context.check("formation probe: an empty inactivate module is a pair of no-ops",
                 inactivate instanceof InactivateFormationAction(
-                        com.iafenvoy.mxt.data.action.BlockAction blockAction,
-                        com.iafenvoy.mxt.data.action.EntityAction entityAction
+                        BlockAction blockAction,
+                        EntityAction entityAction
                 )
                         && blockAction == NoOpAction.INSTANCE && entityAction == NoOpAction.INSTANCE);
         // The zone is required: a bonus is applied to the resources of the zone the override selected, so a module
@@ -188,7 +176,7 @@ public final class FormationProbes {
                 "{\"shape\": \"mxt:eight\", \"duration_ticks\": 60, \"interval_ticks\": 30}");
         context.check("formation probe: the display module reads its own fields",
                 module instanceof ParticleFormationAction(
-                        net.minecraft.core.Holder<FormationShape> shape, int durationTicks, int intervalTicks
+                        Holder<FormationShape> shape, int durationTicks, int intervalTicks
                 )
                         && HolderHelper.id(shape).equals(Identifier.parse("mxt:eight"))
                         && durationTicks == 60
@@ -218,8 +206,8 @@ public final class FormationProbes {
             context.check("formation probe: " + name + " begins with the ring and paints every stroke",
                     figure != null && figure.strokes().size() >= 2
                             && figure.strokes().getFirst() instanceof FormationStroke.Circle ring
-                            && ring.radius() == 1.0D && ring.color().orElse(0) == 0xFFFFFF
-                            && figure.strokes().stream().allMatch(stroke -> stroke.color().isPresent()));
+                            && ring.radius() == 1.0D && ring.color().left().orElse(0) == 0xFFFFFF
+                            && figure.strokes().stream().allMatch(stroke -> stroke.color().left().isPresent()));
             context.check("formation probe: " + name + " takes the standard layout",
                     figure != null && figure.strokes().stream()
                             .allMatch(stroke -> stroke.spacing() == FormationStroke.Common.DEFAULT_SPACING
@@ -252,12 +240,13 @@ public final class FormationProbes {
                     demo.actions().stream().anyMatch(action -> action instanceof ParticleFormationAction display
                             && HolderHelper.id(display.shape()).equals(Identifier.parse("mxt:" + name))));
         }
-        // What one stroke may say about its own paint, and what it may not.
+        // What one stroke may say about its own paint, and what it may not: one field, written flat or as a ramp.
         FormationShape ramped = definition(context, """
                 {"strokes": [{"type": "mxt:polyline", "points": [[0, 0], [1, 0]],
-                  "gradient": [{"at": 0, "color": "#ff0000"}, {"at": 1, "color": "#0000ff"}]}]}""");
+                  "color": [{"at": 0, "color": "#ff0000"}, {"at": 1, "color": "#0000ff"}]}]}""");
         context.check("formation probe: a ramp is read along the stroke it is on",
-                ramped != null && ramped.strokes().getFirst().colorAt(0.0D) == 0xFF0000
+                ramped != null && ramped.strokes().getFirst().color().right().isPresent()
+                        && ramped.strokes().getFirst().colorAt(0.0D) == 0xFF0000
                         && ramped.strokes().getFirst().colorAt(0.5D) == 0x800080
                         && ramped.strokes().getFirst().colorAt(1.0D) == 0x0000FF);
         // Paint has no fallback: the module carries no colour of its own, so a stroke that writes none is refused
@@ -266,16 +255,6 @@ public final class FormationProbes {
                 definition(context, "{\"strokes\": [{\"type\": \"mxt:circle\", \"radius\": 1}]}") == null
                         && definition(context, """
                         {"strokes": [{"type": "mxt:polyline", "points": [[0, 0], [1, 0]]}]}""") == null);
-        context.check("formation probe: a stroke cannot be painted and ramped at once, and a ramp runs one way",
-                definition(context, """
-                        {"strokes": [{"type": "mxt:circle", "radius": 1, "color": "#ffffff",
-                          "gradient": [{"at": 0, "color": "#ffffff"}, {"at": 1, "color": "#000000"}]}]}""") == null
-                        && definition(context, """
-                        {"strokes": [{"type": "mxt:circle", "radius": 1, "color": "#ffffff",
-                          "gradient": [{"at": 1, "color": "#ffffff"}, {"at": 0, "color": "#000000"}]}]}""") == null
-                        && definition(context, """
-                        {"strokes": [{"type": "mxt:circle", "radius": 1, "color": "#ffffff",
-                          "gradient": [{"at": 0, "color": "#ffffff"}]}]}""") == null);
         context.check("formation probe: a figure cannot be empty, have a circle with no radius or a one-point stroke",
                 definition(context, "{\"strokes\": []}") == null
                         && definition(context, """
@@ -316,9 +295,9 @@ public final class FormationProbes {
                 ]}""");
         context.check("formation probe: what the figure tool writes is what the codec reads",
                 written != null && written.strokes().size() == 2
-                        && written.strokes().getFirst().color().orElse(0) == 0xFFFFFF
+                        && written.strokes().getFirst().color().left().orElse(0) == 0xFFFFFF
                         && written.strokes().getFirst().spacing() == FormationStroke.Common.DEFAULT_SPACING
-                        && written.strokes().get(1).color().orElse(0) == 0xFFD76A
+                        && written.strokes().get(1).color().left().orElse(0) == 0xFFD76A
                         && written.strokes().get(1).spacing() == 1.0D
                         && written.strokes().get(1).size() == 1.5F);
         // A stroke's own layout is bounded the way the module's was: past it a figure stops being drawable at all.
@@ -339,10 +318,10 @@ public final class FormationProbes {
                 Identifier.fromNamespaceAndPath("mxt_test", "test1")).value();
         context.check("formation probe: the test pack's sample figure walks its nine strokes",
                 sample.strokes().size() == 9
-                        && sample.strokes().getFirst().gradient().isPresent()
-                        && sample.strokes().get(3).start() == 0.5D
+                        && sample.strokes().getFirst().color().right().isPresent()
                         && sample.strokes().get(3) instanceof FormationStroke.Circle offCentre
                         && offCentre.center().x == 0.5F
+                        && sample.strokes().get(7).start() == 0.5D
                         && !FormationShapePath.outline(sample, origin, radius, 1.0F).isEmpty());
         FormationShape five = figure(context, "five");
         List<FormationShapePath.Dot> full = FormationShapePath.outline(five, origin, radius, 1.0F);
@@ -550,7 +529,8 @@ public final class FormationProbes {
         return FormationShape.DIRECT_CODEC.parse(ops(context), JsonParser.parseString(json)).result().orElse(null);
     }
 
-    private static Formation formation(ProbeContext context, String json) {        Formation definition = Formation.DIRECT_CODEC.parse(ops(context), JsonParser.parseString(json)).result().orElse(null);
+    private static Formation formation(ProbeContext context, String json) {
+        Formation definition = Formation.DIRECT_CODEC.parse(ops(context), JsonParser.parseString(json)).result().orElse(null);
         context.check("formation probe: the fixture decodes: " + json, definition != null);
         return definition;
     }
@@ -565,7 +545,6 @@ public final class FormationProbes {
     // A module is decoded the way a definition decodes one: through the dispatch table's own codec for its id.
     private static FormationActionType module(ProbeContext context, String id, String json) {
         MapCodec<? extends FormationActionType> codec = MxtRegistries.FORMATION_ACTION_TYPE.getValue(Identifier.parse(id));
-        if (codec == null) return null;
         return codec.decoder().parse(ops(context), JsonParser.parseString(json)).result().orElse(null);
     }
 
