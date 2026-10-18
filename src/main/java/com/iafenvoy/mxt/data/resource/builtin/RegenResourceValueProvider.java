@@ -15,8 +15,7 @@ public enum RegenResourceValueProvider implements ResourceValueProvider {
 
     @Override
     public double resolve(ResourceHolderAttachment holder, Holder<Resource> resource, FormulaContext context) {
-        return AuraLookup.find(context.registries(), resource)
-                .map(profile -> profile.regen().evaluate(context)).orElse(0.0D);
+        return AuraLookup.find(context.registries(), resource).map(profile -> profile.regen().evaluate(context)).orElse(0.0D);
     }
 
     @Override

@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.render.sword;
 
-import com.iafenvoy.mxt.render.sword.flame.BurningItemManager;
 import com.iafenvoy.mxt.entity.SwordAuraEntity;
+import com.iafenvoy.mxt.render.sword.flame.BurningItemManager;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.renderer.SubmitNodeCollector;

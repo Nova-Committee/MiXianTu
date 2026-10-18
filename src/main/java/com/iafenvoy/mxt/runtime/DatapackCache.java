@@ -14,6 +14,7 @@ import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.alchemy.AlchemyHeatService;
 import com.iafenvoy.mxt.runtime.damage.DamageElements;
 import com.iafenvoy.mxt.runtime.element.ElementReactionService;
+import com.iafenvoy.mxt.runtime.world.BlockAuraService;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.chain.Chain;
 import com.iafenvoy.mxt.util.chain.ChainCache;
@@ -243,6 +244,7 @@ public final class DatapackCache {
         // here rather than left to notice the reload by themselves.
         // FIXME::Move all cache to here
         AlchemyHeatService.reload(access);
+        BlockAuraService.reload(access);
         DamageElements.reload(access);
         ElementReactionService.reload(access);
         FormulaNames.reload(access);
@@ -254,6 +256,7 @@ public final class DatapackCache {
         public static void onLoggingOut(ClientPlayerNetworkEvent.LoggingOut event) {
             INSTANCE = EMPTY;
             AlchemyHeatService.clear();
+            BlockAuraService.clear();
             DamageElements.clear();
             ElementReactionService.clear();
             FormulaNames.clear();

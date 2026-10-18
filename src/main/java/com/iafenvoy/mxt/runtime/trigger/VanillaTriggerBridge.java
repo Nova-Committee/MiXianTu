@@ -67,8 +67,8 @@ public final class VanillaTriggerBridge {
     private static final String BLOCKED_DAMAGE = "blocked_damage";
     private static final String USE_DURATION = "use_duration";
 
-    // Players whose effect set changed this tick, mapped to the source vanilla would report. Nothing is
-    // remembered while nothing listens to the signal.
+    // Players whose effect set changed this tick, mapped to the source vanilla would report. The value being an
+    // entity is only safe because onServerTick drains the map; nothing is remembered while nobody listens.
     private static final Map<UUID, Entity> PENDING_EFFECTS = new HashMap<>();
 
     private VanillaTriggerBridge() {

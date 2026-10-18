@@ -1,8 +1,6 @@
 package com.iafenvoy.mxt.runtime.formation;
 
 import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
-import com.iafenvoy.mxt.config.MxtServerConfig;
-import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.formation.Formation;
 import com.iafenvoy.mxt.data.formation.FormationIntervals;
 import com.iafenvoy.mxt.event.FormationEvent.Tick;
@@ -12,11 +10,10 @@ import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.Sources;
+import com.iafenvoy.mxt.runtime.cultivation.AuraDistributionService;
 import com.iafenvoy.mxt.runtime.formation.FormationService.MaintainResult;
-import com.iafenvoy.mxt.runtime.world.FormationAbsorption;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -95,10 +92,10 @@ public final class FormationWorldTicker {
         ResourceHolderAttachment resources = payer == null
                 ? new ResourceHolderAttachment()
                 : payer.getData(MxtAttachments.RESOURCE_HOLDER);
-        // The block emitters standing inside this formation supply it instead of the environment, so what
-        // they emit this period pays the upkeep before the store and then the owner are asked for the rest.
+        // The formation draws its share of the chunk stock through the same prepass cultivators use, so what it
+        // was granted over this period pays the upkeep before the store and then the owner are asked for the rest.
         MaintainResult result = FormationService.maintain(instance, definition, resources, context,
-                supply(level, controller, instance.radius()));
+                AuraDistributionService.takeUpkeep(level, controller));
         if (result.maintained()) return true;
         // Cancelling keeps the formation registered: it pays nothing and does nothing this period, which is
         // the hook for content that wants a formation to survive a lean stretch.
@@ -107,27 +104,6 @@ public final class FormationWorldTicker {
             return false;
         FormationWorldService.deactivate(level, controller);
         return false;
-    }
-
-    // What the formation's own ground supplies this period: the emitters inside it plus, when the server option
-    // allows it, the ambient aura of the position it stands on, summed per resource. Also what the upkeep report
-    // subtracts, so the number a player is shown is the number the next period will ask for.
-    public static Map<Holder<Aura>, Double> supply(ServerLevel level, BlockPos controller, double radius) {
-        return combine(
-                FormationAbsorption.absorbedFor(level, controller, radius),
-                FormationAbsorption.environmentSupply(level, controller),
-                MxtServerConfig.INSTANCE.formations.drawsEnvironment.getValue());
-    }
-
-    // Split from the lookup so the rule is assertable without a level: the option either adds the ambient aura
-    // or leaves the formation with only what its own emitters give it.
-    public static Map<Holder<Aura>, Double> combine(Map<Holder<Aura>, Double> absorbed,
-                                                    Map<Holder<Aura>, Double> environment,
-                                                    boolean drawsEnvironment) {
-        Map<Holder<Aura>, Double> supply = new LinkedHashMap<>(absorbed);
-        if (!drawsEnvironment) return supply;
-        environment.forEach((aura, amount) -> supply.merge(aura, amount, Double::sum));
-        return supply;
     }
 
     // An entity the formation does not affect is treated as absent rather than present-but-skipped, which is what

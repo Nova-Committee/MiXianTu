@@ -1,5 +1,6 @@
 package com.iafenvoy.mxt.runtime.curse;
 
+import com.google.common.collect.MapMaker;
 import com.iafenvoy.mxt.attachment.CurseHolderAttachment;
 import com.iafenvoy.mxt.attachment.CurseHolderAttachment.State;
 import com.iafenvoy.mxt.data.curse.Curse;
@@ -18,7 +19,9 @@ import java.util.*;
  * Per-level due queue for curse lifecycle work. It never iterates every loaded entity.
  */
 public final class CurseScheduler {
-    private static final Map<ServerLevel, Queue> QUEUES = new IdentityHashMap<>();
+    // Keyed by level identity and held weakly, so a level that closes takes its queue with it; the queue holds
+    // nothing but ids, which is what lets the key be collected.
+    private static final Map<ServerLevel, Queue> QUEUES = new MapMaker().weakKeys().makeMap();
 
     private CurseScheduler() {
     }

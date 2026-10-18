@@ -8,7 +8,6 @@ import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.formation.FormationService.ActivateResult;
-import com.iafenvoy.mxt.runtime.world.AuraChunkTicker;
 import com.iafenvoy.mxt.util.MiscUtil;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.BlockPos;
@@ -61,9 +60,6 @@ public final class FormationWorldService {
         // A ward whose delegation cannot be honoured falls back to its own flags; the report belongs here,
         // where the definition was just chosen.
         FormationProtection.warnIfDelegationFallsBack(id, definition);
-        // The formation now absorbs the block emitters inside its radius, so every chunk it reaches has to
-        // rebuild its block aura, or the absorbed ones would be counted in the shared stock as well.
-        invalidateAura(level, controller, activated.instance().radius());
         FormationActionRunner.activate(definition, FormationActionContext.array(level, controller, activated.instance()));
         return Result.activated(activated.instance());
     }
@@ -74,9 +70,6 @@ public final class FormationWorldService {
     public static boolean deactivate(ServerLevel level, BlockPos controller) {
         FormationInstance instance = level.getData(MxtAttachments.FORMATION_WORLD).remove(controller).orElse(null);
         if (instance == null) return false;
-        // The emitters this formation was absorbing return to the environment, so the chunks it covered
-        // have to rebuild their block aura.
-        invalidateAura(level, controller, instance.radius());
         Formation definition = MxtDatapackRegistries.get(level.registryAccess(), MxtResourceKeys.FORMATION, instance.formation())
                 .orElse(null);
         FormationEntityActions.releaseTracked(level, controller, instance, definition);
@@ -84,21 +77,6 @@ public final class FormationWorldService {
             FormationActionRunner.inactivate(definition, FormationActionContext.array(level, controller, instance));
         NeoForge.EVENT_BUS.post(new Deactivate(level, controller, instance));
         return true;
-    }
-
-    // Queues a block-aura rebuild for every chunk a formation's radius reaches, on both ends of its life, since
-    // which emitters are absorbed is a property of the rebuilt cache. A dirty mark rather than a scan, so
-    // activation never reads chunks during the click.
-    private static void invalidateAura(ServerLevel level, BlockPos controller, double radius) {
-        int minChunkX = (int) Math.floor((controller.getX() - radius) / 16.0D);
-        int maxChunkX = (int) Math.floor((controller.getX() + radius) / 16.0D);
-        int minChunkZ = (int) Math.floor((controller.getZ() - radius) / 16.0D);
-        int maxChunkZ = (int) Math.floor((controller.getZ() + radius) / 16.0D);
-        for (int chunkX = minChunkX; chunkX <= maxChunkX; chunkX++) {
-            for (int chunkZ = minChunkZ; chunkZ <= maxChunkZ; chunkZ++) {
-                AuraChunkTicker.markDirty(level, new BlockPos(chunkX << 4, controller.getY(), chunkZ << 4));
-            }
-        }
     }
 
     public enum Failure {OCCUPIED, INVALID_STRUCTURE, NOT_CLAIMED, FOREIGN_CLAIM, ACTIVATION_FAILED, CANCELLED}

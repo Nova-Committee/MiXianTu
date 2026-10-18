@@ -13,10 +13,10 @@ import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.runtime.cultivation.AuraDistributionService;
 import com.iafenvoy.mxt.runtime.formation.FormationInstance;
 import com.iafenvoy.mxt.runtime.formation.FormationService;
 import com.iafenvoy.mxt.runtime.formation.FormationStructures;
-import com.iafenvoy.mxt.runtime.formation.FormationWorldTicker;
 import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.TooltipText;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
@@ -219,7 +219,7 @@ public final class FormationCommand {
             CostContext context = CostContext.account(new ResourceHolderAttachment(), null,
                     FormulaContext.of(player), CostOrigin.FORMATION_MAINTENANCE);
             Map<Identifier, Double> owed = FormationService.MaintainRule.remaining(definition, context,
-                    FormationWorldTicker.supply(level, controller, instance.radius()));
+                    AuraDistributionService.projectedSupply(level, controller, instance.radius()));
             source.sendSuccess(() -> Component.literal(line(controller, instance) + " owed=" + owed(owed)), false);
         }
         return covering.size();

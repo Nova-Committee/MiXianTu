@@ -7,9 +7,8 @@ import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
 import net.minecraft.core.HolderLookup.Provider;
-import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.level.Level;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Optional;
@@ -27,48 +26,24 @@ public final class AuraLookup {
     private AuraLookup() {
     }
 
-    public static Stream<Reference<Aura>> all(@Nullable Provider access) {
-        return access == null ? Stream.empty() : MxtDatapackRegistries.holders(access, MxtResourceKeys.AURA);
-    }
-
-    public static Stream<Reference<Aura>> all(@Nullable Level level) {
-        return level == null ? Stream.empty() : all(level.registryAccess());
+    public static Stream<Reference<Aura>> all(@NotNull Provider access) {
+        return MxtDatapackRegistries.holders(access, MxtResourceKeys.AURA);
     }
 
     public static Stream<Reference<Aura>> all(LivingEntity entity) {
-        return all(entity.level());
-    }
-
-    // The value-to-aura direction, not an identity: an aura names the one value it is measured in
-    // (Aura#resource), and a value naming no aura is a plain counter rather than a second kind of aura.
-    public static Optional<Reference<Aura>> holder(@Nullable Provider access, Identifier resource) {
-        if (access == null) return Optional.empty();
-        return all(access).filter(aura -> aura.value().resource().is(resource)).findFirst();
+        return all(entity.level().registryAccess());
     }
 
     // Keeps the holder: a realm chain is keyed by the aura holder, so comparisons need the reference.
-    public static Optional<Reference<Aura>> holder(@Nullable Provider access, Holder<Resource> resource) {
-        if (access == null) return Optional.empty();
-        return all(access).filter(aura -> aura.value().resource().is(resource)).findFirst();
+    public static Optional<Reference<Aura>> holder(@NotNull Provider access, Holder<Resource> resource) {
+        return all(access).filter(aura -> aura.value().resource().equals(resource)).findFirst();
     }
 
     public static Optional<Reference<Aura>> holder(@Nullable LivingEntity entity, Holder<Resource> resource) {
         return entity == null ? Optional.empty() : holder(entity.level().registryAccess(), resource);
     }
 
-    public static Optional<Aura> find(@Nullable Provider access, Identifier resource) {
+    public static Optional<Aura> find(@NotNull Provider access, Holder<Resource> resource) {
         return holder(access, resource).map(Reference::value);
-    }
-
-    public static Optional<Aura> find(@Nullable Provider access, Holder<Resource> resource) {
-        return holder(access, resource).map(Reference::value);
-    }
-
-    public static Optional<Aura> find(LivingEntity entity, Holder<Resource> resource) {
-        return find(entity.registryAccess(), resource);
-    }
-
-    public static Optional<Aura> find(@Nullable Level level, Holder<Resource> resource) {
-        return level == null ? Optional.empty() : find(level.registryAccess(), resource);
     }
 }

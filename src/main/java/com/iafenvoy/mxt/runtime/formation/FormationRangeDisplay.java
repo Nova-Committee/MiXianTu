@@ -45,8 +45,7 @@ public final class FormationRangeDisplay {
     // Reach is the radius plus a fixed margin, because standing at the edge of an array is exactly when a player
     // wants to see where it ends.
     public static boolean visible(Vec3 center, double radius, Vec3 position) {
-        double reach = radius + VISIBLE_MARGIN;
-        return position.distanceToSqr(center) <= reach * reach;
+        return FormationShapeDisplay.visible(center, radius, position, VISIBLE_MARGIN);
     }
 
     // RING is a circle at the centre's own height; SPHERE spreads the same number of points over the whole

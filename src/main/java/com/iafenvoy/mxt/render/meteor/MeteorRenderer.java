@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.render.meteor;
 
-import com.iafenvoy.mxt.render.sword.flame.BurningItemManager;
 import com.iafenvoy.mxt.entity.MeteorEntity;
+import com.iafenvoy.mxt.render.sword.flame.BurningItemManager;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.entity.EntityRenderer;

@@ -1,5 +1,6 @@
 package com.iafenvoy.mxt.runtime.world;
 
+import com.google.common.collect.MapMaker;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.aura.AuraZone;
 import com.iafenvoy.mxt.runtime.world.AuraService.Resolved;
@@ -36,16 +37,18 @@ public final class AuraQueryCache {
         timing = value;
     }
 
-    private static final Map<ServerLevel, Long> EPOCH = new IdentityHashMap<>();
-    private static final Map<ServerLevel, Map<AuraLocation, Resolved>> STATIC = new IdentityHashMap<>();
-    private static final Map<ServerLevel, Map<AuraLocation, Optional<Resolved>>> FORMATION = new IdentityHashMap<>();
-    private static final Map<ServerLevel, Map<LevelPosition, AuraResult>> RESULT = new IdentityHashMap<>();
-    private static final Map<ServerLevel, Map<AuraLocation, Map<Holder<AuraZone>, Map<Holder<Aura>, AuraPool>>>> POOLS = new IdentityHashMap<>();
+    // Weak keys: a level that is gone takes its memo with it, so nothing has to clear these on unload. The values
+    // never reach their level, which is what lets the key be collected at all.
+    private static final Map<ServerLevel, Long> EPOCH = perLevel();
+    private static final Map<ServerLevel, Map<AuraLocation, Resolved>> STATIC = perLevel();
+    private static final Map<ServerLevel, Map<AuraLocation, Optional<Resolved>>> FORMATION = perLevel();
+    private static final Map<ServerLevel, Map<LevelPosition, AuraResult>> RESULT = perLevel();
+    private static final Map<ServerLevel, Map<AuraLocation, Map<Holder<AuraZone>, Map<Holder<Aura>, AuraPool>>>> POOLS = perLevel();
     // One query asks every source in a 7x7 chunk neighbourhood for every aura, so the same answer is
     // requested hundreds of times.
-    private static final Map<ServerLevel, Map<AvailabilityKey, Double>> AVAILABILITY = new IdentityHashMap<>();
+    private static final Map<ServerLevel, Map<AvailabilityKey, Double>> AVAILABILITY = perLevel();
     // Each biome read is far more expensive than a map lookup, and one query asks for every nearby source.
-    private static final Map<ServerLevel, Map<LevelPosition, Holder<Biome>>> BIOME = new IdentityHashMap<>();
+    private static final Map<ServerLevel, Map<LevelPosition, Holder<Biome>>> BIOME = perLevel();
 
     // Unconditional: one increment is far cheaper than the two System.nanoTime() calls the timer needs.
     private static final AtomicLong QUERIES = new AtomicLong();
@@ -66,6 +69,11 @@ public final class AuraQueryCache {
     private static final AtomicLong TICKS = new AtomicLong();
 
     private AuraQueryCache() {
+    }
+
+    // Identity keys, which is what a level is; weak, so a closed level needs no unload hook to be forgotten.
+    private static <V> Map<ServerLevel, V> perLevel() {
+        return new MapMaker().weakKeys().makeMap();
     }
 
     // Hit ratios are the point: a layer at ninety percent misses needs a cheaper computation, not more caching.
@@ -152,7 +160,9 @@ public final class AuraQueryCache {
         LAST_QUERY.clear();
     }
 
-    private static final Map<ServerLevel, Map<UUID, AuraLocation>> LAST_QUERY = new IdentityHashMap<>();
+    // Keyed by player id rather than by the entity: an entity key would pin the entity and, through it, its
+    // level; a stale id is one small entry that forget drops when the entity leaves.
+    private static final Map<ServerLevel, Map<UUID, AuraLocation>> LAST_QUERY = perLevel();
 
     public static boolean needsQuery(ServerLevel level, UUID entity, AuraLocation position, int refreshInterval) {
         Map<UUID, AuraLocation> tracked = LAST_QUERY.get(level);
@@ -353,9 +363,9 @@ public final class AuraQueryCache {
         cache.put(key, value);
     }
 
-    // The chunk attachment is part of the key, so two chunks that happen to describe the same source
-    // position can never share an entry.
-    record AvailabilityKey(Object attachment, BlockPos source, Holder<Aura> aura) {
+    // One entry per section, not per block: availability is a section quantity. The chunk attachment is part of
+    // the key, so two chunks can never share an entry.
+    record AvailabilityKey(Object attachment, int sectionY, Holder<Aura> aura) {
     }
 
     // The dimension travels with the position so one level's snapshot can never be compared against

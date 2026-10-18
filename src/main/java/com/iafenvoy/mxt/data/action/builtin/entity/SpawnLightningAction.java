@@ -2,8 +2,8 @@ package com.iafenvoy.mxt.data.action.builtin.entity;
 
 import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.context.action.EntityActionContext;
-import com.iafenvoy.mxt.registry.MxtEntityTypes;
 import com.iafenvoy.mxt.entity.ColoredLightningBolt;
+import com.iafenvoy.mxt.registry.MxtEntityTypes;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.iafenvoy.mxt.util.formula.number.Constant;

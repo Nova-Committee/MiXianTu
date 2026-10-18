@@ -12,6 +12,8 @@ import net.minecraft.world.level.dimension.LevelStem;
 import net.minecraft.world.level.storage.DerivedLevelData;
 import net.minecraft.world.level.storage.ServerLevelData;
 import net.minecraft.world.level.storage.WorldData;
+import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.level.LevelEvent;
 
 import java.io.IOException;
 import java.util.Map;
@@ -61,6 +63,9 @@ public final class RuntimeDimensionService {
             if (level == null || !level.players().isEmpty()) return false;
             worlds.remove(key);
             server.markWorldsDirty();
+            // Closing directly skips MinecraftServer's own shutdown, which announces each level before closing
+            // it; listeners that only follow the event would otherwise keep this level alive.
+            NeoForge.EVENT_BUS.post(new LevelEvent.Unload(level));
             try {
                 level.close();
             } catch (IOException exception) {

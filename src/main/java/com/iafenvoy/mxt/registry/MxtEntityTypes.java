@@ -2,13 +2,7 @@ package com.iafenvoy.mxt.registry;
 
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.data.ability.type.MountAbilityType;
-import com.iafenvoy.mxt.entity.FlyingSwordEntity;
-import com.iafenvoy.mxt.entity.ColoredLightningBolt;
-import com.iafenvoy.mxt.entity.MeteorEntity;
-import com.iafenvoy.mxt.entity.SpiritBurstEntity;
-import com.iafenvoy.mxt.entity.SwordAuraEntity;
-import com.iafenvoy.mxt.entity.TalismanProjectileEntity;
-import com.iafenvoy.mxt.entity.SoulEntity;
+import com.iafenvoy.mxt.entity.*;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobCategory;
 import net.neoforged.neoforge.registries.DeferredHolder;

@@ -13,6 +13,7 @@ import com.iafenvoy.mxt.util.MiscUtil;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup;
+import net.minecraft.core.SectionPos;
 import net.minecraft.world.level.Level;
 
 import java.util.LinkedHashMap;
@@ -129,7 +130,8 @@ public final class AuraCostDraft implements CostDraft<AuraCost> {
         BlockPos pos = this.context.pos();
         if (level == null || pos == null) return Optional.of(CostFailure.NO_CHANNEL);
         AuraChunkAttachment chunk = level.getChunkAt(pos).getData(MxtAttachments.AURA_CHUNK);
-        return chunk.canConsume(this.auras) ? Optional.empty() : Optional.of(CostFailure.INSUFFICIENT_AURA);
+        return chunk.canConsume(SectionPos.blockToSectionCoord(pos.getY()), this.auras)
+                ? Optional.empty() : Optional.of(CostFailure.INSUFFICIENT_AURA);
     }
 
     private Optional<CostFailure> poolCommit() {
