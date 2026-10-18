@@ -17,7 +17,6 @@ import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.runtime.aura.AuraLookup;
 import com.iafenvoy.mxt.runtime.resource.ResourceService;
 import com.iafenvoy.mxt.runtime.resource.ResourceService.Bounds;
 import com.iafenvoy.mxt.runtime.resource.ResourceTransactions;
@@ -67,7 +66,7 @@ public final class CultivationMethodService {
     }
 
     public static boolean canStartCultivation(LivingEntity entity, FormulaContext context) {
-        return AuraLookup.all(entity).map(Reference::value)
+        return MxtDatapackRegistries.holders(entity.level().registryAccess(), MxtResourceKeys.AURA).map(Reference::value)
                 .filter(aura -> aura.firstRealm().isPresent())
                 .allMatch(aura -> aura.startCultivateConditions().test(entity, context));
     }
@@ -427,7 +426,7 @@ public final class CultivationMethodService {
 
     private static List<Holder<RealmStage>> cultivationStages(LivingEntity entity, CultivationAttachment spirit) {
         Map<Holder<Aura>, Holder<RealmStage>> stages = new LinkedHashMap<>(spirit.realmStages());
-        AuraLookup.all(entity).forEach(aura ->
+        MxtDatapackRegistries.holders(entity.level().registryAccess(), MxtResourceKeys.AURA).forEach(aura ->
                 aura.value().firstRealm().ifPresent(first -> stages.putIfAbsent(aura, first)));
         return List.copyOf(stages.values());
     }

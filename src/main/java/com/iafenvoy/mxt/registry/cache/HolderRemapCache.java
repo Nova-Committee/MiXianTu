@@ -13,9 +13,9 @@ import java.util.function.Function;
 import java.util.stream.Stream;
 
 public class HolderRemapCache<K, T> extends RegistryCache<ListMultimap<K, Holder<T>>> {
-    private final ListMultimap<K, Holder<T>> data = LinkedListMultimap.create();
     private final ResourceKey<Registry<T>> registry;
     private final Function<Holder<T>, List<K>> keyMapper;
+    private final ListMultimap<K, Holder<T>> data = LinkedListMultimap.create();
 
     public HolderRemapCache(ResourceKey<Registry<T>> registry, Function<Holder<T>, List<K>> keyMapper) {
         this.registry = registry;

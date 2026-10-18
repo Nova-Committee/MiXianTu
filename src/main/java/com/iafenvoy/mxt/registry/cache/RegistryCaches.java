@@ -1,5 +1,6 @@
 package com.iafenvoy.mxt.registry.cache;
 
+import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.aura.BlockAura;
 import com.iafenvoy.mxt.data.cultivation.Element;
 import com.iafenvoy.mxt.data.cultivation.ElementReaction;
@@ -33,6 +34,7 @@ public final class RegistryCaches {
     public static final HeatSourceCache HEAT_SOURCE = new HeatSourceCache();
     public static final HolderRemapCache<Identifier, TriggerRule> TRIGGER_RULES_BY_SIGNAL = new HolderRemapCache<>(MxtResourceKeys.TRIGGER, rule -> List.of(rule.value().trigger().signalType()));
     public static final HolderRemapCache<Block, BlockAura> BLOCK_AURA = new HolderRemapCache<>(MxtResourceKeys.BLOCK_AURA, (aura) -> RegistryCodecs.resolve(aura.value().blocks(), BuiltInRegistries.BLOCK).map(Holder::value).toList());
+    public static final ReverseMappingCache<Holder<Resource>, Aura> RESOURCE_AURA = new ReverseMappingCache<>(MxtResourceKeys.AURA, aura -> aura.value().resource());
     public static final FormulaNameCache<Resource> RESOURCE_NAMES = new FormulaNameCache<>(MxtResourceKeys.RESOURCE, "resource");
     public static final FormulaNameCache<Element> ELEMENT_NAMES = new FormulaNameCache<>(MxtResourceKeys.ELEMENT, "element");
     public static final FormulaNameCache<Attribute> ATTRIBUTE_NAMES = new FormulaNameCache<>(Registries.ATTRIBUTE, "attribute");

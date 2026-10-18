@@ -11,9 +11,9 @@ import java.util.List;
 import java.util.stream.Stream;
 
 public class OrderCache<T> extends RegistryCache<List<Holder<T>>> {
-    private final List<Holder<T>> data = new LinkedList<>();
     private final ResourceKey<Registry<T>> registry;
     private final Comparator<Holder.Reference<T>> comparator;
+    private final List<Holder<T>> data = new LinkedList<>();
 
     public OrderCache(ResourceKey<Registry<T>> registry, Comparator<Holder.Reference<T>> comparator) {
         this.registry = registry;

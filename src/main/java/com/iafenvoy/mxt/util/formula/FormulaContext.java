@@ -162,6 +162,7 @@ public final class FormulaContext {
         return target instanceof Player player ? player : null;
     }
 
+    //FIXME:?
     public record ResourceSubject(CultivationAttachment cultivation, Holder<Resource> resource) {
         public ResourceSubject {
             Objects.requireNonNull(cultivation, "cultivation");

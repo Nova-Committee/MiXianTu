@@ -6,7 +6,7 @@ import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.runtime.aura.AuraLookup;
+import com.iafenvoy.mxt.registry.cache.RegistryCaches;
 import com.iafenvoy.mxt.util.HolderHelper;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup.Provider;
@@ -43,7 +43,7 @@ public final class ResourceTransactions {
             // The gate belongs to the aura a value carries; a value without one has no gate to ask, and a
             // server system without an entity has nobody to ask.
             if (entity != null) {
-                Holder<Aura> aura = AuraLookup.holder(entity, resource).orElse(null);
+                Holder<Aura> aura = RegistryCaches.RESOURCE_AURA.get(resource).orElse(null);
                 if (aura != null && !ResourceUseService.canUse(entity, aura))
                     return Result.rejected(resource, evaluation.amounts);
             }

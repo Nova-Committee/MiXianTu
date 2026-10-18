@@ -12,7 +12,7 @@ import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.runtime.aura.AuraLookup;
+import com.iafenvoy.mxt.registry.cache.RegistryCaches;
 import com.iafenvoy.mxt.runtime.world.AuraPool;
 import com.iafenvoy.mxt.runtime.world.AuraService;
 import com.iafenvoy.mxt.util.DefinitionText;
@@ -134,7 +134,7 @@ public final class ResourceCommand {
                                                   ResourceBarContext context) {
         // A bar is declared on a value, but the two concentration sources are aura pools: the value names the
         // aura it carries, and a value that carries none has no concentration to report.
-        Holder<Aura> aura = AuraLookup.holder(player, resource).orElse(null);
+        Holder<Aura> aura = RegistryCaches.RESOURCE_AURA.get(resource).orElse(null);
         if (context == ActualConcentrationContext.INSTANCE) {
             if (aura == null) return Optional.empty();
             AuraPool pool = AuraService.getPositionAura(player.level(), player.blockPosition()).pool(aura);

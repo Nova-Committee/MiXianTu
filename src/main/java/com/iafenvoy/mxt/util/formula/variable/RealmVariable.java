@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.util.formula.variable;
 
 import com.iafenvoy.mxt.data.aura.Aura;
-import com.iafenvoy.mxt.runtime.aura.AuraLookup;
+import com.iafenvoy.mxt.registry.cache.RegistryCaches;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationRanks;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
@@ -29,7 +29,7 @@ public final class RealmVariable implements FormulaVariable {
         if (!suffix.isEmpty()) return Double.NaN;
         ResourceSubject subject = context.resource();
         if (subject == null) return Double.NaN;
-        Holder<Aura> aura = AuraLookup.holder(context.registries(), subject.resource()).orElse(null);
+        Holder<Aura> aura = RegistryCaches.RESOURCE_AURA.get(subject.resource()).orElse(null);
         if (key.equals("minor_stage"))
             return aura == null ? Double.NaN : CultivationService.minorStage(aura, subject.cultivation(), context);
         int rank = aura == null ? -1 : CultivationRanks.realmRank(subject.cultivation(), aura);

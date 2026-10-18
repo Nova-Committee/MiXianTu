@@ -15,10 +15,10 @@ import java.util.function.BiPredicate;
 import java.util.function.Function;
 
 public class ChainCache<T extends ChainNode<T>> extends RegistryCache<ChainCache<T>> {
+    private final ResourceKey<Registry<T>> registry;
     private final List<Chain<T>> chains = new LinkedList<>();
     private final Map<Holder<T>, Chain<T>> byNode = new LinkedHashMap<>();
     private final List<BiPredicate<T, T>> chainValidators = new LinkedList<>();
-    private final ResourceKey<Registry<T>> registry;
 
     public ChainCache(ResourceKey<Registry<T>> registry) {
         this.registry = registry;

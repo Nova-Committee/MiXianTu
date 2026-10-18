@@ -3,7 +3,7 @@ package com.iafenvoy.mxt.data.resource.builtin;
 import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.data.resource.ResourceValueProvider;
-import com.iafenvoy.mxt.runtime.aura.AuraLookup;
+import com.iafenvoy.mxt.registry.cache.RegistryCaches;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.Holder;
@@ -15,7 +15,7 @@ public enum RegenResourceValueProvider implements ResourceValueProvider {
 
     @Override
     public double resolve(ResourceHolderAttachment holder, Holder<Resource> resource, FormulaContext context) {
-        return AuraLookup.find(context.registries(), resource).map(profile -> profile.regen().evaluate(context)).orElse(0.0D);
+        return RegistryCaches.RESOURCE_AURA.get(resource).map(Holder::value).map(aura -> aura.regen().evaluate(context)).orElse(0.0D);
     }
 
     @Override

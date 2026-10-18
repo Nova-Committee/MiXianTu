@@ -3,7 +3,7 @@ package com.iafenvoy.mxt.data.resourcebar.builtin.context;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.data.resourcebar.ResourceBarContext;
-import com.iafenvoy.mxt.runtime.aura.AuraLookup;
+import com.iafenvoy.mxt.registry.cache.RegistryCaches;
 import com.iafenvoy.mxt.runtime.world.AuraClientState;
 import com.iafenvoy.mxt.runtime.world.AuraPool;
 import com.iafenvoy.mxt.util.DefinitionText;
@@ -23,7 +23,7 @@ public enum ActualConcentrationContext implements ResourceBarContext {
     public Optional<Values> extract(LivingEntity entity, Holder<Resource> resource) {
         if (!entity.level().isClientSide()) return Optional.empty();
         // The bar is declared on a value; what it shows is the concentration of the aura that value carries.
-        Holder<Aura> aura = AuraLookup.holder(entity, resource).orElse(null);
+        Holder<Aura> aura = RegistryCaches.RESOURCE_AURA.get(resource).orElse(null);
         if (aura == null) return Optional.empty();
         AuraPool pool = AuraClientState.current().actualPool(aura);
         if (pool.maximum() <= 0.0D && pool.amount() <= 0.0D) return Optional.empty();

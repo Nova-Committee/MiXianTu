@@ -13,9 +13,9 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 public class FormulaNameCache<T> extends RegistryCache<Map<String, Holder<T>>> {
-    private final Map<String, Holder<T>> data = new LinkedHashMap<>();
     private final ResourceKey<Registry<T>> registry;
     private final String kind;
+    private final Map<String, Holder<T>> data = new LinkedHashMap<>();
 
     public FormulaNameCache(ResourceKey<Registry<T>> registry, String kind) {
         this.registry = registry;

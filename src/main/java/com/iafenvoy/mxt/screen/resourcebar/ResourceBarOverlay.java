@@ -16,7 +16,7 @@ import com.iafenvoy.mxt.data.resourcebar.ResourceBarView;
 import com.iafenvoy.mxt.data.resourcebar.builtin.context.SelfHudContext;
 import com.iafenvoy.mxt.data.resourcebar.builtin.renderdata.OriginsRenderData;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.runtime.aura.AuraLookup;
+import com.iafenvoy.mxt.registry.cache.RegistryCaches;
 import com.iafenvoy.mxt.runtime.resource.ResourceUseService;
 import com.iafenvoy.mxt.runtime.world.AuraClientState;
 import com.iafenvoy.mxt.runtime.world.AuraClientState.Snapshot;
@@ -94,7 +94,7 @@ public final class ResourceBarOverlay {
         long gameTime = entity.level().getGameTime();
         for (Reference<Resource> resource : resources.listElements().toList()) {
             // A bar is declared on a value; the use gate belongs to the aura that value carries (no aura = ungated).
-            Holder<Aura> aura = AuraLookup.holder(entity, resource).orElse(null);
+            Holder<Aura> aura = RegistryCaches.RESOURCE_AURA.get(resource).orElse(null);
             if (aura != null && !ResourceUseService.canUse(entity, aura)) continue;
             Identifier id = HolderHelper.idOrNull(resource);
             if (id == null) continue;
