@@ -1,9 +1,9 @@
 package com.iafenvoy.mxt.data.progression;
 
-import com.iafenvoy.mxt.runtime.DatapackCache;
+import com.iafenvoy.mxt.registry.cache.ChainCache;
+import com.iafenvoy.mxt.registry.cache.RegistryCaches;
 import com.iafenvoy.mxt.util.AbstractChangeTrackable;
 import com.iafenvoy.mxt.util.chain.Chain;
-import com.iafenvoy.mxt.util.chain.ChainCache;
 import com.iafenvoy.mxt.util.codec.CollectionCodecs;
 import com.mojang.serialization.Codec;
 import net.minecraft.core.Holder;
@@ -155,7 +155,7 @@ public final class ProgressionHolder<T extends ProgressionOwner> extends Abstrac
     }
 
     private ChainCache<Progression> chains() {
-        return DatapackCache.get().progressionChains();
+        return RegistryCaches.PROGRESSION_CHAIN;
     }
 
     // An optional field is written by comparing the value to the default it was given, so an empty holder has to

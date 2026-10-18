@@ -3,9 +3,9 @@ package com.iafenvoy.mxt.util.formula.variable;
 import com.iafenvoy.mxt.data.cultivation.Element;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.registry.MxtAttachments;
+import com.iafenvoy.mxt.registry.cache.RegistryCaches;
 import com.iafenvoy.mxt.runtime.cultivation.Elements;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
-import com.iafenvoy.mxt.util.formula.FormulaNames;
 import com.iafenvoy.mxt.util.formula.FormulaVariable;
 import net.minecraft.core.Holder;
 import net.minecraft.server.level.ServerPlayer;
@@ -60,16 +60,16 @@ public final class EntityVariable implements FormulaVariable {
     // Attributes are asked first, because the context used to expose resources before attributes.
     private static double state(Entity entity, String field) {
         if (!(entity instanceof LivingEntity living)) return Double.NaN;
-        Holder<Attribute> attribute = FormulaNames.attribute(field);
+        Holder<Attribute> attribute = RegistryCaches.ATTRIBUTE_NAMES.get(field);
         if (attribute != null) {
             AttributeInstance instance = living.getAttributes().getInstance(attribute);
             if (instance == null) return 0.0D;
             if (living.level().isClientSide() && !synchronised(living, attribute)) return 0.0D;
             return instance.getValue();
         }
-        Holder<Resource> resource = FormulaNames.resource(living.level().registryAccess(), field);
+        Holder<Resource> resource = RegistryCaches.RESOURCE_NAMES.get(field);
         if (resource != null) return living.getData(MxtAttachments.RESOURCE_HOLDER).get(resource);
-        Holder<Element> element = FormulaNames.element(living.level().registryAccess(), field);
+        Holder<Element> element = RegistryCaches.ELEMENT_NAMES.get(field);
         if (element == null) return Double.NaN;
         return Elements.of(living).contains(element) ? 1.0D : 0.0D;
     }

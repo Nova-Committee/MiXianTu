@@ -2,45 +2,19 @@ package com.iafenvoy.mxt.runtime.alchemy;
 
 import com.iafenvoy.mxt.api.AlchemyHeatSource;
 import com.iafenvoy.mxt.data.alchemy.HeatSource;
-import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.registry.cache.RegistryCaches;
 import com.iafenvoy.mxt.util.MiscUtil;
-import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Holder;
-import net.minecraft.core.RegistryAccess;
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.Nullable;
-
-import java.util.LinkedHashMap;
-import java.util.Map;
 
 /**
  * How hot the block in a furnace's heat cell is. A block implementing {@link AlchemyHeatSource} answers for itself
  * and wins over the table; every other block is looked up in {@code mxt:heat_source}.
  */
 public final class AlchemyHeatService {
-    private static final Map<Block, HeatSource> INDEX_CACHE = new LinkedHashMap<>();
-
-    public static void clear() {
-        INDEX_CACHE.clear();
-    }
-
-    public static void reload(RegistryAccess access) {
-        clear();
-        access.lookupOrThrow(MxtResourceKeys.HEAT_SOURCE).listElements().forEach(holder -> claim(holder.value()));
-    }
-
-    private static void claim(HeatSource definition) {
-        for (Holder<Block> holder : RegistryCodecs.resolve(definition.blocks(), BuiltInRegistries.BLOCK).toList()) {
-            HeatSource existing = INDEX_CACHE.get(holder.value());
-            if (existing == null || definition.priority() > existing.priority())
-                INDEX_CACHE.put(holder.value(), definition);
-        }
-    }
-
     public static double maxTemperature(ServerLevel level, BlockPos pos) {
         BlockState state = stateAt(level, pos);
         if (state == null) return 0.0D;
@@ -73,6 +47,6 @@ public final class AlchemyHeatService {
     }
 
     private static @Nullable HeatSource find(Block block) {
-        return INDEX_CACHE.get(block);
+        return RegistryCaches.HEAT_SOURCE.get(block);
     }
 }

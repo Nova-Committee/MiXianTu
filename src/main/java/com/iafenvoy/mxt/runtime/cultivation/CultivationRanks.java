@@ -3,7 +3,7 @@ package com.iafenvoy.mxt.runtime.cultivation;
 import com.iafenvoy.mxt.attachment.CultivationAttachment;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.cultivation.RealmStage;
-import com.iafenvoy.mxt.runtime.DatapackCache;
+import com.iafenvoy.mxt.registry.cache.RegistryCaches;
 import net.minecraft.core.Holder;
 
 import java.util.OptionalInt;
@@ -18,7 +18,6 @@ public final class CultivationRanks {
     }
 
     public static int realmRank(CultivationAttachment spirit, Holder<Aura> aura) {
-        DatapackCache cache = DatapackCache.get();
         Holder<RealmStage> current = spirit.realmStage(aura);
         if (current == null) {
             // The mortal state sits one rank below the chain's first realm, and an aura that declares no first
@@ -27,7 +26,7 @@ public final class CultivationRanks {
             // no index exists.
             return aura.value().firstRealm().isPresent() ? 0 : -1;
         }
-        OptionalInt rank = cache.rankForRealm(current);
+        OptionalInt rank = RegistryCaches.REALM_CHAIN.rankOf(current);
         return rank.isPresent() ? rank.getAsInt() + 1 : -1;
     }
 }

@@ -15,12 +15,13 @@ import com.iafenvoy.mxt.event.CultivationBreakEvent.Pre;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtCriteriaTriggers;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.runtime.DatapackCache;
+import com.iafenvoy.mxt.registry.cache.RegistryCaches;
 import com.iafenvoy.mxt.runtime.ability.AbilityEventBridge;
 import com.iafenvoy.mxt.runtime.resource.ResourceService;
 import com.iafenvoy.mxt.runtime.tribulation.TribulationService;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.MiscUtil;
+import com.iafenvoy.mxt.util.chain.Chain;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
@@ -148,7 +149,7 @@ public final class CultivationService {
             // The validated chain answers one rung at a time in either direction. Without one - no server, or
             // before a world is loaded - the realm's own next_realm answers instead; a chain the walk refused does
             // not, because advancing along a line nobody validated is what the refusal is about.
-            return DatapackCache.get().nextRealm(current).orElse(null);
+            return RegistryCaches.REALM_CHAIN.next(current).orElse(null);
         }
         return aura.value().firstRealm().filter(value -> Objects.equals(value.value().aura(), aura)).orElse(null);
     }
@@ -267,7 +268,7 @@ public final class CultivationService {
 
     // Administrative, validated through the server cache rather than by traversing the registry here.
     public static boolean setRealm(CultivationAttachment spirit, Holder<RealmStage> target) {
-        Holder<Aura> aura = DatapackCache.get().cultivationForRealm(target).orElse(null);
+        Holder<Aura> aura = RegistryCaches.REALM_CHAIN.chainOf(target).map(Chain::first).flatMap(RegistryCaches.REALM_CHAIN::getAuraByRealm).orElse(null);
         if (aura == null) return false;
         spirit.setRealmStage(target);
         spirit.setCultivationProgress(aura, 0.0D);

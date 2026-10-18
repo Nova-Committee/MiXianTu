@@ -1,8 +1,8 @@
 package com.iafenvoy.mxt.data.quality;
 
-import com.iafenvoy.mxt.runtime.DatapackCache;
+import com.iafenvoy.mxt.registry.cache.ChainCache;
+import com.iafenvoy.mxt.registry.cache.RegistryCaches;
 import com.iafenvoy.mxt.util.chain.Chain;
-import com.iafenvoy.mxt.util.chain.ChainCache;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
 import org.jspecify.annotations.Nullable;
@@ -29,7 +29,7 @@ public final class QualityLadders {
      * DatapackCache keeps; the fallback answers before a tag update has built one, and reads empty with no registry.
      */
     public static ChainCache<ItemQuality> cache() {
-        return DatapackCache.get().qualityChains();
+        return RegistryCaches.QUALITY_CHAIN;
     }
 
     /**

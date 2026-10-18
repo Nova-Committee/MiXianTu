@@ -5,7 +5,7 @@ import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.cultivation.RealmStage;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.runtime.DatapackCache;
+import com.iafenvoy.mxt.registry.cache.RegistryCaches;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService;
 import com.iafenvoy.mxt.runtime.cultivation.MinorStageService;
 import com.iafenvoy.mxt.runtime.resource.ResourceService;
@@ -69,7 +69,7 @@ public final class RealmCommand {
         // A chain the cache validated is read straight from it. One it refused to index whole is still walked here
         // from the loaded stages, so an author sees what is written rather than only "no chain". The argument parser
         // resolved this stage against the loaded registry, so the walk's own answer is the only one left to ask.
-        Chain<RealmStage> chain = DatapackCache.get().realmsOf(aura);
+        Chain<RealmStage> chain = RegistryCaches.REALM_CHAIN.getChainByAura(aura).orElse(Chain.empty());
         int current = chain.indexOf(target);
         if (current < 0) {
             source.sendFailure(Component.translatable("command.mxt.realm.chain.none", HolderHelper.id(target).toString()));

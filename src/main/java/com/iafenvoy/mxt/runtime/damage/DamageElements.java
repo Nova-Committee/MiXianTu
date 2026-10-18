@@ -2,7 +2,8 @@ package com.iafenvoy.mxt.runtime.damage;
 
 import com.iafenvoy.mxt.data.cultivation.DamageTypeClaim;
 import com.iafenvoy.mxt.data.cultivation.Element;
-import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.registry.cache.DamageElementsCache;
+import com.iafenvoy.mxt.registry.cache.RegistryCaches;
 import com.iafenvoy.mxt.runtime.cultivation.Elements;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.mojang.datafixers.util.Either;
@@ -30,41 +31,9 @@ import java.util.stream.Collectors;
  */
 public final class DamageElements {
     public static final Logger LOGGER = LogUtils.getLogger();
-    private static final Map<Holder<DamageType>, List<Claim>> INDEX_CACHE = new LinkedHashMap<>();
-
-    public static void clear() {
-        INDEX_CACHE.clear();
-    }
-
-    public static void reload(RegistryAccess access) {
-        clear();
-        Registry<Element> elements = access.lookupOrThrow(MxtResourceKeys.ELEMENT);
-        Registry<DamageType> types = access.lookupOrThrow(Registries.DAMAGE_TYPE);
-        for (Reference<Element> element : elements.listElements().toList()) claimAll(types, element);
-    }
-
-    private static void claimAll(Registry<DamageType> types, Holder<Element> element) {
-        for (DamageTypeClaim claim : element.value().damageTypes()) {
-            // The claim's own number when it wrote one, the element's own default otherwise.
-            double attachment = claim.attachment(element.value().damageAttachment());
-            claim.type().left().ifPresentOrElse(type -> claim(type, element, attachment), () -> {
-                TagKey<DamageType> tag = claim.type().right().orElseThrow();
-                types.listElements().filter(type -> type.is(tag)).forEach(type -> claim(type, element, attachment));
-            });
-        }
-    }
-
-    private static void claim(Holder<DamageType> type, Holder<Element> element, double attachment) {
-        List<Claim> claimants = INDEX_CACHE.computeIfAbsent(type, _ -> new LinkedList<>());
-        for (Claim existing : claimants) if (existing.element().equals(element)) return;
-        // Every claim multiplies downstream, so a second claimant for one type is worth a warning.
-        if (!claimants.isEmpty())
-            LOGGER.warn("Damage type {} is claimed by more than one element; every claim multiplies the element relation of such a strike", HolderHelper.id(type));
-        claimants.add(new Claim(element, attachment));
-    }
 
     public static Set<Holder<Element>> of(Holder<DamageType> type) {
-        return INDEX_CACHE.getOrDefault(type, List.of()).stream().map(Claim::element).collect(Collectors.toSet());
+        return RegistryCaches.DAMAGE_ELEMENTS.get().get(type).stream().map(DamageElementsCache.Claim::element).collect(Collectors.toSet());
     }
 
     // The single rule the pipeline and the damage condition both read, so a condition can never disagree with
@@ -76,13 +45,13 @@ public final class DamageElements {
     // strike(...) with the origin and the amounts kept: the reduction step wants the elements, the buildup step
     // also wants how much of each this kind of hit leaves.
     public static Strike reading(Optional<Holder<DamageType>> type, @Nullable Entity attacker) {
-        List<Claim> claimed = type.map(type1 -> INDEX_CACHE.getOrDefault(type1, List.of())).orElse(List.of());
+        List<DamageElementsCache.Claim> claimed = type.map(t -> RegistryCaches.DAMAGE_ELEMENTS.get().get(t)).orElse(List.of());
         return claimed.isEmpty() ? roots(attacker) : of(claimed);
     }
 
     // What the reduction and attachment steps of the incoming event read.
     public static Strike reading(DamageSource source, HolderLookup.Provider provider) {
-        List<Claim> claimed = INDEX_CACHE.getOrDefault(source.typeHolder(), List.of());
+        List<DamageElementsCache.Claim> claimed = RegistryCaches.DAMAGE_ELEMENTS.get().get(source.typeHolder());
         if (!claimed.isEmpty()) return of(claimed);
         return roots(source.getEntity());
     }
@@ -103,10 +72,10 @@ public final class DamageElements {
 
     // One entry per element, in index order. The first claim an element makes over a type is the one that
     // speaks, the same reading the index itself keeps.
-    private static Strike of(List<Claim> claimed) {
+    private static Strike of(List<DamageElementsCache.Claim> claimed) {
         Set<Holder<Element>> elements = new LinkedHashSet<>();
         Map<Holder<Element>, Double> attachment = new LinkedHashMap<>();
-        for (Claim claim : claimed)
+        for (DamageElementsCache.Claim claim : claimed)
             if (elements.add(claim.element())) attachment.put(claim.element(), claim.attachment());
         return new Strike(Set.copyOf(elements), Map.copyOf(attachment), true);
     }
@@ -166,9 +135,5 @@ public final class DamageElements {
     // and the origin or the amounts of another. attachment answers "what would this element leave"; only a
     // TYPE reading reaches the buildup, so a roots reading never gets asked.
     public record Strike(Set<Holder<Element>> elements, Map<Holder<Element>, Double> attachment, boolean attaches) {
-    }
-
-    // The number belongs to the claim, not to the element, so the index stores this rather than bare holders.
-    public record Claim(Holder<Element> element, double attachment) {
     }
 }

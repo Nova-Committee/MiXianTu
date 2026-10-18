@@ -12,7 +12,7 @@ import com.iafenvoy.mxt.data.trigger.TriggerContext;
 import com.iafenvoy.mxt.data.trigger.TriggerSignals;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.runtime.DatapackCache;
+import com.iafenvoy.mxt.registry.cache.RegistryCaches;
 import com.iafenvoy.mxt.runtime.trigger.TriggerDispatcher;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
@@ -31,7 +31,7 @@ import java.util.Optional;
  * The owner-agnostic half of every progression: where a holder stands, what the next level is, what each level grants
  * and whether it may be entered. Which owners a body holds, when it advances and what happens then belong to the
  * owning module. Every question is asked of an {@link ProgressionOwners.Owner}, so it reaches the holder of that owner's
- * own sort and never another sort's records. Ordering comes from {@link DatapackCache}.
+ * own sort and never another sort's records. Ordering comes from {@link RegistryCaches}.
  */
 public final class ProgressionService {
     private ProgressionService() {
@@ -97,10 +97,9 @@ public final class ProgressionService {
     // Cumulative: what a level grants stays active on every later level, so everything at or below the current
     // one is the answer.
     public static List<Holder<Ability>> grantedAbilities(ProgressionOwner owner, Holder<Progression> current, Provider access) {
-        DatapackCache cache = DatapackCache.get();
         if (current == null) return List.of();
         return owner.levels().entrySet().stream()
-                .filter(entry -> cache.progressionChains().compare(CompareOperation.GREATER_THAN_OR_EQUAL, current, entry.getKey()))
+                .filter(entry -> RegistryCaches.PROGRESSION_CHAIN.compare(CompareOperation.GREATER_THAN_OR_EQUAL, current, entry.getKey()))
                 .flatMap(entry -> RegistryCodecs.resolve(entry.getValue().abilities(), access, MxtResourceKeys.ABILITY))
                 .distinct()
                 .toList();
@@ -113,7 +112,7 @@ public final class ProgressionService {
                                   Holder<Progression> reached) {
         FormulaContext formula = FormulaContext.of(entity);
         definition.config(reached).ifPresent(config -> config.action().execute(entity, formula));
-        int rank = DatapackCache.get().rankForLevel(reached).orElse(0);
+        int rank = RegistryCaches.PROGRESSION_CHAIN.rankOf(reached).orElse(0);
         TriggerContext triggerContext = new TriggerContext().actor(entity).level(entity.level()).formula(formula.with("level", rank));
         triggerContext.set("owner", owner.toString());
         triggerContext.set("level", (double) rank);

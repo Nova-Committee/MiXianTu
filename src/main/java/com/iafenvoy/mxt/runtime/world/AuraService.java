@@ -294,8 +294,8 @@ public final class AuraService {
                     if (exact) {
                         BlockAuraService.visitSources(level, sourceChunk, sectionY, (x, y, z, definitions) -> {
                             double falloff = 1.0D / Math.max(1.0D, distanceSquared(x, y, z, query));
-                            for (BlockAura definition : definitions)
-                                accumulate(weighted, definition.aura(), availability, falloff);
+                            for (Holder<BlockAura> definition : definitions)
+                                accumulate(weighted, definition.value().aura(), availability, falloff);
                         });
                     } else {
                         double falloff = 1.0D / Math.max(1.0D, distanceSquaredToSectionCenter(section, query));

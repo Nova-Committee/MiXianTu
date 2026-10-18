@@ -48,7 +48,7 @@ public final class AuraChunkTicker {
         LOADED.computeIfAbsent(level, ignored -> Collections.newSetFromMap(new IdentityHashMap<>())).add(chunk);
         PENDING.computeIfAbsent(level, ignored -> Collections.newSetFromMap(new IdentityHashMap<>())).add(chunk);
         // The save can be older than the world, so the whole column is rebuilt before anything may read it.
-        BlockAuraService.rebuild(level, chunk);
+        BlockAuraService.rebuild(chunk);
         refreshDeadlines(level, chunk);
     }
 
@@ -88,7 +88,7 @@ public final class AuraChunkTicker {
         for (LevelChunk chunk : new LinkedHashSet<>(chunks)) {
             int x = chunk.getPos().x() - centerX, z = chunk.getPos().z() - centerZ;
             if (Math.abs(x) > radius || Math.abs(z) > radius) continue;
-            BlockAuraService.rebuild(level, chunk);
+            BlockAuraService.rebuild(chunk);
             cleared++;
         }
         return cleared;
@@ -121,7 +121,7 @@ public final class AuraChunkTicker {
             if (now >= entry.getLongValue()) due.add(entry.getIntKey());
         for (int i = 0; i < due.size(); i++) {
             int sectionY = due.getInt(i);
-            BlockAuraService.rebuild(level, chunk, sectionY);
+            BlockAuraService.rebuild(chunk, sectionY);
             deadlines.put(sectionY, nextRefresh(level));
         }
     }

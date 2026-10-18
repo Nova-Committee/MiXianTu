@@ -29,7 +29,6 @@ public final class AuraChunkAttachment {
     ).apply(i, AuraChunkAttachment::new));
     private Optional<Holder<AuraZone>> template;
     private final Int2ObjectMap<BlockAuraSectionCache> blockAuraSections;
-    // Keyed by the absolute section Y, the same key the block cache uses, so a rebuild and a query agree.
     private final Int2ObjectMap<Map<Holder<Aura>, AuraPool>> auras;
     // Runtime-only; never saved.
     private final Map<SectionPos, Integer> auraVisitors = new LinkedHashMap<>();

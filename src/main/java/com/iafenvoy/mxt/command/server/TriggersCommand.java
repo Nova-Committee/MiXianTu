@@ -4,7 +4,7 @@ import com.iafenvoy.mxt.command.ServerCommandManager;
 import com.iafenvoy.mxt.data.trigger.TriggerContext;
 import com.iafenvoy.mxt.data.trigger.TriggerRule;
 import com.iafenvoy.mxt.registry.MxtRegistries;
-import com.iafenvoy.mxt.runtime.DatapackCache;
+import com.iafenvoy.mxt.registry.cache.RegistryCaches;
 import com.iafenvoy.mxt.runtime.curse.CurseService;
 import com.iafenvoy.mxt.runtime.trigger.TriggerDispatcher;
 import com.iafenvoy.mxt.runtime.trigger.TriggerSubscription;
@@ -19,7 +19,7 @@ import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.SharedSuggestionProvider;
 import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.commands.arguments.IdentifierArgument;
-import net.minecraft.core.Holder.Reference;
+import net.minecraft.core.Holder;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Entity;
@@ -59,13 +59,13 @@ public final class TriggersCommand {
     }
 
     private static CompletableFuture<Suggestions> suggestRuleSignals(SuggestionsBuilder builder) {
-        return SharedSuggestionProvider.suggest(DatapackCache.get().triggerSignals().stream().map(Identifier::toString).toList(), builder);
+        return SharedSuggestionProvider.suggest(RegistryCaches.TRIGGER_RULES_BY_SIGNAL.suggestions(), builder);
     }
 
     // Every signal a rule reacts to or a subscription listens to: the two sets a signal can be published against.
     private static CompletableFuture<Suggestions> suggestPublishedSignals(SuggestionsBuilder builder) {
         Set<String> ids = new LinkedHashSet<>();
-        DatapackCache.get().triggerSignals().forEach(signal -> ids.add(signal.toString()));
+        RegistryCaches.TRIGGER_RULES_BY_SIGNAL.suggestions().forEach(ids::add);
         TriggerDispatcher.signals().forEach(signal -> ids.add(signal.toString()));
         return SharedSuggestionProvider.suggest(ids, builder);
     }
@@ -83,7 +83,7 @@ public final class TriggersCommand {
     }
 
     private static int listTriggerRules(CommandSourceStack source, Identifier signal) {
-        List<Reference<TriggerRule>> rules = DatapackCache.get().triggerRules(signal);
+        List<Holder<TriggerRule>> rules = RegistryCaches.TRIGGER_RULES_BY_SIGNAL.get(signal);
         source.sendSuccess(() -> Component.translatable("command.mxt.trigger.rules.header", signal.toString(), rules.size()), false);
         rules.forEach(rule -> source.sendSuccess(() -> Component.translatable("command.mxt.trigger.rules.entry",
                 HolderHelper.id(rule).toString(),

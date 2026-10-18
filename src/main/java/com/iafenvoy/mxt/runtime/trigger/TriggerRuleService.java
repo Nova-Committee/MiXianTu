@@ -5,10 +5,10 @@ import com.iafenvoy.mxt.attachment.TriggerCooldownAttachment;
 import com.iafenvoy.mxt.data.trigger.TriggerRule;
 import com.iafenvoy.mxt.data.trigger.TriggerSignal;
 import com.iafenvoy.mxt.registry.MxtAttachments;
-import com.iafenvoy.mxt.runtime.DatapackCache;
+import com.iafenvoy.mxt.registry.cache.RegistryCaches;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.MiscUtil;
-import net.minecraft.core.Holder.Reference;
+import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Entity;
 
@@ -34,13 +34,13 @@ public final class TriggerRuleService {
     public static void dispatch(TriggerSignal signal) {
         Entity actor = signal.context().actor();
         if (actor == null) return;
-        List<Reference<TriggerRule>> rules = DatapackCache.get().triggerRules(signal.type());
+        List<Holder<TriggerRule>> rules = RegistryCaches.TRIGGER_RULES_BY_SIGNAL.get(signal.type());
         if (rules.isEmpty()) return;
         long gameTime = actor.level().getGameTime();
         TriggerCooldownAttachment cooldowns = actor.getExistingData(MxtAttachments.TRIGGER_COOLDOWNS).orElse(null);
         // A read-only query never creates the attachment, so the expired rows are only swept once it exists.
         if (cooldowns != null) cooldowns.clearExpired(gameTime);
-        for (Reference<TriggerRule> holder : rules) {
+        for (Holder<TriggerRule> holder : rules) {
             TriggerRule rule = holder.value();
             if (!rule.trigger().matches(signal)) continue;
             Identifier ruleId = HolderHelper.id(holder);

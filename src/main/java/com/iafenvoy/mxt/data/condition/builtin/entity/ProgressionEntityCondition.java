@@ -3,7 +3,7 @@ package com.iafenvoy.mxt.data.condition.builtin.entity;
 import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.data.context.condition.EntityConditionContext;
 import com.iafenvoy.mxt.data.progression.Progression;
-import com.iafenvoy.mxt.runtime.DatapackCache;
+import com.iafenvoy.mxt.registry.cache.RegistryCaches;
 import com.iafenvoy.mxt.runtime.progression.ProgressionOwners;
 import com.iafenvoy.mxt.runtime.progression.ProgressionService;
 import com.iafenvoy.mxt.util.math.CompareOperation;
@@ -45,7 +45,7 @@ public record ProgressionEntityCondition(Holder<Progression> level, CompareOpera
 
     // Both bounds come from the indexed chain, so a level of another chain satisfies neither.
     private boolean reached(Holder<Progression> current) {
-        return DatapackCache.get().progressionChains().compare(this.comparison, current, this.level);
+        return RegistryCaches.PROGRESSION_CHAIN.compare(this.comparison, current, this.level);
     }
 
     @Override

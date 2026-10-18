@@ -3,7 +3,7 @@ package com.iafenvoy.mxt.runtime.trigger;
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.data.trigger.TriggerContext;
 import com.iafenvoy.mxt.data.trigger.TriggerSignal;
-import com.iafenvoy.mxt.runtime.DatapackCache;
+import com.iafenvoy.mxt.registry.cache.RegistryCaches;
 import com.iafenvoy.mxt.runtime.trigger.TriggerSubscription.State;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Entity;
@@ -119,7 +119,7 @@ public final class TriggerDispatcher {
     public static boolean hasListener(Identifier signal) {
         LinkedHashMap<UUID, LinkedHashMap<String, TriggerSubscription>> byOwner = BY_SIGNAL.get(signal);
         if (byOwner != null && !byOwner.isEmpty()) return true;
-        return !DatapackCache.get().triggerRules(signal).isEmpty();
+        return !RegistryCaches.TRIGGER_RULES_BY_SIGNAL.get(signal).isEmpty();
     }
 
     // Every signal at least one owner listens to, in a stable order, for command completion.

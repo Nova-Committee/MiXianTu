@@ -4,13 +4,11 @@ import com.iafenvoy.mxt.attachment.ElementAttachment;
 import com.iafenvoy.mxt.data.cultivation.Element;
 import com.iafenvoy.mxt.data.cultivation.ElementReaction;
 import com.iafenvoy.mxt.registry.MxtAttachments;
-import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.registry.cache.RegistryCaches;
 import com.iafenvoy.mxt.util.MiscUtil;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import net.minecraft.core.Holder;
-import net.minecraft.core.Holder.Reference;
-import net.minecraft.core.RegistryAccess;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
@@ -39,18 +37,6 @@ public final class ElementReactionService {
     // on its next pass - so at most MAX_CHAIN reactions fire per body per application. Identity, not equality,
     // and per thread because a chain never crosses one.
     private static final ThreadLocal<Set<Entity>> IN_CHAIN = ThreadLocal.withInitial(() -> Collections.newSetFromMap(new IdentityHashMap<>()));
-    private static final List<Reference<ElementReaction>> ORDER_CACHE = new LinkedList<>();
-
-    public static void clear() {
-        ORDER_CACHE.clear();
-    }
-
-    public static void reload(RegistryAccess access) {
-        clear();
-        access.lookupOrThrow(MxtResourceKeys.ELEMENT_REACTION).listElements()
-                .sorted(Comparator.comparingInt((Reference<ElementReaction> holder) -> holder.value().priority()).reversed().thenComparing(holder -> holder.key().identifier()))
-                .forEach(ORDER_CACHE::add);
-    }
 
     // A negative amount takes away. Zero and non-finite are silent no-ops: applying an element is not a
     // transaction that can fail.
@@ -97,7 +83,7 @@ public final class ElementReactionService {
     public static Holder<ElementReaction> match(Entity entity, FormulaContext context) {
         ElementAttachment attachment = entity.getExistingData(MxtAttachments.ELEMENT_ATTACHMENT).orElse(null);
         if (attachment == null || attachment.isEmpty()) return null;
-        return ORDER_CACHE.stream()
+        return RegistryCaches.ELEMENT_REACTION_ORDER.stream()
                 .filter(holder -> satisfied(holder.value(), attachment, entity, context))
                 .findFirst().orElse(null);
     }

@@ -6,7 +6,7 @@ import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.data.context.condition.EntityConditionContext;
 import com.iafenvoy.mxt.data.cultivation.RealmStage;
 import com.iafenvoy.mxt.registry.MxtAttachments;
-import com.iafenvoy.mxt.runtime.DatapackCache;
+import com.iafenvoy.mxt.registry.cache.RegistryCaches;
 import com.iafenvoy.mxt.util.codec.OptionalCodecs;
 import com.iafenvoy.mxt.util.math.CompareOperation;
 import com.mojang.serialization.MapCodec;
@@ -40,7 +40,7 @@ public record RealmEntityCondition(Holder<RealmStage> realm, CompareOperation co
         // A body with no record on this chain stands on its entry stage, which is what makes a mortal an entry.
         if (current == null) current = aura.value().firstRealm().orElse(null);
         // Both sides are ranks inside that one walked chain, so a stage of another aura satisfies nothing.
-        boolean inRealm = current != null && DatapackCache.get().realmChains().compare(this.comparison, current, this.realm);
+        boolean inRealm = current != null && RegistryCaches.REALM_CHAIN.compare(this.comparison, current, this.realm);
         if (!inRealm || this.minMinorStage.isEmpty()) return inRealm;
         // -1 for a realm the body never entered, so a threshold is never met by a realm it has not stood in.
         return entity.getExistingData(MxtAttachments.MINOR_STAGES)
