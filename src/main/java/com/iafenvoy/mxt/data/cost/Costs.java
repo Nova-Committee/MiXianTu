@@ -2,44 +2,29 @@ package com.iafenvoy.mxt.data.cost;
 
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.cost.builtin.AuraCost;
-import com.iafenvoy.mxt.data.cost.builtin.ResourceCost;
 import com.iafenvoy.mxt.data.cost.context.CostContext;
-import com.iafenvoy.mxt.data.resource.Resource;
-import com.iafenvoy.mxt.util.HolderHelper;
 import com.mojang.serialization.DataResult;
 import net.minecraft.core.Holder;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.*;
+import java.util.List;
+import java.util.Map;
 
 /**
- * Load-time validation shared by every costs array.
+ * The two helpers every costs array shares: the check for the fields that are aura costs by definition, and the plain
+ * price of an array.
+ * <p>
+ * A repeated target is not a load error. A payment sums the entries that reach one store, charges it once and reports
+ * the repeat, so the array still behaves sensibly; refusing the whole definition over it would only pre-empt the
+ * answer that already exists at run time.
  */
 public final class Costs {
     private Costs() {
     }
 
     /**
-     * Two entries that name the same store are rejected: the order they are written in is invisible at runtime, so
-     * a duplicate can only be a mistake. Entries that reach the same resource through different routes (an aura and
-     * the resource it is counted in) are not duplicates - the draft adds them up, which is the one answer that does
-     * not depend on order.
-     */
-    public static DataResult<List<Cost>> validate(List<Cost> costs) {
-        Set<Holder<Resource>> resources = new HashSet<>();
-        Set<Holder<Aura>> auras = new HashSet<>();
-        for (Cost cost : costs) {
-            if (cost instanceof ResourceCost resource && !resources.add(resource.resource()))
-                return DataResult.error(() -> "Duplicate resource cost " + HolderHelper.id(resource.resource()));
-            if (cost instanceof AuraCost aura && !auras.add(aura.aura()))
-                return DataResult.error(() -> "Duplicate aura cost " + HolderHelper.id(aura.aura()));
-        }
-        return DataResult.success(costs);
-    }
-
-    /**
-     * Load-time check for the fields that are aura costs by definition ({@code cultivation.aura_costs},
-     * spirit-crafting recipes): a resource, item or script entry there could never be paid by the store the field
+     * Load-time check for the fields that are aura costs by definition (a spirit crafting recipe's {@code aura},
+     * {@code spirit_herb.costs}): a resource, item or script entry there could never be paid by the store the field
      * charges, so it is refused instead of quietly never crafting.
      */
     public static DataResult<List<Cost>> validateAuras(List<Cost> costs) {
@@ -49,17 +34,18 @@ public final class Costs {
     }
 
     /**
-     * The aura amounts a costs array would take, loaded only - no availability check. For the callers that pay a
-     * pool or a store by hand (a per-tick cultivation settlement that holds the chunk store rather than a level),
-     * and for the shared-pool allocation, which needs the amounts before it can scale them.
+     * The aura amounts the {@code mxt:aura} entries of a costs array would take, priced only - no store is asked. For
+     * the callers that pay a pool or a store by hand (a per-tick cultivation settlement that holds the chunk store
+     * rather than a level), and for the shared-pool allocation, which needs the amounts before it can scale them.
+     * Entries of another type are not this question and are left out, so one array can answer both.
      * <p>
-     * Null means the array is not a set of aura amounts: an entry that is not an {@code mxt:aura} entry, or one that
-     * cannot be loaded. The whole array loads through one pass, so entries that name the same aura add up.
+     * Null means an aura entry could not be priced.
      */
     public static @Nullable Map<Holder<Aura>, Double> auras(List<Cost> costs, CostContext context) {
-        if (!costs.stream().allMatch(cost -> cost instanceof AuraCost)) return null;
+        List<Cost> auras = costs.stream().filter(cost -> cost instanceof AuraCost).toList();
+        if (auras.isEmpty()) return Map.of();
         CostPayment payment = CostPayment.of(context.withAuraTarget(CostContext.AuraTarget.POOL));
-        if (payment.loadAll(costs).isPresent()) return null;
-        return new LinkedHashMap<>(payment.auras());
+        if (payment.price(auras).isPresent()) return null;
+        return payment.auras();
     }
 }

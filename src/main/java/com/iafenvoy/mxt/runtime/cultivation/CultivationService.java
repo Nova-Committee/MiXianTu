@@ -123,12 +123,13 @@ public final class CultivationService {
         if (!conditionsMet.getAsBoolean()) return BreakthroughResult.rejected(Failures.CONDITIONS, null);
         CostContext costContext = CostContext.of(entity, context, CostOrigin.BREAKTHROUGH);
         CostPayment plan = CostPayment.of(costContext);
-        Optional<Failure> refusal = plan.loadAndTest(target.breakthroughCosts());
+        Optional<Failure> refusal = plan.price(target.breakthroughCosts());
         if (refusal.isPresent()) return BreakthroughResult.rejected(refusal.get(), null);
         Pre event = new Pre(spirit, resources, stage, context, minimum, plan.resources());
         if (NeoForge.EVENT_BUS.post(event).isCanceled()) return BreakthroughResult.rejected(Failures.CANCELLED, null);
-        plan.reprice(event.getCosts());
-        CostPayment.PaymentResult payment = plan.commit();
+        Optional<Failure> edited = plan.replaceResourceAmounts(event.getCosts());
+        if (edited.isPresent()) return BreakthroughResult.rejected(edited.get(), null);
+        CostPayment.PaymentResult payment = plan.pay();
         if (!payment.isSuccess()) return BreakthroughResult.rejected(payment.failure(), payment.failedResource());
         spirit.setRealmStage(stage);
         spirit.setCultivationProgress(aura, 0.0D);

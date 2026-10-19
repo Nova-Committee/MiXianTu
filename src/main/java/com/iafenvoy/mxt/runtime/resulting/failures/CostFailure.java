@@ -32,6 +32,14 @@ public final class CostFailure {
      * A script cost refused the payment.
      */
     public static final Failure SCRIPT_REJECTED = SimpleFailure.of("script_rejected");
+    /**
+     * The bill was already paid, so it can no longer be priced into, edited or paid again.
+     */
+    public static final Failure BILL_CLOSED = SimpleFailure.of("bill_closed");
+    /**
+     * A payment reached one of its own stores again while it was writing it.
+     */
+    public static final Failure REENTRANT = SimpleFailure.of("reentrant");
 
     private CostFailure() {
     }

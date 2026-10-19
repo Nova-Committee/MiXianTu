@@ -71,8 +71,8 @@ public record Ability(AbilityType type, List<Cost> costs,
                 value -> value.name().toLowerCase(Locale.ROOT));
     }
 
-    // Actions and composite ability types may refer to abilities through holders: keep diagnostic output shallow
-    // so logging a cyclic datapack definition cannot recurse through its holder.
+    // Actions refer to abilities through holders: keep diagnostic output shallow so logging a cyclic datapack
+    // definition cannot recurse through its holder.
     @Override
     public @NonNull String toString() {
         return "Ability[type=" + this.type.getClass().getSimpleName() + ", costs=" + this.costs.size()

@@ -306,7 +306,7 @@ public final class AuraDistributionService {
     }
 
     private static Map<Holder<Aura>, Double> evaluateCosts(Cultivation action, FormulaContext context) {
-        return Costs.auras(action.auraCosts(), CostContext.of(null, context, CostOrigin.CULTIVATION));
+        return Costs.auras(action.costs(), CostContext.of(null, context, CostOrigin.CULTIVATION));
     }
 
     private record Slot(long chunk, int sectionY) {

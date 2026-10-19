@@ -12,19 +12,20 @@ import com.iafenvoy.mxt.data.cost.Cost;
 import com.iafenvoy.mxt.data.cost.CostPayment;
 import com.iafenvoy.mxt.data.cost.context.CostContext;
 import com.iafenvoy.mxt.data.cost.context.CostOrigin;
-import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtEntityTypes;
 import com.iafenvoy.mxt.runtime.resulting.Failure;
 import com.iafenvoy.mxt.runtime.resulting.Failures;
 import com.iafenvoy.mxt.runtime.resulting.ResultWithData;
 import com.iafenvoy.mxt.runtime.resulting.failures.FlightFailure;
+import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
 import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.Unit;
@@ -202,16 +203,17 @@ public final class FlightService {
 
     // The fuel is bought out of the mount's own artifact before the rider's pool: the stack that became this
     // vehicle carries the aura it burns, so what it holds is spent first and only the rest falls back on the
-    // pilot. The whole price is planned first, the artifact's share is taken out of that plan, and the shared
-    // transaction pays what is left - it rolls its own writes back, so the artifact's share is handed back when
-    // the remainder cannot be paid.
+    // pilot. The whole price is planned first, the artifact's share is taken out of that plan, and the payment
+    // pays what is left - the artifact's share is handed back when the remainder cannot be paid.
     private static boolean payFuel(LivingEntity holder, MountVehicle vehicle, Level level, List<Cost> costs,
                                    FormulaContext context) {
         CostContext costContext = CostContext.of(holder, context, CostOrigin.ARTIFACT_FLIGHT);
         CostPayment planning = CostPayment.of(costContext);
-        if (planning.loadAll(costs).isPresent()) return false;
+        if (planning.price(costs).isPresent()) return false;
         List<Fuel> burned = burn(vehicle, level, planning, context);
-        CostPayment.PaymentResult payment = planning.commit();
+        // The bill could not be reduced to what the pilot owes, so this tick has no answer it can trust.
+        if (burned == null) return false;
+        CostPayment.PaymentResult payment = planning.pay();
         if (payment.isSuccess()) return true;
         refund(vehicle, level, burned, context);
         return false;
@@ -221,17 +223,21 @@ public final class FlightService {
     private record Fuel(Holder<Aura> aura, double amount) {
     }
 
-    private static List<Fuel> burn(MountVehicle vehicle, Level level, CostPayment planning,
-                                   FormulaContext context) {
+    // Null when the remainder could not be written back into the bill, which is the one case the caller must not pay.
+    private static @Nullable List<Fuel> burn(MountVehicle vehicle, Level level, CostPayment planning,
+                                             FormulaContext context) {
         ItemStack stack = vehicle.visual();
         if (stack.isEmpty()) return List.of();
         Provider access = level.registryAccess();
         List<Fuel> burned = new ArrayList<>();
-        for (Map.Entry<Holder<Resource>, Double> entry : new ArrayList<>(planning.account().entrySet())) {
-            double left = entry.getValue();
+        // What the artifact covers is subtracted from the bill itself: the payment is the only place an amount lives,
+        // so there is nothing to write back into a table when a resource turns out to be covered.
+        Map<Identifier, Double> remaining = new LinkedHashMap<>();
+        planning.resourceAmounts().forEach((resource, amount) -> {
+            double left = amount;
             // A price written as a resource still names the aura an artifact can pay it in, so the store is
             // asked which of its auras are counted in that resource.
-            for (Holder<Aura> aura : ArtifactService.aurasFor(stack, entry.getKey())) {
+            for (Holder<Aura> aura : ArtifactService.aurasFor(stack, resource)) {
                 if (left <= 0.0D) break;
                 double capacity = ArtifactService.capacity(access, stack, aura, 0.0D, context);
                 if (capacity <= 0.0D) continue;
@@ -240,8 +246,11 @@ public final class FlightService {
                 left -= taken;
                 burned.add(new Fuel(aura, taken));
             }
-            if (left <= 0.0D) planning.account().remove(entry.getKey());
-            else planning.account().put(entry.getKey(), left);
+            if (left > 0.0D) remaining.put(HolderHelper.id(resource), left);
+        });
+        if (planning.replaceResourceAmounts(remaining).isPresent()) {
+            refund(vehicle, level, burned, context);
+            return null;
         }
         return burned;
     }

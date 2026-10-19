@@ -4,7 +4,6 @@ import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.attachment.AbilityAttachment;
 import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.data.ability.*;
-import com.iafenvoy.mxt.data.ability.type.CompositeAbilityType;
 import com.iafenvoy.mxt.data.ability.type.WordAbilityType;
 import com.iafenvoy.mxt.data.ability.type.WordAbilityType.WordEffect;
 import com.iafenvoy.mxt.data.cost.CostPayment;
@@ -39,12 +38,14 @@ import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.common.NeoForge;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.*;
+import java.util.Map;
+import java.util.Optional;
+import java.util.OptionalDouble;
 
 /**
  * Server-side ability cost and cooldown transaction: actions are committed only after this service approves
- * them, as one server-thread operation. World actions are deliberately never rolled back, which is why every
- * child of a composite is validated first and paid before any of them runs.
+ * them, as one server-thread operation. World actions are deliberately never rolled back, which is why the price
+ * is checked before any of them runs.
  *
  * <p>Everything here takes the ability as its registry holder: however it was granted - a book, a command, a
  * script or a carried artifact - it takes the same path, and the holder's id is what the grant ledger and the
@@ -86,12 +87,14 @@ public final class AbilityService {
             }
             chargeBefore = available;
         }
-        // One payment for the whole array: loading it evaluates every entry and merges the entries of a type into
-        // that type's draft, testing it answers whether the payer can afford all of it, and nothing is written. The
-        // same payment is what the commit spends, so "can this be paid" has one implementation.
+        // One payment for the whole array: pricing it binds every entry to a fixed amount and writes nothing, and the
+        // check right after asks every store whether the whole bill can be paid. The same payment is what the commit
+        // spends, so "can this be paid" has one implementation.
         CostPayment cost = payment != null ? payment
                 : CostPayment.of(CostContext.of(payer, context, CostOrigin.ABILITY));
-        Optional<Failure> refusal = cost.loadAndTest(definition.costs());
+        Optional<Failure> refusal = cost.price(definition.costs());
+        if (refusal.isPresent()) return PrepareResult.rejected(refusal.get(), cost.failedResource());
+        refusal = cost.test();
         if (refusal.isPresent()) return PrepareResult.rejected(refusal.get(), cost.failedResource());
         return PrepareResult.prepared(new PreparedUse(ability, cost, Math.round(castTime), Math.round(cooldown), channelInterval, charges.isPresent(), chargeBefore));
     }
@@ -99,7 +102,7 @@ public final class AbilityService {
     private static CommitResult commit(PreparedUse use, AbilityAttachment abilities, long gameTime) {
         if (AbilityStorage.onCooldown(abilities, use.ability(), gameTime))
             return CommitResult.rejected(Failures.COOLDOWN, null);
-        CostPayment.PaymentResult payment = use.payment().commit();
+        CostPayment.PaymentResult payment = use.payment().pay();
         if (!payment.isSuccess()) return CommitResult.rejected(payment.failure(), payment.failedResource());
         applyAbilityState(use, abilities, gameTime);
         return CommitResult.committed(payment.resources());
@@ -164,8 +167,6 @@ public final class AbilityService {
         }
         if (!validateWord(definition, actor, context))
             return UseResult.rejected(AbilityFailure.PERMISSION_DENIED, null);
-        if (definition.type() instanceof CompositeAbilityType)
-            return useComposite(ability, actor, abilities, resources, gameTime, context, requiresGrant, origin);
         PrepareResult prepared = prepare(ability, abilities, gameTime, context, actor instanceof LivingEntity living ? living : null, requiresGrant, null);
         if (!prepared.isSuccess()) return UseResult.rejected(prepared.failure(), prepared.failedResource());
         if (prepared.getData().castTimeTicks() > 0L) {
@@ -211,7 +212,8 @@ public final class AbilityService {
         Pre resourceEvent = new Pre(resources, preparedUse.payment().resources());
         if (NeoForge.EVENT_BUS.post(resourceEvent).isCanceled()) return UseResult.rejected(Failures.CANCELLED, null);
         // The event owns the amounts from here on: the payment being made is the one it handed back.
-        preparedUse.payment().reprice(resourceEvent.getAmounts());
+        Optional<Failure> edited = preparedUse.payment().replaceResourceAmounts(resourceEvent.getAmounts());
+        if (edited.isPresent()) return UseResult.rejected(edited.get(), null);
         CommitResult committed = commit(preparedUse, abilities, gameTime);
         if (!committed.isSuccess()) return UseResult.rejected(committed.failure(), committed.failedResource());
         if (definition.type() instanceof ChannelSource) {
@@ -247,9 +249,9 @@ public final class AbilityService {
         double cooldown = cooldownOf(ability, formula);
         if (!Double.isFinite(cooldown) || cooldown < 0.0D) return Result.failure(Failures.INVALID_FORMULA, null);
         CostPayment plan = CostPayment.of(CostContext.of(holder, formula, CostOrigin.ABILITY));
-        Optional<Failure> refusal = plan.loadAndTest(definition.costs());
+        Optional<Failure> refusal = plan.price(definition.costs());
         if (refusal.isPresent()) return Result.failure(refusal.get(), null);
-        CostPayment.PaymentResult payment = plan.commit();
+        CostPayment.PaymentResult payment = plan.pay();
         if (!payment.isSuccess()) return Result.failure(payment.failure(), payment.failedResource());
         if (cooldown > 0.0D)
             AbilityStorage.startCooldown(abilities, ability, cooldown, gameTime);
@@ -294,18 +296,23 @@ public final class AbilityService {
         }
         CostContext upkeepContext = CostContext.of(actor instanceof LivingEntity living ? living : null, context, CostOrigin.CHANNEL_UPKEEP);
         CostPayment upkeep = CostPayment.of(upkeepContext);
-        Optional<Failure> unpaid = upkeep.loadAndTest(channel.upkeepCosts());
+        Optional<Failure> unpaid = upkeep.price(channel.upkeepCosts());
         if (unpaid.isPresent()) {
             stopChannel(abilities);
             return ChannelResult.stopped(unpaid.get());
         }
+        // The event owns the amounts from here on: the pulse being paid is the one it handed back.
         Pre resourceEvent = new Pre(resources, upkeep.resources());
         if (NeoForge.EVENT_BUS.post(resourceEvent).isCanceled()) {
             stopChannel(abilities);
             return ChannelResult.stopped(Failures.CANCELLED);
         }
-        upkeep.reprice(resourceEvent.getAmounts());
-        CostPayment.PaymentResult payment = upkeep.commit();
+        Optional<Failure> edited = upkeep.replaceResourceAmounts(resourceEvent.getAmounts());
+        if (edited.isPresent()) {
+            stopChannel(abilities);
+            return ChannelResult.stopped(edited.get());
+        }
+        CostPayment.PaymentResult payment = upkeep.pay();
         if (!payment.isSuccess()) {
             stopChannel(abilities);
             return ChannelResult.stopped(payment.failure());
@@ -367,85 +374,6 @@ public final class AbilityService {
         }
     }
 
-    // Every required child is validated against detached drafts and all costs are committed before any action
-    // runs, because world actions are deliberately never rolled back.
-    private static UseResult useComposite(Holder<Ability> composite, Entity actor,
-                                          AbilityAttachment abilities, ResourceHolderAttachment resources, long gameTime,
-                                          FormulaContext context, boolean requiresGrant, @Nullable Vec3 origin) {
-        if (!(composite.value().type() instanceof CompositeAbilityType(
-                List<Holder<Ability>> abilities1, boolean allRequired
-        )))
-            return UseResult.rejected(Failures.INVALID_FORMULA, null);
-        if (!allRequired) {
-            if (abilities1.isEmpty()) return UseResult.rejected(AbilityFailure.NOT_GRANTED, null);
-            return use(abilities1.getFirst(), actor, abilities, resources, gameTime, context, requiresGrant, origin);
-        }
-
-        LivingEntity payer = actor instanceof LivingEntity value ? value : null;
-        AbilityAttachment abilityDraft = abilities.copy();
-        List<CompositeStep> steps = new LinkedList<>();
-        LinkedHashMap<Identifier, Double> paid = new LinkedHashMap<>();
-        for (Holder<Ability> childHolder : abilities1) {
-            Ability child = childHolder.value();
-            FormulaContext childContext = context;
-            if (actor instanceof LivingEntity living) {
-                childContext = withAbilityScaling(living, childHolder, FormulaContexts.forEntity(living, context));
-                if (!child.elementAffinity().isEmpty() && childContext.value(DamageCalculationService.ELEMENT_MODIFIER) <= 0.0D)
-                    return UseResult.rejected(AbilityFailure.ELEMENT_AFFINITY, null);
-            }
-            if (NeoForge.EVENT_BUS.post(new AbilityUseEvent.Pre(actor, childHolder, childContext)).isCanceled())
-                return UseResult.rejected(Failures.CANCELLED, null);
-            if (!child.condition().test(actor, childContext))
-                return UseResult.rejected(Failures.CONDITION_FAILED, null);
-            if (!validateWord(child, actor, childContext))
-                return UseResult.rejected(AbilityFailure.PERMISSION_DENIED, null);
-            // Each child gets its own payment, in its own formula context, because the event below owns that child's
-            // amounts and because a composite is one boundary rather than one payment.
-            CostPayment payment = CostPayment.of(CostContext.of(payer, childContext, CostOrigin.ABILITY));
-            PrepareResult prepared = prepare(childHolder, abilityDraft, gameTime, childContext,
-                    payer, requiresGrant, payment);
-            if (!prepared.isSuccess()) return UseResult.rejected(prepared.failure(), prepared.failedResource());
-            if (prepared.getData().castTimeTicks() > 0L)
-                return UseResult.rejected(Failures.INVALID_FORMULA, null);
-            // A child that reaches nobody refuses the whole composite, before any child has been paid for.
-            Failure unreached = applierFailure(child, actor, childContext, origin);
-            if (unreached != null) return UseResult.rejected(unreached, null);
-            Pre resourceEvent = new Pre(resources, prepared.getData().payment().resources());
-            if (NeoForge.EVENT_BUS.post(resourceEvent).isCanceled())
-                return UseResult.rejected(Failures.CANCELLED, null);
-            prepared.getData().payment().reprice(resourceEvent.getAmounts());
-            applyAbilityState(prepared.getData(), abilityDraft, gameTime);
-            resourceEvent.getAmounts().forEach((id, amount) -> paid.merge(id, amount, Double::sum));
-            steps.add(new CompositeStep(childHolder, prepared.getData(), childContext, Map.copyOf(resourceEvent.getAmounts())));
-        }
-        // One boundary for every child: a child that refuses - whether its store is short or its items do not fit -
-        // puts back what the earlier ones took, and no child's cooldown or charges is written before the whole group
-        // is paid for.
-        List<CostPayment> payments = new ArrayList<>();
-        for (CompositeStep step : steps) {
-            if (AbilityStorage.onCooldown(abilities, step.use().ability(), gameTime))
-                return UseResult.rejected(Failures.COOLDOWN, null);
-            payments.add(step.use().payment());
-        }
-        CostPayment.PaymentResult payment = CostPayment.payAll(payments);
-        if (!payment.isSuccess()) return UseResult.rejected(payment.failure(), payment.failedResource());
-        for (CompositeStep step : steps) applyAbilityState(step.use(), abilities, gameTime);
-        for (CompositeStep step : steps) {
-            if (step.ability().value().type() instanceof ChannelSource) {
-                abilities.setChannelledAbility(step.use().ability());
-                AbilityStorage.value(abilities, step.use().ability(), ChannelPulse.class, new ChannelPulse(0.0D), gameTime)
-                        .set(Math.addExact(gameTime, step.use().channelIntervalTicks()));
-            } else {
-                executeEffects(step.ability().value(), actor, step.context(), origin);
-            }
-            NeoForge.EVENT_BUS.post(new Post(resources, step.amounts()));
-            NeoForge.EVENT_BUS.post(new AbilityUseEvent.Post(actor, step.ability(), step.context(), step.amounts()));
-            if (actor instanceof ServerPlayer serverPlayer)
-                MxtCriteriaTriggers.ABILITY.get().trigger(serverPlayer, HolderHelper.id(step.ability()));
-        }
-        return UseResult.committed(paid);
-    }
-
     private static void applyAbilityState(PreparedUse use, AbilityAttachment abilities, long gameTime) {
         Holder<Ability> ability = use.ability();
         AbilityStorage.startCooldown(abilities, ability, use.cooldownTicks(), gameTime);
@@ -467,10 +395,6 @@ public final class AbilityService {
             scaled = scaled.with(DamageCalculationService.ELEMENT_MODIFIER, modifier);
         }
         return scaled.with(DamageCalculationService.DAMAGE_MULTIPLIER, ProgressionDamageMultiplier.of(actor, ability));
-    }
-
-    private record CompositeStep(Holder<Ability> ability, PreparedUse use, FormulaContext context,
-                                 Map<Identifier, Double> amounts) {
     }
 
     public record PreparedUse(Holder<Ability> ability, CostPayment payment, long castTimeTicks,

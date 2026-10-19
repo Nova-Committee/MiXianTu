@@ -1,20 +1,18 @@
 package com.iafenvoy.mxt.data.cost.builtin;
 
 import com.iafenvoy.mxt.data.cost.Cost;
-import com.iafenvoy.mxt.data.cost.CostPayment;
+import com.iafenvoy.mxt.data.cost.CostTransaction;
 import com.iafenvoy.mxt.data.cost.context.CostContext;
 import com.iafenvoy.mxt.data.resource.Resource;
-import com.iafenvoy.mxt.runtime.resulting.Failure;
+import com.iafenvoy.mxt.runtime.resulting.ResultWithData;
+import com.iafenvoy.mxt.runtime.resulting.failures.CostFailure;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
 
-import java.util.Optional;
-
 /**
- * Takes an amount of one datapack resource from the payer's own attachment; see {@code ResourceCostDraft} for how
- * the amount is evaluated and when it is written.
+ * Takes an amount of one datapack resource from the payer's own account; the write itself is {@link ResourceChannel}.
  */
 public record ResourceCost(Holder<Resource> resource, NumberProvider amount) implements Cost {
     public static final MapCodec<ResourceCost> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
@@ -23,13 +21,12 @@ public record ResourceCost(Holder<Resource> resource, NumberProvider amount) imp
     ).apply(i, ResourceCost::new));
 
     @Override
-    public Optional<Failure> test(CostContext context) {
-        return CostPayment.test(this, context);
-    }
-
-    @Override
-    public Optional<Failure> commit(CostContext context) {
-        return CostPayment.commit(this, context);
+    public ResultWithData<Transaction> prepare(CostContext context) {
+        double value = ResourceChannel.evaluate(context, this.resource(), this.amount());
+        if (value <= 0.0D) return ResultWithData.failure(null, CostFailure.INVALID_AMOUNT);
+        CostTransaction transaction = ResourceChannel.transaction(context, this.resource(), value);
+        return transaction == null ? ResultWithData.failure(null, CostFailure.NO_CHANNEL)
+                : ResultWithData.success(transaction);
     }
 
     @Override

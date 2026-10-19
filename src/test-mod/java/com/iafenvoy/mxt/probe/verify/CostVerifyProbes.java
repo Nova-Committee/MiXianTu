@@ -103,6 +103,45 @@ public final class CostVerifyProbes {
         if (!onPlayer.isSuccess()) return "a payer-paid resource cost was refused: " + onPlayer.failure();
         if (!close(left, 8.0D)) return "a payer-paid 2-point cost left " + left + " instead of 8";
 
+        // The bill is the amount from here on: replacing the resource fee replaces what is charged, and a fee the edit
+        // does not name is not charged at all, even though the definition named it.
+        account.set(probe, 100.0D, 0.0D, 10_000.0D, -1L, "probe");
+        account.set(qi, 50.0D, 0.0D, 100.0D, -1L, "probe");
+        CostPayment edited = CostPayment.of(costs);
+        if (edited.price(decodeCosts(registries, "[{\"id\": \"mxt_test:trigger_probe\", \"amount\": 5}]")).isPresent())
+            return "a one-entry bill could not be priced: " + edited.failure();
+        if (edited.replaceResourceAmounts(Map.of(ProbeDefinitions.QI, 3.0D)).isPresent())
+            return "replacing the resource fee of a bill failed: " + edited.failure();
+        CostPayment.PaymentResult swapped = edited.pay();
+        if (!swapped.isSuccess()) return "an edited bill was refused: " + swapped.failure();
+        if (!close(account.get(probe), 100.0D))
+            return "a replaced fee still took " + (100.0D - account.get(probe)) + " of the value it no longer names";
+        if (!close(account.get(qi), 47.0D))
+            return "a fee edited to 3 of the other value left " + account.get(qi) + " instead of 47";
+
+        // Scaling replaces the amount and paying twice repeats the first answer: the second call must not charge again.
+        CostPayment scaled = CostPayment.of(costs);
+        if (scaled.price(decodeCosts(registries, "[{\"id\": \"mxt_test:trigger_probe\", \"amount\": 4}]")).isPresent())
+            return "a bill about to be scaled could not be priced: " + scaled.failure();
+        if (scaled.scale(transaction -> true, 0.5D).isPresent()) return "scaling a bill failed: " + scaled.failure();
+        CostPayment.PaymentResult half = scaled.pay();
+        CostPayment.PaymentResult again = scaled.pay();
+        if (!half.isSuccess() || again != half) return "paying the same bill twice did not repeat the first answer";
+        if (!close(account.get(probe), 98.0D))
+            return "a 4-point fee scaled to a half left " + account.get(probe) + " instead of 98";
+
+        // An edit to an empty table removes the fee without re-running the formula that priced it.
+        account.set(probe, 100.0D, 0.0D, 10_000.0D, -1L, "probe");
+        CostPayment cleared = CostPayment.of(costs);
+        if (cleared.price(decodeCosts(registries, "[{\"id\": \"mxt_test:trigger_probe\", \"amount\": 7}]")).isPresent())
+            return "a bill about to be cleared could not be priced: " + cleared.failure();
+        if (cleared.replaceResourceAmounts(Map.of()).isPresent())
+            return "clearing a bill's resource fee failed: " + cleared.failure();
+        CostPayment.PaymentResult nothing = cleared.pay();
+        if (!nothing.isSuccess()) return "a cleared bill was refused: " + nothing.failure();
+        if (!close(account.get(probe), 100.0D))
+            return "a cleared fee still took " + (100.0D - account.get(probe));
+
         // The two aura-only fields read the old map and the new list, and refuse anything that is not an aura:
         // a resource entry there could never be paid by the pool or the store the field charges.
         RegistryOps<JsonElement> ops = RegistryOps.create(JsonOps.INSTANCE, registries);

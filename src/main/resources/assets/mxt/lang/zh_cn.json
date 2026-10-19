@@ -634,6 +634,8 @@
   "failure.mxt.common.missing_item": "缺少所需物品",
   "failure.mxt.common.no_channel": "没有可用的支付方式",
   "failure.mxt.common.no_payer": "没有付款者",
+  "failure.mxt.common.bill_closed": "付款一旦开始就不能再改价或重付",
+  "failure.mxt.common.reentrant": "这次付款正在结算同一个存储",
   "failure.mxt.common.no_target": "没有符合条件的目标",
   "failure.mxt.common.not_applicable": "指定的技能不能作用在目标身上",
   "failure.mxt.common.not_willing": "对方不愿意",

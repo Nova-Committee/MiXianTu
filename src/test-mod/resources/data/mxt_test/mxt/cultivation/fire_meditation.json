@@ -2,9 +2,11 @@
   "tick_interval": 20,
   "start_condition": { "type": "mxt:aura_range", "aura": { "mxt_test:spirit_power": { "min": 90, "max": 100000 } } },
   "tick_condition": { "type": "mxt:aura_range", "aura": { "mxt_test:spirit_power": { "min": 90, "max": 100000 } } },
-  "costs": [{ "id": "mxt_test:spirit_power", "amount": 1 }],
+  "costs": [
+    { "id": "mxt_test:spirit_power", "amount": 1 },
+    { "type": "mxt:aura", "aura": "mxt_test:spirit_power", "amount": 1 }
+  ],
   "absorb_amount": "1 + level * 0.1",
-  "aura_costs": { "mxt_test:spirit_power": 1 },
   "aura_gains": [{ "id": "mxt_test:qi", "amount": "2 + level * 0.1" }],
   "cooldown": 0,
   "cultivate_action": { "type": "mxt:apply_effect", "effect": "minecraft:fire_resistance", "duration_ticks": 40 }

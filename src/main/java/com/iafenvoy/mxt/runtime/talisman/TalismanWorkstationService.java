@@ -106,7 +106,9 @@ public final class TalismanWorkstationService {
             TalismanDrawingRecipe recipe = holder.value();
             Component name = DefinitionText.nameOrId(recipe.talisman());
             boolean unlocked = recipe.unlockCondition().test(player, FormulaContext.of(player));
-            boolean affordable = CostPayment.of(context(player, station)).loadAndTest(costs(recipe)).isEmpty();
+            // Priced and checked without a commit: a row says whether this formula could be started right now.
+            CostPayment payment = CostPayment.of(context(player, station));
+            boolean affordable = payment.price(costs(recipe)).isEmpty() && payment.test().isEmpty();
             entries.add(new Entry(holder.id().identifier(), name, unlocked && affordable));
         }
         entries.sort(Comparator.comparing(entry -> entry.id().toString()));
@@ -133,13 +135,13 @@ public final class TalismanWorkstationService {
         List<Cost> costs = costs(recipe);
         CostContext context = context(player, paperSlot);
         CostPayment planning = CostPayment.of(context);
-        if (planning.loadAndTest(costs).isPresent()) return Optional.empty();
+        if (planning.price(costs).isPresent()) return Optional.empty();
         // Read before the payment, because the settlement needs the paper's tier and by then the slot is empty.
         ItemStack paper = firstMatching(paperSlot, paperEntry(recipe));
         if (paper.isEmpty()) return Optional.empty();
         List<Runnable> refunds = snapshotResources(context, planning);
         List<ItemStack> before = contents(paperSlot);
-        if (!planning.commit().isSuccess()) return Optional.empty();
+        if (!planning.pay().isSuccess()) return Optional.empty();
         return Optional.of(new TalismanDrawingSession(id, recipe, costs, context, paperSlot, paper,
                 charged(before, paperSlot), refunds, player.level().getGameTime()));
     }
@@ -371,9 +373,10 @@ public final class TalismanWorkstationService {
     // resources the price actually names are touched.
     private static List<Runnable> snapshotResources(CostContext context, CostPayment planning) {
         ResourceHolderAttachment target = context.resourceTarget();
-        if (target == null || planning.account().isEmpty()) return List.of();
+        Map<Holder<Resource>, Double> priced = planning.resourceAmounts();
+        if (target == null || priced.isEmpty()) return List.of();
         List<Runnable> refunds = new ArrayList<>();
-        for (Holder<Resource> resource : planning.account().keySet()) {
+        for (Holder<Resource> resource : priced.keySet()) {
             double value = target.get(resource);
             Audit audit = target.audit(resource);
             refunds.add(() -> target.set(resource, value, audit.minSnapshot(), audit.maxSnapshot(), audit.lastChangedTick(), audit.source()));

@@ -7,7 +7,10 @@ import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.aura.AuraGain;
 import com.iafenvoy.mxt.data.aura.AuraRequirement;
 import com.iafenvoy.mxt.data.condition.builtin.entity.AuraRangeEntityCondition;
+import com.iafenvoy.mxt.data.cost.Cost;
 import com.iafenvoy.mxt.data.cost.CostPayment;
+import com.iafenvoy.mxt.data.cost.CostTarget;
+import com.iafenvoy.mxt.data.cost.builtin.AuraCost;
 import com.iafenvoy.mxt.data.cost.context.CostContext;
 import com.iafenvoy.mxt.data.cost.context.CostOrigin;
 import com.iafenvoy.mxt.data.cultivation.Cultivation;
@@ -18,12 +21,9 @@ import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.resource.ResourceService;
 import com.iafenvoy.mxt.runtime.resource.ResourceService.Bounds;
-import com.iafenvoy.mxt.runtime.resource.ResourceTransactions;
-import com.iafenvoy.mxt.runtime.resource.ResourceTransactions.Evaluation;
 import com.iafenvoy.mxt.runtime.resulting.Failure;
 import com.iafenvoy.mxt.runtime.resulting.Failures;
 import com.iafenvoy.mxt.runtime.resulting.Result;
-import com.iafenvoy.mxt.runtime.resulting.ResultWithData;
 import com.iafenvoy.mxt.runtime.resulting.failures.CultivationFailure;
 import com.iafenvoy.mxt.runtime.trigger.CultivationTriggerService;
 import com.iafenvoy.mxt.runtime.world.AuraResult;
@@ -38,7 +38,6 @@ import net.minecraft.world.entity.LivingEntity;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -102,23 +101,23 @@ public final class CultivationMethodService {
         if (gameTime < spirit.nextCultivateTick()) {
             return CultivationResult.waitingResult();
         }
-        // The aura a cycle burns comes out of the ground at the cultivator, so the pool is the one channel this
-        // plan uses; the shared-pool allocation below scales the amounts before they are committed.
+        // One array, two channels: an mxt:aura entry is the ground's, taken out of the shared pool at the cultivator,
+        // and everything else is the body's, taken out of its own account. The split is by entry type, but both halves
+        // are one bill - a body cost that refused after the ground aura was taken would otherwise leave the aura spent
+        // without a settlement.
+        List<Cost> groundCosts = definition.costs().stream().filter(cost -> cost instanceof AuraCost).toList();
+        List<Cost> bodyCosts = definition.costs().stream().filter(cost -> !(cost instanceof AuraCost)).toList();
         CostContext auraContext = CostContext.pool(entity, entity.level(), entity.blockPosition(), context, CostOrigin.CULTIVATION);
-        // Whatever size is available is not asked here: this tick's share is decided below, and the commit is
-        // what checks the pool against the amount actually spent, so the entries are only loaded.
-        CostPayment auraPlan = CostPayment.of(auraContext);
-        if (auraPlan.loadAll(definition.auraCosts()).isPresent())
+        CostContext costContext = CostContext.of(entity, context, CostOrigin.CULTIVATION);
+        CostPayment bill = CostPayment.of(costContext);
+        // Whatever size is available is not asked here: this tick's share is decided below, and the payment is what
+        // checks the pool against the amount actually spent, so both halves are only priced.
+        if (bill.price(groundCosts, auraContext).isPresent() || bill.price(bodyCosts).isPresent())
             return stop(entity, spirit, action, definition, gameTime, Failures.INVALID_FORMULA);
-        Map<Holder<Aura>, Double> auraCosts = auraPlan.auras();
+        Map<Holder<Aura>, Double> auraCosts = bill.auras();
         double auraCost = auraCosts.values().stream().mapToDouble(Double::doubleValue).sum();
         if (!Double.isFinite(affinity) || affinity < 0.0D)
             return stop(entity, spirit, action, definition, gameTime, Failures.INVALID_FORMULA);
-        CostContext costContext = CostContext.of(entity, context, CostOrigin.CULTIVATION);
-        CostPayment costPlan = CostPayment.of(costContext);
-        if (costPlan.loadAndTest(definition.costs()).isPresent())
-            return stop(entity, spirit, action, definition, gameTime, Failures.INVALID_FORMULA);
-        Evaluation costs = costPlan.evaluation();
         Map<Holder<Aura>, Double> gains;
         try {
             gains = evaluateGains(definition.auraGains(), context);
@@ -132,24 +131,18 @@ public final class CultivationMethodService {
             if (allocationFactor <= 0.0D && MxtServerConfig.INSTANCE.cultivation.forbidWithoutEligibleAura.getValue())
                 return stop(entity, spirit, action, definition, gameTime, CultivationFailure.INSUFFICIENT_AURA);
         }
-        // The prepass bounds what this tick may take from the shared pool; the plan is what actually pays it.
-        double share = allocationFactor;
-        auraPlan.auras().replaceAll((element, amount) -> amount * share);
+        // The prepass bounds what this tick may take from the shared pool, and the bill is what replaces the amounts:
+        // the pool half is scaled to this tick's share, nothing is written to a side table.
+        if (bill.scale(transaction -> transaction.target() instanceof CostTarget.AuraStore, allocationFactor).isPresent())
+            return stop(entity, spirit, action, definition, gameTime, Failures.INVALID_FORMULA);
         double speed = aura.cultivationSpeed() * allocationFactor;
         gains.replaceAll((id, amount) -> amount * speed);
         if (!Double.isFinite(speed) || speed < 0.0D)
             return stop(entity, spirit, action, definition, gameTime, Failures.INVALID_FORMULA);
-        ResultWithData<Map<Identifier, Double>> preview = ResourceTransactions.tryConsume(copyOf(resources), costs);
-        if (preview.isFailure())
-            return CultivationResult.rejected(Failures.INSUFFICIENT_RESOURCE, preview.failedResource());
         if (!canApplyGains(entity, copyOf(resources), gains, context))
             return stop(entity, spirit, action, definition, gameTime, Failures.INVALID_FORMULA);
-        // Both payments are one boundary: a body cost that refuses after the ground aura was taken would otherwise
-        // leave the aura spent without a settlement.
-        List<CostPayment> payments = new ArrayList<>();
-        if (!auraPlan.auras().isEmpty()) payments.add(auraPlan);
-        payments.add(costPlan);
-        CostPayment.PaymentResult payment = CostPayment.payAll(payments);
+        // The whole bill is one boundary: every fee is asked before any of them is taken.
+        CostPayment.PaymentResult payment = bill.pay();
         if (!payment.isSuccess()) return CultivationResult.rejected(payment.failure(), payment.failedResource());
         applyGains(entity, resources, gains, context);
         spirit.scheduleCultivateTick(Math.addExact(gameTime, definition.tickInterval()));

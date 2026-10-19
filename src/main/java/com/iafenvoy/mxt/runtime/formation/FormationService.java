@@ -109,7 +109,7 @@ public final class FormationService {
             // Whatever the bill names is charged in the value it is measured in, and only loaded: the caller asks
             // what the owner can afford of the remainder. An item charge has no channel here, so it refuses.
             CostPayment bill = CostPayment.of(context.withAuraTarget(CostContext.AuraTarget.VALUE));
-            if (bill.loadAll(definition.maintenanceCosts()).isPresent() || bill.beyondResources()) return null;
+            if (bill.price(definition.maintenanceCosts()).isPresent() || bill.beyondResources()) return null;
             Map<Identifier, Double> cost = bill.resources();
             Map<Identifier, Holder<Aura>> byValue = new LinkedHashMap<>();
             for (Holder<Aura> aura : supplied.keySet())

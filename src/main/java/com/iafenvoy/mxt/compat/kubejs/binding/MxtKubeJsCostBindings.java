@@ -8,11 +8,14 @@ import com.iafenvoy.mxt.compat.kubejs.callback.TriConsumer;
 import com.iafenvoy.mxt.compat.kubejs.callback.TriPredicate;
 import com.iafenvoy.mxt.compat.kubejs.codec.MxtKubeJsDataCodec;
 import com.iafenvoy.mxt.data.cost.Cost;
+import com.iafenvoy.mxt.data.cost.CostPayment;
 import com.iafenvoy.mxt.data.cost.context.CostContext;
 import com.iafenvoy.mxt.data.cost.context.CostOrigin;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import dev.latvian.mods.kubejs.typings.Info;
 import net.minecraft.world.entity.player.Player;
+
+import java.util.List;
 
 /**
  * Complete data-driven cost operations exposed as {@code MxtCosts}.
@@ -27,7 +30,8 @@ public final class MxtKubeJsCostBindings {
     @Info("Checks one complete MXT cost definition without changing player state.")
     public boolean check(Player player, JsonElement definition) {
         Cost cost = MxtKubeJsDataCodec.decodeCached(Cost.CODEC, definition, player.level().registryAccess());
-        return cost.test(CostContext.of(player, CostOrigin.SCRIPT)).isEmpty();
+        CostPayment payment = CostPayment.of(CostContext.of(player, CostOrigin.SCRIPT));
+        return payment.price(List.of(cost)).isEmpty() && payment.test().isEmpty();
     }
 
     @Info("Checks and consumes one complete MXT cost definition. Returns false without consuming when it cannot be paid.")
@@ -37,6 +41,8 @@ public final class MxtKubeJsCostBindings {
             return false;
         }
         Cost cost = MxtKubeJsDataCodec.decodeCached(Cost.CODEC, definition, player.level().registryAccess());
-        return cost.commit(CostContext.of(player, CostOrigin.SCRIPT)).isEmpty();
+        // One definition is one fee, and it pays through the same bill every other caller uses - so a script cannot
+        // reach a channel the common payment would have checked.
+        return CostPayment.pay(List.of(cost), CostContext.of(player, CostOrigin.SCRIPT)).isSuccess();
     }
 }

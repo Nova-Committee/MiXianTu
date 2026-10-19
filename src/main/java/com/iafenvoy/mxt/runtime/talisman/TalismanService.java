@@ -181,14 +181,6 @@ public final class TalismanService {
         return declared;
     }
 
-    // What one invocation costs the holder, in the order the definitions were written. Every aura entry is left
-    // out: an aura is drawn from the carrier's own store rather than from an account. The list goes into the shared
-    // transaction untouched, so a price that cannot be paid refuses the invocation instead of half-paying it.
-    private static List<Cost> holderCosts(List<Holder<Talisman>> written) {
-        return written.stream().flatMap(talisman -> talisman.value().costs().stream())
-                .filter(cost -> !(cost instanceof AuraCost)).toList();
-    }
-
     // The one entry every trigger shares - a hand (TalismanItem#use) and a carrier that filled itself - so
     // neither way in can drift from the other; which rule applies is read off the source, never decided here.
     // A hand charges the window for the attempt rather than the firing. The window is filed against a copy
@@ -283,12 +275,14 @@ public final class TalismanService {
             return Attempt.REFUSED;
         }
         // One invocation is charged as a whole before anything happens: the carrier's own costs plus every
-        // inscription's own costs, merged into one payment that is never committed, so an inscription that has
-        // already fired can never be left unpaid for. The aura entries are not in it - they come out of the
-        // carrier's own store.
+        // inscription's own costs, in one payment that is priced once, so an inscription that has already fired can
+        // never be left unpaid for. Every aura entry is left out - an aura comes out of the carrier's own store rather
+        // than from an account.
+        List<Cost> holderCosts = written.stream().flatMap(talisman -> talisman.value().costs().stream())
+                .filter(cost -> !(cost instanceof AuraCost)).toList();
         CostContext costContext = CostContext.of(holder, context, CostOrigin.TALISMAN);
         CostPayment payment = CostPayment.of(costContext);
-        Optional<Failure> priced = payment.loadAndTest(holderCosts(written));
+        Optional<Failure> priced = payment.price(holderCosts);
         if (priced.isPresent()) {
             say(holder, Component.translatable("actionbar.mxt.talisman.failed", priced.get().message()));
             return Attempt.REFUSED;
@@ -296,7 +290,7 @@ public final class TalismanService {
         // What each type does once the price can be paid. A type answers for its own targets; the ones that land
         // immediately run their actions here, and a thrown one leaves its effect to the moment it hits.
         for (PlannedUse entry : planned) entry.use().definition().value().type().apply(entry.use(), entry.plan());
-        CostPayment.PaymentResult paid = CostPayment.pay(holderCosts(written), costContext);
+        CostPayment.PaymentResult paid = payment.pay();
         if (!paid.isSuccess()) {
             say(holder, Component.translatable("actionbar.mxt.talisman.failed", paid.failure().message()));
             return Attempt.REFUSED;

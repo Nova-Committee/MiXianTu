@@ -1,348 +1,383 @@
 package com.iafenvoy.mxt.data.cost;
 
-import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.data.aura.Aura;
+import com.iafenvoy.mxt.data.cost.builtin.ResourceChannel;
 import com.iafenvoy.mxt.data.cost.context.CostContext;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.runtime.resource.ResourceTransactions.Evaluation;
 import com.iafenvoy.mxt.runtime.resulting.Failure;
 import com.iafenvoy.mxt.runtime.resulting.Failures;
 import com.iafenvoy.mxt.runtime.resulting.Result;
+import com.iafenvoy.mxt.runtime.resulting.ResultWithData;
+import com.iafenvoy.mxt.runtime.resulting.failures.CostFailure;
 import com.iafenvoy.mxt.util.HolderHelper;
+import com.mojang.logging.LogUtils;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.resources.Identifier;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Predicate;
 
 /**
- * One payment: the drafts its entries are loaded into and the two tables they charge. Loading merges an entry into
- * the draft of its type and answers at once, testing asks whether the stores can pay for all of it, and committing
- * writes it - so an array that cannot be paid stops at the entry that ran out instead of loading all of it first, and
- * nothing is written before the commit.
+ * One payment: the fees it was given and the one place they are paid from. Pricing binds every entry to a fixed
+ * transaction, editing replaces fees the caller changed, and paying is one simulation pass over all of them followed by
+ * one real pass - a fee is never taken before every fee has been asked, and a refusal on the way takes nothing.
  *
- * <p>{@link CostDraftManager} registers which draft serves which type and creates them; a draft is never built here
- * or by a call site. Each table belongs to the draft that charges it, and the payment holds the map too because it
- * answers for it - see {@link #resources()} and {@link #auras()}. {@link #commit} is the one write, and it drops the
- * drafts with it.
+ * <p>Fees that name the same store are summed and charged once, so an array can reach one balance through two routes
+ * (an {@code mxt:aura} charged as the value it is measured in and the {@code mxt:resource} naming that value) without
+ * being checked twice against one balance. That is why a repeated target is only reported, not refused.
  *
- * <p>Write order is chosen so that the only channel that cannot be put back - a script - runs after every channel
- * that can.
+ * <p>There is no rollback: a second pass that refuses leaves what the earlier fees already took, and the result reports
+ * it. Payment is started once - after it starts the bill is closed, and a fee can no longer be added, edited or paid a
+ * second time.
  */
 public final class CostPayment {
+    private static final Logger LOGGER = LogUtils.getLogger();
+    // One warn per origin per target for the life of the process: a shape hint, not a per-payment event.
+    private static final Set<String> WARNED = ConcurrentHashMap.newKeySet();
+    private static final ThreadLocal<Set<CostTarget>> PAYING = ThreadLocal.withInitial(HashSet::new);
     private final CostContext context;
-    private final Map<Holder<Resource>, Double> account = new LinkedHashMap<>();
-    private final Map<Class<?>, CostDraft<?>> drafts = new LinkedHashMap<>();
-    private final List<Cost> direct = new ArrayList<>();
-    private @Nullable Map<Holder<Aura>, Double> auras;
+    private final List<Entry> entries = new ArrayList<>();
     private @Nullable Failure failure;
     private @Nullable Identifier failedResource;
-    private @Nullable PaymentResult written;
-    private boolean beyondResources;
+    private boolean closed;
+    private boolean paying;
+    private @Nullable PaymentResult taken;
 
     private CostPayment(CostContext context) {
         this.context = context;
     }
 
     /**
-     * Starts a payment over the entries a caller is about to load into it.
+     * An empty bill for this context. Pricing is what fills it; nothing is bound before that.
      */
     public static CostPayment of(CostContext context) {
         return new CostPayment(context);
     }
 
     /**
-     * Loads, tests and writes one array in one call: nothing is written unless every entry can be charged.
+     * One array, priced, checked and paid in one call: nothing is taken unless every entry could be priced and every
+     * store could pay.
      */
     public static PaymentResult pay(List<Cost> costs, CostContext context) {
         CostPayment payment = of(context);
-        Optional<Failure> refusal = payment.loadAndTest(costs);
-        return refusal.map(costFailure -> PaymentResult.denied(costFailure, payment.failedResource())).orElseGet(payment::commit);
+        Optional<Failure> refusal = payment.price(costs);
+        return refusal.map(failure -> PaymentResult.denied(failure, payment.failedResource()))
+                .orElseGet(payment::pay);
     }
 
     /**
-     * Writes several payments as one boundary: a later payment that refuses puts back what the earlier ones wrote,
-     * and an entry with no draft - a script - runs after every channel that can still be put back. A payment is one
-     * pass, so it is written once and keeps no draft.
+     * Prices and binds every entry, in this bill's own context. Nothing is checked or written: this is what a caller
+     * that only wants the price of an array, or that is about to edit it, asks for. A fee that cannot be priced
+     * refuses here, and a payment that was priced in part pays nothing at all.
      */
-    public static PaymentResult payAll(List<CostPayment> payments) {
-        PaymentResult result = write(payments);
-        for (CostPayment payment : payments) {
-            payment.written = result;
-            payment.drafts.clear();
-        }
-        return result;
+    public Optional<Failure> price(List<Cost> costs) {
+        return this.price(costs, this.context);
     }
 
     /**
-     * Checks one entry the way a payment would, for the drafted types' own {@link Cost#test}. Not the path for a
-     * type without a draft: such an entry is the one that has to answer for itself.
+     * Prices entries that belong to another context into this same bill: one payment can charge a body out of an
+     * account and a ground out of a world pool without becoming two payments.
      */
-    public static Optional<Failure> test(Cost cost, CostContext context) {
-        CostDraft<?> draft = single(cost, context);
-        Optional<Failure> refusal = load(draft, cost);
-        return refusal.isPresent() ? refusal : draft.test();
-    }
-
-    /**
-     * Takes one entry the way a payment would, for the drafted types' own {@link Cost#commit}.
-     */
-    public static Optional<Failure> commit(Cost cost, CostContext context) {
-        CostDraft<?> draft = single(cost, context);
-        Optional<Failure> refusal = load(draft, cost);
-        return refusal.isPresent() ? refusal : draft.commit();
-    }
-
-    /**
-     * The load step: merges one entry into the draft of its type, or asks the entry itself when its type has no
-     * draft. The answer is why the entry cannot be charged at all; the store's ability to pay for what is loaded is
-     * {@link #test}.
-     */
-    public Optional<Failure> load(Cost cost) {
-        CostDraft<?> draft = this.draft(cost.getClass());
-        if (draft == null) {
-            Optional<Failure> asked = cost.test(this.context);
-            if (asked.isEmpty()) {
-                this.direct.add(cost);
-                this.beyondResources = true;
-            }
-            return asked.flatMap(costFailure -> this.record(costFailure, null));
-        }
-        // Remembered here rather than read off the drafts later: every type has a draft once the payment is tested,
-        // and a caller asks this before that.
-        if (!draft.chargesAmounts()) this.beyondResources = true;
-        Optional<Failure> refusal = load(draft, cost);
-        return refusal.flatMap(costFailure -> this.record(costFailure, draft));
-    }
-
-    /**
-     * The load step for a whole array, without asking whether it can be paid.
-     */
-    public Optional<Failure> loadAll(List<Cost> costs) {
+    public Optional<Failure> price(List<Cost> costs, CostContext context) {
+        if (this.closed) return Optional.of(CostFailure.BILL_CLOSED);
         for (Cost cost : costs) {
-            Optional<Failure> refusal = this.load(cost);
-            if (refusal.isPresent()) return refusal;
+            ResultWithData<Cost.Transaction> prepared = cost.prepare(context);
+            if (prepared.isFailure()) return this.broken(prepared.failure(), prepared.failedResource());
+            this.accept(new Entry(context, prepared.getData()));
         }
         return Optional.empty();
     }
 
     /**
-     * The load and test steps in one call, answering the earliest refusal: what makes an unaffordable array stop at
-     * the entry that ran out, and what a one-shot payment runs.
-     */
-    public Optional<Failure> loadAndTest(List<Cost> costs) {
-        Optional<Failure> refusal = this.loadAll(costs);
-        return refusal.isPresent() ? refusal : this.test();
-    }
-
-    /**
-     * The test step: whether every draft can pay for what has been loaded into it. Writes nothing.
+     * Asks every store of the frozen bill whether it can pay, writing nothing. A bill that was refused while being
+     * priced, or paid already, answers with that instead. A refusal here is only this moment's answer: the bill stays
+     * usable, so a caller can ask again after the inventory moved and then pay.
      */
     public Optional<Failure> test() {
-        this.createMissingDrafts();
-        for (CostDraft<?> draft : this.drafts.values()) {
-            Optional<Failure> refusal = draft.test();
-            if (refusal.isPresent()) return this.record(refusal.get(), draft);
+        if (this.taken != null) return Optional.ofNullable(this.taken.failure());
+        if (this.failure != null) return Optional.of(this.failure);
+        for (Group group : this.plan()) {
+            ResultWithData<List<Debit>> simulated = this.run(group, true);
+            if (simulated.isFailure()) return Optional.of(simulated.failure());
         }
         return Optional.empty();
     }
 
     /**
-     * The resource price loaded so far, as the id-keyed table a listener, a script or a result names resources in.
-     * This is a copy: what the payment charges is {@link #account()}, and a re-price goes through {@link #reprice}.
+     * The whole payment: one simulation pass over every fee, then one real pass. A simulation that refuses takes
+     * nothing; a real pass that refuses keeps what it already took and says so. The answer is terminal - paying the
+     * same bill again repeats it without touching a store.
+     */
+    public PaymentResult pay() {
+        if (this.taken != null) return this.taken;
+        if (this.paying) return PaymentResult.denied(CostFailure.REENTRANT, null);
+        if (this.failure != null) return this.taken = PaymentResult.denied(this.failure, this.failedResource);
+        List<Group> plan = this.plan();
+        this.closed = true;
+        this.paying = true;
+        try {
+            return this.taken = this.settle(plan);
+        } finally {
+            this.paying = false;
+        }
+    }
+
+    private PaymentResult settle(List<Group> plan) {
+        for (Group group : plan) {
+            ResultWithData<List<Debit>> simulated = this.run(group, true);
+            if (simulated.isFailure()) return PaymentResult.denied(simulated.failure(), simulated.failedResource());
+        }
+        List<Debit> debits = new ArrayList<>(plan.size());
+        for (Group group : plan) {
+            ResultWithData<List<Debit>> result = this.run(group, false);
+            if (result.isFailure()) return PaymentResult.partly(debits, result.failure(), result.failedResource());
+            debits.addAll(result.getData());
+        }
+        return PaymentResult.paid(debits);
+    }
+
+    /**
+     * The resource price of this bill as the id-keyed table a listener, a script or a result names resources in. A copy:
+     * what is charged is decided by the fees themselves.
      */
     public Map<Identifier, Double> resources() {
         Map<Identifier, Double> reported = new LinkedHashMap<>();
-        this.account.forEach((resource, amount) -> reported.merge(HolderHelper.id(resource), amount, Double::sum));
+        this.resourceAmounts().forEach((resource, amount) -> reported.merge(HolderHelper.id(resource), amount, Double::sum));
         return reported;
     }
 
     /**
-     * The same price keyed by the resource itself: the table the drafts charge, and what a caller holding resources
-     * (a tooltip, an account snapshot, an evaluation) reads. Mutable, because that is what the drafts write into.
+     * The resource price keyed by the resource itself, read-only. Two fees reaching one balance are already summed.
      */
-    public Map<Holder<Resource>, Double> account() {
-        return this.account;
+    public Map<Holder<Resource>, Double> resourceAmounts() {
+        Map<Holder<Resource>, Double> amounts = new LinkedHashMap<>();
+        for (Entry entry : this.entries) {
+            if (!(entry.transaction().target() instanceof CostTarget.Account target)) continue;
+            amounts.merge(target.resource(), entry.transaction().amount(), Double::sum);
+        }
+        return amounts;
     }
 
     /**
-     * This price as the amounts a transaction writes.
-     */
-    public Evaluation evaluation() {
-        return new Evaluation(this.account);
-    }
-
-    /**
-     * Replaces this price from the id-keyed table a listener hands back. An id the registries do not provide is
-     * dropped, which is the answer every other unresolved id gets.
-     */
-    public void reprice(Map<Identifier, Double> amounts) {
-        Provider access = this.context.formula().registries();
-        this.account.clear();
-        if (access == null) return;
-        amounts.forEach((id, amount) -> MxtDatapackRegistries.holder(access, MxtResourceKeys.RESOURCE, id)
-                .ifPresent(resource -> this.account.merge(resource, amount, Double::sum)));
-    }
-
-    /**
-     * The aura price loaded so far, the table of the aura draft, mutable for the same reason.
+     * The aura price, read-only: the entries charged out of a pool or a bank, which an account cannot spell out.
      */
     public Map<Holder<Aura>, Double> auras() {
-        // Asked before this payment has loaded an aura entry, and answered all the same: every registered type gets
-        // its draft, and the one that charges auras owns this table.
-        this.createMissingDrafts();
-        return Objects.requireNonNull(this.auras, "No registered cost draft charges an aura");
+        Map<Holder<Aura>, Double> amounts = new LinkedHashMap<>();
+        for (Entry entry : this.entries) {
+            if (!(entry.transaction().target() instanceof CostTarget.AuraStore target)) continue;
+            amounts.merge(target.aura(), entry.transaction().amount(), Double::sum);
+        }
+        return amounts;
     }
 
+
     /**
-     * Whether this payment charges anything the resource table does not spell out: an aura, the items a draft counts
-     * for itself, a script. What a caller with room for resource amounts only has to leave unsaid.
+     * Whether this bill charges anything a resource table cannot spell out: an aura out of a pool or a bank, the items
+     * an entry counts for itself, a script.
      */
     public boolean beyondResources() {
-        return this.beyondResources || (this.auras != null && !this.auras.isEmpty());
+        if (!this.auras().isEmpty()) return true;
+        for (Entry entry : this.entries)
+            if (entry.transaction().target() instanceof CostTarget.Items || entry.transaction().target() instanceof CostTarget.Script)
+                return true;
+        return false;
     }
 
     /**
-     * Why this payment was last refused; null while nothing has been refused.
+     * Replaces the resource fees of this bill with the id-keyed table a listener hands back, which is how a
+     * {@code ResourceConsumeEvent} changes what is paid: an id the new table does not name is not charged at all, and a
+     * zero removes it. Items, pool and bank auras and scripts are untouched.
+     *
+     * <p>An unknown resource, a negative or non-finite amount or a missing account refuses the whole edit and leaves the
+     * bill exactly as it was.
+     */
+    public Optional<Failure> replaceResourceAmounts(Map<Identifier, Double> amounts) {
+        if (this.closed) return Optional.of(CostFailure.BILL_CLOSED);
+        Provider access = this.context.formula().registries();
+        if (access == null) return Optional.of(Failures.INVALID_VALUE);
+        Map<Holder<Resource>, Double> resolved = new LinkedHashMap<>();
+        for (Map.Entry<Identifier, Double> entry : amounts.entrySet()) {
+            Identifier id = entry.getKey();
+            double amount = entry.getValue();
+            if (id == null || !Double.isFinite(amount) || amount < 0.0D) return Optional.of(CostFailure.INVALID_AMOUNT);
+            if (amount <= 0.0D) continue;
+            Holder<Resource> resource = MxtDatapackRegistries.holder(access, MxtResourceKeys.RESOURCE, id).orElse(null);
+            if (resource == null) return Optional.of(Failures.INVALID_VALUE);
+            resolved.merge(resource, amount, Double::sum);
+        }
+        CostContext context = this.resourceContext();
+        List<Entry> replaced = new ArrayList<>(this.entries.size());
+        for (Entry entry : this.entries)
+            if (!(entry.transaction().target() instanceof CostTarget.Account)) replaced.add(entry);
+        for (Map.Entry<Holder<Resource>, Double> entry : resolved.entrySet()) {
+            replaced.add(new Entry(context, ResourceChannel.transaction(context, entry.getKey(), entry.getValue())));
+        }
+        this.entries.clear();
+        this.entries.addAll(replaced);
+        return Optional.empty();
+    }
+
+    /**
+     * Scales the selected fees, which is how a caller that already decided how much of a bill it owes replaces the
+     * amounts instead of writing to a side table: each selected fee is replaced at its own amount times
+     * {@code ratio}, and one that comes out at zero leaves the bill. A non-finite or negative ratio refuses the whole
+     * edit and leaves the bill exactly as it was.
+     */
+    public Optional<Failure> scale(Predicate<Cost.Transaction> selection, double ratio) {
+        if (this.closed) return Optional.of(CostFailure.BILL_CLOSED);
+        if (!Double.isFinite(ratio) || ratio < 0.0D) return Optional.of(CostFailure.INVALID_AMOUNT);
+        List<Entry> scaled = new ArrayList<>(this.entries.size());
+        for (Entry entry : this.entries) {
+            Cost.Transaction transaction = entry.transaction();
+            if (!selection.test(transaction)) {
+                scaled.add(entry);
+                continue;
+            }
+            double amount = transaction.amount() * ratio;
+            if (!Double.isFinite(amount)) return Optional.of(CostFailure.INVALID_AMOUNT);
+            if (amount <= 0.0D) continue;
+            scaled.add(new Entry(entry.context(), transaction.withAmount(amount)));
+        }
+        this.entries.clear();
+        this.entries.addAll(scaled);
+        return Optional.empty();
+    }
+
+    /**
+     * Why this bill was last refused while being priced; null while it was priced in full.
      */
     public @Nullable Failure failure() {
         return this.failure;
     }
 
     /**
-     * The resource that ran out, when the last refusal was {@link Failures#INSUFFICIENT_RESOURCE}: what a caller
-     * names back to the player.
+     * The resource that ran out, when the last refusal named one.
      */
     public @Nullable Identifier failedResource() {
         return this.failedResource;
     }
 
-    /**
-     * Writes this payment, and only this payment. A payment is one pass: the first write is the only one, and the
-     * drafts it created are dropped with it.
-     */
-    public PaymentResult commit() {
-        if (this.written != null) return this.written;
-        return payAll(List.of(this));
+    private void accept(Entry entry) {
+        this.warnSameTarget(entry.transaction().target());
+        this.entries.add(entry);
     }
 
-    // The draft for one entry on its own, for the single-entry step above.
-    private static CostDraft<?> single(Cost cost, CostContext context) {
-        CostDraft<?> draft = CostDraftManager.create(cost.getClass(), context, new LinkedHashMap<>());
-        if (draft == null) throw new IllegalStateException("Cost type " + cost.getClass().getName()
-                + " has no cost draft and answers test() and commit() itself");
-        return draft;
-    }
-
-    @SuppressWarnings("unchecked")
-    private static Optional<Failure> load(CostDraft<?> draft, Cost cost) {
-        return ((CostDraft<Cost>) draft).load(cost);
-    }
-
-    private static PaymentResult write(List<CostPayment> payments) {
-        List<CostDraft<?>> written = new ArrayList<>();
-        for (CostPayment payment : payments) {
-            payment.createMissingDrafts();
-            for (CostDraft<?> draft : payment.drafts.values()) {
-                Optional<Failure> refusal = draft.commit();
-                written.add(draft);
-                if (refusal.isPresent()) return PaymentResult.denied(refusal.get(), draft.failedResource(), written);
-            }
-        }
-        for (CostPayment payment : payments) {
-            for (Cost cost : payment.direct) {
-                Optional<Failure> refusal = cost.commit(payment.context);
-                if (refusal.isPresent()) return PaymentResult.denied(refusal.get(), null, written);
-            }
-        }
-        Map<Identifier, Double> resources = new LinkedHashMap<>();
-        Map<Holder<Aura>, Double> auras = new LinkedHashMap<>();
-        for (CostPayment payment : payments) {
-            payment.account.forEach((resource, amount) -> resources.merge(HolderHelper.id(resource), amount, Double::sum));
-            if (payment.auras != null)
-                payment.auras.forEach((aura, amount) -> auras.merge(aura, amount, Double::sum));
-        }
-        return PaymentResult.paid(resources, auras);
-    }
-
-    // A reset that cannot run is louder than a wrong balance: the payment is abandoned and the reason logged.
-    private static void reset(List<CostDraft<?>> written) {
-        for (int index = written.size() - 1; index >= 0; index--) {
-            try {
-                written.get(index).reset();
-            } catch (RuntimeException exception) {
-                MiXianTu.LOGGER.error("Could not reset part of a cost payment; a balance may be wrong", exception);
-            }
+    // One entry per target is the shape a pack is meant to write; two that reach one store are summed and charged once,
+    // which is correct but not what was written, so it is reported. A bill is also built from several definitions (a
+    // talisman's inscriptions), so the hint is once per origin and target rather than once per payment.
+    private void warnSameTarget(CostTarget target) {
+        for (Entry known : this.entries) {
+            if (!known.transaction().target().equals(target)) continue;
+            if (WARNED.add(this.context.origin() + "|" + target.label()))
+                LOGGER.warn("A costs array charges {} twice (origin {}); the amounts were summed, and one entry per target is the shape to write",
+                        target.label(), this.context.origin());
+            return;
         }
     }
 
-    // Every registered type gets its draft, used or not: one that charged nothing is a no-op, and this is what gives
-    // a table another type wrote into - an mxt:aura entry charged as the resource it is counted in lands in the
-    // resource table - a draft to check and write it through.
-    private void createMissingDrafts() {
-        for (Class<? extends Cost> type : CostDraftManager.types()) this.draft(type);
-    }
-
-    // The one draft of its type: an entry is loaded through it, and every later entry of that type is merged into
-    // what it already holds. The table a draft owns is picked up here, so the payment can answer for it later.
-    private @Nullable CostDraft<?> draft(Class<? extends Cost> type) {
-        CostDraft<?> existing = this.drafts.get(type);
-        if (existing != null) return existing;
-        CostDraft<?> created = CostDraftManager.create(type, this.context, this.account);
-        if (created != null) {
-            this.drafts.put(type, created);
-            Map<Holder<Aura>, Double> auras = created.auras();
-            if (auras != null) this.auras = auras;
+    // Fees naming one store are one charge: the amounts add up in that store's own unit and one transaction takes it,
+    // which is why a bill needs no side table of per-entry shares. The order is the pipeline's, not the pack's: every
+    // built-in store first, then the opaque scripts, so a script never runs before the price it was written next to.
+    private List<Group> plan() {
+        Map<CostTarget, Cost.Transaction> merged = new LinkedHashMap<>();
+        for (Entry entry : this.entries) {
+            Cost.Transaction transaction = entry.transaction();
+            if (!(transaction.amount() > 0.0D)) continue;
+            Cost.Transaction present = merged.get(transaction.target());
+            merged.put(transaction.target(), present == null ? transaction
+                    : present.withAmount(present.amount() + transaction.amount()));
         }
-        return created;
+        List<Group> stores = new ArrayList<>(merged.size());
+        List<Group> scripts = new ArrayList<>();
+        merged.forEach((target, transaction) -> (target instanceof CostTarget.Script ? scripts : stores)
+                .add(new Group(target, transaction)));
+        stores.addAll(scripts);
+        return stores;
     }
 
-    // The reason a payment was refused, and the resource it names when it names one: a caller reads both off the
-    // payment instead of carrying a result through every step.
-    private Optional<Failure> record(Failure failure, @Nullable CostDraft<?> draft) {
+    // A nested payment touching a store this one is writing is refused rather than interleaved, while an independent
+    // one on another store goes through.
+    private ResultWithData<List<Debit>> run(Group group, boolean simulate) {
+        Set<CostTarget> paying = PAYING.get();
+        if (!paying.add(group.target())) return ResultWithData.failure(List.of(), CostFailure.REENTRANT);
+        try {
+            return group.transaction().execute(simulate);
+        } finally {
+            paying.remove(group.target());
+        }
+    }
+
+    private CostContext resourceContext() {
+        for (Entry entry : this.entries)
+            if (entry.transaction().target() instanceof CostTarget.Account) return entry.context();
+        return this.context;
+    }
+
+    private Optional<Failure> broken(Failure failure, @Nullable Identifier resource) {
         this.failure = failure;
-        this.failedResource = draft == null ? null : draft.failedResource();
+        if (resource != null) this.failedResource = resource;
         return Optional.of(failure);
     }
 
+    private record Entry(CostContext context, Cost.Transaction transaction) {
+    }
+
+    private record Group(CostTarget target, Cost.Transaction transaction) {
+    }
+
     /**
-     * What a payment did: what it took, or why it took nothing.
+     * What a payment did: every fee it really took, or why it took nothing, or why it stopped halfway.
      */
     public static final class PaymentResult extends Result {
-        private final Map<Identifier, Double> resources;
-        private final Map<Holder<Aura>, Double> auras;
+        private final List<Debit> debits;
 
-        private PaymentResult(@Nullable Failure failure, @Nullable Identifier failedResource,
-                              Map<Identifier, Double> resources, Map<Holder<Aura>, Double> auras) {
+        private PaymentResult(@Nullable Failure failure, @Nullable Identifier failedResource, List<Debit> debits) {
             super(failure, failedResource);
-            this.resources = new LinkedHashMap<>(resources);
-            this.auras = new LinkedHashMap<>(auras);
+            this.debits = List.copyOf(debits);
         }
 
-        static PaymentResult paid(Map<Identifier, Double> resources, Map<Holder<Aura>, Double> auras) {
-            return new PaymentResult(null, null, resources, auras);
+        static PaymentResult paid(List<Debit> debits) {
+            return new PaymentResult(null, null, debits);
         }
 
-        // Nothing is written before the commit, so a refusal here has nothing to put back.
         static PaymentResult denied(Failure failure, @Nullable Identifier failedResource) {
-            return denied(failure, failedResource, List.of());
+            return new PaymentResult(failure, failedResource, List.of());
         }
 
-        // Everything this payment itself wrote comes back through the drafts it already committed.
-        static PaymentResult denied(Failure failure, @Nullable Identifier failedResource, List<CostDraft<?>> written) {
-            reset(written);
-            return new PaymentResult(failure, failedResource, Map.of(), Map.of());
+        // A channel that refused mid-way: what the earlier fees took is still what happened, and is reported as such.
+        static PaymentResult partly(List<Debit> debits, Failure failure, @Nullable Identifier failedResource) {
+            return new PaymentResult(failure, failedResource, debits);
+        }
+
+        /**
+         * What was really taken, one per store.
+         */
+        public List<Debit> debits() {
+            return this.debits;
         }
 
         public Map<Identifier, Double> resources() {
-            return this.resources;
+            Map<Identifier, Double> reported = new LinkedHashMap<>();
+            for (Debit debit : this.debits) {
+                if (!(debit.target() instanceof CostTarget.Account target)) continue;
+                reported.merge(HolderHelper.id(target.resource()), debit.amount(), Double::sum);
+            }
+            return reported;
         }
 
         public Map<Holder<Aura>, Double> auras() {
-            return this.auras;
+            Map<Holder<Aura>, Double> reported = new LinkedHashMap<>();
+            for (Debit debit : this.debits) {
+                if (!(debit.target() instanceof CostTarget.AuraStore target)) continue;
+                reported.merge(target.aura(), debit.amount(), Double::sum);
+            }
+            return reported;
         }
     }
 }

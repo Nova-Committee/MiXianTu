@@ -22,6 +22,7 @@ import org.jetbrains.annotations.Nullable;
  * A resource account can also be named without a payer at all, which is how a formation pays its upkeep while its
  * owner is offline: there is an account to charge and nobody to ask.
  */
+// FIXME::Too many
 public record CostContext(@Nullable LivingEntity payer, FormulaContext formula, CostOrigin origin,
                           @Nullable Level level, @Nullable BlockPos pos, @Nullable AuraAccess bank,
                           @Nullable ResourceHolderAttachment account, AuraTarget auraTarget,

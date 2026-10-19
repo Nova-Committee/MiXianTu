@@ -76,7 +76,7 @@ research/            设计稿与审计（大改才写）
 - **术语固定**：载体与定义写「符箓」（`talisman`），配套「符纸」「符笔」，颜料存量叫「颜料」；**「符篆」「符墨」禁用**。灵根 ≠ 体质、功法 ≠ 技能 ≠ 进度等级、`resource` 是数值而 `aura` 是灵气身份。完整术语表见 [`learning/terminology.md`](learning/terminology.md)。
 - **两个 Codec**：`CODEC` 是 Holder Codec、`DIRECT_CODEC` 是直接对象 Codec（注册表注册后者），且 **`DIRECT_CODEC` 每次解码都必须造新对象**（用 `MapCodec.unit(X::new)`，不能捕获共享实例，否则第二份文件撞 `Adding duplicate value`)。
 - **定义文本一律按 id 生成**：定义里没有 `name` / `description` 字段；名字键是 `<注册表命名空间>.<注册表路径>.<条目命名空间>.<条目路径>`，出口只有 `DefinitionText`（`name` / `description` / `resolved` / `nameOrId`）。没翻译时：可以空着的地方用 `resolved` 整行不画，必须显示点什么的地方用 `nameOrId` 回退 id——**不许露键名**。
-- **一套形状，绝不造第二套**：链的走法（`util/chain/`）、消耗（`Cost[]` + 草稿）、能力（`mxt:ability` 一个定义）、命令的注册表参数、阵法的四个节拍、品质阶梯、灵气分配——各自只有一份实现与一个出口，新代码接进去。
+- **一套形状，绝不造第二套**：链的走法（`util/chain/`）、消耗（`Cost[]`，两遍执行）、能力（`mxt:ability` 一个定义）、命令的注册表参数、阵法的四个节拍、品质阶梯、灵气分配——各自只有一份实现与一个出口，新代码接进去。
 - **失败用结果记录**（`Result` + `Failure` 枚举，客户端回 `false` / `SERVER_ONLY`，不写日志），不用异常做常规控制流；重入守卫用 `ThreadLocal<Set<…>>` + try/finally。
 - **不写死模组版本号**：版本以 `gradle.properties` / 安装的 Jar 为准；平台与依赖版本（Minecraft / NeoForge / Curios / KubeJS）可以写。
 - **任何文档都不写日期**：本文件、`learning/`、`docs/`、两份 README、`research/` 的正文里都不写日期（`YYYY-MM-DD`、「X 月 Y 日」这类都不行），除非用户明确要求；要表达时间先后就用「之前 / 现在」或设计稿编号。
