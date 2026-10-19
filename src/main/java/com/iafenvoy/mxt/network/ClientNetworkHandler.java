@@ -2,13 +2,11 @@ package com.iafenvoy.mxt.network;
 
 import com.iafenvoy.mxt.network.payload.*;
 import com.iafenvoy.mxt.runtime.world.AuraClientState;
-import com.iafenvoy.mxt.screen.gui.ItemPickerScreen;
 import com.iafenvoy.mxt.screen.menu.AlchemyFurnaceMenu;
 import com.iafenvoy.mxt.screen.menu.TalismanWorkstationMenu;
 import com.iafenvoy.mxt.screen.multiblock.MultiblockStructure;
 import com.iafenvoy.mxt.screen.multiblock.MultiblockStructureScreen;
 import com.iafenvoy.mxt.util.ClientPlayerNames;
-import net.minecraft.client.Minecraft;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 import org.jetbrains.annotations.Nullable;
 
@@ -47,15 +45,6 @@ public final class ClientNetworkHandler {
     private static @Nullable TalismanWorkstationMenu talismanMenu(IPayloadContext context, int containerId) {
         if (!(context.player().containerMenu instanceof TalismanWorkstationMenu menu)) return null;
         return menu.containerId == containerId ? menu : null;
-    }
-
-    // The grid is built on this side from the synced registries, and taking an item out of it is the vanilla
-    // creative gesture, so the only thing that reaches the server is the slot it ends up in: this only opens the screen.
-    static void onItemPicker(ItemPickerS2CPayload payload, IPayloadContext context) {
-        context.enqueueWork(() -> {
-            ItemPickerScreen screen = ItemPickerScreen.opening(payload.title(), payload.categories());
-            if (screen != null) Minecraft.getInstance().setScreen(screen);
-        });
     }
 
     // The structure travels in the payload, so the screen is built from what the server resolved rather than from

@@ -41,7 +41,6 @@ public final class ServerCommandManager {
         builder.put(_ -> LightningCommand.build(), config.lightning);
         builder.put(LifespanCommand::build, config.lifespan);
         builder.put(PhysiqueCommand::build, config.physique);
-        builder.put(_ -> PickerCommand.build(), config.picker);
         builder.put(QualityCommand::build, config.quality);
         builder.put(RealmCommand::build, config.realm);
         builder.put(ResourceCommand::build, config.resource);

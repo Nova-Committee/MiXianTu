@@ -7,7 +7,6 @@ import com.iafenvoy.mxt.data.quality.ItemQuality.Modifier;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.registry.tag.MxtQualityTags;
 import com.iafenvoy.mxt.runtime.item.ItemBindingService.ResolvedBindings;
 import com.iafenvoy.mxt.runtime.resulting.Failure;
 import com.iafenvoy.mxt.runtime.resulting.Failures;
@@ -20,7 +19,6 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
 import net.minecraft.core.HolderLookup.Provider;
-import net.minecraft.core.HolderLookup.RegistryLookup;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
@@ -257,18 +255,5 @@ public final class QualityService {
     // the tier's id when no pack translated a name, because a listed tier has to say which tier it is.
     public static Component displayName(Holder<ItemQuality> quality) {
         return coloredName(quality, DefinitionText.nameOrId(quality));
-    }
-
-    // The registry comes from the caller, because every caller holds one: ItemPickerManager is handed the
-    // provider it is browsing under, and a bare server lookup would be wrong on a client.
-    public static List<Holder<ItemQuality>> ordered(Provider access) {
-        return ordered(access.lookupOrThrow(MxtResourceKeys.ITEM_QUALITY));
-    }
-
-    private static List<Holder<ItemQuality>> ordered(RegistryLookup<ItemQuality> registry) {
-        Set<Holder<ItemQuality>> values = new LinkedHashSet<>();
-        registry.get(MxtQualityTags.TOOLTIP_ORDER).ifPresent(tag -> tag.forEach(values::add));
-        registry.listElements().forEach(values::add);
-        return List.copyOf(values);
     }
 }

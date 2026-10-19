@@ -4,6 +4,7 @@ import com.iafenvoy.jupiter.ConfigManager;
 import com.iafenvoy.jupiter.ServerConfigManager.PermissionChecker;
 import com.iafenvoy.mxt.compat.CuriosIntegration;
 import com.iafenvoy.mxt.config.MxtServerConfig;
+import com.iafenvoy.mxt.data.PickerCategories;
 import com.iafenvoy.mxt.registry.*;
 import com.iafenvoy.mxt.registry.cache.RegistryCaches;
 import com.mojang.logging.LogUtils;
@@ -71,5 +72,9 @@ public final class MiXianTu {
         MxtResourceBarVisibilities.REGISTRY.register(bus);
         MxtResourceValueProviders.REGISTRY.register(bus);
         MxtTimelineEntries.REGISTRY.register(bus);
+
+        // What the picker shows for this mod's registries; the picker itself owns the screen, the command and the
+        // packet, so this is the only place our content meets it.
+        PickerCategories.register();
     }
 }

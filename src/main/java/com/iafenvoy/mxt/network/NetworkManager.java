@@ -42,7 +42,6 @@ public final class NetworkManager {
         // A dedicated server never runs one of these, so it registers the codec and nothing else.
         if (FMLEnvironment.getDist() != Dist.CLIENT) {
             registrar.playToClient(AuraStateS2CPayload.TYPE, AuraStateS2CPayload.STREAM_CODEC)
-                    .playToClient(ItemPickerS2CPayload.TYPE, ItemPickerS2CPayload.STREAM_CODEC)
                     .playToClient(AlchemyStateS2CPayload.TYPE, AlchemyStateS2CPayload.STREAM_CODEC)
                     .playToClient(FormationStructureS2CPayload.TYPE, FormationStructureS2CPayload.STREAM_CODEC)
                     .playToClient(OwnerNameS2CPayload.TYPE, OwnerNameS2CPayload.STREAM_CODEC)
@@ -54,8 +53,6 @@ public final class NetworkManager {
         }
         registrar.playToClient(AuraStateS2CPayload.TYPE, AuraStateS2CPayload.STREAM_CODEC,
                         new MainThreadPayloadHandler<>(ClientNetworkHandler::onAuraState))
-                .playToClient(ItemPickerS2CPayload.TYPE, ItemPickerS2CPayload.STREAM_CODEC,
-                        new MainThreadPayloadHandler<>(ClientNetworkHandler::onItemPicker))
                 .playToClient(AlchemyStateS2CPayload.TYPE, AlchemyStateS2CPayload.STREAM_CODEC,
                         new MainThreadPayloadHandler<>(ClientNetworkHandler::onAlchemyState))
                 .playToClient(FormationStructureS2CPayload.TYPE, FormationStructureS2CPayload.STREAM_CODEC,

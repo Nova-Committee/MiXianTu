@@ -6,7 +6,9 @@ import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.api.AlchemyWorkstation;
 import com.iafenvoy.mxt.compat.kubejs.MxtKubeJsApi;
 import com.iafenvoy.mxt.compat.kubejs.codec.MxtKubeJsDataCodec;
-import com.iafenvoy.mxt.data.ItemPickerManager;
+import com.iafenvoy.picker.PickerCatalogue;
+import com.iafenvoy.picker.PickerContents;
+import com.iafenvoy.picker.api.PickerRow;
 import com.iafenvoy.mxt.data.alchemy.AlchemyFurnaceDefinition;
 import com.iafenvoy.mxt.data.alchemy.MedicinalProperty;
 import com.iafenvoy.mxt.data.condition.ItemCondition;
@@ -87,7 +89,6 @@ public final class QualityProbes {
                 Probe.of("item/quality/tier_source_layers", QualityProbes::tierSourceLayers),
                 Probe.of("item/quality/empty_requirement", QualityProbes::emptyRequirement),
                 Probe.of("item/quality/default_quality_priority", QualityProbes::defaultQualityPriority),
-                Probe.of("item/quality/tooltip_order", QualityProbes::tooltipOrder),
                 Probe.of("item/quality/picker_catalogue", QualityProbes::pickerCatalogue),
                 Probe.of("item/quality/kubejs_requirement", QualityProbes::kubejsRequirement),
                 Probe.of("item/quality/alchemy_core_gate", QualityProbes::alchemyCoreGate),
@@ -449,34 +450,22 @@ public final class QualityProbes {
                 "gravel=mxt_test:normal flint=mxt_test:excellent");
     }
 
-    // The catalogue's own order: the tooltip-order tag first, in the order it writes, then every remaining
-    // tier once. The picker's quality page is that same list, which is what gives the tag its consumer.
-    private static void tooltipOrder(ProbeContext context) {
-        RegistryAccess access = context.registries();
-        List<Holder<ItemQuality>> catalogue = QualityService.ordered(access);
-        List<String> order = catalogue.stream().map(HolderHelper::id).map(Identifier::toString).toList();
-        long tiers = MxtDatapackRegistries.holders(access, MxtResourceKeys.ITEM_QUALITY).count();
-        leg(context, "tooltip_order",
-                order.size() == tiers && order.getFirst().equals("mxt_test:excellent")
-                        && order.get(1).equals("mxt_test:normal") && order.get(2).equals("mxt_test:poor"),
-                "size=" + order.size() + " first=" + order.getFirst() + " second=" + order.get(1) + " third=" + order.get(2),
-                "size=" + tiers + " first=mxt_test:excellent second=mxt_test:normal third=mxt_test:poor");
-    }
-
+    // The picker's quality page: one row per tier, in the order the picker reads the registry, each named by the
+    // definition's own name and its id.
     private static void pickerCatalogue(ProbeContext context) {
         RegistryAccess access = context.registries();
-        List<Holder<ItemQuality>> catalogue = QualityService.ordered(access);
-        List<String> order = catalogue.stream().map(HolderHelper::id).map(Identifier::toString).toList();
-        List<ItemPickerManager.PickerItem> rows = qualityRows(access);
-        String firstRow = rows.isEmpty() ? "none" : rows.getFirst().names().getLast().getString();
+        List<String> tiers = MxtDatapackRegistries.holders(access, MxtResourceKeys.ITEM_QUALITY)
+                .map(HolderHelper::id).map(Identifier::toString).toList();
+        List<PickerRow> rows = qualityRows(access);
+        List<String> named = rows.stream().map(row -> row.names().getLast().getString()).toList();
         leg(context, "picker_catalogue",
-                rows.size() == order.size() && firstRow.equals(order.getFirst())
-                        && ItemPickerManager.category(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "default_quality")).isPresent()
-                        && ItemPickerManager.category(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "heat_source")).isPresent(),
-                "rows=" + rows.size() + " first=" + firstRow
-                        + " default_quality=" + ItemPickerManager.category(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "default_quality")).isPresent()
-                        + " heat_source=" + ItemPickerManager.category(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "heat_source")).isPresent(),
-                "rows=" + order.size() + " first=" + order.getFirst() + " default_quality=true heat_source=true");
+                rows.size() == tiers.size() && named.equals(tiers)
+                        && PickerCatalogue.category(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "default_quality")).isPresent()
+                        && PickerCatalogue.category(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "heat_source")).isPresent(),
+                "rows=" + rows.size() + " named=" + named
+                        + " default_quality=" + PickerCatalogue.category(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "default_quality")).isPresent()
+                        + " heat_source=" + PickerCatalogue.category(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "heat_source")).isPresent(),
+                "rows=" + tiers.size() + " named=" + tiers + " default_quality=true heat_source=true");
     }
 
     // The script-side entry points, called the way a script's binding calls them: a requirement decoded from
@@ -642,12 +631,10 @@ public final class QualityProbes {
         return RegistryOps.create(JsonOps.INSTANCE, context.registries());
     }
 
-    // The picker's own provider, asked the way its screen asks it: the client's registry access is the only argument
+    // The picker's own reader, asked the way its screen asks it: the client's registry access is the only argument
     // that differs there.
-    private static List<ItemPickerManager.PickerItem> qualityRows(RegistryAccess access) {
-        ResourceKey<Registry<?>> key = ItemPickerManager.category(MxtResourceKeys.ITEM_QUALITY.identifier()).orElse(null);
-        ItemPickerManager.ItemProvider<?> provider = key == null ? null : ItemPickerManager.provider(key);
-        return provider == null ? List.of() : provider.items().apply(access, ignored -> true);
+    private static List<PickerRow> qualityRows(RegistryAccess access) {
+        return PickerContents.itemsOf(access, MxtResourceKeys.ITEM_QUALITY);
     }
 
     private static String qualityEntry(String items) {

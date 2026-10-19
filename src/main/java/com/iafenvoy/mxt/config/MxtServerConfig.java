@@ -347,7 +347,6 @@ public final class MxtServerConfig extends AutoInitConfigContainer {
         public final BooleanEntry lightning = BooleanEntry.builder("config.mxt.server.commands.lightning", true).key("lightning").tooltip("config.mxt.server.commands.lightning.tooltip").build();
         public final BooleanEntry lifespan = BooleanEntry.builder("config.mxt.server.commands.lifespan", true).key("lifespan").tooltip("config.mxt.server.commands.lifespan.tooltip").build();
         public final BooleanEntry physique = BooleanEntry.builder("config.mxt.server.commands.physique", true).key("physique").tooltip("config.mxt.server.commands.physique.tooltip").build();
-        public final BooleanEntry picker = BooleanEntry.builder("config.mxt.server.commands.picker", true).key("picker").tooltip("config.mxt.server.commands.picker.tooltip").build();
         public final BooleanEntry quality = BooleanEntry.builder("config.mxt.server.commands.quality", true).key("quality").tooltip("config.mxt.server.commands.quality.tooltip").build();
         public final BooleanEntry realm = BooleanEntry.builder("config.mxt.server.commands.realm", true).key("realm").tooltip("config.mxt.server.commands.realm.tooltip").build();
         public final BooleanEntry resource = BooleanEntry.builder("config.mxt.server.commands.resource", true).key("resource").tooltip("config.mxt.server.commands.resource.tooltip").build();

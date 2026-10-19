@@ -64,5 +64,12 @@ versionRange = "[${apricityui_version},)"
 ordering = "AFTER"
 side = "BOTH"
 
+[[dependencies.${mod_id}]]
+modId = "picker"
+type = "required"
+versionRange = "[0,)"
+ordering = "AFTER"
+side = "BOTH"
+
 #[features.${mod_id}]
 #openGLVersion="[3.2,)"

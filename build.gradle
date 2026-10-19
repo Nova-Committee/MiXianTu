@@ -154,6 +154,7 @@ dependencies {
     implementation jarJar("curse.maven:player-animation-library-1283899:8674772")
     implementation jarJar("curse.maven:bendable-cuboids-1302303:7986578")
     implementation jarJar("curse.maven:bedrock-creative-tabs-1733490:9108400")
+    implementation jarJar("curse.maven:picker-1753447:9251435")
 
     implementation "curse.maven:jade-324717:8651070"
     compileOnly "mezz.jei:jei-${minecraft_version}-neoforge-api:${jei_version}"
