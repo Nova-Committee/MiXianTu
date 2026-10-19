@@ -1,4 +1,8 @@
-package com.iafenvoy.mxt.runtime.failure;
+package com.iafenvoy.mxt.runtime.resulting.failures;
+
+import com.iafenvoy.mxt.runtime.resulting.Failure;
+import com.iafenvoy.mxt.runtime.resulting.FailureSources;
+import com.iafenvoy.mxt.runtime.resulting.SimpleFailure;
 
 public final class SecretRealmFailure {
     public static final Failure FULL = SimpleFailure.of("full", FailureSources.SECRET_REALM);

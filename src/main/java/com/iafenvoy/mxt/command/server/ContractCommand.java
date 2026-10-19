@@ -10,11 +10,12 @@ import com.iafenvoy.mxt.data.progression.Progression;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.creature.*;
-import com.iafenvoy.mxt.runtime.failure.ContractFailure;
-import com.iafenvoy.mxt.runtime.failure.ProgressionFailure;
 import com.iafenvoy.mxt.runtime.progression.ProgressionAdminService;
 import com.iafenvoy.mxt.runtime.progression.ProgressionOwners;
 import com.iafenvoy.mxt.runtime.progression.ProgressionService;
+import com.iafenvoy.mxt.runtime.resulting.Result;
+import com.iafenvoy.mxt.runtime.resulting.failures.ContractFailure;
+import com.iafenvoy.mxt.runtime.resulting.failures.ProgressionFailure;
 import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.PlayerNames;
@@ -111,12 +112,12 @@ public final class ContractCommand {
         CommandSourceStack source = ctx.getSource();
         Entity entity = EntityArgument.getEntity(ctx, "target");
         if (!(entity instanceof Mob mob)) {
-            source.sendFailure(ContractFeedback.of(ContractFailure.NOT_CONTRACTABLE));
+            source.sendFailure(ContractFailure.NOT_CONTRACTABLE.message());
             return 0;
         }
         ContractAttachment contract = mob.getData(MxtAttachments.CONTRACT);
         if (!contract.bound()) {
-            source.sendFailure(ContractFeedback.of(ContractFailure.NOT_BOUND));
+            source.sendFailure(ContractFailure.NOT_BOUND.message());
             return 0;
         }
         Holder<ContractType> type = contract.contractType().orElseThrow();
@@ -157,12 +158,12 @@ public final class ContractCommand {
         Reference<ContractType> type = ResourceArgument.getResource(ctx, "contract_type", MxtResourceKeys.CONTRACT_TYPE);
         Entity target = EntityArgument.getEntity(ctx, "target");
         if (!(target instanceof Mob mob)) {
-            source.sendFailure(ContractFeedback.of(ContractFailure.NOT_CONTRACTABLE));
+            source.sendFailure(ContractFailure.NOT_CONTRACTABLE.message());
             return 0;
         }
-        ContractService.Result result = ContractService.bind(type, owner, mob, force);
-        if (!result.changed()) {
-            source.sendFailure(ContractFeedback.of(result.failure()));
+        Result result = ContractService.bind(type, owner, mob, force);
+        if (result.failure() != null) {
+            source.sendFailure(result.failure().message());
             return 0;
         }
         source.sendSuccess(() -> Component.translatable("command.mxt.contract.bind_success", mob.getDisplayName(),
@@ -174,13 +175,13 @@ public final class ContractCommand {
         CommandSourceStack source = ctx.getSource();
         Entity target = EntityArgument.getEntity(ctx, "target");
         if (!(target instanceof Mob mob)) {
-            source.sendFailure(ContractFeedback.of(ContractFailure.NOT_BOUND));
+            source.sendFailure(ContractFailure.NOT_BOUND.message());
             return 0;
         }
-        ContractService.Result result = ContractService.release(mob, source.getEntity() == null
+        Result result = ContractService.release(mob, source.getEntity() == null
                 ? mob.getUUID() : source.getEntity().getUUID(), force);
-        if (!result.changed()) {
-            source.sendFailure(ContractFeedback.of(result.failure()));
+        if (result.failure() != null) {
+            source.sendFailure(result.failure().message());
             return 0;
         }
         source.sendSuccess(() -> Component.translatable("command.mxt.contract.break_success", mob.getDisplayName()), true);
@@ -191,13 +192,13 @@ public final class ContractCommand {
         CommandSourceStack source = ctx.getSource();
         Entity target = EntityArgument.getEntity(ctx, "target");
         if (!(target instanceof Mob mob)) {
-            source.sendFailure(ContractFeedback.of(ContractFailure.NOT_BOUND));
+            source.sendFailure(ContractFailure.NOT_BOUND.message());
             return 0;
         }
-        ContractService.Result result = ContractService.requestRecall(mob, source.getEntity() == null
+        Result result = ContractService.requestRecall(mob, source.getEntity() == null
                 ? mob.getUUID() : source.getEntity().getUUID(), force);
-        if (!result.changed()) {
-            source.sendFailure(ContractFeedback.of(result.failure()));
+        if (result.failure() != null) {
+            source.sendFailure(result.failure().message());
             return 0;
         }
         source.sendSuccess(() -> Component.translatable("command.mxt.contract.recall_success", mob.getDisplayName()), true);
@@ -211,13 +212,13 @@ public final class ContractCommand {
         Entity target = EntityArgument.getEntity(ctx, "target");
         ContractBehavior behavior = ContractBehaviors.byId(IdentifierArgument.getId(ctx, "behavior")).orElse(null);
         if (!(target instanceof Mob mob) || behavior == null) {
-            source.sendFailure(ContractFeedback.of(ContractFailure.UNSUPPORTED_BEHAVIOR));
+            source.sendFailure(ContractFailure.UNSUPPORTED_BEHAVIOR.message());
             return 0;
         }
-        ContractService.Result result = ContractBehaviorService.request(mob, source.getEntity() == null
+        Result result = ContractBehaviorService.request(mob, source.getEntity() == null
                 ? mob.getUUID() : source.getEntity().getUUID(), behavior, force);
-        if (!result.changed()) {
-            source.sendFailure(ContractFeedback.of(result.failure()));
+        if (result.failure() != null) {
+            source.sendFailure(result.failure().message());
             return 0;
         }
         source.sendSuccess(() -> Component.translatable("command.mxt.contract.behavior_success",
@@ -235,13 +236,13 @@ public final class ContractCommand {
             source.sendFailure(ProgressionFailure.UNKNOWN_OWNER.message());
             return 0;
         }
-        ProgressionAdminService.Result result = living.getExistingData(MxtAttachments.CREATURE_SPIRIT)
+        Result result = living.getExistingData(MxtAttachments.CREATURE_SPIRIT)
                 .flatMap(CreatureSpiritAttachment::profile)
                 .map(profile -> ProgressionAdminService.setLevel(living,
                         new ProgressionOwners.Owner<>(profile, living.getData(MxtAttachments.CREATURE_SPIRIT).profileLevels()),
                         level, force))
-                .orElseGet(() -> ProgressionAdminService.Result.rejected(ProgressionFailure.UNKNOWN_OWNER));
-        if (!result.changed()) {
+                .orElseGet(() -> Result.failure(ProgressionFailure.UNKNOWN_OWNER));
+        if (result.failure() != null) {
             source.sendFailure(result.failure().message());
             return 0;
         }

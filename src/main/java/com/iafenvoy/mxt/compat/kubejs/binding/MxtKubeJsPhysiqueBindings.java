@@ -1,8 +1,8 @@
 package com.iafenvoy.mxt.compat.kubejs.binding;
 
 import com.iafenvoy.mxt.compat.kubejs.MxtKubeJsApi;
-import com.iafenvoy.mxt.runtime.cultivation.CultivationIdentityService.Result;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationToggleService;
+import com.iafenvoy.mxt.runtime.resulting.Result;
 import dev.latvian.mods.kubejs.typings.Info;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Entity;
@@ -48,7 +48,7 @@ public final class MxtKubeJsPhysiqueBindings {
     }
 
     @Info("Switches a held physique on or off without giving it up, re-deriving what the body is granted; {changed, failure} with NOT_HELD when it holds no such physique.")
-    public CultivationToggleService.Result setEnabled(LivingEntity entity, String physique, boolean enabled) {
+    public CultivationToggleService.ToggleResult setEnabled(LivingEntity entity, String physique, boolean enabled) {
         return MxtKubeJsApi.setPhysiqueEnabled(entity, id(physique), enabled);
     }
 

@@ -14,10 +14,13 @@ import com.iafenvoy.mxt.registry.MxtCriteriaTriggers;
 import com.iafenvoy.mxt.runtime.alchemy.AlchemyResolver.Candidate;
 import com.iafenvoy.mxt.runtime.alchemy.AlchemyResolver.Evaluated;
 import com.iafenvoy.mxt.runtime.alchemy.AlchemyResolver.Gap;
-import com.iafenvoy.mxt.runtime.failure.AlchemyFailure;
-import com.iafenvoy.mxt.runtime.failure.QualityFailure;
 import com.iafenvoy.mxt.runtime.item.QualityRequirements;
 import com.iafenvoy.mxt.runtime.item.QualityService;
+import com.iafenvoy.mxt.runtime.resulting.Failure;
+import com.iafenvoy.mxt.runtime.resulting.Failures;
+import com.iafenvoy.mxt.runtime.resulting.ResultWithData;
+import com.iafenvoy.mxt.runtime.resulting.failures.AlchemyFailure;
+import com.iafenvoy.mxt.runtime.resulting.failures.QualityFailure;
 import com.iafenvoy.mxt.runtime.world.AuraResult;
 import com.iafenvoy.mxt.runtime.world.AuraService;
 import com.iafenvoy.mxt.util.MiscUtil;
@@ -44,8 +47,6 @@ import net.neoforged.neoforge.common.NeoForge;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
-import com.iafenvoy.mxt.runtime.failure.Failure;
-import com.iafenvoy.mxt.runtime.failure.Failures;
 
 /**
  * Recipe numbers use the same parameters() path for preview and the frozen batch.
@@ -144,7 +145,8 @@ public final class AlchemyWorkstationService {
         if (station.state().busy()) return StartResult.rejected(AlchemyFailure.ACTIVE);
         AlchemyPreview preview = preview(player, station);
         if (preview.blocker().isPresent())
-            return new StartResult(false, preview.blocker().get(), preview.qualityFailure());
+            return preview.qualityFailure().map(quality -> StartResult.rejected(preview.blocker().get(), quality))
+                    .orElseGet(() -> StartResult.rejected(preview.blocker().get()));
         if (preview.parameters().isEmpty() || preview.resolvedRecipe().isEmpty())
             return StartResult.rejected(Failures.INVALID_FORMULA);
         Optional<RecipeHolder<AlchemyRecipe>> holder = recipe(player.level().getServer().getRecipeManager(), preview.resolvedRecipe().get());
@@ -512,18 +514,21 @@ public final class AlchemyWorkstationService {
                                  List<ItemStack> failureOutputs) {
     }
 
-    public record StartResult(boolean started, @Nullable Failure failure,
-                              Optional<Failure> qualityFailure) {
+    public static final class StartResult extends ResultWithData<Optional<Failure>> {
+        private StartResult(Optional<Failure> qualityFailure, Failure failure) {
+            super(qualityFailure, failure, null);
+        }
+
         public static StartResult success() {
-            return new StartResult(true, null, Optional.empty());
+            return new StartResult(Optional.empty(), null);
         }
 
         public static StartResult rejected(Failure failure) {
-            return new StartResult(false, failure, Optional.empty());
+            return new StartResult(Optional.empty(), failure);
         }
 
         public static StartResult rejected(Failure failure, Failure quality) {
-            return new StartResult(false, failure, Optional.of(quality));
+            return new StartResult(Optional.of(quality), failure);
         }
     }
 }

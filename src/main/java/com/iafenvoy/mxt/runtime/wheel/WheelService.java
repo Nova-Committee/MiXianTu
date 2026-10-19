@@ -13,14 +13,13 @@ import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.ability.AbilityActivationService;
-import com.iafenvoy.mxt.runtime.ability.AbilityFeedback;
 import com.iafenvoy.mxt.runtime.ability.AbilityService;
 import com.iafenvoy.mxt.runtime.creature.ContractBehaviorService;
 import com.iafenvoy.mxt.runtime.creature.ContractBells;
-import com.iafenvoy.mxt.runtime.creature.ContractFeedback;
-import com.iafenvoy.mxt.runtime.creature.ContractService;
-import com.iafenvoy.mxt.runtime.failure.ContractFailure;
-import com.iafenvoy.mxt.runtime.failure.TogglableFailure;
+import com.iafenvoy.mxt.runtime.resulting.Failure;
+import com.iafenvoy.mxt.runtime.resulting.Result;
+import com.iafenvoy.mxt.runtime.resulting.failures.AbilityFailure;
+import com.iafenvoy.mxt.runtime.resulting.failures.ContractFailure;
 import com.iafenvoy.mxt.runtime.spirit.SpiritBurstService;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.OptionalBoolean;
@@ -36,7 +35,6 @@ import net.minecraft.world.item.ItemStack;
 import org.jspecify.annotations.Nullable;
 
 import java.util.*;
-import com.iafenvoy.mxt.runtime.failure.Failure;
 
 /**
  * The server's half of the wheel: what a submitted layout may contain, and what choosing a page's entry does.
@@ -102,7 +100,7 @@ public final class WheelService {
         // Only a switch has a state to ask for; a one-shot keeps the press channel, which carries no direction.
         OptionalBoolean state = AbilityActivationService.state(player, ability);
         if (state.isEmpty())
-            return refuse(player, id, TogglableFailure.UNAVAILABLE, null, "directed", "actionbar.mxt.wheel.use_failed");
+            return refuse(player, id, AbilityFailure.UNAVAILABLE, null, "directed", "actionbar.mxt.wheel.use_failed");
         if (state.getAsBoolean() == wanted) return true;
         ItemStack carrier = WheelSources.carrier(player, source, ability).orElse(null);
         return activate(player, ability, carrier, id, "directed");
@@ -139,7 +137,7 @@ public final class WheelService {
 
     private static boolean activate(ServerPlayer player, Holder<Ability> ability, @Nullable ItemStack carrier,
                                     Identifier id, String verb) {
-        Togglable.Result result = AbilityActivationService.activate(player, ability, carrier);
+        Togglable.PressResult result = AbilityActivationService.activate(player, ability, carrier);
         if (result.failure() == null) return true;
         return refuse(player, id, result.failure(), result.failedResource(), verb, "actionbar.mxt.wheel.use_failed");
     }
@@ -152,7 +150,7 @@ public final class WheelService {
         AbilityService.UseResult result = AbilityService.use(ability, player, abilities, resources,
                 player.level().getGameTime(), FormulaContext.of(player));
         if (result.failure() == null) return true;
-        return refuse(player, HolderHelper.id(ability), AbilityActivationService.failureOf(result.failure()),
+        return refuse(player, HolderHelper.id(ability), result.failure(),
                 result.failedResource(), "cast", "actionbar.mxt.wheel.cast_failed");
     }
 
@@ -174,7 +172,7 @@ public final class WheelService {
             // path guards against, one registry-like list later.
             MiXianTu.LOGGER.info("Dropping the wheel order {} from {}: no such order is known",
                     id, player.getGameProfile().name());
-            player.sendSystemMessage(ContractFeedback.of(ContractFailure.UNSUPPORTED_BEHAVIOR), true);
+            player.sendSystemMessage(ContractFailure.UNSUPPORTED_BEHAVIOR.message(), true);
             return false;
         }
         Mob beast = ContractBells.beast(player).orElse(null);
@@ -184,11 +182,11 @@ public final class WheelService {
             player.sendSystemMessage(Component.translatable("actionbar.mxt.contract.no_beast"), true);
             return false;
         }
-        ContractService.Result result = ContractBehaviorService.request(beast, player.getUUID(), behavior, false);
-        if (!result.changed()) {
+        Result result = ContractBehaviorService.request(beast, player.getUUID(), behavior, false);
+        if (result.failure() != null) {
             MiXianTu.LOGGER.info("Refusing the wheel order {} for {}: {}", id, player.getGameProfile().name(),
                     result.failure());
-            player.sendSystemMessage(ContractFeedback.of(result.failure()), true);
+            player.sendSystemMessage(result.failure().message(), true);
             return false;
         }
         player.sendSystemMessage(Component.translatable("actionbar.mxt.contract.ordered", beast.getDisplayName(),
@@ -204,7 +202,7 @@ public final class WheelService {
         MiXianTu.LOGGER.info("Refusing the wheel {} {} for {}: {}{}", verb, id, player.getGameProfile().name(), name,
                 failedResource == null ? "" : " (" + failedResource + ")");
         player.sendSystemMessage(Component.translatable(messageKey,
-                AbilityFeedback.reason(failure, failedResource)), true);
+                failure.message(failedResource)), true);
         return false;
     }
 }

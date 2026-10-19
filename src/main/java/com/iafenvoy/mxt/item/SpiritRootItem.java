@@ -3,8 +3,7 @@ package com.iafenvoy.mxt.item;
 import com.iafenvoy.mxt.data.cultivation.SpiritRoot;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationIdentityService;
-import com.iafenvoy.mxt.runtime.cultivation.CultivationIdentityService.Result;
-import com.iafenvoy.mxt.runtime.failure.CultivationIdentityFailure;
+import com.iafenvoy.mxt.runtime.resulting.Result;
 import com.iafenvoy.mxt.util.DefinitionText;
 import net.minecraft.core.Holder;
 import net.minecraft.network.chat.Component;
@@ -16,9 +15,6 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.NotNull;
-import org.jspecify.annotations.Nullable;
-import com.iafenvoy.mxt.runtime.failure.Failure;
-import com.iafenvoy.mxt.runtime.failure.Failures;
 
 /**
  * A physical spirit root: using the stack grants the root its component names. The grant goes through the same
@@ -40,8 +36,8 @@ public final class SpiritRootItem extends Item {
             return InteractionResult.FAIL;
         }
         Result result = CultivationIdentityService.grantSpiritRoot(serverPlayer, root);
-        if (!result.changed()) {
-            Component message = failure(result.failure());
+        if (result.failure() != null) {
+            Component message = Component.translatable("item.mxt.spirit_root.failed", result.failure().message());
             if (player instanceof ServerPlayer serverPlayer1) serverPlayer1.sendSystemMessage(message, true);
             return InteractionResult.FAIL;
         }
@@ -50,10 +46,5 @@ public final class SpiritRootItem extends Item {
         Component message = Component.translatable("item.mxt.spirit_root.granted", DefinitionText.nameOrId(root));
         if (player instanceof ServerPlayer serverPlayer1) serverPlayer1.sendSystemMessage(message, true);
         return InteractionResult.SUCCESS_SERVER;
-    }
-
-    private static Component failure(@Nullable Failure failure) {
-        if (failure == null) return Component.translatable("item.mxt.spirit_root.failed", "-");
-        return failure.message();
     }
 }

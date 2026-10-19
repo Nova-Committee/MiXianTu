@@ -139,7 +139,7 @@ public final class AbilityCommand {
         // An accepted cast is a success too: it commits when the cast time runs out, so there is no failure to
         // name here - reading one would be a null pointer for every skill that has a cast time.
         if (result.failure() != null) {
-            source.sendFailure(Component.translatable("command.mxt.ability.cast_failed", result.failure().name()));
+            source.sendFailure(Component.translatable("command.mxt.ability.cast_failed", result.failure().message()));
             return 0;
         }
         source.sendSuccess(() -> Component.translatable("command.mxt.ability.cast_success", DefinitionText.nameOrId(ability)), true);

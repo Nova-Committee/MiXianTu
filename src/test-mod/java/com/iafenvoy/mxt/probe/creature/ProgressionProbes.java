@@ -21,7 +21,7 @@ import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.ability.AbilityGrantService;
 import com.iafenvoy.mxt.runtime.ability.PassiveAttributeService;
 import com.iafenvoy.mxt.runtime.creature.ContractService;
-import com.iafenvoy.mxt.runtime.failure.ProgressionFailure;
+import com.iafenvoy.mxt.runtime.resulting.failures.ProgressionFailure;
 import com.iafenvoy.mxt.runtime.progression.ProgressionAdminService;
 import com.iafenvoy.mxt.runtime.progression.ProgressionDamageMultiplier;
 import com.iafenvoy.mxt.runtime.progression.ProgressionDriver;
@@ -235,7 +235,7 @@ public final class ProgressionProbes {
 
             boolean foreignRefused = ProgressionAdminService.setLevel(beast, ProbeDefinitions.PROBE_BEAST_PROFILE, foreign, false).failure()
                     == ProgressionFailure.FOREIGN_LEVEL;
-            boolean written = ProgressionAdminService.setLevel(beast, ProbeDefinitions.PROBE_BEAST_PROFILE, third, false).changed()
+            boolean written = ProgressionAdminService.setLevel(beast, ProbeDefinitions.PROBE_BEAST_PROFILE, third, false).failure() == null
                     && stoodOn(beast, ProbeDefinitions.BEAST_3) && signals.size() == 2
                     && close(ProgressionDamageMultiplier.of(beast, growthAbility), 2.0D);
             boolean unchanged = ProgressionAdminService.setLevel(beast, ProbeDefinitions.PROBE_BEAST_PROFILE, third, false).failure()
@@ -337,7 +337,7 @@ public final class ProgressionProbes {
             AbilityAttachment abilities = beast.getData(MxtAttachments.ABILITY_HOLDER);
             double baseHealth = beast.getAttributeValue(Attributes.MAX_HEALTH);
             Holder<ContractType> open = context.require(MxtResourceKeys.CONTRACT_TYPE, ProbeDefinitions.OPEN_CONTRACT);
-            boolean bound = ContractService.bind(open, player, beast, true).changed();
+            boolean bound = ContractService.bind(open, player, beast, true).failure() == null;
             // While bound the condition reports the record: the type it names and the order it is under.
             boolean contractReads = new ContractEntityCondition(true, List.of(), List.of()).test(beast, FormulaContext.of(beast))
                     && new ContractEntityCondition(true, List.of(Either.left(open)), List.of()).test(beast, FormulaContext.of(beast))
@@ -348,7 +348,7 @@ public final class ProgressionProbes {
             resources.set(growth, 10.0D, 0.0D, 1000.0D, -1L, "probe");
             boolean regrown = ProgressionDriver.tick(beast) && stoodOn(beast, ProbeDefinitions.BEAST_2);
             AbilityGrantService.recalculate(beast);
-            boolean released = ContractService.release(beast, player.getUUID(), true).changed();
+            boolean released = ContractService.release(beast, player.getUUID(), true).failure() == null;
             PassiveAttributeService.tick(beast);
             boolean cleared = stoodOn(beast, ProbeDefinitions.BEAST_1)
                     && beast.getData(MxtAttachments.CREATURE_SPIRIT).profileLevels().levels().isEmpty()
@@ -382,7 +382,7 @@ public final class ProgressionProbes {
             spawned.add(beast);
             ResourceHolderAttachment resources = beast.getData(MxtAttachments.RESOURCE_HOLDER);
             Holder<ContractType> open = context.require(MxtResourceKeys.CONTRACT_TYPE, ProbeDefinitions.OPEN_CONTRACT);
-            boolean rebound = ContractService.bind(open, player, beast, true).changed();
+            boolean rebound = ContractService.bind(open, player, beast, true).failure() == null;
             resources.set(growth, 10.0D, 0.0D, 1000.0D, -1L, "probe");
             boolean grown = ProgressionDriver.tick(beast) && stoodOn(beast, ProbeDefinitions.BEAST_2);
             beast.hurtServer(level, level.damageSources().genericKill(), Float.MAX_VALUE);

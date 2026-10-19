@@ -493,7 +493,7 @@ public final class DamageProbes {
     // refused, and the leg that asked for it fails rather than measuring a body that never got it.
     private static boolean grantProbePhysique(ProbeContext context, LivingEntity entity, Identifier id) {
         return CultivationIdentityService.grantPhysique(entity, context.require(MxtResourceKeys.PHYSIQUE, id),
-                FormulaContext.of(entity)).changed();
+                FormulaContext.of(entity)).failure() == null;
     }
 
     private static boolean close(double actual, double expected) {

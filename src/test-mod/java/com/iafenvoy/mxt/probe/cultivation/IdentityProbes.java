@@ -54,8 +54,8 @@ public final class IdentityProbes {
                 context.fail("identity probe: could not create the probe entity");
                 return;
             }
-            boolean granted = MxtKubeJsApi.grantSpiritRoot(probe, ProbeDefinitions.PROBE_FIRE_ROOT).changed()
-                    && MxtKubeJsApi.grantPhysique(probe, ProbeDefinitions.PROBE_PHYSIQUE).changed();
+            boolean granted = MxtKubeJsApi.grantSpiritRoot(probe, ProbeDefinitions.PROBE_FIRE_ROOT).failure() == null
+                    && MxtKubeJsApi.grantPhysique(probe, ProbeDefinitions.PROBE_PHYSIQUE).failure() == null;
             boolean listed = MxtKubeJsApi.spiritRoots(probe).equals(List.of(ProbeDefinitions.PROBE_FIRE_ROOT.toString()))
                     && MxtKubeJsApi.physiques(probe).equals(List.of(ProbeDefinitions.PROBE_PHYSIQUE.toString()))
                     && MxtKubeJsApi.activeSpiritRoots(probe).equals(List.of(ProbeDefinitions.PROBE_FIRE_ROOT.toString()))

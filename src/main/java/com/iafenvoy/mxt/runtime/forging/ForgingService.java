@@ -11,8 +11,12 @@ import com.iafenvoy.mxt.data.forging.ForgingMethod;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.event.ForgingEvent;
 import com.iafenvoy.mxt.event.ForgingEvent.*;
-import com.iafenvoy.mxt.runtime.failure.ForgingFailure;
 import com.iafenvoy.mxt.runtime.item.QualityService;
+import com.iafenvoy.mxt.runtime.resulting.Failure;
+import com.iafenvoy.mxt.runtime.resulting.Failures;
+import com.iafenvoy.mxt.runtime.resulting.Result;
+import com.iafenvoy.mxt.runtime.resulting.ResultWithData;
+import com.iafenvoy.mxt.runtime.resulting.failures.ForgingFailure;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.Holder;
 import net.minecraft.core.RegistryAccess;
@@ -28,8 +32,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.BooleanSupplier;
 import java.util.function.IntFunction;
-import com.iafenvoy.mxt.runtime.failure.Failure;
-import com.iafenvoy.mxt.runtime.failure.Failures;
 
 /**
  * Server-side coordinator for method validation, atomic payment and final forging-quality data.
@@ -63,9 +65,11 @@ public final class ForgingService {
         if (refusal != null) return StrikeResult.rejected(refusal, null);
         CostContext costContext = CostContext.of(player, context, CostOrigin.FORGING);
         CostPayment plan = CostPayment.of(costContext);
-        if (plan.loadAndTest(event.getCosts()).isPresent()) return StrikeResult.rejected(Failures.INVALID_FORMULA, null);
-        CostPayment.Result payment = plan.commit();
-        if (!payment.paid()) return StrikeResult.rejected(Failures.INSUFFICIENT_RESOURCE, payment.failedResource());
+        if (plan.loadAndTest(event.getCosts()).isPresent())
+            return StrikeResult.rejected(Failures.INVALID_FORMULA, null);
+        CostPayment.PaymentResult payment = plan.commit();
+        if (!payment.isSuccess())
+            return StrikeResult.rejected(Failures.INSUFFICIENT_RESOURCE, payment.failedResource());
         if (!session.strike(method))
             throw new IllegalStateException("Forging session changed after its strike precheck");
         notifyListeners(new StrikePost(player, surface.pos(), new ForgingSessionView(session)));
@@ -156,7 +160,11 @@ public final class ForgingService {
         }
     }
 
-    public record StartResult(ForgingSession session, Failure failure) {
+    public static final class StartResult extends ResultWithData<ForgingSession> {
+        private StartResult(@Nullable ForgingSession session, Failure failure) {
+            super(session, failure, null);
+        }
+
         private static StartResult started(ForgingSession session) {
             return new StartResult(session, null);
         }
@@ -164,26 +172,55 @@ public final class ForgingService {
         private static StartResult rejected(Failure failure) {
             return new StartResult(null, failure);
         }
-
-        public boolean started() {
-            return this.session != null;
-        }
     }
 
-    public record StrikeResult(boolean struck, Failure failure, Identifier failedResource, int value, int steps,
-                               Map<Identifier, Double> paidCosts) {
+    public static final class StrikeResult extends Result {
+        private final int value;
+        private final int steps;
+        private final Map<Identifier, Double> paidCosts;
+
+        private StrikeResult(@Nullable Failure failure, @Nullable Identifier failedResource, int value, int steps,
+                             Map<Identifier, Double> paidCosts) {
+            super(failure, failedResource);
+            this.value = value;
+            this.steps = steps;
+            this.paidCosts = paidCosts;
+        }
+
         private static StrikeResult struck(int value, int steps, Map<Identifier, Double> paidCosts) {
-            return new StrikeResult(true, null, null, value, steps, paidCosts);
+            return new StrikeResult(null, null, value, steps, paidCosts);
         }
 
         private static StrikeResult rejected(Failure failure, Identifier resource) {
-            return new StrikeResult(false, failure, resource, 0, 0, Map.of());
+            return new StrikeResult(failure, resource, 0, 0, Map.of());
+        }
+
+        public int value() {
+            return this.value;
+        }
+
+        public int steps() {
+            return this.steps;
+        }
+
+        public Map<Identifier, Double> paidCosts() {
+            return this.paidCosts;
         }
     }
 
     // The tier is carried beside the record rather than inside it: the workstation writes it to the one quality
     // component, and the record keeps only what the smith did.
-    public record FinishResult(ForgingResultComponent result, Holder<ItemQuality> quality, Failure failure) {
+    public static final class FinishResult extends Result {
+        private final @Nullable ForgingResultComponent result;
+        private final @Nullable Holder<ItemQuality> quality;
+
+        private FinishResult(@Nullable ForgingResultComponent result, @Nullable Holder<ItemQuality> quality,
+                             Failure failure) {
+            super(failure, null);
+            this.result = result;
+            this.quality = quality;
+        }
+
         private static FinishResult finished(ForgingResultComponent result, Holder<ItemQuality> quality) {
             return new FinishResult(result, quality, null);
         }
@@ -192,8 +229,12 @@ public final class ForgingService {
             return new FinishResult(null, null, failure);
         }
 
-        public boolean finished() {
-            return this.result != null;
+        public @Nullable ForgingResultComponent result() {
+            return this.result;
+        }
+
+        public @Nullable Holder<ItemQuality> quality() {
+            return this.quality;
         }
     }
 }

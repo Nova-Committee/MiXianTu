@@ -41,7 +41,8 @@ import net.neoforged.neoforge.common.NeoForge;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
-import com.iafenvoy.mxt.runtime.failure.Failures;
+import com.iafenvoy.mxt.runtime.resulting.Failures;
+import com.iafenvoy.mxt.runtime.resulting.Result;
 
 /**
  * The whole lifespan ledger, driven on disposable probes: the master switch, both numbers, seeding, the settlement,
@@ -87,7 +88,7 @@ public final class LifespanProbes {
             settings.baseLifespan.setValue(24_000L);
             boolean dormantSettled = LifeSpanService.settle(dormant);
             boolean dormantLedger = dormant.getExistingData(MxtAttachments.LIFESPAN).isPresent();
-            boolean dormantWrite = LifeSpanService.set(dormant, 100L).changed();
+            boolean dormantWrite = LifeSpanService.set(dormant, 100L).failure() == null;
             ok &= context.check("lifespan probe: switch_off settled=" + dormantSettled + " ledger=" + dormantLedger
                             + " written=" + LifeSpanService.remaining(dormant),
                     !dormantSettled && !dormantLedger && dormantWrite && LifeSpanService.remaining(dormant) == 100L);
@@ -143,7 +144,7 @@ public final class LifespanProbes {
             boolean added = LifeSpanService.remaining(ledger) == 150L && LifeSpanService.total(ledger) == 150L;
             LifeSpanService.add(ledger, -30L);
             boolean spent = LifeSpanService.remaining(ledger) == 120L && LifeSpanService.total(ledger) == 150L;
-            boolean refusedSet = !LifeSpanService.set(ledger, -1L).changed()
+            boolean refusedSet = LifeSpanService.set(ledger, -1L).failure() != null
                     && LifeSpanService.remaining(ledger) == 120L && LifeSpanService.total(ledger) == 150L;
             // Ageing of zero settles without spending anything.
             settings.agePerSettle.setValue(0);
@@ -376,9 +377,9 @@ public final class LifespanProbes {
             // The pack's cap is part of the arithmetic: 25 is the fixture's own cost, and a body that cannot hold
             // that much turns the whole part into an INSUFFICIENT_RESOURCE answer that says nothing about lifespan.
             boolean affordable = climbResources.get(climbPayment) >= 25.0D;
-            boolean granted = breakthrough.advanced() && LifeSpanService.remaining(climber) == 2_400L
+            boolean granted = breakthrough.isSuccess() && LifeSpanService.remaining(climber) == 2_400L
                     && LifeSpanService.total(climber) == 2_400L;
-            ok &= context.check("lifespan probe: breakthrough advanced=" + breakthrough.advanced()
+            ok &= context.check("lifespan probe: breakthrough advanced=" + breakthrough.isSuccess()
                             + " failure=" + breakthrough.failure() + " declared=" + declared
                             + " affordable=" + affordable + " granted=" + LifeSpanService.remaining(climber),
                     affordable && granted);
@@ -440,7 +441,7 @@ public final class LifespanProbes {
 
             settings.enabled.setValue(true);
             settings.baseLifespan.setValue(0L);
-            boolean zeroAdd = LifeSpanService.add(untouched, 0L).changed()
+            boolean zeroAdd = LifeSpanService.add(untouched, 0L).failure() == null
                     && untouched.getExistingData(MxtAttachments.LIFESPAN).isEmpty();
             boolean clean = !LifeSpanService.settle(untouched)
                     && untouched.getExistingData(MxtAttachments.LIFESPAN).isEmpty()
@@ -486,16 +487,16 @@ public final class LifespanProbes {
             NeoForge.EVENT_BUS.addListener(watch);
             NeoForge.EVENT_BUS.addListener(counted);
             NeoForge.EVENT_BUS.addListener(veto);
-            LifeSpanService.Result refused;
+            Result refused;
             try {
                 refused = LifeSpanService.reincarnate(restart);
             } finally {
                 NeoForge.EVENT_BUS.unregister(veto);
             }
             // A refused rebirth changes nothing at all: the realm is still there and the ledger still reads 5.
-            boolean restartRefused = !refused.changed() && refused.failure() == Failures.CANCELLED
+            boolean restartRefused = refused.failure() != null && refused.failure() == Failures.CANCELLED
                     && !restartSpirit.realmStages().isEmpty() && LifeSpanService.remaining(restart) == 5L;
-            LifeSpanService.Result restarted;
+            Result restarted;
             try {
                 restarted = LifeSpanService.reincarnate(restart);
             } finally {
@@ -507,13 +508,13 @@ public final class LifespanProbes {
                     && !restartAbilities.has(context.require(MxtResourceKeys.ABILITY, context.id("awaken_divine_sense")))
                     && restartAbilities.has(context.require(MxtResourceKeys.ABILITY, ProbeDefinitions.PROBE_AFFINITY_ABILITY));
             boolean restartLedger = LifeSpanService.remaining(restart) == 24_000L && LifeSpanService.total(restart) == 24_000L;
-            ok &= context.check("lifespan probe: explicit_reincarnate ran=" + restarted.changed()
+            ok &= context.check("lifespan probe: explicit_reincarnate ran=" + (restarted.failure() == null)
                             + " refused=" + restartRefused + " ability=" + restartAbility
                             + " realms=" + restartSpirit.realmStages().size()
                             + " kept_root=" + restartAbilities.has(context.require(MxtResourceKeys.ABILITY, ProbeDefinitions.PROBE_AFFINITY_ABILITY))
                             + " ledger=" + LifeSpanService.remaining(restart)
                             + " rebirth_post=" + rebirths[0] + " end_event=" + ended[0],
-                    restartAbility && restarted.changed() && restartRefused && restartReset && restartLedger
+                    restartAbility && restarted.failure() == null && restartRefused && restartReset && restartLedger
                             && rebirths[0] == 1 && !ended[0]);
             verdict(context, ok);
         } finally {

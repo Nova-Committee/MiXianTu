@@ -5,8 +5,8 @@ import com.iafenvoy.mxt.data.cultivation.Cultivation;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.runtime.cultivation.CultivationMethodService.Result;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService.BreakthroughStatus;
+import com.iafenvoy.mxt.runtime.resulting.Failure;
 import com.iafenvoy.mxt.runtime.trigger.CultivationTriggerService;
 import com.iafenvoy.mxt.runtime.world.AuraResult;
 import com.iafenvoy.mxt.runtime.world.AuraService;
@@ -28,7 +28,6 @@ import net.neoforged.neoforge.event.tick.LevelTickEvent.Post;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
-import com.iafenvoy.mxt.runtime.failure.Failure;
 
 /**
  * Drives the one persisted cultivation method using the entity's current chunk aura.
@@ -80,7 +79,7 @@ public final class CultivationEventBridge {
         FormulaContext context = FormulaContexts.forEntity(entity);
         boolean mayContinue = definition.tickCondition().test(entity, context);
         AuraResult aura = AuraService.getPositionAura(entity.level(), entity.blockPosition());
-        Result result = CultivationMethodService.tick(entity, spirit, entity.getData(MxtAttachments.RESOURCE_HOLDER), aura, action, definition,
+        CultivationMethodService.CultivationResult result = CultivationMethodService.tick(entity, spirit, entity.getData(MxtAttachments.RESOURCE_HOLDER), aura, action, definition,
                 entity.level().getGameTime(), context, () -> mayContinue);
         if (entity instanceof ServerPlayer player) {
             if (result.failure() == null) {

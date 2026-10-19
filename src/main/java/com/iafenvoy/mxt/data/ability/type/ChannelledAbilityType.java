@@ -69,7 +69,7 @@ public record ChannelledAbilityType(NumberProvider tickInterval, List<Cost> upke
     }
 
     @Override
-    public Result activate(ToggleContext context) {
+    public PressResult activate(ToggleContext context) {
         return AbilityActivationService.cast(context);
     }
 }

@@ -8,8 +8,10 @@ import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.registry.tag.MxtQualityTags;
-import com.iafenvoy.mxt.runtime.failure.QualityFailure;
 import com.iafenvoy.mxt.runtime.item.ItemBindingService.ResolvedBindings;
+import com.iafenvoy.mxt.runtime.resulting.Failure;
+import com.iafenvoy.mxt.runtime.resulting.Failures;
+import com.iafenvoy.mxt.runtime.resulting.failures.QualityFailure;
 import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.MiscUtil;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
@@ -39,8 +41,6 @@ import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent.RightClick
 import java.util.*;
 import java.util.function.Function;
 import java.util.function.Supplier;
-import com.iafenvoy.mxt.runtime.failure.Failure;
-import com.iafenvoy.mxt.runtime.failure.Failures;
 
 /**
  * The one quality service: what tier a stack reads at, which ladder that tier belongs to, the catalogue the tooltip

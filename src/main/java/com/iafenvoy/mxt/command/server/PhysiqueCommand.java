@@ -6,9 +6,10 @@ import com.iafenvoy.mxt.data.cultivation.Physique;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationIdentityService;
-import com.iafenvoy.mxt.runtime.cultivation.CultivationIdentityService.Result;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationToggleService;
 import com.iafenvoy.mxt.runtime.item.QualityService;
+import com.iafenvoy.mxt.runtime.resulting.Failure;
+import com.iafenvoy.mxt.runtime.resulting.Result;
 import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
@@ -34,7 +35,6 @@ import java.util.List;
 
 import static net.minecraft.commands.Commands.argument;
 import static net.minecraft.commands.Commands.literal;
-import com.iafenvoy.mxt.runtime.failure.Failure;
 
 /**
  * The {@code /physique} command; also reachable as {@code /mxt physique}. The administrative half of the physique
@@ -105,7 +105,7 @@ public final class PhysiqueCommand {
                 continue;
             }
             Result result = CultivationIdentityService.grantPhysique(living, physique, FormulaContext.of(living));
-            if (!result.changed()) {
+            if (result.failure() != null) {
                 source.sendFailure(Component.translatable("command.mxt.identity.grant_failed",
                         DefinitionText.nameOrId(physique), target.getDisplayName(), reason(result.failure())));
                 continue;
@@ -147,7 +147,7 @@ public final class PhysiqueCommand {
                 source.sendFailure(Component.translatable("command.mxt.identity.not_living", target.getDisplayName()));
                 continue;
             }
-            CultivationToggleService.Result result = CultivationToggleService.setPhysiqueEnabled(living, physique, enabled);
+            CultivationToggleService.ToggleResult result = CultivationToggleService.setPhysiqueEnabled(living, physique, enabled);
             if (!result.changed()) {
                 source.sendFailure(Component.translatable("command.mxt.identity.toggle_failed", target.getDisplayName(), HolderHelper.id(physique), reason(result.failure())));
                 continue;
@@ -160,9 +160,8 @@ public final class PhysiqueCommand {
         return changed;
     }
 
-    // Printed as its own name rather than as a sentence: the values are a fixed vocabulary shared with the
-    // services, and a pack author reading the log wants the identifier.
+    // A switch that was already in the state asked for was not refused, so it has no reason to read out.
     private static Component reason(@Nullable Failure failure) {
-        return Component.literal(failure == null ? "NO_CHANGE" : failure.name());
+        return failure == null ? Component.translatable("command.mxt.identity.unchanged") : failure.message();
     }
 }

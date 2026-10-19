@@ -4,13 +4,13 @@ import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.cost.Cost;
 import com.iafenvoy.mxt.data.cost.CostPayment;
 import com.iafenvoy.mxt.data.cost.context.CostContext;
+import com.iafenvoy.mxt.runtime.resulting.Failure;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
 
 import java.util.Optional;
-import com.iafenvoy.mxt.runtime.failure.Failure;
 
 /**
  * Takes aura by identity rather than by the value it is counted in: on a payer it becomes that aura's resource,

@@ -7,7 +7,8 @@ import com.iafenvoy.mxt.data.cost.builtin.AuraCost;
 import com.iafenvoy.mxt.data.cost.context.CostContext;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.registry.MxtAttachments;
-import com.iafenvoy.mxt.runtime.failure.CostFailure;
+import com.iafenvoy.mxt.runtime.resulting.Failure;
+import com.iafenvoy.mxt.runtime.resulting.failures.CostFailure;
 import com.iafenvoy.mxt.runtime.world.AuraService;
 import com.iafenvoy.mxt.util.MiscUtil;
 import net.minecraft.core.BlockPos;
@@ -19,7 +20,6 @@ import net.minecraft.world.level.Level;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
-import com.iafenvoy.mxt.runtime.failure.Failure;
 
 /**
  * The aura draft: what every {@code mxt:aura} entry takes from the store its context names, merged per aura in the

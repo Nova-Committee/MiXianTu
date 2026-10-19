@@ -51,7 +51,7 @@ public record TargetedAbilityType(TargetSelector targetSelector, Holder<Ability>
     }
 
     @Override
-    public Result activate(ToggleContext context) {
+    public PressResult activate(ToggleContext context) {
         return AbilityActivationService.cast(context);
     }
 

@@ -21,10 +21,10 @@ import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.registry.MxtItems;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationMethodService;
-import com.iafenvoy.mxt.runtime.cultivation.CultivationMethodService.Result;
+import com.iafenvoy.mxt.runtime.cultivation.CultivationMethodService.CultivationResult;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationModeService;
 import com.iafenvoy.mxt.runtime.cultivation.TechniqueService;
-import com.iafenvoy.mxt.runtime.failure.TechniqueFailure;
+import com.iafenvoy.mxt.runtime.resulting.failures.TechniqueFailure;
 import com.iafenvoy.mxt.runtime.world.AuraResult;
 import com.iafenvoy.mxt.runtime.world.AuraService;
 import com.iafenvoy.mxt.util.HolderHelper;
@@ -47,7 +47,7 @@ import net.neoforged.neoforge.common.NeoForge;
 
 import java.util.*;
 import java.util.function.Consumer;
-import com.iafenvoy.mxt.runtime.failure.Failures;
+import com.iafenvoy.mxt.runtime.resulting.Failures;
 
 /**
  * The cultivation-method pick: which method a body selects, what each of the three conditions answers, and what a
@@ -112,11 +112,11 @@ public final class CultivationProbes {
         try {
             boolean noneLearned = !asks(named, learner) && !asks(strict, learner) && asks(worldly, learner);
             boolean learnedBreathing = TechniqueService.learn(learner,
-                    learner.getData(MxtAttachments.TECHNIQUE), breathing, contextOf(learner)).changed();
+                    learner.getData(MxtAttachments.TECHNIQUE), breathing, contextOf(learner)).failure() == null;
             boolean tagOnly = asks(gated, learner) && !asks(named, learner) && !asks(strict, learner)
                     && !asks(worldly, learner);
             boolean learnedSword = TechniqueService.learn(learner,
-                    learner.getData(MxtAttachments.TECHNIQUE), sword, contextOf(learner)).changed();
+                    learner.getData(MxtAttachments.TECHNIQUE), sword, contextOf(learner)).failure() == null;
             boolean allOf = asks(named, learner) && asks(strict, learner);
             report(context, "cultivation probe: technique none=" + noneLearned + " learned="
                             + (learnedBreathing && learnedSword) + " tag=" + tagOnly + " all=" + allOf,
@@ -173,7 +173,7 @@ public final class CultivationProbes {
             boolean yieldHolds = asks(dual, seatA);
             boolean upkeepFalse = !dual.value().tickCondition().test(seatA, contextOf(seatA));
             boolean seated = CultivationModeService.start(seatA, seatSpirit, dual, contextOf(seatA)).started();
-            Result upkeepTick = tickCultivation(seatA, seatSpirit, dual, now);
+            CultivationResult upkeepTick = tickCultivation(seatA, seatSpirit, dual, now);
             boolean aborted = !seatSpirit.cultivating()
                     && upkeepTick.failure() == Failures.CONDITIONS
                     && named(upkeepTick, "the partner is gone");
@@ -229,8 +229,8 @@ public final class CultivationProbes {
             ProbeKit.ensureResource(runB, otherResources, waterPower, 10.0D);
             boolean bothSeated = CultivationModeService.start(runA, runSpiritA, dual, contextOf(runA)).started()
                     && CultivationModeService.start(runB, runSpiritB, dual, contextOf(runB)).started();
-            Result firstA = tickCultivation(runA, runSpiritA, dual, now);
-            Result firstB = tickCultivation(runB, runSpiritB, dual, now);
+            CultivationResult firstA = tickCultivation(runA, runSpiritA, dual, now);
+            CultivationResult firstB = tickCultivation(runB, runSpiritB, dual, now);
             boolean bothPaid = firstA.progressed() && firstB.progressed()
                     && close(runResources.get(waterPower), 9.0D) && close(runResources.get(mastery), 1.0D);
             report(context, "cultivation probe: pair seated=" + bothSeated + " progressed=" + firstA.progressed()
@@ -243,12 +243,12 @@ public final class CultivationProbes {
             long due = runSpiritA.nextCultivateTick();
             double powerBefore = runResources.get(waterPower);
             double masteryBefore = runResources.get(mastery);
-            Result skipped = tickCultivation(runA, runSpiritA, dual, due);
+            CultivationResult skipped = tickCultivation(runA, runSpiritA, dual, due);
             boolean noYield = skipped.waiting() && !skipped.progressed() && runSpiritA.cultivating()
                     && close(runResources.get(waterPower), powerBefore) && close(runResources.get(mastery), masteryBefore)
                     && runSpiritA.nextCultivateTick() == due;
             runB.setItemInHand(InteractionHand.MAIN_HAND, held);
-            Result resumed = tickCultivation(runA, runSpiritA, dual, due);
+            CultivationResult resumed = tickCultivation(runA, runSpiritA, dual, due);
             boolean yieldsAgain = resumed.progressed() && close(runResources.get(waterPower), powerBefore - 1.0D)
                     && close(runResources.get(mastery), masteryBefore + 1.0D) && runSpiritA.nextCultivateTick() == due + 20L;
             report(context, "cultivation probe: skipped waiting=" + skipped.waiting() + " resumed=" + yieldsAgain
@@ -392,7 +392,7 @@ public final class CultivationProbes {
         CultivationModeService.start(actor, actorSpirit, free, contextOf(actor));
         try {
             CultivationAttachment pickSpirit = veteran.getData(MxtAttachments.CULTIVATION);
-            Result namedPick = CultivationModeService.startNamed(veteran, basic);
+            CultivationResult namedPick = CultivationModeService.startNamed(veteran, basic);
             boolean pickedAnyway = namedPick.started() && runs(pickSpirit, ProbeDefinitions.CULTIVATE)
                     && picks(CultivationModeService.select(veteran, contextOf(veteran)),
                     ProbeDefinitions.TECHNIQUE_MEDITATION);
@@ -425,11 +425,11 @@ public final class CultivationProbes {
             CultivationAttachment bareSpirit = bareA.getData(MxtAttachments.CULTIVATION);
             AbilityAttachment bareAbilities = bareA.getData(MxtAttachments.ABILITY_HOLDER);
             bareSpirit.setRealmStage(context.require(MxtResourceKeys.REALM_STAGE, ProbeDefinitions.QI_REFINING));
-            boolean bareLearned = TechniqueService.learn(bareA, bareIdentity, sword, contextOf(bareA)).changed();
+            boolean bareLearned = TechniqueService.learn(bareA, bareIdentity, sword, contextOf(bareA)).failure() == null;
             bareA.getData(MxtAttachments.TECHNIQUE).techniqueLevels()
                     .set(sword, context.require(MxtResourceKeys.PROGRESSION, ProbeDefinitions.PROBE_PROGRESSION_LEVEL));
             boolean bareGranted = bareAbilities.has(context.require(MxtResourceKeys.ABILITY, ProbeDefinitions.PROBE_ABILITY));
-            boolean forgotten = TechniqueService.forget(bareA, bareIdentity, sword).changed();
+            boolean forgotten = TechniqueService.forget(bareA, bareIdentity, sword).failure() == null;
             boolean gone = bareIdentity.learnedTechniques().stream()
                     .noneMatch(technique -> HolderHelper.id(technique).equals(ProbeDefinitions.SWORD_MANUAL))
                     && bareIdentity.techniqueLevels().levels().keySet().stream()
@@ -527,7 +527,7 @@ public final class CultivationProbes {
 
     // One settlement of a running method, driven the way the runtime drives it: the place supplies the aura, the
     // caller supplies the upkeep answer, and the time is whatever the caller says it is.
-    private static Result tickCultivation(LivingEntity entity, CultivationAttachment spirit,
+    private static CultivationResult tickCultivation(LivingEntity entity, CultivationAttachment spirit,
                                           Holder<Cultivation> action, long gameTime) {
         Cultivation definition = action.value();
         FormulaContext context = contextOf(entity);
@@ -554,7 +554,7 @@ public final class CultivationProbes {
     }
 
     // A pack-named abort carries its own text; every other failure carries none and is told by its enum.
-    private static boolean named(Result result, String expected) {
+    private static boolean named(CultivationResult result, String expected) {
         return result.abortReason() != null && result.abortReason().getString().equals(expected);
     }
 

@@ -1,8 +1,8 @@
 package com.iafenvoy.mxt.compat.kubejs.binding;
 
 import com.iafenvoy.mxt.compat.kubejs.MxtKubeJsApi;
-import com.iafenvoy.mxt.runtime.progression.ProgressionAdminService;
 import com.iafenvoy.mxt.runtime.progression.ProgressionMastery;
+import com.iafenvoy.mxt.runtime.resulting.Result;
 import dev.latvian.mods.kubejs.typings.Info;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Entity;
@@ -39,7 +39,7 @@ public final class MxtKubeJsProgressionBindings {
     }
 
     @Info("Stores a level and rebuilds what it grants, the same way an operator does it. {changed, failure}, where failure is UNKNOWN_OWNER, FOREIGN_LEVEL, SAME_LEVEL, UNKNOWN_LEVEL or SERVER_ONLY.")
-    public ProgressionAdminService.Result setLevel(LivingEntity entity, String owner, String level) {
+    public Result setLevel(LivingEntity entity, String owner, String level) {
         return MxtKubeJsApi.setProgressionLevel(entity, id(owner), id(level), false);
     }
 

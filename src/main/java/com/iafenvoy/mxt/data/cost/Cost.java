@@ -4,6 +4,7 @@ import com.iafenvoy.mxt.data.cost.builtin.ResourceCost;
 import com.iafenvoy.mxt.data.cost.context.CostContext;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.registry.MxtRegistries;
+import com.iafenvoy.mxt.runtime.resulting.Failure;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
@@ -13,7 +14,6 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
-import com.iafenvoy.mxt.runtime.failure.Failure;
 
 /**
  * One entry of a costs array. An entry is data: what it costs is read, merged and written by the {@link CostDraft}

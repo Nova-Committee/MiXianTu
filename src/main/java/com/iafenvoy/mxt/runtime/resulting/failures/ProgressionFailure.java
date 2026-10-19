@@ -1,4 +1,8 @@
-package com.iafenvoy.mxt.runtime.failure;
+package com.iafenvoy.mxt.runtime.resulting.failures;
+
+import com.iafenvoy.mxt.runtime.resulting.Failure;
+import com.iafenvoy.mxt.runtime.resulting.FailureSources;
+import com.iafenvoy.mxt.runtime.resulting.SimpleFailure;
 
 // UNKNOWN_LEVEL belongs to the script entry, which takes ids rather than parsed arguments.
 public final class ProgressionFailure {

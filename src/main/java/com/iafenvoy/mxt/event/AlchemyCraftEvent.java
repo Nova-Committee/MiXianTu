@@ -2,6 +2,7 @@ package com.iafenvoy.mxt.event;
 
 import com.iafenvoy.mxt.recipe.AlchemyRecipe;
 import com.iafenvoy.mxt.recipe.AlchemyRole;
+import com.iafenvoy.mxt.runtime.resulting.Failure;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
@@ -13,7 +14,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-import com.iafenvoy.mxt.runtime.failure.Failure;
 
 /**
  * KubeJS name remains {@code alchemyCraft}. Pre copies cannot change the bill; Post does not write the output slots.

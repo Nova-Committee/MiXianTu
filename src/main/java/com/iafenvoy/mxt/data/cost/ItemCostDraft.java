@@ -2,7 +2,8 @@ package com.iafenvoy.mxt.data.cost;
 
 import com.iafenvoy.mxt.data.cost.builtin.ItemCost;
 import com.iafenvoy.mxt.data.cost.context.CostContext;
-import com.iafenvoy.mxt.runtime.failure.CostFailure;
+import com.iafenvoy.mxt.runtime.resulting.Failure;
+import com.iafenvoy.mxt.runtime.resulting.failures.CostFailure;
 import com.iafenvoy.mxt.util.MiscUtil;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.world.Container;
@@ -11,7 +12,6 @@ import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
-import com.iafenvoy.mxt.runtime.failure.Failure;
 
 /**
  * The inventory's draft: which slot each item entry comes out of, counted without touching the inventory. Its

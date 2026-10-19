@@ -9,10 +9,14 @@ import com.iafenvoy.mxt.network.payload.AlchemyActionC2SPayload;
 import com.iafenvoy.mxt.network.payload.AlchemyStateS2CPayload;
 import com.iafenvoy.mxt.registry.MxtBlocks;
 import com.iafenvoy.mxt.registry.MxtMenus;
-import com.iafenvoy.mxt.runtime.alchemy.*;
+import com.iafenvoy.mxt.runtime.alchemy.AlchemyFurnaceStructure;
+import com.iafenvoy.mxt.runtime.alchemy.AlchemyInventoryKind;
+import com.iafenvoy.mxt.runtime.alchemy.AlchemySession;
+import com.iafenvoy.mxt.runtime.alchemy.AlchemyWorkstationService;
 import com.iafenvoy.mxt.runtime.alchemy.AlchemyWorkstationService.AlchemyPreview;
 import com.iafenvoy.mxt.runtime.alchemy.AlchemyWorkstationService.Parameters;
 import com.iafenvoy.mxt.runtime.item.QualityService;
+import com.iafenvoy.mxt.runtime.resulting.Failure;
 import com.iafenvoy.mxt.screen.aui.AuiPages;
 import com.iafenvoy.mxt.screen.menu.AlchemyFurnaceView.Numbers;
 import com.iafenvoy.mxt.screen.menu.AlchemyFurnaceView.Status;
@@ -41,7 +45,6 @@ import org.jspecify.annotations.NonNull;
 
 import java.util.Locale;
 import java.util.Map;
-import com.iafenvoy.mxt.runtime.failure.Failure;
 
 /**
  * One menu type, four views. The slot order is the page's container order - the machine container, as wide as the
@@ -202,8 +205,8 @@ public final class AlchemyFurnaceMenu extends ApricityContainerMenu {
             case TEMPERATURE -> this.acknowledgeTemperature(furnace, payload.temperature());
             case START -> {
                 AlchemyWorkstationService.StartResult result = AlchemyWorkstationService.start(player, furnace);
-                if (!result.started() && result.failure() != null)
-                    player.sendSystemMessage(failure(result.failure()), true);
+                if (result.isFailure())
+                    player.sendSystemMessage(result.failure().message(), true);
             }
             case ABORT -> AlchemyWorkstationService.abort(player.level(), furnace.getBlockPos(), furnace);
         }
@@ -349,8 +352,8 @@ public final class AlchemyFurnaceMenu extends ApricityContainerMenu {
                 : text("phase." + furnace.phase().name().toLowerCase(Locale.ROOT))
                 : spec == null ? text("no_furnace")
                 : !structure.complete() ? text("structure", structure.missing().size(), structure.unloaded().size(), structure.conflicts().size())
-                : preview.qualityFailure().map(reason -> text("failure." + reason.name().toLowerCase(Locale.ROOT)))
-                .or(() -> preview.blocker().map(AlchemyFurnaceMenu::failure))
+                : preview.qualityFailure().map(Failure::message)
+                .or(() -> preview.blocker().map(Failure::message))
                 .orElse(text("ready"));
         Status status = new Status(name, quality, furnace.phase().name(), message,
                 canStart, furnace.state().busy(), structure.formed(),
@@ -366,10 +369,6 @@ public final class AlchemyFurnaceMenu extends ApricityContainerMenu {
 
     private static Component text(String suffix, Object... arguments) {
         return Component.translatable("screen.mxt.alchemy." + suffix, arguments);
-    }
-
-    private static Component failure(Failure failure) {
-        return failure.message();
     }
 
     /**

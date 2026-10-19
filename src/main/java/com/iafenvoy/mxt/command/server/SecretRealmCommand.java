@@ -78,10 +78,10 @@ public final class SecretRealmCommand {
 
     private static int enterSecretRealm(CommandSourceStack source, Reference<SecretRealm> definition) throws CommandSyntaxException {
         ServerPlayer player = source.getPlayerOrException();
-        SecretRealmService.Result result = SecretRealmService.enter(player, source.getServer(), definition);
-        if (!result.changed()) {
+        SecretRealmService.TravelResult result = SecretRealmService.enter(player, source.getServer(), definition);
+        if (!result.isSuccess()) {
             source.sendFailure(result.message().orElseGet(() -> Component.translatable("command.mxt.secret_realm.enter_failed",
-                    result.failure().name())));
+                    result.failure().message())));
             return 0;
         }
         source.sendSuccess(() -> Component.translatable("command.mxt.secret_realm.entered", DefinitionText.nameOrId(definition)), true);
@@ -90,10 +90,10 @@ public final class SecretRealmCommand {
 
     private static int exitSecretRealm(CommandSourceStack source) throws CommandSyntaxException {
         ServerPlayer player = source.getPlayerOrException();
-        SecretRealmService.Result result = SecretRealmService.exit(player);
-        if (!result.changed()) {
+        SecretRealmService.TravelResult result = SecretRealmService.exit(player);
+        if (!result.isSuccess()) {
             source.sendFailure(result.message().orElseGet(() -> Component.translatable("command.mxt.secret_realm.exit_failed",
-                    result.failure() == null ? "unknown" : result.failure().name())));
+                    result.failure().message())));
             return 0;
         }
         source.sendSuccess(() -> Component.translatable("command.mxt.secret_realm.exited"), true);

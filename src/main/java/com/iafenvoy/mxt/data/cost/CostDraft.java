@@ -1,14 +1,14 @@
 package com.iafenvoy.mxt.data.cost;
 
 import com.iafenvoy.mxt.data.aura.Aura;
+import com.iafenvoy.mxt.runtime.resulting.Failure;
+import com.iafenvoy.mxt.runtime.resulting.Failures;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Map;
 import java.util.Optional;
-import com.iafenvoy.mxt.runtime.failure.Failure;
-import com.iafenvoy.mxt.runtime.failure.Failures;
 
 /**
  * One channel's half of a payment: the requirements of one entry type, merged as they arrive, checked once and

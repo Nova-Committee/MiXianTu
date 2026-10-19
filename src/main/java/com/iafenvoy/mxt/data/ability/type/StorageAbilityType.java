@@ -8,7 +8,9 @@ import com.iafenvoy.mxt.registry.MxtMenus;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactService;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactStorageContainer;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactStorageService;
-import com.iafenvoy.mxt.runtime.failure.TogglableFailure;
+import com.iafenvoy.mxt.runtime.resulting.Failure;
+import com.iafenvoy.mxt.runtime.resulting.Failures;
+import com.iafenvoy.mxt.runtime.resulting.failures.AbilityFailure;
 import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.iafenvoy.mxt.util.formula.number.Constant;
@@ -21,8 +23,6 @@ import net.minecraft.world.inventory.ChestMenu;
 import net.minecraft.world.item.ItemStack;
 
 import java.util.Optional;
-import com.iafenvoy.mxt.runtime.failure.Failure;
-import com.iafenvoy.mxt.runtime.failure.Failures;
 
 /**
  * Gives the ability's carrier an inventory of its own; the slot count is the whole declaration and the contents
@@ -51,21 +51,21 @@ public record StorageAbilityType(NumberProvider slots,
 
     @Override
     public Optional<Failure> canActivate(ToggleContext context) {
-        if (!(context.holder() instanceof ServerPlayer player)) return Optional.of(TogglableFailure.UNAVAILABLE);
+        if (!(context.holder() instanceof ServerPlayer player)) return Optional.of(AbilityFailure.UNAVAILABLE);
         ItemStack carrier = context.carrier();
-        if (carrier == null || carrier.isEmpty()) return Optional.of(TogglableFailure.NO_CARRIER);
+        if (carrier == null || carrier.isEmpty()) return Optional.of(AbilityFailure.NO_CARRIER);
         // No slots is the slots formula's own answer, not a state the press cannot describe.
         if (ArtifactService.storageSlots(carrier, context.ability(), context.formula()) <= 0)
             return Optional.of(Failures.INVALID_FORMULA);
         if (!ArtifactStorageService.INSTANCE.mayAccess(player.level().registryAccess(), carrier, context.ability(), player))
-            return Optional.of(TogglableFailure.NOT_OWNED);
+            return Optional.of(AbilityFailure.NOT_OWNED);
         return Optional.empty();
     }
 
     @Override
-    public Result activate(ToggleContext context) {
+    public PressResult activate(ToggleContext context) {
         Optional<Failure> refusal = this.canActivate(context);
-        if (refusal.isPresent()) return Result.refused(refusal.get());
+        if (refusal.isPresent()) return PressResult.refused(refusal.get());
         ServerPlayer player = (ServerPlayer) context.holder();
         ItemStack carrier = context.carrier();
         int capacity = ArtifactService.storageSlots(carrier, context.ability(), context.formula());
@@ -77,6 +77,6 @@ public record StorageAbilityType(NumberProvider slots,
                 // The client rebuilds the same menu shape from the row count, which is all it needs: the slots
                 // themselves arrive through the menu sync.
                 buffer -> buffer.writeVarInt(rows));
-        return Result.activated();
+        return PressResult.activated();
     }
 }

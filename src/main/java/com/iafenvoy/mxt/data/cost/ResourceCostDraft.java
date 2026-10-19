@@ -5,11 +5,13 @@ import com.iafenvoy.mxt.attachment.ResourceHolderAttachment.Audit;
 import com.iafenvoy.mxt.data.cost.builtin.ResourceCost;
 import com.iafenvoy.mxt.data.cost.context.CostContext;
 import com.iafenvoy.mxt.data.resource.Resource;
-import com.iafenvoy.mxt.runtime.failure.CostFailure;
 import com.iafenvoy.mxt.runtime.resource.ResourceService;
 import com.iafenvoy.mxt.runtime.resource.ResourceTransactions;
 import com.iafenvoy.mxt.runtime.resource.ResourceTransactions.Evaluation;
-import com.iafenvoy.mxt.runtime.resource.ResourceTransactions.Result;
+import com.iafenvoy.mxt.runtime.resulting.Failure;
+import com.iafenvoy.mxt.runtime.resulting.Failures;
+import com.iafenvoy.mxt.runtime.resulting.ResultWithData;
+import com.iafenvoy.mxt.runtime.resulting.failures.CostFailure;
 import com.iafenvoy.mxt.util.MiscUtil;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.Holder;
@@ -19,8 +21,6 @@ import org.jetbrains.annotations.Nullable;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
-import com.iafenvoy.mxt.runtime.failure.Failure;
-import com.iafenvoy.mxt.runtime.failure.Failures;
 
 /**
  * The resource account's draft: every {@code mxt:resource} entry merges into one amount per resource in the account
@@ -101,9 +101,9 @@ public final class ResourceCostDraft implements CostDraft<ResourceCost> {
     // The write itself, all-or-nothing: tryConsume validates every entry before it touches any, so a store that
     // cannot pay for the whole price is left exactly as it was.
     private boolean consume(ResourceHolderAttachment holder) {
-        Result result = ResourceTransactions.tryConsume(this.context.payer(), holder, new Evaluation(this.account));
+        ResultWithData<Map<Identifier, Double>> result = ResourceTransactions.tryConsume(this.context.payer(), holder, new Evaluation(this.account));
         this.failedResource = result.failedResource();
-        return result.committed();
+        return result.isSuccess();
     }
 
     private record Value(Holder<Resource> resource, double value, double min, double max, long changedAt,

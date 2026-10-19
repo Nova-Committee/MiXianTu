@@ -7,7 +7,8 @@ import com.iafenvoy.mxt.data.creature.ContractBehaviors;
 import com.iafenvoy.mxt.data.creature.ContractContext;
 import com.iafenvoy.mxt.data.creature.ContractType;
 import com.iafenvoy.mxt.registry.MxtAttachments;
-import com.iafenvoy.mxt.runtime.failure.ContractFailure;
+import com.iafenvoy.mxt.runtime.resulting.Result;
+import com.iafenvoy.mxt.runtime.resulting.failures.ContractFailure;
 import net.minecraft.core.Holder;
 import net.minecraft.world.entity.Mob;
 
@@ -22,27 +23,27 @@ public final class ContractBehaviorService {
     private ContractBehaviorService() {
     }
 
-    public static ContractService.Result request(Mob creature, UUID requester, ContractBehavior behavior, boolean force) {
+    public static Result request(Mob creature, UUID requester, ContractBehavior behavior, boolean force) {
         ContractAttachment data = creature.getData(MxtAttachments.CONTRACT);
-        if (!data.bound()) return ContractService.Result.rejected(ContractFailure.NOT_BOUND);
+        if (!data.bound()) return Result.failure(ContractFailure.NOT_BOUND);
         Holder<ContractType> type = data.contractType().orElseThrow();
         UUID owner = Contracts.ownerOf(creature).orElse(null);
         if (!force && (owner == null || !owner.equals(requester)))
-            return ContractService.Result.rejected(ContractFailure.NOT_OWNER);
+            return Result.failure(ContractFailure.NOT_OWNER);
         ContractOperations operations = Contracts.operations(creature).orElse(null);
-        if (operations == null) return ContractService.Result.rejected(ContractFailure.NOT_CONTRACTABLE);
+        if (operations == null) return Result.failure(ContractFailure.NOT_CONTRACTABLE);
         if (!operations.behaviors().contains(behavior))
-            return ContractService.Result.rejected(ContractFailure.UNSUPPORTED_BEHAVIOR);
+            return Result.failure(ContractFailure.UNSUPPORTED_BEHAVIOR);
         // A recall is the one order whose state the framework owns: the latch and the cooldown live on the record,
         // so it goes through the same request the command always used instead of becoming the order in force.
         if (ContractBehaviors.RECALL.equals(behavior))
             return ContractService.requestRecall(creature, requester, force);
         ContractContext context = Contracts.context(creature, type);
         if (!operations.onBehaviorSelected(context, behavior))
-            return ContractService.Result.rejected(ContractFailure.BEHAVIOR_REFUSED);
+            return Result.failure(ContractFailure.BEHAVIOR_REFUSED);
         // Momentary orders stop here: the creature has acted on the request, and there is nothing to keep.
-        if (behavior.momentary()) return ContractService.Result.applied();
+        if (behavior.momentary()) return Result.success();
         data.setBehavior(behavior);
-        return ContractService.Result.applied();
+        return Result.success();
     }
 }

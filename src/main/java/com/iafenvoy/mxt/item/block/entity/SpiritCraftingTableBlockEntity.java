@@ -101,7 +101,7 @@ public final class SpiritCraftingTableBlockEntity extends BlockEntity implements
                 || stored.getCount() + produced.getCount() > max))) return;
         // Paid through the shared transaction, so a recipe's aura price behaves like every other cost.
         CostContext bankContext = CostContext.bank(this, null, FormulaContext.of(this.level), CostOrigin.RECIPE);
-        if (!CostPayment.pay(recipe.aura(), bankContext).paid()) return;
+        if (!CostPayment.pay(recipe.aura(), bankContext).isSuccess()) return;
         for (int index = 0; index < this.grid.getContainerSize(); index++) this.grid.getItem(index).shrink(1);
         if (stored.isEmpty()) this.result.setItem(0, produced);
         else stored.grow(produced.getCount());

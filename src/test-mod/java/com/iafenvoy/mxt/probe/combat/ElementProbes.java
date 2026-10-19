@@ -28,8 +28,8 @@ import com.iafenvoy.mxt.runtime.cultivation.*;
 import com.iafenvoy.mxt.runtime.damage.DamageCalculationService;
 import com.iafenvoy.mxt.runtime.damage.DamageElements;
 import com.iafenvoy.mxt.runtime.element.ElementReactionService;
-import com.iafenvoy.mxt.runtime.failure.CultivationIdentityFailure;
-import com.iafenvoy.mxt.runtime.failure.CultivationToggleFailure;
+import com.iafenvoy.mxt.runtime.resulting.failures.CultivationFailure;
+import com.iafenvoy.mxt.runtime.resulting.failures.CultivationIdentityFailure;
 import com.iafenvoy.mxt.runtime.wheel.WheelEntryKinds;
 import com.iafenvoy.mxt.runtime.wheel.WheelSources;
 import com.iafenvoy.mxt.runtime.world.AuraPool;
@@ -256,7 +256,7 @@ public final class ElementProbes {
             boolean unchanged = !CultivationToggleService.setSpiritRootEnabled(toggleProbe, fireRoot, true).changed();
             boolean notHeld = CultivationToggleService.setSpiritRootEnabled(toggleProbe,
                     context.require(MxtResourceKeys.SPIRIT_ROOT, ProbeDefinitions.PROBE_WATER_ROOT), false).failure()
-                    == CultivationToggleFailure.NOT_HELD;
+                    == CultivationFailure.NOT_HELD;
             boolean toggle = off && on && unchanged && notHeld;
             String report = "element probe: toggle off=" + off + " on=" + on
                     + " unchanged=" + unchanged + " not_held=" + notHeld;
@@ -283,7 +283,7 @@ public final class ElementProbes {
                 context.fail("element probe: could not create the probe entities");
                 return;
             }
-            boolean dualGranted = CultivationIdentityService.grantSpiritRoot(toggleProbe, dualRoot).changed();
+            boolean dualGranted = CultivationIdentityService.grantSpiritRoot(toggleProbe, dualRoot).failure() == null;
             SpiritIdentityAttachment dualIdentity = toggleProbe.getData(MxtAttachments.SPIRIT_IDENTITY);
             FormulaContext affinityFormula = FormulaContext.EMPTY;
             double onWater = CultivationAffinity.abilityMultiplier(dualIdentity, List.of(Either.left(water)), affinityFormula, Ability.AffinityMode.AVERAGE);
@@ -359,13 +359,13 @@ public final class ElementProbes {
                 context.fail("element probe: could not create the probe entities");
                 return;
             }
-            boolean blocked = CultivationIdentityService.grantSpiritRoot(conflictProbe, antiWater).changed()
+            boolean blocked = CultivationIdentityService.grantSpiritRoot(conflictProbe, antiWater).failure() == null
                     && CultivationIdentityService.grantSpiritRoot(conflictProbe, probeWater).failure()
                     == CultivationIdentityFailure.ELEMENT_CONFLICT;
             boolean inertBlocked = CultivationIdentityService.grantSpiritRoot(conflictProbe, probeInert).failure()
                     == CultivationIdentityFailure.ELEMENT_CONFLICT;
             boolean reopened = CultivationToggleService.setSpiritRootEnabled(conflictProbe, antiWater, false).changed()
-                    && CultivationIdentityService.grantSpiritRoot(conflictProbe, probeWater).changed();
+                    && CultivationIdentityService.grantSpiritRoot(conflictProbe, probeWater).failure() == null;
             boolean conflict = blocked && inertBlocked && reopened;
             String report = "element probe: conflict blocked=" + blocked
                     + " inert_blocked=" + inertBlocked + " reopened=" + reopened;

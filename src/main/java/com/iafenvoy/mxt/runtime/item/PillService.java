@@ -7,6 +7,8 @@ import com.iafenvoy.mxt.data.item.Pill;
 import com.iafenvoy.mxt.data.item.PillBinding;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.item.ItemBindingService.PillResolution;
+import com.iafenvoy.mxt.runtime.resulting.Failure;
+import com.iafenvoy.mxt.runtime.resulting.Failures;
 import com.iafenvoy.mxt.util.MiscUtil;
 import com.iafenvoy.mxt.util.TooltipText;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
@@ -29,8 +31,6 @@ import org.jspecify.annotations.NonNull;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.OptionalInt;
-import com.iafenvoy.mxt.runtime.failure.Failure;
-import com.iafenvoy.mxt.runtime.failure.Failures;
 
 /**
  * Server-authoritative pill gate, one-dose settlement and toxicity ledger. Reads use
@@ -157,8 +157,7 @@ public final class PillService {
     public enum ModifyMode implements StringRepresentable {
         ADD, SET;
 
-        public static final Codec<ModifyMode> CODEC =
-                StringRepresentable.fromEnum(ModifyMode::values);
+        public static final Codec<ModifyMode> CODEC = StringRepresentable.fromEnum(ModifyMode::values);
 
         @Override
         public @NonNull String getSerializedName() {

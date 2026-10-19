@@ -10,8 +10,8 @@ import com.iafenvoy.mxt.runtime.formation.FormationCenters;
 import com.iafenvoy.mxt.runtime.formation.FormationCenters.Match;
 import com.iafenvoy.mxt.runtime.formation.FormationInstance;
 import com.iafenvoy.mxt.runtime.formation.FormationRelations;
+import com.iafenvoy.mxt.runtime.formation.FormationService.ActivateResult;
 import com.iafenvoy.mxt.runtime.formation.FormationWorldService;
-import com.iafenvoy.mxt.runtime.formation.FormationWorldService.Result;
 import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContexts;
@@ -30,7 +30,6 @@ import org.jetbrains.annotations.NotNull;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
-import com.iafenvoy.mxt.runtime.failure.Failure;
 
 /**
  * One portable controller for every datapack formation, working as a two-way switch: clicking the centre of a
@@ -102,10 +101,10 @@ public final class FormationPlateItem extends Item {
     private static InteractionResult activateAt(ServerLevel level, BlockPos center, ServerPlayer player, Holder<Formation> formation) {
         if (level.getData(MxtAttachments.FORMATION_WORLD).get(center).isPresent())
             return dismantle(level, center, player);
-        Result result = FormationWorldService.activate(level, center, HolderHelper.id(formation),
+        ActivateResult result = FormationWorldService.activate(level, center, HolderHelper.id(formation),
                 formation.value(), player.getData(MxtAttachments.RESOURCE_HOLDER), FormulaContexts.forEntity(player), player.getUUID());
-        if (!result.active()) {
-            Component message = Component.translatable("item.mxt.formation_plate.failed", failure(result.failure()));
+        if (!result.isSuccess()) {
+            Component message = Component.translatable("item.mxt.formation_plate.failed", result.failure().message());
             if ((Player) player instanceof ServerPlayer serverPlayer) serverPlayer.sendSystemMessage(message, true);
             return InteractionResult.FAIL;
         }
@@ -113,11 +112,6 @@ public final class FormationPlateItem extends Item {
                 DefinitionText.nameOrId(formation));
         if ((Player) player instanceof ServerPlayer serverPlayer) serverPlayer.sendSystemMessage(message, true);
         return InteractionResult.SUCCESS;
-    }
-
-    private static Component failure(Failure failure) {
-        if (failure == null) return Component.translatable("failure.mxt.common.unknown");
-        return failure.message();
     }
 
     // The only player-facing way to stop a formation.

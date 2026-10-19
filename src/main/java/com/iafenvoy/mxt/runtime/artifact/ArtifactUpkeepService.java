@@ -66,9 +66,9 @@ public final class ArtifactUpkeepService {
         FormulaContext context = FormulaContext.of(holder);
         long interval = interval(upkeep.type(), context);
         if (gameTime % interval != 0L) return false;
-        CostPayment.Result payment = CostPayment.pay(costs,
+        CostPayment.PaymentResult payment = CostPayment.pay(costs,
                 CostContext.of(holder, context, CostOrigin.ARTIFACT_UPKEEP));
-        if (payment.paid()) return true;
+        if (payment.isSuccess()) return true;
         upkeep.type().onFail().execute(holder, stack, context);
         return false;
     }

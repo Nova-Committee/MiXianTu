@@ -326,7 +326,7 @@ public final class AbilityEventBridge {
                                 if (NeoForge.EVENT_BUS.post(new Pre(entity, ability, signal.type(), signal.context())).isCanceled())
                                     return;
                                 UseResult result = AbilityService.use(ability, entity, abilities, resources, signal.gameTime(), formula);
-                                if (result.committed())
+                                if (result.isSuccess())
                                     NeoForge.EVENT_BUS.post(new Post(entity, ability, signal.type(), signal.context()));
                             } finally {
                                 active.remove(key);

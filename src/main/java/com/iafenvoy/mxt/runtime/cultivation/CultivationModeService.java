@@ -5,9 +5,9 @@ import com.iafenvoy.mxt.data.cultivation.Cultivation;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.runtime.cultivation.CultivationMethodService.Result;
+import com.iafenvoy.mxt.runtime.cultivation.CultivationMethodService.CultivationResult;
+import com.iafenvoy.mxt.runtime.resulting.Failures;
 import com.iafenvoy.mxt.runtime.trigger.CultivationTriggerService;
-import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.FormulaContexts;
 import net.minecraft.core.Holder;
@@ -18,7 +18,6 @@ import net.minecraft.world.entity.LivingEntity;
 import java.util.Comparator;
 import java.util.Objects;
 import java.util.Optional;
-import com.iafenvoy.mxt.runtime.failure.Failures;
 
 /**
  * Owns the selected cultivation method: which one a body runs, plus the player-controlled start and stop around it.
@@ -29,7 +28,7 @@ public final class CultivationModeService {
     private CultivationModeService() {
     }
 
-    public static Result toggle(ServerPlayer player) {
+    public static CultivationResult toggle(ServerPlayer player) {
         CultivationAttachment spirit = player.getData(MxtAttachments.CULTIVATION);
         // Stopping goes by the stored method: once the running one no longer applies the selector picks another
         // (or none at all), and stopping by that pick would leave the body cultivating.
@@ -37,7 +36,7 @@ public final class CultivationModeService {
         if (spirit.cultivating() && running != null) return stop(player, spirit, running);
         FormulaContext context = FormulaContexts.forEntity(player);
         Holder<Cultivation> action = select(player, context).orElse(null);
-        if (action == null) return Result.rejected(Failures.NOT_APPLICABLE, null);
+        if (action == null) return CultivationResult.rejected(Failures.NOT_APPLICABLE, null);
         return start(player, spirit, action, context);
     }
 
@@ -58,10 +57,10 @@ public final class CultivationModeService {
                 && CultivationMethodService.canStartCultivation(entity, context);
     }
 
-    public static Result start(LivingEntity entity, CultivationAttachment spirit, Holder<Cultivation> action,
-                               FormulaContext context) {
+    public static CultivationResult start(LivingEntity entity, CultivationAttachment spirit, Holder<Cultivation> action,
+                                          FormulaContext context) {
         Cultivation definition = action.value();
-        Result result = CultivationMethodService.start(spirit, action, definition, entity.level().getGameTime(),
+        CultivationResult result = CultivationMethodService.start(spirit, action, definition, entity.level().getGameTime(),
                 () -> applicable(entity, action, context));
         if (result.started()) {
             if (entity instanceof ServerPlayer player) CultivationMovementService.reconcile(player);
@@ -70,8 +69,8 @@ public final class CultivationModeService {
         return result;
     }
 
-    public static Result stop(LivingEntity entity, CultivationAttachment spirit, Holder<Cultivation> action) {
-        Result result = CultivationMethodService.stop(entity, spirit, action, action.value(),
+    public static CultivationResult stop(LivingEntity entity, CultivationAttachment spirit, Holder<Cultivation> action) {
+        CultivationResult result = CultivationMethodService.stop(entity, spirit, action, action.value(),
                 entity.level().getGameTime());
         if (result.stopped()) {
             if (entity instanceof ServerPlayer player) CultivationMovementService.clear(player);
@@ -84,14 +83,14 @@ public final class CultivationModeService {
     // The explicit pick behind {@code /mxt cultivate select}: a named method runs now even when the pack's ordering
     // would choose another, but starting still goes through the same ruler, so one that does not apply is refused
     // without disturbing the session already running. Nothing is remembered - the next press of the key picks again.
-    public static Result startNamed(LivingEntity entity, Holder<Cultivation> action) {
+    public static CultivationResult startNamed(LivingEntity entity, Holder<Cultivation> action) {
         CultivationAttachment spirit = entity.getData(MxtAttachments.CULTIVATION);
         Holder<Cultivation> running = spirit.cultivation().orElse(null);
         boolean active = spirit.cultivating() && running != null;
         if (active && Objects.equals(running, action))
-            return Result.rejected(Failures.ALREADY_ACTIVE, null);
+            return CultivationResult.rejected(Failures.ALREADY_ACTIVE, null);
         FormulaContext context = FormulaContexts.forEntity(entity);
-        if (!applicable(entity, action, context)) return Result.rejected(Failures.NOT_APPLICABLE, null);
+        if (!applicable(entity, action, context)) return CultivationResult.rejected(Failures.NOT_APPLICABLE, null);
         if (active) stop(entity, spirit, running);
         return start(entity, spirit, action, context);
     }
@@ -104,13 +103,10 @@ public final class CultivationModeService {
         return true;
     }
 
-    public static void notifyFailure(ServerPlayer player, Result result) {
+    public static void notifyFailure(ServerPlayer player, CultivationResult result) {
         if (result == null || result.failure() == null) return;
         Component reason = result.abortReason();
-        if (reason == null)
-            reason = result.failure() == Failures.INSUFFICIENT_RESOURCE && result.failedResource() != null
-                    ? Component.translatable(result.failure().key() + "_named", DefinitionText.nameOrId(MxtResourceKeys.RESOURCE, result.failedResource()))
-                    : result.failure().message();
+        if (reason == null) reason = result.failure().message(result.failedResource());
         player.sendSystemMessage(Component.translatable("actionbar.mxt.cultivation.failed", reason), true);
     }
 }

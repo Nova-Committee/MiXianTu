@@ -6,8 +6,8 @@ import com.iafenvoy.mxt.data.storage.DataStorageCollector;
 import com.iafenvoy.mxt.data.storage.builtin.CooldownDataStorage;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.artifact.FlightService;
-import com.iafenvoy.mxt.runtime.failure.FlightFailure;
-import com.iafenvoy.mxt.runtime.failure.TogglableFailure;
+import com.iafenvoy.mxt.runtime.resulting.Failure;
+import com.iafenvoy.mxt.runtime.resulting.failures.FlightFailure;
 import com.iafenvoy.mxt.util.OptionalBoolean;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.iafenvoy.mxt.util.formula.number.Constant;
@@ -19,8 +19,6 @@ import org.jspecify.annotations.NonNull;
 
 import java.util.Locale;
 import java.util.Optional;
-import com.iafenvoy.mxt.runtime.failure.Failure;
-import com.iafenvoy.mxt.runtime.failure.Failures;
 
 /**
  * The skill that lets its holder fly an artifact: which hand is searched for a vehicle and how much the holder's own
@@ -80,35 +78,19 @@ public record FlightControlAbilityType(Hand hand, NumberProvider speedMultiplier
     public Optional<Failure> canActivate(ToggleContext context) {
         // A press while flying means "put it away", which needs no vehicle to be read first.
         if (this.state(context).orElse(false)) return Optional.empty();
-        return Optional.ofNullable(FlightService.canMount(context.holder(), context.ability(), context.formula()))
-                .map(FlightControlAbilityType::failureOf);
+        return Optional.ofNullable(FlightService.canMount(context.holder(), context.ability(), context.formula()));
     }
 
     @Override
-    public Result activate(ToggleContext context) {
+    public PressResult activate(ToggleContext context) {
         if (this.state(context).orElse(false)) {
             FlightService.dismount(context.holder(), FlightFailure.STOPPED);
-            return Result.activated();
+            return PressResult.activated();
         }
-        FlightService.Result mounted = FlightService.mount(context.holder(), context.ability(), context.formula());
-        if (mounted.failure() == null) return Result.activated();
+        FlightService.FlightResult mounted = FlightService.mount(context.holder(), context.ability(), context.formula());
+        if (mounted.failure() == null) return PressResult.activated();
         // Each reason a take-off can give is reported as itself; NOT_FLYABLE is the one failure this type cannot
         // produce, since the type was just read.
-        return Result.refused(failureOf(mounted.failure()));
-    }
-
-    // The take-off's own names, so a press and a cast report a reason through one table of messages.
-    private static Failure failureOf(Failure failure) {
-        if (failure == FlightFailure.NO_VEHICLE) return TogglableFailure.NO_VEHICLE;
-        if (failure == FlightFailure.NOT_OWNED) return TogglableFailure.NOT_OWNED;
-        if (failure == FlightFailure.CANNOT_MOUNT) return TogglableFailure.CANNOT_MOUNT;
-        // A definition that names a body which is not a MountVehicle is a pack mistake: the report stays the generic
-        // "cannot be boarded" and the log names the type that was named.
-        if (failure == FlightFailure.INVALID_VEHICLE) return TogglableFailure.CANNOT_MOUNT;
-        // Already flying is the press's own "already set" state rather than a shared refusal of its own.
-        if (failure == Failures.ALREADY_ACTIVE) return TogglableFailure.ALREADY_SET;
-        // Every other shared reason already reads the same in both tables, so it travels unchanged.
-        if (Failures.isShared(failure)) return failure;
-        return TogglableFailure.UNAVAILABLE;
+        return PressResult.refused(mounted.failure());
     }
 }

@@ -16,6 +16,7 @@ import com.iafenvoy.mxt.runtime.cultivation.TechniqueService;
 import com.iafenvoy.mxt.runtime.hold.HoldLookup;
 import com.iafenvoy.mxt.runtime.item.ItemBindingService;
 import com.iafenvoy.mxt.runtime.item.QualityService;
+import com.iafenvoy.mxt.runtime.resulting.Failure;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
@@ -36,7 +37,6 @@ import java.util.Map.Entry;
 
 import static net.minecraft.commands.Commands.argument;
 import static net.minecraft.commands.Commands.literal;
-import com.iafenvoy.mxt.runtime.failure.Failure;
 
 /**
  * The {@code /technique} command; also reachable as {@code /mxt technique}. It handles stored technique
@@ -150,7 +150,7 @@ public final class TechniqueCommand {
     private static int drop(CommandSourceStack source, Holder<Technique> technique) throws CommandSyntaxException {
         ServerPlayer player = source.getPlayerOrException();
         Identifier id = HolderHelper.id(technique);
-        if (!TechniqueService.forget(player, player.getData(MxtAttachments.TECHNIQUE), technique).changed()) {
+        if (TechniqueService.forget(player, player.getData(MxtAttachments.TECHNIQUE), technique).failure() != null) {
             source.sendFailure(Component.translatable("command.mxt.technique.drop.absent", id.toString()));
             return 0;
         }
@@ -161,7 +161,7 @@ public final class TechniqueCommand {
     private static int forget(CommandSourceStack source, Holder<Technique> technique) throws CommandSyntaxException {
         ServerPlayer player = source.getPlayerOrException();
         Identifier id = HolderHelper.id(technique);
-        if (!TechniqueService.forget(player, player.getData(MxtAttachments.TECHNIQUE), technique).changed()) {
+        if (TechniqueService.forget(player, player.getData(MxtAttachments.TECHNIQUE), technique).failure() != null) {
             source.sendFailure(Component.translatable("command.mxt.technique.forget.absent", id.toString()));
             return 0;
         }

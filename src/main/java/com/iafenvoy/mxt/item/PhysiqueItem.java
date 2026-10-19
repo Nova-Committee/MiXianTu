@@ -3,8 +3,7 @@ package com.iafenvoy.mxt.item;
 import com.iafenvoy.mxt.data.cultivation.Physique;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationIdentityService;
-import com.iafenvoy.mxt.runtime.cultivation.CultivationIdentityService.Result;
-import com.iafenvoy.mxt.runtime.failure.CultivationIdentityFailure;
+import com.iafenvoy.mxt.runtime.resulting.Result;
 import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.Holder;
@@ -17,9 +16,6 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.NotNull;
-import org.jspecify.annotations.Nullable;
-import com.iafenvoy.mxt.runtime.failure.Failure;
-import com.iafenvoy.mxt.runtime.failure.Failures;
 
 /**
  * A physical physique: using the stack grants the one its component names. The grant goes through the same
@@ -42,8 +38,8 @@ public final class PhysiqueItem extends Item {
             return InteractionResult.FAIL;
         }
         Result result = CultivationIdentityService.grantPhysique(serverPlayer, physique, FormulaContext.of(serverPlayer));
-        if (!result.changed()) {
-            Component message = failure(result.failure());
+        if (result.failure() != null) {
+            Component message = Component.translatable("item.mxt.physique.failed", result.failure().message());
             if (player instanceof ServerPlayer serverPlayer1) serverPlayer1.sendSystemMessage(message, true);
             return InteractionResult.FAIL;
         }
@@ -52,10 +48,5 @@ public final class PhysiqueItem extends Item {
         Component message = Component.translatable("item.mxt.physique.granted", DefinitionText.nameOrId(physique));
         if (player instanceof ServerPlayer serverPlayer1) serverPlayer1.sendSystemMessage(message, true);
         return InteractionResult.SUCCESS_SERVER;
-    }
-
-    private static Component failure(@Nullable Failure failure) {
-        if (failure == null) return Component.translatable("item.mxt.physique.failed", "-");
-        return failure.message();
     }
 }

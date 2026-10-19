@@ -1,4 +1,7 @@
-package com.iafenvoy.mxt.runtime.failure;
+package com.iafenvoy.mxt.runtime.resulting.failures;
+
+import com.iafenvoy.mxt.runtime.resulting.Failure;
+import com.iafenvoy.mxt.runtime.resulting.SimpleFailure;
 
 /**
  * Why a payment cannot be made. A payment that cannot be made is a value, never an exception: the same definition

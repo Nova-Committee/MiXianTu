@@ -5,14 +5,14 @@ import com.iafenvoy.mxt.compat.kubejs.callback.MxtJsCostCallbacks;
 import com.iafenvoy.mxt.compat.kubejs.codec.MxtJsCodecs;
 import com.iafenvoy.mxt.data.cost.Cost;
 import com.iafenvoy.mxt.data.cost.context.CostContext;
-import com.iafenvoy.mxt.runtime.failure.CostFailure;
+import com.iafenvoy.mxt.runtime.resulting.Failure;
+import com.iafenvoy.mxt.runtime.resulting.failures.CostFailure;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.world.entity.player.Player;
 
 import java.util.Optional;
-import com.iafenvoy.mxt.runtime.failure.Failure;
 
 /**
  * A cost whose check and payment are server script callbacks. The implementations live in the optional

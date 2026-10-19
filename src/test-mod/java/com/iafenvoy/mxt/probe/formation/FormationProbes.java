@@ -16,9 +16,9 @@ import com.iafenvoy.mxt.probe.ProbeDefinitions;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.runtime.failure.FormationWorldFailure;
+import com.iafenvoy.mxt.runtime.resulting.failures.FormationWorldFailure;
 import com.iafenvoy.mxt.runtime.formation.*;
-import com.iafenvoy.mxt.runtime.formation.FormationWorldService.Result;
+import com.iafenvoy.mxt.runtime.formation.FormationService.ActivateResult;
 import com.iafenvoy.mxt.testmod.FormationProbeActions;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
@@ -508,16 +508,16 @@ public final class FormationProbes {
         ResourceHolderAttachment resources = context.player().getData(MxtAttachments.RESOURCE_HOLDER);
         FormulaContext formula = FormulaContext.of(context.player());
         UUID owner = context.player().getUUID();
-        Result refused = FormationWorldService.activate(context.level(), spot,
+        ActivateResult refused = FormationWorldService.activate(context.level(), spot,
                 ProbeDefinitions.id("probe_declared_structure"), declared, resources, formula, owner);
         context.expect("formation probe: a declared structure is checked when the array is raised",
                 refused.failure(), FormationWorldFailure.INVALID_STRUCTURE);
         // Whatever the first attempt left behind, the position has to be free before the second one is judged.
         FormationWorldService.deactivate(context.level(), spot);
-        Result raised = FormationWorldService.activate(context.level(), spot,
+        ActivateResult raised = FormationWorldService.activate(context.level(), spot,
                 ProbeDefinitions.id("probe_bare_structure"), bare, resources, formula, owner);
         context.check("formation probe: a formation that declares no structure goes up on bare ground",
-                raised.active());
+                raised.isSuccess());
         FormationWorldService.deactivate(context.level(), spot);
         context.check("formation probe: taking it down frees the position",
                 context.level().getData(MxtAttachments.FORMATION_WORLD).get(spot).isEmpty());

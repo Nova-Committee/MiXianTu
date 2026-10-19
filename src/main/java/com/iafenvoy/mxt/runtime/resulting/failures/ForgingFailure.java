@@ -1,5 +1,9 @@
-package com.iafenvoy.mxt.runtime.failure;
+package com.iafenvoy.mxt.runtime.resulting.failures;
 
+import com.iafenvoy.mxt.runtime.resulting.Failure;
+import com.iafenvoy.mxt.runtime.resulting.FailureSources;
+import com.iafenvoy.mxt.runtime.resulting.Failures;
+import com.iafenvoy.mxt.runtime.resulting.SimpleFailure;
 import org.jetbrains.annotations.Nullable;
 
 public final class ForgingFailure {

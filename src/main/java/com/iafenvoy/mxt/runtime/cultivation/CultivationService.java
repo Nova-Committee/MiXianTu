@@ -16,8 +16,11 @@ import com.iafenvoy.mxt.registry.MxtCriteriaTriggers;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.registry.cache.RegistryCaches;
 import com.iafenvoy.mxt.runtime.ability.AbilityEventBridge;
-import com.iafenvoy.mxt.runtime.failure.CultivationFailure;
 import com.iafenvoy.mxt.runtime.resource.ResourceService;
+import com.iafenvoy.mxt.runtime.resulting.Failure;
+import com.iafenvoy.mxt.runtime.resulting.Failures;
+import com.iafenvoy.mxt.runtime.resulting.ResultWithData;
+import com.iafenvoy.mxt.runtime.resulting.failures.CultivationFailure;
 import com.iafenvoy.mxt.runtime.tribulation.TribulationService;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.MiscUtil;
@@ -38,8 +41,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.BooleanSupplier;
-import com.iafenvoy.mxt.runtime.failure.Failure;
-import com.iafenvoy.mxt.runtime.failure.Failures;
 
 /**
  * Server-side breakthrough transaction; callers evaluate content conditions before payment is committed. A
@@ -64,7 +65,8 @@ public final class CultivationService {
     // Triggered abilities are dispatched only after the realm state has committed.
     private static BreakthroughResult attempt(LivingEntity entity, CultivationAttachment spirit, ResourceHolderAttachment resources, Holder<Aura> aura, Holder<RealmStage> stage, FormulaContext context, BooleanSupplier conditionsMet) {
         RealmStage target = stage.value();
-        if (!Objects.equals(target.aura(), aura)) return BreakthroughResult.rejected(CultivationFailure.WRONG_AURA, null);
+        if (!Objects.equals(target.aura(), aura))
+            return BreakthroughResult.rejected(CultivationFailure.WRONG_AURA, null);
         FormulaContext resourceContext = ResourceService.formulaContext(entity, aura.value().resource(), context);
         Threshold threshold = threshold(stage, resourceContext);
         if (threshold == null) return BreakthroughResult.rejected(Failures.INVALID_FORMULA, null);
@@ -79,7 +81,7 @@ public final class CultivationService {
                 .allMatch(ability -> entity.getData(MxtAttachments.ABILITY_HOLDER).has(ability));
         BreakthroughResult result = commit(entity, spirit, resources, aura, stage, resourceContext,
                 () -> configuredConditions && requiredAbilities && conditionsMet.getAsBoolean());
-        if (result.advanced()) {
+        if (result.isSuccess()) {
             if (entity instanceof ServerPlayer player)
                 MxtCriteriaTriggers.BREAKTHROUGH.get().trigger(player, HolderHelper.id(stage));
             target.breakthroughParticle().ifPresent(effect -> {
@@ -126,8 +128,8 @@ public final class CultivationService {
         Pre event = new Pre(spirit, resources, stage, context, minimum, plan.resources());
         if (NeoForge.EVENT_BUS.post(event).isCanceled()) return BreakthroughResult.rejected(Failures.CANCELLED, null);
         plan.reprice(event.getCosts());
-        CostPayment.Result payment = plan.commit();
-        if (!payment.paid()) return BreakthroughResult.rejected(payment.failure(), payment.failedResource());
+        CostPayment.PaymentResult payment = plan.commit();
+        if (!payment.isSuccess()) return BreakthroughResult.rejected(payment.failure(), payment.failedResource());
         spirit.setRealmStage(stage);
         spirit.setCultivationProgress(aura, 0.0D);
         NeoForge.EVENT_BUS.post(new Post(spirit, resources, stage, context, minimum, payment.resources()));
@@ -291,14 +293,17 @@ public final class CultivationService {
         private static final BreakthroughStatus UNAVAILABLE = new BreakthroughStatus(false, false, false, 0.0D, 0.0D);
     }
 
-    public record BreakthroughResult(boolean advanced, Failure failure, Identifier failedResource,
-                                     Map<Identifier, Double> costs) {
-        private static BreakthroughResult committed(Map<Identifier, Double> costs) {
-            return new BreakthroughResult(true, null, null, costs);
+    public static final class BreakthroughResult extends ResultWithData<Map<Identifier, Double>> {
+        private BreakthroughResult(Map<Identifier, Double> costs, Failure failure, Identifier failedResource) {
+            super(costs, failure, failedResource);
         }
 
-        private static BreakthroughResult rejected(Failure failure, Identifier resource) {
-            return new BreakthroughResult(false, failure, resource, Map.of());
+        private static BreakthroughResult committed(Map<Identifier, Double> costs) {
+            return new BreakthroughResult(costs, null, null);
+        }
+
+        public static BreakthroughResult rejected(Failure failure, Identifier resource) {
+            return new BreakthroughResult(Map.of(), failure, resource);
         }
     }
 }

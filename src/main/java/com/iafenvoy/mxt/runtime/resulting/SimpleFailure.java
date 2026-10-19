@@ -1,4 +1,4 @@
-package com.iafenvoy.mxt.runtime.failure;
+package com.iafenvoy.mxt.runtime.resulting;
 
 /**
  * A refusal that is not a constant of any enum: one a command or a script synthesises, or one whose text is plain.

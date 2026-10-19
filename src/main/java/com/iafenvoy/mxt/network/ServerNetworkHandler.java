@@ -5,7 +5,7 @@ import com.iafenvoy.mxt.attachment.WheelLayoutAttachment;
 import com.iafenvoy.mxt.item.block.entity.ForgingTableBlockEntity;
 import com.iafenvoy.mxt.network.payload.*;
 import com.iafenvoy.mxt.registry.MxtAttachments;
-import com.iafenvoy.mxt.runtime.cultivation.CultivationMethodService.Result;
+import com.iafenvoy.mxt.runtime.cultivation.CultivationMethodService.CultivationResult;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationModeService;
 import com.iafenvoy.mxt.runtime.economy.PlayerTradeService;
 import com.iafenvoy.mxt.runtime.forging.ForgingWorkstationService;
@@ -152,7 +152,7 @@ public final class ServerNetworkHandler {
 
     static void onCultivationToggle(CultivationToggleC2SPayload payload, IPayloadContext context) {
         if (!(context.player() instanceof ServerPlayer player)) return;
-        Result result = CultivationModeService.toggle(player);
+        CultivationResult result = CultivationModeService.toggle(player);
         if (!result.started() && !result.stopped()) CultivationModeService.notifyFailure(player, result);
     }
 

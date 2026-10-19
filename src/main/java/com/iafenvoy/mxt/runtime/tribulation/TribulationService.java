@@ -10,7 +10,11 @@ import com.iafenvoy.mxt.data.timeline.TimelineEntry.Outcome;
 import com.iafenvoy.mxt.data.timeline.TimelineJump;
 import com.iafenvoy.mxt.data.timeline.TimelineState;
 import com.iafenvoy.mxt.event.TribulationEvent.*;
-import com.iafenvoy.mxt.runtime.failure.TribulationFailure;
+import com.iafenvoy.mxt.runtime.resulting.Failure;
+import com.iafenvoy.mxt.runtime.resulting.Failures;
+import com.iafenvoy.mxt.runtime.resulting.Result;
+import com.iafenvoy.mxt.runtime.resulting.ResultWithData;
+import com.iafenvoy.mxt.runtime.resulting.failures.TribulationFailure;
 import com.iafenvoy.mxt.runtime.world.AuraService;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
@@ -19,8 +23,6 @@ import net.minecraft.world.entity.LivingEntity;
 import net.neoforged.neoforge.common.NeoForge;
 
 import java.util.List;
-import com.iafenvoy.mxt.runtime.failure.Failure;
-import com.iafenvoy.mxt.runtime.failure.Failures;
 
 /**
  * Consumer for a persisted tribulation timeline: a run is installed by copying the definition's timeline into the
@@ -45,22 +47,22 @@ public final class TribulationService {
                 AuraService.getPositionAura(entity.level(), entity.blockPosition()).rules().tribulationModify());
     }
 
-    public static StartResult start(LivingEntity entity, TribulationAttachment data, Holder<Tribulation> tribulation, long gameTime, FormulaContext context) {
+    public static Result start(LivingEntity entity, TribulationAttachment data, Holder<Tribulation> tribulation, long gameTime, FormulaContext context) {
         Tribulation definition = tribulation.value();
-        if (data.tribulation().isPresent()) return StartResult.rejected(Failures.ALREADY_ACTIVE);
+        if (data.tribulation().isPresent()) return Result.failure(Failures.ALREADY_ACTIVE);
         List<TimelineEntry> timeline = definition.timeline();
-        if (timeline.isEmpty()) return StartResult.rejected(TribulationFailure.EMPTY_TIMELINE);
-        if (!definition.condition().test(entity, context)) return StartResult.rejected(Failures.CONDITIONS);
+        if (timeline.isEmpty()) return Result.failure(TribulationFailure.EMPTY_TIMELINE);
+        if (!definition.condition().test(entity, context)) return Result.failure(Failures.CONDITIONS);
         // Every entry is asked whether it can run before the run begins: this is the only moment a content error
         // can be reported as a refusal instead of a failure halfway through a committed timeline.
         FormulaContext runContext = tribulationContext(entity, context);
         TimelineContext probe = new TimelineContext(entity, runContext, gameTime,
                 definition.difficultyScale().evaluate(runContext), timeline.size(), new TimelineState(), new TimelineJump());
         for (TimelineEntry entry : timeline) {
-            if (!entry.validate(probe)) return StartResult.rejected(TribulationFailure.INVALID_ENTRY);
+            if (!entry.validate(probe)) return Result.failure(TribulationFailure.INVALID_ENTRY);
         }
         if (NeoForge.EVENT_BUS.post(new StartPre(data, tribulation)).isCanceled())
-            return StartResult.rejected(Failures.CANCELLED);
+            return Result.failure(Failures.CANCELLED);
         // The wind-up is resolved here, through the same rule every wait uses, and stored with the run: the
         // countdown a player watches is the number of ticks that will really pass, and a restart resumes it.
         long windup = Math.max(0L, probe.ticks(definition.windup()));
@@ -68,7 +70,7 @@ public final class TribulationService {
         // its first entry begins on the tick after that.
         data.start(tribulation, timeline, windup);
         NeoForge.EVENT_BUS.post(new StartPost(data, tribulation));
-        return StartResult.accepted();
+        return Result.success();
     }
 
     // Reincarnation drops a run in progress: no fail action and no completion, because the life that was being
@@ -138,17 +140,12 @@ public final class TribulationService {
         }
     }
 
-    public record StartResult(boolean started, Failure failure) {
-        static StartResult accepted() {
-            return new StartResult(true, null);
+
+    public static final class TickResult extends ResultWithData<State> {
+        private TickResult(State state, Failure failure) {
+            super(state, failure, null);
         }
 
-        static StartResult rejected(Failure failure) {
-            return new StartResult(false, failure);
-        }
-    }
-
-    public record TickResult(State state, Failure failure) {
         static TickResult idle() {
             return new TickResult(State.IDLE, null);
         }

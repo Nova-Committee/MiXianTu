@@ -17,7 +17,7 @@ import com.iafenvoy.mxt.probe.ProbeDefinitions;
 import com.iafenvoy.mxt.recipe.SpiritRecipe;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.runtime.failure.CostFailure;
+import com.iafenvoy.mxt.runtime.resulting.failures.CostFailure;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.number.Constant;
 import com.mojang.serialization.JsonOps;
@@ -58,49 +58,49 @@ public final class CostVerifyProbes {
         account.set(probe, 100.0D, 0.0D, 10_000.0D, -1L, "probe");
         CostContext costs = CostContext.account(account, null, FormulaContext.of(context.player()), CostOrigin.SCRIPT);
 
-        CostPayment.Result plain = CostPayment.pay(decodeCosts(registries,
+        CostPayment.PaymentResult plain = CostPayment.pay(decodeCosts(registries,
                 "[{\"id\": \"mxt_test:trigger_probe\", \"amount\": 3}]"), costs);
-        if (!plain.paid()) return "a plain resource cost was refused: " + plain.failure();
+        if (!plain.isSuccess()) return "a plain resource cost was refused: " + plain.failure();
         if (!close(account.get(probe), 97.0D))
             return "a 3-point cost left " + account.get(probe) + " instead of 97";
 
         // Two entries that reach the same value by different routes add up: the aura is charged as the resource
         // it is measured in, which is the only answer that does not depend on the order they were written in.
         account.set(qi, 10.0D, 0.0D, 100.0D, -1L, "probe");
-        CostPayment.Result merged = CostPayment.pay(decodeCosts(registries,
+        CostPayment.PaymentResult merged = CostPayment.pay(decodeCosts(registries,
                         "[{\"id\": \"mxt_test:qi\", \"amount\": 1}, {\"type\": \"mxt:aura\", \"aura\": \"mxt_test:qi\", \"amount\": 3}]"),
                 costs);
-        if (!merged.paid()) return "a resource entry plus the aura it names was refused: " + merged.failure();
+        if (!merged.isSuccess()) return "a resource entry plus the aura it names was refused: " + merged.failure();
         if (!close(account.get(qi), 6.0D))
             return "1 + 3 of the same value left " + account.get(qi) + " instead of 6";
 
         double before = account.get(probe);
-        CostPayment.Result refused = CostPayment.pay(decodeCosts(registries,
+        CostPayment.PaymentResult refused = CostPayment.pay(decodeCosts(registries,
                         "[{\"id\": \"mxt_test:trigger_probe\", \"amount\": 1}, {\"id\": \"mxt_test:soul_power\", \"amount\": 9999}]"),
                 costs);
-        if (refused.paid()) return "an array whose second entry is unpayable was paid anyway";
+        if (refused.isSuccess()) return "an array whose second entry is unpayable was paid anyway";
         if (!close(account.get(probe), before))
             return "a refused payment still took " + (before - account.get(probe)) + " off the first entry";
 
-        CostPayment.Result item = CostPayment.pay(decodeCosts(registries,
+        CostPayment.PaymentResult item = CostPayment.pay(decodeCosts(registries,
                 "[{\"type\": \"mxt:item\", \"items\": [\"minecraft:emerald\"], \"amount\": 1}]"), costs);
-        if (item.paid() || item.failure() != CostFailure.NO_CHANNEL)
+        if (item.isSuccess() || item.failure() != CostFailure.NO_CHANNEL)
             return "an item cost without a player channel read as " + item.failure();
 
-        CostPayment.Result invalid = CostPayment.pay(decodeCosts(registries,
+        CostPayment.PaymentResult invalid = CostPayment.pay(decodeCosts(registries,
                 "[{\"id\": \"mxt_test:trigger_probe\", \"amount\": 0}]"), costs);
-        if (invalid.paid() || invalid.failure() != CostFailure.INVALID_AMOUNT)
+        if (invalid.isSuccess() || invalid.failure() != CostFailure.INVALID_AMOUNT)
             return "a zero amount read as " + invalid.failure();
 
         ResourceHolderAttachment personal = context.player().getData(MxtAttachments.RESOURCE_HOLDER);
         double previous = personal.get(probe);
         personal.set(probe, 10.0D, 0.0D, 10_000.0D, -1L, "probe");
-        CostPayment.Result onPlayer = CostPayment.pay(decodeCosts(registries,
+        CostPayment.PaymentResult onPlayer = CostPayment.pay(decodeCosts(registries,
                         "[{\"id\": \"mxt_test:trigger_probe\", \"amount\": 2}]"),
                 CostContext.of(context.player(), FormulaContext.of(context.player()), CostOrigin.SCRIPT));
         double left = personal.get(probe);
         personal.set(probe, previous, 0.0D, 10_000.0D, -1L, "probe");
-        if (!onPlayer.paid()) return "a payer-paid resource cost was refused: " + onPlayer.failure();
+        if (!onPlayer.isSuccess()) return "a payer-paid resource cost was refused: " + onPlayer.failure();
         if (!close(left, 8.0D)) return "a payer-paid 2-point cost left " + left + " instead of 8";
 
         // The two aura-only fields read the old map and the new list, and refuse anything that is not an aura:

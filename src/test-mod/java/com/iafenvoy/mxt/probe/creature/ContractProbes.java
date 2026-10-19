@@ -16,7 +16,7 @@ import com.iafenvoy.mxt.probe.ProbeDefinitions;
 import com.iafenvoy.mxt.registry.*;
 import com.iafenvoy.mxt.runtime.ability.AbilityGrantService;
 import com.iafenvoy.mxt.runtime.creature.*;
-import com.iafenvoy.mxt.runtime.failure.ContractFailure;
+import com.iafenvoy.mxt.runtime.resulting.failures.ContractFailure;
 import com.iafenvoy.mxt.runtime.wheel.WheelEntryKinds;
 import com.iafenvoy.mxt.runtime.wheel.WheelService;
 import com.iafenvoy.mxt.runtime.wheel.WheelSourceTypes;
@@ -45,7 +45,8 @@ import net.neoforged.neoforge.event.tick.EntityTickEvent;
 
 import java.util.ArrayList;
 import java.util.List;
-import com.iafenvoy.mxt.runtime.failure.Failures;
+import com.iafenvoy.mxt.runtime.resulting.Failures;
+import com.iafenvoy.mxt.runtime.resulting.Result;
 
 /**
  * The contract lifecycle, driven through the interfaces a creature implements itself: eligibility, the price before
@@ -130,13 +131,13 @@ public final class ContractProbes {
                     && close(resources.get(qi), 3.0D)
                     && BoundBeastService.of(server, player.getUUID()).isEmpty();
             resources.set(qi, 5.0D, 0.0D, 10_000.0D, -1L, "probe");
-            ContractService.Result secondBind = ContractService.bind(tagged, player, beast, false);
+            Result secondBind = ContractService.bind(tagged, player, beast, false);
             // The pieces are printed, not just the aggregate: the owner lookup and the failure code are what tell
             // a refused payment apart from a bind that never reached the record.
             boolean ownerRecorded = Contracts.ownerOf(beast).filter(player.getUUID()::equals).isPresent();
             boolean vanillaOwner = beast.getOwner() == player;
             int rows = BoundBeastService.of(server, player.getUUID()).size();
-            boolean bound = secondBind.changed() && close(resources.get(qi), 0.0D)
+            boolean bound = secondBind.failure() == null && close(resources.get(qi), 0.0D)
                     && ownerRecorded && vanillaOwner && rows == 1;
             ItemStack probeCore = beast.getData(MxtAttachments.CREATURE_SPIRIT).innerCore();
             // A profile's spawn action is one action, and the profile is written once, so it runs once: the probe
@@ -215,7 +216,7 @@ public final class ContractProbes {
             ProbeBeast second = spawnProbeBeast(level, player.blockPosition().offset(0, 0, 3));
             spawned.add(first);
             spawned.add(second);
-            boolean firstBound = ContractService.bind(open, player, first, false).changed();
+            boolean firstBound = ContractService.bind(open, player, first, false).failure() == null;
             boolean limitHit = ContractService.bind(open, player, second, false).failure()
                     == ContractFailure.LIMIT_REACHED;
             // Two contracts, two grants: the second type adds its own ability without disturbing the first.
@@ -223,7 +224,7 @@ public final class ContractProbes {
                     && abilities.has(context.require(MxtResourceKeys.ABILITY, ProbeDefinitions.OWNER_BOND));
             // Ending a contract is not the same act as forgetting who owns the creature, and the owner lives on
             // the creature, so a released probe still answers the player it was signed with.
-            boolean releasedFirst = ContractService.release(first, player.getUUID(), false).changed()
+            boolean releasedFirst = ContractService.release(first, player.getUUID(), false).failure() == null
                     && !first.getData(MxtAttachments.CONTRACT).bound()
                     && Contracts.ownerOf(first).filter(player.getUUID()::equals).isPresent();
             // The release action runs on the owner, and the grant of the type they no longer hold goes with it
@@ -231,7 +232,7 @@ public final class ContractProbes {
             boolean ownerReleased = !abilities.has(context.require(MxtResourceKeys.ABILITY, ProbeDefinitions.OPEN_BOND))
                     && abilities.has(context.require(MxtResourceKeys.ABILITY, ProbeDefinitions.OWNER_BOND))
                     && player.hasEffect(MobEffects.WEAKNESS);
-            boolean freed = releasedFirst && ContractService.bind(open, player, second, false).changed();
+            boolean freed = releasedFirst && ContractService.bind(open, player, second, false).failure() == null;
             boolean limit = firstBound && limitHit && freed && bothHeld && ownerReleased;
             context.note("contract probe: first_bound=" + firstBound
                     + " limit_hit=" + limitHit + " both_held=" + bothHeld + " owner_released=" + ownerReleased
@@ -270,7 +271,7 @@ public final class ContractProbes {
             ContractService.bind(tagged, player, beast, false);
 
             long now = level.getGameTime();
-            boolean latch = ContractService.requestRecall(beast, player.getUUID(), false).changed()
+            boolean latch = ContractService.requestRecall(beast, player.getUUID(), false).failure() == null
                     && beast.getData(MxtAttachments.CONTRACT).recalled()
                     && beast.getData(MxtAttachments.CONTRACT).recallAt() == now;
             // The latch is still set, so a second order has to name that instead of reporting no reason at all.
@@ -279,7 +280,7 @@ public final class ContractProbes {
             ContractService.completeRecall(beast);
             boolean cooling = ContractService.requestRecall(beast, player.getUUID(), false).failure()
                     == ContractFailure.RECALL_COOLDOWN;
-            boolean forced = ContractService.requestRecall(beast, player.getUUID(), true).changed();
+            boolean forced = ContractService.requestRecall(beast, player.getUUID(), true).failure() == null;
             ContractService.completeRecall(beast);
             // The interface default is the movement the framework used to hardcode, asked through the same
             // context the bridge builds.
@@ -423,7 +424,7 @@ public final class ContractProbes {
             ContractService.bind(tagged, player, beast, false);
             ContractBehaviorService.request(beast, player.getUUID(), ContractBehaviors.WANDER, false);
 
-            boolean momentary = ContractBehaviorService.request(beast, player.getUUID(), ContractBehaviors.RECALL, false).changed()
+            boolean momentary = ContractBehaviorService.request(beast, player.getUUID(), ContractBehaviors.RECALL, false).failure() == null
                     && beast.getData(MxtAttachments.CONTRACT).recalled()
                     && beast.getData(MxtAttachments.CONTRACT).behavior().equals(ContractBehaviors.WANDER);
             ContractService.completeRecall(beast);

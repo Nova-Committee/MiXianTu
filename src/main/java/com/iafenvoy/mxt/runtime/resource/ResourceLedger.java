@@ -1,5 +1,7 @@
 package com.iafenvoy.mxt.runtime.resource;
 
+import com.iafenvoy.mxt.runtime.resulting.Failures;
+import com.iafenvoy.mxt.runtime.resulting.ResultWithData;
 import net.minecraft.resources.Identifier;
 import org.jetbrains.annotations.NotNull;
 
@@ -27,14 +29,14 @@ public final class ResourceLedger {
         this.set(id, this.get(id) + value);
     }
 
-    public synchronized TransactionResult tryConsume(Map<Identifier, Double> amounts) {
+    public synchronized ResultWithData<Map<Identifier, Double>> tryConsume(Map<Identifier, Double> amounts) {
         for (Entry<Identifier, Double> entry : amounts.entrySet()) {
             if (this.get(entry.getKey()) < entry.getValue()) {
-                return TransactionResult.rejected(entry.getKey(), amounts);
+                return ResultWithData.failure(new LinkedHashMap<>(amounts), Failures.UNKNOWN, entry.getKey());
             }
         }
         amounts.forEach((id, amount) -> this.balances.put(id, this.get(id) - amount));
-        return TransactionResult.committed(amounts);
+        return ResultWithData.success(new LinkedHashMap<>(amounts));
     }
 
     public synchronized Map<Identifier, Double> snapshot() {
@@ -44,20 +46,6 @@ public final class ResourceLedger {
     private void requireFinite(double value, String label) {
         if (!Double.isFinite(value)) {
             throw new IllegalArgumentException(label + " must be finite");
-        }
-    }
-
-    public record TransactionResult(boolean committed, Identifier failedResource, Map<Identifier, Double> amounts) {
-        public TransactionResult {
-            amounts = new LinkedHashMap<>(amounts);
-        }
-
-        static TransactionResult committed(Map<Identifier, Double> amounts) {
-            return new TransactionResult(true, null, amounts);
-        }
-
-        static TransactionResult rejected(Identifier failedResource, Map<Identifier, Double> amounts) {
-            return new TransactionResult(false, failedResource, amounts);
         }
     }
 }

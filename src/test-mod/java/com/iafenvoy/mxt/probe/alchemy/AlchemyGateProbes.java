@@ -13,7 +13,7 @@ import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.alchemy.*;
 import com.iafenvoy.mxt.runtime.alchemy.AlchemyWorkstationService.AlchemyPreview;
-import com.iafenvoy.mxt.runtime.failure.AlchemyFailure;
+import com.iafenvoy.mxt.runtime.resulting.failures.AlchemyFailure;
 import com.mojang.authlib.GameProfile;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -74,7 +74,7 @@ public final class AlchemyGateProbes {
         Generic crossed = new Generic(standard(), at(context), spec(level), core(level, ProbeDefinitions.id("poor")));
         AlchemyPreview crossPreview = AlchemyWorkstationService.preview(player, crossed);
         context.expect("gate-core-cross-ladder", crossPreview.blocker().orElse(null), AlchemyFailure.FURNACE_TIER);
-        context.expect("gate-core-cross-started", AlchemyWorkstationService.start(player, crossed).started(), false);
+        context.expect("gate-core-cross-started", AlchemyWorkstationService.start(player, crossed).isSuccess(), false);
         context.expect("gate-core-cross-kept", crossed.container().getItem(0).getCount(), 2);
     }
 
@@ -113,7 +113,7 @@ public final class AlchemyGateProbes {
         AlchemyPreview gated = AlchemyWorkstationService.preview(player, refused);
         context.expect("gate-input-recipe", resolved(gated), ProbeDefinitions.id("alchemy/zz_input_gate"));
         context.expect("gate-input-refused", gated.blocker().orElse(null), AlchemyFailure.INPUT_TIER);
-        context.expect("gate-input-started", AlchemyWorkstationService.start(player, refused).started(), false);
+        context.expect("gate-input-started", AlchemyWorkstationService.start(player, refused).isSuccess(), false);
         context.expect("gate-input-kept", refused.container().getItem(0).getCount(), 4);
     }
 
@@ -128,7 +128,7 @@ public final class AlchemyGateProbes {
                 grade(level, marked.container().getItem(index), ProbeDefinitions.id("alchemy/kiln_a"));
         AlchemyPreview markedPreview = AlchemyWorkstationService.preview(player, marked);
         context.expect("gate-input-marked-blocker", markedPreview.blocker().orElse(null), null);
-        context.expect("gate-input-marked-started", AlchemyWorkstationService.start(player, marked).started(), true);
+        context.expect("gate-input-marked-started", AlchemyWorkstationService.start(player, marked).isSuccess(), true);
     }
 
     // The temperature ceiling is a minimum of three, and the specification is only one of them: the capped

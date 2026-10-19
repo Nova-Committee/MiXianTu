@@ -312,11 +312,11 @@ public final class ClosureVerifyProbes {
         resources.set(probe, 0.0D, 0.0D, 100_000.0D, -1L, "closure");
         try {
             Holder<Tribulation> branch = context.require(MxtResourceKeys.TRIBULATION, ProbeDefinitions.id("probe_branch"));
-            if (!TribulationService.start(player, data, branch, level.getGameTime(), FormulaContext.of(player)).started())
+            if (!TribulationService.start(player, data, branch, level.getGameTime(), FormulaContext.of(player)).isSuccess())
                 return "the branching timeline was refused";
             TribulationService.TickResult branchTick = TribulationService.tick(player, data, branch, level.getGameTime(), FormulaContext.of(player));
-            if (branchTick.state() != TribulationService.State.COMPLETED)
-                return "the branching timeline ended as " + branchTick.state();
+            if (branchTick.getData() != TribulationService.State.COMPLETED)
+                return "the branching timeline ended as " + branchTick.getData();
             double branched = resources.get(probe);
             if (!close(branched, 1001.0D))
                 return "the branch added " + branched + " instead of skipping the 100 it jumped over";
@@ -324,14 +324,14 @@ public final class ClosureVerifyProbes {
             data.clear();
             resources.set(probe, 0.0D, 0.0D, 100_000.0D, -1L, "closure");
             Holder<Tribulation> timeout = context.require(MxtResourceKeys.TRIBULATION, ProbeDefinitions.id("probe_wait_timeout"));
-            if (!TribulationService.start(player, data, timeout, level.getGameTime(), FormulaContext.of(player)).started())
+            if (!TribulationService.start(player, data, timeout, level.getGameTime(), FormulaContext.of(player)).isSuccess())
                 return "the timed-wait timeline was refused";
-            if (TribulationService.tick(player, data, timeout, level.getGameTime(), FormulaContext.of(player)).state()
+            if (TribulationService.tick(player, data, timeout, level.getGameTime(), FormulaContext.of(player)).getData()
                     != TribulationService.State.RUNNING)
                 return "a wait with a two-tick timeout did not hold the run on its first tick";
             TribulationService.TickResult waitTick = TribulationService.tick(player, data, timeout, level.getGameTime(), FormulaContext.of(player));
-            if (waitTick.state() != TribulationService.State.COMPLETED)
-                return "a wait that ran out finished as " + waitTick.state();
+            if (waitTick.getData() != TribulationService.State.COMPLETED)
+                return "a wait that ran out finished as " + waitTick.getData();
             if (!close(resources.get(probe), 10.0D))
                 return "the beat after a timed-out wait added " + resources.get(probe) + " instead of 10";
 
@@ -340,11 +340,11 @@ public final class ClosureVerifyProbes {
             data.clear();
             resources.set(probe, 0.0D, 0.0D, 100_000.0D, -1L, "closure");
             Holder<Tribulation> cycle = context.require(MxtResourceKeys.TRIBULATION, ProbeDefinitions.id("probe_branch_cycle"));
-            if (!TribulationService.start(player, data, cycle, level.getGameTime(), FormulaContext.of(player)).started())
+            if (!TribulationService.start(player, data, cycle, level.getGameTime(), FormulaContext.of(player)).isSuccess())
                 return "the cycling timeline was refused";
             TribulationService.TickResult cycleTick = TribulationService.tick(player, data, cycle, level.getGameTime(), FormulaContext.of(player));
-            if (cycleTick.state() != TribulationService.State.RUNNING)
-                return "a cycling branch ended as " + cycleTick.state() + " instead of parking the run";
+            if (cycleTick.getData() != TribulationService.State.RUNNING)
+                return "a cycling branch ended as " + cycleTick.getData() + " instead of parking the run";
             if (!close(resources.get(probe), 0.0D))
                 return "a cycling branch reached the beat it loops over, adding " + resources.get(probe);
         } finally {

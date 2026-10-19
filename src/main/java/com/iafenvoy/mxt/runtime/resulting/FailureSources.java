@@ -1,4 +1,4 @@
-package com.iafenvoy.mxt.runtime.failure;
+package com.iafenvoy.mxt.runtime.resulting;
 
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;

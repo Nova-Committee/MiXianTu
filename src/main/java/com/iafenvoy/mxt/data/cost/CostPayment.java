@@ -7,6 +7,9 @@ import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.resource.ResourceTransactions.Evaluation;
+import com.iafenvoy.mxt.runtime.resulting.Failure;
+import com.iafenvoy.mxt.runtime.resulting.Failures;
+import com.iafenvoy.mxt.runtime.resulting.Result;
 import com.iafenvoy.mxt.util.HolderHelper;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup.Provider;
@@ -14,8 +17,6 @@ import net.minecraft.resources.Identifier;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
-import com.iafenvoy.mxt.runtime.failure.Failure;
-import com.iafenvoy.mxt.runtime.failure.Failures;
 
 /**
  * One payment: the drafts its entries are loaded into and the two tables they charge. Loading merges an entry into
@@ -39,7 +40,7 @@ public final class CostPayment {
     private @Nullable Map<Holder<Aura>, Double> auras;
     private @Nullable Failure failure;
     private @Nullable Identifier failedResource;
-    private @Nullable Result written;
+    private @Nullable PaymentResult written;
     private boolean beyondResources;
 
     private CostPayment(CostContext context) {
@@ -56,10 +57,10 @@ public final class CostPayment {
     /**
      * Loads, tests and writes one array in one call: nothing is written unless every entry can be charged.
      */
-    public static Result pay(List<Cost> costs, CostContext context) {
+    public static PaymentResult pay(List<Cost> costs, CostContext context) {
         CostPayment payment = of(context);
         Optional<Failure> refusal = payment.loadAndTest(costs);
-        return refusal.map(costFailure -> Result.denied(costFailure, payment.failedResource())).orElseGet(payment::commit);
+        return refusal.map(costFailure -> PaymentResult.denied(costFailure, payment.failedResource())).orElseGet(payment::commit);
     }
 
     /**
@@ -67,8 +68,8 @@ public final class CostPayment {
      * and an entry with no draft - a script - runs after every channel that can still be put back. A payment is one
      * pass, so it is written once and keeps no draft.
      */
-    public static Result payAll(List<CostPayment> payments) {
-        Result result = write(payments);
+    public static PaymentResult payAll(List<CostPayment> payments) {
+        PaymentResult result = write(payments);
         for (CostPayment payment : payments) {
             payment.written = result;
             payment.drafts.clear();
@@ -223,7 +224,7 @@ public final class CostPayment {
      * Writes this payment, and only this payment. A payment is one pass: the first write is the only one, and the
      * drafts it created are dropped with it.
      */
-    public Result commit() {
+    public PaymentResult commit() {
         if (this.written != null) return this.written;
         return payAll(List.of(this));
     }
@@ -241,20 +242,20 @@ public final class CostPayment {
         return ((CostDraft<Cost>) draft).load(cost);
     }
 
-    private static Result write(List<CostPayment> payments) {
+    private static PaymentResult write(List<CostPayment> payments) {
         List<CostDraft<?>> written = new ArrayList<>();
         for (CostPayment payment : payments) {
             payment.createMissingDrafts();
             for (CostDraft<?> draft : payment.drafts.values()) {
                 Optional<Failure> refusal = draft.commit();
                 written.add(draft);
-                if (refusal.isPresent()) return Result.denied(refusal.get(), draft.failedResource(), written);
+                if (refusal.isPresent()) return PaymentResult.denied(refusal.get(), draft.failedResource(), written);
             }
         }
         for (CostPayment payment : payments) {
             for (Cost cost : payment.direct) {
                 Optional<Failure> refusal = cost.commit(payment.context);
-                if (refusal.isPresent()) return Result.denied(refusal.get(), null, written);
+                if (refusal.isPresent()) return PaymentResult.denied(refusal.get(), null, written);
             }
         }
         Map<Identifier, Double> resources = new LinkedHashMap<>();
@@ -264,7 +265,7 @@ public final class CostPayment {
             if (payment.auras != null)
                 payment.auras.forEach((aura, amount) -> auras.merge(aura, amount, Double::sum));
         }
-        return Result.paid(resources, auras);
+        return PaymentResult.paid(resources, auras);
     }
 
     // A reset that cannot run is louder than a wrong balance: the payment is abandoned and the reason logged.
@@ -310,26 +311,38 @@ public final class CostPayment {
     /**
      * What a payment did: what it took, or why it took nothing.
      */
-    public record Result(boolean paid, Failure failure, Identifier failedResource,
-                         Map<Identifier, Double> resources, Map<Holder<Aura>, Double> auras) {
-        public Result {
-            resources = new LinkedHashMap<>(resources);
-            auras = new LinkedHashMap<>(auras);
+    public static final class PaymentResult extends Result {
+        private final Map<Identifier, Double> resources;
+        private final Map<Holder<Aura>, Double> auras;
+
+        private PaymentResult(@Nullable Failure failure, @Nullable Identifier failedResource,
+                              Map<Identifier, Double> resources, Map<Holder<Aura>, Double> auras) {
+            super(failure, failedResource);
+            this.resources = new LinkedHashMap<>(resources);
+            this.auras = new LinkedHashMap<>(auras);
         }
 
-        static Result paid(Map<Identifier, Double> resources, Map<Holder<Aura>, Double> auras) {
-            return new Result(true, null, null, resources, auras);
+        static PaymentResult paid(Map<Identifier, Double> resources, Map<Holder<Aura>, Double> auras) {
+            return new PaymentResult(null, null, resources, auras);
         }
 
         // Nothing is written before the commit, so a refusal here has nothing to put back.
-        static Result denied(Failure failure, @Nullable Identifier failedResource) {
+        static PaymentResult denied(Failure failure, @Nullable Identifier failedResource) {
             return denied(failure, failedResource, List.of());
         }
 
         // Everything this payment itself wrote comes back through the drafts it already committed.
-        static Result denied(Failure failure, @Nullable Identifier failedResource, List<CostDraft<?>> written) {
+        static PaymentResult denied(Failure failure, @Nullable Identifier failedResource, List<CostDraft<?>> written) {
             reset(written);
-            return new Result(false, failure, failedResource, Map.of(), Map.of());
+            return new PaymentResult(failure, failedResource, Map.of(), Map.of());
+        }
+
+        public Map<Identifier, Double> resources() {
+            return this.resources;
+        }
+
+        public Map<Holder<Aura>, Double> auras() {
+            return this.auras;
         }
     }
 }

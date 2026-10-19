@@ -103,7 +103,7 @@ public final class CurseCommand {
         for (Entity target : targets) {
             ApplyResult result = CurseService.applyWithDuration(target, curse, stacks,
                     target.level().getGameTime(), FormulaContext.of(target), SOURCE, durationTicks);
-            if (result.applied()) {
+            if (result.isSuccess()) {
                 applied++;
                 source.sendSuccess(() -> Component.translatable("command.mxt.curse.applied",
                         DefinitionText.nameOrId(curse), stacks, target.getDisplayName()), true);

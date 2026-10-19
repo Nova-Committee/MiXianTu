@@ -74,7 +74,7 @@ public final class CultivationTriggerService {
                         BreakthroughResult result = CultivationService.attempt(
                                 entity, cultivation, resources, chain,
                                 signal.context().formula(), () -> true);
-                        if (result.advanced()) TriggerDispatcher.clearModule(entity.getUUID(), MODULE);
+                        if (result.isSuccess()) TriggerDispatcher.clearModule(entity.getUUID(), MODULE);
                     }, false));
         }
     }

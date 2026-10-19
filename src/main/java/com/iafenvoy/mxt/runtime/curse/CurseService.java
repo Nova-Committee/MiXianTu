@@ -11,7 +11,10 @@ import com.iafenvoy.mxt.event.CurseRemoveEvent.Post;
 import com.iafenvoy.mxt.event.CurseRemoveEvent.Pre;
 import com.iafenvoy.mxt.event.CurseRemoveEvent.Reason;
 import com.iafenvoy.mxt.registry.MxtAttachments;
-import com.iafenvoy.mxt.runtime.failure.CurseFailure;
+import com.iafenvoy.mxt.runtime.resulting.Failure;
+import com.iafenvoy.mxt.runtime.resulting.Failures;
+import com.iafenvoy.mxt.runtime.resulting.ResultWithData;
+import com.iafenvoy.mxt.runtime.resulting.failures.CurseFailure;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.MiscUtil;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
@@ -21,11 +24,10 @@ import net.minecraft.world.entity.Entity;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.common.NeoForge;
 import org.jetbrains.annotations.NotNull;
+import org.jspecify.annotations.Nullable;
 
 import java.util.*;
 import java.util.Map.Entry;
-import com.iafenvoy.mxt.runtime.failure.Failure;
-import com.iafenvoy.mxt.runtime.failure.Failures;
 
 /**
  * Attachment bridge for the common curse transaction model; callers supply a resolved definition.
@@ -104,7 +106,7 @@ public final class CurseService {
                     || definition.stackingMode() == StackingMode.REPLACE;
             ApplyResult result = apply(target.getData(MxtAttachments.CURSE_HOLDER), curse, stacks, gameTime,
                     context, source, eventBus, durationOverride);
-            if (result.applied()) {
+            if (result.isSuccess()) {
                 // "On apply" means the instance was created: stacking onto, or refreshing, a curse already held is
                 // a later application of the same instance and must not repeat it.
                 if (created && !definition.typedType().inert()) definition.onApply().execute(target, context);
@@ -261,21 +263,21 @@ public final class CurseService {
         return executed;
     }
 
-    public record ApplyResult(CurseInstance instance, boolean cancelled, Failure failure) {
+    public static final class ApplyResult extends ResultWithData<CurseInstance> {
+        private ApplyResult(@Nullable CurseInstance instance, Failure failure) {
+            super(instance, failure, null);
+        }
+
         private static ApplyResult applied(CurseInstance instance) {
-            return new ApplyResult(instance, false, null);
+            return new ApplyResult(instance, null);
         }
 
         private static ApplyResult cancelledResult() {
-            return new ApplyResult(null, true, Failures.CANCELLED);
+            return new ApplyResult(null, Failures.CANCELLED);
         }
 
-        private static ApplyResult rejected(Failure failure) {
-            return new ApplyResult(null, false, failure);
-        }
-
-        public boolean applied() {
-            return this.instance != null;
+        public static ApplyResult rejected(Failure failure) {
+            return new ApplyResult(null, failure);
         }
     }
 

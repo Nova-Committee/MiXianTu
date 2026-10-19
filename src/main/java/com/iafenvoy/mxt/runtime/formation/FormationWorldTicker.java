@@ -11,7 +11,7 @@ import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.Sources;
 import com.iafenvoy.mxt.runtime.cultivation.AuraDistributionService;
-import com.iafenvoy.mxt.runtime.formation.FormationService.MaintainResult;
+import com.iafenvoy.mxt.runtime.resulting.Result;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.Identifier;
@@ -94,9 +94,9 @@ public final class FormationWorldTicker {
                 : payer.getData(MxtAttachments.RESOURCE_HOLDER);
         // The formation draws its share of the chunk stock through the same prepass cultivators use, so what it
         // was granted over this period pays the upkeep before the store and then the owner are asked for the rest.
-        MaintainResult result = FormationService.maintain(instance, definition, resources, context,
+        Result result = FormationService.maintain(instance, definition, resources, context,
                 AuraDistributionService.takeUpkeep(level, controller));
-        if (result.maintained()) return true;
+        if (result.isSuccess()) return true;
         // Cancelling keeps the formation registered: it pays nothing and does nothing this period, which is
         // the hook for content that wants a formation to survive a lean stretch.
         if (NeoForge.EVENT_BUS.post(new UpkeepFailed(level, controller, instance, Optional.ofNullable(payer),

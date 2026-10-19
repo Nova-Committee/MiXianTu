@@ -372,20 +372,20 @@ public final class SecretRealmProbes {
         try {
             LivingEntity mobTraveller = spawnBeing(context, overworld, context.at(BEING), null);
             probes.add(mobTraveller);
-            SecretRealmService.Result mobEntered = mobTraveller == null ? null : SecretRealmService.enter(mobTraveller, server, mirror);
+            SecretRealmService.TravelResult mobEntered = mobTraveller == null ? null : SecretRealmService.enter(mobTraveller, server, mirror);
             // A body that is no player is rebuilt by the platform when it crosses a dimension, so the one to read
             // afterwards is the body the call handed back - the one passed in is already gone.
             LivingEntity mobVisitor = mobEntered == null ? null : mobEntered.traveller().orElse(null);
             if (mobVisitor != null && mobVisitor != mobTraveller) probes.add(mobVisitor);
             SecretRealmRecord mobHome = mobVisitor == null ? null : SecretRealmRegistry.ofMember(mobVisitor.getUUID()).orElse(null);
             if (mobHome != null) opened.add(mobHome.dimension());
-            boolean mobIn = mobVisitor != null && mobEntered.changed() && mobHome != null
+            boolean mobIn = mobVisitor != null && mobEntered.isSuccess() && mobHome != null
                     && mobVisitor.level().dimension().equals(mobHome.dimension())
                     && mobVisitor.getData(MxtAttachments.SECRET_REALM_TRAVEL).active();
-            SecretRealmService.Result mobLeft = mobIn ? SecretRealmService.exit(mobVisitor) : null;
+            SecretRealmService.TravelResult mobLeft = mobIn ? SecretRealmService.exit(mobVisitor) : null;
             LivingEntity mobReturned = mobLeft == null ? null : mobLeft.traveller().orElse(null);
             if (mobReturned != null && mobReturned != mobVisitor) probes.add(mobReturned);
-            boolean mobOut = mobLeft != null && mobLeft.changed() && mobReturned != null
+            boolean mobOut = mobLeft != null && mobLeft.isSuccess() && mobReturned != null
                     && mobReturned.level().dimension().equals(Level.OVERWORLD)
                     && !mobReturned.getData(MxtAttachments.SECRET_REALM_TRAVEL).active()
                     && SecretRealmRegistry.ofMember(mobReturned.getUUID()).isEmpty();

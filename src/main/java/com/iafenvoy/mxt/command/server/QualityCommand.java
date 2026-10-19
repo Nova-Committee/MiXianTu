@@ -130,8 +130,8 @@ public final class QualityCommand {
                 source.sendFailure(Component.translatable("command.mxt.quality.no_item"));
                 continue;
             }
-            QualityUpgradeService.Result result = QualityUpgradeService.upgrade(living, stack);
-            if (result.changed()) {
+            QualityUpgradeService.UpgradeResult result = QualityUpgradeService.upgrade(living, stack);
+            if (result.isSuccess()) {
                 upgraded++;
                 source.sendSuccess(() -> Component.translatable("command.mxt.quality.upgraded", stack.getHoverName(),
                         QualityService.displayName(result.to())), true);

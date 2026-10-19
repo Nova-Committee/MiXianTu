@@ -3,6 +3,7 @@ package com.iafenvoy.mxt.command.server;
 import com.iafenvoy.mxt.command.ServerCommandManager;
 import com.iafenvoy.mxt.config.MxtServerConfig;
 import com.iafenvoy.mxt.runtime.cultivation.LifeSpanService;
+import com.iafenvoy.mxt.runtime.resulting.Result;
 import com.mojang.brigadier.arguments.LongArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
@@ -14,7 +15,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import org.jetbrains.annotations.NotNull;
-
 
 import static net.minecraft.commands.Commands.argument;
 import static net.minecraft.commands.Commands.literal;
@@ -78,8 +78,8 @@ public final class LifespanCommand {
                 source.sendFailure(Component.translatable("command.mxt.lifespan.not_living", target.getDisplayName()));
                 continue;
             }
-            LifeSpanService.Result result = LifeSpanService.reincarnate(living);
-            if (!result.changed()) {
+            Result result = LifeSpanService.reincarnate(living);
+            if (result.failure() != null) {
                 source.sendFailure(Component.translatable("command.mxt.lifespan.reincarnate_failed",
                         target.getDisplayName(), result.failure().message()));
                 continue;
@@ -100,8 +100,8 @@ public final class LifespanCommand {
                 source.sendFailure(Component.translatable("command.mxt.lifespan.not_living", target.getDisplayName()));
                 continue;
             }
-            LifeSpanService.Result result = rewrite ? LifeSpanService.set(living, ticks) : LifeSpanService.add(living, ticks);
-            if (!result.changed()) {
+            Result result = rewrite ? LifeSpanService.set(living, ticks) : LifeSpanService.add(living, ticks);
+            if (result.failure() != null) {
                 source.sendFailure(Component.translatable("command.mxt.lifespan.failed", target.getDisplayName(),
                         result.failure().message()));
                 continue;

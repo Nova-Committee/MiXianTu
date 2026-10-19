@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.compat.kubejs.binding;
 
 import com.iafenvoy.mxt.compat.kubejs.MxtKubeJsApi;
-import com.iafenvoy.mxt.runtime.cultivation.LifeSpanService;
+import com.iafenvoy.mxt.runtime.resulting.Result;
 import dev.latvian.mods.kubejs.typings.Info;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
@@ -21,17 +21,17 @@ public final class MxtKubeJsLifespanBindings {
     }
 
     @Info("Rewrites both numbers of the ledger; a negative value is refused.")
-    public LifeSpanService.Result set(LivingEntity entity, long ticks) {
+    public Result set(LivingEntity entity, long ticks) {
         return MxtKubeJsApi.setLifespan(entity, ticks);
     }
 
     @Info("Adds to the ledger, extending the life; a negative amount takes life away.")
-    public LifeSpanService.Result add(LivingEntity entity, long ticks) {
+    public Result add(LivingEntity entity, long ticks) {
         return MxtKubeJsApi.addLifespan(entity, ticks);
     }
 
     @Info("Runs the reincarnation reset on the entity right now; the ledger afterwards is what the next life starts from. A listener may cancel it, which answers with the cancelled failure.")
-    public LifeSpanService.Result reincarnate(LivingEntity entity) {
+    public Result reincarnate(LivingEntity entity) {
         return MxtKubeJsApi.reincarnateLifespan(entity);
     }
 }

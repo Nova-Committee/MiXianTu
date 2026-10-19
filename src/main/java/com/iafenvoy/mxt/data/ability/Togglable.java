@@ -1,11 +1,12 @@
 package com.iafenvoy.mxt.data.ability;
 
+import com.iafenvoy.mxt.runtime.resulting.Failure;
+import com.iafenvoy.mxt.runtime.resulting.Result;
 import com.iafenvoy.mxt.util.OptionalBoolean;
 import net.minecraft.resources.Identifier;
 import org.jspecify.annotations.Nullable;
 
 import java.util.Optional;
-import com.iafenvoy.mxt.runtime.failure.Failure;
 
 /**
  * Something the wheel can trigger. Implementing it is the whole of saying "put me on the wheel": the entry's kind
@@ -33,20 +34,24 @@ public interface Togglable {
     }
 
     // One call per press, server side only, which is why a refusal is a value rather than an exception.
-    Result activate(ToggleContext context);
+    PressResult activate(ToggleContext context);
 
-    record Result(boolean changed, @Nullable Failure failure, @Nullable Identifier failedResource) {
-        public static Result activated() {
-            return new Result(true, null, null);
+    final class PressResult extends Result {
+        private PressResult(@Nullable Failure failure, @Nullable Identifier failedResource) {
+            super(failure, failedResource);
         }
 
-        public static Result refused(Failure failure) {
-            return new Result(false, failure, null);
+        public static PressResult activated() {
+            return new PressResult(null, null);
+        }
+
+        public static PressResult refused(Failure failure) {
+            return new PressResult(failure, null);
         }
 
         // The payer ran out of one named resource, which is what lets the report say which one.
-        public static Result refused(Failure failure, @Nullable Identifier failedResource) {
-            return new Result(false, failure, failedResource);
+        public static PressResult refused(Failure failure, @Nullable Identifier failedResource) {
+            return new PressResult(failure, failedResource);
         }
     }
 }

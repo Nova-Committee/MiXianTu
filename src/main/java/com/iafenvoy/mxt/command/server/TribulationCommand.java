@@ -6,8 +6,8 @@ import com.iafenvoy.mxt.data.Tribulation;
 import com.iafenvoy.mxt.data.storage.DataStorage;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.runtime.resulting.Result;
 import com.iafenvoy.mxt.runtime.tribulation.TribulationService;
-import com.iafenvoy.mxt.runtime.tribulation.TribulationService.StartResult;
 import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.formula.FormulaContexts;
 import com.mojang.brigadier.Command;
@@ -27,10 +27,8 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import org.jetbrains.annotations.Nullable;
 
-
 import static net.minecraft.commands.Commands.argument;
 import static net.minecraft.commands.Commands.literal;
-import com.iafenvoy.mxt.runtime.failure.Failure;
 
 /**
  * The {@code /mxt tribulation} subtree: run a trial by hand instead of waiting for the breakthrough that would have
@@ -67,9 +65,9 @@ public final class TribulationCommand {
         LivingEntity entity = target(source, target);
         if (entity == null) return 0;
         TribulationAttachment data = entity.getData(MxtAttachments.TRIBULATION);
-        StartResult result = TribulationService.start(entity, data, tribulation, entity.level().getGameTime(),
+        Result result = TribulationService.start(entity, data, tribulation, entity.level().getGameTime(),
                 FormulaContexts.forEntity(entity));
-        if (!result.started()) {
+        if (!result.isSuccess()) {
             source.sendFailure(Component.translatable("command.mxt.tribulation.failed", DefinitionText.nameOrId(tribulation),
                     result.failure().message()));
             return 0;

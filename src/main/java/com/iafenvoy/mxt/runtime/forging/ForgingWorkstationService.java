@@ -9,11 +9,14 @@ import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.runtime.failure.ForgingFailure;
 import com.iafenvoy.mxt.runtime.forging.ForgingService.FinishResult;
-import com.iafenvoy.mxt.runtime.forging.ForgingService.StartResult;
 import com.iafenvoy.mxt.runtime.forging.ForgingService.StrikeResult;
 import com.iafenvoy.mxt.runtime.item.QualityService;
+import com.iafenvoy.mxt.runtime.resulting.Failure;
+import com.iafenvoy.mxt.runtime.resulting.Failures;
+import com.iafenvoy.mxt.runtime.resulting.Result;
+import com.iafenvoy.mxt.runtime.resulting.ResultWithData;
+import com.iafenvoy.mxt.runtime.resulting.failures.ForgingFailure;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.Holder;
@@ -32,8 +35,6 @@ import net.neoforged.neoforge.common.crafting.SizedIngredient;
 
 import java.util.*;
 import java.util.stream.Stream;
-import com.iafenvoy.mxt.runtime.failure.Failure;
-import com.iafenvoy.mxt.runtime.failure.Failures;
 
 /**
  * Authoritative forge-table transaction boundary - material matching, tool/blueprint gating, the shared
@@ -116,65 +117,65 @@ public final class ForgingWorkstationService {
         cancellation = policy == null ? RETURN_EVERYTHING : policy;
     }
 
-    public static StartOutcome start(ServerPlayer player, ForgingSurface surface, Identifier blueprintId) {
-        if (!canUse(player, surface)) return new StartOutcome(ForgingFailure.OUT_OF_RANGE, false);
+    public static Result start(ServerPlayer player, ForgingSurface surface, Identifier blueprintId) {
+        if (!canUse(player, surface)) return Result.failure(ForgingFailure.OUT_OF_RANGE);
         ForgingTableState state = surface.forgingState();
-        if (state.active()) return new StartOutcome(Failures.ALREADY_ACTIVE, false);
+        if (state.active()) return Result.failure(Failures.ALREADY_ACTIVE);
         Holder<ForgingBlueprint> holder = MxtDatapackRegistries.holder(player.level().registryAccess(), MxtResourceKeys.FORGING_BLUEPRINT, blueprintId).orElse(null);
-        if (holder == null) return new StartOutcome(Failures.DISABLED, false);
+        if (holder == null) return Result.failure(Failures.DISABLED);
         ForgingBlueprint blueprint = holder.value();
         if (!selectableBlueprintIds(surface.forgingContainer(), player.level().registryAccess()).contains(blueprintId))
-            return new StartOutcome(ForgingFailure.BLUEPRINT_NOT_HELD, false);
-        if (!outputEmpty(surface)) return new StartOutcome(ForgingFailure.OUTPUT_BLOCKED, false);
+            return Result.failure(ForgingFailure.BLUEPRINT_NOT_HELD);
+        if (!outputEmpty(surface)) return Result.failure(ForgingFailure.OUTPUT_BLOCKED);
 
         StartupMaterials materials = StartupMaterials.resolve(surface.forgingContainer(), blueprint.input());
-        if (materials == null) return new StartOutcome(ForgingFailure.INSUFFICIENT_MATERIALS, false);
+        if (materials == null) return Result.failure(ForgingFailure.INSUFFICIENT_MATERIALS);
 
         RegistryAccess registries = player.level().registryAccess();
-        StartResult result = ForgingService.start(player, surface, blueprint, registries);
-        if (!result.started()) return new StartOutcome(result.failure(), false);
+        ResultWithData<ForgingSession> result = ForgingService.start(player, surface, blueprint, registries);
+        if (result.isFailure()) return Result.failure(result.failure());
 
         materials.consume(surface.forgingContainer());
-        state.lock(holder, ForgingPlan.of(blueprint, registries), result.session(), materials.consumed(), player.getUUID());
+        state.lock(holder, ForgingPlan.of(blueprint, registries), result.getData(), materials.consumed(), player.getUUID());
         surface.forgingChanged();
-        settleIfComplete(player, surface, state, result.session());
-        return new StartOutcome(null, true);
+        settleIfComplete(player, surface, state, result.getData());
+        return Result.success();
     }
 
     // A strike that happens also plays the method's sound at the table; a refused one is silent.
-    public static StrikeOutcome strike(ServerPlayer player, ForgingSurface surface, Identifier methodId) {
-        if (!canUse(player, surface)) return new StrikeOutcome(ForgingFailure.OUT_OF_RANGE, false, 0);
+    public static ResultWithData<Integer> strike(ServerPlayer player, ForgingSurface surface, Identifier methodId) {
+        if (!canUse(player, surface)) return ResultWithData.failure(0, ForgingFailure.OUT_OF_RANGE);
         ForgingTableState state = surface.forgingState();
-        if (!state.active()) return new StrikeOutcome(ForgingFailure.NO_SESSION, false, 0);
-        if (!outputEmpty(surface)) return new StrikeOutcome(ForgingFailure.OUTPUT_BLOCKED, false, 0);
+        if (!state.active()) return ResultWithData.failure(0, ForgingFailure.NO_SESSION);
+        if (!outputEmpty(surface)) return ResultWithData.failure(0, ForgingFailure.OUTPUT_BLOCKED);
         Holder<ForgingMethod> method = MxtDatapackRegistries.holder(player.level().registryAccess(), MxtResourceKeys.FORGING_METHOD, methodId).orElse(null);
-        if (method == null) return new StrikeOutcome(Failures.DISABLED, false, 0);
+        if (method == null) return ResultWithData.failure(0, Failures.DISABLED);
         Holder<ForgingBlueprint> blueprintRef = state.blueprint().orElse(null);
         if (!availableMethodIds(surface.forgingContainer(), player.level().registryAccess(), blueprintRef).contains(methodId))
-            return new StrikeOutcome(ForgingFailure.METHOD_NOT_AVAILABLE, false, 0);
+            return ResultWithData.failure(0, ForgingFailure.METHOD_NOT_AVAILABLE);
         ForgingPlan plan = state.plan().orElse(null);
         ForgingSession session = state.session().map(snapshot -> ForgingSession.restore(plan, snapshot)).orElse(null);
-        if (session == null || plan == null) return new StrikeOutcome(ForgingFailure.NO_SESSION, false, 0);
+        if (session == null || plan == null) return ResultWithData.failure(0, ForgingFailure.NO_SESSION);
 
         long gameTime = player.level().getGameTime();
         if (!ForgingRateLimiter.tryAcquire(player, surface, method.value().cooldown(), gameTime))
-            return new StrikeOutcome(Failures.COOLDOWN, false, session.value());
+            return ResultWithData.failure(session.value(), Failures.COOLDOWN);
 
         if (session.steps() >= plan.maxSteps()) {
             fail(player, surface, state, session);
-            return new StrikeOutcome(null, false, 0);
+            return ResultWithData.failure(0, ForgingFailure.INVALID_STRIKE);
         }
 
         FormulaContext context = FormulaContext.of(player);
         boolean conditionsMet = method.value().condition().test(player, context);
         ResourceHolderAttachment resources = player.getData(MxtAttachments.RESOURCE_HOLDER);
         StrikeResult result = ForgingService.strike(player, surface, session, method, resources, context, () -> conditionsMet);
-        if (!result.struck()) return new StrikeOutcome(result.failure(), false, session.value());
+        if (result.isFailure()) return ResultWithData.failure(session.value(), result.failure());
         state.update(session);
         surface.forgingChanged();
         playMethodSound(player, surface, method.value());
         settleIfComplete(player, surface, state, session);
-        return new StrikeOutcome(null, true, session.value());
+        return ResultWithData.success(session.value());
     }
 
     // Through the level with no excepted player, as SoundSource.BLOCKS so the block volume slider governs it.
@@ -198,38 +199,38 @@ public final class ForgingWorkstationService {
         state.session().map(snapshot -> ForgingSession.restore(plan, snapshot)).ifPresent(session -> settleIfComplete(player, surface, state, session));
     }
 
-    public static FinishOutcome finish(ServerPlayer player, ForgingSurface surface) {
-        if (!canUse(player, surface)) return new FinishOutcome(ForgingFailure.OUT_OF_RANGE, false);
+    public static Result finish(ServerPlayer player, ForgingSurface surface) {
+        if (!canUse(player, surface)) return Result.failure(ForgingFailure.OUT_OF_RANGE);
         ForgingTableState state = surface.forgingState();
-        if (!state.active()) return new FinishOutcome(ForgingFailure.NO_SESSION, false);
-        if (!outputEmpty(surface)) return new FinishOutcome(ForgingFailure.OUTPUT_BLOCKED, false);
+        if (!state.active()) return Result.failure(ForgingFailure.NO_SESSION);
+        if (!outputEmpty(surface)) return Result.failure(ForgingFailure.OUTPUT_BLOCKED);
         return settle(player, surface, state);
     }
 
     // For callers that have already established the session, the range and the free output slot; two callers
     // share this body rather than agreeing by hand.
-    private static FinishOutcome settle(ServerPlayer player, ForgingSurface surface, ForgingTableState state) {
+    private static Result settle(ServerPlayer player, ForgingSurface surface, ForgingTableState state) {
         Holder<ForgingBlueprint> holder = state.blueprint().orElse(null);
-        if (holder == null) return new FinishOutcome(Failures.DISABLED, false);
+        if (holder == null) return Result.failure(Failures.DISABLED);
         ForgingPlan plan = state.plan().orElse(null);
         ForgingSession session = state.session().map(snapshot -> ForgingSession.restore(plan, snapshot)).orElse(null);
-        if (session == null) return new FinishOutcome(Failures.DISABLED, false);
+        if (session == null) return Result.failure(Failures.DISABLED);
 
         ForgingBlueprint blueprint = holder.value();
         // The locked materials are read here rather than at start because only the settlement turns them into
         // a quality: see ForgingService#materialModifier.
         double forgingModifier = ForgingService.materialModifier(player.level().registryAccess(), state.consumed(), FormulaContext.of(player));
         FinishResult result = ForgingService.finish(player, surface, holder, session, blueprint::qualityFor, forgingModifier);
-        if (!result.finished()) {
+        if (result.isFailure()) {
             // A listener refusing is not a verdict on the piece, so it leaves the session where it is: see
             // ForgingFailure#refusedByListener.
             if (ForgingFailure.refusedByListener(result.failure()))
-                return new FinishOutcome(result.failure(), false);
+                return Result.failure(result.failure());
             fail(player, surface, state, session);
-            return new FinishOutcome(null, true);
+            return Result.success();
         }
         ItemStack output = BuiltInRegistries.ITEM.getOptional(blueprint.result()).map(ItemStack::new).orElse(ItemStack.EMPTY);
-        if (output.isEmpty()) return new FinishOutcome(Failures.DISABLED, false);
+        if (output.isEmpty()) return Result.failure(Failures.DISABLED);
         output.set(MxtDataComponents.FORGING_RESULT.get(), result.result());
         // The settled tier goes to the one quality component, so a forged piece is read exactly like one a pack
         // stamped or an administrator set.
@@ -238,20 +239,20 @@ public final class ForgingWorkstationService {
         blueprint.completeAction().execute(player, FormulaContext.of(player));
         state.clear();
         surface.forgingChanged();
-        return new FinishOutcome(null, true);
+        return Result.success();
     }
 
     // The blueprint's fail_action still runs, because cancelling is a failure to produce anything.
-    public static CancelOutcome cancel(ServerPlayer player, ForgingSurface surface) {
-        if (!canUse(player, surface)) return new CancelOutcome(ForgingFailure.OUT_OF_RANGE, false);
+    public static Result cancel(ServerPlayer player, ForgingSurface surface) {
+        if (!canUse(player, surface)) return Result.failure(ForgingFailure.OUT_OF_RANGE);
         ForgingTableState state = surface.forgingState();
-        if (!state.active()) return new CancelOutcome(ForgingFailure.NO_SESSION, false);
+        if (!state.active()) return Result.failure(ForgingFailure.NO_SESSION);
         ForgingPlan plan = state.plan().orElse(null);
         ForgingSession session = state.session().map(snapshot -> ForgingSession.restore(plan, snapshot)).orElse(null);
         // The event decides *whether*; the policy decides *what it costs*. Refusing here leaves the
         // session exactly as it was, materials and all.
         Failure refusal = session == null ? ForgingFailure.NO_SESSION : ForgingService.cancel(player, surface, session);
-        if (refusal != null) return new CancelOutcome(refusal, false);
+        if (refusal != null) return Result.failure(refusal);
         ForgingBlueprint blueprint = state.blueprint().map(Holder::value).orElse(null);
         if (blueprint != null) blueprint.failAction().execute(player, FormulaContext.of(player));
         // After the policy, because its whole input is what the session took; and a full clear rather than
@@ -259,7 +260,7 @@ public final class ForgingWorkstationService {
         cancellation.settle(player, surface, state, blueprint);
         state.clear();
         surface.forgingChanged();
-        return new CancelOutcome(null, true);
+        return Result.success();
     }
 
     private static void fail(ServerPlayer player, ForgingSurface surface, ForgingTableState state, ForgingSession session) {
@@ -387,15 +388,5 @@ public final class ForgingWorkstationService {
         }
     }
 
-    public record StartOutcome(Failure failure, boolean started) {
-    }
 
-    public record StrikeOutcome(Failure failure, boolean struck, int value) {
-    }
-
-    public record FinishOutcome(Failure failure, boolean finished) {
-    }
-
-    public record CancelOutcome(Failure failure, boolean cancelled) {
-    }
 }

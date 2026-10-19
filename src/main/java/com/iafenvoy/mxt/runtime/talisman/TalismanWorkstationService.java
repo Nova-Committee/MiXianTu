@@ -139,7 +139,7 @@ public final class TalismanWorkstationService {
         if (paper.isEmpty()) return Optional.empty();
         List<Runnable> refunds = snapshotResources(context, planning);
         List<ItemStack> before = contents(paperSlot);
-        if (!planning.commit().paid()) return Optional.empty();
+        if (!planning.commit().isSuccess()) return Optional.empty();
         return Optional.of(new TalismanDrawingSession(id, recipe, costs, context, paperSlot, paper,
                 charged(before, paperSlot), refunds, player.level().getGameTime()));
     }

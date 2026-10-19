@@ -27,7 +27,7 @@ public final class TribulationEventBridge {
         TribulationAttachment data = entity.getData(MxtAttachments.TRIBULATION);
         data.tribulation().ifPresent(holder -> {
             TickResult result = TribulationService.tick(entity, data, holder, entity.level().getGameTime(), FormulaContexts.forEntity(entity));
-            if (result.state() == State.COMPLETED && entity instanceof ServerPlayer player) {
+            if (result.getData() == State.COMPLETED && entity instanceof ServerPlayer player) {
                 MxtCriteriaTriggers.TRIBULATION.get().trigger(player, HolderHelper.id(holder));
             }
         });

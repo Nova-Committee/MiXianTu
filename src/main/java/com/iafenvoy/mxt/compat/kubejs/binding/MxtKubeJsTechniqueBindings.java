@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.compat.kubejs.binding;
 
 import com.iafenvoy.mxt.compat.kubejs.MxtKubeJsApi;
-import com.iafenvoy.mxt.runtime.cultivation.TechniqueService;
+import com.iafenvoy.mxt.runtime.resulting.Result;
 import dev.latvian.mods.kubejs.typings.Info;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Entity;
@@ -34,12 +34,12 @@ public final class MxtKubeJsTechniqueBindings {
     }
 
     @Info("Learns a technique through the authoritative service and answers what it did: {changed, failure}, where failure is DISABLED, ALREADY_LEARNED, CONFLICT, CONDITIONS, CANCELLED or SERVER_ONLY.")
-    public TechniqueService.Result learn(LivingEntity entity, String technique) {
+    public Result learn(LivingEntity entity, String technique) {
         return MxtKubeJsApi.learnTechnique(entity, id(technique));
     }
 
     @Info("Forgets a technique and its own progression record, rebuilding what it granted; the realm, the progress, the resources and the running method are untouched. {changed, failure} with ABSENT when the entity does not have it.")
-    public TechniqueService.Result forget(LivingEntity entity, String technique) {
+    public Result forget(LivingEntity entity, String technique) {
         return MxtKubeJsApi.forgetTechnique(entity, id(technique));
     }
 

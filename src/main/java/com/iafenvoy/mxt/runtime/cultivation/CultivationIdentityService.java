@@ -1,92 +1,1 @@
-package com.iafenvoy.mxt.runtime.cultivation;
-
-import com.iafenvoy.mxt.attachment.SpiritIdentityAttachment;
-import com.iafenvoy.mxt.data.cultivation.Physique;
-import com.iafenvoy.mxt.data.cultivation.SpiritRoot;
-import com.iafenvoy.mxt.registry.MxtAttachments;
-import com.iafenvoy.mxt.runtime.ability.AbilityGrantService;
-import com.iafenvoy.mxt.runtime.failure.CultivationIdentityFailure;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
-import net.minecraft.core.Holder;
-import net.minecraft.resources.Identifier;
-import net.minecraft.world.entity.LivingEntity;
-import org.jetbrains.annotations.NotNull;
-
-import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Set;
-import com.iafenvoy.mxt.runtime.failure.Failure;
-import com.iafenvoy.mxt.runtime.failure.Failures;
-
-/**
- * Server-authoritative mutations for independent spirit-root and physique ownership.
- */
-public final class CultivationIdentityService {
-    private CultivationIdentityService() {
-    }
-
-    public static Result grantSpiritRoot(LivingEntity entity, @NotNull Holder<SpiritRoot> spiritRoot) {
-        SpiritIdentityAttachment spirit = entity.getData(MxtAttachments.SPIRIT_IDENTITY);
-        if (spirit.spiritRoots().contains(spiritRoot)) return Result.rejected(CultivationIdentityFailure.ALREADY_HELD);
-        // A root may rule out another root's element, in either direction: the rule is written once, on
-        // whichever of the two the pack thought of first, and the check reads both. Only roots in force can
-        // rule anything out, so a root the holder switched off does not block this grant.
-        if (spirit.activeSpiritRoots().stream().anyMatch(held -> held.value().conflictsWith(spiritRoot.value())))
-            return Result.rejected(CultivationIdentityFailure.ELEMENT_CONFLICT);
-        List<Holder<SpiritRoot>> roots = new LinkedList<>(spirit.spiritRoots());
-        roots.add(spiritRoot);
-        spirit.setSpiritRoots(roots);
-        AbilityGrantService.recalculate(entity);
-        return Result.changedResult();
-    }
-
-    public static Result grantPhysique(LivingEntity entity, Holder<Physique> physique, FormulaContext context) {
-        SpiritIdentityAttachment spirit = entity.getData(MxtAttachments.SPIRIT_IDENTITY);
-        if (physique == null) return Result.rejected(Failures.DISABLED);
-        Physique value = physique.value();
-        if (!value.allowStacking() && spirit.physiques().contains(physique))
-            return Result.rejected(CultivationIdentityFailure.ALREADY_HELD);
-        boolean conditions = value.holderCondition().test(entity, context);
-        if (!conditions) return Result.rejected(Failures.CONDITIONS);
-        Set<Identifier> exclusive = new HashSet<>(value.exclusiveTags());
-        boolean conflict = spirit.physiques().stream().map(Holder::value).anyMatch(existing -> existing.exclusiveTags().stream().anyMatch(exclusive::contains));
-        if (conflict) return Result.rejected(CultivationIdentityFailure.EXCLUSIVE_CONFLICT);
-        List<Holder<Physique>> physiques = new LinkedList<>(spirit.physiques());
-        physiques.add(physique);
-        spirit.setPhysiques(physiques);
-        AbilityGrantService.recalculate(entity);
-        return Result.changedResult();
-    }
-
-    // The reference is looked up among the held ones rather than in the registry: a definition the pack no longer
-    // provides is still held and has to be removable. The attachment decodes its holders through the registry, so
-    // an entry that is gone by then simply is not in the list.
-    public static boolean removeSpiritRoot(LivingEntity entity, Holder<SpiritRoot> spiritRoot) {
-        SpiritIdentityAttachment spirit = entity.getData(MxtAttachments.SPIRIT_IDENTITY);
-        List<Holder<SpiritRoot>> roots = new LinkedList<>(spirit.spiritRoots());
-        if (!roots.removeIf(spiritRoot::equals)) return false;
-        spirit.setSpiritRoots(roots);
-        AbilityGrantService.recalculate(entity);
-        return true;
-    }
-
-    public static boolean removePhysique(LivingEntity entity, Holder<Physique> physique) {
-        SpiritIdentityAttachment spirit = entity.getData(MxtAttachments.SPIRIT_IDENTITY);
-        List<Holder<Physique>> physiques = new LinkedList<>(spirit.physiques());
-        if (!physiques.removeIf(physique::equals)) return false;
-        spirit.setPhysiques(physiques);
-        AbilityGrantService.recalculate(entity);
-        return true;
-    }
-
-    public record Result(boolean changed, Failure failure) {
-        private static Result changedResult() {
-            return new Result(true, null);
-        }
-
-        private static Result rejected(Failure failure) {
-            return new Result(false, failure);
-        }
-    }
-}
+package com.iafenvoy.mxt.runtime.cultivation;import com.iafenvoy.mxt.attachment.SpiritIdentityAttachment;import com.iafenvoy.mxt.data.cultivation.Physique;import com.iafenvoy.mxt.data.cultivation.SpiritRoot;import com.iafenvoy.mxt.registry.MxtAttachments;import com.iafenvoy.mxt.runtime.ability.AbilityGrantService;import com.iafenvoy.mxt.runtime.resulting.Failures;import com.iafenvoy.mxt.runtime.resulting.Result;import com.iafenvoy.mxt.runtime.resulting.failures.CultivationIdentityFailure;import com.iafenvoy.mxt.util.formula.FormulaContext;import net.minecraft.core.Holder;import net.minecraft.resources.Identifier;import net.minecraft.world.entity.LivingEntity;import org.jetbrains.annotations.NotNull;import java.util.HashSet;import java.util.LinkedList;import java.util.List;import java.util.Set;/** * Server-authoritative mutations for independent spirit-root and physique ownership. */public final class CultivationIdentityService {    private CultivationIdentityService() {    }    public static Result grantSpiritRoot(LivingEntity entity, @NotNull Holder<SpiritRoot> spiritRoot) {        SpiritIdentityAttachment spirit = entity.getData(MxtAttachments.SPIRIT_IDENTITY);        if (spirit.spiritRoots().contains(spiritRoot)) return Result.failure(CultivationIdentityFailure.ALREADY_HELD);        // A root may rule out another root's element, in either direction: the rule is written once, on        // whichever of the two the pack thought of first, and the check reads both. Only roots in force can        // rule anything out, so a root the holder switched off does not block this grant.        if (spirit.activeSpiritRoots().stream().anyMatch(held -> held.value().conflictsWith(spiritRoot.value())))            return Result.failure(CultivationIdentityFailure.ELEMENT_CONFLICT);        List<Holder<SpiritRoot>> roots = new LinkedList<>(spirit.spiritRoots());        roots.add(spiritRoot);        spirit.setSpiritRoots(roots);        AbilityGrantService.recalculate(entity);        return Result.success();    }    public static Result grantPhysique(LivingEntity entity, Holder<Physique> physique, FormulaContext context) {        SpiritIdentityAttachment spirit = entity.getData(MxtAttachments.SPIRIT_IDENTITY);        if (physique == null) return Result.failure(Failures.DISABLED);        Physique value = physique.value();        if (!value.allowStacking() && spirit.physiques().contains(physique))            return Result.failure(CultivationIdentityFailure.ALREADY_HELD);        boolean conditions = value.holderCondition().test(entity, context);        if (!conditions) return Result.failure(Failures.CONDITIONS);        Set<Identifier> exclusive = new HashSet<>(value.exclusiveTags());        boolean conflict = spirit.physiques().stream().map(Holder::value).anyMatch(existing -> existing.exclusiveTags().stream().anyMatch(exclusive::contains));        if (conflict) return Result.failure(CultivationIdentityFailure.EXCLUSIVE_CONFLICT);        List<Holder<Physique>> physiques = new LinkedList<>(spirit.physiques());        physiques.add(physique);        spirit.setPhysiques(physiques);        AbilityGrantService.recalculate(entity);        return Result.success();    }    // The reference is looked up among the held ones rather than in the registry: a definition the pack no longer    // provides is still held and has to be removable. The attachment decodes its holders through the registry, so    // an entry that is gone by then simply is not in the list.    public static boolean removeSpiritRoot(LivingEntity entity, Holder<SpiritRoot> spiritRoot) {        SpiritIdentityAttachment spirit = entity.getData(MxtAttachments.SPIRIT_IDENTITY);        List<Holder<SpiritRoot>> roots = new LinkedList<>(spirit.spiritRoots());        if (!roots.removeIf(spiritRoot::equals)) return false;        spirit.setSpiritRoots(roots);        AbilityGrantService.recalculate(entity);        return true;    }    public static boolean removePhysique(LivingEntity entity, Holder<Physique> physique) {        SpiritIdentityAttachment spirit = entity.getData(MxtAttachments.SPIRIT_IDENTITY);        List<Holder<Physique>> physiques = new LinkedList<>(spirit.physiques());        if (!physiques.removeIf(physique::equals)) return false;        spirit.setPhysiques(physiques);        AbilityGrantService.recalculate(entity);        return true;    }}

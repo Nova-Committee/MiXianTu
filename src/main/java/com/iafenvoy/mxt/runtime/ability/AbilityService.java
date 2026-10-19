@@ -20,8 +20,12 @@ import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtCriteriaTriggers;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationAffinity;
 import com.iafenvoy.mxt.runtime.damage.DamageCalculationService;
-import com.iafenvoy.mxt.runtime.failure.AbilityFailure;
 import com.iafenvoy.mxt.runtime.progression.ProgressionDamageMultiplier;
+import com.iafenvoy.mxt.runtime.resulting.Failure;
+import com.iafenvoy.mxt.runtime.resulting.Failures;
+import com.iafenvoy.mxt.runtime.resulting.Result;
+import com.iafenvoy.mxt.runtime.resulting.ResultWithData;
+import com.iafenvoy.mxt.runtime.resulting.failures.AbilityFailure;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.FormulaContexts;
@@ -36,8 +40,6 @@ import net.neoforged.neoforge.common.NeoForge;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
-import com.iafenvoy.mxt.runtime.failure.Failure;
-import com.iafenvoy.mxt.runtime.failure.Failures;
 
 /**
  * Server-side ability cost and cooldown transaction: actions are committed only after this service approves
@@ -97,8 +99,8 @@ public final class AbilityService {
     private static CommitResult commit(PreparedUse use, AbilityAttachment abilities, long gameTime) {
         if (AbilityStorage.onCooldown(abilities, use.ability(), gameTime))
             return CommitResult.rejected(Failures.COOLDOWN, null);
-        CostPayment.Result payment = use.payment().commit();
-        if (!payment.paid()) return CommitResult.rejected(payment.failure(), payment.failedResource());
+        CostPayment.PaymentResult payment = use.payment().commit();
+        if (!payment.isSuccess()) return CommitResult.rejected(payment.failure(), payment.failedResource());
         applyAbilityState(use, abilities, gameTime);
         return CommitResult.committed(payment.resources());
     }
@@ -132,7 +134,7 @@ public final class AbilityService {
         if (!definition.condition().test(actor, context)) return Failures.CONDITION_FAILED;
         PrepareResult prepared = prepare(ability, abilities, gameTime, context,
                 actor instanceof LivingEntity living ? living : null, false, payment);
-        return prepared.approved() ? null : prepared.failure();
+        return prepared.isSuccess() ? null : prepared.failure();
     }
 
     private static UseResult use(Holder<Ability> ability, Entity actor,
@@ -160,19 +162,18 @@ public final class AbilityService {
         if (!definition.condition().test(actor, context)) {
             return UseResult.rejected(Failures.CONDITION_FAILED, null);
         }
-        if (!validateWord(definition, actor, context)) return UseResult.rejected(AbilityFailure.PERMISSION_DENIED, null);
-        if (definition.type() instanceof CompositeAbilityType) {
+        if (!validateWord(definition, actor, context))
+            return UseResult.rejected(AbilityFailure.PERMISSION_DENIED, null);
+        if (definition.type() instanceof CompositeAbilityType)
             return useComposite(ability, actor, abilities, resources, gameTime, context, requiresGrant, origin);
-        }
-        PrepareResult prepared = prepare(ability, abilities, gameTime, context,
-                actor instanceof LivingEntity living ? living : null, requiresGrant, null);
-        if (!prepared.approved()) return UseResult.rejected(prepared.failure(), prepared.failedResource());
-        if (prepared.use().castTimeTicks() > 0L) {
+        PrepareResult prepared = prepare(ability, abilities, gameTime, context, actor instanceof LivingEntity living ? living : null, requiresGrant, null);
+        if (!prepared.isSuccess()) return UseResult.rejected(prepared.failure(), prepared.failedResource());
+        if (prepared.getData().castTimeTicks() > 0L) {
             AbilityStorage.value(abilities, ability, CastDeadline.class, new CastDeadline(CastDeadline.NO_CAST), gameTime)
-                    .start(Math.addExact(gameTime, prepared.use().castTimeTicks()));
+                    .start(Math.addExact(gameTime, prepared.getData().castTimeTicks()));
             return UseResult.castingResult();
         }
-        return finishPreparedUse(prepared.use(), definition, actor, abilities, resources, gameTime, context, origin);
+        return finishPreparedUse(prepared.getData(), definition, actor, abilities, resources, gameTime, context, origin);
     }
 
     public static UseResult finishCast(Holder<Ability> ability, Entity actor,
@@ -191,13 +192,14 @@ public final class AbilityService {
         }
         AbilityStorage.clearCast(abilities, ability, gameTime);
         if (!definition.condition().test(actor, context)) return UseResult.rejected(Failures.CONDITION_FAILED, null);
-        if (!validateWord(definition, actor, context)) return UseResult.rejected(AbilityFailure.PERMISSION_DENIED, null);
+        if (!validateWord(definition, actor, context))
+            return UseResult.rejected(AbilityFailure.PERMISSION_DENIED, null);
         // Already started by something that could start one, so the grant it was approved under is not asked for
         // a second time.
         PrepareResult prepared = prepare(ability, abilities, gameTime, context,
                 actor instanceof LivingEntity living ? living : null, false, null);
-        if (!prepared.approved()) return UseResult.rejected(prepared.failure(), prepared.failedResource());
-        return finishPreparedUse(prepared.use(), definition, actor, abilities, resources, gameTime, context, null);
+        if (!prepared.isSuccess()) return UseResult.rejected(prepared.failure(), prepared.failedResource());
+        return finishPreparedUse(prepared.getData(), definition, actor, abilities, resources, gameTime, context, null);
     }
 
     private static UseResult finishPreparedUse(PreparedUse preparedUse, Ability definition, Entity actor,
@@ -211,7 +213,7 @@ public final class AbilityService {
         // The event owns the amounts from here on: the payment being made is the one it handed back.
         preparedUse.payment().reprice(resourceEvent.getAmounts());
         CommitResult committed = commit(preparedUse, abilities, gameTime);
-        if (!committed.committed()) return UseResult.rejected(committed.failure(), committed.failedResource());
+        if (!committed.isSuccess()) return UseResult.rejected(committed.failure(), committed.failedResource());
         if (definition.type() instanceof ChannelSource) {
             abilities.setChannelledAbility(preparedUse.ability());
             AbilityStorage.value(abilities, preparedUse.ability(), ChannelPulse.class, new ChannelPulse(0.0D), gameTime)
@@ -220,38 +222,38 @@ public final class AbilityService {
         // A channel owns the ability until released, so it never runs the one-shot entity action; its
         // target action still fires on activation and then once per upkeep pulse.
         executeEffects(definition, actor, context, origin);
-        NeoForge.EVENT_BUS.post(new Post(resources, committed.amounts()));
-        NeoForge.EVENT_BUS.post(new AbilityUseEvent.Post(actor, preparedUse.ability(), context, committed.amounts()));
+        NeoForge.EVENT_BUS.post(new Post(resources, committed.getData()));
+        NeoForge.EVENT_BUS.post(new AbilityUseEvent.Post(actor, preparedUse.ability(), context, committed.getData()));
         if (actor instanceof ServerPlayer player)
             MxtCriteriaTriggers.ABILITY.get().trigger(player, HolderHelper.id(preparedUse.ability()));
-        return UseResult.committed(committed.amounts());
+        return UseResult.committed(committed.getData());
     }
 
     // What one press costs when the press is not a cast: the condition, the cooldown and the entry's own costs,
     // paid once, in the same transaction a cast uses. A type that acts on a press calls this first unless it has
     // a reason of its own not to (see Toggable#gated).
-    public static GateResult gate(ToggleContext context) {
+    public static Result gate(ToggleContext context) {
         Holder<Ability> ability = context.ability();
         LivingEntity holder = context.holder();
-        if (holder.level().isClientSide()) return GateResult.rejected(Failures.SERVER_ONLY, null);
+        if (holder.level().isClientSide()) return Result.failure(Failures.SERVER_ONLY, null);
         AbilityAttachment abilities = holder.getData(MxtAttachments.ABILITY_HOLDER);
         long gameTime = holder.level().getGameTime();
         FormulaContext formula = context.formula();
         Ability definition = ability.value();
-        if (!abilities.has(ability)) return GateResult.rejected(AbilityFailure.NOT_GRANTED, null);
+        if (!abilities.has(ability)) return Result.failure(AbilityFailure.NOT_GRANTED, null);
         if (AbilityStorage.onCooldown(abilities, ability, gameTime))
-            return GateResult.rejected(Failures.COOLDOWN, null);
-        if (!definition.condition().test(holder, formula)) return GateResult.rejected(Failures.CONDITION_FAILED, null);
+            return Result.failure(Failures.COOLDOWN, null);
+        if (!definition.condition().test(holder, formula)) return Result.failure(Failures.CONDITION_FAILED, null);
         double cooldown = cooldownOf(ability, formula);
-        if (!Double.isFinite(cooldown) || cooldown < 0.0D) return GateResult.rejected(Failures.INVALID_FORMULA, null);
+        if (!Double.isFinite(cooldown) || cooldown < 0.0D) return Result.failure(Failures.INVALID_FORMULA, null);
         CostPayment plan = CostPayment.of(CostContext.of(holder, formula, CostOrigin.ABILITY));
         Optional<Failure> refusal = plan.loadAndTest(definition.costs());
-        if (refusal.isPresent()) return GateResult.rejected(refusal.get(), null);
-        CostPayment.Result payment = plan.commit();
-        if (!payment.paid()) return GateResult.rejected(payment.failure(), payment.failedResource());
+        if (refusal.isPresent()) return Result.failure(refusal.get(), null);
+        CostPayment.PaymentResult payment = plan.commit();
+        if (!payment.isSuccess()) return Result.failure(payment.failure(), payment.failedResource());
         if (cooldown > 0.0D)
             AbilityStorage.startCooldown(abilities, ability, cooldown, gameTime);
-        return GateResult.ok();
+        return Result.success();
     }
 
     // The ability's own field is the one length there is: the state written on every payment carries the length it
@@ -303,8 +305,8 @@ public final class AbilityService {
             return ChannelResult.stopped(Failures.CANCELLED);
         }
         upkeep.reprice(resourceEvent.getAmounts());
-        CostPayment.Result payment = upkeep.commit();
-        if (!payment.paid()) {
+        CostPayment.PaymentResult payment = upkeep.commit();
+        if (!payment.isSuccess()) {
             stopChannel(abilities);
             return ChannelResult.stopped(payment.failure());
         }
@@ -393,25 +395,28 @@ public final class AbilityService {
             }
             if (NeoForge.EVENT_BUS.post(new AbilityUseEvent.Pre(actor, childHolder, childContext)).isCanceled())
                 return UseResult.rejected(Failures.CANCELLED, null);
-            if (!child.condition().test(actor, childContext)) return UseResult.rejected(Failures.CONDITION_FAILED, null);
-            if (!validateWord(child, actor, childContext)) return UseResult.rejected(AbilityFailure.PERMISSION_DENIED, null);
+            if (!child.condition().test(actor, childContext))
+                return UseResult.rejected(Failures.CONDITION_FAILED, null);
+            if (!validateWord(child, actor, childContext))
+                return UseResult.rejected(AbilityFailure.PERMISSION_DENIED, null);
             // Each child gets its own payment, in its own formula context, because the event below owns that child's
             // amounts and because a composite is one boundary rather than one payment.
             CostPayment payment = CostPayment.of(CostContext.of(payer, childContext, CostOrigin.ABILITY));
             PrepareResult prepared = prepare(childHolder, abilityDraft, gameTime, childContext,
                     payer, requiresGrant, payment);
-            if (!prepared.approved()) return UseResult.rejected(prepared.failure(), prepared.failedResource());
-            if (prepared.use().castTimeTicks() > 0L)
+            if (!prepared.isSuccess()) return UseResult.rejected(prepared.failure(), prepared.failedResource());
+            if (prepared.getData().castTimeTicks() > 0L)
                 return UseResult.rejected(Failures.INVALID_FORMULA, null);
             // A child that reaches nobody refuses the whole composite, before any child has been paid for.
             Failure unreached = applierFailure(child, actor, childContext, origin);
             if (unreached != null) return UseResult.rejected(unreached, null);
-            Pre resourceEvent = new Pre(resources, prepared.use().payment().resources());
-            if (NeoForge.EVENT_BUS.post(resourceEvent).isCanceled()) return UseResult.rejected(Failures.CANCELLED, null);
-            prepared.use().payment().reprice(resourceEvent.getAmounts());
-            applyAbilityState(prepared.use(), abilityDraft, gameTime);
+            Pre resourceEvent = new Pre(resources, prepared.getData().payment().resources());
+            if (NeoForge.EVENT_BUS.post(resourceEvent).isCanceled())
+                return UseResult.rejected(Failures.CANCELLED, null);
+            prepared.getData().payment().reprice(resourceEvent.getAmounts());
+            applyAbilityState(prepared.getData(), abilityDraft, gameTime);
             resourceEvent.getAmounts().forEach((id, amount) -> paid.merge(id, amount, Double::sum));
-            steps.add(new CompositeStep(childHolder, prepared.use(), childContext, Map.copyOf(resourceEvent.getAmounts())));
+            steps.add(new CompositeStep(childHolder, prepared.getData(), childContext, Map.copyOf(resourceEvent.getAmounts())));
         }
         // One boundary for every child: a child that refuses - whether its store is short or its items do not fit -
         // puts back what the earlier ones took, and no child's cooldown or charges is written before the whole group
@@ -422,8 +427,8 @@ public final class AbilityService {
                 return UseResult.rejected(Failures.COOLDOWN, null);
             payments.add(step.use().payment());
         }
-        CostPayment.Result payment = CostPayment.payAll(payments);
-        if (!payment.paid()) return UseResult.rejected(payment.failure(), payment.failedResource());
+        CostPayment.PaymentResult payment = CostPayment.payAll(payments);
+        if (!payment.isSuccess()) return UseResult.rejected(payment.failure(), payment.failedResource());
         for (CompositeStep step : steps) applyAbilityState(step.use(), abilities, gameTime);
         for (CompositeStep step : steps) {
             if (step.ability().value().type() instanceof ChannelSource) {
@@ -473,7 +478,11 @@ public final class AbilityService {
                               boolean consumeCharge, double chargeBefore) {
     }
 
-    public record PrepareResult(PreparedUse use, Failure failure, Identifier failedResource) {
+    public static final class PrepareResult extends ResultWithData<PreparedUse> {
+        private PrepareResult(@Nullable PreparedUse use, Failure failure, Identifier failedResource) {
+            super(use, failure, failedResource);
+        }
+
         private static PrepareResult prepared(PreparedUse use) {
             return new PrepareResult(use, null, null);
         }
@@ -481,50 +490,68 @@ public final class AbilityService {
         private static PrepareResult rejected(Failure failure, Identifier resource) {
             return new PrepareResult(null, failure, resource);
         }
-
-        public boolean approved() {
-            return this.use != null;
-        }
     }
 
-    public record GateResult(boolean approved, Failure failure, Identifier failedResource) {
-        private static GateResult ok() {
-            return new GateResult(true, null, null);
+
+    public static final class CommitResult extends ResultWithData<Map<Identifier, Double>> {
+        private CommitResult(Map<Identifier, Double> amounts, Failure failure, Identifier failedResource) {
+            super(amounts, failure, failedResource);
         }
 
-        private static GateResult rejected(Failure failure, Identifier resource) {
-            return new GateResult(false, failure, resource);
-        }
-    }
-
-    public record CommitResult(boolean committed, Failure failure, Identifier failedResource,
-                               Map<Identifier, Double> amounts) {
         private static CommitResult committed(Map<Identifier, Double> amounts) {
-            return new CommitResult(true, null, null, amounts);
+            return new CommitResult(amounts, null, null);
         }
 
         private static CommitResult rejected(Failure failure, Identifier resource) {
-            return new CommitResult(false, failure, resource, Map.of());
+            return new CommitResult(Map.of(), failure, resource);
         }
     }
 
-    public record UseResult(boolean committed, boolean casting, Failure failure, Identifier failedResource,
-                            Map<Identifier, Double> amounts) {
+    public static final class UseResult extends Result {
+        private final boolean casting;
+        private final Map<Identifier, Double> amounts;
+
+        private UseResult(boolean casting, @Nullable Failure failure, @Nullable Identifier failedResource,
+                          Map<Identifier, Double> amounts) {
+            super(failure, failedResource);
+            this.casting = casting;
+            this.amounts = amounts;
+        }
+
         private static UseResult committed(Map<Identifier, Double> amounts) {
-            return new UseResult(true, false, null, null, amounts);
+            return new UseResult(false, null, null, amounts);
         }
 
         private static UseResult castingResult() {
-            return new UseResult(false, true, null, null, Map.of());
+            return new UseResult(true, null, null, Map.of());
         }
 
-        private static UseResult rejected(Failure failure, Identifier resource) {
-            return new UseResult(false, false, failure, resource, Map.of());
+        public static UseResult rejected(Failure failure, Identifier resource) {
+            return new UseResult(false, failure, resource, Map.of());
+        }
+
+        public boolean casting() {
+            return this.casting;
+        }
+
+        public Map<Identifier, Double> amounts() {
+            return this.amounts;
         }
     }
 
-    public record ChannelResult(State state, Failure failure, long nextTick,
-                                Map<Identifier, Double> amounts) {
+    public static final class ChannelResult extends Result {
+        private final State state;
+        private final long nextTick;
+        private final Map<Identifier, Double> amounts;
+
+        private ChannelResult(State state, @Nullable Failure failure, long nextTick,
+                              Map<Identifier, Double> amounts) {
+            super(failure, null);
+            this.state = state;
+            this.nextTick = nextTick;
+            this.amounts = amounts;
+        }
+
         private static ChannelResult inactive() {
             return new ChannelResult(State.INACTIVE, null, -1L, Map.of());
         }
@@ -539,6 +566,18 @@ public final class AbilityService {
 
         private static ChannelResult stopped(Failure failure) {
             return new ChannelResult(State.STOPPED, failure, -1L, Map.of());
+        }
+
+        public State state() {
+            return this.state;
+        }
+
+        public long nextTick() {
+            return this.nextTick;
+        }
+
+        public Map<Identifier, Double> amounts() {
+            return this.amounts;
         }
     }
 

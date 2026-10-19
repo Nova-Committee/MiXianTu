@@ -20,6 +20,8 @@ import com.iafenvoy.mxt.item.TalismanItem;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.runtime.resource.ResourceService;
+import com.iafenvoy.mxt.runtime.resulting.Failure;
+import com.iafenvoy.mxt.runtime.resulting.Failures;
 import com.iafenvoy.mxt.runtime.spirit.SpiritChargeService;
 import com.iafenvoy.mxt.runtime.spirit.SpiritPour.Entry;
 import com.iafenvoy.mxt.runtime.spirit.SpiritSource;
@@ -36,8 +38,6 @@ import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
-import com.iafenvoy.mxt.runtime.failure.Failure;
-import com.iafenvoy.mxt.runtime.failure.Failures;
 
 /**
  * The talisman carrier's own half of the pour: what a carrier takes to fill, and what happens once it holds
@@ -271,7 +271,7 @@ public final class TalismanService {
             TalismanUse use = new TalismanUse(holder, context, source.position(), talisman);
             TalismanType.Plan plan = talisman.value().type().plan(use);
             if (!plan.runnable()) {
-                say(holder, failed(Failures.NO_TARGET));
+                say(holder, Component.translatable("actionbar.mxt.talisman.failed", Failures.NO_TARGET.message()));
                 return Attempt.REFUSED;
             }
             planned.add(new PlannedUse(use, plan));
@@ -279,7 +279,7 @@ public final class TalismanService {
         // The definitions' own gate, asked before the price is planned: what a carrier will not let the holder do
         // right now is refused while nothing has been paid, so a condition can never cost the holder anything.
         if (!allowed(written, holder, context)) {
-            say(holder, failed(Failures.CONDITION_FAILED));
+            say(holder, Component.translatable("actionbar.mxt.talisman.failed", Failures.CONDITION_FAILED.message()));
             return Attempt.REFUSED;
         }
         // One invocation is charged as a whole before anything happens: the carrier's own costs plus every
@@ -290,15 +290,15 @@ public final class TalismanService {
         CostPayment payment = CostPayment.of(costContext);
         Optional<Failure> priced = payment.loadAndTest(holderCosts(written));
         if (priced.isPresent()) {
-            say(holder, failed(priced.get()));
+            say(holder, Component.translatable("actionbar.mxt.talisman.failed", priced.get().message()));
             return Attempt.REFUSED;
         }
         // What each type does once the price can be paid. A type answers for its own targets; the ones that land
         // immediately run their actions here, and a thrown one leaves its effect to the moment it hits.
         for (PlannedUse entry : planned) entry.use().definition().value().type().apply(entry.use(), entry.plan());
-        CostPayment.Result paid = CostPayment.pay(holderCosts(written), costContext);
-        if (!paid.paid()) {
-            say(holder, failed(paid.failure()));
+        CostPayment.PaymentResult paid = CostPayment.pay(holderCosts(written), costContext);
+        if (!paid.isSuccess()) {
+            say(holder, Component.translatable("actionbar.mxt.talisman.failed", paid.failure().message()));
             return Attempt.REFUSED;
         }
         // This invocation's share of the store is spent here; whatever the definitions wrote on top of one
@@ -316,10 +316,6 @@ public final class TalismanService {
     // that says the holder may not use it now refuses the whole carrier rather than being left out of the volley.
     private static boolean allowed(List<Holder<Talisman>> written, LivingEntity holder, FormulaContext context) {
         return written.stream().allMatch(talisman -> talisman.value().condition().test(holder, context));
-    }
-
-    private static Component failed(Failure failure) {
-        return Component.translatable("actionbar.mxt.talisman.failed", failure.message());
     }
 
     // What a carrier was still holding when it was spent, handed back to whoever set that invocation off. The pour

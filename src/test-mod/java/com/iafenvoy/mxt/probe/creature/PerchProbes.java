@@ -8,7 +8,7 @@ import com.iafenvoy.mxt.probe.Probe;
 import com.iafenvoy.mxt.probe.ProbeContext;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationIdentityService;
-import com.iafenvoy.mxt.runtime.failure.PerchFailure;
+import com.iafenvoy.mxt.runtime.resulting.failures.PerchFailure;
 import com.iafenvoy.mxt.runtime.perch.PerchEventBridge;
 import com.iafenvoy.mxt.runtime.perch.PerchService;
 import com.iafenvoy.mxt.testmod.MxtTestEntities;

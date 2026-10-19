@@ -10,7 +10,10 @@ import com.iafenvoy.mxt.data.formation.Formation.Storage;
 import com.iafenvoy.mxt.runtime.formation.FormationService.MaintainRule.PaymentPlan;
 import com.iafenvoy.mxt.runtime.resource.ResourceTransactions;
 import com.iafenvoy.mxt.runtime.resource.ResourceTransactions.Evaluation;
-import com.iafenvoy.mxt.runtime.resource.ResourceTransactions.Result;
+import com.iafenvoy.mxt.runtime.resulting.Failure;
+import com.iafenvoy.mxt.runtime.resulting.Failures;
+import com.iafenvoy.mxt.runtime.resulting.Result;
+import com.iafenvoy.mxt.runtime.resulting.ResultWithData;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.MiscUtil;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
@@ -21,8 +24,6 @@ import org.jetbrains.annotations.Nullable;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
-import com.iafenvoy.mxt.runtime.failure.Failure;
-import com.iafenvoy.mxt.runtime.failure.Failures;
 
 /**
  * Activates formations and charges their maintenance only through common resource transactions.
@@ -40,21 +41,21 @@ public final class FormationService {
         if (radius <= 0.0D) return ActivateResult.rejected(Failures.INVALID_FORMULA, null);
         // The activating player's own account is named directly: activation is driven from a controller block, so
         // there is no entity here to take a channel from, only an account to charge.
-        CostPayment.Result payment = CostPayment.pay(definition.activationCosts(),
+        CostPayment.PaymentResult payment = CostPayment.pay(definition.activationCosts(),
                 CostContext.account(resources, null, context, CostOrigin.FORMATION_ACTIVATION));
-        if (!payment.paid())
+        if (!payment.isSuccess())
             return ActivateResult.rejected(Failures.INSUFFICIENT_RESOURCE, payment.failedResource());
         return ActivateResult.activated(owner == null ? new FormationInstance(id, radius) : new FormationInstance(id, radius, owner));
     }
 
-    public static MaintainResult maintain(FormationInstance instance, Formation definition, ResourceHolderAttachment resources, FormulaContext context) {
+    public static Result maintain(FormationInstance instance, Formation definition, ResourceHolderAttachment resources, FormulaContext context) {
         return maintain(instance, definition, resources, context, Map.of());
     }
 
     // The formation's own blocks pay first, then its stock. A failure leaves the instance untouched rather than
     // marking it inactive, because tearing a formation down belongs to FormationWorldService#deactivate.
-    public static MaintainResult maintain(FormationInstance instance, Formation definition, ResourceHolderAttachment resources,
-                                          FormulaContext context, Map<Holder<Aura>, Double> supplied) {
+    public static Result maintain(FormationInstance instance, Formation definition, ResourceHolderAttachment resources,
+                                  FormulaContext context, Map<Holder<Aura>, Double> supplied) {
         Map<Holder<Aura>, Double> capacity = definition.storage()
                 .map(storage -> MaintainRule.capacities(storage, context))
                 .orElse(Map.of());
@@ -62,12 +63,12 @@ public final class FormationService {
         // so the account is named directly rather than reached through a payer.
         CostContext costContext = CostContext.account(resources, null, context, CostOrigin.FORMATION_MAINTENANCE);
         PaymentPlan plan = MaintainRule.plan(definition, costContext, supplied, instance.stored(), capacity);
-        if (plan == null) return MaintainResult.unpaid(null);
-        Result payment = ResourceTransactions.tryConsume(resources, Evaluation.of(context.registries(), plan.fromOwner()));
-        if (!payment.committed()) return MaintainResult.unpaid(payment.failedResource());
+        if (plan == null) return Result.failure(Failures.UNKNOWN);
+        ResultWithData<Map<Identifier, Double>> payment = ResourceTransactions.tryConsume(resources, Evaluation.of(context.registries(), plan.fromOwner()));
+        if (payment.isFailure()) return Result.failure(Failures.UNKNOWN, payment.failedResource());
         plan.applyTo(instance);
         instance.maintained();
-        return MaintainResult.paid();
+        return Result.success();
     }
 
     // What is left for the payer once the formation's own blocks have supplied what they supply and its stock
@@ -165,7 +166,11 @@ public final class FormationService {
         }
     }
 
-    public record ActivateResult(FormationInstance instance, Failure failure, Identifier failedResource) {
+    public static final class ActivateResult extends ResultWithData<FormationInstance> {
+        private ActivateResult(@Nullable FormationInstance instance, Failure failure, Identifier failedResource) {
+            super(instance, failure, failedResource);
+        }
+
         static ActivateResult activated(FormationInstance instance) {
             return new ActivateResult(instance, null, null);
         }
@@ -173,19 +178,7 @@ public final class FormationService {
         static ActivateResult rejected(Failure failure, Identifier resource) {
             return new ActivateResult(null, failure, resource);
         }
-
-        public boolean active() {
-            return this.instance != null;
-        }
     }
 
-    public record MaintainResult(boolean maintained, Identifier failedResource) {
-        static MaintainResult paid() {
-            return new MaintainResult(true, null);
-        }
 
-        static MaintainResult unpaid(Identifier resource) {
-            return new MaintainResult(false, resource);
-        }
-    }
 }

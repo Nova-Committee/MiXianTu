@@ -1,4 +1,7 @@
-package com.iafenvoy.mxt.runtime.failure;
+package com.iafenvoy.mxt.runtime.resulting.failures;
+
+import com.iafenvoy.mxt.runtime.resulting.Failure;
+import com.iafenvoy.mxt.runtime.resulting.SimpleFailure;
 
 // NOT_WILLING covers both "the creature refused this vehicle" and "the creature does not implement the
 // contract at all": either way no seat was offered.

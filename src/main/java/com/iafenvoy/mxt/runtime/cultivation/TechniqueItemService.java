@@ -10,11 +10,12 @@ import com.iafenvoy.mxt.item.ItemReading;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.runtime.cultivation.TechniqueService.Result;
 import com.iafenvoy.mxt.runtime.hold.HoldLookup;
 import com.iafenvoy.mxt.runtime.hold.HoldService;
 import com.iafenvoy.mxt.runtime.item.ItemBindingService;
 import com.iafenvoy.mxt.runtime.item.QualityService;
+import com.iafenvoy.mxt.runtime.resulting.Failure;
+import com.iafenvoy.mxt.runtime.resulting.Result;
 import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.logging.LogUtils;
@@ -40,7 +41,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import com.iafenvoy.mxt.runtime.failure.Failure;
 
 /**
  * Server-side use path for books, jade slips and other technique items: a matching binding claims the
@@ -243,7 +243,7 @@ public final class TechniqueItemService {
         // Every completed read pays, not only the ones that teach: a refusal is still a read the player
         // spent the hold on. Charged before the outcome is looked at so the two cases cannot drift.
         applyCooldown(entity, stack);
-        if (!result.changed()) {
+        if (result.failure() != null) {
             notifyLearnFailure(entity, binding.technique(), result);
             return;
         }

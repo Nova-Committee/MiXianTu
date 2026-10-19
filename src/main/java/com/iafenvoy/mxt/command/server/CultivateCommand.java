@@ -7,6 +7,8 @@ import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationMethodService;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationModeService;
+import com.iafenvoy.mxt.runtime.resulting.Failure;
+import com.iafenvoy.mxt.runtime.resulting.Failures;
 import com.iafenvoy.mxt.util.DefinitionText;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
@@ -24,8 +26,6 @@ import java.util.stream.Collectors;
 
 import static net.minecraft.commands.Commands.argument;
 import static net.minecraft.commands.Commands.literal;
-import com.iafenvoy.mxt.runtime.failure.Failure;
-import com.iafenvoy.mxt.runtime.failure.Failures;
 
 /**
  * The {@code /cultivate} command; also reachable as {@code /mxt cultivate}. {@code status} reports the session a
@@ -63,7 +63,7 @@ public final class CultivateCommand {
     // body's own conditions still decide whether it runs at all.
     private static int select(CommandSourceStack source, Holder<Cultivation> action) throws CommandSyntaxException {
         ServerPlayer player = source.getPlayerOrException();
-        CultivationMethodService.Result result = CultivationModeService.startNamed(player, action);
+        CultivationMethodService.CultivationResult result = CultivationModeService.startNamed(player, action);
         if (!result.started()) {
             Failure failure = result.failure() == null ? Failures.NOT_APPLICABLE : result.failure();
             source.sendFailure(Component.translatable("command.mxt.cultivate.select.failed",
