@@ -25,7 +25,6 @@ import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Collection;
-import java.util.Locale;
 import java.util.Optional;
 
 import static net.minecraft.commands.Commands.argument;
@@ -138,7 +137,7 @@ public final class QualityCommand {
                         QualityService.displayName(result.to())), true);
             } else {
                 source.sendFailure(Component.translatable("command.mxt.quality.upgrade_failed", stack.getHoverName(),
-                        Component.translatable("command.mxt.quality.failure." + result.failure().name().toLowerCase(Locale.ROOT))));
+                        result.failure().message()));
             }
         }
         return upgraded;

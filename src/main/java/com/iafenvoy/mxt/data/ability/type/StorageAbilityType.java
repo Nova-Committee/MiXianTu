@@ -8,6 +8,7 @@ import com.iafenvoy.mxt.registry.MxtMenus;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactService;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactStorageContainer;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactStorageService;
+import com.iafenvoy.mxt.runtime.failure.TogglableFailure;
 import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.iafenvoy.mxt.util.formula.number.Constant;
@@ -20,6 +21,8 @@ import net.minecraft.world.inventory.ChestMenu;
 import net.minecraft.world.item.ItemStack;
 
 import java.util.Optional;
+import com.iafenvoy.mxt.runtime.failure.Failure;
+import com.iafenvoy.mxt.runtime.failure.Failures;
 
 /**
  * Gives the ability's carrier an inventory of its own; the slot count is the whole declaration and the contents
@@ -48,14 +51,14 @@ public record StorageAbilityType(NumberProvider slots,
 
     @Override
     public Optional<Failure> canActivate(ToggleContext context) {
-        if (!(context.holder() instanceof ServerPlayer player)) return Optional.of(Failure.UNAVAILABLE);
+        if (!(context.holder() instanceof ServerPlayer player)) return Optional.of(TogglableFailure.UNAVAILABLE);
         ItemStack carrier = context.carrier();
-        if (carrier == null || carrier.isEmpty()) return Optional.of(Failure.NO_CARRIER);
+        if (carrier == null || carrier.isEmpty()) return Optional.of(TogglableFailure.NO_CARRIER);
         // No slots is the slots formula's own answer, not a state the press cannot describe.
         if (ArtifactService.storageSlots(carrier, context.ability(), context.formula()) <= 0)
-            return Optional.of(Failure.INVALID_FORMULA);
+            return Optional.of(Failures.INVALID_FORMULA);
         if (!ArtifactStorageService.INSTANCE.mayAccess(player.level().registryAccess(), carrier, context.ability(), player))
-            return Optional.of(Failure.NOT_OWNED);
+            return Optional.of(TogglableFailure.NOT_OWNED);
         return Optional.empty();
     }
 

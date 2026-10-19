@@ -41,6 +41,7 @@ import net.neoforged.neoforge.common.NeoForge;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
+import com.iafenvoy.mxt.runtime.failure.Failures;
 
 /**
  * The whole lifespan ledger, driven on disposable probes: the master switch, both numbers, seeding, the settlement,
@@ -492,7 +493,7 @@ public final class LifespanProbes {
                 NeoForge.EVENT_BUS.unregister(veto);
             }
             // A refused rebirth changes nothing at all: the realm is still there and the ledger still reads 5.
-            boolean restartRefused = !refused.changed() && refused.failure() == LifeSpanService.Failure.CANCELLED
+            boolean restartRefused = !refused.changed() && refused.failure() == Failures.CANCELLED
                     && !restartSpirit.realmStages().isEmpty() && LifeSpanService.remaining(restart) == 5L;
             LifeSpanService.Result restarted;
             try {

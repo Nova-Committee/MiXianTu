@@ -6,6 +6,8 @@ import com.iafenvoy.mxt.data.storage.DataStorageCollector;
 import com.iafenvoy.mxt.data.storage.builtin.CooldownDataStorage;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.artifact.FlightService;
+import com.iafenvoy.mxt.runtime.failure.FlightFailure;
+import com.iafenvoy.mxt.runtime.failure.TogglableFailure;
 import com.iafenvoy.mxt.util.OptionalBoolean;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.iafenvoy.mxt.util.formula.number.Constant;
@@ -17,6 +19,8 @@ import org.jspecify.annotations.NonNull;
 
 import java.util.Locale;
 import java.util.Optional;
+import com.iafenvoy.mxt.runtime.failure.Failure;
+import com.iafenvoy.mxt.runtime.failure.Failures;
 
 /**
  * The skill that lets its holder fly an artifact: which hand is searched for a vehicle and how much the holder's own
@@ -83,7 +87,7 @@ public record FlightControlAbilityType(Hand hand, NumberProvider speedMultiplier
     @Override
     public Result activate(ToggleContext context) {
         if (this.state(context).orElse(false)) {
-            FlightService.dismount(context.holder(), FlightService.Failure.STOPPED);
+            FlightService.dismount(context.holder(), FlightFailure.STOPPED);
             return Result.activated();
         }
         FlightService.Result mounted = FlightService.mount(context.holder(), context.ability(), context.formula());
@@ -94,17 +98,17 @@ public record FlightControlAbilityType(Hand hand, NumberProvider speedMultiplier
     }
 
     // The take-off's own names, so a press and a cast report a reason through one table of messages.
-    private static Failure failureOf(FlightService.Failure failure) {
-        return switch (failure) {
-            case NO_VEHICLE -> Failure.NO_VEHICLE;
-            case NOT_OWNED -> Failure.NOT_OWNED;
-            case INVALID_FORMULA -> Failure.INVALID_FORMULA;
-            case CANNOT_MOUNT -> Failure.CANNOT_MOUNT;
-            // A definition that names a body which is not a MountVehicle is a pack mistake: the report stays the
-            // generic "cannot be boarded" and the log names the type that was named.
-            case INVALID_VEHICLE -> Failure.CANNOT_MOUNT;
-            case ALREADY_ACTIVE -> Failure.ALREADY_SET;
-            default -> Failure.UNAVAILABLE;
-        };
+    private static Failure failureOf(Failure failure) {
+        if (failure == FlightFailure.NO_VEHICLE) return TogglableFailure.NO_VEHICLE;
+        if (failure == FlightFailure.NOT_OWNED) return TogglableFailure.NOT_OWNED;
+        if (failure == FlightFailure.CANNOT_MOUNT) return TogglableFailure.CANNOT_MOUNT;
+        // A definition that names a body which is not a MountVehicle is a pack mistake: the report stays the generic
+        // "cannot be boarded" and the log names the type that was named.
+        if (failure == FlightFailure.INVALID_VEHICLE) return TogglableFailure.CANNOT_MOUNT;
+        // Already flying is the press's own "already set" state rather than a shared refusal of its own.
+        if (failure == Failures.ALREADY_ACTIVE) return TogglableFailure.ALREADY_SET;
+        // Every other shared reason already reads the same in both tables, so it travels unchanged.
+        if (Failures.isShared(failure)) return failure;
+        return TogglableFailure.UNAVAILABLE;
     }
 }

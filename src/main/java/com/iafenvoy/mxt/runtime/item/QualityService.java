@@ -8,6 +8,7 @@ import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.registry.tag.MxtQualityTags;
+import com.iafenvoy.mxt.runtime.failure.QualityFailure;
 import com.iafenvoy.mxt.runtime.item.ItemBindingService.ResolvedBindings;
 import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.MiscUtil;
@@ -38,6 +39,8 @@ import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent.RightClick
 import java.util.*;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import com.iafenvoy.mxt.runtime.failure.Failure;
+import com.iafenvoy.mxt.runtime.failure.Failures;
 
 /**
  * The one quality service: what tier a stack reads at, which ladder that tier belongs to, the catalogue the tooltip
@@ -129,8 +132,7 @@ public final class QualityService {
     // sees.
     public static void notifyCannotUse(LivingEntity entity, Failure failure) {
         if (entity instanceof ServerPlayer player)
-            player.sendSystemMessage(Component.translatable("actionbar.mxt.item.cannot_use",
-                            Component.translatable("actionbar.mxt.item.cannot_use." + failure.name().toLowerCase(Locale.ROOT)))
+            player.sendSystemMessage(Component.translatable("actionbar.mxt.item.cannot_use", failure.message())
                     .withStyle(ChatFormatting.RED), true);
     }
 
@@ -165,27 +167,6 @@ public final class QualityService {
         return Optional.empty();
     }
 
-    // Why an entity may not use an item. Furnace quality is one of the checks above; pill caps are extra and
-    // never replace them.
-    public enum Failure {
-        /**
-         * A matching binding's own conditions did not all pass.
-         */
-        BINDING_CONDITIONS,
-        /**
-         * The condition of the item's resolved quality did not pass.
-         */
-        QUALITY_CONDITIONS,
-        /**
-         * The pill binding's use cap has already been reached.
-         */
-        MAX_USES,
-        /**
-         * The pill binding is still on cooldown.
-         */
-        COOLDOWN
-    }
-
     public static boolean canUse(LivingEntity user, ItemStack stack) {
         return canUse(user, stack, ItemBindingService.resolve(user.level().registryAccess(), stack));
     }
@@ -210,19 +191,18 @@ public final class QualityService {
     static Optional<Failure> check(Provider access, LivingEntity user, ItemStack stack, ResolvedBindings bindings) {
         if (stack.isEmpty()) return Optional.empty();
         FormulaContext context = FormulaContext.of(user);
-        if (!bindings.conditionsMet(user, context)) return Optional.of(Failure.BINDING_CONDITIONS);
+        if (!bindings.conditionsMet(user, context)) return Optional.of(QualityFailure.BINDING_CONDITIONS);
         Optional<Holder<ItemQuality>> quality = find(access, stack);
         if (quality.isPresent() && !quality.orElseThrow().value().condition().test(user, context))
-            return Optional.of(Failure.QUALITY_CONDITIONS);
+            return Optional.of(QualityFailure.QUALITY_CONDITIONS);
         return bindings.pill().identity().flatMap(holder -> PillService.usageFailure(user, holder)).map(QualityService::fromPill);
     }
 
-    private static Failure fromPill(PillService.Failure failure) {
-        return switch (failure) {
-            case MAX_USES -> Failure.MAX_USES;
-            case COOLDOWN -> Failure.COOLDOWN;
-            case CONDITIONS -> Failure.BINDING_CONDITIONS;
-        };
+    // A pill binding's own refusals are reported as the quality check they stand for; the two it names are reported
+    // as themselves, and anything else keeps the generic binding-conditions reason.
+    private static Failure fromPill(Failure failure) {
+        if (failure == Failures.MAX_USES || failure == Failures.COOLDOWN) return failure;
+        return QualityFailure.BINDING_CONDITIONS;
     }
 
     static Optional<Failure> check(Provider access, LivingEntity user, ItemStack stack) {

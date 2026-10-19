@@ -2,7 +2,6 @@ package com.iafenvoy.mxt.event;
 
 import com.iafenvoy.mxt.recipe.AlchemyRecipe;
 import com.iafenvoy.mxt.recipe.AlchemyRole;
-import com.iafenvoy.mxt.runtime.alchemy.AlchemyFailure;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
@@ -14,6 +13,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import com.iafenvoy.mxt.runtime.failure.Failure;
 
 /**
  * KubeJS name remains {@code alchemyCraft}. Pre copies cannot change the bill; Post does not write the output slots.
@@ -72,11 +72,11 @@ public abstract class AlchemyCraftEvent extends Event {
 
     public static final class Post extends AlchemyCraftEvent {
         private final boolean success;
-        private final AlchemyFailure reason;
+        private final Failure reason;
         private final List<ItemStack> outputs;
         private final ServerPlayer player;
 
-        public Post(RecipeHolder<AlchemyRecipe> recipe, BlockPos pos, UUID operator, ServerPlayer player, boolean success, AlchemyFailure reason, List<ItemStack> outputs) {
+        public Post(RecipeHolder<AlchemyRecipe> recipe, BlockPos pos, UUID operator, ServerPlayer player, boolean success, Failure reason, List<ItemStack> outputs) {
             super(recipe, pos, operator);
             this.player = player;
             this.success = success;
@@ -90,7 +90,7 @@ public abstract class AlchemyCraftEvent extends Event {
             return this.success;
         }
 
-        public Optional<AlchemyFailure> getReason() {
+        public Optional<Failure> getReason() {
             return Optional.ofNullable(this.reason);
         }
 

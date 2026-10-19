@@ -21,7 +21,7 @@ import java.util.List;
  * Server-side hooks for the complete forging transaction, posted with the requesting player and the table position.
  * The session arrives as a read-only {@link ForgingSessionView}: a pre event may cancel or replace the strike's
  * costs, but not the session's value, history or quality. A listener throw on a pre event is caught as
- * {@code ForgingService.Failure.LISTENER_ERROR} and leaves the session as it was; elsewhere it is only logged.
+ * {@code ForgingFailure.LISTENER_ERROR} and leaves the session as it was; elsewhere it is only logged.
  */
 public abstract class ForgingEvent extends Event {
     private final ServerPlayer player;

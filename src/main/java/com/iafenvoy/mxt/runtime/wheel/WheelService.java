@@ -19,6 +19,8 @@ import com.iafenvoy.mxt.runtime.creature.ContractBehaviorService;
 import com.iafenvoy.mxt.runtime.creature.ContractBells;
 import com.iafenvoy.mxt.runtime.creature.ContractFeedback;
 import com.iafenvoy.mxt.runtime.creature.ContractService;
+import com.iafenvoy.mxt.runtime.failure.ContractFailure;
+import com.iafenvoy.mxt.runtime.failure.TogglableFailure;
 import com.iafenvoy.mxt.runtime.spirit.SpiritBurstService;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.OptionalBoolean;
@@ -34,6 +36,7 @@ import net.minecraft.world.item.ItemStack;
 import org.jspecify.annotations.Nullable;
 
 import java.util.*;
+import com.iafenvoy.mxt.runtime.failure.Failure;
 
 /**
  * The server's half of the wheel: what a submitted layout may contain, and what choosing a page's entry does.
@@ -99,7 +102,7 @@ public final class WheelService {
         // Only a switch has a state to ask for; a one-shot keeps the press channel, which carries no direction.
         OptionalBoolean state = AbilityActivationService.state(player, ability);
         if (state.isEmpty())
-            return refuse(player, id, Togglable.Failure.UNAVAILABLE, null, "directed", "actionbar.mxt.wheel.use_failed");
+            return refuse(player, id, TogglableFailure.UNAVAILABLE, null, "directed", "actionbar.mxt.wheel.use_failed");
         if (state.getAsBoolean() == wanted) return true;
         ItemStack carrier = WheelSources.carrier(player, source, ability).orElse(null);
         return activate(player, ability, carrier, id, "directed");
@@ -171,7 +174,7 @@ public final class WheelService {
             // path guards against, one registry-like list later.
             MiXianTu.LOGGER.info("Dropping the wheel order {} from {}: no such order is known",
                     id, player.getGameProfile().name());
-            player.sendSystemMessage(ContractFeedback.of(ContractService.Failure.UNSUPPORTED_BEHAVIOR), true);
+            player.sendSystemMessage(ContractFeedback.of(ContractFailure.UNSUPPORTED_BEHAVIOR), true);
             return false;
         }
         Mob beast = ContractBells.beast(player).orElse(null);
@@ -195,7 +198,7 @@ public final class WheelService {
 
     // Both paths report the same way, because the client cannot tell a press from a cast: the reason comes out of
     // one table, the log keeps both the reason and the entry, and the action bar shows the reason to the player.
-    private static boolean refuse(ServerPlayer player, Identifier id, Togglable.Failure failure,
+    private static boolean refuse(ServerPlayer player, Identifier id, Failure failure,
                                   @Nullable Identifier failedResource, String verb, String messageKey) {
         String name = failure.name().toLowerCase(Locale.ROOT);
         MiXianTu.LOGGER.info("Refusing the wheel {} {} for {}: {}{}", verb, id, player.getGameProfile().name(), name,

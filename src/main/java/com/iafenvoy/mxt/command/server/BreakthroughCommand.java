@@ -16,10 +16,10 @@ import net.minecraft.core.Holder.Reference;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 
-import java.util.Locale;
 
 import static net.minecraft.commands.Commands.argument;
 import static net.minecraft.commands.Commands.literal;
+import com.iafenvoy.mxt.runtime.failure.Failures;
 
 /**
  * The {@code /curse} command; also reachable as {@code /mxt curse}. Reading the executing player's own curses needs
@@ -41,11 +41,11 @@ public final class BreakthroughCommand {
         CultivationService.BreakthroughResult result = CultivationService.attempt(player, player.getData(MxtAttachments.CULTIVATION), player.getData(MxtAttachments.RESOURCE_HOLDER), aura, FormulaContext.of(player), () -> true);
         if (result == null || !result.advanced()) {
             Component reason = result == null || result.failure() == null
-                    ? Component.translatable("command.mxt.breakthrough.failure.unknown")
-                    : result.failure() == CultivationService.Failure.INSUFFICIENT_RESOURCE && result.failedResource() != null
-                    ? Component.translatable("command.mxt.breakthrough.failure.insufficient_resource",
+                    ? Component.translatable("failure.mxt.common.unknown")
+                    : Failures.INSUFFICIENT_RESOURCE.equals(result.failure()) && result.failedResource() != null
+                    ? Component.translatable(result.failure().key() + "_named",
                     DefinitionText.nameOrId(MxtResourceKeys.RESOURCE, result.failedResource()))
-                    : Component.translatable("command.mxt.breakthrough.failure." + result.failure().name().toLowerCase(Locale.ROOT));
+                    : result.failure().message();
             source.sendFailure(Component.translatable("command.mxt.breakthrough.failed", reason));
             return 0;
         }

@@ -3,7 +3,6 @@ package com.iafenvoy.mxt.data.cost.builtin;
 import com.iafenvoy.mxt.data.cost.Cost;
 import com.iafenvoy.mxt.data.cost.CostPayment;
 import com.iafenvoy.mxt.data.cost.context.CostContext;
-import com.iafenvoy.mxt.data.cost.context.CostFailure;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.iafenvoy.mxt.util.matcher.ItemMatcher;
 import com.mojang.serialization.MapCodec;
@@ -11,6 +10,7 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 
 import java.util.List;
 import java.util.Optional;
+import com.iafenvoy.mxt.runtime.failure.Failure;
 
 /**
  * Takes matching items out of the payer's inventory, or out of a container the call site names; see
@@ -23,12 +23,12 @@ public record ItemCost(List<Entry> entries, NumberProvider amount) implements It
     ).apply(i, ItemCost::new));
 
     @Override
-    public Optional<CostFailure> test(CostContext context) {
+    public Optional<Failure> test(CostContext context) {
         return CostPayment.test(this, context);
     }
 
     @Override
-    public Optional<CostFailure> commit(CostContext context) {
+    public Optional<Failure> commit(CostContext context) {
         return CostPayment.commit(this, context);
     }
 

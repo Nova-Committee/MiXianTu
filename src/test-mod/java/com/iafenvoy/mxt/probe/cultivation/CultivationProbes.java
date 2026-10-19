@@ -24,6 +24,7 @@ import com.iafenvoy.mxt.runtime.cultivation.CultivationMethodService;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationMethodService.Result;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationModeService;
 import com.iafenvoy.mxt.runtime.cultivation.TechniqueService;
+import com.iafenvoy.mxt.runtime.failure.TechniqueFailure;
 import com.iafenvoy.mxt.runtime.world.AuraResult;
 import com.iafenvoy.mxt.runtime.world.AuraService;
 import com.iafenvoy.mxt.util.HolderHelper;
@@ -46,6 +47,7 @@ import net.neoforged.neoforge.common.NeoForge;
 
 import java.util.*;
 import java.util.function.Consumer;
+import com.iafenvoy.mxt.runtime.failure.Failures;
 
 /**
  * The cultivation-method pick: which method a body selects, what each of the three conditions answers, and what a
@@ -173,7 +175,7 @@ public final class CultivationProbes {
             boolean seated = CultivationModeService.start(seatA, seatSpirit, dual, contextOf(seatA)).started();
             Result upkeepTick = tickCultivation(seatA, seatSpirit, dual, now);
             boolean aborted = !seatSpirit.cultivating()
-                    && upkeepTick.failure() == CultivationMethodService.Failure.CONDITIONS
+                    && upkeepTick.failure() == Failures.CONDITIONS
                     && named(upkeepTick, "the partner is gone");
             report(context, "cultivation probe: upkeep yield=" + yieldHolds + " false=" + upkeepFalse
                             + " seated=" + seated + " failure=" + upkeepTick.failure()
@@ -395,10 +397,10 @@ public final class CultivationProbes {
                     && picks(CultivationModeService.select(veteran, contextOf(veteran)),
                     ProbeDefinitions.TECHNIQUE_MEDITATION);
             boolean pickRefused = CultivationModeService.startNamed(actor, gated).failure()
-                    == CultivationMethodService.Failure.NOT_APPLICABLE
+                    == Failures.NOT_APPLICABLE
                     && runs(actorSpirit, ProbeDefinitions.FREE_MEDITATION);
             boolean pickRunning = CultivationModeService.startNamed(learner, named).failure()
-                    == CultivationMethodService.Failure.ALREADY_ACTIVE;
+                    == Failures.ALREADY_ACTIVE;
             report(context, "cultivation probe: pick named=" + pickedAnyway + " refused=" + pickRefused
                             + " running=" + pickRunning + " failure=" + namedPick.failure(),
                     pickedAnyway && pickRefused && pickRunning);
@@ -435,7 +437,7 @@ public final class CultivationProbes {
                     && !bareAbilities.has(context.require(MxtResourceKeys.ABILITY, ProbeDefinitions.PROBE_ABILITY))
                     && !bareSpirit.realmStages().isEmpty();
             boolean absent = TechniqueService.forget(bareA, bareIdentity, sword).failure()
-                    == TechniqueService.Failure.ABSENT;
+                    == TechniqueFailure.ABSENT;
             report(context, "cultivation probe: forget learned=" + bareLearned + " granted=" + bareGranted
                             + " forgotten=" + forgotten + " gone=" + gone + " absent=" + absent,
                     bareLearned && bareGranted && forgotten && gone && absent);

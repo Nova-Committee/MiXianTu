@@ -2,7 +2,7 @@ package com.iafenvoy.mxt.runtime.creature;
 
 import net.minecraft.network.chat.Component;
 
-import java.util.Locale;
+import com.iafenvoy.mxt.runtime.failure.Failure;
 
 /**
  * The one place a contract failure becomes text: the scroll, the bell, the bag and the command all report
@@ -12,7 +12,7 @@ public final class ContractFeedback {
     private ContractFeedback() {
     }
 
-    public static Component of(ContractService.Failure failure) {
-        return Component.translatable("contract.mxt.failure." + failure.name().toLowerCase(Locale.ROOT));
+    public static Component of(Failure failure) {
+        return failure.message();
     }
 }

@@ -7,6 +7,7 @@ import com.iafenvoy.mxt.event.FormationEvent.Deactivate;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.runtime.failure.FormationWorldFailure;
 import com.iafenvoy.mxt.runtime.formation.FormationService.ActivateResult;
 import com.iafenvoy.mxt.util.MiscUtil;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
@@ -16,6 +17,8 @@ import net.minecraft.server.level.ServerLevel;
 import net.neoforged.neoforge.common.NeoForge;
 
 import java.util.UUID;
+import com.iafenvoy.mxt.runtime.failure.Failure;
+import com.iafenvoy.mxt.runtime.failure.Failures;
 
 /**
  * The two ends of a formation's life in the world: bringing one into the level index, and taking it out. Neither
@@ -34,24 +37,24 @@ public final class FormationWorldService {
     public static Result activate(ServerLevel level, BlockPos controller, Identifier id, Formation definition,
                                   ResourceHolderAttachment resources, FormulaContext context, UUID owner) {
         FormationWorldAttachment world = level.getData(MxtAttachments.FORMATION_WORLD);
-        if (world.get(controller).isPresent()) return Result.rejected(Failure.OCCUPIED, null);
+        if (world.get(controller).isPresent()) return Result.rejected(FormationWorldFailure.OCCUPIED, null);
         if (!FormationStructureValidator.of(definition).matches(level, controller, definition))
-            return Result.rejected(Failure.INVALID_STRUCTURE, null);
+            return Result.rejected(FormationWorldFailure.INVALID_STRUCTURE, null);
         // Jurisdiction before payment: a ward this server will not allow here must not charge for the
         // attempt. Both rules apply only to formations that carry a ward at all.
         if (FormationProtection.hasProtection(definition)) {
             if (FormationProtection.claimsOnlyRefuses(level, controller))
-                return Result.rejected(Failure.NOT_CLAIMED, null);
+                return Result.rejected(FormationWorldFailure.NOT_CLAIMED, null);
             if (FormationProtection.foreignClaimRefuses(level, controller, owner))
-                return Result.rejected(Failure.FOREIGN_CLAIM, null);
+                return Result.rejected(FormationWorldFailure.FOREIGN_CLAIM, null);
         }
         double radius = MiscUtil.positive(definition.radius().evaluate(context));
-        if (radius <= 0.0D) return Result.rejected(Failure.ACTIVATION_FAILED, null);
+        if (radius <= 0.0D) return Result.rejected(FormationWorldFailure.ACTIVATION_FAILED, null);
         FormationInstance preview = owner == null ? new FormationInstance(id, radius) : new FormationInstance(id, radius, owner);
         if (NeoForge.EVENT_BUS.post(new Activate(level, controller, preview)).isCanceled())
-            return Result.rejected(Failure.CANCELLED, null);
+            return Result.rejected(Failures.CANCELLED, null);
         ActivateResult activated = FormationService.activate(id, definition, resources, context, owner);
-        if (!activated.active()) return Result.rejected(Failure.ACTIVATION_FAILED, activated.failedResource());
+        if (!activated.active()) return Result.rejected(FormationWorldFailure.ACTIVATION_FAILED, activated.failedResource());
         if (!world.put(controller, activated.instance()))
             throw new IllegalStateException("Formation controller became occupied during activation");
         // Stamped before the opening beat, so a display module that animates from the moment of raising measures from
@@ -78,8 +81,6 @@ public final class FormationWorldService {
         NeoForge.EVENT_BUS.post(new Deactivate(level, controller, instance));
         return true;
     }
-
-    public enum Failure {OCCUPIED, INVALID_STRUCTURE, NOT_CLAIMED, FOREIGN_CLAIM, ACTIVATION_FAILED, CANCELLED}
 
     public record Result(FormationInstance instance, Failure failure, Identifier failedResource) {
         private static Result activated(FormationInstance instance) {

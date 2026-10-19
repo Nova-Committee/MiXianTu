@@ -25,10 +25,11 @@ import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactService;
 import com.iafenvoy.mxt.runtime.cultivation.*;
-import com.iafenvoy.mxt.runtime.cultivation.CultivationToggleService.Failure;
 import com.iafenvoy.mxt.runtime.damage.DamageCalculationService;
 import com.iafenvoy.mxt.runtime.damage.DamageElements;
 import com.iafenvoy.mxt.runtime.element.ElementReactionService;
+import com.iafenvoy.mxt.runtime.failure.CultivationIdentityFailure;
+import com.iafenvoy.mxt.runtime.failure.CultivationToggleFailure;
 import com.iafenvoy.mxt.runtime.wheel.WheelEntryKinds;
 import com.iafenvoy.mxt.runtime.wheel.WheelSources;
 import com.iafenvoy.mxt.runtime.world.AuraPool;
@@ -255,7 +256,7 @@ public final class ElementProbes {
             boolean unchanged = !CultivationToggleService.setSpiritRootEnabled(toggleProbe, fireRoot, true).changed();
             boolean notHeld = CultivationToggleService.setSpiritRootEnabled(toggleProbe,
                     context.require(MxtResourceKeys.SPIRIT_ROOT, ProbeDefinitions.PROBE_WATER_ROOT), false).failure()
-                    == Failure.NOT_HELD;
+                    == CultivationToggleFailure.NOT_HELD;
             boolean toggle = off && on && unchanged && notHeld;
             String report = "element probe: toggle off=" + off + " on=" + on
                     + " unchanged=" + unchanged + " not_held=" + notHeld;
@@ -360,9 +361,9 @@ public final class ElementProbes {
             }
             boolean blocked = CultivationIdentityService.grantSpiritRoot(conflictProbe, antiWater).changed()
                     && CultivationIdentityService.grantSpiritRoot(conflictProbe, probeWater).failure()
-                    == CultivationIdentityService.Failure.ELEMENT_CONFLICT;
+                    == CultivationIdentityFailure.ELEMENT_CONFLICT;
             boolean inertBlocked = CultivationIdentityService.grantSpiritRoot(conflictProbe, probeInert).failure()
-                    == CultivationIdentityService.Failure.ELEMENT_CONFLICT;
+                    == CultivationIdentityFailure.ELEMENT_CONFLICT;
             boolean reopened = CultivationToggleService.setSpiritRootEnabled(conflictProbe, antiWater, false).changed()
                     && CultivationIdentityService.grantSpiritRoot(conflictProbe, probeWater).changed();
             boolean conflict = blocked && inertBlocked && reopened;

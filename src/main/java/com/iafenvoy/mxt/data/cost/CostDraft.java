@@ -1,13 +1,14 @@
 package com.iafenvoy.mxt.data.cost;
 
 import com.iafenvoy.mxt.data.aura.Aura;
-import com.iafenvoy.mxt.data.cost.context.CostFailure;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Map;
 import java.util.Optional;
+import com.iafenvoy.mxt.runtime.failure.Failure;
+import com.iafenvoy.mxt.runtime.failure.Failures;
 
 /**
  * One channel's half of a payment: the requirements of one entry type, merged as they arrive, checked once and
@@ -24,7 +25,7 @@ public interface CostDraft<T extends Cost> {
      * itself cannot be charged here - a formula that produced no usable amount, or a channel this context does not
      * offer - and nothing is written; whether the store can pay for everything loaded is {@link #test}'s answer.
      */
-    Optional<CostFailure> load(T cost);
+    Optional<Failure> load(T cost);
 
     /**
      * Whether the store can pay for everything loaded so far, asked without writing anything. Read-only on purpose:
@@ -32,7 +33,7 @@ public interface CostDraft<T extends Cost> {
      * <p>
      * A draft with nothing loaded answers success: the manager gives every registered type a draft, used or not.
      */
-    Optional<CostFailure> test();
+    Optional<Failure> test();
 
     /**
      * Writes everything loaded. A store that has changed since {@link #test} can refuse here, which is why the
@@ -41,7 +42,7 @@ public interface CostDraft<T extends Cost> {
      * <p>
      * A draft with nothing loaded writes nothing and answers success.
      */
-    Optional<CostFailure> commit();
+    Optional<Failure> commit();
 
     /**
      * Puts back what {@link #commit} wrote, and only that: a store that moved on in between keeps what it gained.
@@ -51,7 +52,7 @@ public interface CostDraft<T extends Cost> {
 
     /**
      * The resource that ran out, when {@link #test} or {@link #commit} answered
-     * {@link CostFailure#INSUFFICIENT_RESOURCE}. Null for every other reason and for every other channel.
+     * {@link Failures#INSUFFICIENT_RESOURCE}. Null for every other reason and for every other channel.
      */
     default @Nullable Identifier failedResource() {
         return null;

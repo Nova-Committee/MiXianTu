@@ -16,7 +16,6 @@ import com.iafenvoy.mxt.runtime.cultivation.TechniqueService;
 import com.iafenvoy.mxt.runtime.hold.HoldLookup;
 import com.iafenvoy.mxt.runtime.item.ItemBindingService;
 import com.iafenvoy.mxt.runtime.item.QualityService;
-import com.iafenvoy.mxt.runtime.item.QualityService.Failure;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
@@ -37,6 +36,7 @@ import java.util.Map.Entry;
 
 import static net.minecraft.commands.Commands.argument;
 import static net.minecraft.commands.Commands.literal;
+import com.iafenvoy.mxt.runtime.failure.Failure;
 
 /**
  * The {@code /technique} command; also reachable as {@code /mxt technique}. It handles stored technique
@@ -88,7 +88,7 @@ public final class TechniqueCommand {
 
         // This gate cancels Start and Tick, so a refusal here is what a pose that appears and then aborts looks like.
         Optional<Failure> refusal = QualityService.check(player, stack);
-        source.sendSuccess(() -> Component.translatable("command.mxt.technique.diagnose.gate", refusal.map(Enum::name).orElse("OK")), false);
+        source.sendSuccess(() -> Component.translatable("command.mxt.technique.diagnose.gate", refusal.map(Failure::name).orElse("OK")), false);
 
         TechniqueAttachment spirit = player.getData(MxtAttachments.TECHNIQUE);
         boolean known = spirit.learnedTechniques().contains(value.technique());

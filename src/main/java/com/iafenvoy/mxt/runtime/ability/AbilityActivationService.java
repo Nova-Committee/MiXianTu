@@ -6,6 +6,8 @@ import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.ability.Togglable;
 import com.iafenvoy.mxt.data.ability.ToggleContext;
 import com.iafenvoy.mxt.registry.MxtAttachments;
+import com.iafenvoy.mxt.runtime.failure.AbilityFailure;
+import com.iafenvoy.mxt.runtime.failure.TogglableFailure;
 import com.iafenvoy.mxt.util.OptionalBoolean;
 import net.minecraft.core.Holder;
 import net.minecraft.world.entity.LivingEntity;
@@ -13,6 +15,8 @@ import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Optional;
+import com.iafenvoy.mxt.runtime.failure.Failure;
+import com.iafenvoy.mxt.runtime.failure.Failures;
 
 /**
  * The one press entry point. The wheel, the command and the script bridge all come through here, so "what happens
@@ -27,12 +31,12 @@ public final class AbilityActivationService {
 
     public static Togglable.Result activate(LivingEntity holder, Holder<Ability> ability, @Nullable ItemStack carrier) {
         if (holder == null || ability == null || !(ability.value().type() instanceof Togglable togglable))
-            return Togglable.Result.refused(Togglable.Failure.UNAVAILABLE);
+            return Togglable.Result.refused(TogglableFailure.UNAVAILABLE);
         // A press writes state and world, so only the server answers one; reading the state stays two-sided.
-        if (holder.level().isClientSide()) return Togglable.Result.refused(Togglable.Failure.UNAVAILABLE);
+        if (holder.level().isClientSide()) return Togglable.Result.refused(TogglableFailure.UNAVAILABLE);
         ToggleContext context = new ToggleContext(holder, carrier, ability);
         // Nothing is paid for a press that cannot happen: the read-only precondition is asked before the gate.
-        Optional<Togglable.Failure> refusal = togglable.canActivate(context);
+        Optional<Failure> refusal = togglable.canActivate(context);
         if (refusal.isPresent()) return Togglable.Result.refused(refusal.get());
         if (!togglable.gated(context)) return togglable.activate(context);
         AbilityService.GateResult gate = AbilityService.gate(context);
@@ -64,22 +68,14 @@ public final class AbilityActivationService {
 
     // A press keeps the cast pipeline's own names instead of collapsing them into "unavailable", because the
     // report the player reads is keyed by these: only a reason a press can never produce has nowhere else to go.
-    public static Togglable.Failure failureOf(@Nullable AbilityService.Failure failure) {
-        if (failure == null) return Togglable.Failure.UNAVAILABLE;
-        return switch (failure) {
-            case NOT_GRANTED -> Togglable.Failure.NOT_GRANTED;
-            case COOLDOWN -> Togglable.Failure.COOLDOWN;
-            case INSUFFICIENT_RESOURCE -> Togglable.Failure.INSUFFICIENT_RESOURCE;
-            case INSUFFICIENT_COST -> Togglable.Failure.INSUFFICIENT_COST;
-            case INVALID_FORMULA -> Togglable.Failure.INVALID_FORMULA;
-            case CONDITION_FAILED -> Togglable.Failure.CONDITION_FAILED;
-            case NO_CHARGES -> Togglable.Failure.NO_CHARGES;
-            case CANCELLED -> Togglable.Failure.CANCELLED;
-            case PERMISSION_DENIED -> Togglable.Failure.PERMISSION_DENIED;
-            case ELEMENT_AFFINITY -> Togglable.Failure.ELEMENT_AFFINITY;
-            case NO_TARGET -> Togglable.Failure.NO_TARGET;
-            case NOT_APPLICABLE -> Togglable.Failure.NOT_APPLICABLE;
-            case DISABLED, SERVER_ONLY, CARRIED_NOT_INSTANT -> Togglable.Failure.UNAVAILABLE;
-        };
+    public static Failure failureOf(@Nullable Failure failure) {
+        if (failure == null) return TogglableFailure.UNAVAILABLE;
+        if (failure == AbilityFailure.NOT_GRANTED) return TogglableFailure.NOT_GRANTED;
+        if (failure == AbilityFailure.NO_CHARGES) return TogglableFailure.NO_CHARGES;
+        if (failure == AbilityFailure.PERMISSION_DENIED) return TogglableFailure.PERMISSION_DENIED;
+        if (failure == AbilityFailure.ELEMENT_AFFINITY) return TogglableFailure.ELEMENT_AFFINITY;
+        // A refusal the press and the cast share already reads the same in both tables, so it travels unchanged.
+        if (Failures.isShared(failure)) return failure;
+        return TogglableFailure.UNAVAILABLE;
     }
 }

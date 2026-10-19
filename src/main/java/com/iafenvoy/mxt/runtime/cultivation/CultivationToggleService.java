@@ -5,11 +5,13 @@ import com.iafenvoy.mxt.data.cultivation.Physique;
 import com.iafenvoy.mxt.data.cultivation.SpiritRoot;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.ability.AbilityGrantService;
+import com.iafenvoy.mxt.runtime.failure.CultivationToggleFailure;
 import net.minecraft.core.Holder;
 import net.minecraft.world.entity.LivingEntity;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
+import com.iafenvoy.mxt.runtime.failure.Failure;
 
 /**
  * The enable/disable module for spirit roots and physiques: the server-authoritative way to switch a held root
@@ -27,7 +29,7 @@ public final class CultivationToggleService {
     // or handed back with the switch.
     public static Result setSpiritRootEnabled(LivingEntity entity, Holder<SpiritRoot> root, boolean enabled) {
         SpiritIdentityAttachment spirit = entity.getData(MxtAttachments.SPIRIT_IDENTITY);
-        if (!spirit.spiritRoots().contains(root)) return Result.rejected(Failure.NOT_HELD);
+        if (!spirit.spiritRoots().contains(root)) return Result.rejected(CultivationToggleFailure.NOT_HELD);
         if (!spirit.setSpiritRootEnabled(root, enabled)) return Result.unchangedToggle();
         AbilityGrantService.recalculate(entity);
         return Result.changedToggle();
@@ -35,7 +37,7 @@ public final class CultivationToggleService {
 
     public static Result setPhysiqueEnabled(LivingEntity entity, Holder<Physique> physique, boolean enabled) {
         SpiritIdentityAttachment spirit = entity.getData(MxtAttachments.SPIRIT_IDENTITY);
-        if (!spirit.physiques().contains(physique)) return Result.rejected(Failure.NOT_HELD);
+        if (!spirit.physiques().contains(physique)) return Result.rejected(CultivationToggleFailure.NOT_HELD);
         if (!spirit.setPhysiqueEnabled(physique, enabled)) return Result.unchangedToggle();
         AbilityGrantService.recalculate(entity);
         return Result.changedToggle();
@@ -61,8 +63,6 @@ public final class CultivationToggleService {
         AbilityGrantService.recalculate(entity);
         return Result.changedToggle();
     }
-
-    public enum Failure {NOT_HELD, SERVER_ONLY}
 
     public record Result(boolean changed, @Nullable Failure failure) {
         private static Result changedToggle() {

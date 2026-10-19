@@ -11,7 +11,6 @@ import com.iafenvoy.mxt.runtime.formation.FormationCenters.Match;
 import com.iafenvoy.mxt.runtime.formation.FormationInstance;
 import com.iafenvoy.mxt.runtime.formation.FormationRelations;
 import com.iafenvoy.mxt.runtime.formation.FormationWorldService;
-import com.iafenvoy.mxt.runtime.formation.FormationWorldService.Failure;
 import com.iafenvoy.mxt.runtime.formation.FormationWorldService.Result;
 import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.HolderHelper;
@@ -30,8 +29,8 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.Comparator;
 import java.util.List;
-import java.util.Locale;
 import java.util.Optional;
+import com.iafenvoy.mxt.runtime.failure.Failure;
 
 /**
  * One portable controller for every datapack formation, working as a two-way switch: clicking the centre of a
@@ -117,8 +116,8 @@ public final class FormationPlateItem extends Item {
     }
 
     private static Component failure(Failure failure) {
-        if (failure == null) return Component.translatable("item.mxt.formation_plate.failed.unknown");
-        return Component.translatable("item.mxt.formation_plate.failed." + failure.name().toLowerCase(Locale.ROOT));
+        if (failure == null) return Component.translatable("failure.mxt.common.unknown");
+        return failure.message();
     }
 
     // The only player-facing way to stop a formation.

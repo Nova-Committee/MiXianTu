@@ -11,6 +11,7 @@ import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.ability.AbilityGrantService;
 import com.iafenvoy.mxt.runtime.ability.PassiveAttributeService;
 import com.iafenvoy.mxt.runtime.damage.DamageCalculationService;
+import com.iafenvoy.mxt.runtime.failure.LifeSpanFailure;
 import com.iafenvoy.mxt.runtime.tribulation.TribulationService;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Registry;
@@ -29,6 +30,8 @@ import net.neoforged.neoforge.common.NeoForge;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
+import com.iafenvoy.mxt.runtime.failure.Failure;
+import com.iafenvoy.mxt.runtime.failure.Failures;
 
 /**
  * The lifespan ledger: two numbers per body, spent by settlement and answered by one of three outcomes. Data
@@ -64,8 +67,8 @@ public final class LifeSpanService {
      * switched off, because that switch decides whether time passes, not whether the numbers exist.
      */
     public static Result set(LivingEntity entity, long ticks) {
-        if (entity.level().isClientSide()) return Result.refused(Failure.SERVER_ONLY);
-        if (ticks < 0L) return Result.refused(Failure.INVALID_VALUE);
+        if (entity.level().isClientSide()) return Result.refused(Failures.SERVER_ONLY);
+        if (ticks < 0L) return Result.refused(LifeSpanFailure.INVALID_VALUE);
         LifespanAttachment stats = entity.getData(MxtAttachments.LIFESPAN);
         long before = stats.lifespanRemaining();
         stats.setLifespan(ticks, ticks);
@@ -78,7 +81,7 @@ public final class LifeSpanService {
      * lowers what is left. A body nobody ever granted life to is measured from the configured base first.
      */
     public static Result add(LivingEntity entity, long ticks) {
-        if (entity.level().isClientSide()) return Result.refused(Failure.SERVER_ONLY);
+        if (entity.level().isClientSide()) return Result.refused(Failures.SERVER_ONLY);
         // Adding nothing is no reason to open an account. A stage whose formula rounds to zero, or an admin
         // typing {@code add 0}, would otherwise leave the body accounted for at zero - which the very next
         // settlement reads as a spent life and executes.
@@ -144,12 +147,12 @@ public final class LifeSpanService {
      * reset happens even when {@code kills} cannot kill. Answers {@link Result} so a caller can tell a refusal.
      */
     public static Result reincarnate(LivingEntity entity) {
-        if (entity.level().isClientSide()) return Result.refused(Failure.SERVER_ONLY);
+        if (entity.level().isClientSide()) return Result.refused(Failures.SERVER_ONLY);
         LifespanAttachment stats = entity.getData(MxtAttachments.LIFESPAN);
         // Nothing has happened yet, so a listener saying no leaves the body untouched - unlike expiry, where the
         // life is already spent and a refusal can only mean closing the account.
         if (NeoForge.EVENT_BUS.post(new LifeSpanRebirthEvent.Pre(entity, stats)).isCanceled())
-            return Result.refused(Failure.CANCELLED);
+            return Result.refused(Failures.CANCELLED);
         reincarnate(entity, stats);
         // A body loses everything it was and cannot see it coming, so it is told. Expiry has its own line, because
         // only there did a lifespan actually run out.
@@ -286,10 +289,6 @@ public final class LifeSpanService {
     private static long saturatedAdd(long value, long delta) {
         long sum = value + delta;
         return ((value ^ sum) & (delta ^ sum)) < 0L ? (delta > 0L ? Long.MAX_VALUE : Long.MIN_VALUE) : sum;
-    }
-
-    public enum Failure {
-        SERVER_ONLY, INVALID_VALUE, CANCELLED
     }
 
     public record Result(boolean changed, Failure failure) {

@@ -6,7 +6,6 @@ import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.cost.CostPayment;
 import com.iafenvoy.mxt.data.cost.context.CostContext;
-import com.iafenvoy.mxt.data.cost.context.CostFailure;
 import com.iafenvoy.mxt.data.cost.context.CostOrigin;
 import com.iafenvoy.mxt.data.cultivation.CultivateConditions;
 import com.iafenvoy.mxt.data.cultivation.RealmStage;
@@ -17,6 +16,7 @@ import com.iafenvoy.mxt.registry.MxtCriteriaTriggers;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.registry.cache.RegistryCaches;
 import com.iafenvoy.mxt.runtime.ability.AbilityEventBridge;
+import com.iafenvoy.mxt.runtime.failure.CultivationFailure;
 import com.iafenvoy.mxt.runtime.resource.ResourceService;
 import com.iafenvoy.mxt.runtime.tribulation.TribulationService;
 import com.iafenvoy.mxt.util.HolderHelper;
@@ -38,6 +38,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.BooleanSupplier;
+import com.iafenvoy.mxt.runtime.failure.Failure;
+import com.iafenvoy.mxt.runtime.failure.Failures;
 
 /**
  * Server-side breakthrough transaction; callers evaluate content conditions before payment is committed. A
@@ -53,25 +55,25 @@ public final class CultivationService {
     }
 
     public static BreakthroughResult attempt(LivingEntity entity, CultivationAttachment spirit, ResourceHolderAttachment resources, Holder<Aura> aura, FormulaContext context, BooleanSupplier conditionsMet) {
-        if (entity.level().isClientSide()) return BreakthroughResult.rejected(Failure.SERVER_ONLY, null);
+        if (entity.level().isClientSide()) return BreakthroughResult.rejected(Failures.SERVER_ONLY, null);
         Holder<RealmStage> target = next(aura, spirit);
-        if (target == null) return BreakthroughResult.rejected(Failure.NO_NEXT_REALM, null);
+        if (target == null) return BreakthroughResult.rejected(CultivationFailure.NO_NEXT_REALM, null);
         return attempt(entity, spirit, resources, aura, target, context, conditionsMet);
     }
 
     // Triggered abilities are dispatched only after the realm state has committed.
     private static BreakthroughResult attempt(LivingEntity entity, CultivationAttachment spirit, ResourceHolderAttachment resources, Holder<Aura> aura, Holder<RealmStage> stage, FormulaContext context, BooleanSupplier conditionsMet) {
         RealmStage target = stage.value();
-        if (!Objects.equals(target.aura(), aura)) return BreakthroughResult.rejected(Failure.WRONG_AURA, null);
+        if (!Objects.equals(target.aura(), aura)) return BreakthroughResult.rejected(CultivationFailure.WRONG_AURA, null);
         FormulaContext resourceContext = ResourceService.formulaContext(entity, aura.value().resource(), context);
         Threshold threshold = threshold(stage, resourceContext);
-        if (threshold == null) return BreakthroughResult.rejected(Failure.INVALID_FORMULA, null);
+        if (threshold == null) return BreakthroughResult.rejected(Failures.INVALID_FORMULA, null);
         double minimum = threshold.breakthroughExp();
         double maximum = threshold.maxExperience();
         if (!Double.isFinite(minimum) || !Double.isFinite(maximum) || minimum < 0.0D || maximum < 0.0D || minimum > maximum)
-            return BreakthroughResult.rejected(Failure.INVALID_FORMULA, null);
+            return BreakthroughResult.rejected(Failures.INVALID_FORMULA, null);
         double progress = spirit.cultivationProgress(aura);
-        if (progress < minimum) return BreakthroughResult.rejected(Failure.INSUFFICIENT_PROGRESS, null);
+        if (progress < minimum) return BreakthroughResult.rejected(CultivationFailure.INSUFFICIENT_PROGRESS, null);
         boolean configuredConditions = target.breakthrough().test(entity, context);
         boolean requiredAbilities = RegistryCodecs.resolve(target.abilityRequirements(), entity.level().registryAccess(), MxtResourceKeys.ABILITY)
                 .allMatch(ability -> entity.getData(MxtAttachments.ABILITY_HOLDER).has(ability));
@@ -112,30 +114,24 @@ public final class CultivationService {
     private static BreakthroughResult commit(LivingEntity entity, CultivationAttachment spirit, ResourceHolderAttachment resources, @NotNull Holder<Aura> aura, @NotNull Holder<RealmStage> stage, FormulaContext context, BooleanSupplier conditionsMet) {
         RealmStage target = stage.value();
         Threshold threshold = threshold(stage, context);
-        if (threshold == null) return BreakthroughResult.rejected(Failure.INVALID_FORMULA, null);
+        if (threshold == null) return BreakthroughResult.rejected(Failures.INVALID_FORMULA, null);
         double minimum = threshold.breakthroughExp();
         double progress = spirit.cultivationProgress(aura);
-        if (progress < minimum) return BreakthroughResult.rejected(Failure.INSUFFICIENT_PROGRESS, null);
-        if (!conditionsMet.getAsBoolean()) return BreakthroughResult.rejected(Failure.CONDITIONS, null);
+        if (progress < minimum) return BreakthroughResult.rejected(CultivationFailure.INSUFFICIENT_PROGRESS, null);
+        if (!conditionsMet.getAsBoolean()) return BreakthroughResult.rejected(Failures.CONDITIONS, null);
         CostContext costContext = CostContext.of(entity, context, CostOrigin.BREAKTHROUGH);
         CostPayment plan = CostPayment.of(costContext);
-        Optional<CostFailure> refusal = plan.loadAndTest(target.breakthroughCosts());
-        if (refusal.isPresent()) return BreakthroughResult.rejected(failure(refusal.get()), null);
+        Optional<Failure> refusal = plan.loadAndTest(target.breakthroughCosts());
+        if (refusal.isPresent()) return BreakthroughResult.rejected(refusal.get(), null);
         Pre event = new Pre(spirit, resources, stage, context, minimum, plan.resources());
-        if (NeoForge.EVENT_BUS.post(event).isCanceled()) return BreakthroughResult.rejected(Failure.CANCELLED, null);
+        if (NeoForge.EVENT_BUS.post(event).isCanceled()) return BreakthroughResult.rejected(Failures.CANCELLED, null);
         plan.reprice(event.getCosts());
         CostPayment.Result payment = plan.commit();
-        if (!payment.paid()) return BreakthroughResult.rejected(failure(payment.failure()), payment.failedResource());
+        if (!payment.paid()) return BreakthroughResult.rejected(payment.failure(), payment.failedResource());
         spirit.setRealmStage(stage);
         spirit.setCultivationProgress(aura, 0.0D);
         NeoForge.EVENT_BUS.post(new Post(spirit, resources, stage, context, minimum, payment.resources()));
         return BreakthroughResult.committed(payment.resources());
-    }
-
-    // Everything that is not "this resource ran out" reads the same way to the caller: the stage cannot be paid
-    // for as written.
-    private static Failure failure(CostFailure failure) {
-        return failure == CostFailure.INSUFFICIENT_RESOURCE ? Failure.INSUFFICIENT_RESOURCE : Failure.INVALID_FORMULA;
     }
 
     // The stage this chain climbs towards: the next rung when the body already stands in the chain, and the aura's
@@ -293,12 +289,6 @@ public final class CultivationService {
     public record BreakthroughStatus(boolean reached, boolean conditionsMet, boolean automatic,
                                      double minimumExperience, double maximumExperience) {
         private static final BreakthroughStatus UNAVAILABLE = new BreakthroughStatus(false, false, false, 0.0D, 0.0D);
-    }
-
-    // Everything here is reachable: a stage may not require less progress than its own cap (see threshold()), so
-    // "the cap is holding the progress back" can never be the reason a breakthrough was refused.
-    public enum Failure {
-        DISABLED, WRONG_AURA, NO_NEXT_REALM, INSUFFICIENT_PROGRESS, CONDITIONS, INSUFFICIENT_RESOURCE, INVALID_FORMULA, CANCELLED, SERVER_ONLY
     }
 
     public record BreakthroughResult(boolean advanced, Failure failure, Identifier failedResource,

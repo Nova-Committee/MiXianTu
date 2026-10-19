@@ -11,6 +11,7 @@ import com.iafenvoy.mxt.data.forging.ForgingMethod;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.event.ForgingEvent;
 import com.iafenvoy.mxt.event.ForgingEvent.*;
+import com.iafenvoy.mxt.runtime.failure.ForgingFailure;
 import com.iafenvoy.mxt.runtime.item.QualityService;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.Holder;
@@ -27,6 +28,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.BooleanSupplier;
 import java.util.function.IntFunction;
+import com.iafenvoy.mxt.runtime.failure.Failure;
+import com.iafenvoy.mxt.runtime.failure.Failures;
 
 /**
  * Server-side coordinator for method validation, atomic payment and final forging-quality data.
@@ -42,7 +45,7 @@ public final class ForgingService {
         try {
             plan = ForgingPlan.of(blueprint, registries);
         } catch (IllegalArgumentException exception) {
-            return StartResult.rejected(Failure.INVALID_BLUEPRINT);
+            return StartResult.rejected(ForgingFailure.INVALID_BLUEPRINT);
         }
         // After the try, and deliberately so: a `Started` listener throwing an IllegalArgumentException
         // would land in that catch and be reported as a broken blueprint.
@@ -53,16 +56,16 @@ public final class ForgingService {
 
     public static StrikeResult strike(ServerPlayer player, ForgingSurface surface, ForgingSession session, Holder<ForgingMethod> method,
                                       ResourceHolderAttachment resources, FormulaContext context, BooleanSupplier conditions) {
-        if (!conditions.getAsBoolean()) return StrikeResult.rejected(Failure.CONDITIONS, null);
-        if (!session.canStrike(method)) return StrikeResult.rejected(Failure.INVALID_STRIKE, null);
+        if (!conditions.getAsBoolean()) return StrikeResult.rejected(Failures.CONDITIONS, null);
+        if (!session.canStrike(method)) return StrikeResult.rejected(ForgingFailure.INVALID_STRIKE, null);
         StrikePre event = new StrikePre(player, surface.pos(), new ForgingSessionView(session), method, resources, context);
         Failure refusal = postEvent(event);
         if (refusal != null) return StrikeResult.rejected(refusal, null);
         CostContext costContext = CostContext.of(player, context, CostOrigin.FORGING);
         CostPayment plan = CostPayment.of(costContext);
-        if (plan.loadAndTest(event.getCosts()).isPresent()) return StrikeResult.rejected(Failure.INVALID_FORMULA, null);
+        if (plan.loadAndTest(event.getCosts()).isPresent()) return StrikeResult.rejected(Failures.INVALID_FORMULA, null);
         CostPayment.Result payment = plan.commit();
-        if (!payment.paid()) return StrikeResult.rejected(Failure.INSUFFICIENT_RESOURCE, payment.failedResource());
+        if (!payment.paid()) return StrikeResult.rejected(Failures.INSUFFICIENT_RESOURCE, payment.failedResource());
         if (!session.strike(method))
             throw new IllegalStateException("Forging session changed after its strike precheck");
         notifyListeners(new StrikePost(player, surface.pos(), new ForgingSessionView(session)));
@@ -85,10 +88,10 @@ public final class ForgingService {
                                IntFunction<Holder<ItemQuality>> qualityForExtraSteps, double forgingModifier) {
         Failure refusal = postEvent(new CompletePre(player, surface.pos(), blueprint, new ForgingSessionView(session)));
         if (refusal != null) return FinishResult.rejected(refusal);
-        if (!session.canComplete()) return FinishResult.rejected(Failure.NOT_COMPLETE);
+        if (!session.canComplete()) return FinishResult.rejected(ForgingFailure.NOT_COMPLETE);
         int extra = session.extraSteps();
         Holder<ItemQuality> quality = qualityForExtraSteps.apply(effectiveExtraSteps(extra, forgingModifier));
-        if (quality == null) return FinishResult.rejected(Failure.INVALID_BLUEPRINT);
+        if (quality == null) return FinishResult.rejected(ForgingFailure.INVALID_BLUEPRINT);
         ForgingResultComponent result = new ForgingResultComponent(blueprint, session.value(), session.steps(), session.optimalSteps(), extra);
         notifyListeners(new CompletePost(player, surface.pos(), blueprint, new ForgingSessionView(session), result, quality));
         return FinishResult.finished(result, quality);
@@ -130,13 +133,13 @@ public final class ForgingService {
     // rethrows it and every caller sits inside a transaction.
     static <T extends ForgingEvent & ICancellableEvent> @Nullable Failure postEvent(T event) {
         try {
-            return NeoForge.EVENT_BUS.post(event).isCanceled() ? Failure.CANCELLED : null;
+            return NeoForge.EVENT_BUS.post(event).isCanceled() ? Failures.CANCELLED : null;
         } catch (VirtualMachineError error) {
             throw error;
         } catch (Throwable throwable) {
             MiXianTu.LOGGER.error("A {} listener threw; the forging operation is refused as {}",
-                    event.getClass().getSimpleName(), Failure.LISTENER_ERROR, throwable);
-            return Failure.LISTENER_ERROR;
+                    event.getClass().getSimpleName(), ForgingFailure.LISTENER_ERROR, throwable);
+            return ForgingFailure.LISTENER_ERROR;
         }
     }
 
@@ -150,35 +153,6 @@ public final class ForgingService {
         } catch (Throwable throwable) {
             MiXianTu.LOGGER.error("A {} listener threw; the forging operation had already been applied and stands",
                     event.getClass().getSimpleName(), throwable);
-        }
-    }
-
-    public enum Failure {
-        DISABLED,
-        INVALID_BLUEPRINT,
-        CONDITIONS,
-        INVALID_STRIKE,
-        INVALID_FORMULA,
-        INSUFFICIENT_RESOURCE,
-        NOT_COMPLETE,
-        CANCELLED,
-        NO_SESSION,
-        ALREADY_ACTIVE,
-        OUT_OF_RANGE,
-        BLUEPRINT_NOT_HELD,
-        // The struck method is not in the intersection of the blueprint's allowed methods and the methods the
-        // placed tools unlock.
-        METHOD_NOT_AVAILABLE,
-        INSUFFICIENT_MATERIALS,
-        OUTPUT_BLOCKED,
-        COOLDOWN,
-        // A listener for the phase threw, so the operation was refused instead of half-performed. Apart from
-        // CANCELLED: one is a script that said no, the other a script that broke.
-        LISTENER_ERROR;
-
-        // A session stopped this way is left exactly as it was, unlike one failed with NOT_COMPLETE.
-        public boolean refusedByListener() {
-            return this == CANCELLED || this == LISTENER_ERROR;
         }
     }
 

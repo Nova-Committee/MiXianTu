@@ -7,7 +7,6 @@ import com.iafenvoy.mxt.data.storage.DataStorage;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.tribulation.TribulationService;
-import com.iafenvoy.mxt.runtime.tribulation.TribulationService.Failure;
 import com.iafenvoy.mxt.runtime.tribulation.TribulationService.StartResult;
 import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.formula.FormulaContexts;
@@ -28,10 +27,10 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.Locale;
 
 import static net.minecraft.commands.Commands.argument;
 import static net.minecraft.commands.Commands.literal;
+import com.iafenvoy.mxt.runtime.failure.Failure;
 
 /**
  * The {@code /mxt tribulation} subtree: run a trial by hand instead of waiting for the breakthrough that would have
@@ -72,7 +71,7 @@ public final class TribulationCommand {
                 FormulaContexts.forEntity(entity));
         if (!result.started()) {
             source.sendFailure(Component.translatable("command.mxt.tribulation.failed", DefinitionText.nameOrId(tribulation),
-                    Component.translatable("command.mxt.tribulation.failure." + name(result.failure()))));
+                    result.failure().message()));
             return 0;
         }
         source.sendSuccess(() -> data.windup() > 0L
@@ -132,9 +131,5 @@ public final class TribulationCommand {
         return DataStorage.CODEC.encodeStart(JsonOps.INSTANCE, value).result()
                 .<Component>map(json -> Component.literal(json.toString()))
                 .orElseGet(() -> Component.literal(value.getClass().getSimpleName()));
-    }
-
-    private static String name(Failure failure) {
-        return failure == null ? "unknown" : failure.name().toLowerCase(Locale.ROOT);
     }
 }

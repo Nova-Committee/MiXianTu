@@ -9,7 +9,6 @@ import com.iafenvoy.mxt.data.cost.Cost;
 import com.iafenvoy.mxt.data.cost.CostPayment;
 import com.iafenvoy.mxt.data.cost.builtin.AuraCost;
 import com.iafenvoy.mxt.data.cost.context.CostContext;
-import com.iafenvoy.mxt.data.cost.context.CostFailure;
 import com.iafenvoy.mxt.data.cost.context.CostOrigin;
 import com.iafenvoy.mxt.data.item.TalismanComponent;
 import com.iafenvoy.mxt.data.item.TalismanComponent.TriggerMode;
@@ -37,6 +36,8 @@ import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
+import com.iafenvoy.mxt.runtime.failure.Failure;
+import com.iafenvoy.mxt.runtime.failure.Failures;
 
 /**
  * The talisman carrier's own half of the pour: what a carrier takes to fill, and what happens once it holds
@@ -57,11 +58,6 @@ import java.util.*;
  */
 public final class TalismanService {
     private TalismanService() {
-    }
-
-    // The words this module refuses with; the lang keys are `actionbar.mxt.talisman.failure.<lowercased name>`.
-    private enum Failure {
-        CONDITION_FAILED, INSUFFICIENT_RESOURCE, INSUFFICIENT_COST, INVALID_FORMULA, NO_TARGET
     }
 
     // One inscription's invocation: who is using it, where from, and the plan its own type answered with.
@@ -275,7 +271,7 @@ public final class TalismanService {
             TalismanUse use = new TalismanUse(holder, context, source.position(), talisman);
             TalismanType.Plan plan = talisman.value().type().plan(use);
             if (!plan.runnable()) {
-                say(holder, failed(Failure.NO_TARGET));
+                say(holder, failed(Failures.NO_TARGET));
                 return Attempt.REFUSED;
             }
             planned.add(new PlannedUse(use, plan));
@@ -283,7 +279,7 @@ public final class TalismanService {
         // The definitions' own gate, asked before the price is planned: what a carrier will not let the holder do
         // right now is refused while nothing has been paid, so a condition can never cost the holder anything.
         if (!allowed(written, holder, context)) {
-            say(holder, failed(Failure.CONDITION_FAILED));
+            say(holder, failed(Failures.CONDITION_FAILED));
             return Attempt.REFUSED;
         }
         // One invocation is charged as a whole before anything happens: the carrier's own costs plus every
@@ -292,9 +288,9 @@ public final class TalismanService {
         // carrier's own store.
         CostContext costContext = CostContext.of(holder, context, CostOrigin.TALISMAN);
         CostPayment payment = CostPayment.of(costContext);
-        Optional<CostFailure> priced = payment.loadAndTest(holderCosts(written));
+        Optional<Failure> priced = payment.loadAndTest(holderCosts(written));
         if (priced.isPresent()) {
-            say(holder, failed(costFailure(priced.get())));
+            say(holder, failed(priced.get()));
             return Attempt.REFUSED;
         }
         // What each type does once the price can be paid. A type answers for its own targets; the ones that land
@@ -302,7 +298,7 @@ public final class TalismanService {
         for (PlannedUse entry : planned) entry.use().definition().value().type().apply(entry.use(), entry.plan());
         CostPayment.Result paid = CostPayment.pay(holderCosts(written), costContext);
         if (!paid.paid()) {
-            say(holder, failed(costFailure(paid.failure())));
+            say(holder, failed(paid.failure()));
             return Attempt.REFUSED;
         }
         // This invocation's share of the store is spent here; whatever the definitions wrote on top of one
@@ -322,15 +318,8 @@ public final class TalismanService {
         return written.stream().allMatch(talisman -> talisman.value().condition().test(holder, context));
     }
 
-    // A price the holder cannot make is the same two answers every other cost gives: not enough of one resource,
-    // or not enough of everything else.
-    private static Failure costFailure(CostFailure failure) {
-        return failure == CostFailure.INSUFFICIENT_RESOURCE ? Failure.INSUFFICIENT_RESOURCE : Failure.INSUFFICIENT_COST;
-    }
-
     private static Component failed(Failure failure) {
-        return Component.translatable("actionbar.mxt.talisman.failed",
-                Component.translatable("actionbar.mxt.talisman.failure." + failure.name().toLowerCase(Locale.ROOT)));
+        return Component.translatable("actionbar.mxt.talisman.failed", failure.message());
     }
 
     // What a carrier was still holding when it was spent, handed back to whoever set that invocation off. The pour

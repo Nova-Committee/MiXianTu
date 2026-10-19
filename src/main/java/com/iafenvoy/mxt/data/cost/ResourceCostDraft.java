@@ -4,8 +4,8 @@ import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.attachment.ResourceHolderAttachment.Audit;
 import com.iafenvoy.mxt.data.cost.builtin.ResourceCost;
 import com.iafenvoy.mxt.data.cost.context.CostContext;
-import com.iafenvoy.mxt.data.cost.context.CostFailure;
 import com.iafenvoy.mxt.data.resource.Resource;
+import com.iafenvoy.mxt.runtime.failure.CostFailure;
 import com.iafenvoy.mxt.runtime.resource.ResourceService;
 import com.iafenvoy.mxt.runtime.resource.ResourceTransactions;
 import com.iafenvoy.mxt.runtime.resource.ResourceTransactions.Evaluation;
@@ -19,6 +19,8 @@ import org.jetbrains.annotations.Nullable;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
+import com.iafenvoy.mxt.runtime.failure.Failure;
+import com.iafenvoy.mxt.runtime.failure.Failures;
 
 /**
  * The resource account's draft: every {@code mxt:resource} entry merges into one amount per resource in the account
@@ -46,7 +48,7 @@ public final class ResourceCostDraft implements CostDraft<ResourceCost> {
     }
 
     @Override
-    public Optional<CostFailure> load(ResourceCost cost) {
+    public Optional<Failure> load(ResourceCost cost) {
         if (this.target == null) return Optional.of(CostFailure.NO_CHANNEL);
         // Each cost is evaluated with the formula context of the resource it spends, so a cost may refer to that
         // resource's realm rank and absorbed aura.
@@ -59,14 +61,14 @@ public final class ResourceCostDraft implements CostDraft<ResourceCost> {
     }
 
     @Override
-    public Optional<CostFailure> test() {
+    public Optional<Failure> test() {
         if (this.account.isEmpty()) return Optional.empty();
         if (this.baseline == null) return Optional.of(CostFailure.NO_PAYER);
-        return this.consume(this.baseline.copy()) ? Optional.empty() : Optional.of(CostFailure.INSUFFICIENT_RESOURCE);
+        return this.consume(this.baseline.copy()) ? Optional.empty() : Optional.of(Failures.INSUFFICIENT_RESOURCE);
     }
 
     @Override
-    public Optional<CostFailure> commit() {
+    public Optional<Failure> commit() {
         if (this.account.isEmpty()) return Optional.empty();
         if (this.target == null) return Optional.of(CostFailure.NO_PAYER);
         // What each resource it will overwrite held, and when: taken here rather than when the draft was made,
@@ -80,7 +82,7 @@ public final class ResourceCostDraft implements CostDraft<ResourceCost> {
             this.written.put(resource, new Value(resource, this.target.get(resource), audit.minSnapshot(),
                     audit.maxSnapshot(), audit.lastChangedTick(), audit.source()));
         }
-        return this.consume(this.target) ? Optional.empty() : Optional.of(CostFailure.INSUFFICIENT_RESOURCE);
+        return this.consume(this.target) ? Optional.empty() : Optional.of(Failures.INSUFFICIENT_RESOURCE);
     }
 
     @Override

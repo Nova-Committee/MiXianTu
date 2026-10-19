@@ -5,6 +5,7 @@ import com.iafenvoy.mxt.data.secretrealm.SecretRealm;
 import com.iafenvoy.mxt.data.secretrealm.builtin.ExistingGeneration;
 import com.iafenvoy.mxt.event.SecretRealmEvent.*;
 import com.iafenvoy.mxt.registry.MxtAttachments;
+import com.iafenvoy.mxt.runtime.failure.SecretRealmFailure;
 import com.iafenvoy.mxt.runtime.world.SecretRealmEntryLocator.Arrival;
 import com.iafenvoy.mxt.runtime.world.SecretRealmEntryLocator.Landing;
 import com.iafenvoy.mxt.util.HolderHelper;
@@ -26,6 +27,8 @@ import net.neoforged.neoforge.common.NeoForge;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
+import com.iafenvoy.mxt.runtime.failure.Failure;
+import com.iafenvoy.mxt.runtime.failure.Failures;
 
 /**
  * Authoritative secret realm membership and cross-dimension travel.
@@ -42,9 +45,9 @@ public final class SecretRealmService {
         // A token can outlive the definition it names, so the current registry is the last word on whether this realm
         // still exists. Kept here rather than at the token, because every caller has to be held to it.
         if (definition.unwrapKey().flatMap(server.overworld().registryAccess()::get).isEmpty())
-            return Result.rejected(Failure.DISABLED);
+            return Result.rejected(Failures.DISABLED);
         SecretRealmTravelAttachment travel = traveller.getData(MxtAttachments.SECRET_REALM_TRAVEL);
-        if (travel.active()) return Result.rejected(Failure.ALREADY_TRAVELLING);
+        if (travel.active()) return Result.rejected(SecretRealmFailure.ALREADY_TRAVELLING);
 
         UUID member = traveller.getUUID();
         // One clock for the whole lifecycle: every level shares the primary level data's game time, and the expiry
@@ -53,7 +56,7 @@ public final class SecretRealmService {
         SecretRealm value = definition.value();
         FormulaContext context = FormulaContext.of(traveller);
         if (!value.enterCondition().test(traveller, context))
-            return Result.rejected(Failure.CONDITION_NOT_MET, value.enterDeniedMessage());
+            return Result.rejected(SecretRealmFailure.CONDITION_NOT_MET, value.enterDeniedMessage());
 
         // A clock that ran out while nobody was watching must not keep an instance alive.
         for (SecretRealmRecord candidate : SecretRealmRegistry.of(definition))
@@ -64,31 +67,31 @@ public final class SecretRealmService {
         Optional<SecretRealmRecord> joinable = SecretRealmRegistry.joinable(definition, member);
         if (joinable.isPresent()) {
             record = joinable.get();
-            if (!record.holds(member) && record.full()) return Result.rejected(Failure.FULL);
+            if (!record.holds(member) && record.full()) return Result.rejected(SecretRealmFailure.FULL);
             if (record.empty()) record = record.restarted(gameTime);
         } else {
             if (SecretRealmRegistry.of(definition).size() >= value.maxInstances())
-                return Result.rejected(Failure.NO_FREE_INSTANCE);
+                return Result.rejected(SecretRealmFailure.NO_FREE_INSTANCE);
             if (!SecretRealmStructurePlacer.resolvable(server.overworld().getStructureManager(), value))
-                return Result.rejected(Failure.MISSING_STRUCTURE);
+                return Result.rejected(SecretRealmFailure.MISSING_STRUCTURE);
             int index = SecretRealmRegistry.nextIndex(definition);
             long seed = value.seed() != 0L ? value.seed() : RandomSource.create().nextLong();
             record = plan(definition, index, seed, gameTime);
             if (SecretRealmRegistry.at(record.dimension()).isPresent())
-                return Result.rejected(Failure.NO_FREE_INSTANCE);
+                return Result.rejected(SecretRealmFailure.NO_FREE_INSTANCE);
             created = true;
         }
         if (NeoForge.EVENT_BUS.post(new EnterPre(server, definition, record.dimension(), record.index(), record.owner(), member)).isCanceled())
-            return Result.rejected(Failure.CANCELLED);
+            return Result.rejected(Failures.CANCELLED);
         if (value.owned() && record.owner().isEmpty()) record = record.withOwner(member);
 
         Optional<SecretRealmRecord> prepared = open(server, record);
-        if (prepared.isEmpty()) return Result.rejected(Failure.GENERATION_FAILED);
+        if (prepared.isEmpty()) return Result.rejected(SecretRealmFailure.GENERATION_FAILED);
         record = prepared.get();
         ServerLevel destination = server.getLevel(record.dimension());
         if (destination == null) {
             SecretRealmRegistry.remove(record.dimension());
-            return Result.rejected(Failure.MISSING_DIMENSION);
+            return Result.rejected(SecretRealmFailure.MISSING_DIMENSION);
         }
         if (created)
             NeoForge.EVENT_BUS.post(new Create(server, definition, record.dimension(), record.index(), record.owner()));
@@ -108,7 +111,7 @@ public final class SecretRealmService {
         LivingEntity arrived = move(traveller, destination, arrival.position().x, arrival.position().y,
                 arrival.position().z, arrival.yaw(), arrival.pitch());
         if (arrived == null)
-            return Result.rejected(Failure.TELEPORT_FAILED);
+            return Result.rejected(SecretRealmFailure.TELEPORT_FAILED);
         if (joining) {
             members.add(member);
             record = record.with(members);
@@ -126,10 +129,10 @@ public final class SecretRealmService {
     public static Result exit(LivingEntity traveller) {
         SecretRealmTravelAttachment travel = travel(traveller);
         Holder<SecretRealm> definition = travel == null ? null : travel.realm().orElse(null);
-        if (definition == null || !travel.active()) return Result.rejected(Failure.NOT_TRAVELLING);
+        if (definition == null || !travel.active()) return Result.rejected(SecretRealmFailure.NOT_TRAVELLING);
         SecretRealm value = definition.value();
         if (!value.exitCondition().test(traveller, FormulaContext.of(traveller)))
-            return Result.rejected(Failure.EXIT_DENIED, value.exitDeniedMessage());
+            return Result.rejected(SecretRealmFailure.EXIT_DENIED, value.exitDeniedMessage());
         Moved moved = leave(traveller);
         return moved.failure() == null ? Result.exited(moved.traveller()) : Result.rejected(moved.failure());
     }
@@ -144,11 +147,11 @@ public final class SecretRealmService {
         if (definition == null || !travel.active()) return Moved.arrived(traveller);
         MinecraftServer server = traveller.level().getServer();
         ServerLevel origin = origin(server, travel).orElse(null);
-        if (origin == null) return Moved.refused(Failure.MISSING_ORIGIN);
+        if (origin == null) return Moved.refused(SecretRealmFailure.MISSING_ORIGIN);
         Optional<SecretRealmRecord> held = SecretRealmRegistry.ofMember(traveller.getUUID());
         LivingEntity arrived = move(traveller, origin, travel.originX(), travel.originY(), travel.originZ(),
                 travel.originYaw(), travel.originPitch());
-        if (arrived == null) return Moved.refused(Failure.TELEPORT_FAILED);
+        if (arrived == null) return Moved.refused(SecretRealmFailure.TELEPORT_FAILED);
         arrived.getData(MxtAttachments.SECRET_REALM_TRAVEL).clear();
         if (held.isPresent()) {
             SecretRealmRecord record = held.get();
@@ -291,12 +294,6 @@ public final class SecretRealmService {
 
     private static Optional<ServerLevel> origin(MinecraftServer server, SecretRealmTravelAttachment travel) {
         return travel.originDimension().map(id -> server.getLevel(ResourceKey.create(Registries.DIMENSION, id)));
-    }
-
-    public enum Failure {
-        DISABLED, FULL, CANCELLED, MISSING_DIMENSION, ALREADY_TRAVELLING,
-        NOT_TRAVELLING, MISSING_ORIGIN, GENERATION_FAILED, MISSING_STRUCTURE, NO_FREE_INSTANCE,
-        CONDITION_NOT_MET, EXIT_DENIED, TELEPORT_FAILED
     }
 
     /**

@@ -29,6 +29,8 @@ import org.jspecify.annotations.NonNull;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.OptionalInt;
+import com.iafenvoy.mxt.runtime.failure.Failure;
+import com.iafenvoy.mxt.runtime.failure.Failures;
 
 /**
  * Server-authoritative pill gate, one-dose settlement and toxicity ledger. Reads use
@@ -42,12 +44,6 @@ public final class PillService {
     private PillService() {
     }
 
-    public enum Failure {
-        CONDITIONS,
-        MAX_USES,
-        COOLDOWN
-    }
-
     public static Optional<Failure> check(LivingEntity user, ItemStack stack) {
         return check(user.level().registryAccess(), user, stack);
     }
@@ -59,15 +55,15 @@ public final class PillService {
         if (definition == null) return Optional.empty();
         FormulaContext context = FormulaContext.of(user);
         if (definition.conditions().stream().anyMatch(condition -> !condition.value().test(user, context)))
-            return Optional.of(Failure.CONDITIONS);
+            return Optional.of(Failures.CONDITIONS);
         return resolution.identity().flatMap(holder -> usageFailure(user, holder));
     }
 
     public static Optional<Failure> usageFailure(LivingEntity user, Holder<PillBinding> pill) {
         OptionalInt maxUses = pill.value().maxUses();
         if (maxUses.isPresent() && uses(user, pill) >= maxUses.getAsInt())
-            return Optional.of(Failure.MAX_USES);
-        if (onCooldown(user, pill)) return Optional.of(Failure.COOLDOWN);
+            return Optional.of(Failures.MAX_USES);
+        if (onCooldown(user, pill)) return Optional.of(Failures.COOLDOWN);
         return Optional.empty();
     }
 

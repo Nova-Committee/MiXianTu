@@ -2,7 +2,7 @@ package com.iafenvoy.mxt.data.cost;
 
 import com.iafenvoy.mxt.data.cost.builtin.ItemCost;
 import com.iafenvoy.mxt.data.cost.context.CostContext;
-import com.iafenvoy.mxt.data.cost.context.CostFailure;
+import com.iafenvoy.mxt.runtime.failure.CostFailure;
 import com.iafenvoy.mxt.util.MiscUtil;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.world.Container;
@@ -11,6 +11,7 @@ import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
+import com.iafenvoy.mxt.runtime.failure.Failure;
 
 /**
  * The inventory's draft: which slot each item entry comes out of, counted without touching the inventory. Its
@@ -46,7 +47,7 @@ public final class ItemCostDraft implements CostDraft<ItemCost> {
     }
 
     @Override
-    public Optional<CostFailure> load(ItemCost cost) {
+    public Optional<Failure> load(ItemCost cost) {
         if (this.container == null) return Optional.of(CostFailure.NO_CHANNEL);
         if (this.required(cost) <= 0) return Optional.of(CostFailure.INVALID_AMOUNT);
         this.loaded.add(cost);
@@ -54,13 +55,13 @@ public final class ItemCostDraft implements CostDraft<ItemCost> {
     }
 
     @Override
-    public Optional<CostFailure> test() {
+    public Optional<Failure> test() {
         if (this.loaded.isEmpty()) return Optional.empty();
         return this.reservation(this.snapshot) == null ? Optional.of(CostFailure.MISSING_ITEM) : Optional.empty();
     }
 
     @Override
-    public Optional<CostFailure> commit() {
+    public Optional<Failure> commit() {
         if (this.loaded.isEmpty()) return Optional.empty();
         // Reserved against the counts the inventory holds now, not the ones this draft was made with: two prices
         // written in one act each take their items, and the second must be measured against what the first took.

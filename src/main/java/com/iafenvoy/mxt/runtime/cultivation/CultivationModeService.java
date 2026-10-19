@@ -5,7 +5,6 @@ import com.iafenvoy.mxt.data.cultivation.Cultivation;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.runtime.cultivation.CultivationMethodService.Failure;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationMethodService.Result;
 import com.iafenvoy.mxt.runtime.trigger.CultivationTriggerService;
 import com.iafenvoy.mxt.util.DefinitionText;
@@ -17,9 +16,9 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
 
 import java.util.Comparator;
-import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
+import com.iafenvoy.mxt.runtime.failure.Failures;
 
 /**
  * Owns the selected cultivation method: which one a body runs, plus the player-controlled start and stop around it.
@@ -38,7 +37,7 @@ public final class CultivationModeService {
         if (spirit.cultivating() && running != null) return stop(player, spirit, running);
         FormulaContext context = FormulaContexts.forEntity(player);
         Holder<Cultivation> action = select(player, context).orElse(null);
-        if (action == null) return Result.rejected(Failure.NOT_APPLICABLE, null);
+        if (action == null) return Result.rejected(Failures.NOT_APPLICABLE, null);
         return start(player, spirit, action, context);
     }
 
@@ -90,9 +89,9 @@ public final class CultivationModeService {
         Holder<Cultivation> running = spirit.cultivation().orElse(null);
         boolean active = spirit.cultivating() && running != null;
         if (active && Objects.equals(running, action))
-            return Result.rejected(Failure.ALREADY_ACTIVE, null);
+            return Result.rejected(Failures.ALREADY_ACTIVE, null);
         FormulaContext context = FormulaContexts.forEntity(entity);
-        if (!applicable(entity, action, context)) return Result.rejected(Failure.NOT_APPLICABLE, null);
+        if (!applicable(entity, action, context)) return Result.rejected(Failures.NOT_APPLICABLE, null);
         if (active) stop(entity, spirit, running);
         return start(entity, spirit, action, context);
     }
@@ -108,12 +107,10 @@ public final class CultivationModeService {
     public static void notifyFailure(ServerPlayer player, Result result) {
         if (result == null || result.failure() == null) return;
         Component reason = result.abortReason();
-        if (reason == null) {
-            String reasonKey = "actionbar.mxt.cultivation.failure." + result.failure().name().toLowerCase(Locale.ROOT);
-            reason = result.failure() == Failure.INSUFFICIENT_RESOURCE && result.failedResource() != null
-                    ? Component.translatable(reasonKey, DefinitionText.nameOrId(MxtResourceKeys.RESOURCE, result.failedResource()))
-                    : Component.translatable(reasonKey);
-        }
+        if (reason == null)
+            reason = result.failure() == Failures.INSUFFICIENT_RESOURCE && result.failedResource() != null
+                    ? Component.translatable(result.failure().key() + "_named", DefinitionText.nameOrId(MxtResourceKeys.RESOURCE, result.failedResource()))
+                    : result.failure().message();
         player.sendSystemMessage(Component.translatable("actionbar.mxt.cultivation.failed", reason), true);
     }
 }

@@ -8,6 +8,7 @@ import com.iafenvoy.mxt.probe.Probe;
 import com.iafenvoy.mxt.probe.ProbeContext;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationIdentityService;
+import com.iafenvoy.mxt.runtime.failure.PerchFailure;
 import com.iafenvoy.mxt.runtime.perch.PerchEventBridge;
 import com.iafenvoy.mxt.runtime.perch.PerchService;
 import com.iafenvoy.mxt.testmod.MxtTestEntities;
@@ -188,10 +189,10 @@ public final class PerchProbes {
             PerchService.release(first);
             boolean firstTwo = PerchService.perch(first, vehicle, left).changed()
                     && PerchService.perch(second, vehicle, right).changed();
-            boolean thirdRefused = PerchService.perch(third, vehicle, left).failure() == PerchService.Failure.FULL
+            boolean thirdRefused = PerchService.perch(third, vehicle, left).failure() == PerchFailure.FULL
                     && !third.isPassenger();
             boolean moved = PerchService.perch(first, vehicle, right).changed()
-                    && PerchService.perch(third, vehicle, left).failure() == PerchService.Failure.FULL;
+                    && PerchService.perch(third, vehicle, left).failure() == PerchFailure.FULL;
             vehicle.positionRider(first);
             boolean otherSide = close(first.getX(), vehicle.getX() + right.x);
             boolean capacity = firstTwo && thirdRefused && moved && otherSide;
@@ -309,9 +310,9 @@ public final class PerchProbes {
                     && ProbeBeast.calls().contains("seat:0") && ProbeBeast.calls().contains("perched");
             boolean unperched = PerchService.release(answerer).changed() && ProbeBeast.calls().contains("unperched");
             ProbeBeast.perchAnswer(Optional.empty());
-            boolean notWilling = PerchService.perch(answerer, host).failure() == PerchService.Failure.NOT_WILLING;
+            boolean notWilling = PerchService.perch(answerer, host).failure() == PerchFailure.NOT_WILLING;
             boolean notPerchable = plain != null
-                    && PerchService.perch(plain, host).failure() == PerchService.Failure.NOT_WILLING;
+                    && PerchService.perch(plain, host).failure() == PerchFailure.NOT_WILLING;
             boolean answers = asked && unperched && notWilling && notPerchable;
             context.note("perch probe: answered=" + asked + " unperched=" + unperched
                     + " not_willing=" + notWilling + " not_perchable=" + notPerchable

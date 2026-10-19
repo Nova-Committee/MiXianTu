@@ -7,6 +7,7 @@ import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.runtime.creature.ContractFeedback;
 import com.iafenvoy.mxt.runtime.creature.ContractService;
 import com.iafenvoy.mxt.runtime.creature.Contracts;
+import com.iafenvoy.mxt.runtime.failure.ContractFailure;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
@@ -42,7 +43,7 @@ public final class SpiritBeastBagItem extends Item {
                                                            @NotNull InteractionHand hand) {
         if (player.level().isClientSide()) return InteractionResult.SUCCESS;
         if (!(player instanceof ServerPlayer owner) || !(target instanceof Mob mob)) {
-            Component message = ContractFeedback.of(ContractService.Failure.NOT_CONTRACTABLE);
+            Component message = ContractFeedback.of(ContractFailure.NOT_CONTRACTABLE);
             if (player instanceof ServerPlayer serverPlayer) serverPlayer.sendSystemMessage(message, true);
             return InteractionResult.FAIL;
         }
@@ -53,7 +54,7 @@ public final class SpiritBeastBagItem extends Item {
         }
         ContractAttachment contract = mob.getData(MxtAttachments.CONTRACT);
         if (!contract.bound() || Contracts.ownerOf(mob).filter(player.getUUID()::equals).isEmpty()) {
-            Component message = ContractFeedback.of(ContractService.Failure.NOT_BOUND);
+            Component message = ContractFeedback.of(ContractFailure.NOT_BOUND);
             if (player instanceof ServerPlayer serverPlayer) serverPlayer.sendSystemMessage(message, true);
             return InteractionResult.FAIL;
         }

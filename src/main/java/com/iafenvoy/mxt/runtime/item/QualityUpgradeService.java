@@ -2,11 +2,11 @@ package com.iafenvoy.mxt.runtime.item;
 
 import com.iafenvoy.mxt.data.cost.CostPayment;
 import com.iafenvoy.mxt.data.cost.context.CostContext;
-import com.iafenvoy.mxt.data.cost.context.CostFailure;
 import com.iafenvoy.mxt.data.cost.context.CostOrigin;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.data.quality.QualityLadders;
 import com.iafenvoy.mxt.registry.cache.ChainCache;
+import com.iafenvoy.mxt.runtime.failure.QualityUpgradeFailure;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup.Provider;
@@ -14,6 +14,8 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
 
 import java.util.Optional;
+import com.iafenvoy.mxt.runtime.failure.Failure;
+import com.iafenvoy.mxt.runtime.failure.Failures;
 
 /**
  * Moving an item one step up its quality ladder. The ladder is the one the stack is read on - what it carries,
@@ -28,24 +30,24 @@ public final class QualityUpgradeService {
     }
 
     public static Result upgrade(LivingEntity actor, ItemStack stack) {
-        if (actor.level().isClientSide()) return Result.rejected(Failure.SERVER_ONLY);
-        if (stack.isEmpty()) return Result.rejected(Failure.EMPTY);
+        if (actor.level().isClientSide()) return Result.rejected(Failures.SERVER_ONLY);
+        if (stack.isEmpty()) return Result.rejected(QualityUpgradeFailure.EMPTY);
         Provider access = actor.level().registryAccess();
         Holder<ItemQuality> current = QualityService.find(access, stack).orElse(null);
-        if (current == null) return Result.rejected(Failure.NO_QUALITY);
+        if (current == null) return Result.rejected(QualityUpgradeFailure.NO_QUALITY);
         ChainCache<ItemQuality> ladders = QualityLadders.cache();
         // A tier no ladder holds has nothing to climb, and a ladder the walk refused whole leaves all of its tiers
         // out, so a broken ladder lands here too.
-        if (!ladders.contains(current)) return Result.rejected(Failure.NO_CHAIN);
+        if (!ladders.contains(current)) return Result.rejected(QualityUpgradeFailure.NO_CHAIN);
         Holder<ItemQuality> next = ladders.next(current).orElse(null);
-        if (next == null) return Result.rejected(Failure.AT_TOP);
+        if (next == null) return Result.rejected(QualityUpgradeFailure.AT_TOP);
         ItemQuality step = next.value();
         FormulaContext formula = FormulaContext.of(actor);
-        if (!step.upgradeCondition().test(actor, formula)) return Result.rejected(Failure.CONDITION_FAILED);
+        if (!step.upgradeCondition().test(actor, formula)) return Result.rejected(Failures.CONDITION_FAILED);
         CostContext context = CostContext.of(actor, formula, CostOrigin.QUALITY_UPGRADE);
         CostPayment.Result payment = CostPayment.pay(step.upgradeCosts(), context);
         // The tier is written only after the price is actually paid, so a refusal leaves the stack untouched.
-        if (!payment.paid()) return Result.rejected(costFailure(payment.failure()));
+        if (!payment.paid()) return Result.rejected(payment.failure());
         QualityService.set(stack, next);
         return Result.upgraded(current, next);
     }
@@ -59,17 +61,6 @@ public final class QualityUpgradeService {
     // The tier the ladder would move to, for a caller that wants to show it before anything is paid.
     public static Optional<Holder<ItemQuality>> nextTier(Provider access, ItemStack stack) {
         return QualityService.find(access, stack).flatMap(current -> QualityLadders.cache().next(current));
-    }
-
-    // Every cost failure ends the same way for the caller: a resource that ran out is named, anything else is
-    // "this cannot be paid for".
-    private static Failure costFailure(CostFailure failure) {
-        return failure == CostFailure.INSUFFICIENT_RESOURCE ? Failure.INSUFFICIENT_RESOURCE : Failure.INSUFFICIENT_COST;
-    }
-
-    public enum Failure {
-        SERVER_ONLY, EMPTY, NO_QUALITY, NO_CHAIN, AT_TOP,
-        CONDITION_FAILED, INSUFFICIENT_RESOURCE, INSUFFICIENT_COST
     }
 
     public record Result(boolean changed, Failure failure, Holder<ItemQuality> from, Holder<ItemQuality> to) {

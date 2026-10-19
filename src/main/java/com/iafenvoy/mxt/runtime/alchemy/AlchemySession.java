@@ -4,6 +4,8 @@ import com.iafenvoy.mxt.data.action.BlockAction;
 import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.recipe.AlchemyRecipe;
 import com.iafenvoy.mxt.runtime.alchemy.AlchemyWorkstationService.Parameters;
+import com.iafenvoy.mxt.runtime.failure.AlchemyFailure;
+import com.iafenvoy.mxt.runtime.failure.Failure;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.UUIDUtil;
@@ -28,14 +30,14 @@ public final class AlchemySession {
     private AlchemyPhase phase;
     private long remainingTicks;
     private int badTicks;
-    private @Nullable AlchemyFailure failure;
+    private @Nullable Failure failure;
     private boolean settled;
     private final List<ItemStack> pending = new ArrayList<>(4);
 
     private AlchemySession(Identifier recipeId, AlchemyRecipe recipe, Parameters parameters,
                            List<ItemStack> successOutputs, List<ItemStack> failureOutputs,
                            UUID operator, AlchemyMixture mixture, AlchemyPhase phase, long remainingTicks, int badTicks,
-                           @Nullable AlchemyFailure failure, boolean settled, List<ItemStack> pending) {
+                           @Nullable Failure failure, boolean settled, List<ItemStack> pending) {
         this.recipeId = recipeId;
         this.recipe = recipe;
         this.parameters = parameters;
@@ -109,7 +111,7 @@ public final class AlchemySession {
         return this.failure != null;
     }
 
-    public Optional<AlchemyFailure> failure() {
+    public Optional<Failure> failure() {
         return Optional.ofNullable(this.failure);
     }
 
@@ -156,7 +158,7 @@ public final class AlchemySession {
         this.phase = AlchemyPhase.READY;
     }
 
-    public void scrap(AlchemyFailure reason) {
+    public void scrap(Failure reason) {
         if (this.phase == AlchemyPhase.READY || this.settled) return;
         this.failure = reason;
         this.generatePending();
@@ -196,7 +198,7 @@ public final class AlchemySession {
     public record Snapshot(Identifier recipeId, AlchemyRecipe recipe, Parameters parameters,
                            List<ItemStack> successOutputs, List<ItemStack> failureOutputs, UUID operator,
                            AlchemyMixture mixture, AlchemyPhase phase, long remainingTicks, int badTicks,
-                           Optional<AlchemyFailure> failure, boolean settled, List<ItemStack> pending) {
+                           Optional<Failure> failure, boolean settled, List<ItemStack> pending) {
         public static final Codec<Snapshot> CODEC = RecordCodecBuilder.create(i -> i.group(
                 Identifier.CODEC.fieldOf("recipe").forGetter(Snapshot::recipeId),
                 AlchemyRecipe.CODEC.codec().fieldOf("frozen_recipe").forGetter(Snapshot::recipe),

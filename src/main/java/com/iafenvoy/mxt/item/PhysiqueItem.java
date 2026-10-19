@@ -3,8 +3,8 @@ package com.iafenvoy.mxt.item;
 import com.iafenvoy.mxt.data.cultivation.Physique;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationIdentityService;
-import com.iafenvoy.mxt.runtime.cultivation.CultivationIdentityService.Failure;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationIdentityService.Result;
+import com.iafenvoy.mxt.runtime.failure.CultivationIdentityFailure;
 import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.Holder;
@@ -18,6 +18,8 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.NotNull;
 import org.jspecify.annotations.Nullable;
+import com.iafenvoy.mxt.runtime.failure.Failure;
+import com.iafenvoy.mxt.runtime.failure.Failures;
 
 /**
  * A physical physique: using the stack grants the one its component names. The grant goes through the same
@@ -54,12 +56,6 @@ public final class PhysiqueItem extends Item {
 
     private static Component failure(@Nullable Failure failure) {
         if (failure == null) return Component.translatable("item.mxt.physique.failed", "-");
-        return switch (failure) {
-            case ALREADY_HELD -> Component.translatable("item.mxt.physique.already_held");
-            case CONDITIONS -> Component.translatable("item.mxt.physique.conditions");
-            case EXCLUSIVE_CONFLICT -> Component.translatable("item.mxt.physique.conflict");
-            case DISABLED -> Component.translatable("item.mxt.physique.disabled");
-            default -> Component.translatable("item.mxt.physique.failed", failure.name());
-        };
+        return failure.message();
     }
 }

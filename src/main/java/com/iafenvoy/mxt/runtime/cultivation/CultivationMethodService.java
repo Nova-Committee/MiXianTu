@@ -9,7 +9,6 @@ import com.iafenvoy.mxt.data.aura.AuraRequirement;
 import com.iafenvoy.mxt.data.condition.builtin.entity.AuraRangeEntityCondition;
 import com.iafenvoy.mxt.data.cost.CostPayment;
 import com.iafenvoy.mxt.data.cost.context.CostContext;
-import com.iafenvoy.mxt.data.cost.context.CostFailure;
 import com.iafenvoy.mxt.data.cost.context.CostOrigin;
 import com.iafenvoy.mxt.data.cultivation.Cultivation;
 import com.iafenvoy.mxt.data.cultivation.RealmStage;
@@ -17,6 +16,7 @@ import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.runtime.failure.CultivationMethodFailure;
 import com.iafenvoy.mxt.runtime.resource.ResourceService;
 import com.iafenvoy.mxt.runtime.resource.ResourceService.Bounds;
 import com.iafenvoy.mxt.runtime.resource.ResourceTransactions;
@@ -40,6 +40,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.function.BooleanSupplier;
+import com.iafenvoy.mxt.runtime.failure.Failure;
+import com.iafenvoy.mxt.runtime.failure.Failures;
 
 /**
  * Authoritative lifecycle for the selected cultivation method; each realm resource chain is processed
@@ -51,16 +53,16 @@ public final class CultivationMethodService {
 
     public static Result start(CultivationAttachment spirit, @NotNull Holder<Cultivation> action, Cultivation definition,
                                long gameTime, BooleanSupplier conditionsMet) {
-        if (spirit.cultivating()) return Result.rejected(Failure.ALREADY_ACTIVE, null);
-        if (spirit.isCultivationOnCooldown(action, gameTime)) return Result.rejected(Failure.COOLDOWN, null);
-        if (!conditionsMet.getAsBoolean()) return Result.rejected(Failure.CONDITIONS, null);
+        if (spirit.cultivating()) return Result.rejected(Failures.ALREADY_ACTIVE, null);
+        if (spirit.isCultivationOnCooldown(action, gameTime)) return Result.rejected(Failures.COOLDOWN, null);
+        if (!conditionsMet.getAsBoolean()) return Result.rejected(Failures.CONDITIONS, null);
         spirit.startCultivation(action, gameTime, gameTime);
         return Result.startedResult();
     }
 
     public static Result start(LivingEntity entity, CultivationAttachment spirit, Identifier actionId, Cultivation definition, long gameTime, FormulaContext context) {
         Holder<Cultivation> action = MxtDatapackRegistries.holder(entity.level().registryAccess(), MxtResourceKeys.CULTIVATION, actionId).orElse(null);
-        if (action == null) return Result.rejected(Failure.DISABLED, null);
+        if (action == null) return Result.rejected(Failures.DISABLED, null);
         boolean conditions = definition.startCondition().test(entity, context) && canStartCultivation(entity, context);
         return start(spirit, action, definition, gameTime, () -> conditions);
     }
@@ -73,7 +75,7 @@ public final class CultivationMethodService {
 
     public static Result tick(LivingEntity entity, CultivationAttachment spirit, ResourceHolderAttachment resources, AuraResult aura, Holder<Cultivation> action, Cultivation definition, long gameTime, FormulaContext context, BooleanSupplier conditionsMet) {
         if (!canCultivateInEnvironment(spirit, entity, aura, context))
-            return stop(entity, spirit, action, definition, gameTime, Failure.ENVIRONMENT);
+            return stop(entity, spirit, action, definition, gameTime, CultivationMethodFailure.ENVIRONMENT);
         double affinity = CultivationAffinity.multiplier(entity.getData(MxtAttachments.SPIRIT_IDENTITY),
                 entity.getExistingData(MxtAttachments.TECHNIQUE).orElse(null), aura, context);
         return tick(entity, spirit, resources, aura, action, definition, gameTime, context, conditionsMet, affinity);
@@ -81,9 +83,9 @@ public final class CultivationMethodService {
 
     private static Result tick(LivingEntity entity, CultivationAttachment spirit, ResourceHolderAttachment resources, AuraResult aura, Holder<Cultivation> action, Cultivation definition, long gameTime, FormulaContext context, BooleanSupplier conditionsMet, double affinity) {
         if (!spirit.cultivating() || spirit.cultivation().filter(action::equals).isEmpty())
-            return Result.rejected(Failure.NOT_ACTIVE, null);
+            return Result.rejected(CultivationMethodFailure.NOT_ACTIVE, null);
         if (!conditionsMet.getAsBoolean())
-            return stop(entity, spirit, action, definition, gameTime, Failure.CONDITIONS,
+            return stop(entity, spirit, action, definition, gameTime, Failures.CONDITIONS,
                     definition.abortReason().orElse(null));
         // Every tick the session carries on, whether or not this one yields anything.
         definition.tickAction().execute(entity, context);
@@ -92,7 +94,7 @@ public final class CultivationMethodService {
         if (!definition.cultivateCondition().test(entity, context)) return Result.waitingResult();
         ItemAuraService.tick(entity, resources, context);
         Recovery recovery = recover(entity, spirit, resources, aura, definition, affinity, context);
-        if (!recovery.valid()) return stop(entity, spirit, action, definition, gameTime, Failure.INVALID_FORMULA);
+        if (!recovery.valid()) return stop(entity, spirit, action, definition, gameTime, Failures.INVALID_FORMULA);
         convertAll(entity, spirit, resources, context);
         if (gameTime < spirit.nextCultivateTick()) {
             return Result.waitingResult();
@@ -104,28 +106,28 @@ public final class CultivationMethodService {
         // what checks the pool against the amount actually spent, so the entries are only loaded.
         CostPayment auraPlan = CostPayment.of(auraContext);
         if (auraPlan.loadAll(definition.auraCosts()).isPresent())
-            return stop(entity, spirit, action, definition, gameTime, Failure.INVALID_FORMULA);
+            return stop(entity, spirit, action, definition, gameTime, Failures.INVALID_FORMULA);
         Map<Holder<Aura>, Double> auraCosts = auraPlan.auras();
         double auraCost = auraCosts.values().stream().mapToDouble(Double::doubleValue).sum();
         if (!Double.isFinite(affinity) || affinity < 0.0D)
-            return stop(entity, spirit, action, definition, gameTime, Failure.INVALID_FORMULA);
+            return stop(entity, spirit, action, definition, gameTime, Failures.INVALID_FORMULA);
         CostContext costContext = CostContext.of(entity, context, CostOrigin.CULTIVATION);
         CostPayment costPlan = CostPayment.of(costContext);
         if (costPlan.loadAndTest(definition.costs()).isPresent())
-            return stop(entity, spirit, action, definition, gameTime, Failure.INVALID_FORMULA);
+            return stop(entity, spirit, action, definition, gameTime, Failures.INVALID_FORMULA);
         Evaluation costs = costPlan.evaluation();
         Map<Holder<Aura>, Double> gains;
         try {
             gains = evaluateGains(definition.auraGains(), context);
         } catch (IllegalArgumentException | IllegalStateException error) {
-            return stop(entity, spirit, action, definition, gameTime, Failure.INVALID_FORMULA);
+            return stop(entity, spirit, action, definition, gameTime, Failures.INVALID_FORMULA);
         }
         double allocationFactor = 1.0D;
         if (auraCost > 0.0D && entity instanceof ServerPlayer player) {
             // The level prepass bounds this from the shared chunk pool; direct callers keep full cost.
             allocationFactor = AuraDistributionService.take(player).map(values -> allocationFactor(auraCosts, values)).orElse(1.0D);
             if (allocationFactor <= 0.0D && MxtServerConfig.INSTANCE.cultivation.forbidWithoutEligibleAura.getValue())
-                return stop(entity, spirit, action, definition, gameTime, Failure.INSUFFICIENT_AURA);
+                return stop(entity, spirit, action, definition, gameTime, CultivationMethodFailure.INSUFFICIENT_AURA);
         }
         // The prepass bounds what this tick may take from the shared pool; the plan is what actually pays it.
         double share = allocationFactor;
@@ -133,20 +135,18 @@ public final class CultivationMethodService {
         double speed = aura.cultivationSpeed() * allocationFactor;
         gains.replaceAll((id, amount) -> amount * speed);
         if (!Double.isFinite(speed) || speed < 0.0D)
-            return stop(entity, spirit, action, definition, gameTime, Failure.INVALID_FORMULA);
+            return stop(entity, spirit, action, definition, gameTime, Failures.INVALID_FORMULA);
         ResourceTransactions.Result preview = ResourceTransactions.tryConsume(copyOf(resources), costs);
-        if (!preview.committed()) return Result.rejected(Failure.INSUFFICIENT_RESOURCE, preview.failedResource());
+        if (!preview.committed()) return Result.rejected(Failures.INSUFFICIENT_RESOURCE, preview.failedResource());
         if (!canApplyGains(entity, copyOf(resources), gains, context))
-            return stop(entity, spirit, action, definition, gameTime, Failure.INVALID_FORMULA);
+            return stop(entity, spirit, action, definition, gameTime, Failures.INVALID_FORMULA);
         // Both payments are one boundary: a body cost that refuses after the ground aura was taken would otherwise
         // leave the aura spent without a settlement.
         List<CostPayment> payments = new ArrayList<>();
         if (!auraPlan.auras().isEmpty()) payments.add(auraPlan);
         payments.add(costPlan);
         CostPayment.Result payment = CostPayment.payAll(payments);
-        if (!payment.paid())
-            return Result.rejected(payment.failure() == CostFailure.INSUFFICIENT_AURA
-                    ? Failure.INSUFFICIENT_AURA : Failure.INSUFFICIENT_RESOURCE, payment.failedResource());
+        if (!payment.paid()) return Result.rejected(payment.failure(), payment.failedResource());
         applyGains(entity, resources, gains, context);
         spirit.scheduleCultivateTick(Math.addExact(gameTime, definition.tickInterval()));
         definition.cultivateAction().execute(entity, context);
@@ -462,8 +462,6 @@ public final class CultivationMethodService {
             return Double.isFinite(this.cultivationToResource);
         }
     }
-
-    public enum Failure {DISABLED, ALREADY_ACTIVE, COOLDOWN, CONDITIONS, NOT_ACTIVE, NOT_APPLICABLE, ENVIRONMENT, INVALID_FORMULA, INSUFFICIENT_RESOURCE, INSUFFICIENT_AURA}
 
     public record Result(boolean started, boolean progressed, boolean waiting, boolean stopped, Failure failure,
                          Identifier failedResource,

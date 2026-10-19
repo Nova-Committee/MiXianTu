@@ -5,7 +5,7 @@ import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.ability.type.FlightControlAbilityType;
 import com.iafenvoy.mxt.data.ability.type.MountAbilityType;
 import com.iafenvoy.mxt.registry.MxtAttachments;
-import com.iafenvoy.mxt.runtime.artifact.FlightService.Failure;
+import com.iafenvoy.mxt.runtime.failure.FlightFailure;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.Holder;
 import net.minecraft.world.entity.LivingEntity;
@@ -33,14 +33,14 @@ public final class FlightEventBridge {
         // written with, so these are type checks rather than a way to notice a definition leaving the pack.
         Holder<Ability> skill = data.archetype().filter(archetype -> archetype.value().type() instanceof FlightControlAbilityType).orElse(null);
         if (skill == null) {
-            FlightService.dismount(holder, Failure.NOT_FLYABLE);
+            FlightService.dismount(holder, FlightFailure.NOT_FLYABLE);
             return;
         }
         Holder<Ability> vehicle = data.vehicle()
                 .filter(mount -> mount.value().type() instanceof MountAbilityType)
                 .orElse(null);
         if (vehicle == null) {
-            FlightService.dismount(holder, Failure.NOT_FLYABLE);
+            FlightService.dismount(holder, FlightFailure.NOT_FLYABLE);
             return;
         }
         FlightService.tick(holder, skill, vehicle, FormulaContext.of(holder));

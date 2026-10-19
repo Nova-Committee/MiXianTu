@@ -21,6 +21,7 @@ import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.ability.AbilityGrantService;
 import com.iafenvoy.mxt.runtime.ability.PassiveAttributeService;
 import com.iafenvoy.mxt.runtime.creature.ContractService;
+import com.iafenvoy.mxt.runtime.failure.ProgressionFailure;
 import com.iafenvoy.mxt.runtime.progression.ProgressionAdminService;
 import com.iafenvoy.mxt.runtime.progression.ProgressionDamageMultiplier;
 import com.iafenvoy.mxt.runtime.progression.ProgressionDriver;
@@ -233,14 +234,14 @@ public final class ProgressionProbes {
             AbilityGrantService.recalculate(beast);
 
             boolean foreignRefused = ProgressionAdminService.setLevel(beast, ProbeDefinitions.PROBE_BEAST_PROFILE, foreign, false).failure()
-                    == ProgressionAdminService.Failure.FOREIGN_LEVEL;
+                    == ProgressionFailure.FOREIGN_LEVEL;
             boolean written = ProgressionAdminService.setLevel(beast, ProbeDefinitions.PROBE_BEAST_PROFILE, third, false).changed()
                     && stoodOn(beast, ProbeDefinitions.BEAST_3) && signals.size() == 2
                     && close(ProgressionDamageMultiplier.of(beast, growthAbility), 2.0D);
             boolean unchanged = ProgressionAdminService.setLevel(beast, ProbeDefinitions.PROBE_BEAST_PROFILE, third, false).failure()
-                    == ProgressionAdminService.Failure.SAME_LEVEL;
+                    == ProgressionFailure.SAME_LEVEL;
             boolean unknown = ProgressionAdminService.setLevel(beast, ProbeDefinitions.SWORD_MANUAL, third, false).failure()
-                    == ProgressionAdminService.Failure.UNKNOWN_OWNER;
+                    == ProgressionFailure.UNKNOWN_OWNER;
             boolean admin = foreignRefused && written && unchanged && unknown;
             context.note("progression probe: foreign_refused=" + foreignRefused
                     + " written=" + written + " unchanged=" + unchanged + " unknown_owner=" + unknown

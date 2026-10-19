@@ -11,6 +11,7 @@ import com.iafenvoy.mxt.event.CurseRemoveEvent.Post;
 import com.iafenvoy.mxt.event.CurseRemoveEvent.Pre;
 import com.iafenvoy.mxt.event.CurseRemoveEvent.Reason;
 import com.iafenvoy.mxt.registry.MxtAttachments;
+import com.iafenvoy.mxt.runtime.failure.CurseFailure;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.MiscUtil;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
@@ -23,6 +24,8 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
 import java.util.Map.Entry;
+import com.iafenvoy.mxt.runtime.failure.Failure;
+import com.iafenvoy.mxt.runtime.failure.Failures;
 
 /**
  * Attachment bridge for the common curse transaction model; callers supply a resolved definition.
@@ -59,7 +62,7 @@ public final class CurseService {
         Set<Identifier> displacedFrom = data.sources().of(curse);
         CurseLedger ledger = read(data);
         Optional<CurseInstance> applied = ledger.apply(curse, event.getStacks(), gameTime, context, durationOverride);
-        if (applied.isEmpty()) return ApplyResult.rejected(ApplyFailure.INVALID_DURATION);
+        if (applied.isEmpty()) return ApplyResult.rejected(CurseFailure.INVALID_DURATION);
         CurseInstance result = applied.get();
         write(data, ledger);
         // The shared rule with ability grants: a source leaving cannot remove another source's curse.
@@ -93,9 +96,9 @@ public final class CurseService {
                                      FormulaContext context, Identifier source, IEventBus eventBus, OptionalLong durationOverride) {
         Curse definition = curse.value();
         if (!definition.applicationCondition().test(target, context))
-            return ApplyResult.rejected(ApplyFailure.CONDITION);
+            return ApplyResult.rejected(CurseFailure.CONDITION);
         String key = transactionKey(target, curse);
-        if (!IN_TRANSACTION.get().add(key)) return ApplyResult.rejected(ApplyFailure.REENTRANT);
+        if (!IN_TRANSACTION.get().add(key)) return ApplyResult.rejected(CurseFailure.REENTRANT);
         try {
             boolean created = !target.getData(MxtAttachments.CURSE_HOLDER).instances().containsKey(curse)
                     || definition.stackingMode() == StackingMode.REPLACE;
@@ -258,49 +261,22 @@ public final class CurseService {
         return executed;
     }
 
-    public record ApplyResult(CurseInstance instance, boolean cancelled, ApplyFailure failure) {
+    public record ApplyResult(CurseInstance instance, boolean cancelled, Failure failure) {
         private static ApplyResult applied(CurseInstance instance) {
             return new ApplyResult(instance, false, null);
         }
 
         private static ApplyResult cancelledResult() {
-            return new ApplyResult(null, true, ApplyFailure.CANCELLED);
+            return new ApplyResult(null, true, Failures.CANCELLED);
         }
 
-        private static ApplyResult rejected(ApplyFailure failure) {
+        private static ApplyResult rejected(Failure failure) {
             return new ApplyResult(null, false, failure);
         }
 
         public boolean applied() {
             return this.instance != null;
         }
-    }
-
-    public enum ApplyFailure {
-        /**
-         * The application condition rejected the entity.
-         */
-        CONDITION,
-        /**
-         * A listener cancelled the apply event.
-         */
-        CANCELLED,
-        /**
-         * The caller is a client; curses are server-authoritative.
-         */
-        SERVER_ONLY,
-        /**
-         * The definition is not in the registry any more.
-         */
-        UNKNOWN,
-        /**
-         * The same curse is already mid-transaction for this entity.
-         */
-        REENTRANT,
-        /**
-         * The resolved duration cannot be honoured, so nothing was written.
-         */
-        INVALID_DURATION
     }
 
     private static String transactionKey(Entity entity, Holder<Curse> curse) {

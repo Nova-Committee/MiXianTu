@@ -14,6 +14,8 @@ import com.iafenvoy.mxt.registry.MxtCriteriaTriggers;
 import com.iafenvoy.mxt.runtime.alchemy.AlchemyResolver.Candidate;
 import com.iafenvoy.mxt.runtime.alchemy.AlchemyResolver.Evaluated;
 import com.iafenvoy.mxt.runtime.alchemy.AlchemyResolver.Gap;
+import com.iafenvoy.mxt.runtime.failure.AlchemyFailure;
+import com.iafenvoy.mxt.runtime.failure.QualityFailure;
 import com.iafenvoy.mxt.runtime.item.QualityRequirements;
 import com.iafenvoy.mxt.runtime.item.QualityService;
 import com.iafenvoy.mxt.runtime.world.AuraResult;
@@ -42,6 +44,8 @@ import net.neoforged.neoforge.common.NeoForge;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
+import com.iafenvoy.mxt.runtime.failure.Failure;
+import com.iafenvoy.mxt.runtime.failure.Failures;
 
 /**
  * Recipe numbers use the same parameters() path for preview and the frozen batch.
@@ -76,7 +80,7 @@ public final class AlchemyWorkstationService {
         List<Candidate> candidates = AlchemyResolver.candidates(player.level().getServer().getRecipeManager(), mixture,
                 context.with(AlchemyRecipe.FURNACE_RANK, furnaceRank(player.registryAccess(), station.furnaceItem())));
         Candidate chosen = AlchemyResolver.dominating(candidates);
-        AlchemyFailure blocker = recipeBlocker(candidates, chosen);
+        Failure blocker = recipeBlocker(candidates, chosen);
         Optional<Parameters> numbers = Optional.empty();
         List<ItemStack> success = List.of(), failure = List.of();
         QualityRequirement required = null, inputRequired = null;
@@ -88,17 +92,17 @@ public final class AlchemyWorkstationService {
                 numbers = parameters(player, station, holder.get().value(), chosen.evaluated(), context);
                 List<ItemStack> madeSuccess = create(holder.get().value().successOutputs());
                 List<ItemStack> madeFailure = create(holder.get().value().failureOutputs());
-                if (madeSuccess == null || madeFailure == null) blocker = AlchemyFailure.INVALID_FORMULA;
+                if (madeSuccess == null || madeFailure == null) blocker = Failures.INVALID_FORMULA;
                 else {
                     success = madeSuccess;
                     failure = madeFailure;
                 }
             }
-            if (numbers.isEmpty()) blocker = AlchemyFailure.INVALID_FORMULA;
+            if (numbers.isEmpty()) blocker = Failures.INVALID_FORMULA;
         }
         if (mixture.inputFailure().isPresent()) blocker = mixture.inputFailure().get();
         AlchemyFurnaceDefinition spec = station.furnaceDefinition().map(Holder::value).orElse(null);
-        Optional<QualityService.Failure> qualityFailure = Optional.empty();
+        Optional<Failure> qualityFailure = Optional.empty();
         if (station.state().busy()) blocker = AlchemyFailure.ACTIVE;
         else if (!station.structureStatus().complete()) blocker = AlchemyFailure.STRUCTURE;
         else if (spec == null) blocker = AlchemyFailure.NO_FURNACE;
@@ -110,7 +114,7 @@ public final class AlchemyWorkstationService {
             blocker = AlchemyFailure.INPUT_TIER;
         else {
             qualityFailure = QualityService.check(player, station.furnaceItem());
-            AlchemyFailure placed = placement(station.container(), spec);
+            Failure placed = placement(station.container(), spec);
             if (qualityFailure.isPresent()) blocker = mapQuality(qualityFailure.get());
             else if (placed != null) blocker = placed;
         }
@@ -142,7 +146,7 @@ public final class AlchemyWorkstationService {
         if (preview.blocker().isPresent())
             return new StartResult(false, preview.blocker().get(), preview.qualityFailure());
         if (preview.parameters().isEmpty() || preview.resolvedRecipe().isEmpty())
-            return StartResult.rejected(AlchemyFailure.INVALID_FORMULA);
+            return StartResult.rejected(Failures.INVALID_FORMULA);
         Optional<RecipeHolder<AlchemyRecipe>> holder = recipe(player.level().getServer().getRecipeManager(), preview.resolvedRecipe().get());
         if (holder.isEmpty()) return StartResult.rejected(AlchemyFailure.DISABLED);
         Parameters numbers = preview.parameters().get();
@@ -166,7 +170,7 @@ public final class AlchemyWorkstationService {
         abort(level, pos, station, AlchemyFailure.CANCELLED);
     }
 
-    public static void abort(ServerLevel level, BlockPos pos, AlchemyWorkstation station, AlchemyFailure reason) {
+    public static void abort(ServerLevel level, BlockPos pos, AlchemyWorkstation station, Failure reason) {
         AlchemySession session = station.state().session().orElse(null);
         if (session == null || session.phase() == AlchemyPhase.READY || session.settled()) return;
         session.scrap(reason);
@@ -275,7 +279,7 @@ public final class AlchemyWorkstationService {
         return true;
     }
 
-    private static AlchemyFailure placement(Container container, AlchemyFurnaceDefinition spec) {
+    private static Failure placement(Container container, AlchemyFurnaceDefinition spec) {
         int count = 0;
         for (int index = 0; index < AlchemySlots.OUTPUT_START; index++) {
             ItemStack stack = container.getItem(index);
@@ -459,25 +463,25 @@ public final class AlchemyWorkstationService {
         return QualityService.find(access, stack).map(quality -> QualityLadders.rank(quality).orElse(0)).orElse(0);
     }
 
-    private static @Nullable AlchemyFailure recipeBlocker(List<Candidate> candidates, @Nullable Candidate chosen) {
+    private static @Nullable Failure recipeBlocker(List<Candidate> candidates, @Nullable Candidate chosen) {
         if (chosen != null) return null;
         for (Candidate candidate : candidates) if (candidate.matched()) return AlchemyFailure.AMBIGUOUS;
         return candidates.isEmpty() ? AlchemyFailure.INSUFFICIENT : reason(candidates.getFirst().gaps());
     }
 
-    private static AlchemyFailure reason(List<Gap> gaps) {
+    private static Failure reason(List<Gap> gaps) {
         for (Gap gap : gaps) if (gap.kind() == Gap.Kind.EXTRA) return AlchemyFailure.CONFLICT;
         for (Gap gap : gaps) if (gap.kind() == Gap.Kind.BALANCE) return AlchemyFailure.IMBALANCE;
         return AlchemyFailure.INSUFFICIENT;
     }
 
-    private static AlchemyFailure mapQuality(QualityService.Failure failure) {
-        return switch (failure) {
-            case BINDING_CONDITIONS -> AlchemyFailure.BINDING_CONDITIONS;
-            case QUALITY_CONDITIONS -> AlchemyFailure.QUALITY_CONDITIONS;
-            case MAX_USES -> AlchemyFailure.MAX_USES;
-            case COOLDOWN -> AlchemyFailure.COOLDOWN;
-        };
+    // Any refusal this does not name is reported as the quality check that produced it; the pill caps keep their own
+    // wording, because alchemy can still tell them apart from a failed condition.
+    private static Failure mapQuality(Failure failure) {
+        if (failure == QualityFailure.BINDING_CONDITIONS) return AlchemyFailure.BINDING_CONDITIONS;
+        if (failure == QualityFailure.QUALITY_CONDITIONS) return AlchemyFailure.QUALITY_CONDITIONS;
+        if (failure == Failures.MAX_USES || failure == Failures.COOLDOWN) return failure;
+        return AlchemyFailure.QUALITY_CONDITIONS;
     }
 
     public record Parameters(double targetTemperature, double temperatureTolerance, double balanceTolerance,
@@ -503,22 +507,22 @@ public final class AlchemyWorkstationService {
 
     public record AlchemyPreview(AlchemyMixture mixture, List<Candidate> candidates,
                                  Optional<ResourceKey<Recipe<?>>> resolvedRecipe,
-                                 Optional<AlchemyFailure> blocker, Optional<Parameters> parameters,
-                                 Optional<QualityService.Failure> qualityFailure, List<ItemStack> successOutputs,
+                                 Optional<Failure> blocker, Optional<Parameters> parameters,
+                                 Optional<Failure> qualityFailure, List<ItemStack> successOutputs,
                                  List<ItemStack> failureOutputs) {
     }
 
-    public record StartResult(boolean started, @Nullable AlchemyFailure failure,
-                              Optional<QualityService.Failure> qualityFailure) {
+    public record StartResult(boolean started, @Nullable Failure failure,
+                              Optional<Failure> qualityFailure) {
         public static StartResult success() {
             return new StartResult(true, null, Optional.empty());
         }
 
-        public static StartResult rejected(AlchemyFailure failure) {
+        public static StartResult rejected(Failure failure) {
             return new StartResult(false, failure, Optional.empty());
         }
 
-        public static StartResult rejected(AlchemyFailure failure, QualityService.Failure quality) {
+        public static StartResult rejected(Failure failure, Failure quality) {
             return new StartResult(false, failure, Optional.of(quality));
         }
     }

@@ -16,6 +16,7 @@ import com.iafenvoy.mxt.probe.ProbeDefinitions;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.runtime.failure.FormationWorldFailure;
 import com.iafenvoy.mxt.runtime.formation.*;
 import com.iafenvoy.mxt.runtime.formation.FormationWorldService.Result;
 import com.iafenvoy.mxt.testmod.FormationProbeActions;
@@ -510,7 +511,7 @@ public final class FormationProbes {
         Result refused = FormationWorldService.activate(context.level(), spot,
                 ProbeDefinitions.id("probe_declared_structure"), declared, resources, formula, owner);
         context.expect("formation probe: a declared structure is checked when the array is raised",
-                refused.failure(), FormationWorldService.Failure.INVALID_STRUCTURE);
+                refused.failure(), FormationWorldFailure.INVALID_STRUCTURE);
         // Whatever the first attempt left behind, the position has to be free before the second one is judged.
         FormationWorldService.deactivate(context.level(), spot);
         Result raised = FormationWorldService.activate(context.level(), spot,

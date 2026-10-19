@@ -3,7 +3,6 @@ package com.iafenvoy.mxt.data.cost;
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.cost.context.CostContext;
-import com.iafenvoy.mxt.data.cost.context.CostFailure;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
@@ -15,6 +14,8 @@ import net.minecraft.resources.Identifier;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
+import com.iafenvoy.mxt.runtime.failure.Failure;
+import com.iafenvoy.mxt.runtime.failure.Failures;
 
 /**
  * One payment: the drafts its entries are loaded into and the two tables they charge. Loading merges an entry into
@@ -36,7 +37,7 @@ public final class CostPayment {
     private final Map<Class<?>, CostDraft<?>> drafts = new LinkedHashMap<>();
     private final List<Cost> direct = new ArrayList<>();
     private @Nullable Map<Holder<Aura>, Double> auras;
-    private @Nullable CostFailure failure;
+    private @Nullable Failure failure;
     private @Nullable Identifier failedResource;
     private @Nullable Result written;
     private boolean beyondResources;
@@ -57,7 +58,7 @@ public final class CostPayment {
      */
     public static Result pay(List<Cost> costs, CostContext context) {
         CostPayment payment = of(context);
-        Optional<CostFailure> refusal = payment.loadAndTest(costs);
+        Optional<Failure> refusal = payment.loadAndTest(costs);
         return refusal.map(costFailure -> Result.denied(costFailure, payment.failedResource())).orElseGet(payment::commit);
     }
 
@@ -79,18 +80,18 @@ public final class CostPayment {
      * Checks one entry the way a payment would, for the drafted types' own {@link Cost#test}. Not the path for a
      * type without a draft: such an entry is the one that has to answer for itself.
      */
-    public static Optional<CostFailure> test(Cost cost, CostContext context) {
+    public static Optional<Failure> test(Cost cost, CostContext context) {
         CostDraft<?> draft = single(cost, context);
-        Optional<CostFailure> refusal = load(draft, cost);
+        Optional<Failure> refusal = load(draft, cost);
         return refusal.isPresent() ? refusal : draft.test();
     }
 
     /**
      * Takes one entry the way a payment would, for the drafted types' own {@link Cost#commit}.
      */
-    public static Optional<CostFailure> commit(Cost cost, CostContext context) {
+    public static Optional<Failure> commit(Cost cost, CostContext context) {
         CostDraft<?> draft = single(cost, context);
-        Optional<CostFailure> refusal = load(draft, cost);
+        Optional<Failure> refusal = load(draft, cost);
         return refusal.isPresent() ? refusal : draft.commit();
     }
 
@@ -99,10 +100,10 @@ public final class CostPayment {
      * draft. The answer is why the entry cannot be charged at all; the store's ability to pay for what is loaded is
      * {@link #test}.
      */
-    public Optional<CostFailure> load(Cost cost) {
+    public Optional<Failure> load(Cost cost) {
         CostDraft<?> draft = this.draft(cost.getClass());
         if (draft == null) {
-            Optional<CostFailure> asked = cost.test(this.context);
+            Optional<Failure> asked = cost.test(this.context);
             if (asked.isEmpty()) {
                 this.direct.add(cost);
                 this.beyondResources = true;
@@ -112,16 +113,16 @@ public final class CostPayment {
         // Remembered here rather than read off the drafts later: every type has a draft once the payment is tested,
         // and a caller asks this before that.
         if (!draft.chargesAmounts()) this.beyondResources = true;
-        Optional<CostFailure> refusal = load(draft, cost);
+        Optional<Failure> refusal = load(draft, cost);
         return refusal.flatMap(costFailure -> this.record(costFailure, draft));
     }
 
     /**
      * The load step for a whole array, without asking whether it can be paid.
      */
-    public Optional<CostFailure> loadAll(List<Cost> costs) {
+    public Optional<Failure> loadAll(List<Cost> costs) {
         for (Cost cost : costs) {
-            Optional<CostFailure> refusal = this.load(cost);
+            Optional<Failure> refusal = this.load(cost);
             if (refusal.isPresent()) return refusal;
         }
         return Optional.empty();
@@ -131,18 +132,18 @@ public final class CostPayment {
      * The load and test steps in one call, answering the earliest refusal: what makes an unaffordable array stop at
      * the entry that ran out, and what a one-shot payment runs.
      */
-    public Optional<CostFailure> loadAndTest(List<Cost> costs) {
-        Optional<CostFailure> refusal = this.loadAll(costs);
+    public Optional<Failure> loadAndTest(List<Cost> costs) {
+        Optional<Failure> refusal = this.loadAll(costs);
         return refusal.isPresent() ? refusal : this.test();
     }
 
     /**
      * The test step: whether every draft can pay for what has been loaded into it. Writes nothing.
      */
-    public Optional<CostFailure> test() {
+    public Optional<Failure> test() {
         this.createMissingDrafts();
         for (CostDraft<?> draft : this.drafts.values()) {
-            Optional<CostFailure> refusal = draft.test();
+            Optional<Failure> refusal = draft.test();
             if (refusal.isPresent()) return this.record(refusal.get(), draft);
         }
         return Optional.empty();
@@ -206,12 +207,12 @@ public final class CostPayment {
     /**
      * Why this payment was last refused; null while nothing has been refused.
      */
-    public @Nullable CostFailure failure() {
+    public @Nullable Failure failure() {
         return this.failure;
     }
 
     /**
-     * The resource that ran out, when the last refusal was {@link CostFailure#INSUFFICIENT_RESOURCE}: what a caller
+     * The resource that ran out, when the last refusal was {@link Failures#INSUFFICIENT_RESOURCE}: what a caller
      * names back to the player.
      */
     public @Nullable Identifier failedResource() {
@@ -236,7 +237,7 @@ public final class CostPayment {
     }
 
     @SuppressWarnings("unchecked")
-    private static Optional<CostFailure> load(CostDraft<?> draft, Cost cost) {
+    private static Optional<Failure> load(CostDraft<?> draft, Cost cost) {
         return ((CostDraft<Cost>) draft).load(cost);
     }
 
@@ -245,14 +246,14 @@ public final class CostPayment {
         for (CostPayment payment : payments) {
             payment.createMissingDrafts();
             for (CostDraft<?> draft : payment.drafts.values()) {
-                Optional<CostFailure> refusal = draft.commit();
+                Optional<Failure> refusal = draft.commit();
                 written.add(draft);
                 if (refusal.isPresent()) return Result.denied(refusal.get(), draft.failedResource(), written);
             }
         }
         for (CostPayment payment : payments) {
             for (Cost cost : payment.direct) {
-                Optional<CostFailure> refusal = cost.commit(payment.context);
+                Optional<Failure> refusal = cost.commit(payment.context);
                 if (refusal.isPresent()) return Result.denied(refusal.get(), null, written);
             }
         }
@@ -300,7 +301,7 @@ public final class CostPayment {
 
     // The reason a payment was refused, and the resource it names when it names one: a caller reads both off the
     // payment instead of carrying a result through every step.
-    private Optional<CostFailure> record(CostFailure failure, @Nullable CostDraft<?> draft) {
+    private Optional<Failure> record(Failure failure, @Nullable CostDraft<?> draft) {
         this.failure = failure;
         this.failedResource = draft == null ? null : draft.failedResource();
         return Optional.of(failure);
@@ -309,7 +310,7 @@ public final class CostPayment {
     /**
      * What a payment did: what it took, or why it took nothing.
      */
-    public record Result(boolean paid, CostFailure failure, Identifier failedResource,
+    public record Result(boolean paid, Failure failure, Identifier failedResource,
                          Map<Identifier, Double> resources, Map<Holder<Aura>, Double> auras) {
         public Result {
             resources = new LinkedHashMap<>(resources);
@@ -321,12 +322,12 @@ public final class CostPayment {
         }
 
         // Nothing is written before the commit, so a refusal here has nothing to put back.
-        static Result denied(CostFailure failure, @Nullable Identifier failedResource) {
+        static Result denied(Failure failure, @Nullable Identifier failedResource) {
             return denied(failure, failedResource, List.of());
         }
 
         // Everything this payment itself wrote comes back through the drafts it already committed.
-        static Result denied(CostFailure failure, @Nullable Identifier failedResource, List<CostDraft<?>> written) {
+        static Result denied(Failure failure, @Nullable Identifier failedResource, List<CostDraft<?>> written) {
             reset(written);
             return new Result(false, failure, failedResource, Map.of(), Map.of());
         }

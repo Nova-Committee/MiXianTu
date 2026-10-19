@@ -5,6 +5,7 @@ import net.minecraft.resources.Identifier;
 import org.jspecify.annotations.Nullable;
 
 import java.util.Optional;
+import com.iafenvoy.mxt.runtime.failure.Failure;
 
 /**
  * Something the wheel can trigger. Implementing it is the whole of saying "put me on the wheel": the entry's kind
@@ -47,32 +48,5 @@ public interface Togglable {
         public static Result refused(Failure failure, @Nullable Identifier failedResource) {
             return new Result(false, failure, failedResource);
         }
-    }
-
-    // Named after AbilityService.Failure wherever the two mean the same thing: a press and a cast are reported
-    // through one table of messages, so a reason the cast pipeline already tells apart must not be flattened here.
-    enum Failure {
-        NOT_OWNED,
-        ALREADY_SET,
-        // The last resort, for a press no other reason describes.
-        UNAVAILABLE,
-        // The ability acts on an item and nothing the press offers is carrying one.
-        NO_CARRIER,
-        // The ability acts on a vehicle and neither hand is holding one.
-        NO_VEHICLE,
-        CANNOT_MOUNT,
-        NOT_GRANTED,
-        COOLDOWN,
-        INSUFFICIENT_RESOURCE,
-        INSUFFICIENT_COST,
-        INVALID_FORMULA,
-        CONDITION_FAILED,
-        NO_CHARGES,
-        CANCELLED,
-        PERMISSION_DENIED,
-        ELEMENT_AFFINITY,
-        // The press reached nothing it could act on, or names something that cannot act on a target at all.
-        NO_TARGET,
-        NOT_APPLICABLE
     }
 }

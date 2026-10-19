@@ -2,7 +2,6 @@ package com.iafenvoy.mxt.data.cost;
 
 import com.iafenvoy.mxt.data.cost.builtin.ResourceCost;
 import com.iafenvoy.mxt.data.cost.context.CostContext;
-import com.iafenvoy.mxt.data.cost.context.CostFailure;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.registry.MxtRegistries;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
@@ -14,6 +13,7 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
+import com.iafenvoy.mxt.runtime.failure.Failure;
 
 /**
  * One entry of a costs array. An entry is data: what it costs is read, merged and written by the {@link CostDraft}
@@ -42,12 +42,12 @@ public interface Cost {
      * Whether this one entry can be charged here, asked without writing anything. The right side is a failure - a
      * formula that cannot produce a finite positive amount, or a channel this context does not offer.
      */
-    Optional<CostFailure> test(CostContext context);
+    Optional<Failure> test(CostContext context);
 
     /**
      * Takes what this one entry asks for. Not reversible: an entry whose type has a draft is taken through it.
      */
-    Optional<CostFailure> commit(CostContext context);
+    Optional<Failure> commit(CostContext context);
 
     MapCodec<? extends Cost> codec();
 }

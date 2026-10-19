@@ -21,6 +21,8 @@ import com.iafenvoy.mxt.runtime.artifact.FlightService;
 import com.iafenvoy.mxt.entity.FlyingSwordEntity;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationIdentityService;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService;
+import com.iafenvoy.mxt.runtime.failure.FlightFailure;
+import com.iafenvoy.mxt.runtime.failure.TogglableFailure;
 import com.iafenvoy.mxt.runtime.wheel.WheelEntryKinds;
 import com.iafenvoy.mxt.runtime.wheel.WheelService;
 import com.iafenvoy.mxt.runtime.wheel.WheelSourceTypes;
@@ -85,7 +87,7 @@ public final class ArtifactFlightProbes {
             ArtifactService.refine(pilotMount, pilot);
             pilot.setItemInHand(InteractionHand.MAIN_HAND, pilotMount);
             Togglable.Result refused = AbilityActivationService.activate(pilot, controlAbility, null);
-            boolean ungranted = refused.failure() == Togglable.Failure.NOT_GRANTED
+            boolean ungranted = refused.failure() == TogglableFailure.NOT_GRANTED
                     && !pilot.getData(MxtAttachments.FLIGHT).active() && !pilot.getMainHandItem().isEmpty();
             // A technique is the ordinary way in: learning it grants the skill through the same ledger as any grant.
             TechniqueAttachment spirit = pilot.getData(MxtAttachments.TECHNIQUE);
@@ -142,7 +144,7 @@ public final class ArtifactFlightProbes {
                     && close(poolBefore - pilotResources.get(qiResource), 0.0D)
                     && artifactBefore > 0.0D;
             flying = flying && artifactFuel;
-            boolean landed = FlightService.dismount(pilot, FlightService.Failure.STOPPED).state() == FlightService.Result.State.STOPPED
+            boolean landed = FlightService.dismount(pilot, FlightFailure.STOPPED).state() == FlightService.Result.State.STOPPED
                     && pilot.getVehicle() == null && !pilot.getData(MxtAttachments.FLIGHT).active()
                     && sword != null && sword.isRemoved() && sword.visual().isEmpty()
                     // Nobody is there to take it back, so it lands where the mount was instead of going with it.
@@ -235,7 +237,7 @@ public final class ArtifactFlightProbes {
                 FlightService.Result crashed = FlightService.tick(crasher, controlAbility, mountAbility, FormulaContext.of(crasher));
                 boolean hit = crashSword.horizontalCollision;
                 boolean stopped = crashed.state() == FlightService.Result.State.STOPPED;
-                boolean blocked = crashed.failure() == FlightService.Failure.COLLISION;
+                boolean blocked = crashed.failure() == FlightFailure.COLLISION;
                 boolean off = crasher.getVehicle() == null;
                 collision = hit && stopped && blocked && off;
                 context.check("artifact roster flight crash: the move left the collision flag", hit);

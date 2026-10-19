@@ -7,6 +7,8 @@ import com.iafenvoy.mxt.recipe.AlchemyRecipeInput;
 import com.iafenvoy.mxt.recipe.AlchemyRecipeInput.Slot;
 import com.iafenvoy.mxt.recipe.AlchemyRole;
 import com.iafenvoy.mxt.runtime.alchemy.SpiritHerbService.HerbPotency;
+import com.iafenvoy.mxt.runtime.failure.AlchemyFailure;
+import com.iafenvoy.mxt.runtime.failure.Failure;
 import com.iafenvoy.mxt.util.MiscUtil;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
@@ -38,7 +40,7 @@ public final class AlchemyResolver {
         double catalyst = 0.0D;
         double weight = 0.0D;
         double signed = 0.0D;
-        AlchemyFailure failure = null;
+        Failure failure = null;
         for (Slot slot : slots) {
             ItemStack stack = slot.stack();
             if (stack.isEmpty()) continue;

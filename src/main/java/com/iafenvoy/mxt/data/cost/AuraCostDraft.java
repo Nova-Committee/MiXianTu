@@ -5,9 +5,9 @@ import com.iafenvoy.mxt.attachment.AuraChunkAttachment;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.cost.builtin.AuraCost;
 import com.iafenvoy.mxt.data.cost.context.CostContext;
-import com.iafenvoy.mxt.data.cost.context.CostFailure;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.registry.MxtAttachments;
+import com.iafenvoy.mxt.runtime.failure.CostFailure;
 import com.iafenvoy.mxt.runtime.world.AuraService;
 import com.iafenvoy.mxt.util.MiscUtil;
 import net.minecraft.core.BlockPos;
@@ -19,6 +19,7 @@ import net.minecraft.world.level.Level;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
+import com.iafenvoy.mxt.runtime.failure.Failure;
 
 /**
  * The aura draft: what every {@code mxt:aura} entry takes from the store its context names, merged per aura in the
@@ -47,7 +48,7 @@ public final class AuraCostDraft implements CostDraft<AuraCost> {
     }
 
     @Override
-    public Optional<CostFailure> load(AuraCost cost) {
+    public Optional<Failure> load(AuraCost cost) {
         double value = MiscUtil.positive(cost.amount().evaluate(this.context.formula()));
         if (value <= 0.0D) return Optional.of(CostFailure.INVALID_AMOUNT);
         if (this.context.auraTarget() == CostContext.AuraTarget.VALUE) {
@@ -59,7 +60,7 @@ public final class AuraCostDraft implements CostDraft<AuraCost> {
     }
 
     @Override
-    public Optional<CostFailure> test() {
+    public Optional<Failure> test() {
         if (this.auras.isEmpty()) return Optional.empty();
         return switch (this.context.auraTarget()) {
             case BANK -> this.bankTest();
@@ -70,7 +71,7 @@ public final class AuraCostDraft implements CostDraft<AuraCost> {
     }
 
     @Override
-    public Optional<CostFailure> commit() {
+    public Optional<Failure> commit() {
         if (this.auras.isEmpty()) return Optional.empty();
         return switch (this.context.auraTarget()) {
             case BANK -> this.bankCommit();
@@ -95,7 +96,7 @@ public final class AuraCostDraft implements CostDraft<AuraCost> {
         }
     }
 
-    private Optional<CostFailure> bankTest() {
+    private Optional<Failure> bankTest() {
         AuraAccess bank = this.context.bank();
         if (bank == null) return Optional.of(CostFailure.NO_CHANNEL);
         HolderLookup.Provider registries = this.context.registries();
@@ -108,7 +109,7 @@ public final class AuraCostDraft implements CostDraft<AuraCost> {
         return Optional.empty();
     }
 
-    private Optional<CostFailure> bankCommit() {
+    private Optional<Failure> bankCommit() {
         AuraAccess bank = this.context.bank();
         if (bank == null) return Optional.of(CostFailure.NO_CHANNEL);
         HolderLookup.Provider registries = this.context.registries();
@@ -125,7 +126,7 @@ public final class AuraCostDraft implements CostDraft<AuraCost> {
         return Optional.empty();
     }
 
-    private Optional<CostFailure> poolTest() {
+    private Optional<Failure> poolTest() {
         Level level = this.context.level();
         BlockPos pos = this.context.pos();
         if (level == null || pos == null) return Optional.of(CostFailure.NO_CHANNEL);
@@ -134,7 +135,7 @@ public final class AuraCostDraft implements CostDraft<AuraCost> {
                 ? Optional.empty() : Optional.of(CostFailure.INSUFFICIENT_AURA);
     }
 
-    private Optional<CostFailure> poolCommit() {
+    private Optional<Failure> poolCommit() {
         Level level = this.context.level();
         BlockPos pos = this.context.pos();
         if (level == null || pos == null) return Optional.of(CostFailure.NO_CHANNEL);

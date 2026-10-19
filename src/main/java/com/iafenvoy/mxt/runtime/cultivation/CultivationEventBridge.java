@@ -5,7 +5,6 @@ import com.iafenvoy.mxt.data.cultivation.Cultivation;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.runtime.cultivation.CultivationMethodService.Failure;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationMethodService.Result;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService.BreakthroughStatus;
 import com.iafenvoy.mxt.runtime.trigger.CultivationTriggerService;
@@ -29,6 +28,7 @@ import net.neoforged.neoforge.event.tick.LevelTickEvent.Post;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import com.iafenvoy.mxt.runtime.failure.Failure;
 
 /**
  * Drives the one persisted cultivation method using the entity's current chunk aura.

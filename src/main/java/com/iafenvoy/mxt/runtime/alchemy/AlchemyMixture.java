@@ -1,6 +1,8 @@
 package com.iafenvoy.mxt.runtime.alchemy;
 
 import com.iafenvoy.mxt.data.alchemy.MedicinalProperty;
+import com.iafenvoy.mxt.runtime.failure.AlchemyFailure;
+import com.iafenvoy.mxt.runtime.failure.Failure;
 import com.iafenvoy.mxt.util.codec.CollectionCodecs;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -14,7 +16,7 @@ import java.util.Optional;
  */
 public record AlchemyMixture(Map<Holder<MedicinalProperty>, Double> main,
                              Map<Holder<MedicinalProperty>, Double> auxiliary,
-                             double catalyst, double balance, double weight, Optional<AlchemyFailure> inputFailure) {
+                             double catalyst, double balance, double weight, Optional<Failure> inputFailure) {
     // Holder keys encode to the same id-keyed object an Identifier-keyed map does, so a saved mixture still reads;
     // a property that a pack has since removed is the one case that differs, and it is dropped with a log.
     public static final Codec<AlchemyMixture> CODEC = RecordCodecBuilder.create(i -> i.group(

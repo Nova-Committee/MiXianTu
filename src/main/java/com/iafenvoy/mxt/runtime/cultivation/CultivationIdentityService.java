@@ -5,6 +5,7 @@ import com.iafenvoy.mxt.data.cultivation.Physique;
 import com.iafenvoy.mxt.data.cultivation.SpiritRoot;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.ability.AbilityGrantService;
+import com.iafenvoy.mxt.runtime.failure.CultivationIdentityFailure;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
@@ -15,6 +16,8 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
+import com.iafenvoy.mxt.runtime.failure.Failure;
+import com.iafenvoy.mxt.runtime.failure.Failures;
 
 /**
  * Server-authoritative mutations for independent spirit-root and physique ownership.
@@ -25,12 +28,12 @@ public final class CultivationIdentityService {
 
     public static Result grantSpiritRoot(LivingEntity entity, @NotNull Holder<SpiritRoot> spiritRoot) {
         SpiritIdentityAttachment spirit = entity.getData(MxtAttachments.SPIRIT_IDENTITY);
-        if (spirit.spiritRoots().contains(spiritRoot)) return Result.rejected(Failure.ALREADY_HELD);
+        if (spirit.spiritRoots().contains(spiritRoot)) return Result.rejected(CultivationIdentityFailure.ALREADY_HELD);
         // A root may rule out another root's element, in either direction: the rule is written once, on
         // whichever of the two the pack thought of first, and the check reads both. Only roots in force can
         // rule anything out, so a root the holder switched off does not block this grant.
         if (spirit.activeSpiritRoots().stream().anyMatch(held -> held.value().conflictsWith(spiritRoot.value())))
-            return Result.rejected(Failure.ELEMENT_CONFLICT);
+            return Result.rejected(CultivationIdentityFailure.ELEMENT_CONFLICT);
         List<Holder<SpiritRoot>> roots = new LinkedList<>(spirit.spiritRoots());
         roots.add(spiritRoot);
         spirit.setSpiritRoots(roots);
@@ -40,15 +43,15 @@ public final class CultivationIdentityService {
 
     public static Result grantPhysique(LivingEntity entity, Holder<Physique> physique, FormulaContext context) {
         SpiritIdentityAttachment spirit = entity.getData(MxtAttachments.SPIRIT_IDENTITY);
-        if (physique == null) return Result.rejected(Failure.DISABLED);
+        if (physique == null) return Result.rejected(Failures.DISABLED);
         Physique value = physique.value();
         if (!value.allowStacking() && spirit.physiques().contains(physique))
-            return Result.rejected(Failure.ALREADY_HELD);
+            return Result.rejected(CultivationIdentityFailure.ALREADY_HELD);
         boolean conditions = value.holderCondition().test(entity, context);
-        if (!conditions) return Result.rejected(Failure.CONDITIONS);
+        if (!conditions) return Result.rejected(Failures.CONDITIONS);
         Set<Identifier> exclusive = new HashSet<>(value.exclusiveTags());
         boolean conflict = spirit.physiques().stream().map(Holder::value).anyMatch(existing -> existing.exclusiveTags().stream().anyMatch(exclusive::contains));
-        if (conflict) return Result.rejected(Failure.EXCLUSIVE_CONFLICT);
+        if (conflict) return Result.rejected(CultivationIdentityFailure.EXCLUSIVE_CONFLICT);
         List<Holder<Physique>> physiques = new LinkedList<>(spirit.physiques());
         physiques.add(physique);
         spirit.setPhysiques(physiques);
@@ -76,8 +79,6 @@ public final class CultivationIdentityService {
         AbilityGrantService.recalculate(entity);
         return true;
     }
-
-    public enum Failure {DISABLED, ALREADY_HELD, CONDITIONS, EXCLUSIVE_CONFLICT, ELEMENT_CONFLICT, SERVER_ONLY}
 
     public record Result(boolean changed, Failure failure) {
         private static Result changedResult() {

@@ -15,6 +15,7 @@ import com.iafenvoy.mxt.data.cost.context.CostOrigin;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtEntityTypes;
+import com.iafenvoy.mxt.runtime.failure.FlightFailure;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
@@ -37,6 +38,8 @@ import net.neoforged.neoforge.common.NeoForgeMod;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
+import com.iafenvoy.mxt.runtime.failure.Failure;
+import com.iafenvoy.mxt.runtime.failure.Failures;
 
 /**
  * Authoritative flight controller: the skill finds the vehicle, the vehicle is taken from the hand and becomes an
@@ -90,15 +93,15 @@ public final class FlightService {
     // is still caught.
     public static @Nullable Failure canMount(LivingEntity holder, Holder<Ability> skill, FormulaContext context) {
         if (!(skill.value().type() instanceof FlightControlAbilityType control))
-            return Failure.NOT_FLYABLE;
+            return FlightFailure.NOT_FLYABLE;
         Mount found = find(holder, control.hand());
-        if (found == null) return Failure.NO_VEHICLE;
+        if (found == null) return FlightFailure.NO_VEHICLE;
         Provider access = holder.level().registryAccess();
         Reference<Artifact> definition = ArtifactService.definition(access, found.stack()).orElse(null);
         if (definition == null || !ArtifactService.mayUse(found.stack(), definition, holder.getUUID()))
-            return Failure.NOT_OWNED;
-        if (holder.getData(MxtAttachments.FLIGHT).active()) return Failure.ALREADY_ACTIVE;
-        return found.type().canMove(speed(found.type(), control, context)) ? null : Failure.INVALID_FORMULA;
+            return FlightFailure.NOT_OWNED;
+        if (holder.getData(MxtAttachments.FLIGHT).active()) return Failures.ALREADY_ACTIVE;
+        return found.type().canMove(speed(found.type(), control, context)) ? null : Failures.INVALID_FORMULA;
     }
 
     public static Result mount(LivingEntity holder, Holder<Ability> skill, FormulaContext context) {
@@ -110,7 +113,7 @@ public final class FlightService {
         assert found != null;
         double speed = speed(found.type(), control, context);
         MountVehicle vehicle = createVehicle(holder.level(), found.type()).orElse(null);
-        if (vehicle == null) return Result.rejected(Failure.INVALID_VEHICLE);
+        if (vehicle == null) return Result.rejected(FlightFailure.INVALID_VEHICLE);
         // The contract promises a body, not one that is an entity: only an entity can be created by an EntityType and
         // only an entity can be ridden, so this cast cannot fail where it is made.
         Entity body = (Entity) vehicle;
@@ -125,12 +128,12 @@ public final class FlightService {
         // inside an entity nothing will ever remove.
         if (!holder.level().addFreshEntity(body)) {
             giveBack(vehicle);
-            return Result.rejected(Failure.CANNOT_MOUNT);
+            return Result.rejected(FlightFailure.CANNOT_MOUNT);
         }
         if (!holder.startRiding(body, true, true)) {
             // Discarding is a removal, which is what hands the artifact back, so a failed start costs nothing.
             body.discard();
-            return Result.rejected(Failure.CANNOT_MOUNT);
+            return Result.rejected(FlightFailure.CANNOT_MOUNT);
         }
         // The flight allowance is an attribute ({@code NeoForgeMod.CREATIVE_FLIGHT}); the mayfly flag is the
         // deprecated view of it, and reading the attribute is what can actually be written back. Only a player has
@@ -174,23 +177,23 @@ public final class FlightService {
         FlightAttachment data = holder.getData(MxtAttachments.FLIGHT);
         if (!data.active()) return Result.inactive();
         if (!(skill.value().type() instanceof FlightControlAbilityType control))
-            return dismount(holder, Failure.NOT_FLYABLE);
+            return dismount(holder, FlightFailure.NOT_FLYABLE);
         if (!(vehicle.value().type() instanceof MountAbilityType mount))
-            return dismount(holder, Failure.NOT_FLYABLE);
+            return dismount(holder, FlightFailure.NOT_FLYABLE);
         Entity body = holder.getVehicle();
         if (!(body instanceof MountVehicle mountVehicle) || data.mount().filter(body.getUUID()::equals).isEmpty()) {
-            return dismount(holder, Failure.MOUNT_LOST);
+            return dismount(holder, FlightFailure.MOUNT_LOST);
         }
         double speed = speed(mount, control, context);
-        if (!mount.canMove(speed)) return dismount(holder, Failure.INVALID_FORMULA);
+        if (!mount.canMove(speed)) return dismount(holder, Failures.INVALID_FORMULA);
         mountVehicle.setFlightSpeed(speed);
-        if (!vehicle.value().condition().test(holder, context)) return dismount(holder, Failure.CONDITION_FAILED);
+        if (!vehicle.value().condition().test(holder, context)) return dismount(holder, Failures.CONDITION_FAILED);
         // The mount moves for real every tick, so hitting a wall or the ground ends the flight instead of grinding
         // along it - see the vehicle's own tick for why the prediction that used to guard this made it dead code.
-        if (body.horizontalCollision || body.verticalCollision) return dismount(holder, Failure.COLLISION);
+        if (body.horizontalCollision || body.verticalCollision) return dismount(holder, FlightFailure.COLLISION);
         List<Cost> costs = vehicle.value().costs();
         if (!costs.isEmpty() && !payFuel(holder, mountVehicle, body.level(), costs, context))
-            return dismount(holder, Failure.INSUFFICIENT_RESOURCE);
+            return dismount(holder, Failures.INSUFFICIENT_RESOURCE);
         // After the fuel, so a tick this hook runs for is a tick that was paid for.
         mount.actions().tick().execute(holder, context);
         return Result.flying();
@@ -311,8 +314,6 @@ public final class FlightService {
         data.stop();
         return Result.stopped(reason);
     }
-
-    public enum Failure {NOT_FLYABLE, NO_VEHICLE, NOT_OWNED, ALREADY_ACTIVE, INVALID_FORMULA, CONDITION_FAILED, INSUFFICIENT_RESOURCE, COLLISION, STOPPED, CANNOT_MOUNT, MOUNT_LOST, INVALID_VEHICLE}
 
     public record Result(State state, Failure failure) {
         static Result mounted() {

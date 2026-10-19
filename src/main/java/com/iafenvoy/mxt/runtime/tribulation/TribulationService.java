@@ -10,6 +10,7 @@ import com.iafenvoy.mxt.data.timeline.TimelineEntry.Outcome;
 import com.iafenvoy.mxt.data.timeline.TimelineJump;
 import com.iafenvoy.mxt.data.timeline.TimelineState;
 import com.iafenvoy.mxt.event.TribulationEvent.*;
+import com.iafenvoy.mxt.runtime.failure.TribulationFailure;
 import com.iafenvoy.mxt.runtime.world.AuraService;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
@@ -18,6 +19,8 @@ import net.minecraft.world.entity.LivingEntity;
 import net.neoforged.neoforge.common.NeoForge;
 
 import java.util.List;
+import com.iafenvoy.mxt.runtime.failure.Failure;
+import com.iafenvoy.mxt.runtime.failure.Failures;
 
 /**
  * Consumer for a persisted tribulation timeline: a run is installed by copying the definition's timeline into the
@@ -44,20 +47,20 @@ public final class TribulationService {
 
     public static StartResult start(LivingEntity entity, TribulationAttachment data, Holder<Tribulation> tribulation, long gameTime, FormulaContext context) {
         Tribulation definition = tribulation.value();
-        if (data.tribulation().isPresent()) return StartResult.rejected(Failure.ALREADY_ACTIVE);
+        if (data.tribulation().isPresent()) return StartResult.rejected(Failures.ALREADY_ACTIVE);
         List<TimelineEntry> timeline = definition.timeline();
-        if (timeline.isEmpty()) return StartResult.rejected(Failure.EMPTY_TIMELINE);
-        if (!definition.condition().test(entity, context)) return StartResult.rejected(Failure.CONDITIONS);
+        if (timeline.isEmpty()) return StartResult.rejected(TribulationFailure.EMPTY_TIMELINE);
+        if (!definition.condition().test(entity, context)) return StartResult.rejected(Failures.CONDITIONS);
         // Every entry is asked whether it can run before the run begins: this is the only moment a content error
         // can be reported as a refusal instead of a failure halfway through a committed timeline.
         FormulaContext runContext = tribulationContext(entity, context);
         TimelineContext probe = new TimelineContext(entity, runContext, gameTime,
                 definition.difficultyScale().evaluate(runContext), timeline.size(), new TimelineState(), new TimelineJump());
         for (TimelineEntry entry : timeline) {
-            if (!entry.validate(probe)) return StartResult.rejected(Failure.INVALID_ENTRY);
+            if (!entry.validate(probe)) return StartResult.rejected(TribulationFailure.INVALID_ENTRY);
         }
         if (NeoForge.EVENT_BUS.post(new StartPre(data, tribulation)).isCanceled())
-            return StartResult.rejected(Failure.CANCELLED);
+            return StartResult.rejected(Failures.CANCELLED);
         // The wind-up is resolved here, through the same rule every wait uses, and stored with the run: the
         // countdown a player watches is the number of ticks that will really pass, and a restart resumes it.
         long windup = Math.max(0L, probe.ticks(definition.windup()));
@@ -128,14 +131,12 @@ public final class TribulationService {
             if (outcome == Outcome.FAILED) {
                 data.clear();
                 definition.failAction().execute(entity, runContext);
-                return TickResult.failed(Failure.INVALID_ENTRY);
+                return TickResult.failed(TribulationFailure.INVALID_ENTRY);
             }
             NeoForge.EVENT_BUS.post(new EntryPost(data, tribulation, data.consumed(), entry));
             data.advance(jump.target());
         }
     }
-
-    public enum Failure {ALREADY_ACTIVE, EMPTY_TIMELINE, CONDITIONS, INVALID_ENTRY, CANCELLED}
 
     public record StartResult(boolean started, Failure failure) {
         static StartResult accepted() {

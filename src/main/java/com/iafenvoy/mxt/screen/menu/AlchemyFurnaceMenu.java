@@ -41,6 +41,7 @@ import org.jspecify.annotations.NonNull;
 
 import java.util.Locale;
 import java.util.Map;
+import com.iafenvoy.mxt.runtime.failure.Failure;
 
 /**
  * One menu type, four views. The slot order is the page's container order - the machine container, as wide as the
@@ -367,8 +368,8 @@ public final class AlchemyFurnaceMenu extends ApricityContainerMenu {
         return Component.translatable("screen.mxt.alchemy." + suffix, arguments);
     }
 
-    private static Component failure(AlchemyFailure failure) {
-        return text("failure." + failure.name().toLowerCase(Locale.ROOT));
+    private static Component failure(Failure failure) {
+        return failure.message();
     }
 
     /**

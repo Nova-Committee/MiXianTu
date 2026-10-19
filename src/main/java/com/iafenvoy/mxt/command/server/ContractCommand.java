@@ -10,6 +10,8 @@ import com.iafenvoy.mxt.data.progression.Progression;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.creature.*;
+import com.iafenvoy.mxt.runtime.failure.ContractFailure;
+import com.iafenvoy.mxt.runtime.failure.ProgressionFailure;
 import com.iafenvoy.mxt.runtime.progression.ProgressionAdminService;
 import com.iafenvoy.mxt.runtime.progression.ProgressionOwners;
 import com.iafenvoy.mxt.runtime.progression.ProgressionService;
@@ -35,7 +37,6 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 
 import java.util.List;
-import java.util.Locale;
 
 import static net.minecraft.commands.Commands.argument;
 import static net.minecraft.commands.Commands.literal;
@@ -110,12 +111,12 @@ public final class ContractCommand {
         CommandSourceStack source = ctx.getSource();
         Entity entity = EntityArgument.getEntity(ctx, "target");
         if (!(entity instanceof Mob mob)) {
-            source.sendFailure(ContractFeedback.of(ContractService.Failure.NOT_CONTRACTABLE));
+            source.sendFailure(ContractFeedback.of(ContractFailure.NOT_CONTRACTABLE));
             return 0;
         }
         ContractAttachment contract = mob.getData(MxtAttachments.CONTRACT);
         if (!contract.bound()) {
-            source.sendFailure(ContractFeedback.of(ContractService.Failure.NOT_BOUND));
+            source.sendFailure(ContractFeedback.of(ContractFailure.NOT_BOUND));
             return 0;
         }
         Holder<ContractType> type = contract.contractType().orElseThrow();
@@ -156,7 +157,7 @@ public final class ContractCommand {
         Reference<ContractType> type = ResourceArgument.getResource(ctx, "contract_type", MxtResourceKeys.CONTRACT_TYPE);
         Entity target = EntityArgument.getEntity(ctx, "target");
         if (!(target instanceof Mob mob)) {
-            source.sendFailure(ContractFeedback.of(ContractService.Failure.NOT_CONTRACTABLE));
+            source.sendFailure(ContractFeedback.of(ContractFailure.NOT_CONTRACTABLE));
             return 0;
         }
         ContractService.Result result = ContractService.bind(type, owner, mob, force);
@@ -173,7 +174,7 @@ public final class ContractCommand {
         CommandSourceStack source = ctx.getSource();
         Entity target = EntityArgument.getEntity(ctx, "target");
         if (!(target instanceof Mob mob)) {
-            source.sendFailure(ContractFeedback.of(ContractService.Failure.NOT_BOUND));
+            source.sendFailure(ContractFeedback.of(ContractFailure.NOT_BOUND));
             return 0;
         }
         ContractService.Result result = ContractService.release(mob, source.getEntity() == null
@@ -190,7 +191,7 @@ public final class ContractCommand {
         CommandSourceStack source = ctx.getSource();
         Entity target = EntityArgument.getEntity(ctx, "target");
         if (!(target instanceof Mob mob)) {
-            source.sendFailure(ContractFeedback.of(ContractService.Failure.NOT_BOUND));
+            source.sendFailure(ContractFeedback.of(ContractFailure.NOT_BOUND));
             return 0;
         }
         ContractService.Result result = ContractService.requestRecall(mob, source.getEntity() == null
@@ -210,7 +211,7 @@ public final class ContractCommand {
         Entity target = EntityArgument.getEntity(ctx, "target");
         ContractBehavior behavior = ContractBehaviors.byId(IdentifierArgument.getId(ctx, "behavior")).orElse(null);
         if (!(target instanceof Mob mob) || behavior == null) {
-            source.sendFailure(ContractFeedback.of(ContractService.Failure.UNSUPPORTED_BEHAVIOR));
+            source.sendFailure(ContractFeedback.of(ContractFailure.UNSUPPORTED_BEHAVIOR));
             return 0;
         }
         ContractService.Result result = ContractBehaviorService.request(mob, source.getEntity() == null
@@ -231,7 +232,7 @@ public final class ContractCommand {
         Entity target = EntityArgument.getEntity(ctx, "target");
         Reference<Progression> level = ResourceArgument.getResource(ctx, "level", MxtResourceKeys.PROGRESSION);
         if (!(target instanceof LivingEntity living)) {
-            source.sendFailure(Component.translatable("command.mxt.contract.failure.unknown_owner"));
+            source.sendFailure(ProgressionFailure.UNKNOWN_OWNER.message());
             return 0;
         }
         ProgressionAdminService.Result result = living.getExistingData(MxtAttachments.CREATURE_SPIRIT)
@@ -239,10 +240,9 @@ public final class ContractCommand {
                 .map(profile -> ProgressionAdminService.setLevel(living,
                         new ProgressionOwners.Owner<>(profile, living.getData(MxtAttachments.CREATURE_SPIRIT).profileLevels()),
                         level, force))
-                .orElseGet(() -> ProgressionAdminService.Result.rejected(ProgressionAdminService.Failure.UNKNOWN_OWNER));
+                .orElseGet(() -> ProgressionAdminService.Result.rejected(ProgressionFailure.UNKNOWN_OWNER));
         if (!result.changed()) {
-            source.sendFailure(Component.translatable("command.mxt.contract.failure."
-                    + result.failure().name().toLowerCase(Locale.ROOT)));
+            source.sendFailure(result.failure().message());
             return 0;
         }
         source.sendSuccess(() -> Component.translatable("command.mxt.contract.level.done", living.getDisplayName(),

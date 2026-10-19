@@ -15,7 +15,6 @@ import com.iafenvoy.mxt.runtime.hold.HoldLookup;
 import com.iafenvoy.mxt.runtime.hold.HoldService;
 import com.iafenvoy.mxt.runtime.item.ItemBindingService;
 import com.iafenvoy.mxt.runtime.item.QualityService;
-import com.iafenvoy.mxt.runtime.item.QualityService.Failure;
 import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.logging.LogUtils;
@@ -37,11 +36,11 @@ import net.neoforged.neoforge.event.entity.living.LivingEntityUseItemEvent.Tick;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent.RightClickItem;
 import org.slf4j.Logger;
 
-import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import com.iafenvoy.mxt.runtime.failure.Failure;
 
 /**
  * Server-side use path for books, jade slips and other technique items: a matching binding claims the
@@ -272,7 +271,7 @@ public final class TechniqueItemService {
         if (!(entity instanceof ServerPlayer player) || result.failure() == null) return;
         player.sendSystemMessage(Component.translatable("actionbar.mxt.technique.failed",
                         DefinitionText.nameOrId(technique),
-                        Component.translatable("actionbar.mxt.technique.failure." + result.failure().name().toLowerCase(Locale.ROOT)))
+                        result.failure().message())
                 .withStyle(ChatFormatting.RED), true);
     }
 }

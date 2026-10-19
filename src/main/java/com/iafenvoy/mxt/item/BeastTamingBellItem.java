@@ -6,6 +6,7 @@ import com.iafenvoy.mxt.runtime.creature.ContractBells;
 import com.iafenvoy.mxt.runtime.creature.ContractFeedback;
 import com.iafenvoy.mxt.runtime.creature.ContractService;
 import com.iafenvoy.mxt.runtime.creature.Contracts;
+import com.iafenvoy.mxt.runtime.failure.ContractFailure;
 import com.iafenvoy.mxt.runtime.wheel.WheelSourceTypes;
 import com.iafenvoy.mxt.screen.wheel.WheelMenuController;
 import net.minecraft.network.chat.Component;
@@ -39,19 +40,19 @@ public final class BeastTamingBellItem extends Item {
     public @NotNull InteractionResult interactLivingEntity(@NotNull ItemStack stack, @NotNull Player player, @NotNull LivingEntity target, @NotNull InteractionHand hand) {
         if (player.level().isClientSide()) return InteractionResult.SUCCESS;
         if (!(player instanceof ServerPlayer owner) || !(target instanceof Mob beast)) {
-            Component message = ContractFeedback.of(ContractService.Failure.NOT_CONTRACTABLE);
+            Component message = ContractFeedback.of(ContractFailure.NOT_CONTRACTABLE);
             if (player instanceof ServerPlayer serverPlayer) serverPlayer.sendSystemMessage(message, true);
             return InteractionResult.FAIL;
         }
         ContractAttachment contract = beast.getData(MxtAttachments.CONTRACT);
         if (!contract.bound() || Contracts.ownerOf(beast).filter(owner.getUUID()::equals).isEmpty()) {
-            Component message = ContractFeedback.of(ContractService.Failure.NOT_BOUND);
+            Component message = ContractFeedback.of(ContractFailure.NOT_BOUND);
             if (player instanceof ServerPlayer serverPlayer) serverPlayer.sendSystemMessage(message, true);
             return InteractionResult.FAIL;
         }
         // A beast the framework cannot ask for anything is not a beast to point a bell at, even bound.
         if (Contracts.operations(beast).isEmpty()) {
-            Component message = ContractFeedback.of(ContractService.Failure.NOT_CONTRACTABLE);
+            Component message = ContractFeedback.of(ContractFailure.NOT_CONTRACTABLE);
             if (player instanceof ServerPlayer serverPlayer) serverPlayer.sendSystemMessage(message, true);
             return InteractionResult.FAIL;
         }

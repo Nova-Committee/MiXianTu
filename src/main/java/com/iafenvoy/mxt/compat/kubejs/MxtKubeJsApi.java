@@ -31,11 +31,10 @@ import com.iafenvoy.mxt.runtime.ability.AbilityService;
 import com.iafenvoy.mxt.runtime.ability.AbilityService.UseResult;
 import com.iafenvoy.mxt.runtime.cultivation.*;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService.BreakthroughResult;
-import com.iafenvoy.mxt.runtime.cultivation.CultivationService.Failure;
 import com.iafenvoy.mxt.runtime.curse.CurseService;
-import com.iafenvoy.mxt.runtime.curse.CurseService.ApplyFailure;
 import com.iafenvoy.mxt.runtime.curse.CurseService.ApplyResult;
 import com.iafenvoy.mxt.runtime.element.ElementReactionService;
+import com.iafenvoy.mxt.runtime.failure.*;
 import com.iafenvoy.mxt.runtime.item.QualityRequirements;
 import com.iafenvoy.mxt.runtime.item.QualityService;
 import com.iafenvoy.mxt.runtime.item.QualityUpgradeService;
@@ -77,11 +76,11 @@ public final class MxtKubeJsApi {
 
     public static UseResult useAbility(@NotNull Entity actor, Identifier id, FormulaContext context) {
         if (actor.level().isClientSide())
-            return new UseResult(false, false, AbilityService.Failure.SERVER_ONLY, null, Map.of());
+            return new UseResult(false, false, Failures.SERVER_ONLY, null, Map.of());
         Provider access = actor.level().registryAccess();
         Holder<Ability> ability = MxtDatapackRegistries.holder(access, MxtResourceKeys.ABILITY, id).orElse(null);
         if (ability == null)
-            return new UseResult(false, false, AbilityService.Failure.NOT_GRANTED, null, Map.of());
+            return new UseResult(false, false, AbilityFailure.NOT_GRANTED, null, Map.of());
         return AbilityService.use(ability, actor, actor.getData(MxtAttachments.ABILITY_HOLDER),
                 actor.getData(MxtAttachments.RESOURCE_HOLDER), actor.level().getGameTime(), context);
     }
@@ -94,7 +93,7 @@ public final class MxtKubeJsApi {
         Provider access = holder.level().registryAccess();
         Holder<Ability> ability = MxtDatapackRegistries.holder(access, MxtResourceKeys.ABILITY, id).orElse(null);
         if (ability == null || holder.level().isClientSide())
-            return Togglable.Result.refused(Togglable.Failure.UNAVAILABLE);
+            return Togglable.Result.refused(TogglableFailure.UNAVAILABLE);
         return AbilityActivationService.activate(holder, ability, carrier);
     }
 
@@ -168,9 +167,9 @@ public final class MxtKubeJsApi {
 
     public static ApplyResult applyCurse(@NotNull Entity target, Identifier id, int stacks, Identifier source, FormulaContext context) {
         if (target.level().isClientSide())
-            return new ApplyResult(null, false, ApplyFailure.SERVER_ONLY);
+            return new ApplyResult(null, false, Failures.SERVER_ONLY);
         Holder<Curse> curse = MxtDatapackRegistries.holder(target.level().registryAccess(), MxtResourceKeys.CURSE, id).orElse(null);
-        if (curse == null) return new ApplyResult(null, false, ApplyFailure.CONDITION);
+        if (curse == null) return new ApplyResult(null, false, CurseFailure.CONDITION);
         return CurseService.apply(target, curse, stacks, target.level().getGameTime(), context, source);
     }
 
@@ -202,12 +201,12 @@ public final class MxtKubeJsApi {
      */
     public static ApplyResult applyCurseFor(@NotNull Entity target, Identifier id, int stacks, Identifier source,
                                             long durationTicks, FormulaContext context) {
-        if (target.level().isClientSide()) return new ApplyResult(null, false, ApplyFailure.SERVER_ONLY);
+        if (target.level().isClientSide()) return new ApplyResult(null, false, Failures.SERVER_ONLY);
         if (durationTicks < 0L) throw new IllegalArgumentException("Curse duration must not be negative");
         return MxtDatapackRegistries.holder(target.level().registryAccess(), MxtResourceKeys.CURSE, id)
                 .map(curse -> CurseService.applyWithDuration(target, curse, stacks, target.level().getGameTime(),
                         context, source, OptionalLong.of(durationTicks)))
-                .orElseGet(() -> new ApplyResult(null, false, ApplyFailure.UNKNOWN));
+                .orElseGet(() -> new ApplyResult(null, false, CurseFailure.UNKNOWN));
     }
 
     /**
@@ -329,10 +328,10 @@ public final class MxtKubeJsApi {
      */
     public static CultivationIdentityService.Result grantSpiritRoot(@NotNull LivingEntity entity, Identifier id) {
         if (entity.level().isClientSide())
-            return new CultivationIdentityService.Result(false, CultivationIdentityService.Failure.SERVER_ONLY);
+            return new CultivationIdentityService.Result(false, Failures.SERVER_ONLY);
         Holder<SpiritRoot> root = MxtDatapackRegistries.holder(entity.level().registryAccess(), MxtResourceKeys.SPIRIT_ROOT, id).orElse(null);
         return root == null
-                ? new CultivationIdentityService.Result(false, CultivationIdentityService.Failure.DISABLED)
+                ? new CultivationIdentityService.Result(false, Failures.DISABLED)
                 : CultivationIdentityService.grantSpiritRoot(entity, root);
     }
 
@@ -346,10 +345,10 @@ public final class MxtKubeJsApi {
      */
     public static CultivationToggleService.Result setSpiritRootEnabled(@NotNull LivingEntity entity, Identifier id, boolean enabled) {
         if (entity.level().isClientSide())
-            return new CultivationToggleService.Result(false, CultivationToggleService.Failure.SERVER_ONLY);
+            return new CultivationToggleService.Result(false, Failures.SERVER_ONLY);
         Holder<SpiritRoot> root = foundSpiritRoot(entity, id);
         return root == null
-                ? new CultivationToggleService.Result(false, CultivationToggleService.Failure.NOT_HELD)
+                ? new CultivationToggleService.Result(false, CultivationToggleFailure.NOT_HELD)
                 : CultivationToggleService.setSpiritRootEnabled(entity, root, enabled);
     }
 
@@ -384,10 +383,10 @@ public final class MxtKubeJsApi {
      */
     public static CultivationIdentityService.Result grantPhysique(@NotNull LivingEntity entity, Identifier id) {
         if (entity.level().isClientSide())
-            return new CultivationIdentityService.Result(false, CultivationIdentityService.Failure.SERVER_ONLY);
+            return new CultivationIdentityService.Result(false, Failures.SERVER_ONLY);
         Holder<Physique> physique = MxtDatapackRegistries.holder(entity.level().registryAccess(), MxtResourceKeys.PHYSIQUE, id).orElse(null);
         return physique == null
-                ? new CultivationIdentityService.Result(false, CultivationIdentityService.Failure.DISABLED)
+                ? new CultivationIdentityService.Result(false, Failures.DISABLED)
                 : CultivationIdentityService.grantPhysique(entity, physique, FormulaContext.of(entity));
     }
 
@@ -398,10 +397,10 @@ public final class MxtKubeJsApi {
 
     public static CultivationToggleService.Result setPhysiqueEnabled(@NotNull LivingEntity entity, Identifier id, boolean enabled) {
         if (entity.level().isClientSide())
-            return new CultivationToggleService.Result(false, CultivationToggleService.Failure.SERVER_ONLY);
+            return new CultivationToggleService.Result(false, Failures.SERVER_ONLY);
         Holder<Physique> physique = foundPhysique(entity, id);
         return physique == null
-                ? new CultivationToggleService.Result(false, CultivationToggleService.Failure.NOT_HELD)
+                ? new CultivationToggleService.Result(false, CultivationToggleFailure.NOT_HELD)
                 : CultivationToggleService.setPhysiqueEnabled(entity, physique, enabled);
     }
 
@@ -471,10 +470,10 @@ public final class MxtKubeJsApi {
     public static ProgressionAdminService.Result setProgressionLevel(@NotNull LivingEntity entity, Identifier owner,
                                                                      Identifier level, boolean force) {
         if (entity.level().isClientSide())
-            return ProgressionAdminService.Result.rejected(ProgressionAdminService.Failure.SERVER_ONLY);
+            return ProgressionAdminService.Result.rejected(Failures.SERVER_ONLY);
         Holder<Progression> resolved = MxtDatapackRegistries.holder(entity.level().registryAccess(), MxtResourceKeys.PROGRESSION, level).orElse(null);
         return resolved == null
-                ? ProgressionAdminService.Result.rejected(ProgressionAdminService.Failure.UNKNOWN_LEVEL)
+                ? ProgressionAdminService.Result.rejected(ProgressionFailure.UNKNOWN_LEVEL)
                 : ProgressionAdminService.setLevel(entity, owner, resolved, force);
     }
 
@@ -484,10 +483,10 @@ public final class MxtKubeJsApi {
      */
     public static TechniqueService.Result learnTechnique(@NotNull LivingEntity entity, Identifier id) {
         if (entity.level().isClientSide())
-            return new TechniqueService.Result(false, TechniqueService.Failure.SERVER_ONLY);
+            return new TechniqueService.Result(false, Failures.SERVER_ONLY);
         Holder<Technique> technique = MxtDatapackRegistries.holder(entity.level().registryAccess(), MxtResourceKeys.TECHNIQUE, id).orElse(null);
         return technique == null
-                ? new TechniqueService.Result(false, TechniqueService.Failure.DISABLED)
+                ? new TechniqueService.Result(false, Failures.DISABLED)
                 : TechniqueService.learn(entity, entity.getData(MxtAttachments.TECHNIQUE), technique,
                 FormulaContext.of(entity));
     }
@@ -499,7 +498,7 @@ public final class MxtKubeJsApi {
      */
     public static TechniqueService.Result forgetTechnique(@NotNull LivingEntity entity, Identifier id) {
         if (entity.level().isClientSide())
-            return new TechniqueService.Result(false, TechniqueService.Failure.SERVER_ONLY);
+            return new TechniqueService.Result(false, Failures.SERVER_ONLY);
         // A reference the current pack no longer provides has no holder to name, so the record goes by id alone.
         Holder<Technique> technique = MxtDatapackRegistries
                 .holder(entity.level().registryAccess(), MxtResourceKeys.TECHNIQUE, id).orElse(null);
@@ -524,9 +523,9 @@ public final class MxtKubeJsApi {
 
     public static BreakthroughResult tryBreakthrough(@NotNull LivingEntity entity, @NotNull Identifier auraId, FormulaContext context) {
         if (entity.level().isClientSide())
-            return new BreakthroughResult(false, Failure.SERVER_ONLY, null, Map.of());
+            return new BreakthroughResult(false, Failures.SERVER_ONLY, null, Map.of());
         Holder<Aura> aura = MxtDatapackRegistries.holder(entity.level().registryAccess(), MxtResourceKeys.AURA, auraId).orElse(null);
-        if (aura == null) return new BreakthroughResult(false, Failure.DISABLED, null, Map.of());
+        if (aura == null) return new BreakthroughResult(false, Failures.DISABLED, null, Map.of());
         return CultivationService.attempt(entity, entity.getData(MxtAttachments.CULTIVATION),
                 entity.getData(MxtAttachments.RESOURCE_HOLDER), aura, context, () -> true);
     }

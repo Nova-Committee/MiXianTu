@@ -21,6 +21,8 @@ import org.jetbrains.annotations.Nullable;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
+import com.iafenvoy.mxt.runtime.failure.Failure;
+import com.iafenvoy.mxt.runtime.failure.Failures;
 
 /**
  * Activates formations and charges their maintenance only through common resource transactions.
@@ -35,13 +37,13 @@ public final class FormationService {
 
     public static ActivateResult activate(Identifier id, Formation definition, ResourceHolderAttachment resources, FormulaContext context, UUID owner) {
         double radius = MiscUtil.positive(definition.radius().evaluate(context));
-        if (radius <= 0.0D) return ActivateResult.rejected(Failure.INVALID_FORMULA, null);
+        if (radius <= 0.0D) return ActivateResult.rejected(Failures.INVALID_FORMULA, null);
         // The activating player's own account is named directly: activation is driven from a controller block, so
         // there is no entity here to take a channel from, only an account to charge.
         CostPayment.Result payment = CostPayment.pay(definition.activationCosts(),
                 CostContext.account(resources, null, context, CostOrigin.FORMATION_ACTIVATION));
         if (!payment.paid())
-            return ActivateResult.rejected(Failure.INSUFFICIENT_RESOURCE, payment.failedResource());
+            return ActivateResult.rejected(Failures.INSUFFICIENT_RESOURCE, payment.failedResource());
         return ActivateResult.activated(owner == null ? new FormationInstance(id, radius) : new FormationInstance(id, radius, owner));
     }
 
@@ -162,8 +164,6 @@ public final class FormationService {
             }
         }
     }
-
-    public enum Failure {DISABLED, INVALID_FORMULA, INSUFFICIENT_RESOURCE}
 
     public record ActivateResult(FormationInstance instance, Failure failure, Identifier failedResource) {
         static ActivateResult activated(FormationInstance instance) {

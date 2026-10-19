@@ -15,7 +15,6 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.Locale;
 
 import static net.minecraft.commands.Commands.argument;
 import static net.minecraft.commands.Commands.literal;
@@ -82,8 +81,7 @@ public final class LifespanCommand {
             LifeSpanService.Result result = LifeSpanService.reincarnate(living);
             if (!result.changed()) {
                 source.sendFailure(Component.translatable("command.mxt.lifespan.reincarnate_failed",
-                        target.getDisplayName(), Component.translatable("command.mxt.lifespan.failure."
-                                + result.failure().name().toLowerCase(Locale.ROOT))));
+                        target.getDisplayName(), result.failure().message()));
                 continue;
             }
             done++;
@@ -105,8 +103,7 @@ public final class LifespanCommand {
             LifeSpanService.Result result = rewrite ? LifeSpanService.set(living, ticks) : LifeSpanService.add(living, ticks);
             if (!result.changed()) {
                 source.sendFailure(Component.translatable("command.mxt.lifespan.failed", target.getDisplayName(),
-                        Component.translatable("command.mxt.lifespan.failure."
-                                + result.failure().name().toLowerCase(Locale.ROOT))));
+                        result.failure().message()));
                 continue;
             }
             changed++;

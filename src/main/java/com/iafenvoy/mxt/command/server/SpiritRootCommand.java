@@ -34,6 +34,7 @@ import java.util.List;
 
 import static net.minecraft.commands.Commands.argument;
 import static net.minecraft.commands.Commands.literal;
+import com.iafenvoy.mxt.runtime.failure.Failure;
 
 /**
  * The {@code /spirit_root} command; also reachable as {@code /mxt spirit_root}. The administrative half of the
@@ -176,7 +177,7 @@ public final class SpiritRootCommand {
 
     // Printed as its own name rather than as a sentence: the values are a fixed vocabulary shared with the
     // services, and a pack author reading the log wants the identifier.
-    private static Component reason(@Nullable Enum<?> failure) {
+    private static Component reason(@Nullable Failure failure) {
         return Component.literal(failure == null ? "NO_CHANGE" : failure.name());
     }
 }

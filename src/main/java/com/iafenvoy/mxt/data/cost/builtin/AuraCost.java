@@ -4,13 +4,13 @@ import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.cost.Cost;
 import com.iafenvoy.mxt.data.cost.CostPayment;
 import com.iafenvoy.mxt.data.cost.context.CostContext;
-import com.iafenvoy.mxt.data.cost.context.CostFailure;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
 
 import java.util.Optional;
+import com.iafenvoy.mxt.runtime.failure.Failure;
 
 /**
  * Takes aura by identity rather than by the value it is counted in: on a payer it becomes that aura's resource,
@@ -25,12 +25,12 @@ public record AuraCost(Holder<Aura> aura, NumberProvider amount) implements Cost
     ).apply(i, AuraCost::new));
 
     @Override
-    public Optional<CostFailure> test(CostContext context) {
+    public Optional<Failure> test(CostContext context) {
         return CostPayment.test(this, context);
     }
 
     @Override
-    public Optional<CostFailure> commit(CostContext context) {
+    public Optional<Failure> commit(CostContext context) {
         return CostPayment.commit(this, context);
     }
 
