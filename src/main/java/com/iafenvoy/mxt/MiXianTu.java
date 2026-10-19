@@ -5,6 +5,7 @@ import com.iafenvoy.jupiter.ServerConfigManager.PermissionChecker;
 import com.iafenvoy.mxt.compat.CuriosIntegration;
 import com.iafenvoy.mxt.config.MxtServerConfig;
 import com.iafenvoy.mxt.registry.*;
+import com.iafenvoy.mxt.registry.cache.RegistryCaches;
 import com.mojang.logging.LogUtils;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.common.Mod;
@@ -16,6 +17,10 @@ public final class MiXianTu {
     public static final Logger LOGGER = LogUtils.getLogger();
 
     public MiXianTu(IEventBus bus) {
+        // Before any world can load: the registry caches are only rebuilt if they were registered before the first
+        // TagsUpdatedEvent, and nothing else touches that class this early.
+        RegistryCaches.init();
+
         ConfigManager.getInstance().registerServerConfigHandler(MxtServerConfig.INSTANCE, PermissionChecker.IS_OPERATOR);
 
         CuriosIntegration.registerPredicates();

@@ -43,7 +43,7 @@ public record SpriteIcon(Optional<Identifier> sprite, Optional<Identifier> textu
             Codec.intRange(0, 8192).optionalFieldOf("height", 0).forGetter(SpriteIcon::height)
     ).apply(i, SpriteIcon::new)).validate(SpriteIcon::validate);
 
-    // Declared after CODEC: a bare id is the other side of an either with it, and a field initialiser that ran
+    // Declared after CODEC: a bare id is the other side of an either with it, and a field initializer that ran
     // before CODEC would capture null and leave the pair permanently undecodable.
     public static final Codec<SpriteIcon> SPRITE_CODEC = bare(true), TEXTURE_CODEC = bare(false);
 
@@ -55,8 +55,7 @@ public record SpriteIcon(Optional<Identifier> sprite, Optional<Identifier> textu
     private static Codec<SpriteIcon> bare(boolean spriteByDefault) {
         return Codec.either(Identifier.CODEC, CODEC).xmap(
                 value -> value.map(id -> of(id, spriteByDefault), Function.identity()),
-                icon -> icon.base(spriteByDefault)
-                        .<Either<Identifier, SpriteIcon>>map(Either::left).orElseGet(() -> Either.right(icon)));
+                icon -> icon.base(spriteByDefault).<Either<Identifier, SpriteIcon>>map(Either::left).orElseGet(() -> Either.right(icon)));
     }
 
     private static DataResult<SpriteIcon> validate(SpriteIcon icon) {

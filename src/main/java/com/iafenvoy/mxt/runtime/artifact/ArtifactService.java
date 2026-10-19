@@ -18,8 +18,6 @@ import com.iafenvoy.mxt.event.ArtifactRefineEvent.Pre;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.runtime.energy.ArtifactSpiritEnergy;
-import com.iafenvoy.mxt.runtime.energy.ISpiritEnergy;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.MiscUtil;
 import com.iafenvoy.mxt.util.PlayerNames;
@@ -292,6 +290,19 @@ public final class ArtifactService {
         return extracted;
     }
 
+    // The same arithmetic as addEnergy without the feed, for a caller that moves exactly what it says and nothing
+    // else: what a refund puts back is not a charge, and the cap stays the caller's because it already evaluated one.
+    public static double acceptEnergy(ItemStack stack, Holder<Aura> aura, double amount, double capacity) {
+        amount = MiscUtil.positive(amount);
+        capacity = MiscUtil.positive(capacity);
+        if (amount <= 0.0D || capacity <= 0.0D) return 0.0D;
+        double stored = stored(stack, aura);
+        double accepted = Math.min(amount, Math.max(0.0D, capacity - stored));
+        if (accepted <= 0.0D) return 0.0D;
+        setEnergy(stack, aura, stored + accepted);
+        return accepted;
+    }
+
     // Never lowered: an artifact keeps what it was fed after the aura it took in is spent again.
     private static void feed(ItemStack stack, double share) {
         share = MiscUtil.positive(share);
@@ -304,10 +315,6 @@ public final class ArtifactService {
 
     public static ArtifactStateComponent state(ItemStack stack) {
         return stack.getOrDefault(MxtDataComponents.ARTIFACT_STATE, ArtifactStateComponent.empty());
-    }
-
-    public static ISpiritEnergy energyStorage(ItemStack stack, Holder<Aura> aura, double capacity) {
-        return new ArtifactSpiritEnergy(stack, aura, capacity);
     }
 
     private static SpiritStorageComponent store(ItemStack stack) {

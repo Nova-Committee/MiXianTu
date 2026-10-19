@@ -32,14 +32,20 @@ public final class RegistryCaches {
     public static final ChainCache<Progression> PROGRESSION_CHAIN = new ChainCache<>(MxtResourceKeys.PROGRESSION).callback(RegistryCaches::validateTechniqueLevels);
     public static final ChainCache<ItemQuality> QUALITY_CHAIN = new ChainCache<>(MxtResourceKeys.ITEM_QUALITY).validate(ItemQuality::quality, Objects::equals);
     public static final HeatSourceCache HEAT_SOURCE = new HeatSourceCache();
-    public static final HolderRemapCache<Identifier, TriggerRule> TRIGGER_RULES_BY_SIGNAL = new HolderRemapCache<>(MxtResourceKeys.TRIGGER, rule -> List.of(rule.value().trigger().signalType()));
-    public static final HolderRemapCache<Block, BlockAura> BLOCK_AURA = new HolderRemapCache<>(MxtResourceKeys.BLOCK_AURA, (aura) -> RegistryCodecs.resolve(aura.value().blocks(), BuiltInRegistries.BLOCK).map(Holder::value).toList());
+    public static final ReverseMappingListCache<Identifier, TriggerRule> TRIGGER_RULES_BY_SIGNAL = new ReverseMappingListCache<>(MxtResourceKeys.TRIGGER, rule -> List.of(rule.value().trigger().signalType()));
+    public static final ReverseMappingListCache<Block, BlockAura> BLOCK_AURA = new ReverseMappingListCache<>(MxtResourceKeys.BLOCK_AURA, (aura) -> RegistryCodecs.resolve(aura.value().blocks(), BuiltInRegistries.BLOCK).map(Holder::value).toList());
     public static final ReverseMappingCache<Holder<Resource>, Aura> RESOURCE_AURA = new ReverseMappingCache<>(MxtResourceKeys.AURA, aura -> aura.value().resource());
     public static final FormulaNameCache<Resource> RESOURCE_NAMES = new FormulaNameCache<>(MxtResourceKeys.RESOURCE, "resource");
     public static final FormulaNameCache<Element> ELEMENT_NAMES = new FormulaNameCache<>(MxtResourceKeys.ELEMENT, "element");
     public static final FormulaNameCache<Attribute> ATTRIBUTE_NAMES = new FormulaNameCache<>(Registries.ATTRIBUTE, "attribute");
     public static final OrderCache<ElementReaction> ELEMENT_REACTION_ORDER = new OrderCache<>(MxtResourceKeys.ELEMENT_REACTION, Comparator.<Holder.Reference<ElementReaction>>comparingInt(h -> h.value().priority()).reversed().thenComparing(h -> h.key().identifier()));
     public static final DamageElementsCache DAMAGE_ELEMENTS = new DamageElementsCache();
+
+    // Constructs every cache above into RegistryCache's rebuild list. That event only rebuilds what is already
+    // registered there, and nothing else touches this class before a world loads, so a run without this call leaves
+    // all of them empty for the whole session.
+    public static void init() {
+    }
 
     // A technique annotates one chain: a holder starts at its entry level and may be configured for every level
     // after it. A partially annotated chain is reported, so nobody reaches a level nothing describes.

@@ -231,7 +231,7 @@ public final class FlightService {
                 if (left <= 0.0D) break;
                 double capacity = ArtifactService.capacity(access, stack, aura, 0.0D, context);
                 if (capacity <= 0.0D) continue;
-                double taken = ArtifactService.energyStorage(stack, aura, capacity).extract(left);
+                double taken = ArtifactService.consumeEnergy(stack, aura, left);
                 if (taken <= 0.0D) continue;
                 left -= taken;
                 burned.add(new Fuel(aura, taken));
@@ -249,7 +249,7 @@ public final class FlightService {
         Provider access = level.registryAccess();
         for (Fuel fuel : burned) {
             double capacity = ArtifactService.capacity(access, stack, fuel.aura(), 0.0D, context);
-            ArtifactService.energyStorage(stack, fuel.aura(), capacity).receive(fuel.amount());
+            ArtifactService.acceptEnergy(stack, fuel.aura(), fuel.amount(), capacity);
         }
     }
 

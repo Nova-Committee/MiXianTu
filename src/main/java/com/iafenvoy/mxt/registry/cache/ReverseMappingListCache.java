@@ -12,12 +12,12 @@ import java.util.List;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
-public class HolderRemapCache<K, T> extends RegistryCache<ListMultimap<K, Holder<T>>> {
+public class ReverseMappingListCache<K, T> extends RegistryCache<ListMultimap<K, Holder<T>>> {
     private final ResourceKey<Registry<T>> registry;
     private final Function<Holder<T>, List<K>> keyMapper;
     private final ListMultimap<K, Holder<T>> data = LinkedListMultimap.create();
 
-    public HolderRemapCache(ResourceKey<Registry<T>> registry, Function<Holder<T>, List<K>> keyMapper) {
+    public ReverseMappingListCache(ResourceKey<Registry<T>> registry, Function<Holder<T>, List<K>> keyMapper) {
         this.registry = registry;
         this.keyMapper = keyMapper;
     }
