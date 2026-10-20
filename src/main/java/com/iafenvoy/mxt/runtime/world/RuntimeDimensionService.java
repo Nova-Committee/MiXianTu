@@ -1,8 +1,8 @@
 package com.iafenvoy.mxt.runtime.world;
 
 import com.google.common.collect.ImmutableList;
-import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.mixin.MinecraftServerRuntimeAccessor;
+import com.mojang.logging.LogUtils;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
@@ -14,6 +14,7 @@ import net.minecraft.world.level.storage.ServerLevelData;
 import net.minecraft.world.level.storage.WorldData;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.level.LevelEvent;
+import org.slf4j.Logger;
 
 import java.io.IOException;
 import java.util.Map;
@@ -24,6 +25,8 @@ import java.util.Optional;
  * dimension registry, so callers can keep it as a fallback for secret realms.
  */
 public final class RuntimeDimensionService {
+    private static final Logger LOGGER = LogUtils.getLogger();
+
     private RuntimeDimensionService() {
     }
 
@@ -47,7 +50,7 @@ public final class RuntimeDimensionService {
                 server.markWorldsDirty();
                 return Optional.of(level);
             } catch (Exception exception) {
-                MiXianTu.LOGGER.error("Failed to load runtime dimension {}", key.identifier(), exception);
+                LOGGER.error("Failed to load runtime dimension {}", key.identifier(), exception);
                 return Optional.empty();
             }
         }
@@ -69,7 +72,7 @@ public final class RuntimeDimensionService {
             try {
                 level.close();
             } catch (IOException exception) {
-                MiXianTu.LOGGER.warn("Failed to close runtime dimension {}", key.identifier(), exception);
+                LOGGER.warn("Failed to close runtime dimension {}", key.identifier(), exception);
             }
             return true;
         }

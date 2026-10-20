@@ -4,8 +4,8 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.iafenvoy.mxt.compat.kubejs.MxtJsWarnings;
 import com.iafenvoy.mxt.compat.kubejs.callback.MxtJsCostCallbacks;
-import com.iafenvoy.mxt.compat.kubejs.callback.TriConsumer;
-import com.iafenvoy.mxt.compat.kubejs.callback.TriPredicate;
+import com.iafenvoy.mxt.util.function.TriConsumer;
+import com.iafenvoy.mxt.util.function.TriPredicate;
 import com.iafenvoy.mxt.compat.kubejs.codec.MxtKubeJsDataCodec;
 import com.iafenvoy.mxt.data.cost.Cost;
 import com.iafenvoy.mxt.data.cost.CostPayment;
@@ -34,7 +34,7 @@ public final class MxtKubeJsCostBindings {
         return payment.price(List.of(cost)).isEmpty() && payment.test().isEmpty();
     }
 
-    @Info("Checks and consumes one complete MXT cost definition. Returns false without consuming when it cannot be paid.")
+    @Info("Simulates one MXT cost, then attempts its deduction; a real failure only warns and still returns true.")
     public boolean consume(Player player, JsonElement definition) {
         if (player.level().isClientSide()) {
             MxtJsWarnings.warnOnce("cost.client", "MxtCosts.consume was called from a client script; nothing was consumed");

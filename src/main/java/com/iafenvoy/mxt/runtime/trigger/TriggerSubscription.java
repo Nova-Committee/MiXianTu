@@ -1,8 +1,10 @@
 package com.iafenvoy.mxt.runtime.trigger;
 
-import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.data.trigger.Trigger;
 import com.iafenvoy.mxt.data.trigger.TriggerSignal;
+import com.iafenvoy.mxt.util.profiling.LoggerDispatcher;
+import com.iafenvoy.mxt.util.profiling.LoggingLevel;
+import com.mojang.logging.LogUtils;
 
 import java.util.UUID;
 import java.util.function.Consumer;
@@ -13,6 +15,7 @@ import java.util.function.Predicate;
  * state.
  */
 public final class TriggerSubscription {
+    private static final LoggerDispatcher LOGGER = LoggerDispatcher.of(LogUtils.getLogger(), LoggingLevel.ERROR, LoggingLevel.ERROR);
     public enum State {DISABLED, ARMED, CONSUMED}
 
     private final UUID owner;
@@ -70,7 +73,7 @@ public final class TriggerSubscription {
             if (!this.trigger.matches(signal)) return false;
             return this.gate.test(signal);
         } catch (RuntimeException exception) {
-            MiXianTu.LOGGER.error("Trigger matcher/gate {} failed for {}", this.identity, signal.type(), exception);
+            LOGGER.log("Trigger matcher/gate '" + this.identity + "' failed for " + signal.type(), exception);
             return false;
         }
     }

@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.util.formula.number;
 
 import com.iafenvoy.mxt.util.formula.FormulaContext;
-import com.iafenvoy.mxt.util.formula.FormulaDiagnostics;
+import com.iafenvoy.mxt.util.formula.FormulaVariables;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -19,8 +19,8 @@ public record Binomial(NumberProvider trials, NumberProvider probability) implem
         double chance = this.probability.evaluate(context);
         if (rawTrials < 0.0D || rawTrials > MAX_TRIALS || Math.rint(rawTrials) != rawTrials
                 || !(chance >= 0.0D) || chance > 1.0D) {
-            FormulaDiagnostics.report("Number provider Binomial received the invalid parameters n=" + rawTrials
-                    + ", p=" + chance + "; using 0");
+            FormulaVariables.LOGGER.log("Number provider Binomial received the invalid parameters n=" + rawTrials
+                        + ", p=" + chance + "; using 0");
             return 0.0D;
         }
         int result = 0;

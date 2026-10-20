@@ -26,6 +26,7 @@ public final class MxtServerConfig extends AutoInitConfigContainer {
     public final Commands commands = new Commands();
     public final Alchemy alchemy = new Alchemy();
     public final Compat compat = new Compat();
+    public final Debug debug = new Debug();
 
     private MxtServerConfig() {
         super(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "server"), "config.mxt.server", "./config/mxt/mxt-server.json");
@@ -408,6 +409,21 @@ public final class MxtServerConfig extends AutoInitConfigContainer {
 
         private Alchemy() {
             super("alchemy", "config.mxt.server.alchemy");
+        }
+    }
+
+    /**
+     * The doors kept for whoever is reproducing something. They are always open in a development build; this switch
+     * is what opens them on a release server.
+     */
+    public static final class Debug extends AutoInitConfigCategoryBase {
+        public final BooleanEntry enabled = BooleanEntry.builder("config.mxt.server.debug.enabled", false)
+                .key("enabled")
+                .tooltip("config.mxt.server.debug.enabled.tooltip")
+                .build();
+
+        private Debug() {
+            super("debug", "config.mxt.server.debug");
         }
     }
 

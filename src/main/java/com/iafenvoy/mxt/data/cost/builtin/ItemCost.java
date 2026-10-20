@@ -115,7 +115,7 @@ public record ItemCost(List<Entry> entries, NumberProvider amount) implements It
             return new ItemTransaction(this.store, this.entries, amount);
         }
 
-        // An amount of items is whole: a scaled or merged count is rounded up once, here, and never written down.
+        // An amount of items is whole: a scaled count is rounded up once, here, and never written down.
         private static int count(double amount) {
             return ItemCost.count(amount);
         }

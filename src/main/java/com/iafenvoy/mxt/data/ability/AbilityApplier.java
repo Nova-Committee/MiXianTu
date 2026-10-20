@@ -1,7 +1,9 @@
 package com.iafenvoy.mxt.data.ability;
 
-import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
+import com.iafenvoy.mxt.util.profiling.LoggerDispatcher;
+import com.iafenvoy.mxt.util.profiling.LoggingLevel;
+import com.mojang.logging.LogUtils;
 import net.minecraft.core.Holder;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.Vec3;
@@ -15,6 +17,8 @@ import java.util.stream.Stream;
  * refused instead of paid for, and the payload itself pays nothing - the activation pays as the ability that owns it.
  */
 public interface AbilityApplier extends AbilityEffect {
+    LoggerDispatcher LOGGER = LoggerDispatcher.of(LogUtils.getLogger(), LoggingLevel.ERROR, LoggingLevel.ERROR);
+
     // The entities the payload would run on right now, already filtered by whatever the payload asks of a target.
     Stream<Entity> reach(Entity actor, FormulaContext context, @Nullable Vec3 origin);
 
@@ -26,7 +30,7 @@ public interface AbilityApplier extends AbilityEffect {
         try {
             this.reach(actor, context, origin).forEach(target -> AbilityEffect.runOn(this.payload().value().type(), actor, target, context, origin));
         } catch (RuntimeException exception) {
-            MiXianTu.LOGGER.error("Ability target selection failed", exception);
+            LOGGER.log("Ability target selection failed", exception);
         }
     }
 }

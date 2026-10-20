@@ -1,6 +1,5 @@
 package com.iafenvoy.mxt.runtime.ability;
 
-import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.attachment.AbilityAttachment;
 import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.data.ability.*;
@@ -28,6 +27,9 @@ import com.iafenvoy.mxt.runtime.resulting.failures.AbilityFailure;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.FormulaContexts;
+import com.iafenvoy.mxt.util.profiling.LoggerDispatcher;
+import com.iafenvoy.mxt.util.profiling.LoggingLevel;
+import com.mojang.logging.LogUtils;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
@@ -52,6 +54,8 @@ import java.util.OptionalDouble;
  * stored state are keyed by.
  */
 public final class AbilityService {
+    private static final LoggerDispatcher LOGGER = LoggerDispatcher.of(LogUtils.getLogger(), LoggingLevel.ERROR, LoggingLevel.ERROR);
+
     private AbilityService() {
     }
 
@@ -369,7 +373,7 @@ public final class AbilityService {
             return applier.reach(actor, context, origin).findAny().isPresent() ? null : Failures.NO_TARGET;
         } catch (RuntimeException exception) {
             // A selector or condition that cannot be evaluated is a broken definition, not an empty reach.
-            MiXianTu.LOGGER.error("Ability target selection failed", exception);
+            LOGGER.log("Ability target selection failed", exception);
             return Failures.INVALID_FORMULA;
         }
     }

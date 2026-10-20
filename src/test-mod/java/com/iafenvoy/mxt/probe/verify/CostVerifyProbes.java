@@ -64,13 +64,12 @@ public final class CostVerifyProbes {
         if (!close(account.get(probe), 97.0D))
             return "a 3-point cost left " + account.get(probe) + " instead of 97";
 
-        // Two entries that reach the same value by different routes add up: the aura is charged as the resource
-        // it is measured in, which is the only answer that does not depend on the order they were written in.
+        // VALUE aura and its resource name the same balance, but both entries still execute separately.
         account.set(qi, 10.0D, 0.0D, 100.0D, -1L, "probe");
-        CostPayment.PaymentResult merged = CostPayment.pay(decodeCosts(registries,
+        CostPayment.PaymentResult repeated = CostPayment.pay(decodeCosts(registries,
                         "[{\"id\": \"mxt_test:qi\", \"amount\": 1}, {\"type\": \"mxt:aura\", \"aura\": \"mxt_test:qi\", \"amount\": 3}]"),
                 costs);
-        if (!merged.isSuccess()) return "a resource entry plus the aura it names was refused: " + merged.failure();
+        if (!repeated.isSuccess()) return "a resource entry plus the aura it names was refused: " + repeated.failure();
         if (!close(account.get(qi), 6.0D))
             return "1 + 3 of the same value left " + account.get(qi) + " instead of 6";
 

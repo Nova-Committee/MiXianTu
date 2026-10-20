@@ -11,12 +11,8 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * The two helpers every costs array shares: the check for the fields that are aura costs by definition, and the plain
- * price of an array.
- * <p>
- * A repeated target is not a load error. A payment sums the entries that reach one store, charges it once and reports
- * the repeat, so the array still behaves sensibly; refusing the whole definition over it would only pre-empt the
- * answer that already exists at run time.
+ * Shared aura-only validation and price projection. Repeated targets are diagnosed at execution time;
+ * the payment keeps entries separate and ordered.
  */
 public final class Costs {
     private Costs() {

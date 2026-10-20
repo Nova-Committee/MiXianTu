@@ -14,6 +14,8 @@ import com.iafenvoy.mxt.runtime.wheel.WheelService;
 import com.iafenvoy.mxt.runtime.wheel.WheelSourceTypes;
 import com.iafenvoy.mxt.screen.menu.*;
 import com.iafenvoy.mxt.util.PlayerNames;
+import com.iafenvoy.mxt.util.profiling.LoggerDispatcher;
+import com.iafenvoy.mxt.util.profiling.LoggingLevel;
 import com.mojang.logging.LogUtils;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
@@ -31,6 +33,8 @@ import java.util.OptionalInt;
 
 public final class ServerNetworkHandler {
     public static final Logger LOGGER = LogUtils.getLogger();
+    // One line per action the client sends, so a held key would repeat it: the trace is development-only.
+    private static final LoggerDispatcher FORGING_TRACE = LoggerDispatcher.of(LogUtils.getLogger(), LoggingLevel.DEBUG, LoggingLevel.NONE);
 
     // The payload carries what was chosen and off which page, and nothing else: whether the player may use it is
     // decided here and by the pipeline behind it, never by the screen that sent this. A filled-in direction asks for
@@ -72,11 +76,11 @@ public final class ServerNetworkHandler {
         // that completes the piece ends it, so "the session is gone afterwards" is the success path.
         switch (payload.action()) {
             case SELECT ->
-                    LOGGER.info("forging SELECT definition={} selectable={} methods={} outcome={} active={}", definition, table.selectableBlueprintIds(), table.availableMethodIds(), ForgingWorkstationService.start(player, table, definition), table.forgingState().active());
+                    FORGING_TRACE.log("forging SELECT definition={} selectable={} methods={} outcome={} active={}", definition, table.selectableBlueprintIds(), table.availableMethodIds(), ForgingWorkstationService.start(player, table, definition), table.forgingState().active());
             case STRIKE ->
-                    LOGGER.info("forging STRIKE definition={} available={} outcome={} active={}", definition, table.availableMethodIds(), ForgingWorkstationService.strike(player, table, definition), table.forgingState().active());
-            case FINISH -> LOGGER.info("forging FINISH outcome={}", ForgingWorkstationService.finish(player, table));
-            case CANCEL -> LOGGER.info("forging CANCEL outcome={}", ForgingWorkstationService.cancel(player, table));
+                    FORGING_TRACE.log("forging STRIKE definition={} available={} outcome={} active={}", definition, table.availableMethodIds(), ForgingWorkstationService.strike(player, table, definition), table.forgingState().active());
+            case FINISH -> FORGING_TRACE.log("forging FINISH outcome={}", ForgingWorkstationService.finish(player, table));
+            case CANCEL -> FORGING_TRACE.log("forging CANCEL outcome={}", ForgingWorkstationService.cancel(player, table));
         }
     }
 

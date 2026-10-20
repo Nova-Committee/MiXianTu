@@ -5,6 +5,7 @@ import com.google.gson.JsonParser;
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.util.matcher.ItemMatcher;
 import com.iafenvoy.mxt.util.matcher.ItemMatcher.Entry;
+import com.mojang.logging.LogUtils;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.JsonOps;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -36,7 +37,7 @@ import java.util.concurrent.ConcurrentHashMap;
 @EventBusSubscriber(Dist.CLIENT)
 public enum AccessoryRenderManager implements ResourceManagerReloadListener {
     INSTANCE;
-    private static final Logger LOGGER = MiXianTu.LOGGER;
+    private static final Logger LOGGER = LogUtils.getLogger();
     private static volatile List<Rule> BACK = List.of();
     private static volatile List<Rule> BELT = List.of();
     private static final Map<Identifier, AccessoryRenderDefinition> BACK_CACHE = new ConcurrentHashMap<>();

@@ -3,7 +3,7 @@ package com.iafenvoy.mxt.compat.kubejs.binding;
 import com.google.gson.JsonObject;
 import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.compat.kubejs.callback.MxtJsValueCallbacks;
-import com.iafenvoy.mxt.compat.kubejs.callback.QuadFunction;
+import com.iafenvoy.mxt.util.function.QuadFunction;
 import com.iafenvoy.mxt.compat.kubejs.codec.MxtKubeJsDataCodec;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.data.resource.ResourceValueProvider;

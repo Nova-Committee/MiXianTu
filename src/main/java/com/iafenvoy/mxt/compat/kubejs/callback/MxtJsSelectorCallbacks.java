@@ -1,8 +1,9 @@
 package com.iafenvoy.mxt.compat.kubejs.callback;
 
 import com.google.gson.JsonObject;
-import com.iafenvoy.mxt.MiXianTu;
+import com.iafenvoy.mxt.compat.kubejs.MxtJsWarnings;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
+import com.iafenvoy.mxt.util.function.TriFunction;
 import net.minecraft.world.entity.Entity;
 
 import java.util.List;
@@ -41,12 +42,12 @@ public final class MxtJsSelectorCallbacks {
     }
 
     private static List<Entity> unknown(String id) {
-        MiXianTu.LOGGER.warn("Unknown KubeJS target selector '{}'; no entity is selected", id);
+        MxtJsWarnings.WARNING.log("Unknown KubeJS target selector '{}'; no entity is selected", id);
         return List.of();
     }
 
     private static List<Entity> failed(String id, Exception exception) {
-        MiXianTu.LOGGER.error("KubeJS target selector '{}' failed; no entity is selected", id, exception);
+        MxtJsWarnings.FAILURE.log("KubeJS target selector '" + id + "' failed; no entity is selected", exception);
         return List.of();
     }
 }

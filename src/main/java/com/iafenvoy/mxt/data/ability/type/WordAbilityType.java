@@ -1,6 +1,5 @@
 package com.iafenvoy.mxt.data.ability.type;
 
-import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.attachment.CurseHolderAttachment;
 import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.ability.AbilityEffect;
@@ -14,6 +13,9 @@ import com.iafenvoy.mxt.runtime.curse.CurseService;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.iafenvoy.mxt.util.formula.number.Constant;
+import com.iafenvoy.mxt.util.profiling.LoggerDispatcher;
+import com.iafenvoy.mxt.util.profiling.LoggingLevel;
+import com.mojang.logging.LogUtils;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -33,6 +35,7 @@ import java.util.Locale;
 public record WordAbilityType(WordEffect effect, boolean requiresOperator,
                               NumberProvider amount,
                               NumberProvider cooldown) implements AbilityType, AbilityEffect, CooldownSource {
+    private static final LoggerDispatcher LOGGER = LoggerDispatcher.of(LogUtils.getLogger(), LoggingLevel.ERROR, LoggingLevel.ERROR);
     public static final MapCodec<WordAbilityType> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             WordEffect.CODEC.fieldOf("effect").forGetter(WordAbilityType::effect),
             Codec.BOOL.optionalFieldOf("requires_operator", true).forGetter(WordAbilityType::requiresOperator),
@@ -57,7 +60,7 @@ public record WordAbilityType(WordEffect effect, boolean requiresOperator,
                         CurseService.remove(actor, curse, Reason.EXPLICIT, -1L, context));
             }
         } catch (RuntimeException exception) {
-            MiXianTu.LOGGER.error("Ability word effect failed", exception);
+            LOGGER.log("Ability word effect failed", exception);
         }
     }
 

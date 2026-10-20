@@ -1,5 +1,6 @@
 package com.iafenvoy.mxt.runtime.economy;
 
+import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.screen.menu.PlayerTradeMenu;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
@@ -15,7 +16,6 @@ import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.fml.loading.FMLEnvironment;
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerLoggedOutEvent;
 import net.neoforged.neoforge.event.tick.LevelTickEvent.Post;
@@ -56,9 +56,9 @@ public final class PlayerTradeService {
     }
 
     // A self-trade exists so the screen can be driven without a second account; only this entry point can build
-    // one, and a production client never does.
+    // one, and only a development build (or a server with the debug switch on) does.
     private static boolean allowsSelfTrade() {
-        return !FMLEnvironment.isProduction();
+        return MiXianTu.isDevMode();
     }
 
     public static RequestResult request(ServerPlayer requester, ServerPlayer target) {

@@ -24,8 +24,8 @@ import java.util.function.Function;
  * on the bound fee, and a payment that re-prices or scales one creates a replacement rather than re-running the
  * formula. {@link Transaction#execute} is the only channel write there is.
  *
- * <p>Two entries reaching one store is not a load error: the payment sums them, charges once and warns, and a pack
- * keeps one entry per target.
+ * <p>Repeated targets are diagnosed but never merged: both passes keep entry order. Packs should use one entry per
+ * target; a real deduction failure only warns and does not cancel later fees or the business action.
  */
 public interface Cost {
     Codec<Cost> TYPED_CODEC = MxtRegistries.COST_TYPE.byNameCodec().dispatch("type", Cost::codec, Function.identity());
@@ -69,8 +69,8 @@ public interface Cost {
 
         /**
          * The check when {@code simulate} is set, the real write when it is not. A simulated call writes nothing and
-         * answers with no debit; a refused call answers with the reason and takes nothing of its own. The first real
-         * answer is terminal, so the same fee cannot be taken twice.
+         * answers with no debit. A real call reports any known debit even on failure; its first answer is terminal,
+         * so the same fee cannot be taken twice. The payment logs real failures and continues.
          */
         ResultWithData<List<Debit>> execute(boolean simulate);
 

@@ -1,6 +1,5 @@
 package com.iafenvoy.mxt.data.ability;
 
-import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.data.action.BiEntityAction;
 import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.condition.BiEntityCondition;
@@ -8,6 +7,9 @@ import com.iafenvoy.mxt.data.context.action.BiEntityActionContext;
 import com.iafenvoy.mxt.data.context.action.EntityActionContext;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.FormulaContexts;
+import com.iafenvoy.mxt.util.profiling.LoggerDispatcher;
+import com.iafenvoy.mxt.util.profiling.LoggingLevel;
+import com.mojang.logging.LogUtils;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.Vec3;
@@ -20,6 +22,9 @@ import org.jetbrains.annotations.Nullable;
  * the rest.
  */
 public interface ActionCarrier extends AbilityEffect {
+    // A pulse type runs this every pulse, so a failing action would otherwise repeat for as long as it lasts.
+    LoggerDispatcher LOGGER = LoggerDispatcher.of(LogUtils.getLogger(), LoggingLevel.ERROR, LoggingLevel.ERROR);
+
     EntityAction entityAction();
 
     TargetSelector targetSelector();
@@ -33,13 +38,13 @@ public interface ActionCarrier extends AbilityEffect {
         try {
             this.entityAction().execute(new EntityActionContext(actor, context, origin));
         } catch (RuntimeException exception) {
-            MiXianTu.LOGGER.error("Ability entity action failed", exception);
+            LOGGER.log("Ability entity action failed", exception);
         }
         try {
             this.targetSelector().select(actor, context, origin)
                     .forEach(target -> this.executeOn(actor, target, context, origin));
         } catch (RuntimeException exception) {
-            MiXianTu.LOGGER.error("Ability target selection failed", exception);
+            LOGGER.log("Ability target selection failed", exception);
         }
     }
 
@@ -59,7 +64,7 @@ public interface ActionCarrier extends AbilityEffect {
             if (this.targetCondition().test(actor, target, targetContext))
                 this.biEntityAction().execute(actor, target, new BiEntityActionContext(actor, target, targetContext, origin));
         } catch (RuntimeException exception) {
-            MiXianTu.LOGGER.error("Ability target action failed", exception);
+            LOGGER.log("Ability target action failed", exception);
         }
     }
 }

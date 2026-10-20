@@ -4,7 +4,7 @@ import com.google.gson.JsonObject;
 import com.iafenvoy.mxt.compat.kubejs.MxtKubeJsApi;
 import com.iafenvoy.mxt.compat.kubejs.callback.MxtJsTriggerCallbacks;
 import com.iafenvoy.mxt.compat.kubejs.callback.MxtJsTriggerMatchers;
-import com.iafenvoy.mxt.compat.kubejs.callback.TriPredicate;
+import com.iafenvoy.mxt.util.function.TriPredicate;
 import com.iafenvoy.mxt.data.trigger.TriggerSignal;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import dev.latvian.mods.kubejs.typings.Info;

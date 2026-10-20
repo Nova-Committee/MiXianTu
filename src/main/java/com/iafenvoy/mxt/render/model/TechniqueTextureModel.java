@@ -3,6 +3,9 @@ package com.iafenvoy.mxt.render.model;
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.data.cultivation.Technique;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
+import com.iafenvoy.mxt.util.profiling.LoggerDispatcher;
+import com.iafenvoy.mxt.util.profiling.LoggingLevel;
+import com.mojang.logging.LogUtils;
 import com.mojang.math.Transformation;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
@@ -32,6 +35,7 @@ import net.neoforged.neoforge.client.event.RegisterItemModelsEvent;
 import org.joml.Matrix4fc;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
+import org.slf4j.Logger;
 
 import java.util.*;
 
@@ -49,6 +53,9 @@ public final class TechniqueTextureModel implements ItemModel {
     // model itself declares is the last resort, and reaching it is simply leaving the slot alone.
     private static final String PAGE_DIRECTORY = "item/technique/";
     private static final String PAGE_FALLBACK = "item/technique_book_page";
+    private static final Logger LOGGER = LogUtils.getLogger();
+    // One line per technique the first time a stack of it is drawn, which is a whole packful of lines at once.
+    private static final LoggerDispatcher TRACE = LoggerDispatcher.of(LogUtils.getLogger(), LoggingLevel.DEBUG, LoggingLevel.NONE);
     private final ItemModel base;
     private final ModelBaker baker;
     private final ResolvedModel resolved;
@@ -71,7 +78,7 @@ public final class TechniqueTextureModel implements ItemModel {
         TextureSlots modelSlots = resolved.getTopTextureSlots();
         for (Optional<String> slot : List.of(pages.left(), pages.right()))
             if (slot.isPresent() && modelSlots.getMaterial(slot.get()) == null)
-                MiXianTu.LOGGER.error("Model {} declares no texture slot {}, so that technique page has nowhere to land", resolved.debugName(), slot.get());
+                LOGGER.error("Model {} declares no texture slot {}, so that technique page has nowhere to land", resolved.debugName(), slot.get());
     }
 
     @SubscribeEvent
@@ -105,9 +112,9 @@ public final class TechniqueTextureModel implements ItemModel {
         this.collect(sharedArt, this.pages.left(), pageArt);
         this.collect(sharedArt, this.pages.right(), pageArt);
         if (pageArt.isEmpty())
-            MiXianTu.LOGGER.debug("Technique {} has no page art, so its pages stay as the model draws them", technique);
+            TRACE.log("Technique {} has no page art, so its pages stay as the model draws them", technique);
         else
-            pageArt.forEach((slot, texture) -> MiXianTu.LOGGER.debug("Technique {} draws page slot {} from {}", technique, slot, texture));
+            pageArt.forEach((slot, texture) -> TRACE.log("Technique {} draws page slot {} from {}", technique, slot, texture));
         TextureSlots.Data.Builder overrides = new TextureSlots.Data.Builder();
         for (Map.Entry<String, Identifier> page : pageArt.entrySet())
             if (modelSlots.getMaterial(page.getKey()) != null)

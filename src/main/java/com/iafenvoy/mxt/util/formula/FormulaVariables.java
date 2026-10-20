@@ -2,6 +2,9 @@ package com.iafenvoy.mxt.util.formula;
 
 import com.iafenvoy.mxt.registry.MxtRegistries;
 import com.iafenvoy.mxt.util.formula.FormulaVariables.Binding.Candidate;
+import com.iafenvoy.mxt.util.profiling.LoggerDispatcher;
+import com.iafenvoy.mxt.util.profiling.LoggingLevel;
+import com.mojang.logging.LogUtils;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
@@ -14,6 +17,7 @@ import java.util.regex.Pattern;
  * cached once per name. An unknown name is a content bug: both environments keep evaluating with {@code 0}.
  */
 public final class FormulaVariables {
+    public static final LoggerDispatcher LOGGER = LoggerDispatcher.of(LogUtils.getLogger(), LoggingLevel.ERROR, LoggingLevel.WARN);
     private static final Pattern IDENTIFIER = Pattern.compile("[A-Za-z_][A-Za-z0-9_]*");
     private static final Set<String> FUNCTIONS = Set.of("abs", "acos", "asin", "atan", "cbrt", "ceil", "cos", "cosh", "exp", "floor", "log", "log10", "sin", "sinh", "sqrt", "tan", "tanh");
     private static final Set<String> CONSTANTS = Set.of("pi", "e");
@@ -47,7 +51,7 @@ public final class FormulaVariables {
     public static double resolve(String name, FormulaContext context) {
         Binding binding = bind(name);
         if (binding == null) {
-            FormulaDiagnostics.report("Unknown formula variable '" + name + "'");
+            LOGGER.log("Unknown formula variable '" + name + "'");
             return 0.0D;
         }
         return read(name, context, binding);
@@ -64,7 +68,7 @@ public final class FormulaVariables {
         if (binding == null) {
             binding = bind(name);
             if (binding == null) {
-                FormulaDiagnostics.report("Unknown formula variable '" + name + "'");
+                LOGGER.log("Unknown formula variable '" + name + "'");
                 return 0.0D;
             }
             cache.put(name, binding);
@@ -76,16 +80,16 @@ public final class FormulaVariables {
         try {
             double value = binding.value(context);
             if (Double.isNaN(value)) {
-                FormulaDiagnostics.report("Formula variable '" + name + "' produced no value in this context");
+                LOGGER.log("Formula variable '" + name + "' produced no value in this context");
                 return 0.0D;
             }
             if (!Double.isFinite(value)) {
-                FormulaDiagnostics.report("Formula variable '" + name + "' produced the non-finite value " + value);
+                LOGGER.log("Formula variable '" + name + "' produced the non-finite value " + value);
                 return 0.0D;
             }
             return value;
         } catch (RuntimeException exception) {
-            FormulaDiagnostics.report("Formula variable '" + name + "' failed", exception);
+            LOGGER.log("Formula variable '" + name + "' failed", exception);
             return 0.0D;
         }
     }
@@ -129,7 +133,7 @@ public final class FormulaVariables {
             for (String name : variable.names()) {
                 FormulaVariable previous = exact.putIfAbsent(name, variable);
                 if (previous != null && previous != variable)
-                    FormulaDiagnostics.report("Formula variable name '" + name + "' is provided by more than one variable");
+                    LOGGER.log("Formula variable name '" + name + "' is provided by more than one variable");
             }
             for (String prefix : variable.prefixes()) prefixes.add(new Lookup.Prefix(prefix, variable));
         }

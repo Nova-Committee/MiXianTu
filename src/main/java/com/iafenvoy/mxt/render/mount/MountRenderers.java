@@ -1,12 +1,13 @@
 package com.iafenvoy.mxt.render.mount;
 
-import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.api.MountRenderer;
 import com.iafenvoy.mxt.data.ability.render.MountRender;
 import com.iafenvoy.mxt.data.ability.render.builtin.GeckoLibMountRender;
 import com.iafenvoy.mxt.data.ability.render.builtin.ItemMountRender;
 import com.iafenvoy.mxt.registry.MxtRegistries;
+import com.mojang.logging.LogUtils;
 import com.mojang.serialization.MapCodec;
+import org.slf4j.Logger;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -21,6 +22,7 @@ import java.util.Set;
  * <p>Registered during client setup and only read from the game thread afterwards, so it needs no lock.
  */
 public final class MountRenderers {
+    private static final Logger LOGGER = LogUtils.getLogger();
     private static final Map<MapCodec<? extends MountRender>, MountRenderer<?>> RENDERERS = new HashMap<>();
     private static final Set<MapCodec<? extends MountRender>> WARNED = new HashSet<>();
 
@@ -49,9 +51,9 @@ public final class MountRenderers {
     private static void warnOnce(MountRender definition) {
         if (!WARNED.add(definition.codec())) return;
         if (definition instanceof GeckoLibMountRender)
-            MiXianTu.LOGGER.warn("A mount asks for a GeckoLib model but GeckoLib is not installed; drawing it as the item it carries instead");
+            LOGGER.warn("A mount asks for a GeckoLib model but GeckoLib is not installed; drawing it as the item it carries instead");
         else
-            MiXianTu.LOGGER.warn("No mount renderer is registered for {}; drawing the mount as the item it carries instead",
+            LOGGER.warn("No mount renderer is registered for {}; drawing the mount as the item it carries instead",
                     MxtRegistries.MOUNT_RENDER_TYPE.getKey(definition.codec()));
     }
 }

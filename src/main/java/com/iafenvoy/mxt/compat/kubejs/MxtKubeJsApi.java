@@ -547,7 +547,7 @@ public final class MxtKubeJsApi {
     }
 
     /**
-     * The same all-or-nothing resource transaction abilities and other server systems use.
+     * The shared two-pass cost payment; real deduction failures warn and do not cancel the payment.
      */
     public static ResultWithData<Map<Identifier, Double>> tryConsumeResources(Entity entity, List<Cost> costs, FormulaContext context) {
         if (!(entity instanceof LivingEntity payer) || entity.level().isClientSide())

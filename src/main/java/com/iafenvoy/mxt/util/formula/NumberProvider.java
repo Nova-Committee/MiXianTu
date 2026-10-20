@@ -32,7 +32,7 @@ public interface NumberProvider {
     // this returns {@code false}.
     default boolean assertFinite(double value) {
         if (Double.isFinite(value)) return true;
-        FormulaDiagnostics.report("Number provider " + this.getClass().getSimpleName() + " produced the non-finite value " + value + "; using 0");
+        FormulaVariables.LOGGER.log("Number provider " + this.getClass().getSimpleName() + " produced the non-finite value " + value + "; using 0");
         return false;
     }
 }

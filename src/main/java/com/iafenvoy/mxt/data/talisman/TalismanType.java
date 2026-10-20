@@ -1,6 +1,5 @@
 package com.iafenvoy.mxt.data.talisman;
 
-import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.data.ability.ActionCarrier;
 import com.iafenvoy.mxt.data.action.BiEntityAction;
 import com.iafenvoy.mxt.data.action.EntityAction;
@@ -8,6 +7,9 @@ import com.iafenvoy.mxt.data.context.action.BiEntityActionContext;
 import com.iafenvoy.mxt.data.context.action.EntityActionContext;
 import com.iafenvoy.mxt.registry.MxtRegistries;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
+import com.iafenvoy.mxt.util.profiling.LoggerDispatcher;
+import com.iafenvoy.mxt.util.profiling.LoggingLevel;
+import com.mojang.logging.LogUtils;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -26,6 +28,7 @@ import java.util.function.Function;
  * anything is paid, which is the one place a target requirement outranks that gate.
  */
 public interface TalismanType {
+    LoggerDispatcher LOGGER = LoggerDispatcher.of(LogUtils.getLogger(), LoggingLevel.ERROR, LoggingLevel.ERROR);
     MapCodec<TalismanType> CODEC = MxtRegistries.TALISMAN_TYPE.byNameCodec().dispatchMap("type", TalismanType::codec, Function.identity());
     // The fall a thrown carrier travels with until its own definition says otherwise.
     double DEFAULT_GRAVITY = 0.03D;
@@ -78,14 +81,14 @@ public interface TalismanType {
         try {
             entityAction.execute(new EntityActionContext(use.user(), use.formula(), use.origin()));
         } catch (RuntimeException exception) {
-            MiXianTu.LOGGER.error("Talisman entity action failed", exception);
+            LOGGER.log("Talisman entity action failed", exception);
         }
         for (Entity target : targets) {
             try {
                 biEntityAction.execute(use.user(), target, new BiEntityActionContext(use.user(), target,
                         ActionCarrier.targetContext(use.user(), target, use.formula()), use.origin()));
             } catch (RuntimeException exception) {
-                MiXianTu.LOGGER.error("Talisman target action failed", exception);
+                LOGGER.log("Talisman target action failed", exception);
             }
         }
     }

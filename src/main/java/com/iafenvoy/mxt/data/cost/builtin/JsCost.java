@@ -70,7 +70,7 @@ public record JsCost(String id, JsonObject params) implements Cost {
         @Override
         protected ResultWithData<List<Debit>> perform(boolean simulate) {
             if (this.player == null) return refused(CostFailure.NO_CHANNEL);
-            if (!MxtJsCostCallbacks.check(this.script, this.player, this.params.deepCopy()))
+            if (!MxtJsCostCallbacks.check(this.script, this.player, this.params.deepCopy(), simulate))
                 return refused(CostFailure.SCRIPT_REJECTED);
             if (simulate) return took(List.of());
             if (!MxtJsCostCallbacks.consume(this.script, this.player, this.params.deepCopy()))

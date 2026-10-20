@@ -1,6 +1,5 @@
 package com.iafenvoy.mxt.runtime.forging;
 
-import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.data.artifact.ForgingResultComponent;
 import com.iafenvoy.mxt.data.cost.CostPayment;
@@ -18,6 +17,7 @@ import com.iafenvoy.mxt.runtime.resulting.Result;
 import com.iafenvoy.mxt.runtime.resulting.ResultWithData;
 import com.iafenvoy.mxt.runtime.resulting.failures.ForgingFailure;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
+import com.mojang.logging.LogUtils;
 import net.minecraft.core.Holder;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.resources.Identifier;
@@ -26,6 +26,7 @@ import net.minecraft.world.item.ItemStack;
 import net.neoforged.bus.api.ICancellableEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
 
 import java.util.List;
 import java.util.Map;
@@ -37,6 +38,8 @@ import java.util.function.IntFunction;
  * Server-side coordinator for method validation, atomic payment and final forging-quality data.
  */
 public final class ForgingService {
+    private static final Logger LOGGER = LogUtils.getLogger();
+
     private ForgingService() {
     }
 
@@ -141,7 +144,7 @@ public final class ForgingService {
         } catch (VirtualMachineError error) {
             throw error;
         } catch (Throwable throwable) {
-            MiXianTu.LOGGER.error("A {} listener threw; the forging operation is refused as {}",
+            LOGGER.error("A {} listener threw; the forging operation is refused as {}",
                     event.getClass().getSimpleName(), ForgingFailure.LISTENER_ERROR, throwable);
             return ForgingFailure.LISTENER_ERROR;
         }
@@ -155,7 +158,7 @@ public final class ForgingService {
         } catch (VirtualMachineError error) {
             throw error;
         } catch (Throwable throwable) {
-            MiXianTu.LOGGER.error("A {} listener threw; the forging operation had already been applied and stands",
+            LOGGER.error("A {} listener threw; the forging operation had already been applied and stands",
                     event.getClass().getSimpleName(), throwable);
         }
     }

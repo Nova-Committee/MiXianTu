@@ -1,8 +1,10 @@
 package com.iafenvoy.mxt.compat.kubejs.callback;
 
 import com.google.gson.JsonObject;
-import com.iafenvoy.mxt.MiXianTu;
+import com.iafenvoy.mxt.compat.kubejs.MxtJsWarnings;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
+import com.iafenvoy.mxt.util.function.QuadConsumer;
+import com.iafenvoy.mxt.util.function.TriConsumer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.ItemStack;
@@ -84,14 +86,14 @@ public final class MxtJsActionCallbacks {
     }
 
     private static void unknown(String type, String id) {
-        MiXianTu.LOGGER.warn("Unknown KubeJS {} '{}'", type, id);
+        MxtJsWarnings.WARNING.log("Unknown KubeJS {} '{}'", type, id);
     }
 
     private static void run(String type, String id, Runnable callback) {
         try {
             callback.run();
         } catch (Exception exception) {
-            MiXianTu.LOGGER.error("KubeJS {} '{}' failed", type, id, exception);
+            MxtJsWarnings.FAILURE.log("KubeJS " + type + " '" + id + "' failed", exception);
         }
     }
 }

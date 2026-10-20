@@ -64,8 +64,7 @@ public final class CostStoreVerifyProbes {
         );
     }
 
-    // One section of one chunk is one stock: two positions inside it are one store, so two fees written at them are one
-    // charge, while the same position in another section is another store.
+    // One section of one chunk is one stock for duplicate diagnostics; another section is another store.
     private static void storeIdentity(ProbeContext context) {
         RegistryAccess registries = context.registries();
         ResourceKey<Level> dimension = context.level().dimension();
@@ -83,7 +82,7 @@ public final class CostStoreVerifyProbes {
         if (near.equals(CostTarget.Section.of(dimension, above)))
             context.fail("two sections of one chunk read as one store");
 
-        // Two aura entries at two positions inside one section add up and are checked once against that one stock.
+        // The price projection sums the amounts without merging the actual transactions.
         Holder<Aura> qi = context.require(MxtResourceKeys.AURA, ProbeDefinitions.QI);
         CostContext here = CostContext.pool(context.player(), context.level(), base,
                 FormulaContext.of(context.player()), CostOrigin.SCRIPT);
@@ -97,7 +96,7 @@ public final class CostStoreVerifyProbes {
             return;
         }
         Map<Holder<Aura>, Double> auraPrice = bill.auras();
-        context.expect("two fees of one section are priced as one", auraPrice.getOrDefault(qi, 0.0D), 2.0D);
+        context.expect("the projection totals two fees of one section", auraPrice.getOrDefault(qi, 0.0D), 2.0D);
     }
 
     // What left a container is named by what was there before the write: a full stack that emptied still reports its
@@ -128,8 +127,8 @@ public final class CostStoreVerifyProbes {
         context.expect("the receipt keeps the count that left", items.getFirst().getCount(), 2);
     }
 
-    // A bank that cannot promise the whole price does not pay part of it: the fee is refused, the part that did leave is
-    // reported instead of dropped, and the amount a bank cannot express is refused rather than clamped.
+    // A short real transfer warns without cancelling the bill, and reports only the amount that really left.
+    // An amount the bank cannot express is still refused before the real pass.
     private static void bankExact(ProbeContext context) {
         RegistryAccess registries = context.registries();
         Holder<Aura> qi = context.require(MxtResourceKeys.AURA, ProbeDefinitions.QI);
@@ -139,11 +138,10 @@ public final class CostStoreVerifyProbes {
                 CostOrigin.SCRIPT);
         CostPayment.PaymentResult paid = CostPayment.pay(decodeCosts(registries,
                 "[{\"type\": \"mxt:aura\", \"aura\": \"mxt_test:qi\", \"amount\": 5}]"), costs);
-        if (paid.isSuccess()) {
-            context.fail("a bank that handed over 3 of 5 was reported as paid");
+        if (paid.isFailure()) {
+            context.fail("a short real bank transfer cancelled the bill: " + paid.failure());
             return;
         }
-        context.expect("a short bank refuses with the aura reason", paid.failure(), CostFailure.INSUFFICIENT_AURA);
         context.expect("the part the bank did hand over is reported", paid.auras().getOrDefault(qi, 0.0D), 3.0D);
         context.expect("the bank really lost the part it reported", bank.removed, 3);
 

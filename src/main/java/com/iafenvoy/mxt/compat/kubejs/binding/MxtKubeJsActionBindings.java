@@ -2,8 +2,8 @@ package com.iafenvoy.mxt.compat.kubejs.binding;
 
 import com.google.gson.JsonObject;
 import com.iafenvoy.mxt.compat.kubejs.callback.MxtJsActionCallbacks;
-import com.iafenvoy.mxt.compat.kubejs.callback.QuadConsumer;
-import com.iafenvoy.mxt.compat.kubejs.callback.TriConsumer;
+import com.iafenvoy.mxt.util.function.QuadConsumer;
+import com.iafenvoy.mxt.util.function.TriConsumer;
 import com.iafenvoy.mxt.compat.kubejs.codec.MxtKubeJsDataCodec;
 import com.iafenvoy.mxt.data.action.BiEntityAction;
 import com.iafenvoy.mxt.data.action.BlockAction;

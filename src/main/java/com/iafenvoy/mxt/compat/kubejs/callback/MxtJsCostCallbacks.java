@@ -1,8 +1,10 @@
 package com.iafenvoy.mxt.compat.kubejs.callback;
 
 import com.google.gson.JsonObject;
-import com.iafenvoy.mxt.MiXianTu;
+import com.iafenvoy.mxt.compat.kubejs.MxtJsWarnings;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
+import com.iafenvoy.mxt.util.function.TriConsumer;
+import com.iafenvoy.mxt.util.function.TriPredicate;
 import net.minecraft.world.entity.player.Player;
 
 import java.util.Map;
@@ -25,12 +27,13 @@ public final class MxtJsCostCallbacks {
         CONSUME.put(id, consume);
     }
 
-    public static boolean check(String id, Player player, JsonObject params) {
+    public static boolean check(String id, Player player, JsonObject params, boolean simulate) {
         TriPredicate<Player, JsonObject, FormulaContext> callback = CHECK.get(id);
         if (callback == null) return unknown(id);
         try {
             return callback.test(player, params, FormulaContext.of(player));
-        } catch (Exception exception) {
+        } catch (RuntimeException exception) {
+            if (!simulate) throw exception;
             return failed(id, exception);
         }
     }
@@ -38,12 +41,8 @@ public final class MxtJsCostCallbacks {
     public static boolean consume(String id, Player player, JsonObject params) {
         TriConsumer<Player, JsonObject, FormulaContext> callback = CONSUME.get(id);
         if (callback == null) return unknown(id);
-        try {
-            callback.accept(player, params, FormulaContext.of(player));
-            return true;
-        } catch (Exception exception) {
-            return failed(id, exception);
-        }
+        callback.accept(player, params, FormulaContext.of(player));
+        return true;
     }
 
     public static void clear() {
@@ -52,12 +51,12 @@ public final class MxtJsCostCallbacks {
     }
 
     private static boolean unknown(String id) {
-        MiXianTu.LOGGER.warn("Unknown KubeJS cost '{}'; the cost cannot be paid", id);
+        MxtJsWarnings.WARNING.log("Unknown KubeJS cost '{}'; the cost cannot be paid", id);
         return false;
     }
 
     private static boolean failed(String id, Exception exception) {
-        MiXianTu.LOGGER.error("KubeJS cost '{}' failed; the cost cannot be paid", id, exception);
+        MxtJsWarnings.FAILURE.log("KubeJS cost '" + id + "' failed; the cost cannot be paid", exception);
         return false;
     }
 }

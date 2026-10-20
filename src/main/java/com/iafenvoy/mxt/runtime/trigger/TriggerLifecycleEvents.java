@@ -1,6 +1,6 @@
 package com.iafenvoy.mxt.runtime.trigger;
 
-import com.iafenvoy.mxt.MiXianTu;
+import com.mojang.logging.LogUtils;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.entity.LivingEntity;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -11,6 +11,7 @@ import net.neoforged.neoforge.event.entity.EntityLeaveLevelEvent;
 import net.neoforged.neoforge.event.server.ServerStartedEvent;
 import net.neoforged.neoforge.event.server.ServerStoppedEvent;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
+import org.slf4j.Logger;
 
 /**
  * Common lifecycle for the runtime-only trigger subscriptions: rebuilt on server start, on a datapack reload and
@@ -18,6 +19,8 @@ import net.neoforged.neoforge.server.ServerLifecycleHooks;
  */
 @EventBusSubscriber
 public final class TriggerLifecycleEvents {
+    private static final Logger LOGGER = LogUtils.getLogger();
+
     private TriggerLifecycleEvents() {
     }
 
@@ -59,7 +62,7 @@ public final class TriggerLifecycleEvents {
                 TriggerRehydrators.rehydrate(living);
             }
         }));
-        MiXianTu.LOGGER.info("Rehydrated trigger data after {}: {} living entities, {} active subscriptions {}",
+        LOGGER.info("Rehydrated trigger data after {}: {} living entities, {} active subscriptions {}",
                 reason, entities[0], TriggerDispatcher.subscriptionCount(), TriggerDispatcher.subscriptionCountsByModule());
     }
 }

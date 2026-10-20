@@ -1,10 +1,11 @@
 package com.iafenvoy.mxt.compat.kubejs.callback;
 
 import com.google.gson.JsonObject;
-import com.iafenvoy.mxt.MiXianTu;
+import com.iafenvoy.mxt.compat.kubejs.MxtJsWarnings;
 import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
+import com.iafenvoy.mxt.util.function.QuadFunction;
 import net.minecraft.core.Holder;
 
 import java.util.Map;
@@ -56,17 +57,17 @@ public final class MxtJsValueCallbacks {
 
     private static double finite(String type, String id, Double value) {
         if (value != null && Double.isFinite(value)) return value;
-        MiXianTu.LOGGER.warn("KubeJS {} '{}' returned a non-finite value; using 0", type, id);
+        MxtJsWarnings.WARNING.log("KubeJS {} '{}' returned a non-finite value; using 0", type, id);
         return 0.0D;
     }
 
     private static double unknown(String type, String id) {
-        MiXianTu.LOGGER.warn("Unknown KubeJS {} '{}'", type, id);
+        MxtJsWarnings.WARNING.log("Unknown KubeJS {} '{}'", type, id);
         return 0.0D;
     }
 
     private static double failed(String type, String id, Exception exception) {
-        MiXianTu.LOGGER.error("KubeJS {} '{}' failed", type, id, exception);
+        MxtJsWarnings.FAILURE.log("KubeJS " + type + " '" + id + "' failed", exception);
         return 0.0D;
     }
 }

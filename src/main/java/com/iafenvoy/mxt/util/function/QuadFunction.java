@@ -1,4 +1,4 @@
-package com.iafenvoy.mxt.compat.kubejs.callback;
+package com.iafenvoy.mxt.util.function;
 
 @FunctionalInterface
 public interface QuadFunction<A, B, C, D, R> {

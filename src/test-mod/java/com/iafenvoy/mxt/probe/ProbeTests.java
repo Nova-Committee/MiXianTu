@@ -28,8 +28,10 @@ import com.iafenvoy.mxt.probe.verify.AbilityCooldownVerifyProbes;
 import com.iafenvoy.mxt.probe.verify.AuraVerifyProbes;
 import com.iafenvoy.mxt.probe.verify.ClosureVerifyProbes;
 import com.iafenvoy.mxt.probe.verify.CostStoreVerifyProbes;
+import com.iafenvoy.mxt.probe.verify.CostSettlementVerifyProbes;
 import com.iafenvoy.mxt.probe.verify.CostVerifyProbes;
 import com.iafenvoy.mxt.probe.verify.CultivationDistributionVerifyProbes;
+import com.iafenvoy.mxt.probe.verify.DevModeVerifyProbes;
 import com.iafenvoy.mxt.probe.verify.EconomyVerifyProbes;
 import com.iafenvoy.mxt.probe.verify.FriendVerifyProbes;
 import com.iafenvoy.mxt.probe.verify.GeneratedNameVerifyProbes;
@@ -101,6 +103,7 @@ public final class ProbeTests {
             ClosureVerifyProbes::probes,
             CostVerifyProbes::probes,
             CostStoreVerifyProbes::probes,
+            CostSettlementVerifyProbes::probes,
             CultivationDistributionVerifyProbes::probes,
             EconomyVerifyProbes::probes,
             GeneratedNameVerifyProbes::probes,
@@ -110,6 +113,7 @@ public final class ProbeTests {
             ScopeVerifyProbes::probes,
             FriendVerifyProbes::probes,
             StoreVerifyProbes::probes,
+            DevModeVerifyProbes::probes,
             TargetSelectorVerifyProbes::probes,
             WheelVerifyProbes::probes,
             RiftProbes::probes,

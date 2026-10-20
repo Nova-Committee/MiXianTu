@@ -3,7 +3,7 @@ package com.iafenvoy.mxt.compat.kubejs.binding;
 import com.google.gson.JsonObject;
 import com.iafenvoy.mxt.compat.kubejs.MxtKubeJsApi;
 import com.iafenvoy.mxt.compat.kubejs.callback.MxtJsSelectorCallbacks;
-import com.iafenvoy.mxt.compat.kubejs.callback.TriFunction;
+import com.iafenvoy.mxt.util.function.TriFunction;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import dev.latvian.mods.kubejs.typings.Info;
 import net.minecraft.resources.Identifier;

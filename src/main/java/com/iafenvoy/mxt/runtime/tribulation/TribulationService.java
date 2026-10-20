@@ -1,6 +1,5 @@
 package com.iafenvoy.mxt.runtime.tribulation;
 
-import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.attachment.TribulationAttachment;
 import com.iafenvoy.mxt.data.Tribulation;
 import com.iafenvoy.mxt.data.storage.runtime.EntryBegan;
@@ -18,6 +17,9 @@ import com.iafenvoy.mxt.runtime.resulting.failures.TribulationFailure;
 import com.iafenvoy.mxt.runtime.world.AuraService;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
+import com.iafenvoy.mxt.util.profiling.LoggerDispatcher;
+import com.iafenvoy.mxt.util.profiling.LoggingLevel;
+import com.mojang.logging.LogUtils;
 import net.minecraft.core.Holder;
 import net.minecraft.world.entity.LivingEntity;
 import net.neoforged.neoforge.common.NeoForge;
@@ -33,6 +35,8 @@ import java.util.List;
  * the beat works on as a draft and commits once it has answered.
  */
 public final class TribulationService {
+    // A cycling timeline reports once per tick for as long as it runs, so a release build keeps the first reports.
+    private static final LoggerDispatcher LOGGER = LoggerDispatcher.of(LogUtils.getLogger(), LoggingLevel.WARN, LoggingLevel.WARN);
     // How many beats one tick may consume. A branch that jumps backwards can describe a cycle, and without a
     // budget a mis-authored timeline would never give the server thread back; a real run waits somewhere long
     // before this, and a cycling one is reported and picked up again next tick.
@@ -108,7 +112,7 @@ public final class TribulationService {
                 return TickResult.completed();
             }
             if (++consumed > MAX_BEATS_PER_TICK) {
-                MiXianTu.LOGGER.warn("Tribulation {} consumed {} beats in one tick without waiting: a branch is "
+                LOGGER.log("Tribulation {} consumed {} beats in one tick without waiting: a branch is "
                         + "probably cycling", HolderHelper.id(tribulation), consumed - 1);
                 return TickResult.running();
             }

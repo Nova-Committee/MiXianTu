@@ -1,6 +1,5 @@
 package com.iafenvoy.mxt.runtime.wheel;
 
-import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.api.WheelEntryKind;
 import com.iafenvoy.mxt.api.WheelSource;
 import com.iafenvoy.mxt.attachment.AbilityAttachment;
@@ -24,6 +23,7 @@ import com.iafenvoy.mxt.runtime.spirit.SpiritBurstService;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.OptionalBoolean;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
+import com.mojang.logging.LogUtils;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.RegistryAccess;
@@ -33,6 +33,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.item.ItemStack;
 import org.jspecify.annotations.Nullable;
+import org.slf4j.Logger;
 
 import java.util.*;
 
@@ -45,6 +46,7 @@ import java.util.*;
  * cannot drift apart; the wheel only adds the carrier the page it was asked about names.
  */
 public final class WheelService {
+    private static final Logger LOGGER = LogUtils.getLogger();
     // Cells are twelve to a page and pages only exist while what they read exists, so this is far past any real
     // wheel: it is here so a nonsense number cannot be stored, not because the server uses the value.
     public static final int MAX_ARMED = 4096;
@@ -76,7 +78,7 @@ public final class WheelService {
         if (source == null || kind == null || id == null) return false;
         if (enabled.isPresent()) return kind.directed(player, source, id, enabled.get());
         if (!WheelSources.offers(player, source, kind, id)) {
-            MiXianTu.LOGGER.info("Dropping the wheel trigger {} {} from {} sent by {}: that source does not hold it",
+            LOGGER.info("Dropping the wheel trigger {} {} from {} sent by {}: that source does not hold it",
                     source.id(), id, kind.id(), player.getGameProfile().name());
             player.sendSystemMessage(Component.translatable("actionbar.mxt.wheel.stale_entry"), true);
             return false;
@@ -92,7 +94,7 @@ public final class WheelService {
         HolderLookup.Provider access = player.level().registryAccess();
         Holder<Ability> ability = MxtDatapackRegistries.holder(access, MxtResourceKeys.ABILITY, id).orElse(null);
         if (ability == null) {
-            MiXianTu.LOGGER.info("Dropping the directed wheel request {} from {}: the ability is no longer registered",
+            LOGGER.info("Dropping the directed wheel request {} from {}: the ability is no longer registered",
                     id, player.getGameProfile().name());
             player.sendSystemMessage(Component.translatable("actionbar.mxt.wheel.stale_entry"), true);
             return false;
@@ -126,7 +128,7 @@ public final class WheelService {
         if (ability == null) {
             // The same race WheelSources#offers exists for, one step later: registered when the source was read
             // and gone by the time the press arrived, which is rare enough to be worth saying rather than dropping.
-            MiXianTu.LOGGER.info("Dropping the wheel press {} on {} from {}: the ability is no longer registered",
+            LOGGER.info("Dropping the wheel press {} on {} from {}: the ability is no longer registered",
                     id, source.id(), player.getGameProfile().name());
             player.sendSystemMessage(Component.translatable("actionbar.mxt.wheel.stale_entry"), true);
             return false;
@@ -157,7 +159,7 @@ public final class WheelService {
     // A burst the player cannot pay for is refused the same way an ability is.
     public static boolean burst(ServerPlayer player, Identifier id) {
         if (SpiritBurstService.fireOnce(player, id)) return true;
-        MiXianTu.LOGGER.info("Refusing the wheel burst {} for {}: the burst did not go off",
+        LOGGER.info("Refusing the wheel burst {} for {}: the burst did not go off",
                 id, player.getGameProfile().name());
         player.sendSystemMessage(Component.translatable("actionbar.mxt.wheel.burst_failed"), true);
         return false;
@@ -170,21 +172,21 @@ public final class WheelService {
         if (behavior == null) {
             // A layout or a hand-edited stack can name an order whose provider is gone; the same race the ability
             // path guards against, one registry-like list later.
-            MiXianTu.LOGGER.info("Dropping the wheel order {} from {}: no such order is known",
+            LOGGER.info("Dropping the wheel order {} from {}: no such order is known",
                     id, player.getGameProfile().name());
             player.sendSystemMessage(ContractFailure.UNSUPPORTED_BEHAVIOR.message(), true);
             return false;
         }
         Mob beast = ContractBells.beast(player).orElse(null);
         if (beast == null) {
-            MiXianTu.LOGGER.info("Dropping the wheel order {} from {}: no loaded beast is tuned to that bell",
+            LOGGER.info("Dropping the wheel order {} from {}: no loaded beast is tuned to that bell",
                     id, player.getGameProfile().name());
             player.sendSystemMessage(Component.translatable("actionbar.mxt.contract.no_beast"), true);
             return false;
         }
         Result result = ContractBehaviorService.request(beast, player.getUUID(), behavior, false);
         if (result.failure() != null) {
-            MiXianTu.LOGGER.info("Refusing the wheel order {} for {}: {}", id, player.getGameProfile().name(),
+            LOGGER.info("Refusing the wheel order {} for {}: {}", id, player.getGameProfile().name(),
                     result.failure());
             player.sendSystemMessage(result.failure().message(), true);
             return false;
@@ -199,7 +201,7 @@ public final class WheelService {
     private static boolean refuse(ServerPlayer player, Identifier id, Failure failure,
                                   @Nullable Identifier failedResource, String verb, String messageKey) {
         String name = failure.name().toLowerCase(Locale.ROOT);
-        MiXianTu.LOGGER.info("Refusing the wheel {} {} for {}: {}{}", verb, id, player.getGameProfile().name(), name,
+        LOGGER.info("Refusing the wheel {} {} for {}: {}{}", verb, id, player.getGameProfile().name(), name,
                 failedResource == null ? "" : " (" + failedResource + ")");
         player.sendSystemMessage(Component.translatable(messageKey,
                 failure.message(failedResource)), true);

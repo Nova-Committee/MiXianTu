@@ -2,7 +2,7 @@ package com.iafenvoy.mxt.compat.kubejs.binding;
 
 import com.google.gson.JsonObject;
 import com.iafenvoy.mxt.compat.kubejs.callback.MxtJsLootCallbacks;
-import com.iafenvoy.mxt.compat.kubejs.callback.TriFunction;
+import com.iafenvoy.mxt.util.function.TriFunction;
 import dev.latvian.mods.kubejs.typings.Info;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.storage.loot.LootContext;

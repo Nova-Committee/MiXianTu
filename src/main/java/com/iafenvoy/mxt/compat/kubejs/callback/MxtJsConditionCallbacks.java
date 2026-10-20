@@ -1,8 +1,10 @@
 package com.iafenvoy.mxt.compat.kubejs.callback;
 
 import com.google.gson.JsonObject;
-import com.iafenvoy.mxt.MiXianTu;
+import com.iafenvoy.mxt.compat.kubejs.MxtJsWarnings;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
+import com.iafenvoy.mxt.util.function.QuadPredicate;
+import com.iafenvoy.mxt.util.function.TriPredicate;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
@@ -87,7 +89,7 @@ public final class MxtJsConditionCallbacks {
     }
 
     private static boolean unknown(String type, String id) {
-        MiXianTu.LOGGER.warn("Unknown KubeJS {} '{}'", type, id);
+        MxtJsWarnings.WARNING.log("Unknown KubeJS {} '{}'", type, id);
         return false;
     }
 
@@ -95,7 +97,7 @@ public final class MxtJsConditionCallbacks {
         try {
             return callback.getAsBoolean();
         } catch (Exception exception) {
-            MiXianTu.LOGGER.error("KubeJS {} '{}' failed", type, id, exception);
+            MxtJsWarnings.FAILURE.log("KubeJS " + type + " '" + id + "' failed", exception);
             return false;
         }
     }

@@ -1,9 +1,9 @@
 package com.iafenvoy.mxt.runtime.world;
 
-import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.data.secretrealm.SecretRealm;
 import com.iafenvoy.mxt.data.secretrealm.SecretRealmGeneration;
 import com.iafenvoy.mxt.data.secretrealm.builtin.*;
+import com.mojang.logging.LogUtils;
 import net.minecraft.core.*;
 import net.minecraft.core.Holder.Reference;
 import net.minecraft.core.registries.Registries;
@@ -24,6 +24,7 @@ import net.minecraft.world.level.levelgen.flat.FlatLevelGeneratorSettings;
 import net.minecraft.world.level.storage.LevelResource;
 import org.apache.commons.io.FileUtils;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -39,6 +40,7 @@ import java.util.stream.Stream;
  * and an aura zone can name that identifier to cover the dimension.
  */
 public final class SecretRealmGenerationService {
+    private static final Logger LOGGER = LogUtils.getLogger();
     public static final String DIMENSION_PREFIX = "secret_realm";
     private static final String TEMPLATE_ROOT = "mxt_secret_realm";
     private static final String[] DATA_FOLDERS = {"region", "entities", "poi"};
@@ -102,7 +104,7 @@ public final class SecretRealmGenerationService {
                 default -> null;
             };
         } catch (Exception exception) {
-            MiXianTu.LOGGER.error("Invalid secret realm generation parameters {}", generation, exception);
+            LOGGER.error("Invalid secret realm generation parameters {}", generation, exception);
             return null;
         }
     }
@@ -129,7 +131,7 @@ public final class SecretRealmGenerationService {
         try {
             FileUtils.deleteDirectory(folder.toFile());
         } catch (IOException exception) {
-            MiXianTu.LOGGER.warn("Failed to remove secret realm folder {}, clearing its data instead", folder, exception);
+            LOGGER.warn("Failed to remove secret realm folder {}, clearing its data instead", folder, exception);
             for (String name : DATA_FOLDERS) clearDirectory(folder.resolve(name));
         }
     }
@@ -153,7 +155,7 @@ public final class SecretRealmGenerationService {
                 }
             }
         } catch (IOException exception) {
-            MiXianTu.LOGGER.warn("Failed to scan secret realm folders", exception);
+            LOGGER.warn("Failed to scan secret realm folders", exception);
             return;
         }
         for (Path candidate : candidates) {
@@ -162,19 +164,19 @@ public final class SecretRealmGenerationService {
             ResourceKey<Level> dimension = ResourceKey.create(Registries.DIMENSION, id);
             if (claimed.contains(dimension) || declared(server, dimension)) continue;
             discard(server, id);
-            MiXianTu.LOGGER.info("Removed leftover secret realm data {}", id);
+            LOGGER.info("Removed leftover secret realm data {}", id);
         }
     }
 
     private static boolean copyTemplate(MinecraftServer server, ResourceKey<Level> target, String template) {
         if (!template.matches(TEMPLATE_NAME)) {
-            MiXianTu.LOGGER.error("Invalid secret realm template name {}", template);
+            LOGGER.error("Invalid secret realm template name {}", template);
             return false;
         }
         Path source = server.getServerDirectory().resolve(TEMPLATE_ROOT).resolve(template)
                 .resolve(dimensionDataFolder(target.identifier()));
         if (!Files.isDirectory(source)) {
-            MiXianTu.LOGGER.error("Missing secret realm template {}", source);
+            LOGGER.error("Missing secret realm template {}", source);
             return false;
         }
         clearData(server, target);
@@ -186,7 +188,7 @@ public final class SecretRealmGenerationService {
             }
             return true;
         } catch (IOException exception) {
-            MiXianTu.LOGGER.error("Failed to copy secret realm template {}", source, exception);
+            LOGGER.error("Failed to copy secret realm template {}", source, exception);
             return false;
         }
     }
@@ -288,7 +290,7 @@ public final class SecretRealmGenerationService {
         try {
             FileUtils.cleanDirectory(path.toFile());
         } catch (IOException exception) {
-            MiXianTu.LOGGER.warn("Failed to clear secret realm folder {}", path, exception);
+            LOGGER.warn("Failed to clear secret realm folder {}", path, exception);
         }
     }
 

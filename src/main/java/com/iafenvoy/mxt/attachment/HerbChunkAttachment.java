@@ -1,12 +1,11 @@
 package com.iafenvoy.mxt.attachment;
 
+import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.util.codec.CollectionCodecs;
-import com.mojang.logging.LogUtils;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.BlockPos;
-import org.slf4j.Logger;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -34,7 +33,6 @@ public final class HerbChunkAttachment {
             // Tolerant per row: one unreadable row is dropped with a named warning instead of costing the chunk.
             CollectionCodecs.list(Stored.CODEC).lenientOptionalFieldOf("plants", List.of()).forGetter(HerbChunkAttachment::stored)
     ).apply(i, HerbChunkAttachment::new));
-    private static final Logger LOGGER = LogUtils.getLogger();
     private final Map<Long, Plant> plants;
 
     public HerbChunkAttachment() {
@@ -43,11 +41,10 @@ public final class HerbChunkAttachment {
 
     private HerbChunkAttachment(List<Stored> stored) {
         this.plants = new LinkedHashMap<>(stored.size());
-        for (Stored entry : stored) {
+        for (Stored entry : stored)
             // A repeated position is a hand-edited save; losing that row is better than losing the chunk.
             if (this.plants.putIfAbsent(entry.position(), new Plant(entry.age(), entry.clock())) != null)
-                LOGGER.warn("Ignoring duplicate herb plant in the saved chunk: {}", BlockPos.of(entry.position()));
-        }
+                MiXianTu.LOGGER.warn("Ignoring duplicate herb plant in the saved chunk: {}", BlockPos.of(entry.position()));
     }
 
     public Optional<Plant> find(BlockPos position) {

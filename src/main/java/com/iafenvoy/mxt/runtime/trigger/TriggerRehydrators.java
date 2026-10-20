@@ -1,7 +1,9 @@
 package com.iafenvoy.mxt.runtime.trigger;
 
-import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.event.dispatcher.TriggerRehydrateEvent;
+import com.iafenvoy.mxt.util.profiling.LoggerDispatcher;
+import com.iafenvoy.mxt.util.profiling.LoggingLevel;
+import com.mojang.logging.LogUtils;
 import net.minecraft.world.entity.LivingEntity;
 import net.neoforged.neoforge.common.NeoForge;
 
@@ -12,6 +14,9 @@ import java.util.UUID;
  * and rebuilt from its own attachment, and {@link TriggerRehydrateEvent#rehydrate} is what isolates a module that throws.
  */
 public final class TriggerRehydrators {
+    // One line per loaded body, which on a populated server means hundreds per load.
+    private static final LoggerDispatcher LOGGER = LoggerDispatcher.of(LogUtils.getLogger(), LoggingLevel.DEBUG, LoggingLevel.NONE);
+
     private TriggerRehydrators() {
     }
 
@@ -19,7 +24,7 @@ public final class TriggerRehydrators {
         if (entity.level().isClientSide()) return;
         int before = TriggerDispatcher.subscriptionCount(entity.getUUID());
         NeoForge.EVENT_BUS.post(new TriggerRehydrateEvent(entity));
-        MiXianTu.LOGGER.debug("Rehydrated trigger subscriptions for {}: {} -> {}",
+        LOGGER.log("Rehydrated trigger subscriptions for {}: {} -> {}",
                 entity.getUUID(), before, TriggerDispatcher.subscriptionCount(entity.getUUID()));
     }
 

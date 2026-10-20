@@ -119,8 +119,9 @@ public final class Expression implements NumberProvider {
             double result = state.expression().evaluate();
             return this.assertFinite(result) ? result : 0.0D;
         } catch (RuntimeException exception) {
-            FormulaDiagnostics.report("Number provider expression '" + this.source + "' failed: "
-                    + (exception.getMessage() == null ? exception.toString() : exception.getMessage()), exception);
+            String message = "Number provider expression '" + this.source + "' failed: "
+                    + (exception.getMessage() == null ? exception.toString() : exception.getMessage());
+            FormulaVariables.LOGGER.log(message, exception);
             return 0.0D;
         }
     }

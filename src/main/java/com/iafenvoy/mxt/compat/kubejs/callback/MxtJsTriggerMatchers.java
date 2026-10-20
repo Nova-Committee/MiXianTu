@@ -1,9 +1,10 @@
 package com.iafenvoy.mxt.compat.kubejs.callback;
 
 import com.google.gson.JsonObject;
-import com.iafenvoy.mxt.MiXianTu;
+import com.iafenvoy.mxt.compat.kubejs.MxtJsWarnings;
 import com.iafenvoy.mxt.data.trigger.TriggerSignal;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
+import com.iafenvoy.mxt.util.function.TriPredicate;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -37,12 +38,12 @@ public final class MxtJsTriggerMatchers {
     }
 
     private static boolean unknown(String id) {
-        MiXianTu.LOGGER.warn("Unknown KubeJS trigger '{}'; the trigger does not match", id);
+        MxtJsWarnings.WARNING.log("Unknown KubeJS trigger '{}'; the trigger does not match", id);
         return false;
     }
 
     private static boolean failed(String id, Exception exception) {
-        MiXianTu.LOGGER.error("KubeJS trigger '{}' failed; the trigger does not match", id, exception);
+        MxtJsWarnings.FAILURE.log("KubeJS trigger '" + id + "' failed; the trigger does not match", exception);
         return false;
     }
 }

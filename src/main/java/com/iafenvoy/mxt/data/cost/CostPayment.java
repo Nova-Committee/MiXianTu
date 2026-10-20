@@ -13,6 +13,7 @@ import com.iafenvoy.mxt.runtime.resulting.Result;
 import com.iafenvoy.mxt.runtime.resulting.ResultWithData;
 import com.iafenvoy.mxt.runtime.resulting.failures.CostFailure;
 import com.iafenvoy.mxt.util.HolderHelper;
+import com.iafenvoy.mxt.util.profiling.LoggerDispatcher;
 import com.mojang.logging.LogUtils;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup.Provider;
@@ -21,27 +22,16 @@ import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Predicate;
 import java.util.function.ToDoubleFunction;
 
 /**
- * One payment: the fees it was given and the one place they are paid from. Pricing binds every entry to a fixed
- * transaction, editing replaces fees the caller changed, and paying is one simulation pass over all of them followed by
- * one real pass - a fee is never taken before every fee has been asked, and a refusal on the way takes nothing.
- *
- * <p>Fees that name the same store are summed and charged once, so an array can reach one balance through two routes
- * (an {@code mxt:aura} charged as the value it is measured in and the {@code mxt:resource} naming that value) without
- * being checked twice against one balance. That is why a repeated target is only reported, not refused.
- *
- * <p>There is no rollback: a second pass that refuses leaves what the earlier fees already took, and the result reports
- * it. Payment is started once - after it starts the bill is closed, and a fee can no longer be added, edited or paid a
- * second time.
+ * Checks every bound fee, then attempts every real charge in entry order. Duplicate targets are diagnostic only;
+ * real failures warn and continue, with known debits retained and the final answer cached against repeat charges.
  */
 public final class CostPayment {
     private static final Logger LOGGER = LogUtils.getLogger();
-    // One warn per origin per target for the life of the process: a shape hint, not a per-payment event.
-    private static final Set<String> WARNED = ConcurrentHashMap.newKeySet();
+    private static final LoggerDispatcher DUPLICATE_TARGET = LoggerDispatcher.of(LOGGER);
     private static final ThreadLocal<Set<Object>> PAYING = ThreadLocal.withInitial(HashSet::new);
     private final CostContext context;
     private final List<Entry> entries = new ArrayList<>();
@@ -92,7 +82,7 @@ public final class CostPayment {
         for (Cost cost : costs) {
             ResultWithData<Cost.Transaction> prepared = cost.prepare(context);
             if (prepared.isFailure()) return this.broken(prepared.failure(), prepared.failedResource());
-            this.accept(new Entry(context, prepared.getData()));
+            this.entries.add(new Entry(context, prepared.getData()));
         }
         return Optional.empty();
     }
@@ -105,19 +95,18 @@ public final class CostPayment {
     public Optional<Failure> test() {
         if (this.taken != null) return Optional.ofNullable(this.taken.failure());
         if (this.failure != null) return Optional.of(this.failure);
-        List<Group> plan = this.plan();
+        List<Entry> plan = this.plan();
         if (plan == null) return Optional.of(CostFailure.INVALID_AMOUNT);
-        for (Group group : plan) {
-            ResultWithData<List<Debit>> simulated = this.run(group, true);
+        for (Entry entry : plan) {
+            ResultWithData<List<Debit>> simulated = this.run(entry, true);
             if (simulated.isFailure()) return Optional.of(simulated.failure());
         }
         return Optional.empty();
     }
 
     /**
-     * The whole payment: one simulation pass over every fee, then one real pass. A simulation that refuses takes
-     * nothing; a real pass that refuses keeps what it already took and says so. The answer is terminal - paying the
-     * same bill again repeats it without touching a store, including when the first attempt did not come back.
+     * Simulation failures refuse the bill; real failures only warn and do not cancel it or later fees.
+     * Repeating this call returns the terminal answer without charging again.
      */
     public PaymentResult pay() {
         if (this.taken != null) return this.taken;
@@ -127,7 +116,7 @@ public final class CostPayment {
         // guessing, and nothing is written again.
         if (this.uncertain) return this.taken = PaymentResult.denied(CostFailure.UNCERTAIN, null);
         if (this.failure != null) return this.taken = PaymentResult.denied(this.failure, this.failedResource);
-        List<Group> plan = this.plan();
+        List<Entry> plan = this.plan();
         if (plan == null) return this.taken = PaymentResult.denied(CostFailure.INVALID_AMOUNT, null);
         this.closed = true;
         this.paying = true;
@@ -138,20 +127,25 @@ public final class CostPayment {
         }
     }
 
-    private PaymentResult settle(List<Group> plan) {
-        for (Group group : plan) {
-            ResultWithData<List<Debit>> simulated = this.run(group, true);
+    private PaymentResult settle(List<Entry> plan) {
+        for (Entry entry : plan) {
+            ResultWithData<List<Debit>> simulated = this.run(entry, true);
             if (simulated.isFailure()) return PaymentResult.denied(simulated.failure(), simulated.failedResource());
         }
         List<Debit> debits = new ArrayList<>(plan.size());
         // From here on a store may really be written, so an answer that never comes back leaves the bill unanswered.
         this.uncertain = true;
-        for (Group group : plan) {
-            ResultWithData<List<Debit>> result = this.run(group, false);
-            // What a refusing fee did take before it refused is kept: the bill reports the known spend instead of
-            // claiming nothing was written.
-            debits.addAll(result.getData());
-            if (result.isFailure()) return PaymentResult.partly(debits, result.failure(), result.failedResource());
+        for (Entry entry : plan) {
+            try {
+                ResultWithData<List<Debit>> result = this.run(entry, false);
+                debits.addAll(result.getData());
+                if (result.isFailure())
+                    LOGGER.warn("Cost deduction failed for {} (origin {}, reason {}, resource {}); continuing payment",
+                            entry.transaction().target().label(), entry.context().origin(), result.failure(), result.failedResource());
+            } catch (RuntimeException exception) {
+                LOGGER.warn("Cost deduction threw for {} (origin {}); continuing payment with known debits only",
+                        entry.transaction().target().label(), entry.context().origin(), exception);
+            }
         }
         this.uncertain = false;
         return PaymentResult.paid(debits);
@@ -168,7 +162,7 @@ public final class CostPayment {
     }
 
     /**
-     * The resource price keyed by the resource itself, read-only. Two fees reaching one balance are already summed.
+     * The resource price keyed by the resource itself; projection totals do not merge executable fees.
      */
     public Map<Holder<Resource>, Double> resourceAmounts() {
         Map<Holder<Resource>, Double> amounts = new LinkedHashMap<>();
@@ -306,57 +300,36 @@ public final class CostPayment {
         return this.failedResource;
     }
 
-    private void accept(Entry entry) {
-        this.warnSameTarget(entry.transaction().target());
-        this.entries.add(entry);
-    }
-
-    // One entry per target is the shape a pack is meant to write; two that reach one store are summed and charged once,
-    // which is correct but not what was written, so it is reported. A bill is also built from several definitions (a
-    // talisman's inscriptions), so the hint is once per origin and target rather than once per payment.
-    private void warnSameTarget(CostTarget target) {
-        for (Entry known : this.entries) {
-            if (!known.transaction().target().equals(target)) continue;
-            if (WARNED.add(this.context.origin() + "|" + target.label()))
-                LOGGER.warn("A costs array charges {} twice (origin {}); the amounts were summed, and one entry per target is the shape to write",
-                        target.label(), this.context.origin());
-            return;
-        }
-    }
-
-    // Fees naming one store are one charge: the amounts add up in that store's own unit and one transaction takes it,
-    // which is why a bill needs no side table of per-entry shares. The order is the pipeline's, not the pack's: every
-    // built-in store first, then the opaque scripts, so a script never runs before the price it was written next to.
-    // A sum this store cannot express refuses the bill here, before any of it is charged: null means exactly that.
-    private @Nullable List<Group> plan() {
-        Map<CostTarget, Cost.Transaction> merged = new LinkedHashMap<>();
+    private @Nullable List<Entry> plan() {
+        List<Entry> plan = new ArrayList<>(this.entries.size());
+        Set<Object> seen = new HashSet<>();
+        Set<Object> reported = new HashSet<>();
         for (Entry entry : this.entries) {
             Cost.Transaction transaction = entry.transaction();
-            if (!(transaction.amount() > 0.0D)) continue;
-            Cost.Transaction present = merged.get(transaction.target());
-            Cost.Transaction sum = present == null ? transaction
-                    : present.withAmount(present.amount() + transaction.amount());
-            if (!Double.isFinite(sum.amount())) return null;
-            merged.put(transaction.target(), sum);
+            if (!Double.isFinite(transaction.amount()) || transaction.amount() < 0.0D) return null;
+            if (transaction.amount() == 0.0D) continue;
+            CostTarget target = transaction.target();
+            Object key = target instanceof CostTarget.Script script
+                    ? new ScriptTarget(entry.context().payer(), script.id()) : target;
+            if (!seen.add(key) && reported.add(key))
+                DUPLICATE_TARGET.log("A costs array charges {} more than once (origin {}); use one entry per target; entries remain separate and run in order",
+                        target.label(), entry.context().origin());
+            plan.add(entry);
         }
-        List<Group> stores = new ArrayList<>(merged.size());
-        List<Group> scripts = new ArrayList<>();
-        merged.forEach((target, transaction) -> (target instanceof CostTarget.Script ? scripts : stores)
-                .add(new Group(target, transaction)));
-        stores.addAll(scripts);
-        return stores;
+        return List.copyOf(plan);
     }
 
     // A nested payment touching a store this one is writing is refused rather than interleaved, while an independent
     // one on another store goes through. The guard is the target's own answer to "is this the same store", which is the
     // target itself except where the identity is deliberately per-entry (see CostTarget#guard).
-    private ResultWithData<List<Debit>> run(Group group, boolean simulate) {
+    private ResultWithData<List<Debit>> run(Entry entry, boolean simulate) {
+        CostTarget target = entry.transaction().target();
         Set<Object> paying = PAYING.get();
-        if (!paying.add(group.target().guard())) return ResultWithData.failure(List.of(), CostFailure.REENTRANT);
+        if (!paying.add(target.guard())) return ResultWithData.failure(List.of(), CostFailure.REENTRANT);
         try {
-            return group.transaction().execute(simulate);
+            return entry.transaction().execute(simulate);
         } finally {
-            paying.remove(group.target().guard());
+            paying.remove(target.guard());
         }
     }
 
@@ -375,11 +348,11 @@ public final class CostPayment {
     private record Entry(CostContext context, Cost.Transaction transaction) {
     }
 
-    private record Group(CostTarget target, Cost.Transaction transaction) {
+    private record ScriptTarget(@Nullable Object payer, String id) {
     }
 
     /**
-     * What a payment did: every fee it really took, or why it took nothing, or why it stopped halfway.
+     * A preflight refusal, or a completed real pass with its known debits; success does not promise full collection.
      */
     public static final class PaymentResult extends Result {
         private final List<Debit> debits;
@@ -397,13 +370,8 @@ public final class CostPayment {
             return new PaymentResult(failure, failedResource, List.of());
         }
 
-        // A channel that refused mid-way: what the earlier fees took is still what happened, and is reported as such.
-        static PaymentResult partly(List<Debit> debits, Failure failure, @Nullable Identifier failedResource) {
-            return new PaymentResult(failure, failedResource, debits);
-        }
-
         /**
-         * What was really taken, one per store.
+         * What was reported as really taken, including partial debits from a failed fee.
          */
         public List<Debit> debits() {
             return this.debits;

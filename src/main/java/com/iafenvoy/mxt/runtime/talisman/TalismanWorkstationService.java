@@ -24,7 +24,7 @@ import com.iafenvoy.mxt.runtime.talisman.TalismanDrawingScorer.Point;
 import com.iafenvoy.mxt.runtime.talisman.TalismanDrawingScorer.Score;
 import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
-import com.iafenvoy.mxt.util.formula.FormulaDiagnostics;
+import com.iafenvoy.mxt.util.formula.FormulaVariables;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.iafenvoy.mxt.util.formula.number.Constant;
 import com.iafenvoy.mxt.util.matcher.ItemMatcher;
@@ -290,7 +290,7 @@ public final class TalismanWorkstationService {
         double value = provider.evaluate(formula);
         if (Double.isFinite(value)) return value;
         // A settlement formula that cannot produce a number gives nothing rather than everything.
-        FormulaDiagnostics.report("A talisman settlement formula produced the non-finite value " + value + "; using 0");
+        FormulaVariables.LOGGER.log("A talisman settlement formula produced the non-finite value " + value + "; using 0");
         return 0.0D;
     }
 

@@ -1,4 +1,5 @@
 {
+
   "actionbar.mxt.artifact.claim_condition": "不满足认主条件",
   "actionbar.mxt.artifact.claimed": "认主完成：%s（消耗 %s 点生命）",
   "actionbar.mxt.artifact.claimed_by_other": "此物已认主他人",
@@ -452,6 +453,9 @@
   "config.mxt.server.compat.ftb_teams_invited.tooltip": "把 FTB Teams 的 INVITED 等级算作队友；注意自由加入的队伍会把任何陌生人都判成受邀。",
   "config.mxt.server.compat.wards_need_claim_permission": "立阵需许可",
   "config.mxt.server.compat.wards_need_claim_permission.tooltip": "在别人的领地上立保护阵法需要地主许可：拥有该地编辑权限、队伍无主、或是地主好友（含队友与盟友）。无领地插件时不起作用。",
+  "config.mxt.server.debug": "调试",
+  "config.mxt.server.debug.enabled": "调试模式",
+  "config.mxt.server.debug.enabled.tooltip": "放开只给复现问题用的入口（自交易、公式报告全文、信息面板的溢出报告）。开发环境下始终开启；正式服打开它，玩家不用另装一份就能用同样的入口。",
   "config.mxt.server.cultivation": "修炼",
   "config.mxt.server.cultivation.allow_movement": "允许移动",
   "config.mxt.server.cultivation.allow_movement.tooltip": "打坐修炼时允许缓慢移动。",

@@ -10,6 +10,7 @@ import com.iafenvoy.mxt.registry.cache.RegistryCaches;
 import com.mojang.logging.LogUtils;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.loading.FMLEnvironment;
 import org.slf4j.Logger;
 
 @Mod(MiXianTu.MOD_ID)
@@ -76,5 +77,16 @@ public final class MiXianTu {
         // What the picker shows for this mod's registries; the picker itself owns the screen, the command and the
         // packet, so this is the only place our content meets it.
         PickerCategories.register();
+    }
+
+    /**
+     * Whether this process may use the doors kept for reproducing something - a self-trade, the verbose formula
+     * report, the overflow report of an information panel - and print the diagnostics that only a developer reads,
+     * which is what {@link com.iafenvoy.mxt.util.profiling.LoggerDispatcher} asks. Always on in a development build;
+     * on a release server the debug switch opens it, so a player reporting a bug reaches the same doors without a
+     * second install.
+     */
+    public static boolean isDevMode() {
+        return !FMLEnvironment.isProduction() || MxtServerConfig.INSTANCE.debug.enabled.getValue();
     }
 }

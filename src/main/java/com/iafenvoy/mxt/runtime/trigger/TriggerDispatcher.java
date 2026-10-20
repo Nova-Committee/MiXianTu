@@ -1,10 +1,12 @@
 package com.iafenvoy.mxt.runtime.trigger;
 
-import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.data.trigger.TriggerContext;
 import com.iafenvoy.mxt.data.trigger.TriggerSignal;
 import com.iafenvoy.mxt.registry.cache.RegistryCaches;
 import com.iafenvoy.mxt.runtime.trigger.TriggerSubscription.State;
+import com.iafenvoy.mxt.util.profiling.LoggerDispatcher;
+import com.iafenvoy.mxt.util.profiling.LoggingLevel;
+import com.mojang.logging.LogUtils;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Entity;
 import net.neoforged.neoforge.common.util.FakePlayer;
@@ -20,6 +22,9 @@ import java.util.*;
  * {@link #DISPATCHING} stops a subscription from re-entering itself through its own signal.
  */
 public final class TriggerDispatcher {
+    // One line per signal and per subscription, so the trace is only worth reading while developing.
+    private static final LoggerDispatcher TRACE = LoggerDispatcher.of(LogUtils.getLogger(), LoggingLevel.DEBUG, LoggingLevel.NONE);
+    private static final LoggerDispatcher FAILURE = LoggerDispatcher.of(LogUtils.getLogger(), LoggingLevel.ERROR, LoggingLevel.ERROR);
     private static final Map<UUID, LinkedHashMap<String, TriggerSubscription>> BY_OWNER = new LinkedHashMap<>();
     private static final Map<Identifier, LinkedHashMap<UUID, LinkedHashMap<String, TriggerSubscription>>> BY_SIGNAL =
             new LinkedHashMap<>();
@@ -37,7 +42,7 @@ public final class TriggerDispatcher {
         if (previous != null) {
             // A module rebuilds by re-registering its own identities, so a different object is a real override.
             if (previous != subscription)
-                MiXianTu.LOGGER.debug("Replacing trigger subscription {}/{} of {}",
+                TRACE.log("Replacing trigger subscription {}/{} of {}",
                         subscription.module(), subscription.identity(), subscription.owner());
             removeSignal(previous);
         }
@@ -133,7 +138,7 @@ public final class TriggerDispatcher {
         // Automation and command plumbing drive fake players. They have no session to act with, so they do
         // not publish: vanilla refuses them at the same point, when awarding progress.
         if (actor instanceof FakePlayer) {
-            MiXianTu.LOGGER.debug("Ignoring trigger signal {} published by a fake player", signal.type());
+            TRACE.log("Ignoring trigger signal {} published by a fake player", signal.type());
             return;
         }
         // Datapack rules are reactions of their own and run before any subscription is considered.
@@ -148,10 +153,10 @@ public final class TriggerDispatcher {
         LinkedHashMap<UUID, LinkedHashMap<String, TriggerSubscription>> byOwner = BY_SIGNAL.get(signal.type());
         LinkedHashMap<String, TriggerSubscription> values = byOwner == null ? null : byOwner.get(owner);
         if (values == null || values.isEmpty()) {
-            MiXianTu.LOGGER.debug("Trigger signal {} for {} has no subscriptions", signal.type(), owner);
+            TRACE.log("Trigger signal {} for {} has no subscriptions", signal.type(), owner);
             return;
         }
-        MiXianTu.LOGGER.debug("Publishing trigger signal {} for {} to {} subscriptions",
+        TRACE.log("Publishing trigger signal {} for {} to {} subscriptions",
                 signal.type(), owner, values.size());
         // A one-shot subscription removes itself while it runs, so the loop walks a snapshot of this owner.
         List<TriggerSubscription> snapshot = List.copyOf(values.values());
@@ -166,16 +171,16 @@ public final class TriggerDispatcher {
                 // The key is released on every exit from this subscription - a thrown failure, a consumed one-shot
                 // that unregisters itself, or a plain return - so a broken subscriber cannot wedge its own signal.
                 try {
-                    MiXianTu.LOGGER.debug("Trigger signal {} matched {}/{} for {}",
+                    TRACE.log("Trigger signal {} matched {}/{} for {}",
                             signal.type(), subscription.module(), subscription.identity(), owner);
                     subscription.invoke(signal);
-                    MiXianTu.LOGGER.debug("Trigger subscription {}/{} completed for {}",
+                    TRACE.log("Trigger subscription {}/{} completed for {}",
                             subscription.module(), subscription.identity(), signal.type());
                 } catch (RuntimeException exception) {
-                    MiXianTu.LOGGER.error("Trigger subscription {} failed for {}", subscription.identity(), signal.type(), exception);
+                    FAILURE.log("Trigger subscription '" + subscription.identity() + "' failed for " + signal.type(), exception);
                 } finally {
                     if (subscription.state() == State.CONSUMED) {
-                        MiXianTu.LOGGER.debug("One-shot trigger subscription {}/{} was consumed",
+                        TRACE.log("One-shot trigger subscription {}/{} was consumed",
                                 subscription.module(), subscription.identity());
                         unregister(subscription.owner(), subscription.module(), subscription.identity());
                     }

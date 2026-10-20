@@ -2,8 +2,10 @@ package com.iafenvoy.mxt.screen.hud;
 
 import com.google.gson.*;
 import com.iafenvoy.mxt.MiXianTu;
+import com.mojang.logging.LogUtils;
 import com.mojang.serialization.JsonOps;
 import net.neoforged.fml.loading.FMLPaths;
+import org.slf4j.Logger;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -21,6 +23,7 @@ import java.util.Optional;
  * element it was written for.
  */
 public final class HudLayoutFile {
+    private static final Logger LOGGER = LogUtils.getLogger();
     private static final int VERSION = 3;
     private static final Path PATH = FMLPaths.CONFIGDIR.get().resolve(MiXianTu.MOD_ID).resolve("mxt-hud.json");
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
@@ -57,7 +60,7 @@ public final class HudLayoutFile {
             JsonElement root = JsonParser.parseString(Files.readString(PATH));
             if (!root.isJsonObject() || root.getAsJsonObject().has("version")
                     && root.getAsJsonObject().get("version").getAsInt() != VERSION) {
-                MiXianTu.LOGGER.warn("Ignoring {}: it is not a version {} HUD layout", PATH, VERSION);
+                LOGGER.warn("Ignoring {}: it is not a version {} HUD layout", PATH, VERSION);
                 return Map.of();
             }
             JsonElement layout = root.getAsJsonObject().get("layout");
@@ -66,14 +69,14 @@ public final class HudLayoutFile {
             for (Entry<String, JsonElement> entry : layout.getAsJsonObject().entrySet()) {
                 HudPlacement placement = HudPlacement.CODEC.parse(JsonOps.INSTANCE, entry.getValue()).result().orElse(null);
                 if (placement == null) {
-                    MiXianTu.LOGGER.warn("Ignoring the HUD layout entry {}: it does not parse", entry.getKey());
+                    LOGGER.warn("Ignoring the HUD layout entry {}: it does not parse", entry.getKey());
                     continue;
                 }
                 placements.put(entry.getKey(), placement);
             }
             return placements;
         } catch (IOException | RuntimeException exception) {
-            MiXianTu.LOGGER.warn("Could not read {}: {}", PATH, exception.getMessage());
+            LOGGER.warn("Could not read {}: {}", PATH, exception.getMessage());
             return Map.of();
         }
     }
@@ -89,7 +92,7 @@ public final class HudLayoutFile {
             Files.createDirectories(PATH.getParent());
             Files.writeString(PATH, GSON.toJson(root));
         } catch (IOException | RuntimeException exception) {
-            MiXianTu.LOGGER.warn("Could not write {}: {}", PATH, exception.getMessage());
+            LOGGER.warn("Could not write {}: {}", PATH, exception.getMessage());
         }
     }
 }

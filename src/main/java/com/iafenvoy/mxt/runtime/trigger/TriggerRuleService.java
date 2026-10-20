@@ -1,6 +1,5 @@
 package com.iafenvoy.mxt.runtime.trigger;
 
-import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.attachment.TriggerCooldownAttachment;
 import com.iafenvoy.mxt.data.trigger.TriggerRule;
 import com.iafenvoy.mxt.data.trigger.TriggerSignal;
@@ -8,6 +7,9 @@ import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.cache.RegistryCaches;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.MiscUtil;
+import com.iafenvoy.mxt.util.profiling.LoggerDispatcher;
+import com.iafenvoy.mxt.util.profiling.LoggingLevel;
+import com.mojang.logging.LogUtils;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Entity;
@@ -25,6 +27,7 @@ import java.util.Set;
  * cooldown has to be written whether or not the pack thought to declare a storage component for it.
  */
 public final class TriggerRuleService {
+    private static final LoggerDispatcher LOGGER = LoggerDispatcher.of(LogUtils.getLogger(), LoggingLevel.ERROR, LoggingLevel.ERROR);
     // Guards one rule against re-entering itself through a signal its own action publishes.
     private static final ThreadLocal<Set<String>> DISPATCHING = ThreadLocal.withInitial(HashSet::new);
 
@@ -54,7 +57,7 @@ public final class TriggerRuleService {
                 if (!rule.condition().test(actor, signal.context())) continue;
                 rule.action().execute(actor, signal.context());
             } catch (RuntimeException exception) {
-                MiXianTu.LOGGER.error("Trigger rule {} failed for signal {}", ruleId, signal.type(), exception);
+                LOGGER.log("Trigger rule '" + ruleId + "' failed for signal " + signal.type(), exception);
             } finally {
                 DISPATCHING.get().remove(key);
             }

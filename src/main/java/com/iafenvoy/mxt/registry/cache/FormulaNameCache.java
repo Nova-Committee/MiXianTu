@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.registry.cache;
 
 import com.iafenvoy.mxt.util.HolderHelper;
-import com.iafenvoy.mxt.util.formula.FormulaDiagnostics;
+import com.iafenvoy.mxt.util.formula.FormulaVariables;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Registry;
 import net.minecraft.core.RegistryAccess;
@@ -46,7 +46,7 @@ public class FormulaNameCache<T> extends RegistryCache<Map<String, Holder<T>>> {
         String name = flatten(id);
         T previous = index.putIfAbsent(name, value);
         if (previous != null)
-            FormulaDiagnostics.report("Two formula " + kind + " names flatten to '" + name + "'; '" + id + "' is ignored");
+            FormulaVariables.LOGGER.log("Two formula " + kind + " names flatten to '" + name + "'; '" + id + "' is ignored");
     }
 
     // The flat id shape every formula name uses: exp4j identifiers cannot hold / . -

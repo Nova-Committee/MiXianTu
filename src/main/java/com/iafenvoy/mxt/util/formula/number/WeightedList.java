@@ -2,7 +2,7 @@ package com.iafenvoy.mxt.util.formula.number;
 
 import com.iafenvoy.mxt.data.Weighted;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
-import com.iafenvoy.mxt.util.formula.FormulaDiagnostics;
+import com.iafenvoy.mxt.util.formula.FormulaVariables;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.MapCodec;
@@ -48,7 +48,7 @@ public final class WeightedList implements NumberProvider {
     public double evaluate(FormulaContext context) {
         long total = this.total;
         if (total <= 0L) {
-            FormulaDiagnostics.report("Number provider WeightedList has an invalid total weight; using 0");
+            FormulaVariables.LOGGER.log("Number provider WeightedList has an invalid total weight; using 0");
             return 0.0D;
         }
         Weighted<NumberProvider> entry = Weighted.select(this.distribution, total, context.random());

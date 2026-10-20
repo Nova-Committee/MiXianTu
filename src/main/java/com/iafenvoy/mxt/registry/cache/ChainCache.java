@@ -19,6 +19,7 @@ public class ChainCache<T extends ChainNode<T>> extends RegistryCache<ChainCache
     private final ResourceKey<Registry<T>> registry;
     private final List<Chain<T>> chains = new LinkedList<>();
     private final Map<Holder<T>, Chain<T>> byNode = new LinkedHashMap<>();
+    // FIXME:: Rename
     private final List<BiPredicate<T, T>> chainValidators = new LinkedList<>();
     private final List<Predicate<Chain<T>>> lineRules = new LinkedList<>();
 

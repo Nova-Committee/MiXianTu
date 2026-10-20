@@ -1,4 +1,4 @@
-package com.iafenvoy.mxt.compat.kubejs.callback;
+package com.iafenvoy.mxt.util.function;
 
 @FunctionalInterface
 public interface TriFunction<A, B, C, R> {

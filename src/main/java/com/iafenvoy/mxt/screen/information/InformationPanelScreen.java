@@ -35,7 +35,6 @@ import net.minecraft.network.chat.TextColor;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.fml.loading.FMLEnvironment;
 import org.jetbrains.annotations.Nullable;
 import org.jspecify.annotations.NonNull;
 
@@ -530,7 +529,7 @@ public final class InformationPanelScreen extends AuiScreen {
                 widestValue = Math.max(widestValue, font.width(entry.value()));
             }
             this.columns = InformationHelper.columns(available, widestName, widestValue);
-            if (width <= 1 || FMLEnvironment.isProduction()) return;
+            if (width <= 1 || !MiXianTu.isDevMode()) return;
             for (InformationEntry entry : entries) {
                 int nameLines = entry.name() == null ? 0
                         : font.split(entry.name(), Math.max(1, this.columns.nameWidth())).size();

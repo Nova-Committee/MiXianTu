@@ -1,6 +1,5 @@
 package com.iafenvoy.mxt.runtime.formation;
 
-import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.compat.ftb.FtbChunksCompat;
 import com.iafenvoy.mxt.config.MxtServerConfig;
 import com.iafenvoy.mxt.config.MxtServerConfig.ClaimLinkage;
@@ -11,12 +10,14 @@ import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.friend.FriendService;
+import com.mojang.logging.LogUtils;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.TriState;
 import net.minecraft.world.entity.Entity;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
 
 import java.util.Map.Entry;
 import java.util.Optional;
@@ -32,6 +33,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * of the action: the flags apply when the actor or the target is inside the radius.
  */
 public final class FormationProtection {
+    private static final Logger LOGGER = LogUtils.getLogger();
     // One line per definition rather than one per activation.
     private static final Set<Identifier> WARNED_DELEGATIONS = ConcurrentHashMap.newKeySet();
 
@@ -128,7 +130,7 @@ public final class FormationProtection {
 
     private static void warnClaimsOnlyWithoutClaims() {
         if (!WARNED_INERT_LINKAGE.compareAndSet(false, true)) return;
-        MiXianTu.LOGGER.warn("config.mxt.server.compat.claim_linkage is claims_only, but FTB Chunks is not installed: "
+        LOGGER.warn("config.mxt.server.compat.claim_linkage is claims_only, but FTB Chunks is not installed: "
                 + "protection formations can be raised anywhere, because there are no claims to require");
     }
 
@@ -146,7 +148,7 @@ public final class FormationProtection {
         boolean delegates = definition.actions().stream()
                 .anyMatch(module -> module instanceof ProtectionFormationAction ward && ward.delegateToClaims());
         if (!delegates || !WARNED_DELEGATIONS.add(id)) return;
-        MiXianTu.LOGGER.warn("Formation {} delegates its protection to claims, but no claim protection is active "
+        LOGGER.warn("Formation {} delegates its protection to claims, but no claim protection is active "
                 + "(FTB Chunks absent, or its claim protection switched off): its own flags stay in force. Turn off "
                 + "the server option config.mxt.server.compat.delegate_requires_claims to hand it over regardless.", id);
     }

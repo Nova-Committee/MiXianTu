@@ -16,13 +16,8 @@ import org.jetbrains.annotations.Nullable;
 import java.util.List;
 
 /**
- * The one store a bound fee comes out of, as a value: two fees of one payment that name the same target are the same
- * store, so the payment sums them and charges once. The identity is physical, not by cost type - an {@code mxt:aura}
- * charged as the resource it is measured in and the {@code mxt:resource} naming that same value are one target, while
- * a pool, a bank and an account stay apart even when they hold the same aura.
- *
- * <p>Stores that have a name of their own (a section of a chunk, a resource id) are equal by that name; stores handed
- * in by the caller (an attachment, a container, a bank) are equal by identity, because two of them are two stores.
+ * The physical store a bound fee comes out of, used for duplicate diagnostics and re-entrancy guards.
+ * VALUE aura and its resource name one account balance; pools, banks and accounts remain separate targets.
  */
 public sealed interface CostTarget {
     /**
@@ -46,8 +41,8 @@ public sealed interface CostTarget {
     }
 
     /**
-     * One demand on one container, identified by the items it accepts: two entries that accept exactly the same items
-     * are one demand that can be summed, while two different matchers stay two demands.
+     * One demand on one container, identified by the items it accepts. Different matchers remain distinct targets;
+     * duplicate diagnostics do not detect arbitrary overlaps between them.
      */
     record Items(@Nullable Container container, List<ItemMatcher.Entry> entries) implements CostTarget {
         public Items {
@@ -61,11 +56,8 @@ public sealed interface CostTarget {
     }
 
     /**
-     * One script call. Never merged with another: what a script takes is its own business, so it is not a share of a
-     * number that could be added up. The entry number is what keeps two calls of one script apart.
-     * <p>
-     * The {@link #guard()} is a different question from the identity: it is what a nested payment of the same script by
-     * the same payer is checked against, so the entry number above cannot make one script look independent of itself.
+     * One script call, kept distinct by its entry number. Duplicate diagnostics compare script id and payer instead;
+     * the re-entrancy guard currently uses the script id alone.
      */
     record Script(String id, long entry) implements CostTarget {
         @Override
@@ -80,9 +72,8 @@ public sealed interface CostTarget {
     }
 
     /**
-     * A section of one chunk's pooled aura: the store a world pool pays from. One chunk's section is one stock, so the
-     * identity is the chunk and the height - two positions inside one section are the same store, and two fees written
-     * at them are summed instead of each seeing the whole pool.
+     * A section of one chunk's pooled aura. Two positions inside one section name the same stock for diagnostics
+     * and guards; the fees are still simulated and charged separately.
      */
     record Section(ResourceKey<Level> dimension, int chunkX, int chunkZ, int sectionY) {
         public static Section of(ResourceKey<Level> dimension, BlockPos pos) {

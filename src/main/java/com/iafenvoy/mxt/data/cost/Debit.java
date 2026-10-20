@@ -6,8 +6,7 @@ import java.util.List;
 
 /**
  * What one fee really took: the store, the amount in that store's own unit, and - for items - the stacks that left it.
- * Only a real pass produces a debit: a simulated one takes nothing and answers with an empty list, and a refused fee
- * answers with the refusal instead.
+ * Only a real pass produces a debit; a failed fee may still report a known partial transfer.
  */
 public record Debit(CostTarget target, double amount, List<ItemStack> items) {
     public Debit {
