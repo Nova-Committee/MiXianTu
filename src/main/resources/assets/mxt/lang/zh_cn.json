@@ -632,6 +632,8 @@
   "failure.mxt.common.no_payer": "没有付款者",
   "failure.mxt.common.bill_closed": "付款一旦开始就不能再改价或重付",
   "failure.mxt.common.reentrant": "这次付款正在结算同一个存储",
+  "failure.mxt.common.ambiguous_payer": "这笔费用同时记在多个账户上，按资源改动无法确定改谁的",
+  "failure.mxt.common.uncertain": "这次付款已经写出一部分但没能确认，不会再扣一次",
   "failure.mxt.common.no_target": "没有符合条件的目标",
   "failure.mxt.common.not_applicable": "指定的技能不能作用在目标身上",
   "failure.mxt.common.not_willing": "对方不愿意",

@@ -40,6 +40,14 @@ public final class CostFailure {
      * A payment reached one of its own stores again while it was writing it.
      */
     public static final Failure REENTRANT = SimpleFailure.of("reentrant");
+    /**
+     * A real pass began and never answered: what it wrote before it stopped is not known, so it is not paid again.
+     */
+    public static final Failure UNCERTAIN = SimpleFailure.of("uncertain");
+    /**
+     * The bill charges more than one account, so an id-keyed table of amounts cannot say whose balance it edits.
+     */
+    public static final Failure AMBIGUOUS_PAYER = SimpleFailure.of("ambiguous_payer");
 
     private CostFailure() {
     }

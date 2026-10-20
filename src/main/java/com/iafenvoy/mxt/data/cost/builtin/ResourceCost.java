@@ -25,8 +25,7 @@ public record ResourceCost(Holder<Resource> resource, NumberProvider amount) imp
         double value = ResourceChannel.evaluate(context, this.resource(), this.amount());
         if (value <= 0.0D) return ResultWithData.failure(null, CostFailure.INVALID_AMOUNT);
         CostTransaction transaction = ResourceChannel.transaction(context, this.resource(), value);
-        return transaction == null ? ResultWithData.failure(null, CostFailure.NO_CHANNEL)
-                : ResultWithData.success(transaction);
+        return ResultWithData.success(transaction);
     }
 
     @Override

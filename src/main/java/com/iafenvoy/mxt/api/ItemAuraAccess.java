@@ -11,7 +11,7 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * An item whose individual stack can exchange whole units of one aura - see {@link AuraAccess} for why what is
- * moved is an aura rather than the value it is counted in.
+ * moved is an aura rather than the value it is counted in, and for what {@code exact} asks of a store.
  * Both operations return the part of {@code amount} that could not be moved.
  * <p>
  * Storage only, asked from wherever the stack is: a display stand reads and writes a store through this, and the
@@ -28,7 +28,7 @@ public interface ItemAuraAccess {
         return this.getCapacity(entity, registries, stack).getInt(aura);
     }
 
-    int insert(@Nullable LivingEntity entity, @NotNull Provider registries, ItemStack stack, Holder<Aura> aura, int amount, boolean simulate);
+    int insert(@Nullable LivingEntity entity, @NotNull Provider registries, ItemStack stack, Holder<Aura> aura, int amount, boolean exact, boolean simulate);
 
-    int extract(@Nullable LivingEntity entity, @NotNull Provider registries, ItemStack stack, Holder<Aura> aura, int amount, boolean simulate);
+    int extract(@Nullable LivingEntity entity, @NotNull Provider registries, ItemStack stack, Holder<Aura> aura, int amount, boolean exact, boolean simulate);
 }

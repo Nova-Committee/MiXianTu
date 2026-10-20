@@ -27,6 +27,10 @@ import java.util.concurrent.atomic.AtomicLong;
  * A script owns whatever state it touches, so one transaction asks it twice: the check before anything is taken and
  * again right before the consume, which is what keeps a single call from skipping the condition. What it takes is the
  * script's own business, so a payment never spells it out and two script calls are never added together.
+ * <p>
+ * The parameters are frozen when the entry is priced and the frozen copy is never handed to a script: every callback
+ * gets a fresh deep copy, so one that writes into what it was given cannot change what the next callback sees - and a
+ * simulated pass cannot change the parameters the real one is paid with.
  */
 public record JsCost(String id, JsonObject params) implements Cost {
     public static final MapCodec<JsCost> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
@@ -66,10 +70,10 @@ public record JsCost(String id, JsonObject params) implements Cost {
         @Override
         protected ResultWithData<List<Debit>> perform(boolean simulate) {
             if (this.player == null) return refused(CostFailure.NO_CHANNEL);
-            if (!MxtJsCostCallbacks.check(this.script, this.player, this.params))
+            if (!MxtJsCostCallbacks.check(this.script, this.player, this.params.deepCopy()))
                 return refused(CostFailure.SCRIPT_REJECTED);
             if (simulate) return took(List.of());
-            if (!MxtJsCostCallbacks.consume(this.script, this.player, this.params))
+            if (!MxtJsCostCallbacks.consume(this.script, this.player, this.params.deepCopy()))
                 return refused(CostFailure.SCRIPT_REJECTED);
             return took(Debit.of(this.target(), this.amount()));
         }

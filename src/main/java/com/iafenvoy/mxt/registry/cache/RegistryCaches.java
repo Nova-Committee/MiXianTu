@@ -22,15 +22,18 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.level.block.Block;
 
-import java.util.Comparator;
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 
 public final class RegistryCaches {
-    public static final RealmChainCache REALM_CHAIN = new RealmChainCache().validate(RealmStage::aura, Objects::equals);
+    public static final RealmChainCache REALM_CHAIN = new RealmChainCache().validate(RealmStage::aura, Objects::equals)
+            .require(ladder -> ladder.nodes().stream().map(node -> node.value().aura()).distinct().count() == 1);
     public static final ChainCache<Progression> PROGRESSION_CHAIN = new ChainCache<>(MxtResourceKeys.PROGRESSION).callback(RegistryCaches::validateTechniqueLevels);
-    public static final ChainCache<ItemQuality> QUALITY_CHAIN = new ChainCache<>(MxtResourceKeys.ITEM_QUALITY).validate(ItemQuality::quality, Objects::equals);
+    // A ladder is allowed to name itself only once and inherit that name downwards, so two tiers on one line may
+    // not write different names; the link check only catches the conflicting pair, and the whole-line rule below
+    // is what actually keeps a misnamed ladder out of the index.
+    public static final ChainCache<ItemQuality> QUALITY_CHAIN = new ChainCache<>(MxtResourceKeys.ITEM_QUALITY)
+            .validate(ItemQuality::quality, RegistryCaches::inheritsName)
+            .require(RegistryCaches::oneLadderName);
     public static final HeatSourceCache HEAT_SOURCE = new HeatSourceCache();
     public static final ReverseMappingListCache<Identifier, TriggerRule> TRIGGER_RULES_BY_SIGNAL = new ReverseMappingListCache<>(MxtResourceKeys.TRIGGER, rule -> List.of(rule.value().trigger().signalType()));
     public static final ReverseMappingListCache<Block, BlockAura> BLOCK_AURA = new ReverseMappingListCache<>(MxtResourceKeys.BLOCK_AURA, (aura) -> RegistryCodecs.resolve(aura.value().blocks(), BuiltInRegistries.BLOCK).map(Holder::value).toList());
@@ -40,11 +43,27 @@ public final class RegistryCaches {
     public static final FormulaNameCache<Attribute> ATTRIBUTE_NAMES = new FormulaNameCache<>(Registries.ATTRIBUTE, "attribute");
     public static final OrderCache<ElementReaction> ELEMENT_REACTION_ORDER = new OrderCache<>(MxtResourceKeys.ELEMENT_REACTION, Comparator.<Holder.Reference<ElementReaction>>comparingInt(h -> h.value().priority()).reversed().thenComparing(h -> h.key().identifier()));
     public static final DamageElementsCache DAMAGE_ELEMENTS = new DamageElementsCache();
+    // Change is made greedily, so the set it is made from is checked when the pack loads.
+    public static final CurrencyChangeCache CURRENCY_CHANGE = CurrencyChangeCache.of();
 
     // Constructs every cache above into RegistryCache's rebuild list. That event only rebuilds what is already
     // registered there, and nothing else touches this class before a world loads, so a run without this call leaves
     // all of them empty for the whole session.
     public static void init() {
+    }
+
+    // One link of a ladder may leave the name out and inherit it from the tier below, so the rule only refuses a
+    // pair that both write a name and disagree about it.
+    private static boolean inheritsName(Optional<Identifier> lower, Optional<Identifier> upper) {
+        return upper.isEmpty() || lower.isEmpty() || lower.get().equals(upper.get());
+    }
+
+    // The same rule for the whole line, since the walk can reach a line whose names disagree far apart. A line with
+    // one name, or with none at all, is a ladder; a line that names itself twice differently is not one ladder.
+    private static boolean oneLadderName(Chain<ItemQuality> ladder) {
+        Set<Identifier> names = new HashSet<>();
+        for (Holder<ItemQuality> tier : ladder.nodes()) tier.value().quality().ifPresent(names::add);
+        return names.size() <= 1;
     }
 
     // A technique annotates one chain: a holder starts at its entry level and may be configured for every level

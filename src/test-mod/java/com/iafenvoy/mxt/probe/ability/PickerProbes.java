@@ -2,7 +2,6 @@ package com.iafenvoy.mxt.probe.ability;
 
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.data.PickerCategories;
-import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.cultivation.SpiritRoot;
 import com.iafenvoy.mxt.probe.Probe;
 import com.iafenvoy.mxt.probe.ProbeContext;

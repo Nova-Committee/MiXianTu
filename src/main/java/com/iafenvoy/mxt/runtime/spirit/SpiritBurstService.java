@@ -118,7 +118,7 @@ public final class SpiritBurstService {
         if (!ResourceService.change(resources, resource, -amount, context).valid()) return false;
         if (vessel != null) {
             ItemStack stack = holder.getMainHandItem();
-            vessel.insert(holder, holder.registryAccess(), stack, aura, amount, false);
+            vessel.insert(holder, holder.registryAccess(), stack, aura, amount, false, false);
             SpiritVesselItem.showCharge(holder, stack, resource);
             return true;
         }
@@ -131,7 +131,7 @@ public final class SpiritBurstService {
     private static @Nullable SpiritVesselItem heldVessel(LivingEntity holder, Holder<Aura> aura, int amount) {
         ItemStack stack = holder.getMainHandItem();
         if (!(stack.getItem() instanceof SpiritVesselItem vessel)) return null;
-        return vessel.insert(holder, holder.registryAccess(), stack, aura, amount, true) < amount ? vessel : null;
+        return vessel.insert(holder, holder.registryAccess(), stack, aura, amount, false, true) < amount ? vessel : null;
     }
 
     private static int asWholeAmount(double value) {

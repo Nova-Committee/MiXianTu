@@ -27,9 +27,16 @@ import com.iafenvoy.mxt.probe.talisman.TalismanProbes;
 import com.iafenvoy.mxt.probe.verify.AbilityCooldownVerifyProbes;
 import com.iafenvoy.mxt.probe.verify.AuraVerifyProbes;
 import com.iafenvoy.mxt.probe.verify.ClosureVerifyProbes;
+import com.iafenvoy.mxt.probe.verify.CostStoreVerifyProbes;
 import com.iafenvoy.mxt.probe.verify.CostVerifyProbes;
+import com.iafenvoy.mxt.probe.verify.CultivationDistributionVerifyProbes;
+import com.iafenvoy.mxt.probe.verify.EconomyVerifyProbes;
+import com.iafenvoy.mxt.probe.verify.FriendVerifyProbes;
 import com.iafenvoy.mxt.probe.verify.GeneratedNameVerifyProbes;
 import com.iafenvoy.mxt.probe.verify.MinorStageVerifyProbes;
+import com.iafenvoy.mxt.probe.verify.ScopeVerifyProbes;
+import com.iafenvoy.mxt.probe.verify.StoreVerifyProbes;
+import com.iafenvoy.mxt.probe.verify.TalismanSessionVerifyProbes;
 import com.iafenvoy.mxt.probe.verify.TalismanVerifyProbes;
 import com.iafenvoy.mxt.probe.verify.TargetSelectorVerifyProbes;
 import com.iafenvoy.mxt.probe.verify.WheelVerifyProbes;
@@ -93,9 +100,16 @@ public final class ProbeTests {
             AuraVerifyProbes::probes,
             ClosureVerifyProbes::probes,
             CostVerifyProbes::probes,
+            CostStoreVerifyProbes::probes,
+            CultivationDistributionVerifyProbes::probes,
+            EconomyVerifyProbes::probes,
             GeneratedNameVerifyProbes::probes,
             MinorStageVerifyProbes::probes,
             TalismanVerifyProbes::probes,
+            TalismanSessionVerifyProbes::probes,
+            ScopeVerifyProbes::probes,
+            FriendVerifyProbes::probes,
+            StoreVerifyProbes::probes,
             TargetSelectorVerifyProbes::probes,
             WheelVerifyProbes::probes,
             RiftProbes::probes,

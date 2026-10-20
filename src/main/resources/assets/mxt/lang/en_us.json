@@ -632,6 +632,8 @@
   "failure.mxt.common.no_payer": "no one to pay for it",
   "failure.mxt.common.bill_closed": "A payment cannot be changed after it has been paid",
   "failure.mxt.common.reentrant": "the same payment is already settling that store",
+  "failure.mxt.common.ambiguous_payer": "this bill charges more than one account, so an id-keyed table of amounts cannot say whose balance it edits",
+  "failure.mxt.common.uncertain": "this payment wrote something and never came back, so it is not charged again",
   "failure.mxt.common.no_target": "no target matches",
   "failure.mxt.common.not_applicable": "the ability it names cannot act on a target",
   "failure.mxt.common.not_willing": "it is not willing",

@@ -159,7 +159,7 @@ public final class ItemAuraService {
             if (item.getItem() instanceof ItemAuraAccess access) {
                 Provider registries = entity.registryAccess();
                 int capacity = Math.max(0, access.getCapacity(entity, registries, item).getInt(definition.value().type()));
-                int unavailable = access.extract(entity, registries, item, definition.value().type(), capacity, true);
+                int unavailable = access.extract(entity, registries, item, definition.value().type(), capacity, false, true);
                 int available = Math.max(0, capacity - unavailable);
                 if (available == 0) {
                     holding.clear();
@@ -249,7 +249,7 @@ public final class ItemAuraService {
     private static void exhaust(LivingEntity entity, ItemStack item, Holder<ItemAura> active, FormulaContext context) {
         entity.getData(MxtAttachments.FLOAT_HOLDING_ITEM).clear();
         if (item.getItem() instanceof ItemAuraAccess access) {
-            access.extract(entity, entity.registryAccess(), item, active.value().type(), Integer.MAX_VALUE, false);
+            access.extract(entity, entity.registryAccess(), item, active.value().type(), Integer.MAX_VALUE, false, false);
             item.remove(MxtDataComponents.ITEM_AURA);
             giveItem(entity, item);
         } else {

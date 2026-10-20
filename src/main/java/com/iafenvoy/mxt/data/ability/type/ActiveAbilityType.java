@@ -6,7 +6,6 @@ import com.iafenvoy.mxt.data.action.BiEntityAction;
 import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.condition.BiEntityCondition;
 import com.iafenvoy.mxt.data.storage.DataStorageCollector;
-import com.iafenvoy.mxt.data.storage.builtin.*;
 import com.iafenvoy.mxt.runtime.ability.AbilityActivationService;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.iafenvoy.mxt.util.formula.number.Constant;
@@ -41,12 +40,7 @@ public record ActiveAbilityType(EntityAction entityAction, TargetSelector target
     @Override
     public void createComponents(Ability ability, DataStorageCollector collector) {
         AbilityType.super.createComponents(ability, collector);
-        collector.add(CooldownDataStorage.INSTANCE);
-        ability.charges().ifPresent(charges -> collector.add(charges.declared()));
-        collector.add(ToggleDataStorage.INSTANCE);
-        collector.add(TimerDataStorage.INSTANCE);
-        collector.add(ResourceDataStorage.INSTANCE);
-        collector.add(TargetLockDataStorage.INSTANCE);
+        AbilityType.declareUseStorages(ability, collector);
     }
 
     // A cast pays inside its own transaction, which also owns its cooldown and its charges.

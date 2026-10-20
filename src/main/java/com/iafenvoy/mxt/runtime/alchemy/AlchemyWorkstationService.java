@@ -360,9 +360,10 @@ public final class AlchemyWorkstationService {
     }
 
     private static void insert(Container container, List<ItemStack> stacks) {
-        int[] counts = plan(container, stacks);
-        if (counts == null) throw new IllegalStateException("Alchemy outputs changed after capacity check");
-        ItemStack[] placed = plannedStacks(container, stacks);
+        Placement placement = plan(container, stacks);
+        if (placement == null) throw new IllegalStateException("Alchemy outputs changed after capacity check");
+        int[] counts = placement.counts();
+        ItemStack[] placed = placement.kinds();
         for (int index = 0; index < AlchemySlots.OUTPUT_COUNT; index++) {
             int slot = AlchemySlots.OUTPUT_START + index;
             ItemStack existing = container.getItem(slot);
@@ -377,9 +378,11 @@ public final class AlchemyWorkstationService {
     }
 
     /**
-     * Remaining room per output slot after merging identical pending stacks. Null when they do not fit.
+     * Where the pending stacks would end up: how many of which item each output slot holds once they are merged in.
+     * Null when they do not fit. Capacity checks and the write both read this one answer, so the two can never
+     * disagree about what the merge is.
      */
-    private static int @Nullable [] plan(Container container, List<ItemStack> stacks) {
+    private static @Nullable Placement plan(Container container, List<ItemStack> stacks) {
         int[] counts = new int[AlchemySlots.OUTPUT_COUNT];
         ItemStack[] kinds = new ItemStack[AlchemySlots.OUTPUT_COUNT];
         for (int index = 0; index < AlchemySlots.OUTPUT_COUNT; index++) {
@@ -408,37 +411,10 @@ public final class AlchemyWorkstationService {
             }
             if (left > 0) return null;
         }
-        return counts;
+        return new Placement(counts, kinds);
     }
 
-    private static ItemStack[] plannedStacks(Container container, List<ItemStack> stacks) {
-        ItemStack[] kinds = new ItemStack[AlchemySlots.OUTPUT_COUNT];
-        int[] counts = new int[AlchemySlots.OUTPUT_COUNT];
-        for (int index = 0; index < AlchemySlots.OUTPUT_COUNT; index++) {
-            ItemStack existing = container.getItem(AlchemySlots.OUTPUT_START + index);
-            kinds[index] = existing;
-            counts[index] = existing.getCount();
-        }
-        for (ItemStack stack : stacks) {
-            if (stack.isEmpty()) continue;
-            int max = Math.min(container.getMaxStackSize(), stack.getMaxStackSize());
-            int left = stack.getCount();
-            for (int pass = 0; pass < 2 && left > 0; pass++) {
-                for (int index = 0; index < AlchemySlots.OUTPUT_COUNT && left > 0; index++) {
-                    boolean empty = counts[index] == 0;
-                    if (pass == 0) {
-                        if (empty || !ItemStack.isSameItemSameComponents(kinds[index], stack)) continue;
-                    } else if (!empty) continue;
-                    int room = max - counts[index];
-                    if (room <= 0) continue;
-                    int take = Math.min(room, left);
-                    if (empty) kinds[index] = stack;
-                    counts[index] += take;
-                    left -= take;
-                }
-            }
-        }
-        return kinds;
+    private record Placement(int[] counts, ItemStack[] kinds) {
     }
 
     private static @Nullable List<ItemStack> create(List<ItemStackTemplate> templates) {

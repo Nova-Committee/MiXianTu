@@ -467,9 +467,9 @@ public final class DrawingProbes {
             this.check("submit-slot-holds-a-carrier", held.is(MxtItems.TALISMAN.get()), read(held));
             TalismanComponent inscribed = held.get(MxtDataComponents.TALISMAN);
             this.check("submit-carrier-names-the-formula",
-                    inscribed != null && inscribed.talismans().size() == 1
-                            && HolderHelper.id(inscribed.talismans().getFirst()).equals(CARRIER),
-                    inscribed == null ? "no inscription" : String.valueOf(inscriptions(inscribed.talismans())));
+                    inscribed != null && inscribed.talisman().isPresent()
+                            && HolderHelper.id(inscribed.talisman().orElseThrow()).equals(CARRIER),
+                    inscribed == null ? "no inscription" : String.valueOf(inscriptions(inscribed.talisman().stream().toList())));
             Holder<?> quality = held.get(MxtDataComponents.QUALITY);
             this.check("submit-carrier-is-the-top-grade-quality",
                     quality != null && HolderHelper.id(quality).equals(QUALITY), String.valueOf(quality));

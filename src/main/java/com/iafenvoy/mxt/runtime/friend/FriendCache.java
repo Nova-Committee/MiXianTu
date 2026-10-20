@@ -14,6 +14,10 @@ import java.util.concurrent.ConcurrentHashMap;
  * Every player's friend lists, mirrored in memory so an owner who is offline can still be answered for; the lists
  * themselves live on the player entity. Filled at login and again at logout, so no writer of friend data has to
  * remember it; while the owner is online the live attachment is read instead.
+ *
+ * <p>The mirror belongs to one server session: it is dropped when that server stops, so a process that opens a second
+ * world cannot answer for an owner from the first one. Unknown is a real answer, and it is the right one until an owner
+ * has logged in to the world being played.
  */
 public final class FriendCache {
     private static final Map<UUID, Set<UUID>> FRIENDS = new ConcurrentHashMap<>();
@@ -36,5 +40,9 @@ public final class FriendCache {
     public static TriState lookup(UUID owner, UUID candidate) {
         Set<UUID> friends = FRIENDS.get(owner);
         return friends == null ? TriState.DEFAULT : TriState.from(friends.contains(candidate));
+    }
+
+    public static void clear() {
+        FRIENDS.clear();
     }
 }

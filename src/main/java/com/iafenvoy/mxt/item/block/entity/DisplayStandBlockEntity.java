@@ -59,13 +59,13 @@ public final class DisplayStandBlockEntity extends BlockEntity implements AuraAc
     }
 
     @Override
-    public int insert(@Nullable LivingEntity entity, @NotNull HolderLookup.Provider registries, Holder<Aura> aura, int amount, boolean simulate) {
+    public int insert(@Nullable LivingEntity entity, @NotNull HolderLookup.Provider registries, Holder<Aura> aura, int amount, boolean exact, boolean simulate) {
         AuraAccess.requireNonNegative(amount);
         // Only a store that asked to be poured into is filled here: the reading is the storing interface, the
         // report is the manual one.
         if (!(this.displayedItem.getItem() instanceof ItemAuraAccess access)) return amount;
         if (this.level == null) return amount;
-        int remaining = access.insert(entity, registries, this.displayedItem, aura, amount, simulate);
+        int remaining = access.insert(entity, registries, this.displayedItem, aura, amount, exact, simulate);
         if (!simulate && remaining != amount) {
             if (access instanceof UseItemAuraAccess manual) {
                 // The store is in nobody's hands, so the place it is at travels with the report instead of being read
@@ -80,7 +80,7 @@ public final class DisplayStandBlockEntity extends BlockEntity implements AuraAc
     }
 
     @Override
-    public int extract(@Nullable LivingEntity entity, @NotNull HolderLookup.Provider registries, Holder<Aura> aura, int amount, boolean simulate) {
+    public int extract(@Nullable LivingEntity entity, @NotNull HolderLookup.Provider registries, Holder<Aura> aura, int amount, boolean exact, boolean simulate) {
         return AuraAccess.requireNonNegative(amount);
     }
 

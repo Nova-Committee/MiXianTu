@@ -67,8 +67,7 @@ public record AuraCost(Holder<Aura> aura, NumberProvider amount) implements Cost
     private ResultWithData<Transaction> pool(CostContext context, double amount) {
         Level level = context.level();
         BlockPos pos = context.pos();
-        CostTarget.Section section = level == null || pos == null ? null : new CostTarget.Section(level.dimension(), pos,
-                SectionPos.blockToSectionCoord(pos.getY()));
+        CostTarget.Section section = level == null || pos == null ? null : CostTarget.Section.of(level.dimension(), pos);
         return ResultWithData.success(new PoolTransaction(level, pos, section, this.aura, amount));
     }
 
@@ -76,11 +75,13 @@ public record AuraCost(Holder<Aura> aura, NumberProvider amount) implements Cost
         return ResultWithData.success(new BankTransaction(context, context.bank(), this.aura, amount));
     }
 
-    // Whole units, the only granularity a bank deals in for a display-sized price.
+    // Whole units, the only granularity a bank deals in for a display-sized price. A price a bank cannot express is
+    // refused rather than clamped: taking less than the bill names while answering "paid" is a lie about the price.
+    // Zero is "no amount", a negative answer is "this store cannot express the amount".
     private static int units(double amount) {
         amount = MiscUtil.positive(amount);
         if (amount <= 0.0D) return 0;
-        return amount >= Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) Math.ceil(amount);
+        return amount > Integer.MAX_VALUE ? -1 : (int) Math.ceil(amount);
     }
 
     // The shared pool at a position: one aura of one section, checked and drained all-or-nothing.
@@ -140,15 +141,19 @@ public record AuraCost(Holder<Aura> aura, NumberProvider amount) implements Cost
         protected ResultWithData<List<Debit>> perform(boolean simulate) {
             if (this.bank == null) return refused(CostFailure.NO_CHANNEL);
             int units = units(this.amount());
-            if (units <= 0) return refused(CostFailure.INVALID_AMOUNT);
+            if (units < 0) return refused(CostFailure.INVALID_AMOUNT);
+            if (units == 0) return took(List.of());
             HolderLookup.Provider registries = this.context.registries();
-            if (this.bank.extract(this.context.payer(), registries, this.aura, units, true) != 0)
-                return refused(CostFailure.INSUFFICIENT_AURA);
+            // Asked as a whole amount: a bank that can only part with some of the price cannot pay it, and a refusal
+            // must not leave the part behind.
+            int simulated = this.bank.extract(this.context.payer(), registries, this.aura, units, true, true);
+            if (simulated != 0) return refused(CostFailure.INSUFFICIENT_AURA);
             if (simulate) return took(List.of());
-            // What the store actually gave is what is reported: a bank that only hands over part of the price is a
-            // channel that cannot pay it, not a paid fee.
-            if (this.bank.extract(this.context.payer(), registries, this.aura, units, false) != 0)
-                return refused(CostFailure.INSUFFICIENT_AURA);
+            int actual = this.bank.extract(this.context.payer(), registries, this.aura, units, true, false);
+            // A store that emptied between the two passes is reported as spent, not as unspent: what it did hand over
+            // is kept as a debit of this fee rather than dropped with the refusal.
+            if (actual != 0) return ResultWithData.failure(List.of(Debit.of(this.target(), units - actual)),
+                    CostFailure.INSUFFICIENT_AURA);
             return took(Debit.of(this.target(), units));
         }
 

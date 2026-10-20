@@ -7,20 +7,19 @@ import net.minecraft.core.Holder;
 import net.minecraft.util.StringRepresentable;
 import org.jspecify.annotations.NonNull;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Optional;
 
 /**
- * The talismans written onto one carrier, in append order, and how this carrier answers being filled. Writing a
- * talisman appends rather than replaces, so one carrier can hold several; an empty list is a blank carrier. The
- * mode lives on the stack, not on any definition, and {@link TriggerMode#FIRE} is the default - which is also
- * what every carrier written before this field existed decodes as. What this component reads as on a tooltip is
- * written by {@code TalismanTooltipAppender}, not here: those lines have to sit above the carrier's charge line.
+ * The one talisman written onto a carrier, and how this carrier answers being filled. A carrier carries a single
+ * inscription - writing one replaces what was there - and no inscription at all is a blank carrier. The mode lives on
+ * the stack, not on any definition, and {@link TriggerMode#FIRE} is the default, which is what every carrier written
+ * before this field existed decodes as. What this component reads as on a tooltip is written by
+ * {@code TalismanTooltipAppender}, not here: those lines have to sit above the carrier's charge line.
  */
-public record TalismanComponent(List<Holder<Talisman>> talismans, TriggerMode mode) {
-    public static final TalismanComponent EMPTY = new TalismanComponent(List.of(), TriggerMode.FIRE);
+public record TalismanComponent(Optional<Holder<Talisman>> talisman, TriggerMode mode) {
+    public static final TalismanComponent EMPTY = new TalismanComponent(Optional.empty(), TriggerMode.FIRE);
     public static final Codec<TalismanComponent> CODEC = RecordCodecBuilder.create(i -> i.group(
-            Talisman.CODEC.listOf().optionalFieldOf("talismans", List.of()).forGetter(TalismanComponent::talismans),
+            Talisman.CODEC.optionalFieldOf("talisman").forGetter(TalismanComponent::talisman),
             TriggerMode.CODEC.optionalFieldOf("mode", TriggerMode.FIRE).forGetter(TalismanComponent::mode)
     ).apply(i, TalismanComponent::new));
 
@@ -51,15 +50,19 @@ public record TalismanComponent(List<Holder<Talisman>> talismans, TriggerMode mo
         }
     }
 
-    // The appended definition is kept as written: a carrier may hold the same talisman twice, so "write it again"
-    // is a no-op the crafting loop decides on rather than a rule hidden here.
-    public TalismanComponent appended(Holder<Talisman> talisman) {
-        List<Holder<Talisman>> appended = new ArrayList<>(this.talismans);
-        appended.add(talisman);
-        return new TalismanComponent(List.copyOf(appended), this.mode);
+    /**
+     * A carrier written with this talisman. Writing over a written carrier replaces it, which is the one inscription a
+     * carrier can hold.
+     */
+    public static TalismanComponent of(Holder<Talisman> talisman, TriggerMode mode) {
+        return new TalismanComponent(Optional.of(talisman), mode);
+    }
+
+    public boolean blank() {
+        return this.talisman.isEmpty();
     }
 
     public TalismanComponent withMode(TriggerMode mode) {
-        return new TalismanComponent(this.talismans, mode);
+        return new TalismanComponent(this.talisman, mode);
     }
 }

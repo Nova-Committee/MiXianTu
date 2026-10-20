@@ -146,9 +146,10 @@ public final class SpiritVesselItem extends Item implements ItemAuraAccess {
     }
 
     @Override
-    public int insert(@Nullable LivingEntity entity, @NotNull HolderLookup.Provider registries, ItemStack stack, Holder<Aura> aura, int amount, boolean simulate) {
+    public int insert(@Nullable LivingEntity entity, @NotNull HolderLookup.Provider registries, ItemStack stack, Holder<Aura> aura, int amount, boolean exact, boolean simulate) {
         AuraAccess.requireNonNegative(amount);
         int moved = Math.min(amount, room(stack, aura.value().resource()));
+        if (exact && moved != amount) return amount;
         if (!simulate && moved > 0) {
             Holder<Resource> resource = aura.value().resource();
             ResourceContainerComponent container = stack.getOrDefault(MxtDataComponents.RESOURCE_CONTAINER, ResourceContainerComponent.EMPTY);
@@ -158,9 +159,10 @@ public final class SpiritVesselItem extends Item implements ItemAuraAccess {
     }
 
     @Override
-    public int extract(@Nullable LivingEntity entity, @NotNull HolderLookup.Provider registries, ItemStack stack, Holder<Aura> aura, int amount, boolean simulate) {
+    public int extract(@Nullable LivingEntity entity, @NotNull HolderLookup.Provider registries, ItemStack stack, Holder<Aura> aura, int amount, boolean exact, boolean simulate) {
         // A vessel is poured into, never drained through the store protocol: what leaves it leaves through the hold,
-        // where the holder's own account is on the other side.
+        // where the holder's own account is on the other side. Nothing can be taken at all, which is the same answer
+        // under either mode.
         AuraAccess.requireNonNegative(amount);
         return amount;
     }

@@ -7,7 +7,6 @@ import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.condition.BiEntityCondition;
 import com.iafenvoy.mxt.data.condition.DamageCondition;
 import com.iafenvoy.mxt.data.storage.DataStorageCollector;
-import com.iafenvoy.mxt.data.storage.builtin.*;
 import com.iafenvoy.mxt.data.trigger.Trigger;
 import com.iafenvoy.mxt.util.MiscUtil;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
@@ -48,12 +47,7 @@ public record TriggeredAbilityType(List<Trigger> triggers, NumberProvider chance
     @Override
     public void createComponents(Ability ability, DataStorageCollector collector) {
         AbilityType.super.createComponents(ability, collector);
-        collector.add(CooldownDataStorage.INSTANCE);
-        ability.charges().ifPresent(charges -> collector.add(charges.declared()));
-        collector.add(ToggleDataStorage.INSTANCE);
-        collector.add(TimerDataStorage.INSTANCE);
-        collector.add(ResourceDataStorage.INSTANCE);
-        collector.add(TargetLockDataStorage.INSTANCE);
+        AbilityType.declareUseStorages(ability, collector);
     }
 
     // A chance the formula cannot answer is a chance that does not get through.

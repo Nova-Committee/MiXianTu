@@ -217,11 +217,12 @@ public final class SpiritCraftingTableBlockEntity extends BlockEntity implements
     }
 
     @Override
-    public int insert(@Nullable LivingEntity entity, @NotNull HolderLookup.Provider registries, Holder<Aura> aura, int amount, boolean simulate) {
+    public int insert(@Nullable LivingEntity entity, @NotNull HolderLookup.Provider registries, Holder<Aura> aura, int amount, boolean exact, boolean simulate) {
         AuraAccess.requireNonNegative(amount);
         int required = (int) Math.clamp((long) this.requiredAura.getOrDefault(aura, 0) * 99L,
                 0L, Integer.MAX_VALUE);
         int accepted = Math.min(amount, Math.max(0, required - this.aura(aura)));
+        if (exact && accepted != amount) return amount;
         if (!simulate && accepted > 0) {
             this.aura.put(aura, this.aura(aura) + accepted);
             this.markChangedAndSync();
@@ -230,11 +231,15 @@ public final class SpiritCraftingTableBlockEntity extends BlockEntity implements
     }
 
     @Override
-    public int extract(@Nullable LivingEntity entity, @NotNull HolderLookup.Provider registries, Holder<Aura> aura, int amount, boolean simulate) {
+    public int extract(@Nullable LivingEntity entity, @NotNull HolderLookup.Provider registries, Holder<Aura> aura, int amount, boolean exact, boolean simulate) {
         AuraAccess.requireNonNegative(amount);
-        int extracted = Math.min(amount, this.aura(aura));
+        int available = this.aura(aura);
+        // The exact form is the one a payment asks through: the stock is read once and the whole amount leaves or
+        // none of it does, which is why the two branches cannot share their arithmetic.
+        if (exact && available < amount) return amount;
+        int extracted = Math.min(amount, available);
         if (!simulate && extracted > 0) {
-            int remaining = this.aura(aura) - extracted;
+            int remaining = available - extracted;
             if (remaining == 0) this.aura.remove(aura);
             else this.aura.put(aura, remaining);
             this.markChangedAndSync();

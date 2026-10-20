@@ -17,8 +17,8 @@ import org.jspecify.annotations.NonNull;
 import java.util.List;
 
 /**
- * True when one of the listed talismans is inscribed on the carrier: a carrier holds a list of them, so the question
- * is whether one of these is written on it rather than whether the stack is one of them. Read through
+ * True when one of the listed talismans is inscribed on the carrier: a carrier carries a single inscription, so the
+ * question is whether that one is among these rather than whether the stack is one of them. Read through
  * {@link TalismanService}, so a stack carrying no {@code mxt:talisman} component is a blank carrier and answers no.
  */
 public record ItemTalismanCondition(
@@ -36,8 +36,8 @@ public record ItemTalismanCondition(
 
     @Override
     public boolean test(@NonNull ItemConditionContext ctx) {
-        return TalismanService.inscribed(ctx.stack()).stream()
-                .anyMatch(inscribed -> RegistryCodecs.matches(this.talismans, inscribed));
+        Holder<Talisman> inscribed = TalismanService.inscribed(ctx.stack());
+        return inscribed != null && RegistryCodecs.matches(this.talismans, inscribed);
     }
 
     @Override

@@ -65,41 +65,35 @@ public final class TalismanService {
     }
 
     // One entry per aura, each the aura one invocation wants times the multiplier, rounded up to the whole units a
-    // pour moves in. Auras, amounts and multipliers are all summed over the definitions written on the carrier.
-    // Priced against the empty context because it has to be: the capacity is also how long a pour lasts, and the
-    // client sizes the same gesture from the same stack.
+    // pour moves in. Priced against the empty context because it has to be: the capacity is also how long a pour
+    // lasts, and the client sizes the same gesture from the same stack.
     public static Map<Holder<Aura>, Integer> capacity(ItemStack stack) {
-        Map<Holder<Aura>, Double> totals = new LinkedHashMap<>();
-        int uses = remainingUses(stack);
-        for (Holder<Talisman> talisman : inscribed(stack)) {
-            // What the carrier can still spend caps what it can hold: a carrier with two invocations of wear left is
-            // never poured for five, and one that is spent whole holds exactly one.
-            double multiplier = Math.min(talisman.value().capacity(), uses);
-            for (Cost cost : talisman.value().costs())
-                if (cost instanceof AuraCost(Holder<Aura> aura1, NumberProvider amount1)) {
-                    double amount = MiscUtil.positive(amount1.evaluate(FormulaContext.EMPTY));
-                    if (amount > 0.0D)
-                        totals.merge(aura1, amount * multiplier, Double::sum);
-                }
-        }
         Map<Holder<Aura>, Integer> capacity = new LinkedHashMap<>();
-        totals.forEach((aura, amount) -> capacity.put(aura, units(amount)));
+        Holder<Talisman> written = inscribed(stack);
+        if (written == null) return capacity;
+        // What the carrier can still spend caps what it can hold: a carrier with two invocations of wear left is
+        // never poured for five, and one that is spent whole holds exactly one.
+        double multiplier = Math.min(written.value().capacity(), remainingUses(stack));
+        for (Cost cost : written.value().costs())
+            if (cost instanceof AuraCost(Holder<Aura> aura, NumberProvider amount)) {
+                double value = MiscUtil.positive(amount.evaluate(FormulaContext.EMPTY));
+                if (value > 0.0D) capacity.put(aura, units(value * multiplier));
+            }
         return capacity;
     }
 
-    // What one invocation takes out of the carrier's own store: the aura entries of the definitions' costs, summed
-    // over the definitions. Priced against the empty context for the same reason the capacity is - the two numbers
-    // have to agree about what one invocation costs, and neither may depend on who happens to be holding it. The
-    // amounts are kept as they are written rather than rounded up, so a multiplier really does buy that many
-    // invocations of them.
-    private static Map<Holder<Aura>, Double> draw(List<Holder<Talisman>> written) {
+    // What one invocation takes out of the carrier's own store: the aura entries of the definition's costs. Priced
+    // against the empty context for the same reason the capacity is - the two numbers have to agree about what one
+    // invocation costs, and neither may depend on who happens to be holding it. The amounts are kept as they are
+    // written rather than rounded up, so a multiplier really does buy that many invocations of them.
+    private static Map<Holder<Aura>, Double> draw(Holder<Talisman> written) {
         Map<Holder<Aura>, Double> draw = new LinkedHashMap<>();
-        for (Holder<Talisman> talisman : written)
-            for (Cost cost : talisman.value().costs())
-                if (cost instanceof AuraCost(Holder<Aura> aura1, NumberProvider amount1)) {
-                    double amount = MiscUtil.positive(amount1.evaluate(FormulaContext.EMPTY));
-                    if (amount > 0.0D) draw.merge(aura1, amount, Double::sum);
-                }
+        if (written == null) return draw;
+        for (Cost cost : written.value().costs())
+            if (cost instanceof AuraCost(Holder<Aura> aura, NumberProvider amount)) {
+                double value = MiscUtil.positive(amount.evaluate(FormulaContext.EMPTY));
+                if (value > 0.0D) draw.put(aura, value);
+            }
         return draw;
     }
 
@@ -175,10 +169,8 @@ public final class TalismanService {
 
     // What every inscription written on the carrier declares together; a type that declares none adds nothing.
     private static int declaredDurability(ItemStack stack) {
-        int declared = 0;
-        for (Holder<Talisman> talisman : inscribed(stack))
-            declared = add(declared, Math.max(0, talisman.value().type().maxUse()));
-        return declared;
+        Holder<Talisman> written = inscribed(stack);
+        return written == null ? 0 : Math.max(0, written.value().type().maxUse());
     }
 
     // The one entry every trigger shares - a hand (TalismanItem#use) and a carrier that filled itself - so
@@ -203,7 +195,7 @@ public final class TalismanService {
     // is whether anything was asked of the carrier, which tells a click that fired from one that only changed
     // a mode.
     public static boolean toggleMode(SpiritSource source, ItemStack stack) {
-        if (inscribed(stack).isEmpty()) return false;
+        if (inscribed(stack) == null) return false;
         TalismanComponent component = component(stack);
         boolean full = SpiritChargeService.full(source.level().registryAccess(), stack);
         if (component.mode() == TriggerMode.STORE && full) {
@@ -242,8 +234,8 @@ public final class TalismanService {
             say(holder, Component.translatable("actionbar.mxt.talisman.cooldown"));
             return Attempt.NOT_AN_ATTEMPT;
         }
-        List<Holder<Talisman>> written = inscribed(stack);
-        if (written.isEmpty()) {
+        Holder<Talisman> written = inscribed(stack);
+        if (written == null) {
             say(holder, Component.translatable("actionbar.mxt.talisman.blank"));
             return Attempt.NOT_AN_ATTEMPT;
         }
@@ -256,29 +248,24 @@ public final class TalismanService {
         // belongs to - the position says where, not who.
         FormulaContext context = FormulaContext.of(holder, Map.of("block_x", source.position().x(),
                 "block_y", source.position().y(), "block_z", source.position().z()));
-        // Ask every inscription where its use would land before anything else happens: a type that cannot happen at
+        // Ask the inscription where its use would land before anything else happens: a type that cannot happen at
         // all - a crosshair with nobody under it - refuses the carrier here, ahead of the condition and of the price.
-        List<PlannedUse> planned = new ArrayList<>(written.size());
-        for (Holder<Talisman> talisman : written) {
-            TalismanUse use = new TalismanUse(holder, context, source.position(), talisman);
-            TalismanType.Plan plan = talisman.value().type().plan(use);
-            if (!plan.runnable()) {
-                say(holder, Component.translatable("actionbar.mxt.talisman.failed", Failures.NO_TARGET.message()));
-                return Attempt.REFUSED;
-            }
-            planned.add(new PlannedUse(use, plan));
+        TalismanUse use = new TalismanUse(holder, context, source.position(), written);
+        TalismanType.Plan plan = written.value().type().plan(use);
+        if (!plan.runnable()) {
+            say(holder, Component.translatable("actionbar.mxt.talisman.failed", Failures.NO_TARGET.message()));
+            return Attempt.REFUSED;
         }
-        // The definitions' own gate, asked before the price is planned: what a carrier will not let the holder do
+        // The definition's own gate, asked before the price is planned: what a carrier will not let the holder do
         // right now is refused while nothing has been paid, so a condition can never cost the holder anything.
-        if (!allowed(written, holder, context)) {
+        if (!written.value().condition().test(holder, context)) {
             say(holder, Component.translatable("actionbar.mxt.talisman.failed", Failures.CONDITION_FAILED.message()));
             return Attempt.REFUSED;
         }
-        // One invocation is charged as a whole before anything happens: the carrier's own costs plus every
-        // inscription's own costs, in one payment that is priced once, so an inscription that has already fired can
-        // never be left unpaid for. Every aura entry is left out - an aura comes out of the carrier's own store rather
-        // than from an account.
-        List<Cost> holderCosts = written.stream().flatMap(talisman -> talisman.value().costs().stream())
+        // One invocation is charged as a whole before anything happens: the carrier's own costs in one payment that is
+        // priced once, so an effect that has already fired can never be left unpaid for. Every aura entry is left out -
+        // an aura comes out of the carrier's own store rather than from an account.
+        List<Cost> holderCosts = written.value().costs().stream()
                 .filter(cost -> !(cost instanceof AuraCost)).toList();
         CostContext costContext = CostContext.of(holder, context, CostOrigin.TALISMAN);
         CostPayment payment = CostPayment.of(costContext);
@@ -287,29 +274,26 @@ public final class TalismanService {
             say(holder, Component.translatable("actionbar.mxt.talisman.failed", priced.get().message()));
             return Attempt.REFUSED;
         }
-        // What each type does once the price can be paid. A type answers for its own targets; the ones that land
-        // immediately run their actions here, and a thrown one leaves its effect to the moment it hits.
-        for (PlannedUse entry : planned) entry.use().definition().value().type().apply(entry.use(), entry.plan());
+        // The price is paid before anything happens: a type's own effects cannot be taken back, so an invocation that
+        // cannot pay must be refused while there is still nothing to undo. Paying here rather than after the effects
+        // is what keeps a carrier from firing on a balance it never had.
         CostPayment.PaymentResult paid = payment.pay();
         if (!paid.isSuccess()) {
             say(holder, Component.translatable("actionbar.mxt.talisman.failed", paid.failure().message()));
             return Attempt.REFUSED;
         }
-        // This invocation's share of the store is spent here; whatever the definitions wrote on top of one
-        // invocation is left for the invocations after it. What is left goes back to whoever set the invocation
-        // off when the carrier itself is spent, which is the one case where it never gets to keep it.
+        // What the type does once the price has been paid. It answers for its own targets; the ones that land
+        // immediately run their actions here, and a thrown one leaves its effect to the moment it hits.
+        written.value().type().apply(use, plan);
+        // This invocation's share of the store is spent here; whatever the definition wrote on top of one invocation
+        // is left for the invocations after it. What is left goes back to whoever set the invocation off when the
+        // carrier itself is spent, which is the one case where it never gets to keep it.
         SpiritStorageComponent left = drain(store(stack), draw(written));
         if (left.isEmpty()) stack.remove(MxtDataComponents.SPIRIT_STORAGE);
         else stack.set(MxtDataComponents.SPIRIT_STORAGE, left);
         if (spend(stack, holder, inHand)) refund(left, holder);
-        say(holder, Component.translatable("actionbar.mxt.talisman.invoked", planned.size()));
+        say(holder, Component.translatable("actionbar.mxt.talisman.invoked", 1));
         return Attempt.FIRED;
-    }
-
-    // Every inscription, because one invocation is one act across everything written on the carrier: a definition
-    // that says the holder may not use it now refuses the whole carrier rather than being left out of the volley.
-    private static boolean allowed(List<Holder<Talisman>> written, LivingEntity holder, FormulaContext context) {
-        return written.stream().allMatch(talisman -> talisman.value().condition().test(holder, context));
     }
 
     // What a carrier was still holding when it was spent, handed back to whoever set that invocation off. The pour
@@ -385,8 +369,8 @@ public final class TalismanService {
         return MxtServerConfig.INSTANCE.talisman.useCooldown.getValue();
     }
 
-    public static List<Holder<Talisman>> inscribed(ItemStack stack) {
-        return component(stack).talismans();
+    public static @Nullable Holder<Talisman> inscribed(ItemStack stack) {
+        return component(stack).talisman().orElse(null);
     }
 
     // Read by the tooltip, which cannot reach the component itself: the default a missing one decodes as is this

@@ -12,6 +12,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.BiPredicate;
 import java.util.function.Function;
+import java.util.function.Predicate;
 
 public class RealmChainCache extends ChainCache<RealmStage> {
     private final Map<Holder<Aura>, Chain<RealmStage>> realmChainByAura = new LinkedHashMap<>();
@@ -44,6 +45,11 @@ public class RealmChainCache extends ChainCache<RealmStage> {
     @Override
     public <R> RealmChainCache validate(Function<RealmStage, R> mapper, BiPredicate<R, R> predicate) {
         return (RealmChainCache) super.validate(mapper, predicate);
+    }
+
+    @Override
+    public RealmChainCache require(Predicate<Chain<RealmStage>> rule) {
+        return (RealmChainCache) super.require(rule);
     }
 
     public Optional<Chain<RealmStage>> getChainByAura(Holder<Aura> holder) {

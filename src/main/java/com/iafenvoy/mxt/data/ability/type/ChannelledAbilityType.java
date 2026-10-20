@@ -7,7 +7,6 @@ import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.condition.BiEntityCondition;
 import com.iafenvoy.mxt.data.cost.Cost;
 import com.iafenvoy.mxt.data.storage.DataStorageCollector;
-import com.iafenvoy.mxt.data.storage.builtin.*;
 import com.iafenvoy.mxt.runtime.ability.AbilityActivationService;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.iafenvoy.mxt.util.formula.number.Constant;
@@ -44,12 +43,7 @@ public record ChannelledAbilityType(NumberProvider tickInterval, List<Cost> upke
     @Override
     public void createComponents(Ability ability, DataStorageCollector collector) {
         AbilityType.super.createComponents(ability, collector);
-        collector.add(CooldownDataStorage.INSTANCE);
-        ability.charges().ifPresent(charges -> collector.add(charges.declared()));
-        collector.add(ToggleDataStorage.INSTANCE);
-        collector.add(TimerDataStorage.INSTANCE);
-        collector.add(ResourceDataStorage.INSTANCE);
-        collector.add(TargetLockDataStorage.INSTANCE);
+        AbilityType.declareUseStorages(ability, collector);
     }
 
     @Override

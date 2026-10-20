@@ -12,6 +12,12 @@ import org.jetbrains.annotations.Nullable;
  * A block entity that can exchange whole units of one aura at a time.
  * Both operations return the part of {@code amount} that could not be moved.
  * <p>
+ * {@code exact} is what a payment asks and a fill does not: {@code true} means the whole amount moves or none of it
+ * does, so {@code 0} promises that all of it moved and the unchanged {@code amount} promises that nothing did. A store
+ * that can check its own stock or room first must do so, because half a price taken by a refusal is half a price
+ * lost. {@code false} is the logistics answer - move what fits and report the rest - and is what a caller that means
+ * "fill this up" wants.
+ * <p>
  * What is exchanged is named by an {@link Aura} and not by the {@code resource} it happens to be counted in.
  * A resource is only a number with bounds, an icon and bars - it does not know what its own number is for, so
  * it cannot say which aura a store holds. The aura is the identity; the resource is the unit it is measured
@@ -27,9 +33,9 @@ public interface AuraAccess {
         return this.getCapacity(entity, registries).getInt(aura);
     }
 
-    int insert(@Nullable LivingEntity entity, @NotNull Provider registries, Holder<Aura> aura, int amount, boolean simulate);
+    int insert(@Nullable LivingEntity entity, @NotNull Provider registries, Holder<Aura> aura, int amount, boolean exact, boolean simulate);
 
-    int extract(@Nullable LivingEntity entity, @NotNull Provider registries, Holder<Aura> aura, int amount, boolean simulate);
+    int extract(@Nullable LivingEntity entity, @NotNull Provider registries, Holder<Aura> aura, int amount, boolean exact, boolean simulate);
 
     static int requireNonNegative(int amount) {
         if (amount < 0) throw new IllegalArgumentException("Aura amount must not be negative");

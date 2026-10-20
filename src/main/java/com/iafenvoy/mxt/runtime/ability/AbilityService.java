@@ -55,24 +55,24 @@ public final class AbilityService {
     private AbilityService() {
     }
 
-    private static PrepareResult prepare(Holder<Ability> ability, AbilityAttachment abilities, long gameTime,
-                                         FormulaContext context, LivingEntity payer, boolean requiresGrant,
-                                         @Nullable CostPayment payment) {
+    private static ResultWithData<PreparedUse> prepare(Holder<Ability> ability, AbilityAttachment abilities, long gameTime,
+                                                       FormulaContext context, LivingEntity payer, boolean requiresGrant,
+                                                       @Nullable CostPayment payment) {
         Ability definition = ability.value();
         if (requiresGrant && !abilities.has(ability))
-            return PrepareResult.rejected(AbilityFailure.NOT_GRANTED, null);
+            return ResultWithData.failure(null, AbilityFailure.NOT_GRANTED, null);
         if (AbilityStorage.onCooldown(abilities, ability, gameTime))
-            return PrepareResult.rejected(Failures.COOLDOWN, null);
+            return ResultWithData.failure(null, Failures.COOLDOWN, null);
         double castTime = definition.castTime().evaluate(context);
         double cooldown = cooldownOf(ability, context);
         if (!Double.isFinite(castTime) || castTime < 0.0D || !Double.isFinite(cooldown) || cooldown < 0.0D) {
-            return PrepareResult.rejected(Failures.INVALID_FORMULA, null);
+            return ResultWithData.failure(null, Failures.INVALID_FORMULA, null);
         }
         long channelInterval = 0L;
         if (definition.type() instanceof ChannelSource channel) {
             double interval = channel.channelInterval().evaluate(context);
             if (!Double.isFinite(interval) || interval <= 0.0D || interval > Long.MAX_VALUE) {
-                return PrepareResult.rejected(Failures.INVALID_FORMULA, null);
+                return ResultWithData.failure(null, Failures.INVALID_FORMULA, null);
             }
             channelInterval = Math.max(1L, Math.round(interval));
         }
@@ -83,7 +83,7 @@ public final class AbilityService {
             OptionalDouble stored = AbilityStorage.get(abilities, ability, ChargesDataStorage.class).map(ChargesDataStorage::remaining).orElseGet(OptionalDouble::empty);
             double available = stored.orElse(maximum);
             if (!Double.isFinite(maximum) || maximum < 1.0D || !Double.isFinite(available) || available < 1.0D) {
-                return PrepareResult.rejected(AbilityFailure.NO_CHARGES, null);
+                return ResultWithData.failure(null, AbilityFailure.NO_CHARGES, null);
             }
             chargeBefore = available;
         }
@@ -93,19 +93,19 @@ public final class AbilityService {
         CostPayment cost = payment != null ? payment
                 : CostPayment.of(CostContext.of(payer, context, CostOrigin.ABILITY));
         Optional<Failure> refusal = cost.price(definition.costs());
-        if (refusal.isPresent()) return PrepareResult.rejected(refusal.get(), cost.failedResource());
+        if (refusal.isPresent()) return ResultWithData.failure(null, refusal.get(), cost.failedResource());
         refusal = cost.test();
-        if (refusal.isPresent()) return PrepareResult.rejected(refusal.get(), cost.failedResource());
-        return PrepareResult.prepared(new PreparedUse(ability, cost, Math.round(castTime), Math.round(cooldown), channelInterval, charges.isPresent(), chargeBefore));
+        if (refusal.isPresent()) return ResultWithData.failure(null, refusal.get(), cost.failedResource());
+        return ResultWithData.success(new PreparedUse(ability, cost, Math.round(castTime), Math.round(cooldown), channelInterval, charges.isPresent(), chargeBefore));
     }
 
-    private static CommitResult commit(PreparedUse use, AbilityAttachment abilities, long gameTime) {
+    private static ResultWithData<Map<Identifier, Double>> commit(PreparedUse use, AbilityAttachment abilities, long gameTime) {
         if (AbilityStorage.onCooldown(abilities, use.ability(), gameTime))
-            return CommitResult.rejected(Failures.COOLDOWN, null);
+            return ResultWithData.failure(Map.of(), Failures.COOLDOWN, null);
         CostPayment.PaymentResult payment = use.payment().pay();
-        if (!payment.isSuccess()) return CommitResult.rejected(payment.failure(), payment.failedResource());
+        if (!payment.isSuccess()) return ResultWithData.failure(Map.of(), payment.failure(), payment.failedResource());
         applyAbilityState(use, abilities, gameTime);
-        return CommitResult.committed(payment.resources());
+        return ResultWithData.success(payment.resources());
     }
 
     public static UseResult use(Holder<Ability> ability, Entity actor,
@@ -135,7 +135,7 @@ public final class AbilityService {
         if (definition.castTime().evaluate(context) > 0.0D || definition.type() instanceof ChannelSource)
             return AbilityFailure.CARRIED_NOT_INSTANT;
         if (!definition.condition().test(actor, context)) return Failures.CONDITION_FAILED;
-        PrepareResult prepared = prepare(ability, abilities, gameTime, context,
+        ResultWithData<PreparedUse> prepared = prepare(ability, abilities, gameTime, context,
                 actor instanceof LivingEntity living ? living : null, false, payment);
         return prepared.isSuccess() ? null : prepared.failure();
     }
@@ -167,7 +167,7 @@ public final class AbilityService {
         }
         if (!validateWord(definition, actor, context))
             return UseResult.rejected(AbilityFailure.PERMISSION_DENIED, null);
-        PrepareResult prepared = prepare(ability, abilities, gameTime, context, actor instanceof LivingEntity living ? living : null, requiresGrant, null);
+        ResultWithData<PreparedUse> prepared = prepare(ability, abilities, gameTime, context, actor instanceof LivingEntity living ? living : null, requiresGrant, null);
         if (!prepared.isSuccess()) return UseResult.rejected(prepared.failure(), prepared.failedResource());
         if (prepared.getData().castTimeTicks() > 0L) {
             AbilityStorage.value(abilities, ability, CastDeadline.class, new CastDeadline(CastDeadline.NO_CAST), gameTime)
@@ -197,7 +197,7 @@ public final class AbilityService {
             return UseResult.rejected(AbilityFailure.PERMISSION_DENIED, null);
         // Already started by something that could start one, so the grant it was approved under is not asked for
         // a second time.
-        PrepareResult prepared = prepare(ability, abilities, gameTime, context,
+        ResultWithData<PreparedUse> prepared = prepare(ability, abilities, gameTime, context,
                 actor instanceof LivingEntity living ? living : null, false, null);
         if (!prepared.isSuccess()) return UseResult.rejected(prepared.failure(), prepared.failedResource());
         return finishPreparedUse(prepared.getData(), definition, actor, abilities, resources, gameTime, context, null);
@@ -214,7 +214,7 @@ public final class AbilityService {
         // The event owns the amounts from here on: the payment being made is the one it handed back.
         Optional<Failure> edited = preparedUse.payment().replaceResourceAmounts(resourceEvent.getAmounts());
         if (edited.isPresent()) return UseResult.rejected(edited.get(), null);
-        CommitResult committed = commit(preparedUse, abilities, gameTime);
+        ResultWithData<Map<Identifier, Double>> committed = commit(preparedUse, abilities, gameTime);
         if (!committed.isSuccess()) return UseResult.rejected(committed.failure(), committed.failedResource());
         if (definition.type() instanceof ChannelSource) {
             abilities.setChannelledAbility(preparedUse.ability());
@@ -400,35 +400,6 @@ public final class AbilityService {
     public record PreparedUse(Holder<Ability> ability, CostPayment payment, long castTimeTicks,
                               long cooldownTicks, long channelIntervalTicks,
                               boolean consumeCharge, double chargeBefore) {
-    }
-
-    public static final class PrepareResult extends ResultWithData<PreparedUse> {
-        private PrepareResult(@Nullable PreparedUse use, Failure failure, Identifier failedResource) {
-            super(use, failure, failedResource);
-        }
-
-        private static PrepareResult prepared(PreparedUse use) {
-            return new PrepareResult(use, null, null);
-        }
-
-        private static PrepareResult rejected(Failure failure, Identifier resource) {
-            return new PrepareResult(null, failure, resource);
-        }
-    }
-
-
-    public static final class CommitResult extends ResultWithData<Map<Identifier, Double>> {
-        private CommitResult(Map<Identifier, Double> amounts, Failure failure, Identifier failedResource) {
-            super(amounts, failure, failedResource);
-        }
-
-        private static CommitResult committed(Map<Identifier, Double> amounts) {
-            return new CommitResult(amounts, null, null);
-        }
-
-        private static CommitResult rejected(Failure failure, Identifier resource) {
-            return new CommitResult(Map.of(), failure, resource);
-        }
     }
 
     public static final class UseResult extends Result {

@@ -109,8 +109,8 @@ public final class TalismanVerifyProbes {
 
             // No declared wear anywhere means the old currency: one whole carrier per invocation.
             ItemStack plain = MxtItems.TALISMAN.toStack(2);
-            plain.set(MxtDataComponents.TALISMAN, new TalismanComponent(
-                    List.of(context.require(MxtResourceKeys.TALISMAN, ProbeDefinitions.id("free_sigil"))), TriggerMode.FIRE));
+            plain.set(MxtDataComponents.TALISMAN, TalismanComponent.of(
+                    context.require(MxtResourceKeys.TALISMAN, ProbeDefinitions.id("free_sigil")), TriggerMode.FIRE));
             if (TalismanService.durability(plain) != 0 || TalismanService.durabilityCost(plain) != 0)
                 return "a carrier whose talisman declares no durability read a cap of " + TalismanService.durability(plain);
             if (!TalismanService.invokeOnUse(placed, plain) || plain.getCount() != 1)
@@ -189,18 +189,18 @@ public final class TalismanVerifyProbes {
                 return "a met condition left " + resources.get(probe) + " instead of paying five of the ten";
             if (!close(resources.get(common) - commonBefore, 3.0D))
                 return "the ability behind a met condition added " + (resources.get(common) - commonBefore);
-            // A carrier is used as a whole: the free inscription next to a blocked one does not fire on its own.
-            Holder<Talisman> free = context.require(MxtResourceKeys.TALISMAN, ProbeDefinitions.id("free_sigil"));
+            // A carrier carries one inscription, so a blocked one is simply a carrier that does not fire; the control
+            // below is the same inscription written on its own.
             Holder<Talisman> blocked = context.require(MxtResourceKeys.TALISMAN, ProbeDefinitions.id("blocked_sigil"));
-            ItemStack mixed = MxtItems.TALISMAN.toStack();
-            mixed.set(MxtDataComponents.TALISMAN, new TalismanComponent(List.of(free, blocked), TriggerMode.FIRE));
-            if (TalismanService.invokeOnUse(placed, mixed))
-                return "a carrier whose second inscription was blocked fired anyway";
-            if (mixed.getCount() != 1)
-                return "a carrier blocked by one of its inscriptions was still spent";
+            ItemStack onlyBlocked = carrier(blocked);
+            if (TalismanService.invokeOnUse(placed, onlyBlocked))
+                return "a carrier whose inscription was blocked fired anyway";
+            if (onlyBlocked.getCount() != 1)
+                return "a carrier blocked by its inscription was still spent";
             if (!close(resources.get(common) - commonBefore, 3.0D))
-                return "a blocked carrier still ran the ability its free inscription carries";
-            // The control: the same free inscription on its own fires, so the leg above is about the block.
+                return "a blocked carrier still ran the ability its inscription carries";
+            // The control: the free inscription on its own fires, so the leg above is about the block.
+            Holder<Talisman> free = context.require(MxtResourceKeys.TALISMAN, ProbeDefinitions.id("free_sigil"));
             if (!TalismanService.invokeOnUse(placed, carrier(free)))
                 return "an ungated carrier of the same inscription did not fire";
         } finally {
@@ -227,7 +227,7 @@ public final class TalismanVerifyProbes {
             if (capacity.getOrDefault(aura, 0) != 9)
                 return "a carrier written for five invocations over three of wear read " + capacity + " instead of 9";
             if (TalismanService.ready(stack)) return "an empty carrier was ready to fire";
-            access.insert(context.player(), context.registries(), stack, aura, 9, false);
+            access.insert(context.player(), context.registries(), stack, aura, 9, false, false);
             if (!TalismanService.ready(stack)) return "a filled carrier was not ready to fire";
             SpiritSource placed = SpiritSource.placed(context.level(), context.player().position(), context.player());
             for (int shot = 1; shot <= 3; shot++) {
@@ -260,7 +260,7 @@ public final class TalismanVerifyProbes {
         try {
             resources.set(resource, 0.0D, 0.0D, 100_000.0D, -1L, "closure");
             SpiritSource placed = SpiritSource.placed(context.level(), context.player().position(), context.player());
-            access.insert(context.player(), context.registries(), stack, aura, 8, false);
+            access.insert(context.player(), context.registries(), stack, aura, 8, false, false);
             if (!close(stored(stack, aura), 8.0D)) return "a full carrier of four invocations did not hold eight units";
             // Wear the carrier down without firing it: what it can still spend decides what it may hold, so being
             // damaged past the point the store was sized for is what leaves aura behind when it finally breaks.
@@ -297,7 +297,7 @@ public final class TalismanVerifyProbes {
 
     private static ItemStack carrier(Holder<Talisman> inscribed) {
         ItemStack stack = MxtItems.TALISMAN.toStack();
-        stack.set(MxtDataComponents.TALISMAN, new TalismanComponent(List.of(inscribed), TriggerMode.FIRE));
+        stack.set(MxtDataComponents.TALISMAN, TalismanComponent.of(inscribed, TriggerMode.FIRE));
         return stack;
     }
 

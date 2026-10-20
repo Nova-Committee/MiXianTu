@@ -3,6 +3,7 @@ package com.iafenvoy.mxt.probe.world;
 import com.iafenvoy.mxt.data.condition.builtin.entity.InSecretRealmEntityCondition;
 import com.iafenvoy.mxt.data.condition.builtin.entity.InSecretRealmEntityCondition.Role;
 import com.iafenvoy.mxt.data.secretrealm.SecretRealm;
+import com.iafenvoy.mxt.event.SecretRealmEvent;
 import com.iafenvoy.mxt.probe.Probe;
 import com.iafenvoy.mxt.probe.ProbeContext;
 import com.iafenvoy.mxt.probe.ProbeDefinitions;
@@ -31,12 +32,14 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.border.WorldBorder;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplate;
 import net.minecraft.world.phys.Vec3;
+import net.neoforged.neoforge.common.NeoForge;
 import org.jspecify.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Consumer;
 
 /**
  * The secret realm machine, one GameTest per step of the old probe: an instance is a dimension, so every part drives
@@ -68,6 +71,7 @@ public final class SecretRealmProbes {
                 Probe.of("world/secret_realm/expiry", SecretRealmProbes::expiry),
                 Probe.of("world/secret_realm/persistence", SecretRealmProbes::persistence),
                 Probe.kitted("world/secret_realm/traveller", SecretRealmProbes::traveller),
+                Probe.of("verify/secret_realm_destroy", SecretRealmProbes::destroyOnce),
                 // The pair is one scenario: keep claims an instance and reopen is the restart that finds the record
                 // it wrote, so they share a test. Two probes run in separate batches and nothing orders them.
                 Probe.of("world/secret_realm/keep_and_reopen", SecretRealmProbes::keepAndReopen));
@@ -432,6 +436,50 @@ public final class SecretRealmProbes {
         boolean kept = level != null && level.getBlockState(new BlockPos(8, 64, 8)).is(Blocks.GOLD_BLOCK);
         boolean prepared = reopened != null && reopened.prepared();
         context.check("secret realm reopen: terrain kept=" + kept + " prepared=" + prepared, kept && prepared);
+    }
+
+    // A destroy answers for the terrain it discarded, and raises one Destroy however many members had to be moved
+    // out. An unclaimed instance whose only member is the last one inside is the case that used to answer false:
+    // that member's own exit retired the record, and destroy then found nothing to report on.
+    private static void destroyOnce(ProbeContext context) {
+        MinecraftServer server = context.server();
+        ServerLevel overworld = server.overworld();
+        Holder<SecretRealm> trial = context.require(MxtResourceKeys.SECRET_REALM, ProbeDefinitions.TRIAL_REALM);
+        List<LivingEntity> probes = new ArrayList<>();
+        List<Object> destroyed = new ArrayList<>();
+        Consumer<SecretRealmEvent.Destroy> watcher = event -> {
+            if (event.getDefinition().equals(trial)) destroyed.add(event.getDimension());
+        };
+        saveTower(context, overworld);
+        NeoForge.EVENT_BUS.addListener(watcher);
+        try {
+            LivingEntity member = spawnBeing(context, overworld, context.at(BEING), null);
+            probes.add(member);
+            if (member == null) {
+                context.fail("verify destroy: the member being could not be spawned");
+                return;
+            }
+            SecretRealmService.TravelResult entered = SecretRealmService.enter(member, server, trial);
+            LivingEntity inside = entered.traveller().orElse(null);
+            if (inside != null && inside != member) probes.add(inside);
+            SecretRealmRecord record = inside == null ? null : SecretRealmRegistry.ofMember(inside.getUUID()).orElse(null);
+            if (record == null) {
+                context.fail("verify destroy: the instance was not entered");
+                return;
+            }
+            // The only member is the one being moved out, which is exactly what the old member exit already retired.
+            boolean answered = SecretRealmService.destroy(server, record);
+            context.expect("destroy answers true for an instance it discarded", answered, true);
+            context.expect("the record is gone", SecretRealmRegistry.at(record.dimension()).isPresent(), false);
+            context.expect("one Destroy for one request", destroyed.size(), 1);
+            // A second request has nothing left to destroy, so nothing is raised for it.
+            boolean again = SecretRealmService.destroy(server, record);
+            context.expect("a second destroy answers false", again, false);
+            context.expect("and raises nothing", destroyed.size(), 1);
+        } finally {
+            NeoForge.EVENT_BUS.unregister(watcher);
+            for (LivingEntity probe : probes) if (probe != null) probe.discard();
+        }
     }
 
     // The structure the fixture places is built here instead of shipping a binary fixture.

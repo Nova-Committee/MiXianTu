@@ -2,6 +2,7 @@ package com.iafenvoy.mxt.data.cost;
 
 import com.iafenvoy.mxt.runtime.resulting.Failure;
 import com.iafenvoy.mxt.runtime.resulting.ResultWithData;
+import com.iafenvoy.mxt.runtime.resulting.failures.CostFailure;
 import net.minecraft.resources.Identifier;
 import org.jetbrains.annotations.Nullable;
 
@@ -19,6 +20,7 @@ public abstract class CostTransaction implements Cost.Transaction {
     private final CostTarget target;
     private final double amount;
     private @Nullable ResultWithData<List<Debit>> taken;
+    private boolean writing;
 
     protected CostTransaction(CostTarget target, double amount) {
         this.target = target;
@@ -38,10 +40,17 @@ public abstract class CostTransaction implements Cost.Transaction {
     @Override
     public final ResultWithData<List<Debit>> execute(boolean simulate) {
         if (this.taken != null) return this.taken;
+        // A real pass began and never answered - it threw rather than returned, so what it wrote before that cannot be
+        // taken back and cannot be known here. Executing again could charge a fee that is already paid.
+        if (this.writing) return ResultWithData.failure(List.of(), CostFailure.UNCERTAIN);
+        if (!simulate) this.writing = true;
         ResultWithData<List<Debit>> result = this.perform(simulate);
         // A simulated answer is a check of what the store holds right now, so it is not kept: the same channel can be
         // asked again after the inventory moved. A real one is terminal.
-        if (!simulate) this.taken = result;
+        if (!simulate) {
+            this.writing = false;
+            this.taken = result;
+        }
         return result;
     }
 

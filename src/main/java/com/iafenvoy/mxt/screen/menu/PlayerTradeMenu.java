@@ -28,7 +28,7 @@ public final class PlayerTradeMenu extends ApricityContainerMenu {
     /**
      * One side's offer grid, which is also the size both of the page's offer containers are declared with.
      */
-    private static final int OFFER_SLOTS = 20;
+    private static final int OFFER_SLOTS = PlayerTradeService.OFFER_SLOTS;
     private final Component partnerName;
     private final DataSlot partnerAccepted = DataSlot.standalone();
     // Both sides are read back from here rather than kept as screen state: a change to either offer has to be able

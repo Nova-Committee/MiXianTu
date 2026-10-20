@@ -143,6 +143,13 @@ public final class SecretRealmService {
     // means the traveller is out (or had nothing to undo); anything else is a refusal, and nothing is cleared for it,
     // so the record still says where they are and a later attempt can try again.
     private static Moved leave(LivingEntity traveller) {
+        return leave(traveller, true);
+    }
+
+    // The exit itself, with the realm's fate decided by the caller or not. A forced destroy moves every member out and
+    // then retires the record once on its own, so a member's exit on that path must neither retire it early nor post a
+    // Destroy of its own - which is what "settle" switches off.
+    private static Moved leave(LivingEntity traveller, boolean settle) {
         SecretRealmTravelAttachment travel = travel(traveller);
         Holder<SecretRealm> definition = travel == null ? null : travel.realm().orElse(null);
         if (definition == null || !travel.active()) return Moved.arrived(traveller);
@@ -159,8 +166,14 @@ public final class SecretRealmService {
             List<UUID> members = new ArrayList<>(record.members());
             members.remove(traveller.getUUID());
             SecretRealmRecord updated = record.with(members);
-            if (updated.empty()) retire(server, updated);
-            else SecretRealmRegistry.replace(updated);
+            // A forced destroy settles the record itself, once every member is out: retiring here would take the
+            // record away before it had its say, and post the same Destroy the caller is about to post.
+            if (settle) {
+                if (updated.empty()) retire(server, updated);
+                else SecretRealmRegistry.replace(updated);
+            } else {
+                SecretRealmRegistry.replace(updated);
+            }
             NeoForge.EVENT_BUS.post(new Exit(server, definition, record.dimension(), record.index(), record.owner(), traveller.getUUID()));
             definition.value().exitAction().execute(arrived, FormulaContext.of(arrived));
         }
@@ -222,9 +235,11 @@ public final class SecretRealmService {
     public static boolean destroy(MinecraftServer server, SecretRealmRecord record) {
         for (UUID id : List.copyOf(record.members())) {
             LivingEntity member = findMember(server, id);
-            if (member != null && leave(member).failure() != null) return false;
+            if (member != null && leave(member, false).failure() != null) return false;
         }
         SecretRealmRecord current = SecretRealmRegistry.at(record.dimension()).orElse(null);
+        // The members above settled nothing, so the record is still here whenever the instance exists at all: an
+        // already destroyed realm answers false instead of raising a second Destroy.
         if (current == null) return false;
         boolean deleted = current.instance().generation() instanceof ExistingGeneration
                 || RuntimeDimensionService.delete(server, current.dimension());

@@ -40,7 +40,7 @@ public class SpiritStoneItem extends Item implements UseItemAuraAccess {
     }
 
     @Override
-    public int insert(@Nullable LivingEntity entity, @NotNull HolderLookup.Provider registries, ItemStack stack, Holder<Aura> aura, int amount, boolean simulate) {
+    public int insert(@Nullable LivingEntity entity, @NotNull HolderLookup.Provider registries, ItemStack stack, Holder<Aura> aura, int amount, boolean exact, boolean simulate) {
         int capacity = this.getCapacity(entity, registries, stack, aura);
         AuraAccess.requireNonNegative(capacity);
         AuraAccess.requireNonNegative(amount);
@@ -48,6 +48,7 @@ public class SpiritStoneItem extends Item implements UseItemAuraAccess {
 
         int stored = this.normalizeStored(stack, capacity, aura, simulate);
         int accepted = Math.min(amount, capacity - stored);
+        if (exact && accepted != amount) return amount;
         if (!simulate && accepted > 0) {
             stack.set(MxtDataComponents.SPIRIT_STORAGE, this.store(stack).with(aura, stored + accepted));
             ItemAuraComponent fuel = stack.get(MxtDataComponents.ITEM_AURA);
@@ -57,7 +58,7 @@ public class SpiritStoneItem extends Item implements UseItemAuraAccess {
     }
 
     @Override
-    public int extract(@Nullable LivingEntity entity, @NotNull HolderLookup.Provider registries, ItemStack stack, Holder<Aura> aura, int amount, boolean simulate) {
+    public int extract(@Nullable LivingEntity entity, @NotNull HolderLookup.Provider registries, ItemStack stack, Holder<Aura> aura, int amount, boolean exact, boolean simulate) {
         int capacity = this.getCapacity(entity, registries, stack, aura);
         AuraAccess.requireNonNegative(capacity);
         AuraAccess.requireNonNegative(amount);
@@ -65,6 +66,7 @@ public class SpiritStoneItem extends Item implements UseItemAuraAccess {
 
         int stored = this.normalizeStored(stack, capacity, aura, simulate);
         int extracted = Math.min(amount, stored);
+        if (exact && extracted != amount) return amount;
         // Emptying the store takes its key with it, so a drained stone is an empty store rather than one holding
         // zero of the aura it used to carry.
         if (!simulate && extracted > 0)

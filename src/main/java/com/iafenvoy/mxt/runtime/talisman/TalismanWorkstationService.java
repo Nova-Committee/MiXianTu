@@ -3,7 +3,6 @@ package com.iafenvoy.mxt.runtime.talisman;
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.api.ItemAuraAccess;
 import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
-import com.iafenvoy.mxt.attachment.ResourceHolderAttachment.Audit;
 import com.iafenvoy.mxt.config.MxtServerConfig;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.cost.Cost;
@@ -20,6 +19,7 @@ import com.iafenvoy.mxt.recipe.TalismanDrawingRecipe;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.registry.MxtItems;
 import com.iafenvoy.mxt.runtime.item.QualityService;
+import com.iafenvoy.mxt.runtime.resource.ResourceService;
 import com.iafenvoy.mxt.runtime.talisman.TalismanDrawingScorer.Point;
 import com.iafenvoy.mxt.runtime.talisman.TalismanDrawingScorer.Score;
 import com.iafenvoy.mxt.util.DefinitionText;
@@ -148,31 +148,42 @@ public final class TalismanWorkstationService {
 
     /**
      * Charges one stroke to the brush the session was opened with.
+     * <p>
+     * Every budget the session is held to is checked before the stroke is recorded, so a client cannot keep the server
+     * holding strokes it has already spent its allowance on. A refusal counts towards the rejection budget and is
+     * judged at once, which is what makes a stream of refusals end the session instead of extending it.
      */
     public static StrokeResult stroke(ServerPlayer player, TalismanDrawingSession session, List<Point> points) {
         if (session.settled() || session.failed()) return new StrokeResult(false, StrokeRefusal.SESSION_OVER, 0);
         if (points.size() > MxtServerConfig.INSTANCE.talisman.maxStrokePoints.getValue())
-            return new StrokeResult(false, StrokeRefusal.TOO_MANY_POINTS, 0);
+            return refuse(session, StrokeRefusal.TOO_MANY_POINTS);
+        // The running totals are the budget, not just the pattern that is submitted later: a stroke that would pass
+        // either of them is refused here and never recorded.
+        if (session.strokeCount() + 1 > MxtServerConfig.INSTANCE.talisman.maxSessionStrokes.getValue()
+                || session.pointCount() + points.size() > MxtServerConfig.INSTANCE.talisman.maxSessionPoints.getValue())
+            return refuse(session, StrokeRefusal.TOO_MANY_POINTS);
         long now = player.level().getGameTime();
         long interval = MxtServerConfig.INSTANCE.talisman.minStrokeInterval.getValue() / 50L;
         // The first stroke is measured against the tick the drawing opened, so "start drawing then dump strokes"
         // is caught by the same check as two strokes in a row.
-        if (interval > 0L && now - session.lastStrokeAt() < interval) {
-            session.reject();
-            return new StrokeResult(false, StrokeRefusal.TOO_FAST, 0);
-        }
+        if (interval > 0L && now - session.lastStrokeAt() < interval)
+            return refuse(session, StrokeRefusal.TOO_FAST);
         ItemStack brush = carried(player);
         if (!BrushPigmentService.isBrush(brush)) return new StrokeResult(false, StrokeRefusal.BRUSH_GONE, 0);
         int charge = BrushPigmentService.chargeForStroke(points);
-        if (!BrushPigmentService.hasPigment(brush, charge)) {
-            session.reject();
-            return new StrokeResult(false, StrokeRefusal.NO_PIGMENT, 0);
-        }
+        if (!BrushPigmentService.hasPigment(brush, charge)) return refuse(session, StrokeRefusal.NO_PIGMENT);
         brush.set(MxtDataComponents.BRUSH_PIGMENT, BrushPigmentService.pigment(brush) - charge);
         session.spendPigment(charge);
         session.record(points, now);
-        if (session.rejected() > MxtServerConfig.INSTANCE.talisman.maxRejectedStrokes.getValue()) session.fail();
         return new StrokeResult(true, null, charge);
+    }
+
+    // One refusal: counted, and the session ends the moment the count is past the budget. Every branch that refuses a
+    // stroke comes through here, so no refusal can slip past the budget by returning early.
+    private static StrokeResult refuse(TalismanDrawingSession session, StrokeRefusal refusal) {
+        session.reject();
+        if (session.rejected() > MxtServerConfig.INSTANCE.talisman.maxRejectedStrokes.getValue()) session.fail();
+        return new StrokeResult(false, refusal, 0);
     }
 
     /**
@@ -250,7 +261,7 @@ public final class TalismanWorkstationService {
     private static ItemStack product(ServerPlayer player, TalismanDrawingRecipe recipe, TalismanDrawingRecipe.Grade grade,
                                      FormulaContext formula) {
         ItemStack stack = MxtItems.TALISMAN.toStack();
-        stack.set(MxtDataComponents.TALISMAN, new TalismanComponent(List.of(recipe.talisman()), TriggerMode.FIRE));
+        stack.set(MxtDataComponents.TALISMAN, TalismanComponent.of(recipe.talisman(), TriggerMode.FIRE));
         grade.quality().ifPresent(quality -> setQuality(stack, quality));
         // Written before the wear is applied, because applyDurability keeps a cap the stack already carries.
         grade.maxDamage().ifPresent(provider -> stack.set(DataComponents.MAX_DAMAGE,
@@ -271,7 +282,7 @@ public final class TalismanWorkstationService {
         Provider registries = player.registryAccess();
         for (Map.Entry<Holder<Aura>, Integer> entry : TalismanService.capacity(stack).entrySet()) {
             int units = (int) Math.ceil(entry.getValue() * Math.min(1.0D, ratio));
-            if (units > 0) access.insert(player, registries, stack, entry.getKey(), units, false);
+            if (units > 0) access.insert(player, registries, stack, entry.getKey(), units, false, false);
         }
     }
 
@@ -369,17 +380,20 @@ public final class TalismanWorkstationService {
         return player.containerMenu.getCarried();
     }
 
-    // What the payer's own accounts held before the payment, so an empty session can hand it back. Only the
-    // resources the price actually names are touched.
+    // What a cancelled session hands back, per resource: the amount the payment actually took, and nothing else. A
+    // session spans ticks, so the balance it was opened at is not the balance to restore - natural regeneration and
+    // other systems write the same resource meanwhile - and crediting the difference leaves both alone.
     private static List<Runnable> snapshotResources(CostContext context, CostPayment planning) {
         ResourceHolderAttachment target = context.resourceTarget();
         Map<Holder<Resource>, Double> priced = planning.resourceAmounts();
         if (target == null || priced.isEmpty()) return List.of();
         List<Runnable> refunds = new ArrayList<>();
-        for (Holder<Resource> resource : priced.keySet()) {
-            double value = target.get(resource);
-            Audit audit = target.audit(resource);
-            refunds.add(() -> target.set(resource, value, audit.minSnapshot(), audit.maxSnapshot(), audit.lastChangedTick(), audit.source()));
+        for (Map.Entry<Holder<Resource>, Double> entry : priced.entrySet()) {
+            Holder<Resource> resource = entry.getKey();
+            double taken = entry.getValue();
+            if (taken <= 0.0D) continue;
+            FormulaContext formula = ResourceService.formulaContext(context.payer(), resource, context.formula());
+            refunds.add(() -> ResourceService.change(target, resource, taken, formula));
         }
         return refunds;
     }

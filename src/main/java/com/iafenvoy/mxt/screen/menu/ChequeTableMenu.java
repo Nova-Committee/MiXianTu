@@ -73,8 +73,9 @@ public final class ChequeTableMenu extends ApricityContainerMenu {
         ItemStack cheque = this.setup.chequeInput().getItem(0);
         ChequeComponent data = cheque.getOrDefault(MxtDataComponents.CHEQUE.get(), ChequeComponent.EMPTY);
         if (!cheque.is(MxtItems.CHEQUE.get()) || data.value() <= 0L || !this.setup.currency().isEmpty()) return false;
-        List<ItemStack> change = CurrencyPaymentService.makeChange(player, data.value()).orElse(null);
-        if (change == null || change.size() > this.setup.currency().getContainerSize()) return false;
+        List<ItemStack> change = CurrencyPaymentService.makeChange(player.level().registryAccess(), data.value(),
+                this.setup.currency().getContainerSize()).orElse(null);
+        if (change == null) return false;
         for (int index = 0; index < change.size(); index++) this.setup.currency().setItem(index, change.get(index));
         cheque.shrink(1);
         this.broadcastChanges();
@@ -106,6 +107,9 @@ public final class ChequeTableMenu extends ApricityContainerMenu {
         super.removed(player);
         this.clearContainer(player, this.setup.currency());
         this.clearContainer(player, this.setup.chequeInput());
+        // An issued cheque that was never taken out is the player's: closing the screen returns it like the rest of
+        // the containers, instead of leaving it in a container nobody can reach.
+        this.clearContainer(player, this.setup.chequeOutput());
     }
 
     /**

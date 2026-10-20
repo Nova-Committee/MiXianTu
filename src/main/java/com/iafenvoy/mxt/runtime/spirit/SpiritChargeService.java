@@ -104,7 +104,7 @@ public final class SpiritChargeService {
         if (want <= 0) return;
         // What the item will really take, asked before anything is paid for: a full item, or one storing
         // another aura, answers zero.
-        int units = want - access.insert(entity, registries, stack, aura, want, true);
+        int units = want - access.insert(entity, registries, stack, aura, want, false, true);
         if (units <= 0) {
             show(entity, Component.translatable("actionbar.mxt.charge.full"), "full");
             return;
@@ -134,7 +134,7 @@ public final class SpiritChargeService {
                 return;
             }
         }
-        access.insert(entity, registries, stack, aura, units, false);
+        access.insert(entity, registries, stack, aura, units, false, false);
         showProgress(entity, resolve(registries, stack, context));
         // The item decides whether that was the moment it filled, so a talisman carrier can spend itself here.
         access.onCharged(SpiritSource.of(entity), stack);

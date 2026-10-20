@@ -24,7 +24,6 @@ import net.neoforged.neoforge.common.tooltip.TooltipLocation;
 import net.neoforged.neoforge.event.RegisterTooltipAppendersEvent;
 
 import java.util.HashSet;
-import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Consumer;
@@ -57,20 +56,17 @@ public final class TalismanTooltipAppender {
             return;
         }
         if (!(stack.getItem() instanceof TalismanItem)) return;
-        List<Holder<Talisman>> inscribed = TalismanService.inscribed(stack);
-        if (inscribed.isEmpty()) {
+        Holder<Talisman> inscribed = TalismanService.inscribed(stack);
+        if (inscribed == null) {
             builder.accept(Component.translatable("tooltip.mxt.talisman.empty"));
         } else {
-            Set<Identifier> explained = new HashSet<>();
-            for (Holder<Talisman> talisman : inscribed) {
-                builder.accept(Component.translatable("tooltip.mxt.talisman.entry", DefinitionText.nameOrId(talisman)));
-                usageLine(talisman.value().type(), explained).ifPresent(builder);
-            }
+            builder.accept(Component.translatable("tooltip.mxt.talisman.entry", DefinitionText.nameOrId(inscribed)));
+            usageLine(inscribed.value().type(), new HashSet<>()).ifPresent(builder);
         }
         if (context.registries() != null)
             SpiritStorageTooltipAppender.chargeLine(context.registries(), stack).ifPresent(builder);
         // A blank carrier says nothing extra: there is no store to fill and nothing to fire.
-        if (inscribed.isEmpty()) return;
+        if (inscribed == null) return;
         String key = TalismanService.ready(stack)
                 ? "tooltip.mxt.talisman.ready" : "tooltip.mxt.talisman.charging";
         builder.accept(Component.translatable(key).withStyle(ChatFormatting.DARK_AQUA));

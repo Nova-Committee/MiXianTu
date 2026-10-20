@@ -13,12 +13,14 @@ import java.util.*;
 import java.util.function.BiConsumer;
 import java.util.function.BiPredicate;
 import java.util.function.Function;
+import java.util.function.Predicate;
 
 public class ChainCache<T extends ChainNode<T>> extends RegistryCache<ChainCache<T>> {
     private final ResourceKey<Registry<T>> registry;
     private final List<Chain<T>> chains = new LinkedList<>();
     private final Map<Holder<T>, Chain<T>> byNode = new LinkedHashMap<>();
     private final List<BiPredicate<T, T>> chainValidators = new LinkedList<>();
+    private final List<Predicate<Chain<T>>> lineRules = new LinkedList<>();
 
     public ChainCache(ResourceKey<Registry<T>> registry) {
         this.registry = registry;
@@ -27,10 +29,23 @@ public class ChainCache<T extends ChainNode<T>> extends RegistryCache<ChainCache
     @Override
     public void build(RegistryAccess access) {
         this.chains.addAll(ChainWalker.walk(access.lookupOrThrow(this.registry).listElements().map(x -> (Holder<T>) x).toList(), x -> x.value().next().orElse(null), Chain::new));
+        // A line the domain rejects is dropped whole before anything is published, so no caller can read a step out
+        // of a ladder that the pack itself declared wrong.
+        this.chains.removeIf(chain -> !this.accepts(chain));
         for (Chain<T> chain : this.chains)
             for (Holder<T> holder : chain.nodes())
                 this.byNode.put(holder, chain);
-        this.chains.forEach(c -> this.chainValidators.forEach(c::validate));
+    }
+
+    private boolean accepts(Chain<T> chain) {
+        boolean whole = true;
+        for (BiPredicate<T, T> validator : this.chainValidators) whole &= chain.validate(validator);
+        for (Predicate<Chain<T>> rule : this.lineRules)
+            if (!rule.test(chain)) {
+                LOGGER.error("Chain {} breaks a domain rule and is left out whole.", chain.ids());
+                whole = false;
+            }
+        return whole;
     }
 
     @Override
@@ -55,6 +70,15 @@ public class ChainCache<T extends ChainNode<T>> extends RegistryCache<ChainCache
 
     public ChainCache<T> validate(BiPredicate<T, T> predicate) {
         this.chainValidators.add(predicate);
+        return this;
+    }
+
+    /**
+     * A rule a whole line has to satisfy, which a per-link check cannot express - a ladder naming itself twice, or
+     * one that climbs into another domain. A line that breaks one is dropped whole rather than published.
+     */
+    public ChainCache<T> require(Predicate<Chain<T>> rule) {
+        this.lineRules.add(rule);
         return this;
     }
 

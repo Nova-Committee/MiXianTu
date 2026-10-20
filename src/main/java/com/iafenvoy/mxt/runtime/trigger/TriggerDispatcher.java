@@ -158,8 +158,13 @@ public final class TriggerDispatcher {
         try {
             for (TriggerSubscription subscription : snapshot) {
                 if (!subscription.accepts(signal)) continue;
-                String dispatchKey = subscription.module() + ":" + subscription.identity() + ":" + signal.type();
+                // The owner is part of the key: an identity is only unique per owner, so two entities holding the same
+                // definition produce the same value on purpose, and one owner's dispatch must not make another owner's
+                // identical subscription look like a re-entry of its own.
+                String dispatchKey = owner + ":" + ownerKey(subscription) + ":" + signal.type();
                 if (!DISPATCHING.get().add(dispatchKey)) continue;
+                // The key is released on every exit from this subscription - a thrown failure, a consumed one-shot
+                // that unregisters itself, or a plain return - so a broken subscriber cannot wedge its own signal.
                 try {
                     MiXianTu.LOGGER.debug("Trigger signal {} matched {}/{} for {}",
                             signal.type(), subscription.module(), subscription.identity(), owner);
@@ -168,13 +173,14 @@ public final class TriggerDispatcher {
                             subscription.module(), subscription.identity(), signal.type());
                 } catch (RuntimeException exception) {
                     MiXianTu.LOGGER.error("Trigger subscription {} failed for {}", subscription.identity(), signal.type(), exception);
+                } finally {
+                    if (subscription.state() == State.CONSUMED) {
+                        MiXianTu.LOGGER.debug("One-shot trigger subscription {}/{} was consumed",
+                                subscription.module(), subscription.identity());
+                        unregister(subscription.owner(), subscription.module(), subscription.identity());
+                    }
+                    DISPATCHING.get().remove(dispatchKey);
                 }
-                if (subscription.state() == State.CONSUMED) {
-                    MiXianTu.LOGGER.debug("One-shot trigger subscription {}/{} was consumed",
-                            subscription.module(), subscription.identity());
-                    unregister(subscription.owner(), subscription.module(), subscription.identity());
-                }
-                DISPATCHING.get().remove(dispatchKey);
             }
         } finally {
             if (DISPATCHING.get().isEmpty()) DISPATCHING.remove();

@@ -125,16 +125,24 @@ public final class CultivationMethodService {
             return stop(entity, spirit, action, definition, gameTime, Failures.INVALID_FORMULA);
         }
         double allocationFactor = 1.0D;
+        Map<Holder<Aura>, Double> shares = Map.of();
         if (auraCost > 0.0D && entity instanceof ServerPlayer player) {
             // The level prepass bounds this from the shared chunk pool; direct callers keep full cost.
-            allocationFactor = AuraDistributionService.take(player).map(values -> allocationFactor(auraCosts, values)).orElse(1.0D);
+            shares = AuraDistributionService.take(player).orElse(null);
+            if (shares != null) allocationFactor = allocationFactor(auraCosts, shares);
             if (allocationFactor <= 0.0D && MxtServerConfig.INSTANCE.cultivation.forbidWithoutEligibleAura.getValue())
                 return stop(entity, spirit, action, definition, gameTime, CultivationFailure.INSUFFICIENT_AURA);
         }
         // The prepass bounds what this tick may take from the shared pool, and the bill is what replaces the amounts:
-        // the pool half is scaled to this tick's share, nothing is written to a side table.
-        if (bill.scale(transaction -> transaction.target() instanceof CostTarget.AuraStore, allocationFactor).isPresent())
-            return stop(entity, spirit, action, definition, gameTime, Failures.INVALID_FORMULA);
+        // each source is scaled by its own grant, so a source nobody was granted is not charged at another's expense.
+        // Null shares means there was no prepass and every source is kept whole.
+        if (shares != null) {
+            Map<Holder<Aura>, Double> granted = shares;
+            if (bill.scale(transaction -> transaction.target() instanceof CostTarget.AuraStore,
+                    transaction -> transaction.target() instanceof CostTarget.AuraStore store
+                            ? granted.getOrDefault(store.aura(), 0.0D) / transaction.amount() : 1.0D).isPresent())
+                return stop(entity, spirit, action, definition, gameTime, Failures.INVALID_FORMULA);
+        }
         double speed = aura.cultivationSpeed() * allocationFactor;
         gains.replaceAll((id, amount) -> amount * speed);
         if (!Double.isFinite(speed) || speed < 0.0D)
@@ -152,10 +160,6 @@ public final class CultivationMethodService {
 
     public static CultivationResult stop(LivingEntity entity, CultivationAttachment spirit, Holder<Cultivation> action, Cultivation definition, long gameTime) {
         return stop(entity, spirit, action, definition, gameTime, null);
-    }
-
-    private static CultivationResult stop(CultivationAttachment spirit, Holder<Cultivation> action, Cultivation definition, long gameTime, Failure reason) {
-        return stop(spirit, action, definition, gameTime, reason, null);
     }
 
     // The abort reason travels with the result so the actionbar can name this pack's own abort instead of the
@@ -255,22 +259,19 @@ public final class CultivationMethodService {
         return new Recovery(restored, cultivation, true);
     }
 
-    // Each requested aura source contributes independently; a missing source reduces only its own share
-    // instead of rejecting the whole tick.
+    // The gain multiplier a tick is worth: how much of what it asked for was actually granted, summed over its sources
+    // rather than averaged, so a source nobody was granted lowers the gain instead of being hidden by one that paid in
+    // full. Each source's own charge is bounded by its own grant above; this is only what the gain is worth.
     private static double allocationFactor(Map<Holder<Aura>, Double> requested,
                                            Map<Holder<Aura>, Double> allocated) {
-        return requested.entrySet().stream()
+        double asked = requested.values().stream().filter(value -> value > 0.0D).mapToDouble(Double::doubleValue).sum();
+        if (asked <= 0.0D) return 1.0D;
+        double granted = requested.entrySet().stream()
                 .filter(entry -> entry.getValue() > 0.0D)
-                .mapToDouble(entry -> Math.clamp(allocated.getOrDefault(entry.getKey(), 0.0D) / entry.getValue(), 0.0D, 1.0D))
-                .average().orElse(1.0D);
-    }
-
-    private static boolean canApplyGains(ResourceHolderAttachment resources, Map<Holder<Aura>, Double> gains, FormulaContext context) {
-        for (Entry<Holder<Aura>, Double> gain : gains.entrySet()) {
-            Holder<Resource> resource = gain.getKey().value().resource();
-            if (!ResourceService.change(resources, resource, gain.getValue(), context).valid()) return false;
-        }
-        return true;
+                .mapToDouble(entry -> Math.clamp(allocated.getOrDefault(entry.getKey(), 0.0D) / entry.getValue(), 0.0D, 1.0D)
+                        * entry.getValue())
+                .sum();
+        return Math.clamp(granted / asked, 0.0D, 1.0D);
     }
 
     private static boolean canApplyGains(LivingEntity entity, ResourceHolderAttachment resources, Map<Holder<Aura>, Double> gains,
@@ -284,51 +285,12 @@ public final class CultivationMethodService {
         return true;
     }
 
-    private static void applyGains(ResourceHolderAttachment resources, Map<Holder<Aura>, Double> gains, FormulaContext context) {
-        for (Entry<Holder<Aura>, Double> gain : gains.entrySet())
-            ResourceService.change(resources, gain.getKey().value().resource(), gain.getValue(), context);
-    }
-
     private static void applyGains(LivingEntity entity, ResourceHolderAttachment resources, Map<Holder<Aura>, Double> gains,
                                    FormulaContext context) {
         for (Entry<Holder<Aura>, Double> gain : gains.entrySet()) {
             Holder<Resource> resource = gain.getKey().value().resource();
             ResourceService.change(resources, resource, gain.getValue(),
                     ResourceService.formulaContext(entity, resource, context));
-        }
-    }
-
-    private static boolean canConvertAbsorption(CultivationAttachment spirit, ResourceHolderAttachment resources, double absorbed,
-                                                FormulaContext context) {
-        return realmCultivations(spirit).stream().allMatch(aura -> conversion(
-                active(aura), context, spirit, resources).valid());
-    }
-
-    private static boolean canConvertAbsorption(LivingEntity entity, CultivationAttachment spirit, ResourceHolderAttachment resources,
-                                                double absorbed, FormulaContext context) {
-        return realmCultivations(spirit).stream().allMatch(aura -> {
-            ActiveCultivation active = active(aura);
-            return conversion(active, ResourceService.formulaContext(entity, active.resource(), context), spirit, resources).valid();
-        });
-    }
-
-    // Absorption restores every chain's value independently; each conversion direction has its own source-side
-    // per-tick limit.
-    private static void restoreAbsorption(CultivationAttachment spirit, ResourceHolderAttachment resources, double absorbed,
-                                          FormulaContext context) {
-        for (Holder<Aura> aura : realmCultivations(spirit)) {
-            ActiveCultivation active = active(aura);
-            ResourceService.change(resources, active.resource(), absorbed,
-                    ResourceService.formulaContext(spirit, active.resource(), context));
-        }
-    }
-
-    private static void restoreAbsorption(LivingEntity entity, CultivationAttachment spirit, ResourceHolderAttachment resources,
-                                          double absorbed, FormulaContext context) {
-        for (Holder<Aura> aura : realmCultivations(spirit)) {
-            ActiveCultivation active = active(aura);
-            ResourceService.change(resources, active.resource(), absorbed,
-                    ResourceService.formulaContext(entity, active.resource(), context));
         }
     }
 
@@ -346,13 +308,6 @@ public final class CultivationMethodService {
                 && ResourceService.resolveBounds(active.definition(), context).isPresent()
                 ? new Conversion(cultivationToResource, cultivationToResourceMaxPerTick,
                 resourceToCultivation, resourceToCultivationMaxPerTick) : Conversion.INVALID;
-    }
-
-    private static void convertAll(CultivationAttachment spirit, ResourceHolderAttachment resources, FormulaContext context) {
-        for (Holder<Aura> aura : realmCultivations(spirit)) {
-            ActiveCultivation active = active(aura);
-            convert(active, spirit, resources, ResourceService.formulaContext(spirit, active.resource(), context));
-        }
     }
 
     private static void convertAll(LivingEntity entity, CultivationAttachment spirit, ResourceHolderAttachment resources,
@@ -395,11 +350,6 @@ public final class CultivationMethodService {
                 ResourceService.change(resources, active.resource(), extracted * conversion.cultivationToResource(), context);
             }
         }
-    }
-
-    private static List<Holder<Aura>> realmCultivations(CultivationAttachment spirit) {
-        return spirit.realmStages().values().stream()
-                .map(stage -> stage.value().aura()).distinct().toList();
     }
 
     private static List<Holder<Aura>> eligibleRealmCultivations(CultivationAttachment spirit, LivingEntity entity,
@@ -447,7 +397,6 @@ public final class CultivationMethodService {
     }
 
     private record Recovery(double restored, double cultivation, boolean valid) {
-        private static final Recovery NONE = new Recovery(0.0D, 0.0D, true);
         private static final Recovery INVALID = new Recovery(0.0D, 0.0D, false);
     }
 

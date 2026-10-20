@@ -70,9 +70,11 @@ public final class ResourceChannel {
             ResultWithData<Map<Identifier, Double>> result = ResourceTransactions.tryConsume(payer,
                     simulate ? this.account.copy() : this.account,
                     new Evaluation(Map.of(this.resource, this.amount())));
-            if (result.isSuccess())
-                return took(Debit.of(this.target(), this.amount()));
-            return refused(Failures.INSUFFICIENT_RESOURCE, result.failedResource());
+            if (result.isFailure()) return refused(Failures.INSUFFICIENT_RESOURCE, result.failedResource());
+            // A check takes nothing, so it has nothing to report: the write is the account's, and the debit names what
+            // that write really left behind rather than what was asked for.
+            if (simulate) return took(List.of());
+            return took(Debit.of(this.target(), this.amount()));
         }
 
         @Override

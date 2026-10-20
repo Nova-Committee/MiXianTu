@@ -157,15 +157,4 @@ public final class CurseCommand {
         }
         return cleansed;
     }
-
-    // The registry entry the pack loads now, or failing that an instance already held - the only trace a definition
-    // the pack no longer provides leaves behind.
-
-    private static Optional<Holder<Curse>> heldByName(Collection<? extends Entity> targets, Identifier id) {
-        for (Entity target : targets) {
-            for (Holder<Curse> curse : target.getData(MxtAttachments.CURSE_HOLDER).instances().keySet())
-                if (curse.is(id)) return Optional.of(curse);
-        }
-        return Optional.empty();
-    }
 }

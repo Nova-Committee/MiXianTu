@@ -25,7 +25,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
 
-import java.util.List;
 import java.util.Map.Entry;
 
 import static net.minecraft.commands.Commands.argument;
@@ -85,7 +84,7 @@ public final class TalismanCommand {
         Reference<Talisman> inscribed = ResourceArgument.getResource(ctx, "talisman", MxtResourceKeys.TALISMAN);
         int count = count(ctx);
         ItemStack template = MxtItems.TALISMAN.toStack();
-        template.set(MxtDataComponents.TALISMAN, new TalismanComponent(List.of(inscribed), mode));
+        template.set(MxtDataComponents.TALISMAN, TalismanComponent.of(inscribed, mode));
         // The declared wear lands on the stack here, because a carrier handed out by the command is the only one
         // the framework itself makes: the bar is on the item before it is ever used.
         TalismanService.applyDurability(template);
@@ -117,7 +116,7 @@ public final class TalismanCommand {
         if (!(stack.getItem() instanceof ItemAuraAccess access)) return;
         for (Entry<Holder<Aura>, Integer> entry : TalismanService.capacity(stack).entrySet()) {
             int units = entry.getValue();
-            if (units > 0) access.insert(player, player.registryAccess(), stack, entry.getKey(), units, false);
+            if (units > 0) access.insert(player, player.registryAccess(), stack, entry.getKey(), units, false, false);
         }
     }
 

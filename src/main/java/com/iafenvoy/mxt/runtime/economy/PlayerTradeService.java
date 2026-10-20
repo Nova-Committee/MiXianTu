@@ -1,7 +1,6 @@
 package com.iafenvoy.mxt.runtime.economy;
 
 import com.iafenvoy.mxt.screen.menu.PlayerTradeMenu;
-import com.iafenvoy.mxt.util.InventoryUtil;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.ComponentSerialization;
@@ -40,6 +39,8 @@ public final class PlayerTradeService {
     private static final long REQUEST_LIFETIME_TICKS = 20L * 60L;
     // How often the module re-checks live state for the sessions and requests it still holds.
     private static final long STALE_CHECK_INTERVAL_TICKS = 20L;
+    // One side's offer grid, which is also the size the page declares both offer containers with.
+    public static final int OFFER_SLOTS = 20;
     private static final Map<UUID, Request> REQUESTS = new HashMap<>();
     private static final Map<UUID, Session> SESSIONS = new HashMap<>();
 
@@ -152,6 +153,16 @@ public final class PlayerTradeService {
         return side != null && side.menu == menu;
     }
 
+    // Either offer container changed. Both sides' confirmations cover both offers, so a change on one side has to be
+    // able to clear the other side's too - which is why this is a session call and not a side one.
+    public static void offerChanged(ServerPlayer player, PlayerTradeMenu menu) {
+        Session session = SESSIONS.get(player.getUUID());
+        if (session == null) return;
+        Side side = session.side(player);
+        if (side == null || side.menu != menu) return;
+        session.offerTouched();
+    }
+
     // Removes one side's entry only when it still points at the given session, so a newer session registered
     // under the same UUID is never evicted by an older close.
     private static void forgetSession(UUID player, Session session) {
@@ -165,10 +176,16 @@ public final class PlayerTradeService {
         private final Side first;
         private final Side second;
         private boolean closed;
+        // Set while items are being moved out of the grids as part of settling, which is not a change to the trade.
+        private boolean settling;
 
         private Session(ServerPlayer first, ServerPlayer second) {
             this.first = new Side(first);
             this.second = new Side(second);
+            // Both offers report their own changes: a plain SimpleContainer answers setChanged with nothing, so
+            // this is the only place a change to either grid can be noticed.
+            this.first.offer.listen(this::offerTouched);
+            this.second.offer.listen(this::offerTouched);
             SESSIONS.put(first.getUUID(), this);
             SESSIONS.put(second.getUUID(), this);
         }
@@ -199,13 +216,15 @@ public final class PlayerTradeService {
         private void setAccepted(Side side, boolean accepted) {
             if (this.closed) return;
             side.accepted = accepted;
-            // A confirmation is about the offer as it stood, and a container carries no version of its own.
-            side.acceptedOffer = accepted ? snapshot(side.offer) : List.of();
+            // A confirmation is about the whole trade, not one side of it: both offers are snapshotted, so a
+            // partner who swaps what they are giving after this press is a different trade and this press no
+            // longer counts.
+            side.acceptedTrade = accepted ? this.snapshotTrade() : List.of();
             Side partner = this.partner(side);
             // The one player of a self-trade confirms for both sides in a single press.
             if (this.isSelf()) {
                 partner.accepted = accepted;
-                partner.acceptedOffer = accepted ? List.copyOf(side.acceptedOffer) : List.of();
+                partner.acceptedTrade = accepted ? List.copyOf(side.acceptedTrade) : List.of();
             }
             // A side that already closed its menu no longer has a slot to notify; the pending
             // acceptance is kept so the trade still resolves once its own menu is gone.
@@ -214,27 +233,54 @@ public final class PlayerTradeService {
             if (this.first.accepted && this.second.accepted) this.complete();
         }
 
+        // Both offers, one after the other: a confirmation covers the trade as a whole.
+        private List<ItemStack> snapshotTrade() {
+            List<ItemStack> stacks = new ArrayList<>(OFFER_SLOTS * 2);
+            stacks.addAll(snapshot(this.first.offer));
+            stacks.addAll(snapshot(this.second.offer));
+            return stacks;
+        }
+
+        // Called the moment either offer container changes, so a confirmation cannot outlive the offer it was
+        // given for. Every path into an offer - a click, a drag, a quick move - ends in setChanged.
+        private void offerTouched() {
+            // Emptying the grids is part of ending the session, not a change to the trade.
+            if (this.closed || this.settling || !this.offerChanged()) return;
+            this.notifyAcceptance();
+        }
+
         // An offer that changed after a confirmation was given is a different trade, so both confirmations are
         // dropped and both sides are told through their own data slot.
         private boolean offerChanged() {
-            if (matches(this.first) && matches(this.second)) return false;
+            boolean first = this.first.accepted && this.matches(this.first);
+            boolean second = this.second.accepted && this.matches(this.second);
+            if (first == this.first.accepted && second == this.second.accepted) return false;
             this.first.accepted = false;
             this.second.accepted = false;
-            this.first.acceptedOffer = List.of();
-            this.second.acceptedOffer = List.of();
-            this.first.menu.setOwnAccepted(false);
-            this.first.menu.setPartnerAccepted(false);
-            if (!this.isSelf()) {
-                this.second.menu.setOwnAccepted(false);
-                this.second.menu.setPartnerAccepted(false);
-            }
+            this.first.acceptedTrade = List.of();
+            this.second.acceptedTrade = List.of();
             return true;
         }
 
-        private static boolean matches(Side side) {
-            if (side.offer.getContainerSize() != side.acceptedOffer.size()) return false;
-            for (int index = 0; index < side.offer.getContainerSize(); index++)
-                if (!ItemStack.matches(side.offer.getItem(index), side.acceptedOffer.get(index))) return false;
+        private void notifyAcceptance() {
+            if (this.first.menu != null) {
+                this.first.menu.setOwnAccepted(this.first.accepted);
+                this.first.menu.setPartnerAccepted(this.second.accepted);
+            }
+            if (this.second.menu != null) {
+                this.second.menu.setOwnAccepted(this.second.accepted);
+                this.second.menu.setPartnerAccepted(this.first.accepted);
+            }
+        }
+
+        private boolean matches(Side side) {
+            List<ItemStack> expected = side.acceptedTrade;
+            if (expected.size() != OFFER_SLOTS * 2) return false;
+            for (int index = 0; index < OFFER_SLOTS; index++) {
+                if (!ItemStack.matches(this.first.offer.getItem(index), expected.get(index))) return false;
+                if (!ItemStack.matches(this.second.offer.getItem(index), expected.get(OFFER_SLOTS + index)))
+                    return false;
+            }
             return true;
         }
 
@@ -254,18 +300,40 @@ public final class PlayerTradeService {
         }
 
         // Moves source.offer into receiver's inventory, then clears the offer so no item can be handed out
-        // twice.
+        // twice. Whatever does not fit is handed to the overflow list, which the close drops next to the receiver.
         private void swap(Side receiver, Side source) {
-            for (int index = 0; index < source.offer.getContainerSize(); index++) {
-                ItemStack stack = source.offer.getItem(index);
-                if (stack.isEmpty()) continue;
-                ItemStack remainder = stack.copy();
-                receiver.player.getInventory().add(remainder);
-                receiver.overflow.add(remainder);
+            this.returnOffer(receiver);
+            this.emptyOffer(source);
+        }
+
+        // The one way items leave an offer container: into the inventory, and past that onto the overflow list. An
+        // item that neither reaches the inventory nor the list would be stranded in a container nobody can open, so
+        // every exit - settle, cancel, disconnect, death - goes through here.
+        private void returnOffer(Side side) {
+            this.settling = true;
+            try {
+                for (int index = 0; index < side.offer.getContainerSize(); index++) {
+                    ItemStack stack = side.offer.getItem(index);
+                    if (stack.isEmpty()) continue;
+                    ItemStack remainder = stack.copy();
+                    side.player.getInventory().add(remainder);
+                    if (!remainder.isEmpty()) side.overflow.add(remainder);
+                    side.offer.setItem(index, ItemStack.EMPTY);
+                }
+                side.offer.setChanged();
+            } finally {
+                this.settling = false;
             }
-            for (int index = 0; index < source.offer.getContainerSize(); index++)
-                source.offer.setItem(index, ItemStack.EMPTY);
-            source.offer.setChanged();
+        }
+
+        private void emptyOffer(Side side) {
+            this.settling = true;
+            try {
+                side.offer.clearContent();
+                side.offer.setChanged();
+            } finally {
+                this.settling = false;
+            }
         }
 
         // Inventory.add empties the stack it successfully inserts, so the common path has nothing left to drop.
@@ -278,8 +346,8 @@ public final class PlayerTradeService {
 
         private void cancel(Component canceller) {
             if (this.closed) return;
-            InventoryUtil.insertItems(this.first.player.getInventory(), this.first.offer);
-            InventoryUtil.insertItems(this.second.player.getInventory(), this.second.offer);
+            this.returnOffer(this.first);
+            this.returnOffer(this.second);
             this.eachSide(player ->
                     player.sendSystemMessage(Component.translatable("command.mxt.trade.cancel", canceller)));
             this.close();
@@ -289,8 +357,8 @@ public final class PlayerTradeService {
         // sides are returned before the session is dropped.
         private void discard(Side leaving) {
             if (this.closed) return;
-            InventoryUtil.insertItems(this.first.player.getInventory(), this.first.offer);
-            InventoryUtil.insertItems(this.second.player.getInventory(), this.second.offer);
+            this.returnOffer(this.first);
+            this.returnOffer(this.second);
             Side partner = leaving == null ? null : this.partner(leaving);
             // Only notify a player who is still connected: the stale pass can discard a session
             // whose remaining side has also gone offline. A self-trade has nobody to tell.
@@ -340,17 +408,41 @@ public final class PlayerTradeService {
 
     private static final class Side {
         private final ServerPlayer player;
-        private final SimpleContainer offer = new SimpleContainer(20);
+        private final OfferContainer offer = new OfferContainer(OFFER_SLOTS);
         // Items that could not fit when this side received a partner offer; dropped next to this side when the
         // session closes.
         private final List<ItemStack> overflow = new ArrayList<>();
         private PlayerTradeMenu menu;
         private boolean accepted;
-        // The offer as it stood when this side confirmed it; empty while nothing is confirmed.
-        private List<ItemStack> acceptedOffer = List.of();
+        // Both offers as they stood when this side confirmed them; empty while nothing is confirmed.
+        private List<ItemStack> acceptedTrade = List.of();
 
         private Side(ServerPlayer player) {
             this.player = player;
+        }
+    }
+
+    /**
+     * An offer grid that reports its own changes. A confirmation is about the trade as a whole, so the session has to
+     * learn about a change on either side the moment it happens; a plain container's {@code setChanged} is empty, and
+     * every path that moves an item into a grid - a click, a drag, a quick move, a hopper - ends in one.
+     */
+    private static final class OfferContainer extends SimpleContainer {
+        private Runnable listener = () -> {
+        };
+
+        private OfferContainer(int size) {
+            super(size);
+        }
+
+        private void listen(Runnable listener) {
+            this.listener = listener;
+        }
+
+        @Override
+        public void setChanged() {
+            super.setChanged();
+            this.listener.run();
         }
     }
 

@@ -70,10 +70,18 @@ public record Chain<T>(List<Holder<T>> nodes) {
         return this.nodes.stream().map(HolderHelper::id).toList();
     }
 
-    public void validate(BiPredicate<T, T> predicate) {
+    /**
+     * Whether every neighbouring pair satisfies one rule. The offending pair is logged either way, and the answer is
+     * what lets a caller drop the whole line instead of publishing one the domain rejected.
+     */
+    public boolean validate(BiPredicate<T, T> predicate) {
+        boolean whole = true;
         for (int i = 1; i < this.nodes.size(); i++)
-            if (!predicate.test(this.nodes.get(i - 1).value(), this.nodes.get(i).value()))
+            if (!predicate.test(this.nodes.get(i - 1).value(), this.nodes.get(i).value())) {
                 LOGGER.error("Chain {} is failed validation at {} and {}.", this.ids(), HolderHelper.id(this.nodes.get(i - 1)), HolderHelper.id(this.nodes.get(i)));
+                whole = false;
+            }
+        return whole;
     }
 
     public Component buildText(Holder<T> current) {

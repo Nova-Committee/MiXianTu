@@ -41,9 +41,8 @@ public record ItemCost(List<Entry> entries, NumberProvider amount) implements It
         Container store = store(context);
         double value = this.amount().evaluate(context.payer() == null ? FormulaContext.EMPTY
                 : FormulaContext.of(context.payer()));
-        int required = MiscUtil.positive(value) > 0.0D ? (int) Math.ceil(value) : 0;
-        if (required <= 0) return ResultWithData.failure(null, CostFailure.INVALID_AMOUNT);
-        return ResultWithData.success(new ItemTransaction(store, this.entries(), required));
+        if (count(value) <= 0) return ResultWithData.failure(null, CostFailure.INVALID_AMOUNT);
+        return ResultWithData.success(new ItemTransaction(store, this.entries(), value));
     }
 
     @Override
@@ -65,6 +64,15 @@ public record ItemCost(List<Entry> entries, NumberProvider amount) implements It
         return player == null ? null : player.getInventory();
     }
 
+    // An amount of items is whole: the one place a count is rounded, so a replacement keeps the price it was given and
+    // only the passes below read it. A price this container cannot express is refused (-1) rather than clamped - there
+    // is no count less than the bill that may be taken and reported as the whole of it. Zero means "no amount".
+    private static int count(double amount) {
+        double value = MiscUtil.positive(amount);
+        if (value <= 0.0D) return 0;
+        return value > Integer.MAX_VALUE ? -1 : (int) Math.ceil(value);
+    }
+
     /**
      * One count of items out of one container. The slots are planned read-only first and written only once the whole
      * plan is known to hold, so a refusal leaves the container exactly as it was and the debit names the stacks that
@@ -74,7 +82,7 @@ public record ItemCost(List<Entry> entries, NumberProvider amount) implements It
         private final @Nullable Container store;
         private final List<ItemMatcher.Entry> entries;
 
-        private ItemTransaction(@Nullable Container store, List<ItemMatcher.Entry> entries, int count) {
+        private ItemTransaction(@Nullable Container store, List<ItemMatcher.Entry> entries, double count) {
             super(new CostTarget.Items(store, entries), count);
             this.store = store;
             this.entries = entries;
@@ -94,8 +102,9 @@ public record ItemCost(List<Entry> entries, NumberProvider amount) implements It
                     return refused(CostFailure.MISSING_ITEM);
             List<ItemStack> taken = new ArrayList<>(plan.size());
             for (Take step : plan) {
-                step.stack().shrink(step.count());
+                // Copied before the shrink: after it the slot may be empty and an empty stack no longer says what left.
                 taken.add(step.stack().copyWithCount(step.count()));
+                step.stack().shrink(step.count());
             }
             this.store.setChanged();
             return took(Debit.of(this.target(), required, taken));
@@ -103,13 +112,12 @@ public record ItemCost(List<Entry> entries, NumberProvider amount) implements It
 
         @Override
         protected CostTransaction replacing(double amount) {
-            return new ItemTransaction(this.store, this.entries, count(amount));
+            return new ItemTransaction(this.store, this.entries, amount);
         }
 
         // An amount of items is whole: a scaled or merged count is rounded up once, here, and never written down.
         private static int count(double amount) {
-            double value = MiscUtil.positive(amount);
-            return value <= 0.0D ? 0 : value >= Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) Math.ceil(value);
+            return ItemCost.count(amount);
         }
 
         // In slot order, the first matching stacks first: the order is the data contract, so a plan built twice from one

@@ -1,5 +1,6 @@
 package com.iafenvoy.mxt.data.cost;
 
+import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.cost.builtin.ResourceChannel;
 import com.iafenvoy.mxt.data.cost.context.CostContext;
@@ -22,6 +23,7 @@ import org.slf4j.Logger;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Predicate;
+import java.util.function.ToDoubleFunction;
 
 /**
  * One payment: the fees it was given and the one place they are paid from. Pricing binds every entry to a fixed
@@ -40,13 +42,14 @@ public final class CostPayment {
     private static final Logger LOGGER = LogUtils.getLogger();
     // One warn per origin per target for the life of the process: a shape hint, not a per-payment event.
     private static final Set<String> WARNED = ConcurrentHashMap.newKeySet();
-    private static final ThreadLocal<Set<CostTarget>> PAYING = ThreadLocal.withInitial(HashSet::new);
+    private static final ThreadLocal<Set<Object>> PAYING = ThreadLocal.withInitial(HashSet::new);
     private final CostContext context;
     private final List<Entry> entries = new ArrayList<>();
     private @Nullable Failure failure;
     private @Nullable Identifier failedResource;
     private boolean closed;
     private boolean paying;
+    private boolean uncertain;
     private @Nullable PaymentResult taken;
 
     private CostPayment(CostContext context) {
@@ -102,7 +105,9 @@ public final class CostPayment {
     public Optional<Failure> test() {
         if (this.taken != null) return Optional.ofNullable(this.taken.failure());
         if (this.failure != null) return Optional.of(this.failure);
-        for (Group group : this.plan()) {
+        List<Group> plan = this.plan();
+        if (plan == null) return Optional.of(CostFailure.INVALID_AMOUNT);
+        for (Group group : plan) {
             ResultWithData<List<Debit>> simulated = this.run(group, true);
             if (simulated.isFailure()) return Optional.of(simulated.failure());
         }
@@ -112,13 +117,18 @@ public final class CostPayment {
     /**
      * The whole payment: one simulation pass over every fee, then one real pass. A simulation that refuses takes
      * nothing; a real pass that refuses keeps what it already took and says so. The answer is terminal - paying the
-     * same bill again repeats it without touching a store.
+     * same bill again repeats it without touching a store, including when the first attempt did not come back.
      */
     public PaymentResult pay() {
         if (this.taken != null) return this.taken;
         if (this.paying) return PaymentResult.denied(CostFailure.REENTRANT, null);
+        // Asked once the real pass had begun and never answered: whatever it wrote before the throw cannot be taken
+        // back, so a second attempt could charge a fee that is already paid. The bill stays unanswered rather than
+        // guessing, and nothing is written again.
+        if (this.uncertain) return this.taken = PaymentResult.denied(CostFailure.UNCERTAIN, null);
         if (this.failure != null) return this.taken = PaymentResult.denied(this.failure, this.failedResource);
         List<Group> plan = this.plan();
+        if (plan == null) return this.taken = PaymentResult.denied(CostFailure.INVALID_AMOUNT, null);
         this.closed = true;
         this.paying = true;
         try {
@@ -134,11 +144,16 @@ public final class CostPayment {
             if (simulated.isFailure()) return PaymentResult.denied(simulated.failure(), simulated.failedResource());
         }
         List<Debit> debits = new ArrayList<>(plan.size());
+        // From here on a store may really be written, so an answer that never comes back leaves the bill unanswered.
+        this.uncertain = true;
         for (Group group : plan) {
             ResultWithData<List<Debit>> result = this.run(group, false);
-            if (result.isFailure()) return PaymentResult.partly(debits, result.failure(), result.failedResource());
+            // What a refusing fee did take before it refused is kept: the bill reports the known spend instead of
+            // claiming nothing was written.
             debits.addAll(result.getData());
+            if (result.isFailure()) return PaymentResult.partly(debits, result.failure(), result.failedResource());
         }
+        this.uncertain = false;
         return PaymentResult.paid(debits);
     }
 
@@ -176,7 +191,6 @@ public final class CostPayment {
         return amounts;
     }
 
-
     /**
      * Whether this bill charges anything a resource table cannot spell out: an aura out of a pool or a bank, the items
      * an entry counts for itself, a script.
@@ -194,11 +208,16 @@ public final class CostPayment {
      * {@code ResourceConsumeEvent} changes what is paid: an id the new table does not name is not charged at all, and a
      * zero removes it. Items, pool and bank auras and scripts are untouched.
      *
+     * <p>The table is one owner's amounts, so it is only unambiguous for a bill that charges one account: a bill naming
+     * two accounts keys its resources by id alone and cannot say whose balance an id means. Such a bill refuses the
+     * edit instead of picking one payer for all of it - see {@link #samePayer()}.
+     *
      * <p>An unknown resource, a negative or non-finite amount or a missing account refuses the whole edit and leaves the
      * bill exactly as it was.
      */
     public Optional<Failure> replaceResourceAmounts(Map<Identifier, Double> amounts) {
         if (this.closed) return Optional.of(CostFailure.BILL_CLOSED);
+        if (!this.samePayer()) return Optional.of(CostFailure.AMBIGUOUS_PAYER);
         Provider access = this.context.formula().registries();
         if (access == null) return Optional.of(Failures.INVALID_VALUE);
         Map<Holder<Resource>, Double> resolved = new LinkedHashMap<>();
@@ -224,14 +243,36 @@ public final class CostPayment {
     }
 
     /**
+     * Whether every resource fee of this bill charges the same account. A table keyed by resource id only is one
+     * owner's amounts, so an edit of a bill that mixes accounts has no single owner to apply to.
+     */
+    public boolean samePayer() {
+        ResourceHolderAttachment account = null;
+        for (Entry entry : this.entries) {
+            if (!(entry.transaction().target() instanceof CostTarget.Account target)) continue;
+            if (account == null) account = target.account();
+            else if (account != target.account()) return false;
+        }
+        return true;
+    }
+
+    /**
      * Scales the selected fees, which is how a caller that already decided how much of a bill it owes replaces the
      * amounts instead of writing to a side table: each selected fee is replaced at its own amount times
      * {@code ratio}, and one that comes out at zero leaves the bill. A non-finite or negative ratio refuses the whole
      * edit and leaves the bill exactly as it was.
      */
     public Optional<Failure> scale(Predicate<Cost.Transaction> selection, double ratio) {
+        return this.scale(selection, transaction -> ratio);
+    }
+
+    /**
+     * Scales each fee by its own ratio, which is how a caller that was granted a different share of each source replaces
+     * the amounts: {@code ratio} is asked once per fee, so one source's grant cannot stand in for another's. A
+     * non-finite or negative ratio refuses the whole edit and leaves the bill exactly as it was.
+     */
+    public Optional<Failure> scale(Predicate<Cost.Transaction> selection, ToDoubleFunction<Cost.Transaction> ratio) {
         if (this.closed) return Optional.of(CostFailure.BILL_CLOSED);
-        if (!Double.isFinite(ratio) || ratio < 0.0D) return Optional.of(CostFailure.INVALID_AMOUNT);
         List<Entry> scaled = new ArrayList<>(this.entries.size());
         for (Entry entry : this.entries) {
             Cost.Transaction transaction = entry.transaction();
@@ -239,7 +280,9 @@ public final class CostPayment {
                 scaled.add(entry);
                 continue;
             }
-            double amount = transaction.amount() * ratio;
+            double factor = ratio.applyAsDouble(transaction);
+            if (!Double.isFinite(factor) || factor < 0.0D) return Optional.of(CostFailure.INVALID_AMOUNT);
+            double amount = transaction.amount() * factor;
             if (!Double.isFinite(amount)) return Optional.of(CostFailure.INVALID_AMOUNT);
             if (amount <= 0.0D) continue;
             scaled.add(new Entry(entry.context(), transaction.withAmount(amount)));
@@ -284,14 +327,17 @@ public final class CostPayment {
     // Fees naming one store are one charge: the amounts add up in that store's own unit and one transaction takes it,
     // which is why a bill needs no side table of per-entry shares. The order is the pipeline's, not the pack's: every
     // built-in store first, then the opaque scripts, so a script never runs before the price it was written next to.
-    private List<Group> plan() {
+    // A sum this store cannot express refuses the bill here, before any of it is charged: null means exactly that.
+    private @Nullable List<Group> plan() {
         Map<CostTarget, Cost.Transaction> merged = new LinkedHashMap<>();
         for (Entry entry : this.entries) {
             Cost.Transaction transaction = entry.transaction();
             if (!(transaction.amount() > 0.0D)) continue;
             Cost.Transaction present = merged.get(transaction.target());
-            merged.put(transaction.target(), present == null ? transaction
-                    : present.withAmount(present.amount() + transaction.amount()));
+            Cost.Transaction sum = present == null ? transaction
+                    : present.withAmount(present.amount() + transaction.amount());
+            if (!Double.isFinite(sum.amount())) return null;
+            merged.put(transaction.target(), sum);
         }
         List<Group> stores = new ArrayList<>(merged.size());
         List<Group> scripts = new ArrayList<>();
@@ -302,14 +348,15 @@ public final class CostPayment {
     }
 
     // A nested payment touching a store this one is writing is refused rather than interleaved, while an independent
-    // one on another store goes through.
+    // one on another store goes through. The guard is the target's own answer to "is this the same store", which is the
+    // target itself except where the identity is deliberately per-entry (see CostTarget#guard).
     private ResultWithData<List<Debit>> run(Group group, boolean simulate) {
-        Set<CostTarget> paying = PAYING.get();
-        if (!paying.add(group.target())) return ResultWithData.failure(List.of(), CostFailure.REENTRANT);
+        Set<Object> paying = PAYING.get();
+        if (!paying.add(group.target().guard())) return ResultWithData.failure(List.of(), CostFailure.REENTRANT);
         try {
             return group.transaction().execute(simulate);
         } finally {
-            paying.remove(group.target());
+            paying.remove(group.target().guard());
         }
     }
 

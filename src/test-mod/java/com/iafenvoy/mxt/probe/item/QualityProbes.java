@@ -24,6 +24,7 @@ import com.iafenvoy.mxt.probe.ProbeContext;
 import com.iafenvoy.mxt.recipe.AlchemyRecipe;
 import com.iafenvoy.mxt.recipe.TalismanDrawingRecipe;
 import com.iafenvoy.mxt.registry.*;
+import com.iafenvoy.mxt.registry.cache.RegistryCaches;
 import com.iafenvoy.mxt.runtime.alchemy.*;
 import com.iafenvoy.mxt.runtime.alchemy.AlchemyWorkstationService.AlchemyPreview;
 import com.iafenvoy.mxt.runtime.resulting.failures.AlchemyFailure;
@@ -75,6 +76,7 @@ public final class QualityProbes {
                 Probe.of("item/quality/compare_same_chain", QualityProbes::compareSameChain),
                 Probe.of("item/quality/compare_cross_chain", QualityProbes::compareCrossChain),
                 Probe.of("item/quality/compare_refused_ladder", QualityProbes::compareRefusedLadder),
+                Probe.of("item/quality/domain_gate", QualityProbes::domainGate),
                 Probe.of("item/quality/empty_refused", QualityProbes::emptyRefused),
                 Probe.of("item/quality/matcher_entry", QualityProbes::matcherEntry),
                 Probe.of("item/quality/matcher_needs_items", QualityProbes::matcherNeedsItems),
@@ -233,6 +235,48 @@ public final class QualityProbes {
                         + " requirement=" + QualityRequirements.test(access, refused, refusedFloor),
                 "rank=99 self=99 at_least_self=false requirement=false");
     }
+
+    // The domain gate, in four answers: a ladder that names itself once and inherits the name downwards is a ladder
+    // and is usable; a ladder whose tiers write two different names is not published at all, so neither its steps nor
+    // its upgrade can be read; and the two realms' own gate refuses a line that climbs from one aura into another.
+    private static void domainGate(ProbeContext context) {
+        RegistryAccess access = context.registries();
+        Holder<ItemQuality> inheritLow = tier(access, "mxt_test:inherit_low");
+        Holder<ItemQuality> inheritHigh = tier(access, "mxt_test:inherit_high");
+        Holder<ItemQuality> conflictLow = tier(access, "mxt_test:conflict_low");
+        Holder<ItemQuality> conflictTop = tier(access, "mxt_test:conflict_top");
+        leg(context, "domain_gate_inherited_name",
+                QualityLadders.rank(inheritLow).orElse(-1) == 0 && QualityLadders.rank(inheritHigh).orElse(-1) == 1
+                        && QualityLadders.compare(inheritHigh, inheritLow).orElse(99) == 1
+                        && QualityLadders.name(inheritHigh).map(Identifier::toString).orElse("none").equals("mxt_test:inherited"),
+                "low_rank=" + QualityLadders.rank(inheritLow).orElse(-1)
+                        + " high_rank=" + QualityLadders.rank(inheritHigh).orElse(-1)
+                        + " step=" + QualityLadders.compare(inheritHigh, inheritLow).orElse(99)
+                        + " high_name=" + QualityLadders.name(inheritHigh).map(Identifier::toString).orElse("none"),
+                "low_rank=0 high_rank=1 step=1 high_name=mxt_test:inherited");
+        // A conflicting name is a domain failure, not a per-link one: the whole line is dropped, so no tier of it has
+        // a next step and an upgrade cannot climb out of the group the pack actually declared.
+        boolean conflictPresent = QualityLadders.cache().contains(conflictLow);
+        leg(context, "domain_gate_conflicting_name",
+                !conflictPresent && !QualityLadders.cache().contains(conflictTop)
+                        && QualityLadders.cache().next(conflictLow).isEmpty()
+                        && QualityLadders.cache().next(conflictTop).isEmpty(),
+                "low_indexed=" + conflictPresent + " top_indexed=" + QualityLadders.cache().contains(conflictTop)
+                        + " low_next=" + QualityLadders.cache().next(conflictLow).map(HolderHelper::id).map(Identifier::toString).orElse("none"),
+                "low_indexed=false top_indexed=false low_next=none");
+        // A realm line that climbs from one aura into another is not one ladder either.
+        leg(context, "domain_gate_realm_aura",
+                QualityLadders.cache().size() > 0 && RegistryCaches.REALM_CHAIN.chainOf(
+                        context.require(MxtResourceKeys.REALM_STAGE, "cross_aura_low")).isEmpty()
+                        && RegistryCaches.REALM_CHAIN.chainOf(context.require(MxtResourceKeys.REALM_STAGE,
+                        "cross_aura_high")).isEmpty(),
+                "low_indexed=" + RegistryCaches.REALM_CHAIN.chainOf(context.require(MxtResourceKeys.REALM_STAGE,
+                        "cross_aura_low")).isPresent()
+                        + " high_indexed=" + RegistryCaches.REALM_CHAIN.chainOf(context.require(MxtResourceKeys.REALM_STAGE,
+                        "cross_aura_high")).isPresent(),
+                "low_indexed=false high_indexed=false");
+    }
+
 
     private static void emptyRefused(ProbeContext context) {
         RegistryOps<JsonElement> ops = ops(context);

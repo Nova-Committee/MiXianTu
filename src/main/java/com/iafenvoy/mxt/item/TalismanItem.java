@@ -75,26 +75,28 @@ public class TalismanItem extends Item implements UseItemAuraAccess {
     }
 
     @Override
-    public int insert(@Nullable LivingEntity entity, @NotNull Provider registries, ItemStack stack, Holder<Aura> aura, int amount, boolean simulate) {
+    public int insert(@Nullable LivingEntity entity, @NotNull Provider registries, ItemStack stack, Holder<Aura> aura, int amount, boolean exact, boolean simulate) {
         AuraAccess.requireNonNegative(amount);
         int capacity = this.getCapacity(entity, registries, stack, aura);
         if (capacity <= 0) return amount;
         SpiritStorageComponent charge = this.store(stack);
         int stored = (int) Math.clamp(Math.floor(charge.get(aura)), 0.0D, capacity);
         int accepted = Math.min(amount, capacity - stored);
+        if (exact && accepted != amount) return amount;
         if (!simulate && accepted > 0)
             stack.set(MxtDataComponents.SPIRIT_STORAGE, charge.with(aura, stored + accepted));
         return amount - accepted;
     }
 
     @Override
-    public int extract(@Nullable LivingEntity entity, @NotNull Provider registries, ItemStack stack, Holder<Aura> aura, int amount, boolean simulate) {
+    public int extract(@Nullable LivingEntity entity, @NotNull Provider registries, ItemStack stack, Holder<Aura> aura, int amount, boolean exact, boolean simulate) {
         AuraAccess.requireNonNegative(amount);
         int capacity = this.getCapacity(entity, registries, stack, aura);
         if (capacity <= 0) return amount;
         SpiritStorageComponent charge = this.store(stack);
         int stored = (int) Math.clamp(Math.floor(charge.get(aura)), 0.0D, capacity);
         int extracted = Math.min(amount, stored);
+        if (exact && extracted != amount) return amount;
         if (!simulate && extracted > 0)
             stack.set(MxtDataComponents.SPIRIT_STORAGE, charge.with(aura, stored - extracted));
         return amount - extracted;

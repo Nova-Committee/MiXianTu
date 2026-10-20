@@ -1,6 +1,7 @@
 package com.iafenvoy.mxt.data.ability;
 
 import com.iafenvoy.mxt.data.storage.DataStorageCollector;
+import com.iafenvoy.mxt.data.storage.builtin.*;
 import com.iafenvoy.mxt.data.storage.runtime.ActiveState;
 import com.iafenvoy.mxt.registry.MxtRegistries;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
@@ -68,5 +69,19 @@ public interface AbilityType {
         double ticks = interval.evaluate(context);
         if (!Double.isFinite(ticks) || ticks < 1.0D) return 0;
         return (int) Math.min(Integer.MAX_VALUE, Math.round(ticks));
+    }
+
+    /**
+     * The storage a type that is pressed or ticked keeps on top of the default: its cooldown, the charges of its own
+     * entry when it declares any, and the four stores a toggle, a timer, a resource drain and a target lock write. A
+     * type that needs this set calls this rather than naming it again; anything it stores beyond the set is its own.
+     */
+    static void declareUseStorages(Ability ability, DataStorageCollector collector) {
+        collector.add(CooldownDataStorage.INSTANCE);
+        ability.charges().ifPresent(charges -> collector.add(charges.declared()));
+        collector.add(ToggleDataStorage.INSTANCE);
+        collector.add(TimerDataStorage.INSTANCE);
+        collector.add(ResourceDataStorage.INSTANCE);
+        collector.add(TargetLockDataStorage.INSTANCE);
     }
 }

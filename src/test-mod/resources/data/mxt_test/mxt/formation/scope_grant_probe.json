@@ -1,0 +1,14 @@
+{
+  "structure_check": "always",
+  "radius": 8,
+  "actions": [
+    {
+      "type": "mxt:activate",
+      "entity_action": {
+        "type": "mxt:grant_ability",
+        "ability": "mxt_test:water_shield",
+        "source": "mxt:formation/mxt_test/scope_grant_probe"
+      }
+    }
+  ]
+}

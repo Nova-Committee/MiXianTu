@@ -78,7 +78,7 @@ public final class PickerCategories {
         PickerCatalogue.registerSingle(MxtResourceKeys.CONTRACT_TYPE, holder -> described(componentStack(MxtItems.CONTRACT_SCROLL.toStack(), MxtDataComponents.CONTRACT_SCROLL, new ContractScrollComponent(Optional.of(holder))), holder));
         PickerCatalogue.registerSingle(MxtResourceKeys.SECRET_REALM, holder -> described(componentStack(MxtItems.SECRET_REALM_TOKEN.toStack(), MxtDataComponents.SECRET_REALM_TOKEN, new SecretRealmTokenComponent(Optional.of(holder))), holder));
         PickerCatalogue.registerSingle(MxtResourceKeys.FORMATION, holder -> described(componentStack(MxtItems.FORMATION_PLATE.toStack(), MxtDataComponents.FORMATION_PLATE, new FormationPlateComponent(List.of(), Optional.of(holder))), holder));
-        PickerCatalogue.registerSingle(MxtResourceKeys.TALISMAN, holder -> described(componentStack(MxtItems.TALISMAN.toStack(), MxtDataComponents.TALISMAN, new TalismanComponent(List.of(holder), TriggerMode.FIRE)), holder));
+        PickerCatalogue.registerSingle(MxtResourceKeys.TALISMAN, holder -> described(componentStack(MxtItems.TALISMAN.toStack(), MxtDataComponents.TALISMAN, TalismanComponent.of(holder, TriggerMode.FIRE)), holder));
         // A technique has no item of its own: the row is the carrier the mod generates for it, which is the item
         // the declaration names or the jade slip.
         PickerCatalogue.registerSingle(MxtResourceKeys.TECHNIQUE, (holder, access) -> described(ItemBindingService.techniqueCarrier(access, holder), holder));

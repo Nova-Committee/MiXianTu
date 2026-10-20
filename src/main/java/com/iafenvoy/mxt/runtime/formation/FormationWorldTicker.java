@@ -139,7 +139,10 @@ public final class FormationWorldTicker {
             if (present.contains(departed)) continue;
             Entity entity = level.getEntities().get(departed);
             if (entity == null) continue;
-            FormationGrants.release(entity, source);
+            // A source is one per definition, so leaving one instance says nothing about a second instance of the same
+            // definition that still covers this entity. The release is the same question the dismantle path and the
+            // player sweep ask, so it goes through the same answer.
+            FormationEntityActions.releaseIfUncovered(level, entity, instance.formation(), controller);
             FormationActionRunner.inactivate(definition, new FormationActionContext(level, carrier, entity));
         }
     }
@@ -149,19 +152,12 @@ public final class FormationWorldTicker {
         // A player who never held a granted ability cannot owe a release, and without this guard the sweep
         // would build a source identifier for every formation in the level, every period.
         if (player.getExistingData(MxtAttachments.ABILITY_HOLDER).isEmpty()) return;
-        BlockPos position = player.blockPosition();
-        Map<BlockPos, FormationInstance> formations = level.getData(MxtAttachments.FORMATION_WORLD).formations();
-        // One source per definition: only a definition none of its instances still covers is released, so two
-        // instances of one definition cannot take each other's grant away.
-        Set<Identifier> present = new LinkedHashSet<>(), covered = new LinkedHashSet<>();
-        for (Entry<BlockPos, FormationInstance> entry : formations.entrySet()) {
-            Identifier definition = entry.getValue().formation();
-            present.add(definition);
-            if (covered.contains(definition)) continue;
-            if (entry.getKey().distSqr(position) <= entry.getValue().radius() * entry.getValue().radius())
-                covered.add(definition);
-        }
-        present.removeAll(covered);
-        for (Identifier definition : present) FormationGrants.release(player, Sources.formation(definition));
+        // One source per definition, so the sweep asks the same question the exit path does - once per definition the
+        // player has actually walked out of.
+        Set<Identifier> present = new LinkedHashSet<>();
+        for (Entry<BlockPos, FormationInstance> entry : level.getData(MxtAttachments.FORMATION_WORLD).formations().entrySet())
+            present.add(entry.getValue().formation());
+        for (Identifier definition : present)
+            FormationEntityActions.releaseIfUncovered(level, player, definition, null);
     }
 }
