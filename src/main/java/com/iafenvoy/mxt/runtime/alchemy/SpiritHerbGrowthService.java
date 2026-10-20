@@ -14,6 +14,8 @@ import com.iafenvoy.mxt.runtime.world.AuraService;
 import com.iafenvoy.mxt.util.MiscUtil;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
+import com.iafenvoy.mxt.util.profiling.ProfilerScope;
+import com.iafenvoy.mxt.util.profiling.ServerProfiling;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -62,11 +64,13 @@ public final class SpiritHerbGrowthService {
     // Placement. A claimed block starts its life here, at age zero, dated to the current game time rather than
     // anything the placement carried: a plant is young whatever it was built from.
     public static void placed(ServerLevel level, BlockPos pos, BlockState state) {
-        SpiritHerbService.findBlock(level.registryAccess(), state).ifPresent(herb -> {
-            if (herb.value().growth().isEmpty()) return;
-            attachment(level, pos).set(pos, 0.0D, level.getGameTime());
-            write(level, pos);
-        });
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.HERB)) {
+            SpiritHerbService.findBlock(level.registryAccess(), state).ifPresent(herb -> {
+                if (herb.value().growth().isEmpty()) return;
+                attachment(level, pos).set(pos, 0.0D, level.getGameTime());
+                write(level, pos);
+            });
+        }
     }
 
     /**
@@ -75,61 +79,67 @@ public final class SpiritHerbGrowthService {
      * outlives the definition that opened it.
      */
     public static OptionalDouble ageAt(ServerLevel level, BlockPos pos, BlockState state) {
-        Optional<Holder<SpiritHerb>> herb = SpiritHerbService.findBlock(level.registryAccess(), state);
-        if (herb.isEmpty()) return OptionalDouble.empty();
-        Growth growth = herb.get().value().growth().orElse(null);
-        if (growth == null) return OptionalDouble.empty();
-        return OptionalDouble.of(resolve(level, pos, growth));
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.HERB)) {
+            Optional<Holder<SpiritHerb>> herb = SpiritHerbService.findBlock(level.registryAccess(), state);
+            if (herb.isEmpty()) return OptionalDouble.empty();
+            Growth growth = herb.get().value().growth().orElse(null);
+            if (growth == null) return OptionalDouble.empty();
+            return OptionalDouble.of(resolve(level, pos, growth));
+        }
     }
 
     // The harvest. Every stack the block dropped that the herb claims as its fruit is stamped with the age the
     // plant reached, and the row is dropped with it: the plant is gone, so its clock has nothing left to describe.
     public static void harvested(ServerLevel level, BlockPos pos, BlockState state, List<ItemEntity> drops) {
-        Optional<Holder<SpiritHerb>> herb = SpiritHerbService.findBlock(level.registryAccess(), state);
-        if (herb.isEmpty()) return;
-        Growth growth = herb.get().value().growth().orElse(null);
-        if (growth == null) return;
-        double age = resolve(level, pos, growth);
-        int years = (int) Math.floor(Math.max(0.0D, age));
-        for (ItemEntity entity : drops) {
-            ItemStack stack = entity.getItem();
-            if (!RegistryCodecs.matches(growth.drops(), BuiltInRegistries.ITEM, stack.getItem())) continue;
-            stack.set(MxtDataComponents.HERB_AGE.get(), years);
-            herb.get().value().qualityFor(years).ifPresent(quality -> QualityService.set(stack, quality));
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.HERB)) {
+            Optional<Holder<SpiritHerb>> herb = SpiritHerbService.findBlock(level.registryAccess(), state);
+            if (herb.isEmpty()) return;
+            Growth growth = herb.get().value().growth().orElse(null);
+            if (growth == null) return;
+            double age = resolve(level, pos, growth);
+            int years = (int) Math.floor(Math.max(0.0D, age));
+            for (ItemEntity entity : drops) {
+                ItemStack stack = entity.getItem();
+                if (!RegistryCodecs.matches(growth.drops(), BuiltInRegistries.ITEM, stack.getItem())) continue;
+                stack.set(MxtDataComponents.HERB_AGE.get(), years);
+                herb.get().value().qualityFor(years).ifPresent(quality -> QualityService.set(stack, quality));
+            }
+            forget(level, pos);
         }
-        forget(level, pos);
     }
 
     // The settlement over the loaded chunks, once per period. A row whose block is gone is dropped; a row whose
     // herb no longer supplies a growth stage is paused in place rather than deleted, so a datapack edit that drops
     // the block does not silently throw away every plant on the map.
     public static void settle(ServerLevel level, LevelChunk chunk, HerbChunkAttachment attachment) {
-        boolean moved = false;
-        for (Map.Entry<BlockPos, HerbChunkAttachment.Plant> entry : attachment.plants().entrySet()) {
-            BlockPos pos = entry.getKey();
-            BlockState state = chunk.getBlockState(pos);
-            Optional<Holder<SpiritHerb>> herb = SpiritHerbService.findBlock(level.registryAccess(), state);
-            Growth growth = herb.flatMap(value -> value.value().growth()).orElse(null);
-            if (growth == null) {
-                // No herb claims this block any more, so the row describes nothing and goes.
-                if (herb.isEmpty()) moved |= attachment.remove(pos);
-                continue;
-            }
-            HerbChunkAttachment.Plant plant = entry.getValue();
-            if (plant.clock() < 0L) {
-                // A parked wild roll nobody has read yet. It becomes a real row dated to now, keeping the age it
-                // rolled: the clock moves forward and the parked age becomes the age the plant starts at.
-                attachment.set(pos, Math.min(plant.age(), growth.maxAge()), level.getGameTime());
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.HERB)) {
+            boolean moved = false;
+            for (Map.Entry<BlockPos, HerbChunkAttachment.Plant> entry : attachment.plants().entrySet()) {
+                BlockPos pos = entry.getKey();
+                BlockState state = chunk.getBlockState(pos);
+                Optional<Holder<SpiritHerb>> herb = SpiritHerbService.findBlock(level.registryAccess(), state);
+                Growth growth = herb.flatMap(value -> value.value().growth()).orElse(null);
+                if (growth == null) {
+                    // No herb claims this block any more, so the row describes nothing and goes.
+                    if (herb.isEmpty()) moved |= attachment.remove(pos);
+                    continue;
+                }
+                HerbChunkAttachment.Plant plant = entry.getValue();
+                if (plant.clock() < 0L) {
+                    // A parked wild roll nobody has read yet. It becomes a real row dated to now, keeping the age it
+                    // rolled: the clock moves forward and the parked age becomes the age the plant starts at.
+                    attachment.set(pos, Math.min(plant.age(), growth.maxAge()), level.getGameTime());
+                    moved = true;
+                    continue;
+                }
+                long gap = level.getGameTime() - plant.clock();
+                if (gap < PERIOD) continue;
+                long periods = Math.min(gap / PERIOD, catchUpPeriods());
+                attachment.set(pos, advance(level, pos, growth, plant.age(), periods), plant.clock() + periods * PERIOD);
                 moved = true;
-                continue;
             }
-            long gap = level.getGameTime() - plant.clock();
-            if (gap < PERIOD) continue;
-            long periods = Math.min(gap / PERIOD, catchUpPeriods());
-            attachment.set(pos, advance(level, pos, growth, plant.age(), periods), plant.clock() + periods * PERIOD);
-            moved = true;
+            if (moved) chunk.markUnsaved();
         }
-        if (moved) chunk.markUnsaved();
     }
 
     // The one reader of a row: settles whatever time it owes and answers the age. A row that does not exist yet is

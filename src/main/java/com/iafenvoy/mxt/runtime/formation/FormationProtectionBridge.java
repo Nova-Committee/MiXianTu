@@ -1,6 +1,8 @@
 package com.iafenvoy.mxt.runtime.formation;
 
 import com.iafenvoy.mxt.runtime.formation.FormationProtection.Action;
+import com.iafenvoy.mxt.util.profiling.ProfilerScope;
+import com.iafenvoy.mxt.util.profiling.ServerProfiling;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -33,36 +35,44 @@ public final class FormationProtectionBridge {
 
     @SubscribeEvent(priority = EventPriority.HIGH)
     public static void onBreak(BreakBlockEvent event) {
-        if (event.getPlayer() instanceof ServerPlayer player && event.getLevel() instanceof ServerLevel level
-                && FormationProtection.prevented(level, Action.BREAK, event.getPos(), player.getUUID()))
-            event.setCanceled(true);
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.FORMATION)) {
+            if (event.getPlayer() instanceof ServerPlayer player && event.getLevel() instanceof ServerLevel level
+                    && FormationProtection.prevented(level, Action.BREAK, event.getPos(), player.getUUID()))
+                event.setCanceled(true);
+        }
     }
 
     @SubscribeEvent(priority = EventPriority.HIGH)
     public static void onPlace(EntityPlaceEvent event) {
-        if (event.getEntity() instanceof ServerPlayer player && event.getLevel() instanceof ServerLevel level
-                && FormationProtection.prevented(level, Action.PLACE, event.getPos(), player.getUUID()))
-            event.setCanceled(true);
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.FORMATION)) {
+            if (event.getEntity() instanceof ServerPlayer player && event.getLevel() instanceof ServerLevel level
+                    && FormationProtection.prevented(level, Action.PLACE, event.getPos(), player.getUUID()))
+                event.setCanceled(true);
+        }
     }
 
     // Cancellations report FAIL, because the client has already predicted the interaction locally and would
     // otherwise swing at a block that refuses to open.
     @SubscribeEvent(priority = EventPriority.HIGH)
     public static void onUse(RightClickBlock event) {
-        if (event.getEntity() instanceof ServerPlayer player && event.getLevel() instanceof ServerLevel level
-                && FormationProtection.prevented(level, Action.INTERACT, event.getPos(), player.getUUID())) {
-            event.setCanceled(true);
-            event.setCancellationResult(InteractionResult.FAIL);
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.FORMATION)) {
+            if (event.getEntity() instanceof ServerPlayer player && event.getLevel() instanceof ServerLevel level
+                    && FormationProtection.prevented(level, Action.INTERACT, event.getPos(), player.getUUID())) {
+                event.setCanceled(true);
+                event.setCancellationResult(InteractionResult.FAIL);
+            }
         }
     }
 
     @SubscribeEvent(priority = EventPriority.HIGH)
     public static void onEntityInteract(EntityInteract event) {
-        if (event.getEntity() instanceof ServerPlayer player && event.getLevel() instanceof ServerLevel level
-                && FormationProtection.prevented(level, Action.ENTITY_INTERACT,
-                event.getTarget().blockPosition(), player.getUUID())) {
-            event.setCanceled(true);
-            event.setCancellationResult(InteractionResult.FAIL);
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.FORMATION)) {
+            if (event.getEntity() instanceof ServerPlayer player && event.getLevel() instanceof ServerLevel level
+                    && FormationProtection.prevented(level, Action.ENTITY_INTERACT,
+                    event.getTarget().blockPosition(), player.getUUID())) {
+                event.setCanceled(true);
+                event.setCancellationResult(InteractionResult.FAIL);
+            }
         }
     }
 
@@ -71,11 +81,13 @@ public final class FormationProtectionBridge {
      */
     @SubscribeEvent(priority = EventPriority.HIGH)
     public static void onEntityInteractSpecific(EntityInteractSpecific event) {
-        if (event.getEntity() instanceof ServerPlayer player && event.getLevel() instanceof ServerLevel level
-                && FormationProtection.prevented(level, Action.ENTITY_INTERACT,
-                event.getTarget().blockPosition(), player.getUUID())) {
-            event.setCanceled(true);
-            event.setCancellationResult(InteractionResult.FAIL);
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.FORMATION)) {
+            if (event.getEntity() instanceof ServerPlayer player && event.getLevel() instanceof ServerLevel level
+                    && FormationProtection.prevented(level, Action.ENTITY_INTERACT,
+                    event.getTarget().blockPosition(), player.getUUID())) {
+                event.setCanceled(true);
+                event.setCancellationResult(InteractionResult.FAIL);
+            }
         }
     }
 
@@ -84,10 +96,12 @@ public final class FormationProtectionBridge {
      */
     @SubscribeEvent(priority = EventPriority.HIGH)
     public static void onItemUse(RightClickItem event) {
-        if (event.getEntity() instanceof ServerPlayer player && event.getLevel() instanceof ServerLevel level
-                && FormationProtection.prevented(level, Action.ITEM_USE, null, player.getUUID())) {
-            event.setCanceled(true);
-            event.setCancellationResult(InteractionResult.FAIL);
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.FORMATION)) {
+            if (event.getEntity() instanceof ServerPlayer player && event.getLevel() instanceof ServerLevel level
+                    && FormationProtection.prevented(level, Action.ITEM_USE, null, player.getUUID())) {
+                event.setCanceled(true);
+                event.setCancellationResult(InteractionResult.FAIL);
+            }
         }
     }
 
@@ -96,10 +110,12 @@ public final class FormationProtectionBridge {
      */
     @SubscribeEvent(priority = EventPriority.HIGH)
     public static void onAttack(AttackEntityEvent event) {
-        if (event.getEntity() instanceof ServerPlayer player && event.getEntity().level() instanceof ServerLevel level
-                && FormationProtection.prevented(level, Action.ATTACK_ENTITY,
-                event.getTarget().blockPosition(), player.getUUID()))
-            event.setCanceled(true);
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.FORMATION)) {
+            if (event.getEntity() instanceof ServerPlayer player && event.getEntity().level() instanceof ServerLevel level
+                    && FormationProtection.prevented(level, Action.ATTACK_ENTITY,
+                    event.getTarget().blockPosition(), player.getUUID()))
+                event.setCanceled(true);
+        }
     }
 
     // Strips the protected positions out of an explosion rather than cancelling it: cancelling would spare the
@@ -107,25 +123,29 @@ public final class FormationProtectionBridge {
     // explosion is about to iterate.
     @SubscribeEvent
     public static void onDetonate(Detonate event) {
-        List<BlockPos> affected = event.getAffectedBlocks();
-        if (affected.isEmpty()) return;
-        List<BlockPos> kept = new ArrayList<>(affected.size());
-        boolean removed = false;
-        for (BlockPos pos : affected) {
-            if (FormationProtection.prevented(event.getExplosion().level(), Action.EXPLOSION, pos, null))
-                removed = true;
-            else kept.add(pos);
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.FORMATION)) {
+            List<BlockPos> affected = event.getAffectedBlocks();
+            if (affected.isEmpty()) return;
+            List<BlockPos> kept = new ArrayList<>(affected.size());
+            boolean removed = false;
+            for (BlockPos pos : affected) {
+                if (FormationProtection.prevented(event.getExplosion().level(), Action.EXPLOSION, pos, null))
+                    removed = true;
+                else kept.add(pos);
+            }
+            if (!removed) return;
+            affected.clear();
+            affected.addAll(kept);
         }
-        if (!removed) return;
-        affected.clear();
-        affected.addAll(kept);
     }
 
     @SubscribeEvent
     public static void onMobGriefing(EntityMobGriefingEvent event) {
-        if (!(event.getEntity().level() instanceof ServerLevel level)) return;
-        if (FormationProtection.prevented(level, Action.MOB_GRIEFING,
-                event.getEntity().blockPosition(), null))
-            event.setCanGrief(false);
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.FORMATION)) {
+            if (!(event.getEntity().level() instanceof ServerLevel level)) return;
+            if (FormationProtection.prevented(level, Action.MOB_GRIEFING,
+                    event.getEntity().blockPosition(), null))
+                event.setCanGrief(false);
+        }
     }
 }

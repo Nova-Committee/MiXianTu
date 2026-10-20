@@ -9,6 +9,8 @@ import com.iafenvoy.mxt.data.creature.ContractType;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.ability.AbilityGrantService;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
+import com.iafenvoy.mxt.util.profiling.ProfilerScope;
+import com.iafenvoy.mxt.util.profiling.ServerProfiling;
 import net.minecraft.core.Holder;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Mob;
@@ -33,26 +35,28 @@ public final class ContractEventBridge {
 
     @SubscribeEvent
     public static void onEntityTick(EntityTickEvent.Post event) {
-        if (!(event.getEntity() instanceof Mob pet) || pet.level().isClientSide()) return;
-        ContractAttachment contract = pet.getData(MxtAttachments.CONTRACT);
-        if (!contract.bound()) return;
-        Holder<ContractType> type = contract.contractType().orElse(null);
-        if (type == null) return;
-        ContractOperations operations = Contracts.operations(pet).orElse(null);
-        if (operations == null) return;
-        ContractContext context = Contracts.context(pet, type);
-        if (contract.recalled()) {
-            operations.recall(context);
-            ContractService.completeRecall(pet);
-            return;
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.CREATURE)) {
+            if (!(event.getEntity() instanceof Mob pet) || pet.level().isClientSide()) return;
+            ContractAttachment contract = pet.getData(MxtAttachments.CONTRACT);
+            if (!contract.bound()) return;
+            Holder<ContractType> type = contract.contractType().orElse(null);
+            if (type == null) return;
+            ContractOperations operations = Contracts.operations(pet).orElse(null);
+            if (operations == null) return;
+            ContractContext context = Contracts.context(pet, type);
+            if (contract.recalled()) {
+                operations.recall(context);
+                ContractService.completeRecall(pet);
+                return;
+            }
+            if (context.player() == null || context.player().level() != pet.level()) return;
+            ContractBehavior behavior = contract.behavior();
+            operations.tick(context, behavior);
+            // The data action colours the following moment, so it runs while the creature is following and not while
+            // the owner has told it to do something else.
+            if (ContractBehaviors.FOLLOW.equals(behavior))
+                type.value().followAction().execute(pet, FormulaContext.of(pet));
         }
-        if (context.player() == null || context.player().level() != pet.level()) return;
-        ContractBehavior behavior = contract.behavior();
-        operations.tick(context, behavior);
-        // The data action colours the following moment, so it runs while the creature is following and not while
-        // the owner has told it to do something else.
-        if (ContractBehaviors.FOLLOW.equals(behavior))
-            type.value().followAction().execute(pet, FormulaContext.of(pet));
     }
 
     // A release and a death with the owner offline have nobody to take the contract's grant away from, so the
@@ -60,29 +64,35 @@ public final class ContractEventBridge {
     // through the same single entry every other rebuild uses.
     @SubscribeEvent
     public static void onPlayerLogin(PlayerLoggedInEvent event) {
-        if (event.getEntity() instanceof ServerPlayer player) AbilityGrantService.recalculate(player);
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.CREATURE)) {
+            if (event.getEntity() instanceof ServerPlayer player) AbilityGrantService.recalculate(player);
+        }
     }
 
     // Contract combat callbacks run after vanilla damage is resolved and never mutate the original hit.
     @SubscribeEvent
     public static void onLivingDamage(Post event) {
-        if (event.getEntity().level().isClientSide() || !(event.getSource().getEntity() instanceof Mob pet)) return;
-        ContractAttachment contract = pet.getData(MxtAttachments.CONTRACT);
-        if (!contract.bound()) return;
-        Holder<ContractType> type = contract.contractType().orElse(null);
-        if (type == null) return;
-        ContractOperations operations = Contracts.operations(pet).orElse(null);
-        if (operations == null) return;
-        ContractContext context = Contracts.context(pet, type);
-        operations.onDealtDamage(context, event.getEntity(), event.getInflictedDamage());
-        type.value().combatAction().execute(pet, event.getEntity(),
-                FormulaContext.of(pet, Map.of("damage", (double) event.getInflictedDamage())));
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.CREATURE)) {
+            if (event.getEntity().level().isClientSide() || !(event.getSource().getEntity() instanceof Mob pet)) return;
+            ContractAttachment contract = pet.getData(MxtAttachments.CONTRACT);
+            if (!contract.bound()) return;
+            Holder<ContractType> type = contract.contractType().orElse(null);
+            if (type == null) return;
+            ContractOperations operations = Contracts.operations(pet).orElse(null);
+            if (operations == null) return;
+            ContractContext context = Contracts.context(pet, type);
+            operations.onDealtDamage(context, event.getEntity(), event.getInflictedDamage());
+            type.value().combatAction().execute(pet, event.getEntity(),
+                    FormulaContext.of(pet, Map.of("damage", (double) event.getInflictedDamage())));
+        }
     }
 
     // A pet death closes its record, exposes the death action and drops its row from the owner's index.
     @SubscribeEvent
     public static void onLivingDeath(LivingDeathEvent event) {
-        if (event.getEntity().level().isClientSide() || !(event.getEntity() instanceof Mob pet)) return;
-        ContractService.onDeath(pet);
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.CREATURE)) {
+            if (event.getEntity().level().isClientSide() || !(event.getEntity() instanceof Mob pet)) return;
+            ContractService.onDeath(pet);
+        }
     }
 }

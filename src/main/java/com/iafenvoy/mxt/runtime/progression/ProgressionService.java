@@ -18,6 +18,8 @@ import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.math.CompareOperation;
+import com.iafenvoy.mxt.util.profiling.ProfilerScope;
+import com.iafenvoy.mxt.util.profiling.ServerProfiling;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.resources.Identifier;
@@ -52,17 +54,23 @@ public final class ProgressionService {
     }
 
     public static <T extends ProgressionOwner> boolean set(ProgressionOwners.Owner<T> owner, Holder<Progression> level) {
-        return owner.levels().set(owner.holder(), level);
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.PROGRESSION)) {
+            return owner.levels().set(owner.holder(), level);
+        }
     }
 
     // One step along the owner's own chain; both bounds and the record itself are the holder's business, so a
     // caller only says which direction.
     public static <T extends ProgressionOwner> boolean promote(ProgressionOwners.Owner<T> owner) {
-        return owner.levels().promote(owner.holder());
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.PROGRESSION)) {
+            return owner.levels().promote(owner.holder());
+        }
     }
 
     public static <T extends ProgressionOwner> boolean demote(ProgressionOwners.Owner<T> owner) {
-        return owner.levels().demote(owner.holder());
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.PROGRESSION)) {
+            return owner.levels().demote(owner.holder());
+        }
     }
 
     public static <T extends ProgressionOwner> boolean follows(ProgressionOwners.Owner<T> owner, Holder<Progression> level) {

@@ -3,6 +3,8 @@ package com.iafenvoy.mxt.runtime.trigger;
 import com.iafenvoy.mxt.data.trigger.TriggerContext;
 import com.iafenvoy.mxt.data.trigger.TriggerSignal;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
+import com.iafenvoy.mxt.util.profiling.ProfilerScope;
+import com.iafenvoy.mxt.util.profiling.ServerProfiling;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.LivingEntity;
 
@@ -17,19 +19,23 @@ public final class TriggerPublishing {
     }
 
     public static void publish(Identifier signalType, LivingEntity actor, FormulaContext context) {
-        publish(signalType, actor, context, ignored -> {
-        });
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.TRIGGER)) {
+            publish(signalType, actor, context, ignored -> {
+            });
+        }
     }
 
     public static void publish(Identifier signalType, LivingEntity actor, FormulaContext context, Consumer<TriggerContext> enrich) {
-        // Nothing to react with, so nothing to build: the tick signal is published by every living entity on
-        // every tick, and only the entities something listens to pay for a context.
-        if (!TriggerDispatcher.hasListener(signalType)) return;
-        TriggerContext triggerContext = new TriggerContext()
-                .actor(actor)
-                .level(actor.level())
-                .formula(context);
-        enrich.accept(triggerContext);
-        TriggerDispatcher.publish(new TriggerSignal(signalType, triggerContext, null, actor.level().getGameTime()));
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.TRIGGER)) {
+            // Nothing to react with, so nothing to build: the tick signal is published by every living entity on
+            // every tick, and only the entities something listens to pay for a context.
+            if (!TriggerDispatcher.hasListener(signalType)) return;
+            TriggerContext triggerContext = new TriggerContext()
+                    .actor(actor)
+                    .level(actor.level())
+                    .formula(context);
+            enrich.accept(triggerContext);
+            TriggerDispatcher.publish(new TriggerSignal(signalType, triggerContext, null, actor.level().getGameTime()));
+        }
     }
 }

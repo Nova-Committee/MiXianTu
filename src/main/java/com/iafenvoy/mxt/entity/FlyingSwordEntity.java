@@ -6,6 +6,8 @@ import com.iafenvoy.mxt.config.MxtServerConfig;
 import com.iafenvoy.mxt.data.ability.type.MountAbilityType;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactService;
+import com.iafenvoy.mxt.util.profiling.ProfilerScope;
+import com.iafenvoy.mxt.util.profiling.ServerProfiling;
 import com.mojang.serialization.Codec;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
@@ -93,46 +95,48 @@ public final class FlyingSwordEntity extends Entity implements MountVehicle {
 
     @Override
     public void tick() {
-        super.tick();
-        // The clients are the side that has to apply what they are sent here: the server moves this itself, so a
-        // client that skipped this would draw the mount where it spawned and never anywhere else.
-        this.interpolation.interpolate();
-        if (this.level().isClientSide()) return;
-        // The flight belongs to the player who started it: seat 0 is the driver, so a driver who left (logged out,
-        // died, was ejected) must not hand that seat - and the fuel bill - to whoever is still sitting behind them.
-        if (this.owner == null || !(this.getFirstPassenger() instanceof ServerPlayer rider)
-                || !Objects.equals(this.owner.getUUID(), rider.getUUID()) || !rider.isAlive()) {
-            this.discard();
-            return;
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.ENTITY)) {
+            super.tick();
+            // The clients are the side that has to apply what they are sent here: the server moves this itself, so a
+            // client that skipped this would draw the mount where it spawned and never anywhere else.
+            this.interpolation.interpolate();
+            if (this.level().isClientSide()) return;
+            // The flight belongs to the player who started it: seat 0 is the driver, so a driver who left (logged out,
+            // died, was ejected) must not hand that seat - and the fuel bill - to whoever is still sitting behind them.
+            if (this.owner == null || !(this.getFirstPassenger() instanceof ServerPlayer rider)
+                    || !Objects.equals(this.owner.getUUID(), rider.getUUID()) || !rider.isAlive()) {
+                this.discard();
+                return;
+            }
+            Input input = rider.getLastClientInput();
+            // The descend key is not a vanilla input, so it arrives on its own payload and is kept on the flight record
+            // rather than read out of the input packet.
+            FlightAttachment data = rider.getExistingData(MxtAttachments.FLIGHT).orElse(null);
+            boolean descend = data != null && data.descend();
+            Vec3 intent = rider.getLastClientMoveIntent();
+            // The mount faces where its rider looks, which is what turns the blade underfoot; the server owns the value
+            // and the ordinary entity rotation packets carry it to the clients.
+            this.setYRot(rider.getYRot());
+            this.setXRot(rider.getXRot() * PITCH_RATIO);
+            double vertical = input.jump() == descend ? 0.0D : input.jump() ? 1.0D : -1.0D;
+            double multiplier = input.sprint() ? 1.5D : 1.0D;
+            Vec3 direction = MxtServerConfig.INSTANCE.flight.followLook.getValue() ? alongLook(rider, intent) : intent;
+            Vec3 movement = direction.scale(this.speed * multiplier);
+            // Jump and the descend key name a direction outright, so they replace the part of the movement the look
+            // would have decided instead of adding to it.
+            if (vertical != 0.0D) movement = new Vec3(movement.x, vertical * this.speed, movement.z);
+            if (movement.lengthSqr() <= 0.0D) {
+                this.setDeltaMovement(Vec3.ZERO);
+                this.emitTrail(false);
+                return;
+            }
+            // Every tick really moves, because the flags it leaves behind are what ends a flight that hit something: a
+            // move that is only predicted reports nothing, so the collision check downstream could never fire.
+            this.move(MoverType.SELF, movement);
+            boolean collided = this.horizontalCollision || this.verticalCollision;
+            this.setDeltaMovement(collided ? Vec3.ZERO : movement);
+            this.emitTrail(!collided);
         }
-        Input input = rider.getLastClientInput();
-        // The descend key is not a vanilla input, so it arrives on its own payload and is kept on the flight record
-        // rather than read out of the input packet.
-        FlightAttachment data = rider.getExistingData(MxtAttachments.FLIGHT).orElse(null);
-        boolean descend = data != null && data.descend();
-        Vec3 intent = rider.getLastClientMoveIntent();
-        // The mount faces where its rider looks, which is what turns the blade underfoot; the server owns the value
-        // and the ordinary entity rotation packets carry it to the clients.
-        this.setYRot(rider.getYRot());
-        this.setXRot(rider.getXRot() * PITCH_RATIO);
-        double vertical = input.jump() == descend ? 0.0D : input.jump() ? 1.0D : -1.0D;
-        double multiplier = input.sprint() ? 1.5D : 1.0D;
-        Vec3 direction = MxtServerConfig.INSTANCE.flight.followLook.getValue() ? alongLook(rider, intent) : intent;
-        Vec3 movement = direction.scale(this.speed * multiplier);
-        // Jump and the descend key name a direction outright, so they replace the part of the movement the look
-        // would have decided instead of adding to it.
-        if (vertical != 0.0D) movement = new Vec3(movement.x, vertical * this.speed, movement.z);
-        if (movement.lengthSqr() <= 0.0D) {
-            this.setDeltaMovement(Vec3.ZERO);
-            this.emitTrail(false);
-            return;
-        }
-        // Every tick really moves, because the flags it leaves behind are what ends a flight that hit something: a
-        // move that is only predicted reports nothing, so the collision check downstream could never fire.
-        this.move(MoverType.SELF, movement);
-        boolean collided = this.horizontalCollision || this.verticalCollision;
-        this.setDeltaMovement(collided ? Vec3.ZERO : movement);
-        this.emitTrail(!collided);
     }
 
     // The trail comes off the mount itself rather than off the rider, and a mount that is standing still counts as

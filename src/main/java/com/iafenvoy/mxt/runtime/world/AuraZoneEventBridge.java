@@ -7,6 +7,8 @@ import com.iafenvoy.mxt.event.AuraZoneEvent.Tick;
 import com.iafenvoy.mxt.network.payload.AuraStateS2CPayload;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.world.AuraQueryCache.AuraLocation;
+import com.iafenvoy.mxt.util.profiling.ProfilerScope;
+import com.iafenvoy.mxt.util.profiling.ServerProfiling;
 import com.mojang.logging.LogUtils;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
@@ -39,56 +41,62 @@ public final class AuraZoneEventBridge {
 
     @SubscribeEvent
     public static void onEntityTick(EntityTickEvent.Post event) {
-        Entity entity = event.getEntity();
-        if (!(entity.level() instanceof ServerLevel level)) return;
-        AuraLocation position = AuraQueryCache.location(level, entity.blockPosition());
-        if (!AuraQueryCache.needsQuery(level, entity.getUUID(), position, MxtServerConfig.INSTANCE.aura.entityRefreshInterval.getValue()))
-            return;
-        AuraResult current = AuraService.getPositionAura(level, entity.blockPosition());
-        AuraQueryCache.recordQuery(level, entity.getUUID(), position);
-        AuraResult previous = LAST.put(new Key(level.dimension().identifier(), entity.getUUID()), current);
-        // Both sides can be absent, so an entity that walks out of every zone still reports the change once.
-        if (previous == null || !Objects.equals(previous.source(), current.source()) || previous.sourceKind() != current.sourceKind()) {
-            if (previous != null) NeoForge.EVENT_BUS.post(new Leave(entity, previous));
-            NeoForge.EVENT_BUS.post(new Enter(entity, current));
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.AURA)) {
+            Entity entity = event.getEntity();
+            if (!(entity.level() instanceof ServerLevel level)) return;
+            AuraLocation position = AuraQueryCache.location(level, entity.blockPosition());
+            if (!AuraQueryCache.needsQuery(level, entity.getUUID(), position, MxtServerConfig.INSTANCE.aura.entityRefreshInterval.getValue()))
+                return;
+            AuraResult current = AuraService.getPositionAura(level, entity.blockPosition());
+            AuraQueryCache.recordQuery(level, entity.getUUID(), position);
+            AuraResult previous = LAST.put(new Key(level.dimension().identifier(), entity.getUUID()), current);
+            // Both sides can be absent, so an entity that walks out of every zone still reports the change once.
+            if (previous == null || !Objects.equals(previous.source(), current.source()) || previous.sourceKind() != current.sourceKind()) {
+                if (previous != null) NeoForge.EVENT_BUS.post(new Leave(entity, previous));
+                NeoForge.EVENT_BUS.post(new Enter(entity, current));
+            }
         }
     }
 
     // Forgets the tracked aura, so the map cannot grow with entities that are unloaded, despawned or dead.
     @SubscribeEvent
     public static void onEntityLeaveLevel(EntityLeaveLevelEvent event) {
-        if (!(event.getLevel() instanceof ServerLevel level)) return;
-        LAST.remove(new Key(level.dimension().identifier(), event.getEntity().getUUID()));
-        AuraQueryCache.forget(level, event.getEntity().getUUID());
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.AURA)) {
+            if (!(event.getLevel() instanceof ServerLevel level)) return;
+            LAST.remove(new Key(level.dimension().identifier(), event.getEntity().getUUID()));
+            AuraQueryCache.forget(level, event.getEntity().getUUID());
+        }
     }
 
     // Runs at the very end of the level tick, after AuraChunkTicker has regenerated this tick's chunk stock, so
     // every query made during the next tick sees one consistent snapshot.
     @SubscribeEvent(priority = EventPriority.LOWEST)
     public static void onLevelTick(Post event) {
-        if (!(event.getLevel() instanceof ServerLevel level)) return;
-        long gameTime = level.getGameTime();
-        AuraQueryCache.advance(level, gameTime);
-        AuraQueryCache.setTiming(MxtServerConfig.INSTANCE.aura.queryStats.getValue());
-        if (MxtServerConfig.INSTANCE.aura.queryStats.getValue() && gameTime % 200L == 0L) {
-            reportQueryStats(gameTime);
-            AuraQueryCache.reportDiagnostics();
-            AuraQueryCache.reportStageCosts();
-        }
-        level.players().forEach(player -> {
-            AuraResult aura = AuraService.getPositionAura(level, player.blockPosition());
-            long syncInterval = MxtServerConfig.INSTANCE.aura.auraSyncInterval.getValue();
-            if (level.getGameTime() % syncInterval == 0L) {
-                NeoForge.EVENT_BUS.post(new Tick(level, player.blockPosition(), aura));
-                AuraResult sensed = AuraService.getSensedAura(level, player.blockPosition());
-                PacketDistributor.sendToPlayer(player, new AuraStateS2CPayload(Optional.ofNullable(aura.source()), aura.aura(), sensed.aura()));
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.AURA)) {
+            if (!(event.getLevel() instanceof ServerLevel level)) return;
+            long gameTime = level.getGameTime();
+            AuraQueryCache.advance(level, gameTime);
+            AuraQueryCache.setTiming(MxtServerConfig.INSTANCE.aura.queryStats.getValue());
+            if (MxtServerConfig.INSTANCE.aura.queryStats.getValue() && gameTime % 200L == 0L) {
+                reportQueryStats(gameTime);
+                AuraQueryCache.reportDiagnostics();
+                AuraQueryCache.reportStageCosts();
             }
-            boolean cultivating = player.getData(MxtAttachments.CULTIVATION).cultivating();
-            boolean emitParticle = cultivating ? level.getGameTime() % 5L < 3L : level.getGameTime() % 5L == 0L;
-            // A position no zone covers has no definition to take a particle from.
-            if (emitParticle && aura.source() != null)
-                aura.source().value().particle().ifPresent(effect -> effect.sendTo(level, player, player.position()));
-        });
+            level.players().forEach(player -> {
+                AuraResult aura = AuraService.getPositionAura(level, player.blockPosition());
+                long syncInterval = MxtServerConfig.INSTANCE.aura.auraSyncInterval.getValue();
+                if (level.getGameTime() % syncInterval == 0L) {
+                    NeoForge.EVENT_BUS.post(new Tick(level, player.blockPosition(), aura));
+                    AuraResult sensed = AuraService.getSensedAura(level, player.blockPosition());
+                    PacketDistributor.sendToPlayer(player, new AuraStateS2CPayload(Optional.ofNullable(aura.source()), aura.aura(), sensed.aura()));
+                }
+                boolean cultivating = player.getData(MxtAttachments.CULTIVATION).cultivating();
+                boolean emitParticle = cultivating ? level.getGameTime() % 5L < 3L : level.getGameTime() % 5L == 0L;
+                // A position no zone covers has no definition to take a particle from.
+                if (emitParticle && aura.source() != null)
+                    aura.source().value().particle().ifPresent(effect -> effect.sendTo(level, player, player.position()));
+            });
+        }
     }
 
     // The average per query is the number that matters, because a memoised tick issues far fewer queries.

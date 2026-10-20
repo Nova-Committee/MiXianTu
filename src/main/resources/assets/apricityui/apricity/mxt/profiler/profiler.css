@@ -1,0 +1,26 @@
+#panel { width: 504px; height: 420px; }
+#title { left: 10px; top: 10px; }
+#status { left: 10px; top: 25px; }
+#sort_source, #sort_min, #sort_average, #sort_max, #direction { top: 42px; height: 18px; }
+#sort_source { left: 10px; width: 58px; }
+#sort_min { left: 72px; width: 40px; }
+#sort_average { left: 116px; width: 40px; }
+#sort_max { left: 160px; width: 40px; }
+#direction { left: 204px; width: 58px; }
+#columns { left: 10px; top: 66px; }
+#sources { position: absolute; left: 10px; top: 80px; }
+.row { position: absolute; left: 0px; height: 38px; display: none; }
+.row.compact { height: 64px; }
+#scroll_track { right: 10px; top: 80px; width: 6px; }
+#scroll_thumb { left: 0px; width: 6px; }
+.name { left: 2px; top: 5px; }
+.values { left: 2px; top: 21px; }
+.axis { left: 184px; top: 3px; width: 44px; justify-content: flex-end; }
+canvas { position: absolute; left: 232px; top: 3px; width: 240px; height: 32px; }
+.row.compact .name { top: 1px; }
+.row.compact .values { top: 14px; }
+.row.compact .axis { left: 0px; top: 28px; }
+.row.compact canvas { left: 48px; top: 28px; }
+#legend { left: 10px; bottom: 10px; }
+#close { right: 10px; bottom: 6px; width: 46px; height: 20px; }
+

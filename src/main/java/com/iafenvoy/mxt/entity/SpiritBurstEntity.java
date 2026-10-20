@@ -6,6 +6,8 @@ import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.particle.SpiritWispParticleOptions;
 import com.iafenvoy.mxt.registry.MxtEntityDataSerializers;
 import com.iafenvoy.mxt.registry.MxtEntityTypes;
+import com.iafenvoy.mxt.util.profiling.ProfilerScope;
+import com.iafenvoy.mxt.util.profiling.ServerProfiling;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.network.syncher.EntityDataAccessor;
@@ -68,10 +70,12 @@ public final class SpiritBurstEntity extends ThrowableProjectile {
 
     @Override
     public void tick() {
-        if (!this.level().isClientSide() && this.tryHitAuraAccess()) return;
-        super.tick();
-        if (this.level().isClientSide()) this.spawnTrailParticles();
-        else if (this.tickCount >= MAX_LIFETIME_TICKS) this.discard();
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.ENTITY)) {
+            if (!this.level().isClientSide() && this.tryHitAuraAccess()) return;
+            super.tick();
+            if (this.level().isClientSide()) this.spawnTrailParticles();
+            else if (this.tickCount >= MAX_LIFETIME_TICKS) this.discard();
+        }
     }
 
     @Override

@@ -3,6 +3,7 @@ package com.iafenvoy.mxt.screen.aui;
 import com.sighs.apricityui.init.Document;
 import com.sighs.apricityui.init.Element;
 import com.sighs.apricityui.layout.Position;
+import com.sighs.apricityui.layout.Size;
 import net.minecraft.client.gui.Font;
 import org.jetbrains.annotations.Nullable;
 
@@ -33,6 +34,13 @@ public final class AuiScrollList<E> {
     private double scroll;
     private int width;
     private int height;
+    @Nullable
+    private Element scrollTrack;
+    @Nullable
+    private Element scrollThumb;
+    private boolean draggingScrollbar;
+    private double scrollbarGrab;
+    private int thumbHeight;
     /**
      * The identity the picked row carries; re-applied after every layout, because the entry behind a cell
      * changes when the list scrolls or its contents are rebuilt.
@@ -72,17 +80,24 @@ public final class AuiScrollList<E> {
         return this.binding.rowHeight();
     }
 
+    // Scrollbar lists move by whole rows so no partial row can paint over a fixed header or footer.
+    public void attachScrollbar(Element track, Element thumb) {
+        this.scrollTrack = track;
+        this.scrollThumb = thumb;
+    }
+
     private int columns() {
         return Math.max(1, this.binding.columns());
     }
 
     private double maxScroll() {
         int rows = (this.entries.size() + this.columns() - 1) / this.columns();
+        if (this.scrollTrack != null) return Math.max(0, (rows - this.height / this.rowHeight()) * this.rowHeight());
         return Math.max(0, rows * this.rowHeight() + 4 - this.height);
     }
 
     /**
-     * Adds to the pixel offset; {@link #layout} clamps it, so this is the only place the window is written.
+     * Adds to the pixel offset; {@link #layout} clamps it before drawing the visible window.
      */
     public void scrollBy(double delta, Font font) {
         this.scroll += delta;
@@ -98,7 +113,7 @@ public final class AuiScrollList<E> {
         int columns = this.columns();
         int visibleRows = Math.max(0, height / rowHeight);
         int firstRow = (int) (this.scroll / rowHeight);
-        int offset = (int) Math.round(this.scroll) - firstRow * rowHeight;
+        int offset = this.scrollTrack == null ? (int) Math.round(this.scroll) - firstRow * rowHeight : 0;
         int gap = this.binding.columnGap();
         int cellWidth = Math.max(1, (Math.max(1, width) - gap * (columns - 1)) / columns);
         int first = firstRow * columns;
@@ -116,6 +131,53 @@ public final class AuiScrollList<E> {
         // The highlight belongs to the entry, not to the row element: a scrolled or refreshed list moves
         // entries between cells, so which cell carries it is only known after the window was written.
         this.applySelection();
+        this.showScrollbar();
+    }
+
+    private void showScrollbar() {
+        if (this.scrollTrack == null || this.scrollThumb == null) return;
+        boolean visible = this.maxScroll() > 0D && this.height >= this.rowHeight();
+        AuiElements.style(this.scrollTrack, "display", visible ? "block" : "none");
+        if (!visible) {
+            this.draggingScrollbar = false;
+            return;
+        }
+        int rows = (this.entries.size() + this.columns() - 1) / this.columns();
+        this.thumbHeight = Math.min(this.height, Math.max(12, this.height * (this.height / this.rowHeight()) / rows));
+        AuiElements.style(this.scrollTrack, "height", this.height + "px");
+        AuiElements.style(this.scrollThumb, "height", this.thumbHeight + "px");
+        AuiElements.style(this.scrollThumb, "top", Math.round((this.height - this.thumbHeight) * this.scroll / this.maxScroll()) + "px");
+    }
+
+    public boolean scrollbarContains(double mouseX, double mouseY) {
+        Position pointer = this.scrollTrack == null ? null : this.local(this.scrollTrack, mouseX, mouseY);
+        return pointer != null && this.maxScroll() > 0D && this.height >= this.rowHeight()
+                && pointer.x >= 0D && pointer.x < Size.of(this.scrollTrack).width()
+                && pointer.y >= 0D && pointer.y < this.height;
+    }
+
+    public boolean scrollbarClicked(double mouseX, double mouseY, Font font) {
+        if (!this.scrollbarContains(mouseX, mouseY)) return false;
+        Position pointer = this.local(this.scrollTrack, mouseX, mouseY);
+        double thumbTop = Math.round((this.height - this.thumbHeight) * this.scroll / this.maxScroll());
+        this.scrollbarGrab = pointer.y >= thumbTop && pointer.y < thumbTop + this.thumbHeight
+                ? pointer.y - thumbTop : this.thumbHeight / 2D;
+        this.draggingScrollbar = true;
+        return this.scrollbarDragged(mouseX, mouseY, font);
+    }
+
+    public boolean scrollbarDragged(double mouseX, double mouseY, Font font) {
+        if (!this.draggingScrollbar || this.scrollTrack == null) return false;
+        Position pointer = this.local(this.scrollTrack, mouseX, mouseY);
+        if (pointer == null) return false;
+        int travel = this.height - this.thumbHeight;
+        this.scroll = travel <= 0 ? 0D : (pointer.y - this.scrollbarGrab) / travel * this.maxScroll();
+        this.layout(font, this.width, this.height);
+        return true;
+    }
+
+    public void scrollbarReleased() {
+        this.draggingScrollbar = false;
     }
 
     public void markSelected(@Nullable String key) {
@@ -162,11 +224,16 @@ public final class AuiScrollList<E> {
      */
     @Nullable
     private Position local(double mouseX, double mouseY) {
+        return this.local(this.root, mouseX, mouseY);
+    }
+
+    @Nullable
+    private Position local(Element element, double mouseX, double mouseY) {
         Document document = this.host.getLinkedDocument();
         if (document == null) return null;
         // The pointer arrives in screen coordinates while element positions are document coordinates.
         Position pointer = document.screenToDocumentPosition(new Position(mouseX, mouseY));
-        Position position = Position.of(this.root);
+        Position position = Position.of(element);
         return new Position(pointer.x - position.x, pointer.y - position.y);
     }
 

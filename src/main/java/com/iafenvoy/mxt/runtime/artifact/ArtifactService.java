@@ -25,6 +25,8 @@ import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.iafenvoy.mxt.util.matcher.ItemMatcher;
+import com.iafenvoy.mxt.util.profiling.ProfilerScope;
+import com.iafenvoy.mxt.util.profiling.ServerProfiling;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
 import net.minecraft.core.HolderLookup.Provider;
@@ -69,21 +71,23 @@ public final class ArtifactService {
     // on a client that may have no way to turn a UUID back into a name (offline player, a server that never told
     // it). Display-only - every ownership question is asked of the UUID.
     public static RefineResult refine(ItemStack stack, Entity owner) {
-        UUID ownerUuid = owner.getUUID();
-        if (NeoForge.EVENT_BUS.post(new Pre(owner, stack)).isCanceled())
-            return RefineResult.CANCELLED;
-        ArtifactStateComponent current = state(stack);
-        String requestedOwner = ownerUuid.toString();
-        if (current.ownerUuid().isPresent() && !current.ownerUuid().get().equals(requestedOwner))
-            return RefineResult.OWNED_BY_OTHER;
-        stack.set(MxtDataComponents.ARTIFACT_STATE, current.withOwner(requestedOwner, PlayerNames.displayName(owner)));
-        NeoForge.EVENT_BUS.post(new Post(owner, stack));
-        // Runs only for a binding that was really written, and deliberately not checked against the holder first:
-        // refusing a claim the price would kill is not this method's business, and every writer of a binding pays
-        // the same price.
-        definition(owner.level().registryAccess(), stack).ifPresent(holder ->
-                holder.value().claimAction().execute(owner, stack, FormulaContext.of(owner)));
-        return RefineResult.REFINED;
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.ARTIFACT)) {
+            UUID ownerUuid = owner.getUUID();
+            if (NeoForge.EVENT_BUS.post(new Pre(owner, stack)).isCanceled())
+                return RefineResult.CANCELLED;
+            ArtifactStateComponent current = state(stack);
+            String requestedOwner = ownerUuid.toString();
+            if (current.ownerUuid().isPresent() && !current.ownerUuid().get().equals(requestedOwner))
+                return RefineResult.OWNED_BY_OTHER;
+            stack.set(MxtDataComponents.ARTIFACT_STATE, current.withOwner(requestedOwner, PlayerNames.displayName(owner)));
+            NeoForge.EVENT_BUS.post(new Post(owner, stack));
+            // Runs only for a binding that was really written, and deliberately not checked against the holder first:
+            // refusing a claim the price would kill is not this method's business, and every writer of a binding pays
+            // the same price.
+            definition(owner.level().registryAccess(), stack).ifPresent(holder ->
+                    holder.value().claimAction().execute(owner, stack, FormulaContext.of(owner)));
+            return RefineResult.REFINED;
+        }
     }
 
     public static boolean isOwner(ItemStack stack, UUID owner) {
@@ -305,12 +309,14 @@ public final class ArtifactService {
 
     // Never lowered: an artifact keeps what it was fed after the aura it took in is spent again.
     private static void feed(ItemStack stack, double share) {
-        share = MiscUtil.positive(share);
-        if (share <= 0.0D) return;
-        ArtifactStateComponent current = state(stack);
-        double raised = Math.clamp(current.nourishment() + share, 0.0D, MAX_NOURISHMENT);
-        if (raised <= current.nourishment()) return;
-        stack.set(MxtDataComponents.ARTIFACT_STATE, current.withNourishment(raised));
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.ARTIFACT)) {
+            share = MiscUtil.positive(share);
+            if (share <= 0.0D) return;
+            ArtifactStateComponent current = state(stack);
+            double raised = Math.clamp(current.nourishment() + share, 0.0D, MAX_NOURISHMENT);
+            if (raised <= current.nourishment()) return;
+            stack.set(MxtDataComponents.ARTIFACT_STATE, current.withNourishment(raised));
+        }
     }
 
     public static ArtifactStateComponent state(ItemStack stack) {

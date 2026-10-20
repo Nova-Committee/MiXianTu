@@ -3,6 +3,8 @@ package com.iafenvoy.mxt.entity;
 import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.context.action.EntityActionContext;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
+import com.iafenvoy.mxt.util.profiling.ProfilerScope;
+import com.iafenvoy.mxt.util.profiling.ServerProfiling;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.*;
@@ -51,16 +53,18 @@ public abstract class VisualProjectileEntity extends Entity implements OwnableEn
 
     @Override
     public void tick() {
-        super.tick();
-        if (this.level().isClientSide()) return;
-        if (this.tickCount >= this.lifetime) {
-            this.discard();
-            return;
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.ENTITY)) {
+            super.tick();
+            if (this.level().isClientSide()) return;
+            if (this.tickCount >= this.lifetime) {
+                this.discard();
+                return;
+            }
+            Vec3 velocity = this.getDeltaMovement();
+            if (velocity.lengthSqr() <= 1.0E-8D || this.impact(velocity)) return;
+            this.move(MoverType.SELF, velocity);
+            this.updateRotation(velocity);
         }
-        Vec3 velocity = this.getDeltaMovement();
-        if (velocity.lengthSqr() <= 1.0E-8D || this.impact(velocity)) return;
-        this.move(MoverType.SELF, velocity);
-        this.updateRotation(velocity);
     }
 
     private boolean impact(Vec3 velocity) {

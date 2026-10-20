@@ -9,6 +9,8 @@ import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.runtime.alchemy.*;
 import com.iafenvoy.mxt.runtime.alchemy.AlchemyFurnaceStructure.Status;
 import com.iafenvoy.mxt.runtime.resulting.failures.AlchemyFailure;
+import com.iafenvoy.mxt.util.profiling.ProfilerScope;
+import com.iafenvoy.mxt.util.profiling.ServerProfiling;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Holder;
@@ -44,15 +46,17 @@ public final class AlchemyFurnaceBlockEntity extends BlockEntity implements Alch
     }
 
     public static void serverTick(Level level, BlockPos pos, BlockState blockState, AlchemyFurnaceBlockEntity furnace) {
-        if (!(level instanceof ServerLevel serverLevel)) return;
-        if (++furnace.structureTicker >= 20) {
-            furnace.structureTicker = 0;
-            furnace.refreshStructure();
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.ALCHEMY)) {
+            if (!(level instanceof ServerLevel serverLevel)) return;
+            if (++furnace.structureTicker >= 20) {
+                furnace.structureTicker = 0;
+                furnace.refreshStructure();
+            }
+            AlchemyWorkstationService.tick(serverLevel, pos, furnace);
+            // A completion block action may already have replaced this block. Do not write lit back over it.
+            if (furnace.isRemoved() || !(level.getBlockState(pos).getBlock() instanceof AlchemyFurnaceBlock)) return;
+            furnace.syncLit();
         }
-        AlchemyWorkstationService.tick(serverLevel, pos, furnace);
-        // A completion block action may already have replaced this block. Do not write lit back over it.
-        if (furnace.isRemoved() || !(level.getBlockState(pos).getBlock() instanceof AlchemyFurnaceBlock)) return;
-        furnace.syncLit();
     }
 
     public void refreshStructure() {

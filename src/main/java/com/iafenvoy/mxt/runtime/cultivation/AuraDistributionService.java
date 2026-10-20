@@ -22,6 +22,8 @@ import com.iafenvoy.mxt.runtime.world.BlockAuraService;
 import com.iafenvoy.mxt.util.MiscUtil;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.FormulaContexts;
+import com.iafenvoy.mxt.util.profiling.ProfilerScope;
+import com.iafenvoy.mxt.util.profiling.ServerProfiling;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
@@ -55,17 +57,19 @@ public final class AuraDistributionService {
     }
 
     public static void prepare(ServerLevel level) {
-        long gameTime = level.getGameTime();
-        long period = currentPeriod(gameTime);
-        PLAYER_ALLOCATIONS.entrySet().removeIf(entry -> entry.getValue().gameTime() != gameTime);
-        // The period that just ended is still collectable, so it is not swept: anything older than it is a period nobody
-        // collected, and dropping it here is what keeps the map from growing over a session.
-        FORMATION_CREDITS.keySet().removeIf(key -> key.period() < settledPeriod(gameTime));
-        Map<Slot, List<Claim>> claimsBySlot = new HashMap<>();
-        collectCultivators(level, gameTime, claimsBySlot);
-        collectFormations(level, period, claimsBySlot);
-        for (Map.Entry<Slot, List<Claim>> claims : claimsBySlot.entrySet())
-            reserve(level, gameTime, period, claims.getKey(), claims.getValue());
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.CULTIVATION_DISTRIBUTION)) {
+            long gameTime = level.getGameTime();
+            long period = currentPeriod(gameTime);
+            PLAYER_ALLOCATIONS.entrySet().removeIf(entry -> entry.getValue().gameTime() != gameTime);
+            // The period that just ended is still collectable, so it is not swept: anything older than it is a period nobody
+            // collected, and dropping it here is what keeps the map from growing over a session.
+            FORMATION_CREDITS.keySet().removeIf(key -> key.period() < settledPeriod(gameTime));
+            Map<Slot, List<Claim>> claimsBySlot = new HashMap<>();
+            collectCultivators(level, gameTime, claimsBySlot);
+            collectFormations(level, period, claimsBySlot);
+            for (Map.Entry<Slot, List<Claim>> claims : claimsBySlot.entrySet())
+                reserve(level, gameTime, period, claims.getKey(), claims.getValue());
+        }
     }
 
     // The period a tick belongs to, and the one a formation settles here: the first tick of a new period is where the
@@ -80,9 +84,11 @@ public final class AuraDistributionService {
 
     // Empty when there was no prepass for this tick.
     public static Optional<Map<Holder<Aura>, Double>> take(ServerPlayer player) {
-        Allocation allocation = PLAYER_ALLOCATIONS.remove(player.getUUID());
-        return allocation == null || allocation.gameTime() != player.level().getGameTime()
-                ? Optional.empty() : Optional.of(allocation.amounts());
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.CULTIVATION_DISTRIBUTION)) {
+            Allocation allocation = PLAYER_ALLOCATIONS.remove(player.getUUID());
+            return allocation == null || allocation.gameTime() != player.level().getGameTime()
+                    ? Optional.empty() : Optional.of(allocation.amounts());
+        }
     }
 
     /**
@@ -94,12 +100,14 @@ public final class AuraDistributionService {
      * regeneration that never happened - pays what it still holds, so nothing is invented.
      */
     public static Map<Holder<Aura>, Double> takeUpkeep(ServerLevel level, BlockPos controller) {
-        FormationKey formation = new FormationKey(level.dimension(), controller);
-        Credit credit = FORMATION_CREDITS.remove(new CreditKey(formation, settledPeriod(level.getGameTime())));
-        if (credit == null) return Map.of();
-        Map<Holder<Aura>, Double> taken = new LinkedHashMap<>();
-        credit.sources().forEach((slot, amounts) -> withdraw(level, slot, amounts, taken));
-        return taken;
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.CULTIVATION_DISTRIBUTION)) {
+            FormationKey formation = new FormationKey(level.dimension(), controller);
+            Credit credit = FORMATION_CREDITS.remove(new CreditKey(formation, settledPeriod(level.getGameTime())));
+            if (credit == null) return Map.of();
+            Map<Holder<Aura>, Double> taken = new LinkedHashMap<>();
+            credit.sources().forEach((slot, amounts) -> withdraw(level, slot, amounts, taken));
+            return taken;
+        }
     }
 
     // Takes what one section still holds of what was claimed, and reports only that.
@@ -125,10 +133,12 @@ public final class AuraDistributionService {
      * and what its per-tick claims are cut from.
      */
     public static Map<Holder<Aura>, Double> projectedSupply(ServerLevel level, BlockPos controller, double radius) {
-        Map<Holder<Aura>, Double> totals = new LinkedHashMap<>();
-        ground(level, controller, radius).slots().values()
-                .forEach(section -> section.forEach((aura, amount) -> totals.merge(aura, amount, Double::sum)));
-        return totals;
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.CULTIVATION_DISTRIBUTION)) {
+            Map<Holder<Aura>, Double> totals = new LinkedHashMap<>();
+            ground(level, controller, radius).slots().values()
+                    .forEach(section -> section.forEach((aura, amount) -> totals.merge(aura, amount, Double::sum)));
+            return totals;
+        }
     }
 
     private static void collectCultivators(ServerLevel level, long gameTime, Map<Slot, List<Claim>> claimsBySlot) {

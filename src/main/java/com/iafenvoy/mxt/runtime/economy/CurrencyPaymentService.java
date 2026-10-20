@@ -2,6 +2,8 @@ package com.iafenvoy.mxt.runtime.economy;
 
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.util.profiling.ProfilerScope;
+import com.iafenvoy.mxt.util.profiling.ServerProfiling;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.Container;
@@ -22,20 +24,25 @@ public final class CurrencyPaymentService {
 
     // Counts and capacity are resolved before allocating any output stacks.
     public static Optional<List<ItemStack>> makeChange(@NotNull HolderLookup.Provider provider, long value, int capacity) {
-        List<Denomination> denominations = denominations(provider);
-        return planCounts(denominations, value, capacity).map(counts -> stacks(denominations, counts));
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.ECONOMY_CHANGE)) {
+            List<Denomination> denominations = denominations(provider);
+            return planCounts(denominations, value, capacity).map(counts -> stacks(denominations, counts));
+        }
     }
 
     // Counts follow the supplied denomination order; any exact plan within capacity is sufficient.
     public static Optional<long[]> planCounts(List<Denomination> denominations, long value, int capacity) {
-        if (value < 0L || capacity < 0) return Optional.empty();
-        if (value == 0L) return Optional.of(new long[denominations.size()]);
-        for (Denomination denomination : denominations)
-            if (denomination.value() <= 0L || denomination.item().getDefaultMaxStackSize() <= 0) return Optional.empty();
-        long[] greedy = greedy(denominations, value, capacity);
-        if (greedy != null) return Optional.of(greedy);
-        long[] searched = search(denominations, value, capacity);
-        return Optional.ofNullable(searched);
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.ECONOMY_CHANGE)) {
+            if (value < 0L || capacity < 0) return Optional.empty();
+            if (value == 0L) return Optional.of(new long[denominations.size()]);
+            for (Denomination denomination : denominations)
+                if (denomination.value() <= 0L || denomination.item().getDefaultMaxStackSize() <= 0)
+                    return Optional.empty();
+            long[] greedy = greedy(denominations, value, capacity);
+            if (greedy != null) return Optional.of(greedy);
+            long[] searched = search(denominations, value, capacity);
+            return Optional.ofNullable(searched);
+        }
     }
 
     // The largest denomination that fits, then the next: null when a remainder is left or the stack budget runs out.
@@ -138,15 +145,17 @@ public final class CurrencyPaymentService {
     }
 
     public static OptionalLong collectCurrency(Container container, @NotNull Entity holder) {
-        long total = 0L;
-        for (int slot = 0; slot < container.getContainerSize(); slot++) {
-            ItemStack stack = container.getItem(slot);
-            if (stack.isEmpty()) continue;
-            OptionalLong value = CurrencyValueService.value(holder, stack);
-            if (value.isEmpty() || value.getAsLong() > Long.MAX_VALUE - total) return OptionalLong.empty();
-            total += value.getAsLong();
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.ECONOMY)) {
+            long total = 0L;
+            for (int slot = 0; slot < container.getContainerSize(); slot++) {
+                ItemStack stack = container.getItem(slot);
+                if (stack.isEmpty()) continue;
+                OptionalLong value = CurrencyValueService.value(holder, stack);
+                if (value.isEmpty() || value.getAsLong() > Long.MAX_VALUE - total) return OptionalLong.empty();
+                total += value.getAsLong();
+            }
+            return OptionalLong.of(total);
         }
-        return OptionalLong.of(total);
     }
 
     // One entry per item: an item two definitions both claim is worth what the winner says, exactly as

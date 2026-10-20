@@ -1,5 +1,7 @@
 package com.iafenvoy.mxt.runtime.world;
 
+import com.iafenvoy.mxt.util.profiling.ProfilerScope;
+import com.iafenvoy.mxt.util.profiling.ServerProfiling;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -29,10 +31,12 @@ public final class SecretRealmBridge {
 
     @SubscribeEvent
     public static void onLevelTick(Post event) {
-        if (!(event.getLevel() instanceof ServerLevel level)) return;
-        if (!level.dimension().equals(Level.OVERWORLD)) return;
-        if (level.getGameTime() % 20L != 0L) return;
-        for (SecretRealmRecord record : SecretRealmRegistry.all())
-            SecretRealmService.expire(level.getServer(), record, level.getGameTime());
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.SECRET_REALM)) {
+            if (!(event.getLevel() instanceof ServerLevel level)) return;
+            if (!level.dimension().equals(Level.OVERWORLD)) return;
+            if (level.getGameTime() % 20L != 0L) return;
+            for (SecretRealmRecord record : SecretRealmRegistry.all())
+                SecretRealmService.expire(level.getServer(), record, level.getGameTime());
+        }
     }
 }

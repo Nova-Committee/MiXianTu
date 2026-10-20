@@ -3,6 +3,8 @@ package com.iafenvoy.mxt.runtime.world;
 import com.iafenvoy.mxt.data.secretrealm.SecretRealm;
 import com.iafenvoy.mxt.data.secretrealm.SecretRealmGeneration;
 import com.iafenvoy.mxt.data.secretrealm.builtin.*;
+import com.iafenvoy.mxt.util.profiling.ProfilerScope;
+import com.iafenvoy.mxt.util.profiling.ServerProfiling;
 import com.mojang.logging.LogUtils;
 import net.minecraft.core.*;
 import net.minecraft.core.Holder.Reference;
@@ -62,25 +64,27 @@ public final class SecretRealmGenerationService {
     }
 
     public static Optional<ServerLevel> open(MinecraftServer server, SecretRealmRecord record) {
-        SecretRealm definition = record.instance();
-        if (definition.generation() instanceof ExistingGeneration(ResourceKey<Level> dimension)) {
-            ServerLevel level = server.getLevel(dimension);
-            if (level == null) return Optional.empty();
-            SecretRealmBorderService.apply(level, definition, false);
-            return Optional.of(level);
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.SECRET_REALM)) {
+            SecretRealm definition = record.instance();
+            if (definition.generation() instanceof ExistingGeneration(ResourceKey<Level> dimension)) {
+                ServerLevel level = server.getLevel(dimension);
+                if (level == null) return Optional.empty();
+                SecretRealmBorderService.apply(level, definition, false);
+                return Optional.of(level);
+            }
+            ServerLevel loaded = server.getLevel(record.dimension());
+            if (loaded != null) {
+                SecretRealmBorderService.apply(loaded, definition, true);
+                return Optional.of(loaded);
+            }
+            if (definition.generation() instanceof TemplateGeneration template && !record.prepared()
+                    && !copyTemplate(server, record.dimension(), template.template())) return Optional.empty();
+            LevelStem stem = buildStem(server, definition.generation(), record.seed());
+            if (stem == null) return Optional.empty();
+            Optional<ServerLevel> level = RuntimeDimensionService.load(server, record.dimension(), stem);
+            level.ifPresent(value -> SecretRealmBorderService.apply(value, definition, true));
+            return level;
         }
-        ServerLevel loaded = server.getLevel(record.dimension());
-        if (loaded != null) {
-            SecretRealmBorderService.apply(loaded, definition, true);
-            return Optional.of(loaded);
-        }
-        if (definition.generation() instanceof TemplateGeneration template && !record.prepared()
-                && !copyTemplate(server, record.dimension(), template.template())) return Optional.empty();
-        LevelStem stem = buildStem(server, definition.generation(), record.seed());
-        if (stem == null) return Optional.empty();
-        Optional<ServerLevel> level = RuntimeDimensionService.load(server, record.dimension(), stem);
-        level.ifPresent(value -> SecretRealmBorderService.apply(value, definition, true));
-        return level;
     }
 
     // Every registry read happens here rather than in the codec: datapack registries load in parallel, and the
@@ -119,8 +123,10 @@ public final class SecretRealmGenerationService {
     // A dimension a data pack declared through the level stem registry is never touched: the secret_realm/ folder
     // convention must not be able to delete a real dimension that happens to sit under it.
     public static void clearData(MinecraftServer server, ResourceKey<Level> dimension) {
-        if (declared(server, dimension)) return;
-        discard(server, dimension.identifier());
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.SECRET_REALM)) {
+            if (declared(server, dimension)) return;
+            discard(server, dimension.identifier());
+        }
     }
 
     // The whole folder goes rather than only the chunk directories, because a dimension also stores its level data
@@ -143,28 +149,30 @@ public final class SecretRealmGenerationService {
 
     // What a secret realm destroyed by a crash, or by a definition that has since been deleted, leaves behind.
     public static void clearOrphans(MinecraftServer server, Set<ResourceKey<Level>> claimed) {
-        Path root = server.getWorldPath(dimensionsRoot());
-        if (!Files.isDirectory(root)) return;
-        List<Path> candidates = new ArrayList<>();
-        try (Stream<Path> namespaces = Files.list(root)) {
-            for (Path namespace : namespaces.toList()) {
-                Path secretRealmRoot = namespace.resolve(DIMENSION_PREFIX);
-                if (!Files.isDirectory(secretRealmRoot)) continue;
-                try (Stream<Path> walked = Files.walk(secretRealmRoot)) {
-                    walked.filter(Files::isDirectory).filter(SecretRealmGenerationService::holdsData).forEach(candidates::add);
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.SECRET_REALM)) {
+            Path root = server.getWorldPath(dimensionsRoot());
+            if (!Files.isDirectory(root)) return;
+            List<Path> candidates = new ArrayList<>();
+            try (Stream<Path> namespaces = Files.list(root)) {
+                for (Path namespace : namespaces.toList()) {
+                    Path secretRealmRoot = namespace.resolve(DIMENSION_PREFIX);
+                    if (!Files.isDirectory(secretRealmRoot)) continue;
+                    try (Stream<Path> walked = Files.walk(secretRealmRoot)) {
+                        walked.filter(Files::isDirectory).filter(SecretRealmGenerationService::holdsData).forEach(candidates::add);
+                    }
                 }
+            } catch (IOException exception) {
+                LOGGER.warn("Failed to scan secret realm folders", exception);
+                return;
             }
-        } catch (IOException exception) {
-            LOGGER.warn("Failed to scan secret realm folders", exception);
-            return;
-        }
-        for (Path candidate : candidates) {
-            Identifier id = identifierOf(root.relativize(candidate));
-            if (id == null) continue;
-            ResourceKey<Level> dimension = ResourceKey.create(Registries.DIMENSION, id);
-            if (claimed.contains(dimension) || declared(server, dimension)) continue;
-            discard(server, id);
-            LOGGER.info("Removed leftover secret realm data {}", id);
+            for (Path candidate : candidates) {
+                Identifier id = identifierOf(root.relativize(candidate));
+                if (id == null) continue;
+                ResourceKey<Level> dimension = ResourceKey.create(Registries.DIMENSION, id);
+                if (claimed.contains(dimension) || declared(server, dimension)) continue;
+                discard(server, id);
+                LOGGER.info("Removed leftover secret realm data {}", id);
+            }
         }
     }
 

@@ -29,6 +29,8 @@ import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.FormulaContexts;
 import com.iafenvoy.mxt.util.profiling.LoggerDispatcher;
 import com.iafenvoy.mxt.util.profiling.LoggingLevel;
+import com.iafenvoy.mxt.util.profiling.ProfilerScope;
+import com.iafenvoy.mxt.util.profiling.ServerProfiling;
 import com.mojang.logging.LogUtils;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
@@ -124,7 +126,9 @@ public final class AbilityService {
     public static UseResult useCarried(Holder<Ability> ability, Entity actor,
                                        AbilityAttachment abilities, ResourceHolderAttachment resources, long gameTime,
                                        FormulaContext context, @Nullable Vec3 origin) {
-        return use(ability, actor, abilities, resources, gameTime, context, false, origin);
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.ABILITY_CAST)) {
+            return use(ability, actor, abilities, resources, gameTime, context, false, origin);
+        }
     }
 
     /**
@@ -184,27 +188,30 @@ public final class AbilityService {
     public static UseResult finishCast(Holder<Ability> ability, Entity actor,
                                        AbilityAttachment abilities, ResourceHolderAttachment resources, long gameTime,
                                        FormulaContext context) {
-        if (actor.level().isClientSide()) return UseResult.rejected(Failures.SERVER_ONLY, null);
-        Ability definition = ability.value();
-        if (actor instanceof LivingEntity living) {
-            context = FormulaContexts.forEntity(living, context);
-            context = withAbilityScaling(living, ability, context);
-            if (!definition.elementAffinity().isEmpty() && context.value(DamageCalculationService.ELEMENT_MODIFIER) <= 0.0D)
-                return UseResult.rejected(AbilityFailure.ELEMENT_AFFINITY, null);
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.ABILITY_CAST)) {
+            if (actor.level().isClientSide()) return UseResult.rejected(Failures.SERVER_ONLY, null);
+            Ability definition = ability.value();
+            if (actor instanceof LivingEntity living) {
+                context = FormulaContexts.forEntity(living, context);
+                context = withAbilityScaling(living, ability, context);
+                if (!definition.elementAffinity().isEmpty() && context.value(DamageCalculationService.ELEMENT_MODIFIER) <= 0.0D)
+                    return UseResult.rejected(AbilityFailure.ELEMENT_AFFINITY, null);
+            }
+            if (!AbilityStorage.castDue(abilities, ability, gameTime)) {
+                return UseResult.castingResult();
+            }
+            AbilityStorage.clearCast(abilities, ability, gameTime);
+            if (!definition.condition().test(actor, context))
+                return UseResult.rejected(Failures.CONDITION_FAILED, null);
+            if (!validateWord(definition, actor, context))
+                return UseResult.rejected(AbilityFailure.PERMISSION_DENIED, null);
+            // Already started by something that could start one, so the grant it was approved under is not asked for
+            // a second time.
+            ResultWithData<PreparedUse> prepared = prepare(ability, abilities, gameTime, context,
+                    actor instanceof LivingEntity living ? living : null, false, null);
+            if (!prepared.isSuccess()) return UseResult.rejected(prepared.failure(), prepared.failedResource());
+            return finishPreparedUse(prepared.getData(), definition, actor, abilities, resources, gameTime, context, null);
         }
-        if (!AbilityStorage.castDue(abilities, ability, gameTime)) {
-            return UseResult.castingResult();
-        }
-        AbilityStorage.clearCast(abilities, ability, gameTime);
-        if (!definition.condition().test(actor, context)) return UseResult.rejected(Failures.CONDITION_FAILED, null);
-        if (!validateWord(definition, actor, context))
-            return UseResult.rejected(AbilityFailure.PERMISSION_DENIED, null);
-        // Already started by something that could start one, so the grant it was approved under is not asked for
-        // a second time.
-        ResultWithData<PreparedUse> prepared = prepare(ability, abilities, gameTime, context,
-                actor instanceof LivingEntity living ? living : null, false, null);
-        if (!prepared.isSuccess()) return UseResult.rejected(prepared.failure(), prepared.failedResource());
-        return finishPreparedUse(prepared.getData(), definition, actor, abilities, resources, gameTime, context, null);
     }
 
     private static UseResult finishPreparedUse(PreparedUse preparedUse, Ability definition, Entity actor,
@@ -272,62 +279,64 @@ public final class AbilityService {
     public static ChannelResult tickChannel(Holder<Ability> ability, Entity actor,
                                             AbilityAttachment abilities, ResourceHolderAttachment resources, long gameTime,
                                             FormulaContext context) {
-        Ability definition = ability.value();
-        if (actor instanceof LivingEntity living) {
-            context = withAbilityScaling(living, ability, FormulaContexts.forEntity(living, context));
-            if (!definition.elementAffinity().isEmpty() && context.value(DamageCalculationService.ELEMENT_MODIFIER) <= 0.0D) {
-                stopChannel(abilities);
-                return ChannelResult.stopped(AbilityFailure.ELEMENT_AFFINITY);
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.ABILITY_CHANNEL)) {
+            Ability definition = ability.value();
+            if (actor instanceof LivingEntity living) {
+                context = withAbilityScaling(living, ability, FormulaContexts.forEntity(living, context));
+                if (!definition.elementAffinity().isEmpty() && context.value(DamageCalculationService.ELEMENT_MODIFIER) <= 0.0D) {
+                    stopChannel(abilities);
+                    return ChannelResult.stopped(AbilityFailure.ELEMENT_AFFINITY);
+                }
             }
+            if (abilities.channelledAbility().filter(ability::equals).isEmpty())
+                return ChannelResult.inactive();
+            if (!abilities.has(ability) || !(definition.type() instanceof ChannelSource channel)) {
+                stopChannel(abilities);
+                return ChannelResult.stopped(AbilityFailure.NOT_GRANTED);
+            }
+            long nextTick = Math.round(AbilityStorage.get(abilities, ability, ChannelPulse.class)
+                    .map(ChannelPulse::nextTick).orElse((double) gameTime));
+            if (gameTime < nextTick) return ChannelResult.waiting(nextTick);
+            if (!definition.condition().test(actor, context)) {
+                stopChannel(abilities);
+                return ChannelResult.stopped(Failures.CONDITION_FAILED);
+            }
+            double interval = channel.channelInterval().evaluate(context);
+            if (!Double.isFinite(interval) || interval <= 0.0D || interval > Long.MAX_VALUE) {
+                stopChannel(abilities);
+                return ChannelResult.stopped(Failures.INVALID_FORMULA);
+            }
+            CostContext upkeepContext = CostContext.of(actor instanceof LivingEntity living ? living : null, context, CostOrigin.CHANNEL_UPKEEP);
+            CostPayment upkeep = CostPayment.of(upkeepContext);
+            Optional<Failure> unpaid = upkeep.price(channel.upkeepCosts());
+            if (unpaid.isPresent()) {
+                stopChannel(abilities);
+                return ChannelResult.stopped(unpaid.get());
+            }
+            // The event owns the amounts from here on: the pulse being paid is the one it handed back.
+            Pre resourceEvent = new Pre(resources, upkeep.resources());
+            if (NeoForge.EVENT_BUS.post(resourceEvent).isCanceled()) {
+                stopChannel(abilities);
+                return ChannelResult.stopped(Failures.CANCELLED);
+            }
+            Optional<Failure> edited = upkeep.replaceResourceAmounts(resourceEvent.getAmounts());
+            if (edited.isPresent()) {
+                stopChannel(abilities);
+                return ChannelResult.stopped(edited.get());
+            }
+            CostPayment.PaymentResult payment = upkeep.pay();
+            if (!payment.isSuccess()) {
+                stopChannel(abilities);
+                return ChannelResult.stopped(payment.failure());
+            }
+            // A channel is never carried by an item (see useCarried), so its pulses happen where the actor is.
+            executeEffects(definition, actor, context, null);
+            NeoForge.EVENT_BUS.post(new Post(resources, payment.resources()));
+            long intervalTicks = Math.max(1L, Math.round(interval));
+            long followingTick = Math.addExact(gameTime, intervalTicks);
+            AbilityStorage.value(abilities, ability, ChannelPulse.class, new ChannelPulse(0.0D), gameTime).set(followingTick);
+            return ChannelResult.pulsed(followingTick, payment.resources());
         }
-        if (abilities.channelledAbility().filter(ability::equals).isEmpty())
-            return ChannelResult.inactive();
-        if (!abilities.has(ability) || !(definition.type() instanceof ChannelSource channel)) {
-            stopChannel(abilities);
-            return ChannelResult.stopped(AbilityFailure.NOT_GRANTED);
-        }
-        long nextTick = Math.round(AbilityStorage.get(abilities, ability, ChannelPulse.class)
-                .map(ChannelPulse::nextTick).orElse((double) gameTime));
-        if (gameTime < nextTick) return ChannelResult.waiting(nextTick);
-        if (!definition.condition().test(actor, context)) {
-            stopChannel(abilities);
-            return ChannelResult.stopped(Failures.CONDITION_FAILED);
-        }
-        double interval = channel.channelInterval().evaluate(context);
-        if (!Double.isFinite(interval) || interval <= 0.0D || interval > Long.MAX_VALUE) {
-            stopChannel(abilities);
-            return ChannelResult.stopped(Failures.INVALID_FORMULA);
-        }
-        CostContext upkeepContext = CostContext.of(actor instanceof LivingEntity living ? living : null, context, CostOrigin.CHANNEL_UPKEEP);
-        CostPayment upkeep = CostPayment.of(upkeepContext);
-        Optional<Failure> unpaid = upkeep.price(channel.upkeepCosts());
-        if (unpaid.isPresent()) {
-            stopChannel(abilities);
-            return ChannelResult.stopped(unpaid.get());
-        }
-        // The event owns the amounts from here on: the pulse being paid is the one it handed back.
-        Pre resourceEvent = new Pre(resources, upkeep.resources());
-        if (NeoForge.EVENT_BUS.post(resourceEvent).isCanceled()) {
-            stopChannel(abilities);
-            return ChannelResult.stopped(Failures.CANCELLED);
-        }
-        Optional<Failure> edited = upkeep.replaceResourceAmounts(resourceEvent.getAmounts());
-        if (edited.isPresent()) {
-            stopChannel(abilities);
-            return ChannelResult.stopped(edited.get());
-        }
-        CostPayment.PaymentResult payment = upkeep.pay();
-        if (!payment.isSuccess()) {
-            stopChannel(abilities);
-            return ChannelResult.stopped(payment.failure());
-        }
-        // A channel is never carried by an item (see useCarried), so its pulses happen where the actor is.
-        executeEffects(definition, actor, context, null);
-        NeoForge.EVENT_BUS.post(new Post(resources, payment.resources()));
-        long intervalTicks = Math.max(1L, Math.round(interval));
-        long followingTick = Math.addExact(gameTime, intervalTicks);
-        AbilityStorage.value(abilities, ability, ChannelPulse.class, new ChannelPulse(0.0D), gameTime).set(followingTick);
-        return ChannelResult.pulsed(followingTick, payment.resources());
     }
 
     public static boolean stopChannel(AbilityAttachment abilities) {

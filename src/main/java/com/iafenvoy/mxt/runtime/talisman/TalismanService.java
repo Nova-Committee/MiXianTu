@@ -28,6 +28,8 @@ import com.iafenvoy.mxt.runtime.spirit.SpiritSource;
 import com.iafenvoy.mxt.util.MiscUtil;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
+import com.iafenvoy.mxt.util.profiling.ProfilerScope;
+import com.iafenvoy.mxt.util.profiling.ServerProfiling;
 import net.minecraft.core.Holder;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
@@ -178,10 +180,12 @@ public final class TalismanService {
     // A hand charges the window for the attempt rather than the firing. The window is filed against a copy
     // taken before the invocation, because firing burns the stack and vanilla reads the cooldown group off it.
     public static boolean invokeOnUse(SpiritSource source, ItemStack stack) {
-        ItemStack beforeUse = stack.copy();
-        Attempt attempt = attempt(source, stack);
-        if (source.consumedByHand() && attempt.attempted()) applyCooldown(source.actor(), beforeUse);
-        return attempt.fired();
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.TALISMAN)) {
+            ItemStack beforeUse = stack.copy();
+            Attempt attempt = attempt(source, stack);
+            if (source.consumedByHand() && attempt.attempted()) applyCooldown(source.actor(), beforeUse);
+            return attempt.fired();
+        }
     }
 
     // Whether the carrier's own mode lets it fire the moment it is full. STORE is a carrier that only
@@ -195,19 +199,21 @@ public final class TalismanService {
     // is whether anything was asked of the carrier, which tells a click that fired from one that only changed
     // a mode.
     public static boolean toggleMode(SpiritSource source, ItemStack stack) {
-        if (inscribed(stack) == null) return false;
-        TalismanComponent component = component(stack);
-        boolean full = SpiritChargeService.full(source.level().registryAccess(), stack);
-        if (component.mode() == TriggerMode.STORE && full) {
-            // Set first: firing spends the stack, and this is the mode the rest of it is left in.
-            stack.set(MxtDataComponents.TALISMAN, component.withMode(TriggerMode.FIRE));
-            return invokeOnUse(source, stack);
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.TALISMAN)) {
+            if (inscribed(stack) == null) return false;
+            TalismanComponent component = component(stack);
+            boolean full = SpiritChargeService.full(source.level().registryAccess(), stack);
+            if (component.mode() == TriggerMode.STORE && full) {
+                // Set first: firing spends the stack, and this is the mode the rest of it is left in.
+                stack.set(MxtDataComponents.TALISMAN, component.withMode(TriggerMode.FIRE));
+                return invokeOnUse(source, stack);
+            }
+            TriggerMode next = component.mode().other();
+            stack.set(MxtDataComponents.TALISMAN, component.withMode(next));
+            LivingEntity holder = source.actor();
+            if (holder != null) say(holder, Component.translatable("actionbar.mxt.talisman.mode." + next.key()));
+            return false;
         }
-        TriggerMode next = component.mode().other();
-        stack.set(MxtDataComponents.TALISMAN, component.withMode(next));
-        LivingEntity holder = source.actor();
-        if (holder != null) say(holder, Component.translatable("actionbar.mxt.talisman.mode." + next.key()));
-        return false;
     }
 
     // False inside the use window, because the aura a tick would move would buy a charge the click is not going
@@ -220,80 +226,82 @@ public final class TalismanService {
     // condition refusing the holder, still means the carrier was used, while a carrier that is blank, uncharged or
     // cooling down was never attempted.
     private static Attempt attempt(SpiritSource source, ItemStack stack) {
-        LivingEntity holder = source.actor();
-        // Nothing living is answerable for it: somebody has to pay, to be credited and to answer for it. The carrier
-        // stays charged, which is what a click by a person can use.
-        if (holder == null || source.level().isClientSide() || !(stack.getItem() instanceof TalismanItem))
-            return Attempt.NOT_AN_ATTEMPT;
-        // Two rules, one per way in. The use window is about the hand alone: a placed carrier on a display stand
-        // is outside every window - it reads none and leaves none. The burn is about where the carrier is: a
-        // hand keeps what a creative hand would not spend, a placed carrier is always spent. The source's own
-        // flag says which this is, so nothing infers it from whether an actor happened to be passed.
-        boolean inHand = source.consumedByHand();
-        if (inHand && coolingDown(holder, stack)) {
-            say(holder, Component.translatable("actionbar.mxt.talisman.cooldown"));
-            return Attempt.NOT_AN_ATTEMPT;
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.TALISMAN)) {
+            LivingEntity holder = source.actor();
+            // Nothing living is answerable for it: somebody has to pay, to be credited and to answer for it. The carrier
+            // stays charged, which is what a click by a person can use.
+            if (holder == null || source.level().isClientSide() || !(stack.getItem() instanceof TalismanItem))
+                return Attempt.NOT_AN_ATTEMPT;
+            // Two rules, one per way in. The use window is about the hand alone: a placed carrier on a display stand
+            // is outside every window - it reads none and leaves none. The burn is about where the carrier is: a
+            // hand keeps what a creative hand would not spend, a placed carrier is always spent. The source's own
+            // flag says which this is, so nothing infers it from whether an actor happened to be passed.
+            boolean inHand = source.consumedByHand();
+            if (inHand && coolingDown(holder, stack)) {
+                say(holder, Component.translatable("actionbar.mxt.talisman.cooldown"));
+                return Attempt.NOT_AN_ATTEMPT;
+            }
+            Holder<Talisman> written = inscribed(stack);
+            if (written == null) {
+                say(holder, Component.translatable("actionbar.mxt.talisman.blank"));
+                return Attempt.NOT_AN_ATTEMPT;
+            }
+            if (!ready(stack)) {
+                say(holder, Component.translatable("actionbar.mxt.talisman.not_charged"));
+                return Attempt.NOT_AN_ATTEMPT;
+            }
+            // Where it happened, in the same shape every other position travels in: the explicit formula values
+            // block_x, block_y and block_z. The acting entity is still the actor, because that is who the invocation
+            // belongs to - the position says where, not who.
+            FormulaContext context = FormulaContext.of(holder, Map.of("block_x", source.position().x(),
+                    "block_y", source.position().y(), "block_z", source.position().z()));
+            // Ask the inscription where its use would land before anything else happens: a type that cannot happen at
+            // all - a crosshair with nobody under it - refuses the carrier here, ahead of the condition and of the price.
+            TalismanUse use = new TalismanUse(holder, context, source.position(), written);
+            TalismanType.Plan plan = written.value().type().plan(use);
+            if (!plan.runnable()) {
+                say(holder, Component.translatable("actionbar.mxt.talisman.failed", Failures.NO_TARGET.message()));
+                return Attempt.REFUSED;
+            }
+            // The definition's own gate, asked before the price is planned: what a carrier will not let the holder do
+            // right now is refused while nothing has been paid, so a condition can never cost the holder anything.
+            if (!written.value().condition().test(holder, context)) {
+                say(holder, Component.translatable("actionbar.mxt.talisman.failed", Failures.CONDITION_FAILED.message()));
+                return Attempt.REFUSED;
+            }
+            // One invocation is charged as a whole before anything happens: the carrier's own costs in one payment that is
+            // priced once, so an effect that has already fired can never be left unpaid for. Every aura entry is left out -
+            // an aura comes out of the carrier's own store rather than from an account.
+            List<Cost> holderCosts = written.value().costs().stream()
+                    .filter(cost -> !(cost instanceof AuraCost)).toList();
+            CostContext costContext = CostContext.of(holder, context, CostOrigin.TALISMAN);
+            CostPayment payment = CostPayment.of(costContext);
+            Optional<Failure> priced = payment.price(holderCosts);
+            if (priced.isPresent()) {
+                say(holder, Component.translatable("actionbar.mxt.talisman.failed", priced.get().message()));
+                return Attempt.REFUSED;
+            }
+            // The price is paid before anything happens: a type's own effects cannot be taken back, so an invocation that
+            // cannot pay must be refused while there is still nothing to undo. Paying here rather than after the effects
+            // is what keeps a carrier from firing on a balance it never had.
+            CostPayment.PaymentResult paid = payment.pay();
+            if (!paid.isSuccess()) {
+                say(holder, Component.translatable("actionbar.mxt.talisman.failed", paid.failure().message()));
+                return Attempt.REFUSED;
+            }
+            // What the type does once the price has been paid. It answers for its own targets; the ones that land
+            // immediately run their actions here, and a thrown one leaves its effect to the moment it hits.
+            written.value().type().apply(use, plan);
+            // This invocation's share of the store is spent here; whatever the definition wrote on top of one invocation
+            // is left for the invocations after it. What is left goes back to whoever set the invocation off when the
+            // carrier itself is spent, which is the one case where it never gets to keep it.
+            SpiritStorageComponent left = drain(store(stack), draw(written));
+            if (left.isEmpty()) stack.remove(MxtDataComponents.SPIRIT_STORAGE);
+            else stack.set(MxtDataComponents.SPIRIT_STORAGE, left);
+            if (spend(stack, holder, inHand)) refund(left, holder);
+            say(holder, Component.translatable("actionbar.mxt.talisman.invoked", 1));
+            return Attempt.FIRED;
         }
-        Holder<Talisman> written = inscribed(stack);
-        if (written == null) {
-            say(holder, Component.translatable("actionbar.mxt.talisman.blank"));
-            return Attempt.NOT_AN_ATTEMPT;
-        }
-        if (!ready(stack)) {
-            say(holder, Component.translatable("actionbar.mxt.talisman.not_charged"));
-            return Attempt.NOT_AN_ATTEMPT;
-        }
-        // Where it happened, in the same shape every other position travels in: the explicit formula values
-        // block_x, block_y and block_z. The acting entity is still the actor, because that is who the invocation
-        // belongs to - the position says where, not who.
-        FormulaContext context = FormulaContext.of(holder, Map.of("block_x", source.position().x(),
-                "block_y", source.position().y(), "block_z", source.position().z()));
-        // Ask the inscription where its use would land before anything else happens: a type that cannot happen at
-        // all - a crosshair with nobody under it - refuses the carrier here, ahead of the condition and of the price.
-        TalismanUse use = new TalismanUse(holder, context, source.position(), written);
-        TalismanType.Plan plan = written.value().type().plan(use);
-        if (!plan.runnable()) {
-            say(holder, Component.translatable("actionbar.mxt.talisman.failed", Failures.NO_TARGET.message()));
-            return Attempt.REFUSED;
-        }
-        // The definition's own gate, asked before the price is planned: what a carrier will not let the holder do
-        // right now is refused while nothing has been paid, so a condition can never cost the holder anything.
-        if (!written.value().condition().test(holder, context)) {
-            say(holder, Component.translatable("actionbar.mxt.talisman.failed", Failures.CONDITION_FAILED.message()));
-            return Attempt.REFUSED;
-        }
-        // One invocation is charged as a whole before anything happens: the carrier's own costs in one payment that is
-        // priced once, so an effect that has already fired can never be left unpaid for. Every aura entry is left out -
-        // an aura comes out of the carrier's own store rather than from an account.
-        List<Cost> holderCosts = written.value().costs().stream()
-                .filter(cost -> !(cost instanceof AuraCost)).toList();
-        CostContext costContext = CostContext.of(holder, context, CostOrigin.TALISMAN);
-        CostPayment payment = CostPayment.of(costContext);
-        Optional<Failure> priced = payment.price(holderCosts);
-        if (priced.isPresent()) {
-            say(holder, Component.translatable("actionbar.mxt.talisman.failed", priced.get().message()));
-            return Attempt.REFUSED;
-        }
-        // The price is paid before anything happens: a type's own effects cannot be taken back, so an invocation that
-        // cannot pay must be refused while there is still nothing to undo. Paying here rather than after the effects
-        // is what keeps a carrier from firing on a balance it never had.
-        CostPayment.PaymentResult paid = payment.pay();
-        if (!paid.isSuccess()) {
-            say(holder, Component.translatable("actionbar.mxt.talisman.failed", paid.failure().message()));
-            return Attempt.REFUSED;
-        }
-        // What the type does once the price has been paid. It answers for its own targets; the ones that land
-        // immediately run their actions here, and a thrown one leaves its effect to the moment it hits.
-        written.value().type().apply(use, plan);
-        // This invocation's share of the store is spent here; whatever the definition wrote on top of one invocation
-        // is left for the invocations after it. What is left goes back to whoever set the invocation off when the
-        // carrier itself is spent, which is the one case where it never gets to keep it.
-        SpiritStorageComponent left = drain(store(stack), draw(written));
-        if (left.isEmpty()) stack.remove(MxtDataComponents.SPIRIT_STORAGE);
-        else stack.set(MxtDataComponents.SPIRIT_STORAGE, left);
-        if (spend(stack, holder, inHand)) refund(left, holder);
-        say(holder, Component.translatable("actionbar.mxt.talisman.invoked", 1));
-        return Attempt.FIRED;
     }
 
     // What a carrier was still holding when it was spent, handed back to whoever set that invocation off. The pour

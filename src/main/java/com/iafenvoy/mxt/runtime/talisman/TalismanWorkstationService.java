@@ -30,6 +30,8 @@ import com.iafenvoy.mxt.util.formula.number.Constant;
 import com.iafenvoy.mxt.util.matcher.ItemMatcher;
 import com.iafenvoy.mxt.util.matcher.builtin.IngredientEntry;
 import com.iafenvoy.mxt.util.matcher.builtin.TagEntry;
+import com.iafenvoy.mxt.util.profiling.ProfilerScope;
+import com.iafenvoy.mxt.util.profiling.ServerProfiling;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.core.NonNullList;
@@ -91,7 +93,9 @@ public final class TalismanWorkstationService {
      * checked when a stroke arrives rather than when a formula is picked.
      */
     public static List<Entry> entries(ServerPlayer player, Container paperSlot) {
-        return entries(player, paperSlot, ItemStack.EMPTY);
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.TALISMAN)) {
+            return entries(player, paperSlot, ItemStack.EMPTY);
+        }
     }
 
     /**
@@ -100,19 +104,21 @@ public final class TalismanWorkstationService {
      *                  picked and the formula could never be changed.
      */
     public static List<Entry> entries(ServerPlayer player, Container paperSlot, ItemStack heldPaper) {
-        List<Entry> entries = new ArrayList<>();
-        Container station = paperSlot.getItem(0).isEmpty() && !heldPaper.isEmpty() ? slotOf(heldPaper) : paperSlot;
-        for (RecipeHolder<TalismanDrawingRecipe> holder : all(player.level().getServer().getRecipeManager())) {
-            TalismanDrawingRecipe recipe = holder.value();
-            Component name = DefinitionText.nameOrId(recipe.talisman());
-            boolean unlocked = recipe.unlockCondition().test(player, FormulaContext.of(player));
-            // Priced and checked without a commit: a row says whether this formula could be started right now.
-            CostPayment payment = CostPayment.of(context(player, station));
-            boolean affordable = payment.price(costs(recipe)).isEmpty() && payment.test().isEmpty();
-            entries.add(new Entry(holder.id().identifier(), name, unlocked && affordable));
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.TALISMAN)) {
+            List<Entry> entries = new ArrayList<>();
+            Container station = paperSlot.getItem(0).isEmpty() && !heldPaper.isEmpty() ? slotOf(heldPaper) : paperSlot;
+            for (RecipeHolder<TalismanDrawingRecipe> holder : all(player.level().getServer().getRecipeManager())) {
+                TalismanDrawingRecipe recipe = holder.value();
+                Component name = DefinitionText.nameOrId(recipe.talisman());
+                boolean unlocked = recipe.unlockCondition().test(player, FormulaContext.of(player));
+                // Priced and checked without a commit: a row says whether this formula could be started right now.
+                CostPayment payment = CostPayment.of(context(player, station));
+                boolean affordable = payment.price(costs(recipe)).isEmpty() && payment.test().isEmpty();
+                entries.add(new Entry(holder.id().identifier(), name, unlocked && affordable));
+            }
+            entries.sort(Comparator.comparing(entry -> entry.id().toString()));
+            return entries;
         }
-        entries.sort(Comparator.comparing(entry -> entry.id().toString()));
-        return entries;
     }
 
     /**
@@ -129,21 +135,23 @@ public final class TalismanWorkstationService {
      * is measured, not assumed: an empty session hands back exactly that much, whatever else the store holds.
      */
     public static Optional<TalismanDrawingSession> start(ServerPlayer player, Container paperSlot, Identifier id) {
-        TalismanDrawingRecipe recipe = find(player.level().getServer().getRecipeManager(), id).orElse(null);
-        if (recipe == null) return Optional.empty();
-        if (!recipe.unlockCondition().test(player, FormulaContext.of(player))) return Optional.empty();
-        List<Cost> costs = costs(recipe);
-        CostContext context = context(player, paperSlot);
-        CostPayment planning = CostPayment.of(context);
-        if (planning.price(costs).isPresent()) return Optional.empty();
-        // Read before the payment, because the settlement needs the paper's tier and by then the slot is empty.
-        ItemStack paper = firstMatching(paperSlot, paperEntry(recipe));
-        if (paper.isEmpty()) return Optional.empty();
-        List<Runnable> refunds = snapshotResources(context, planning);
-        List<ItemStack> before = contents(paperSlot);
-        if (!planning.pay().isSuccess()) return Optional.empty();
-        return Optional.of(new TalismanDrawingSession(id, recipe, costs, context, paperSlot, paper,
-                charged(before, paperSlot), refunds, player.level().getGameTime()));
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.TALISMAN)) {
+            TalismanDrawingRecipe recipe = find(player.level().getServer().getRecipeManager(), id).orElse(null);
+            if (recipe == null) return Optional.empty();
+            if (!recipe.unlockCondition().test(player, FormulaContext.of(player))) return Optional.empty();
+            List<Cost> costs = costs(recipe);
+            CostContext context = context(player, paperSlot);
+            CostPayment planning = CostPayment.of(context);
+            if (planning.price(costs).isPresent()) return Optional.empty();
+            // Read before the payment, because the settlement needs the paper's tier and by then the slot is empty.
+            ItemStack paper = firstMatching(paperSlot, paperEntry(recipe));
+            if (paper.isEmpty()) return Optional.empty();
+            List<Runnable> refunds = snapshotResources(context, planning);
+            List<ItemStack> before = contents(paperSlot);
+            if (!planning.pay().isSuccess()) return Optional.empty();
+            return Optional.of(new TalismanDrawingSession(id, recipe, costs, context, paperSlot, paper,
+                    charged(before, paperSlot), refunds, player.level().getGameTime()));
+        }
     }
 
     /**
@@ -154,28 +162,30 @@ public final class TalismanWorkstationService {
      * judged at once, which is what makes a stream of refusals end the session instead of extending it.
      */
     public static StrokeResult stroke(ServerPlayer player, TalismanDrawingSession session, List<Point> points) {
-        if (session.settled() || session.failed()) return new StrokeResult(false, StrokeRefusal.SESSION_OVER, 0);
-        if (points.size() > MxtServerConfig.INSTANCE.talisman.maxStrokePoints.getValue())
-            return refuse(session, StrokeRefusal.TOO_MANY_POINTS);
-        // The running totals are the budget, not just the pattern that is submitted later: a stroke that would pass
-        // either of them is refused here and never recorded.
-        if (session.strokeCount() + 1 > MxtServerConfig.INSTANCE.talisman.maxSessionStrokes.getValue()
-                || session.pointCount() + points.size() > MxtServerConfig.INSTANCE.talisman.maxSessionPoints.getValue())
-            return refuse(session, StrokeRefusal.TOO_MANY_POINTS);
-        long now = player.level().getGameTime();
-        long interval = MxtServerConfig.INSTANCE.talisman.minStrokeInterval.getValue() / 50L;
-        // The first stroke is measured against the tick the drawing opened, so "start drawing then dump strokes"
-        // is caught by the same check as two strokes in a row.
-        if (interval > 0L && now - session.lastStrokeAt() < interval)
-            return refuse(session, StrokeRefusal.TOO_FAST);
-        ItemStack brush = carried(player);
-        if (!BrushPigmentService.isBrush(brush)) return new StrokeResult(false, StrokeRefusal.BRUSH_GONE, 0);
-        int charge = BrushPigmentService.chargeForStroke(points);
-        if (!BrushPigmentService.hasPigment(brush, charge)) return refuse(session, StrokeRefusal.NO_PIGMENT);
-        brush.set(MxtDataComponents.BRUSH_PIGMENT, BrushPigmentService.pigment(brush) - charge);
-        session.spendPigment(charge);
-        session.record(points, now);
-        return new StrokeResult(true, null, charge);
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.TALISMAN)) {
+            if (session.settled() || session.failed()) return new StrokeResult(false, StrokeRefusal.SESSION_OVER, 0);
+            if (points.size() > MxtServerConfig.INSTANCE.talisman.maxStrokePoints.getValue())
+                return refuse(session, StrokeRefusal.TOO_MANY_POINTS);
+            // The running totals are the budget, not just the pattern that is submitted later: a stroke that would pass
+            // either of them is refused here and never recorded.
+            if (session.strokeCount() + 1 > MxtServerConfig.INSTANCE.talisman.maxSessionStrokes.getValue()
+                    || session.pointCount() + points.size() > MxtServerConfig.INSTANCE.talisman.maxSessionPoints.getValue())
+                return refuse(session, StrokeRefusal.TOO_MANY_POINTS);
+            long now = player.level().getGameTime();
+            long interval = MxtServerConfig.INSTANCE.talisman.minStrokeInterval.getValue() / 50L;
+            // The first stroke is measured against the tick the drawing opened, so "start drawing then dump strokes"
+            // is caught by the same check as two strokes in a row.
+            if (interval > 0L && now - session.lastStrokeAt() < interval)
+                return refuse(session, StrokeRefusal.TOO_FAST);
+            ItemStack brush = carried(player);
+            if (!BrushPigmentService.isBrush(brush)) return new StrokeResult(false, StrokeRefusal.BRUSH_GONE, 0);
+            int charge = BrushPigmentService.chargeForStroke(points);
+            if (!BrushPigmentService.hasPigment(brush, charge)) return refuse(session, StrokeRefusal.NO_PIGMENT);
+            brush.set(MxtDataComponents.BRUSH_PIGMENT, BrushPigmentService.pigment(brush) - charge);
+            session.spendPigment(charge);
+            session.record(points, now);
+            return new StrokeResult(true, null, charge);
+        }
     }
 
     // One refusal: counted, and the session ends the moment the count is past the budget. Every branch that refuses a
@@ -191,21 +201,23 @@ public final class TalismanWorkstationService {
      * failed session or a count over the limits consumes the materials and produces nothing.
      */
     public static Outcome submit(ServerPlayer player, TalismanDrawingSession session, List<List<Point>> strokes) {
-        if (!session.markSettled())
-            return new Outcome(false, 0.0D, ItemStack.EMPTY, Component.empty(), session.pigmentSpent());
-        TalismanDrawingRecipe recipe = session.recipe();
-        boolean overLimits = strokes.size() > MxtServerConfig.INSTANCE.talisman.maxSessionStrokes.getValue()
-                || count(strokes) > MxtServerConfig.INSTANCE.talisman.maxSessionPoints.getValue();
-        if (session.failed() || overLimits || !reconciles(session.strokes(), strokes)) {
-            MiXianTu.LOGGER.warn("Discarding a talisman drawing by {} on {}: the submitted pattern does not match the strokes received",
-                    player.getGameProfile().name(), session.recipeId());
-            return finish(player, session, recipe, 0.0D, false);
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.TALISMAN)) {
+            if (!session.markSettled())
+                return new Outcome(false, 0.0D, ItemStack.EMPTY, Component.empty(), session.pigmentSpent());
+            TalismanDrawingRecipe recipe = session.recipe();
+            boolean overLimits = strokes.size() > MxtServerConfig.INSTANCE.talisman.maxSessionStrokes.getValue()
+                    || count(strokes) > MxtServerConfig.INSTANCE.talisman.maxSessionPoints.getValue();
+            if (session.failed() || overLimits || !reconciles(session.strokes(), strokes)) {
+                MiXianTu.LOGGER.warn("Discarding a talisman drawing by {} on {}: the submitted pattern does not match the strokes received",
+                        player.getGameProfile().name(), session.recipeId());
+                return finish(player, session, recipe, 0.0D, false);
+            }
+            Score score = TalismanDrawingScorer.score(recipe.pattern().strokes(),
+                    strokes.stream().map(TalismanDrawingScorer.Stroke::new).toList(),
+                    recipe.pattern().tolerance(), recipe.judgement());
+            return finish(player, session, recipe, score.completion(),
+                    recipe.result().gradeFor(score.completion()).isPresent());
         }
-        Score score = TalismanDrawingScorer.score(recipe.pattern().strokes(),
-                strokes.stream().map(TalismanDrawingScorer.Stroke::new).toList(),
-                recipe.pattern().tolerance(), recipe.judgement());
-        return finish(player, session, recipe, score.completion(),
-                recipe.result().gradeFor(score.completion()).isPresent());
     }
 
     /**
@@ -216,21 +228,25 @@ public final class TalismanWorkstationService {
      * that reached the settlement, not to an abandoned attempt.
      */
     public static void abandon(ServerPlayer player, TalismanDrawingSession session) {
-        if (session.drewAnything()) {
-            fail(player, session);
-            return;
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.TALISMAN)) {
+            if (session.drewAnything()) {
+                fail(player, session);
+                return;
+            }
+            if (!session.markSettled()) return;
+            refund(player, session);
         }
-        if (!session.markSettled()) return;
-        refund(player, session);
     }
 
     /**
      * A session that failed its own checks (too many refusals) settles as a failure: the materials are gone.
      */
     public static void fail(ServerPlayer player, TalismanDrawingSession session) {
-        if (!session.markSettled()) return;
-        session.recipe().result().failureAction()
-                .execute(player, FormulaContext.of(player, Map.of(TalismanDrawingRecipe.PERCENTAGE, 0.0D)));
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.TALISMAN)) {
+            if (!session.markSettled()) return;
+            session.recipe().result().failureAction()
+                    .execute(player, FormulaContext.of(player, Map.of(TalismanDrawingRecipe.PERCENTAGE, 0.0D)));
+        }
     }
 
     private static Outcome finish(ServerPlayer player, TalismanDrawingSession session, TalismanDrawingRecipe recipe,

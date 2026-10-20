@@ -2,6 +2,8 @@ package com.iafenvoy.mxt.runtime.damage;
 
 import com.iafenvoy.mxt.runtime.element.ElementReactionService;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
+import com.iafenvoy.mxt.util.profiling.ProfilerScope;
+import com.iafenvoy.mxt.util.profiling.ServerProfiling;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.LivingEntity;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -24,22 +26,24 @@ public final class DamageEventBridge {
 
     @SubscribeEvent
     public static void onIncomingDamage(LivingIncomingDamageEvent event) {
-        // A cancelled sequence applies nothing, so changing its amount would only rewrite a number nobody reads.
-        if (event.isCanceled()) return;
-        LivingEntity target = event.getEntity();
-        if (target.level().isClientSide()) return;
-        float incoming = event.getAmount();
-        if (!(incoming > 0.0F)) return;
-        DamageSource source = event.getSource();
-        // Nothing to answer for: the shaping layer skipped this strike for the same reason, and reading its
-        // elements here would leave a mark on the target that the number never asked for.
-        if (DamageCalculationService.bypasses(source)) return;
-        DamageElements.Strike strike = DamageElements.reading(source, target.registryAccess());
-        double reduced = DamageCalculationService.incoming(target, strike.elements(), incoming);
-        if (reduced != incoming) event.setAmount((float) reduced);
-        // Only a strike that declared what it was made of rubs off. The amounts come from the same reading, and
-        // what the target carries decides how much gets through.
-        if (strike.attaches())
-            ElementReactionService.applyFromStrike(target, strike.attachment(), FormulaContext.of(target), DamageCalculationService.attachmentMultiplier(target));
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.COMBAT)) {
+            // A cancelled sequence applies nothing, so changing its amount would only rewrite a number nobody reads.
+            if (event.isCanceled()) return;
+            LivingEntity target = event.getEntity();
+            if (target.level().isClientSide()) return;
+            float incoming = event.getAmount();
+            if (!(incoming > 0.0F)) return;
+            DamageSource source = event.getSource();
+            // Nothing to answer for: the shaping layer skipped this strike for the same reason, and reading its
+            // elements here would leave a mark on the target that the number never asked for.
+            if (DamageCalculationService.bypasses(source)) return;
+            DamageElements.Strike strike = DamageElements.reading(source, target.registryAccess());
+            double reduced = DamageCalculationService.incoming(target, strike.elements(), incoming);
+            if (reduced != incoming) event.setAmount((float) reduced);
+            // Only a strike that declared what it was made of rubs off. The amounts come from the same reading, and
+            // what the target carries decides how much gets through.
+            if (strike.attaches())
+                ElementReactionService.applyFromStrike(target, strike.attachment(), FormulaContext.of(target), DamageCalculationService.attachmentMultiplier(target));
+        }
     }
 }

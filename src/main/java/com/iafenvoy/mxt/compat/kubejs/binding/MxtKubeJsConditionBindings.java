@@ -2,11 +2,11 @@ package com.iafenvoy.mxt.compat.kubejs.binding;
 
 import com.google.gson.JsonObject;
 import com.iafenvoy.mxt.compat.kubejs.callback.MxtJsConditionCallbacks;
-import com.iafenvoy.mxt.util.function.QuadPredicate;
-import com.iafenvoy.mxt.util.function.TriPredicate;
 import com.iafenvoy.mxt.compat.kubejs.codec.MxtKubeJsDataCodec;
 import com.iafenvoy.mxt.data.condition.*;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
+import com.iafenvoy.mxt.util.function.QuadPredicate;
+import com.iafenvoy.mxt.util.function.TriPredicate;
 import dev.latvian.mods.kubejs.typings.Info;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.damagesource.DamageSource;

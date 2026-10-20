@@ -1,6 +1,8 @@
 package com.iafenvoy.mxt.runtime.rift;
 
 import com.iafenvoy.mxt.item.block.entity.RiftBlockEntity;
+import com.iafenvoy.mxt.util.profiling.ProfilerScope;
+import com.iafenvoy.mxt.util.profiling.ServerProfiling;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
 
@@ -31,13 +33,15 @@ public final class RiftConnections {
 
     // Unloaded chunks are skipped rather than loaded, so looking at a rift never generates terrain.
     public static List<BlockPos> connected(Level level, BlockPos pos) {
-        List<BlockPos> found = new ArrayList<>();
-        for (BlockPos offset : OFFSETS) {
-            BlockPos other = pos.offset(offset);
-            if (!level.isLoaded(other)) continue;
-            if (level.getBlockEntity(other) instanceof RiftBlockEntity) found.add(other);
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.RIFT)) {
+            List<BlockPos> found = new ArrayList<>();
+            for (BlockPos offset : OFFSETS) {
+                BlockPos other = pos.offset(offset);
+                if (!level.isLoaded(other)) continue;
+                if (level.getBlockEntity(other) instanceof RiftBlockEntity) found.add(other);
+            }
+            return found;
         }
-        return found;
     }
 
     public static boolean isolated(Level level, BlockPos pos) {
@@ -69,23 +73,25 @@ public final class RiftConnections {
 
     // Diagnostics only, for the command that reports how far one rift's network reaches.
     public static int componentSize(Level level, BlockPos origin) {
-        Set<BlockPos> seen = new HashSet<>();
-        ArrayDeque<BlockPos> queue = new ArrayDeque<>();
-        BlockPos start = origin.immutable();
-        seen.add(start);
-        queue.add(start);
-        while (!queue.isEmpty() && seen.size() < MAX_COMPONENT) {
-            BlockPos current = queue.poll();
-            for (BlockPos offset : OFFSETS) {
-                BlockPos next = current.offset(offset);
-                if (seen.contains(next) || !level.isLoaded(next)) continue;
-                if (level.getBlockEntity(next) instanceof RiftBlockEntity) {
-                    seen.add(next.immutable());
-                    queue.add(next.immutable());
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.RIFT)) {
+            Set<BlockPos> seen = new HashSet<>();
+            ArrayDeque<BlockPos> queue = new ArrayDeque<>();
+            BlockPos start = origin.immutable();
+            seen.add(start);
+            queue.add(start);
+            while (!queue.isEmpty() && seen.size() < MAX_COMPONENT) {
+                BlockPos current = queue.poll();
+                for (BlockPos offset : OFFSETS) {
+                    BlockPos next = current.offset(offset);
+                    if (seen.contains(next) || !level.isLoaded(next)) continue;
+                    if (level.getBlockEntity(next) instanceof RiftBlockEntity) {
+                        seen.add(next.immutable());
+                        queue.add(next.immutable());
+                    }
                 }
             }
+            return seen.size();
         }
-        return seen.size();
     }
 
     // The same reach a link itself uses.

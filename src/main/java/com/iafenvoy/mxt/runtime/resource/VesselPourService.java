@@ -3,6 +3,8 @@ package com.iafenvoy.mxt.runtime.resource;
 import com.iafenvoy.mxt.event.dispatcher.CollectHoldBindingsEvent;
 import com.iafenvoy.mxt.item.SpiritVesselItem;
 import com.iafenvoy.mxt.runtime.hold.HoldLookup;
+import com.iafenvoy.mxt.util.profiling.ProfilerScope;
+import com.iafenvoy.mxt.util.profiling.ServerProfiling;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
@@ -29,16 +31,18 @@ public final class VesselPourService {
 
     @SubscribeEvent
     public static void onUseTick(Tick event) {
-        LivingEntity holder = event.getEntity();
-        if (holder.level().isClientSide()) return;
-        ItemStack stack = event.getItem();
-        if (!(HoldLookup.hold(stack) instanceof VesselPourHold hold)) return;
-        if (!SpiritVesselItem.pourTick(holder, stack)) return;
-        // Said once, on the first tick that really moved something: a hold that poured nothing stays quiet, and the
-        // pour itself is silent apart from the gesture's own sound.
-        if (holder instanceof ServerPlayer player && event.getDuration() == hold.holdTicks(holder.level().registryAccess(), stack)) {
-            Component message = Component.translatable("item.mxt.spirit_vessel.released");
-            if ((Player) player instanceof ServerPlayer serverPlayer) serverPlayer.sendSystemMessage(message, true);
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.SPIRIT)) {
+            LivingEntity holder = event.getEntity();
+            if (holder.level().isClientSide()) return;
+            ItemStack stack = event.getItem();
+            if (!(HoldLookup.hold(stack) instanceof VesselPourHold hold)) return;
+            if (!SpiritVesselItem.pourTick(holder, stack)) return;
+            // Said once, on the first tick that really moved something: a hold that poured nothing stays quiet, and the
+            // pour itself is silent apart from the gesture's own sound.
+            if (holder instanceof ServerPlayer player && event.getDuration() == hold.holdTicks(holder.level().registryAccess(), stack)) {
+                Component message = Component.translatable("item.mxt.spirit_vessel.released");
+                if ((Player) player instanceof ServerPlayer serverPlayer) serverPlayer.sendSystemMessage(message, true);
+            }
         }
     }
 }

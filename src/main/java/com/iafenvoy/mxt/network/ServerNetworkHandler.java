@@ -16,6 +16,7 @@ import com.iafenvoy.mxt.screen.menu.*;
 import com.iafenvoy.mxt.util.PlayerNames;
 import com.iafenvoy.mxt.util.profiling.LoggerDispatcher;
 import com.iafenvoy.mxt.util.profiling.LoggingLevel;
+import com.iafenvoy.mxt.util.profiling.ProfilerSubscriptions;
 import com.mojang.logging.LogUtils;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
@@ -32,6 +33,11 @@ import java.util.OptionalInt;
 
 
 public final class ServerNetworkHandler {
+    static void onProfilerSubscription(ProfilerSubscriptionC2SPayload payload, IPayloadContext context) {
+        if (context.player() instanceof ServerPlayer player)
+            ProfilerSubscriptions.update(player, payload.token(), payload.open());
+    }
+
     public static final Logger LOGGER = LogUtils.getLogger();
     // One line per action the client sends, so a held key would repeat it: the trace is development-only.
     private static final LoggerDispatcher FORGING_TRACE = LoggerDispatcher.of(LogUtils.getLogger(), LoggingLevel.DEBUG, LoggingLevel.NONE);
@@ -79,8 +85,10 @@ public final class ServerNetworkHandler {
                     FORGING_TRACE.log("forging SELECT definition={} selectable={} methods={} outcome={} active={}", definition, table.selectableBlueprintIds(), table.availableMethodIds(), ForgingWorkstationService.start(player, table, definition), table.forgingState().active());
             case STRIKE ->
                     FORGING_TRACE.log("forging STRIKE definition={} available={} outcome={} active={}", definition, table.availableMethodIds(), ForgingWorkstationService.strike(player, table, definition), table.forgingState().active());
-            case FINISH -> FORGING_TRACE.log("forging FINISH outcome={}", ForgingWorkstationService.finish(player, table));
-            case CANCEL -> FORGING_TRACE.log("forging CANCEL outcome={}", ForgingWorkstationService.cancel(player, table));
+            case FINISH ->
+                    FORGING_TRACE.log("forging FINISH outcome={}", ForgingWorkstationService.finish(player, table));
+            case CANCEL ->
+                    FORGING_TRACE.log("forging CANCEL outcome={}", ForgingWorkstationService.cancel(player, table));
         }
     }
 

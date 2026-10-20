@@ -2,6 +2,8 @@ package com.iafenvoy.mxt.runtime.rift;
 
 import com.iafenvoy.mxt.item.block.entity.RiftBlockEntity;
 import com.iafenvoy.mxt.registry.MxtBlocks;
+import com.iafenvoy.mxt.util.profiling.ProfilerScope;
+import com.iafenvoy.mxt.util.profiling.ServerProfiling;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
@@ -37,18 +39,22 @@ public final class RiftTeleportService {
     // Null when the target dimension is not loaded.
     @Nullable
     public static TeleportTransition destination(ServerLevel level, RiftBlockEntity rift, Entity entity, BlockPos entry) {
-        ServerLevel target = level.getServer().getLevel(ResourceKey.create(Registries.DIMENSION, rift.target()));
-        if (target == null) return null;
-        Vec3 scaled = scale(Vec3.atCenterOf(entry), level.dimensionType(), target.dimensionType());
-        BlockPos clamped = target.getWorldBorder().clampToBounds(scaled);
-        return new TeleportTransition(target, arrival(target, level.dimension(), clamped), Vec3.ZERO,
-                entity.getYRot(), entity.getXRot(), AFTER_ARRIVAL);
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.RIFT)) {
+            ServerLevel target = level.getServer().getLevel(ResourceKey.create(Registries.DIMENSION, rift.target()));
+            if (target == null) return null;
+            Vec3 scaled = scale(Vec3.atCenterOf(entry), level.dimensionType(), target.dimensionType());
+            BlockPos clamped = target.getWorldBorder().clampToBounds(scaled);
+            return new TeleportTransition(target, arrival(target, level.dimension(), clamped), Vec3.ZERO,
+                    entity.getYRot(), entity.getXRot(), AFTER_ARRIVAL);
+        }
     }
 
     public static Vec3 arrival(ServerLevel target, ResourceKey<Level> back, BlockPos around) {
-        BlockPos rift = findReturnRift(target, back, around);
-        if (rift == null) rift = carveReturnRift(target, back, around);
-        return standingSpot(target, rift);
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.RIFT)) {
+            BlockPos rift = findReturnRift(target, back, around);
+            if (rift == null) rift = carveReturnRift(target, back, around);
+            return standingSpot(target, rift);
+        }
     }
 
     // The vertical axis is mapped by relative height, the horizontal axes by the vanilla teleportation scale,

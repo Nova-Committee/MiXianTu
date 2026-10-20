@@ -12,6 +12,8 @@ import com.iafenvoy.mxt.runtime.resulting.Failures;
 import com.iafenvoy.mxt.util.MiscUtil;
 import com.iafenvoy.mxt.util.TooltipText;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
+import com.iafenvoy.mxt.util.profiling.ProfilerScope;
+import com.iafenvoy.mxt.util.profiling.ServerProfiling;
 import com.mojang.serialization.Codec;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.Holder;
@@ -91,20 +93,22 @@ public final class PillService {
     }
 
     public static Result apply(LivingEntity entity, Pill definition) {
-        // Toxicity and the overdose action are state: the settlement is the server's, and the caller already is.
-        if (entity.level().isClientSide()) return Result.consumed(0.0D);
-        FormulaContext context = FormulaContext.of(entity);
-        definition.onConsume().execute(entity, context);
-        PillToxicityAttachment toxicity = entity.getData(MxtAttachments.PILL_TOXICITY);
-        double value = toxicity.add(definition.toxicityGain().evaluate(context));
-        double threshold = definition.toxicityThreshold().evaluate(context);
-        if (Double.isFinite(threshold) && value >= threshold) {
-            definition.onOverdose().execute(entity, context);
-            toxicity.set(MiscUtil.positive(definition.toxicityAfterOverdose().evaluate(context)));
-            notifyOverdose(entity, toxicity.toxicity());
-            return Result.overdosed(toxicity.toxicity());
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.ITEM)) {
+            // Toxicity and the overdose action are state: the settlement is the server's, and the caller already is.
+            if (entity.level().isClientSide()) return Result.consumed(0.0D);
+            FormulaContext context = FormulaContext.of(entity);
+            definition.onConsume().execute(entity, context);
+            PillToxicityAttachment toxicity = entity.getData(MxtAttachments.PILL_TOXICITY);
+            double value = toxicity.add(definition.toxicityGain().evaluate(context));
+            double threshold = definition.toxicityThreshold().evaluate(context);
+            if (Double.isFinite(threshold) && value >= threshold) {
+                definition.onOverdose().execute(entity, context);
+                toxicity.set(MiscUtil.positive(definition.toxicityAfterOverdose().evaluate(context)));
+                notifyOverdose(entity, toxicity.toxicity());
+                return Result.overdosed(toxicity.toxicity());
+            }
+            return Result.consumed(value);
         }
-        return Result.consumed(value);
     }
 
     // Every other outcome is whatever the pack's own actions say; an overdose with no word of its own would be the
@@ -134,17 +138,19 @@ public final class PillService {
 
     @SubscribeEvent
     public static void onEntityTick(EntityTickEvent.Post event) {
-        if (!(event.getEntity() instanceof LivingEntity entity) || entity.level().isClientSide()) return;
-        double rate = MiscUtil.positive(MxtServerConfig.INSTANCE.alchemy.toxicityDecayPerSecond.getValue());
-        if (rate <= 0.0D) return;
-        PillToxicityAttachment toxicity = entity.getExistingData(MxtAttachments.PILL_TOXICITY).orElse(null);
-        if (toxicity == null || toxicity.toxicity() <= 0.0D) return;
-        int remainder = toxicity.decayRemainder() + 1;
-        if (remainder >= DECAY_PERIOD) {
-            toxicity.add(-rate);
-            remainder -= DECAY_PERIOD;
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.ITEM)) {
+            if (!(event.getEntity() instanceof LivingEntity entity) || entity.level().isClientSide()) return;
+            double rate = MiscUtil.positive(MxtServerConfig.INSTANCE.alchemy.toxicityDecayPerSecond.getValue());
+            if (rate <= 0.0D) return;
+            PillToxicityAttachment toxicity = entity.getExistingData(MxtAttachments.PILL_TOXICITY).orElse(null);
+            if (toxicity == null || toxicity.toxicity() <= 0.0D) return;
+            int remainder = toxicity.decayRemainder() + 1;
+            if (remainder >= DECAY_PERIOD) {
+                toxicity.add(-rate);
+                remainder -= DECAY_PERIOD;
+            }
+            toxicity.setDecayRemainder(remainder);
         }
-        toxicity.setDecayRemainder(remainder);
     }
 
     static int cooldownTicks(PillBinding definition, LivingEntity entity) {

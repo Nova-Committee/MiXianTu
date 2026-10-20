@@ -3,6 +3,8 @@ package com.iafenvoy.mxt.runtime.progression;
 import com.iafenvoy.mxt.event.dispatcher.CollectTickStagesEvent;
 import com.iafenvoy.mxt.runtime.EntityTickStages;
 import com.iafenvoy.mxt.runtime.ability.AbilityGrantService;
+import com.iafenvoy.mxt.util.profiling.ProfilerScope;
+import com.iafenvoy.mxt.util.profiling.ServerProfiling;
 import net.minecraft.world.entity.LivingEntity;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -24,7 +26,9 @@ public final class ProgressionTickStage {
     }
 
     private static void tick(LivingEntity entity) {
-        if (entity.level().getGameTime() % INTERVAL_TICKS != 0L) return;
-        if (ProgressionDriver.tick(entity)) AbilityGrantService.recalculate(entity);
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.PROGRESSION)) {
+            if (entity.level().getGameTime() % INTERVAL_TICKS != 0L) return;
+            if (ProgressionDriver.tick(entity)) AbilityGrantService.recalculate(entity);
+        }
     }
 }

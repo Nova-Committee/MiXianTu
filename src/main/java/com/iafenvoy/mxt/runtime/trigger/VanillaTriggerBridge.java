@@ -3,6 +3,8 @@ package com.iafenvoy.mxt.runtime.trigger;
 import com.iafenvoy.mxt.data.trigger.TriggerPayload;
 import com.iafenvoy.mxt.data.trigger.TriggerSignals;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
+import com.iafenvoy.mxt.util.profiling.ProfilerScope;
+import com.iafenvoy.mxt.util.profiling.ServerProfiling;
 import net.minecraft.core.Holder;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.resources.ResourceKey;
@@ -186,13 +188,15 @@ public final class VanillaTriggerBridge {
 
     @SubscribeEvent
     public static void onServerTick(ServerTickEvent.Post event) {
-        if (PENDING_EFFECTS.isEmpty()) return;
-        Map<UUID, Entity> pending = new HashMap<>(PENDING_EFFECTS);
-        PENDING_EFFECTS.clear();
-        for (Entry<UUID, Entity> entry : pending.entrySet()) {
-            ServerPlayer player = event.getServer().getPlayerList().getPlayer(entry.getKey());
-            if (player == null) continue;
-            publishEffectsChanged(player, entry.getValue());
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.TRIGGER)) {
+            if (PENDING_EFFECTS.isEmpty()) return;
+            Map<UUID, Entity> pending = new HashMap<>(PENDING_EFFECTS);
+            PENDING_EFFECTS.clear();
+            for (Entry<UUID, Entity> entry : pending.entrySet()) {
+                ServerPlayer player = event.getServer().getPlayerList().getPlayer(entry.getKey());
+                if (player == null) continue;
+                publishEffectsChanged(player, entry.getValue());
+            }
         }
     }
 

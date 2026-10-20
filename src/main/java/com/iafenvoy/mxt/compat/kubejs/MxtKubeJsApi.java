@@ -205,7 +205,7 @@ public final class MxtKubeJsApi {
      * {@link #applyCurse} with a duration the definition may shorten but never be outlasted by.
      */
     public static ResultWithData<CurseInstance> applyCurseFor(@NotNull Entity target, Identifier id, int stacks, Identifier source,
-                                                             long durationTicks, FormulaContext context) {
+                                                              long durationTicks, FormulaContext context) {
         if (target.level().isClientSide()) return ResultWithData.failure(null, Failures.SERVER_ONLY);
         if (durationTicks < 0L) throw new IllegalArgumentException("Curse duration must not be negative");
         return MxtDatapackRegistries.holder(target.level().registryAccess(), MxtResourceKeys.CURSE, id)

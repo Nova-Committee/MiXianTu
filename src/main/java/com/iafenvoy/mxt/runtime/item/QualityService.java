@@ -15,6 +15,8 @@ import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.MiscUtil;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.matcher.ItemMatcher;
+import com.iafenvoy.mxt.util.profiling.ProfilerScope;
+import com.iafenvoy.mxt.util.profiling.ServerProfiling;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
@@ -81,51 +83,61 @@ public final class QualityService {
 
     @SubscribeEvent(priority = EventPriority.HIGHEST)
     public static void onAttack(AttackEntityEvent event) {
-        Optional<Failure> failure = checkForEvent(event.getEntity(), event.getEntity().getMainHandItem());
-        if (failure.isPresent()) {
-            event.setCanceled(true);
-            notifyCannotUse(event.getEntity(), failure.orElseThrow());
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.ITEM)) {
+            Optional<Failure> failure = checkForEvent(event.getEntity(), event.getEntity().getMainHandItem());
+            if (failure.isPresent()) {
+                event.setCanceled(true);
+                notifyCannotUse(event.getEntity(), failure.orElseThrow());
+            }
         }
     }
 
     @SubscribeEvent(priority = EventPriority.HIGHEST)
     public static void onItemUse(RightClickItem event) {
-        ItemStack stack = event.getEntity().getItemInHand(event.getHand());
-        Optional<Failure> failure = checkForEvent(event.getEntity(), stack);
-        if (failure.isPresent()) {
-            event.setCanceled(true);
-            notifyCannotUse(event.getEntity(), failure.orElseThrow());
-            return;
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.ITEM)) {
+            ItemStack stack = event.getEntity().getItemInHand(event.getHand());
+            Optional<Failure> failure = checkForEvent(event.getEntity(), stack);
+            if (failure.isPresent()) {
+                event.setCanceled(true);
+                notifyCannotUse(event.getEntity(), failure.orElseThrow());
+                return;
+            }
+            notifyStillFull(event.getEntity(), stack);
         }
-        notifyStillFull(event.getEntity(), stack);
     }
 
     @SubscribeEvent(priority = EventPriority.HIGHEST)
     public static void onBlockUse(RightClickBlock event) {
-        Optional<Failure> failure = checkForEvent(event.getEntity(), event.getEntity().getItemInHand(event.getHand()));
-        if (failure.isPresent()) {
-            event.setCanceled(true);
-            notifyCannotUse(event.getEntity(), failure.orElseThrow());
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.ITEM)) {
+            Optional<Failure> failure = checkForEvent(event.getEntity(), event.getEntity().getItemInHand(event.getHand()));
+            if (failure.isPresent()) {
+                event.setCanceled(true);
+                notifyCannotUse(event.getEntity(), failure.orElseThrow());
+            }
         }
     }
 
     @SubscribeEvent(priority = EventPriority.HIGHEST)
     public static void onUseStart(Start event) {
-        Optional<Failure> failure = checkForEvent(event.getEntity(), event.getItem());
-        if (failure.isPresent()) {
-            event.setCanceled(true);
-            notifyCannotUse(event.getEntity(), failure.orElseThrow());
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.ITEM)) {
+            Optional<Failure> failure = checkForEvent(event.getEntity(), event.getItem());
+            if (failure.isPresent()) {
+                event.setCanceled(true);
+                notifyCannotUse(event.getEntity(), failure.orElseThrow());
+            }
         }
     }
 
     @SubscribeEvent(priority = EventPriority.HIGHEST)
     public static void onUseTick(Tick event) {
-        Optional<Failure> failure = checkForEvent(event.getEntity(), event.getItem());
-        if (failure.isPresent()) {
-            event.setCanceled(true);
-            // Cancel returns -1; the following decrement would completeUsingItem unless the live use is cleared.
-            event.getEntity().releaseUsingItem();
-            notifyCannotUse(event.getEntity(), failure.orElseThrow());
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.ITEM)) {
+            Optional<Failure> failure = checkForEvent(event.getEntity(), event.getItem());
+            if (failure.isPresent()) {
+                event.setCanceled(true);
+                // Cancel returns -1; the following decrement would completeUsingItem unless the live use is cleared.
+                event.getEntity().releaseUsingItem();
+                notifyCannotUse(event.getEntity(), failure.orElseThrow());
+            }
         }
     }
 

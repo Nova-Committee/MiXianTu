@@ -1,5 +1,7 @@
 package com.iafenvoy.mxt.runtime.forging;
 
+import com.iafenvoy.mxt.util.profiling.ProfilerScope;
+import com.iafenvoy.mxt.util.profiling.ServerProfiling;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -25,9 +27,11 @@ public final class ForgingEventBridge {
 
     @SubscribeEvent
     public static void onServerTick(Post event) {
-        int ticks = event.getServer().getTickCount();
-        if (ticks % PRUNE_INTERVAL_TICKS != 0) return;
-        ForgingRateLimiter.prune(event.getServer(), ticks);
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.FORGING)) {
+            int ticks = event.getServer().getTickCount();
+            if (ticks % PRUNE_INTERVAL_TICKS != 0) return;
+            ForgingRateLimiter.prune(event.getServer(), ticks);
+        }
     }
 
     @SubscribeEvent

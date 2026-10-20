@@ -14,6 +14,8 @@ import com.iafenvoy.mxt.registry.MxtRecipeTypes;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.screen.aui.AuiPages;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
+import com.iafenvoy.mxt.util.profiling.ProfilerScope;
+import com.iafenvoy.mxt.util.profiling.ServerProfiling;
 import com.sighs.apricityui.screen.ApricityContainerMenu;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Registry;
@@ -130,10 +132,12 @@ public final class SpiritCraftingMenu extends ApricityContainerMenu {
     }
 
     private void updateResult() {
-        this.current = this.findRecipe();
-        Map<Holder<Aura>, Integer> costs = this.current == null ? Map.of() : this.current.costs();
-        this.withTable(table -> table.configureAuraCosts(costs));
-        this.syncProgress();
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.CRAFTING)) {
+            this.current = this.findRecipe();
+            Map<Holder<Aura>, Integer> costs = this.current == null ? Map.of() : this.current.costs();
+            this.withTable(table -> table.configureAuraCosts(costs));
+            this.syncProgress();
+        }
     }
 
     private void syncProgress() {

@@ -4,6 +4,8 @@ import com.iafenvoy.mxt.data.item.HoldBinding;
 import com.iafenvoy.mxt.item.PillItem;
 import com.iafenvoy.mxt.runtime.hold.HoldLookup;
 import com.iafenvoy.mxt.runtime.hold.TemporaryUseComponent;
+import com.iafenvoy.mxt.util.profiling.ProfilerScope;
+import com.iafenvoy.mxt.util.profiling.ServerProfiling;
 import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.world.entity.LivingEntity;
@@ -32,8 +34,10 @@ public final class PillUseService {
     // never reaches a lower priority. A hold outranks a pill, so an item that is both is read instead of eaten.
     @SubscribeEvent(priority = EventPriority.LOWEST)
     public static void onItemUse(RightClickItem event) {
-        LivingEntity entity = event.getEntity();
-        arm(entity, entity.getItemInHand(event.getHand()));
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.ITEM)) {
+            LivingEntity entity = event.getEntity();
+            arm(entity, entity.getItemInHand(event.getHand()));
+        }
     }
 
     /**
@@ -64,7 +68,9 @@ public final class PillUseService {
     // Vanilla has eaten one by the time these run, so what is left of the stack is the item as its author wrote it.
     @SubscribeEvent
     public static void onUseFinish(Finish event) {
-        TemporaryUseComponent.takeBack(event.getEntity(), TemporaryUseComponent.Owner.PILL);
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.ITEM)) {
+            TemporaryUseComponent.takeBack(event.getEntity(), TemporaryUseComponent.Owner.PILL);
+        }
     }
 
     @SubscribeEvent
@@ -76,8 +82,10 @@ public final class PillUseService {
     // an item gives the component back on its next tick.
     @SubscribeEvent
     public static void onEntityTick(Post event) {
-        if (!(event.getEntity() instanceof LivingEntity entity) || entity.isUsingItem()) return;
-        if (!TemporaryUseComponent.hasFor(entity, TemporaryUseComponent.Owner.PILL)) return;
-        TemporaryUseComponent.takeBack(entity, TemporaryUseComponent.Owner.PILL);
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.ITEM)) {
+            if (!(event.getEntity() instanceof LivingEntity entity) || entity.isUsingItem()) return;
+            if (!TemporaryUseComponent.hasFor(entity, TemporaryUseComponent.Owner.PILL)) return;
+            TemporaryUseComponent.takeBack(entity, TemporaryUseComponent.Owner.PILL);
+        }
     }
 }

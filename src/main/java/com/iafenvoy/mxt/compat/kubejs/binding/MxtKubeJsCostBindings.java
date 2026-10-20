@@ -4,14 +4,14 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.iafenvoy.mxt.compat.kubejs.MxtJsWarnings;
 import com.iafenvoy.mxt.compat.kubejs.callback.MxtJsCostCallbacks;
-import com.iafenvoy.mxt.util.function.TriConsumer;
-import com.iafenvoy.mxt.util.function.TriPredicate;
 import com.iafenvoy.mxt.compat.kubejs.codec.MxtKubeJsDataCodec;
 import com.iafenvoy.mxt.data.cost.Cost;
 import com.iafenvoy.mxt.data.cost.CostPayment;
 import com.iafenvoy.mxt.data.cost.context.CostContext;
 import com.iafenvoy.mxt.data.cost.context.CostOrigin;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
+import com.iafenvoy.mxt.util.function.TriConsumer;
+import com.iafenvoy.mxt.util.function.TriPredicate;
 import dev.latvian.mods.kubejs.typings.Info;
 import net.minecraft.world.entity.player.Player;
 

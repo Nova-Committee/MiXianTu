@@ -55,6 +55,7 @@ public final class AuiPages {
      * The talisman drawing workstation: the formula list, the station slot and the paper the player traces on.
      */
     public static final String TALISMAN = "mxt/talisman";
+    public static final String PROFILER = "mxt/profiler";
 
     private static final String HTML_SUFFIX = ".html";
 
@@ -83,6 +84,10 @@ public final class AuiPages {
 
     public static String talismanPage() {
         return page(TALISMAN, "talisman");
+    }
+
+    public static String profilerPage() {
+        return page(PROFILER, "profiler");
     }
 
     public static String page(String folder, String name) {

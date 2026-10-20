@@ -10,6 +10,8 @@ import com.iafenvoy.mxt.runtime.ability.AbilityModifierService.ResolvedModifier;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.FormulaContexts;
+import com.iafenvoy.mxt.util.profiling.ProfilerScope;
+import com.iafenvoy.mxt.util.profiling.ServerProfiling;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.LivingEntity;
@@ -59,29 +61,33 @@ public final class PassiveAttributeService {
 
     // Reconciles the full generated modifier set. Server thread only.
     public static void reconcile(LivingEntity entity) {
-        if (entity.level().isClientSide()) return;
-        List<Entry> entries = entries(entity);
-        removeGenerated(entity, Set.of());
-        FormulaContext context = dynamic(entries) ? FormulaContexts.forEntity(entity) : null;
-        for (Entry entry : entries) apply(entity, entry, context);
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.ABILITY_RECONCILE)) {
+            if (entity.level().isClientSide()) return;
+            List<Entry> entries = entries(entity);
+            removeGenerated(entity, Set.of());
+            FormulaContext context = dynamic(entries) ? FormulaContexts.forEntity(entity) : null;
+            for (Entry entry : entries) apply(entity, entry, context);
+        }
     }
 
     // Unchanged modifiers are not rebuilt: a dynamic entry is re-evaluated every tick and a static one is only
     // added when missing, which also repairs attributes lost on player replacement.
     public static void tick(LivingEntity entity) {
-        if (entity.level().isClientSide()) return;
-        List<Entry> entries = entries(entity);
-        Set<Identifier> active = new HashSet<>();
-        boolean dynamic = false;
-        for (Entry entry : entries) {
-            active.add(entry.id());
-            dynamic |= entry.definition().value().isPresent();
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.ABILITY_RECONCILE)) {
+            if (entity.level().isClientSide()) return;
+            List<Entry> entries = entries(entity);
+            Set<Identifier> active = new HashSet<>();
+            boolean dynamic = false;
+            for (Entry entry : entries) {
+                active.add(entry.id());
+                dynamic |= entry.definition().value().isPresent();
+            }
+            removeGenerated(entity, active);
+            // A static entry only needs its constant amount, so a tick whose entries are all static never builds a
+            // formula context.
+            FormulaContext context = dynamic ? FormulaContexts.forEntity(entity) : null;
+            for (Entry entry : entries) apply(entity, entry, context);
         }
-        removeGenerated(entity, active);
-        // A static entry only needs its constant amount, so a tick whose entries are all static never builds a
-        // formula context.
-        FormulaContext context = dynamic ? FormulaContexts.forEntity(entity) : null;
-        for (Entry entry : entries) apply(entity, entry, context);
     }
 
     private static boolean dynamic(List<Entry> entries) {

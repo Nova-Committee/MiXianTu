@@ -3,6 +3,8 @@ package com.iafenvoy.mxt.runtime.trigger;
 import com.iafenvoy.mxt.data.trigger.TriggerPayload;
 import com.iafenvoy.mxt.data.trigger.TriggerSignals;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
+import com.iafenvoy.mxt.util.profiling.ProfilerScope;
+import com.iafenvoy.mxt.util.profiling.ServerProfiling;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
@@ -46,30 +48,32 @@ public final class VanillaTriggerPollBridge {
 
     @SubscribeEvent
     public static void onPlayerTick(Post event) {
-        if (!(event.getEntity() instanceof ServerPlayer player)) return;
-        boolean enterBlock = TriggerDispatcher.hasListener(TriggerSignals.ENTER_BLOCK);
-        boolean location = TriggerDispatcher.hasListener(TriggerSignals.LOCATION);
-        boolean levitation = TriggerDispatcher.hasListener(TriggerSignals.LEVITATION);
-        boolean fall = TriggerDispatcher.hasListener(TriggerSignals.FALL_FROM_HEIGHT)
-                || TriggerDispatcher.hasListener(TriggerSignals.FALL_AFTER_EXPLOSION);
-        boolean lava = TriggerDispatcher.hasListener(TriggerSignals.RIDE_ENTITY_IN_LAVA);
-        boolean sleeping = TriggerDispatcher.hasListener(TriggerSignals.SLEPT_IN_BED);
-        boolean inventory = TriggerDispatcher.hasListener(TriggerSignals.INVENTORY_CHANGED);
-        boolean bucket = TriggerDispatcher.hasListener(TriggerSignals.FILLED_BUCKET);
-        boolean durability = TriggerDispatcher.hasListener(TriggerSignals.ITEM_DURABILITY_CHANGED);
-        if (!(enterBlock || location || levitation || fall || lava || sleeping || inventory || bucket || durability)) {
-            return;
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.TRIGGER)) {
+            if (!(event.getEntity() instanceof ServerPlayer player)) return;
+            boolean enterBlock = TriggerDispatcher.hasListener(TriggerSignals.ENTER_BLOCK);
+            boolean location = TriggerDispatcher.hasListener(TriggerSignals.LOCATION);
+            boolean levitation = TriggerDispatcher.hasListener(TriggerSignals.LEVITATION);
+            boolean fall = TriggerDispatcher.hasListener(TriggerSignals.FALL_FROM_HEIGHT)
+                    || TriggerDispatcher.hasListener(TriggerSignals.FALL_AFTER_EXPLOSION);
+            boolean lava = TriggerDispatcher.hasListener(TriggerSignals.RIDE_ENTITY_IN_LAVA);
+            boolean sleeping = TriggerDispatcher.hasListener(TriggerSignals.SLEPT_IN_BED);
+            boolean inventory = TriggerDispatcher.hasListener(TriggerSignals.INVENTORY_CHANGED);
+            boolean bucket = TriggerDispatcher.hasListener(TriggerSignals.FILLED_BUCKET);
+            boolean durability = TriggerDispatcher.hasListener(TriggerSignals.ITEM_DURABILITY_CHANGED);
+            if (!(enterBlock || location || levitation || fall || lava || sleeping || inventory || bucket || durability)) {
+                return;
+            }
+            PollState state = STATES.computeIfAbsent(player.getUUID(), ignored -> new PollState());
+            if (location && player.tickCount % LOCATION_INTERVAL == 0) {
+                TriggerPublishing.publish(TriggerSignals.LOCATION, player, FormulaContext.of(player));
+            }
+            if (levitation) pollLevitation(player, state);
+            if (fall) pollFall(player, state);
+            if (lava) pollVehicleLava(player, state);
+            if (enterBlock) pollEnterBlock(player, state);
+            if (inventory || bucket || durability) pollInventory(player, state, inventory, bucket, durability);
+            if (sleeping) pollSleeping(player, state);
         }
-        PollState state = STATES.computeIfAbsent(player.getUUID(), ignored -> new PollState());
-        if (location && player.tickCount % LOCATION_INTERVAL == 0) {
-            TriggerPublishing.publish(TriggerSignals.LOCATION, player, FormulaContext.of(player));
-        }
-        if (levitation) pollLevitation(player, state);
-        if (fall) pollFall(player, state);
-        if (lava) pollVehicleLava(player, state);
-        if (enterBlock) pollEnterBlock(player, state);
-        if (inventory || bucket || durability) pollInventory(player, state, inventory, bucket, durability);
-        if (sleeping) pollSleeping(player, state);
     }
 
     // Vanilla records where levitation started when the effect is added and clears it when the effect is gone:

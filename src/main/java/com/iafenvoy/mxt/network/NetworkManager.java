@@ -23,6 +23,7 @@ public final class NetworkManager {
     @SubscribeEvent
     public static void registerPayloads(RegisterPayloadHandlersEvent event) {
         PayloadRegistrar registrar = event.registrar("2")
+                .playToServer(ProfilerSubscriptionC2SPayload.TYPE, ProfilerSubscriptionC2SPayload.STREAM_CODEC, new MainThreadPayloadHandler<>(ServerNetworkHandler::onProfilerSubscription))
                 .playToServer(WheelActionC2SPayload.TYPE, WheelActionC2SPayload.STREAM_CODEC, new MainThreadPayloadHandler<>(ServerNetworkHandler::onWheelAction))
                 .playToServer(ForgingActionC2SPayload.TYPE, ForgingActionC2SPayload.STREAM_CODEC, new MainThreadPayloadHandler<>(ServerNetworkHandler::onForgingAction))
                 .playToServer(AlchemyActionC2SPayload.TYPE, AlchemyActionC2SPayload.STREAM_CODEC, new MainThreadPayloadHandler<>(ServerNetworkHandler::onAlchemyAction))
@@ -41,6 +42,8 @@ public final class NetworkManager {
                 .playToServer(TalismanCancelC2SPayload.TYPE, TalismanCancelC2SPayload.STREAM_CODEC, new MainThreadPayloadHandler<>(ServerNetworkHandler::onTalismanCancel));
         // A dedicated server never runs one of these, so it registers the codec and nothing else.
         if (FMLEnvironment.getDist() != Dist.CLIENT) {
+            registrar.playToClient(ProfilerGuiS2CPayload.TYPE, ProfilerGuiS2CPayload.STREAM_CODEC)
+                    .playToClient(ProfilerSnapshotS2CPayload.TYPE, ProfilerSnapshotS2CPayload.STREAM_CODEC);
             registrar.playToClient(AuraStateS2CPayload.TYPE, AuraStateS2CPayload.STREAM_CODEC)
                     .playToClient(AlchemyStateS2CPayload.TYPE, AlchemyStateS2CPayload.STREAM_CODEC)
                     .playToClient(FormationStructureS2CPayload.TYPE, FormationStructureS2CPayload.STREAM_CODEC)
@@ -51,7 +54,11 @@ public final class NetworkManager {
                     .playToClient(TalismanResultS2CPayload.TYPE, TalismanResultS2CPayload.STREAM_CODEC);
             return;
         }
-        registrar.playToClient(AuraStateS2CPayload.TYPE, AuraStateS2CPayload.STREAM_CODEC,
+        registrar.playToClient(ProfilerGuiS2CPayload.TYPE, ProfilerGuiS2CPayload.STREAM_CODEC,
+                        new MainThreadPayloadHandler<>(ClientNetworkHandler::onProfilerGui))
+                .playToClient(ProfilerSnapshotS2CPayload.TYPE, ProfilerSnapshotS2CPayload.STREAM_CODEC,
+                        new MainThreadPayloadHandler<>(ClientNetworkHandler::onProfilerSnapshot))
+                .playToClient(AuraStateS2CPayload.TYPE, AuraStateS2CPayload.STREAM_CODEC,
                         new MainThreadPayloadHandler<>(ClientNetworkHandler::onAuraState))
                 .playToClient(AlchemyStateS2CPayload.TYPE, AlchemyStateS2CPayload.STREAM_CODEC,
                         new MainThreadPayloadHandler<>(ClientNetworkHandler::onAlchemyState))

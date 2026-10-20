@@ -12,6 +12,8 @@ import com.iafenvoy.mxt.runtime.world.AuraResult;
 import com.iafenvoy.mxt.runtime.world.AuraService;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.FormulaContexts;
+import com.iafenvoy.mxt.util.profiling.ProfilerScope;
+import com.iafenvoy.mxt.util.profiling.ServerProfiling;
 import net.minecraft.core.Holder;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
@@ -48,9 +50,11 @@ public final class CultivationEventBridge {
 
     @SubscribeEvent
     public static void onLevelTick(Post event) {
-        if (!(event.getLevel() instanceof ServerLevel level)) return;
-        AuraDistributionService.prepare(level);
-        for (ServerPlayer player : level.players()) tick(player);
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.CULTIVATION)) {
+            if (!(event.getLevel() instanceof ServerLevel level)) return;
+            AuraDistributionService.prepare(level);
+            for (ServerPlayer player : level.players()) tick(player);
+        }
     }
 
     @SubscribeEvent
@@ -68,35 +72,37 @@ public final class CultivationEventBridge {
     }
 
     private static void tick(LivingEntity entity) {
-        CultivationAttachment spirit = entity.getData(MxtAttachments.CULTIVATION);
-        if (!spirit.cultivating()) return;
-        Holder<Cultivation> action = spirit.cultivation().orElse(null);
-        if (action == null) {
-            if (entity instanceof ServerPlayer player) LAST_FAILURES.remove(player.getUUID());
-            return;
-        }
-        Cultivation definition = action.value();
-        FormulaContext context = FormulaContexts.forEntity(entity);
-        boolean mayContinue = definition.tickCondition().test(entity, context);
-        AuraResult aura = AuraService.getPositionAura(entity.level(), entity.blockPosition());
-        CultivationMethodService.CultivationResult result = CultivationMethodService.tick(entity, spirit, entity.getData(MxtAttachments.RESOURCE_HOLDER), aura, action, definition,
-                entity.level().getGameTime(), context, () -> mayContinue);
-        if (entity instanceof ServerPlayer player) {
-            if (result.failure() == null) {
-                LAST_FAILURES.remove(player.getUUID());
-            } else {
-                FailureNotice notice = new FailureNotice(result.failure(), result.failedResource(), result.abortReason());
-                FailureNotice previous = LAST_FAILURES.put(player.getUUID(), notice);
-                long gameTime = entity.level().getGameTime();
-                if (!notice.equals(previous) || gameTime % 20L == 0L)
-                    CultivationModeService.notifyFailure(player, result);
-                if (!spirit.cultivating()) LAST_FAILURES.remove(player.getUUID());
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.CULTIVATION)) {
+            CultivationAttachment spirit = entity.getData(MxtAttachments.CULTIVATION);
+            if (!spirit.cultivating()) return;
+            Holder<Cultivation> action = spirit.cultivation().orElse(null);
+            if (action == null) {
+                if (entity instanceof ServerPlayer player) LAST_FAILURES.remove(player.getUUID());
+                return;
             }
-            attemptAutomaticBreakthrough(player, spirit);
+            Cultivation definition = action.value();
+            FormulaContext context = FormulaContexts.forEntity(entity);
+            boolean mayContinue = definition.tickCondition().test(entity, context);
+            AuraResult aura = AuraService.getPositionAura(entity.level(), entity.blockPosition());
+            CultivationMethodService.CultivationResult result = CultivationMethodService.tick(entity, spirit, entity.getData(MxtAttachments.RESOURCE_HOLDER), aura, action, definition,
+                    entity.level().getGameTime(), context, () -> mayContinue);
+            if (entity instanceof ServerPlayer player) {
+                if (result.failure() == null) {
+                    LAST_FAILURES.remove(player.getUUID());
+                } else {
+                    FailureNotice notice = new FailureNotice(result.failure(), result.failedResource(), result.abortReason());
+                    FailureNotice previous = LAST_FAILURES.put(player.getUUID(), notice);
+                    long gameTime = entity.level().getGameTime();
+                    if (!notice.equals(previous) || gameTime % 20L == 0L)
+                        CultivationModeService.notifyFailure(player, result);
+                    if (!spirit.cultivating()) LAST_FAILURES.remove(player.getUUID());
+                }
+                attemptAutomaticBreakthrough(player, spirit);
+            }
+            // Progress and static conditions may have just armed a persisted
+            // breakthrough transition; rebuild its runtime trigger subscriptions.
+            CultivationTriggerService.refresh(entity);
         }
-        // Progress and static conditions may have just armed a persisted
-        // breakthrough transition; rebuild its runtime trigger subscriptions.
-        CultivationTriggerService.refresh(entity);
     }
 
     private static void attemptAutomaticBreakthrough(ServerPlayer player, CultivationAttachment spirit) {

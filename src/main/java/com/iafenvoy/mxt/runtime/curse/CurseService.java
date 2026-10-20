@@ -17,6 +17,8 @@ import com.iafenvoy.mxt.runtime.resulting.failures.CurseFailure;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.MiscUtil;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
+import com.iafenvoy.mxt.util.profiling.ProfilerScope;
+import com.iafenvoy.mxt.util.profiling.ServerProfiling;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Entity;
@@ -43,127 +45,152 @@ public final class CurseService {
     }
 
     public static ResultWithData<CurseInstance> apply(CurseHolderAttachment data, Holder<Curse> curse, int stacks, long gameTime, FormulaContext context, Identifier source) {
-        return apply(data, curse, stacks, gameTime, context, source, NeoForge.EVENT_BUS);
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.CURSE)) {
+            return apply(data, curse, stacks, gameTime, context, source, NeoForge.EVENT_BUS);
+        }
     }
 
     /**
      * Variant for integrations that own a dedicated event bus.
      */
     public static ResultWithData<CurseInstance> apply(CurseHolderAttachment data, Holder<Curse> curse, int stacks, long gameTime, FormulaContext context, Identifier source, @NotNull IEventBus eventBus) {
-        return apply(data, curse, stacks, gameTime, context, source, eventBus, OptionalLong.empty());
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.CURSE)) {
+            return apply(data, curse, stacks, gameTime, context, source, eventBus, OptionalLong.empty());
+        }
     }
 
     public static ResultWithData<CurseInstance> apply(CurseHolderAttachment data, Holder<Curse> curse, int stacks, long gameTime, FormulaContext context, Identifier source, IEventBus eventBus, OptionalLong durationOverride) {
-        CurseApplyEvent.Pre event = new CurseApplyEvent.Pre(data, curse, stacks, gameTime, context, source);
-        if (eventBus.post(event).isCanceled()) return ResultWithData.failure(null, Failures.CANCELLED);
-        // A replacement discards an existing instance and reports the displaced one as a removal, so listeners
-        // still learn it disappeared; it runs no action of its own, being an outside decision.
-        State displaced = curse.value().stackingMode() == StackingMode.REPLACE ? data.instances().get(curse) : null;
-        Set<Identifier> displacedFrom = data.sources().of(curse);
-        CurseLedger ledger = read(data);
-        Optional<CurseInstance> applied = ledger.apply(curse, event.getStacks(), gameTime, context, durationOverride);
-        if (applied.isEmpty()) return ResultWithData.failure(null, CurseFailure.INVALID_DURATION);
-        CurseInstance result = applied.get();
-        write(data, ledger);
-        // The shared rule with ability grants: a source leaving cannot remove another source's curse.
-        data.sources().grant(curse, event.getSource());
-        data.markKnown(curse);
-        if (displaced != null)
-            eventBus.post(new Post(data, curse, displaced, displacedFrom, Reason.REPLACED, gameTime));
-        eventBus.post(new CurseApplyEvent.Post(data, curse, gameTime, context, result));
-        return ResultWithData.success(result);
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.CURSE)) {
+            CurseApplyEvent.Pre event = new CurseApplyEvent.Pre(data, curse, stacks, gameTime, context, source);
+            if (eventBus.post(event).isCanceled()) return ResultWithData.failure(null, Failures.CANCELLED);
+            // A replacement discards an existing instance and reports the displaced one as a removal, so listeners
+            // still learn it disappeared; it runs no action of its own, being an outside decision.
+            State displaced = curse.value().stackingMode() == StackingMode.REPLACE ? data.instances().get(curse) : null;
+            Set<Identifier> displacedFrom = data.sources().of(curse);
+            CurseLedger ledger = read(data);
+            Optional<CurseInstance> applied = ledger.apply(curse, event.getStacks(), gameTime, context, durationOverride);
+            if (applied.isEmpty()) return ResultWithData.failure(null, CurseFailure.INVALID_DURATION);
+            CurseInstance result = applied.get();
+            write(data, ledger);
+            // The shared rule with ability grants: a source leaving cannot remove another source's curse.
+            data.sources().grant(curse, event.getSource());
+            data.markKnown(curse);
+            if (displaced != null)
+                eventBus.post(new Post(data, curse, displaced, displacedFrom, Reason.REPLACED, gameTime));
+            eventBus.post(new CurseApplyEvent.Post(data, curse, gameTime, context, result));
+            return ResultWithData.success(result);
+        }
     }
 
     public static ResultWithData<CurseInstance> apply(Entity target, Holder<Curse> curse, int stacks,
                                                       long gameTime, FormulaContext context, Identifier source) {
-        return apply(target, curse, stacks, gameTime, context, source, NeoForge.EVENT_BUS, OptionalLong.empty());
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.CURSE)) {
+            return apply(target, curse, stacks, gameTime, context, source, NeoForge.EVENT_BUS, OptionalLong.empty());
+        }
     }
 
     public static ResultWithData<CurseInstance> apply(@NotNull Entity target, Holder<Curse> curse, int stacks,
                                                       long gameTime, FormulaContext context, Identifier source, IEventBus eventBus) {
-        return apply(target, curse, stacks, gameTime, context, source, eventBus, OptionalLong.empty());
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.CURSE)) {
+            return apply(target, curse, stacks, gameTime, context, source, eventBus, OptionalLong.empty());
+        }
     }
 
     public static ResultWithData<CurseInstance> applyWithDuration(Entity target, Holder<Curse> curse, int stacks,
                                                                   long gameTime, FormulaContext context, Identifier source,
                                                                   OptionalLong durationOverride) {
-        return apply(target, curse, stacks, gameTime, context, source, NeoForge.EVENT_BUS, durationOverride);
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.CURSE)) {
+            return apply(target, curse, stacks, gameTime, context, source, NeoForge.EVENT_BUS, durationOverride);
+        }
     }
 
     // Full entity-facing transaction: state mutation plus the behaviour a newly created instance owes and the
     // runtime subscriptions that follow it.
     private static ResultWithData<CurseInstance> apply(Entity target, Holder<Curse> curse, int stacks, long gameTime,
                                                        FormulaContext context, Identifier source, IEventBus eventBus, OptionalLong durationOverride) {
-        Curse definition = curse.value();
-        if (!definition.applicationCondition().test(target, context))
-            return ResultWithData.failure(null, CurseFailure.CONDITION);
-        String key = transactionKey(target, curse);
-        if (!IN_TRANSACTION.get().add(key)) return ResultWithData.failure(null, CurseFailure.REENTRANT);
-        try {
-            boolean created = !target.getData(MxtAttachments.CURSE_HOLDER).instances().containsKey(curse)
-                    || definition.stackingMode() == StackingMode.REPLACE;
-            ResultWithData<CurseInstance> result = apply(target.getData(MxtAttachments.CURSE_HOLDER), curse, stacks, gameTime,
-                    context, source, eventBus, durationOverride);
-            if (result.isSuccess()) {
-                // "On apply" means the instance was created: stacking onto, or refreshing, a curse already held is
-                // a later application of the same instance and must not repeat it.
-                if (created && !definition.typedType().inert()) definition.onApply().execute(target, context);
-                CurseScheduler.reschedule(target);
-                CurseTriggerSubscriptions.rebuild(target);
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.CURSE)) {
+            Curse definition = curse.value();
+            if (!definition.applicationCondition().test(target, context))
+                return ResultWithData.failure(null, CurseFailure.CONDITION);
+            String key = transactionKey(target, curse);
+            if (!IN_TRANSACTION.get().add(key)) return ResultWithData.failure(null, CurseFailure.REENTRANT);
+            try {
+                boolean created = !target.getData(MxtAttachments.CURSE_HOLDER).instances().containsKey(curse)
+                        || definition.stackingMode() == StackingMode.REPLACE;
+                ResultWithData<CurseInstance> result = apply(target.getData(MxtAttachments.CURSE_HOLDER), curse, stacks, gameTime,
+                        context, source, eventBus, durationOverride);
+                if (result.isSuccess()) {
+                    // "On apply" means the instance was created: stacking onto, or refreshing, a curse already held is
+                    // a later application of the same instance and must not repeat it.
+                    if (created && !definition.typedType().inert()) definition.onApply().execute(target, context);
+                    CurseScheduler.reschedule(target);
+                    CurseTriggerSubscriptions.rebuild(target);
+                }
+                return result;
+            } finally {
+                leave(key);
             }
-            return result;
-        } finally {
-            leave(key);
         }
     }
 
     public static Optional<CurseInstance> remove(CurseHolderAttachment data, Holder<Curse> curse, Reason reason, long gameTime) {
-        return remove(data, curse, reason, gameTime, NeoForge.EVENT_BUS);
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.CURSE)) {
+            return remove(data, curse, reason, gameTime, NeoForge.EVENT_BUS);
+        }
     }
 
     /**
      * Variant for integrations that own a dedicated event bus.
      */
     public static Optional<CurseInstance> remove(CurseHolderAttachment data, Holder<Curse> curse, Reason reason, long gameTime, @NotNull IEventBus eventBus) {
-        // Captured before the transaction erases them, so listeners hear who was keeping the curse alive.
-        return remove(data, curse, data.sources().of(curse), reason, gameTime, eventBus);
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.CURSE)) {
+            // Captured before the transaction erases them, so listeners hear who was keeping the curse alive.
+            return remove(data, curse, data.sources().of(curse), reason, gameTime, eventBus);
+        }
     }
 
     private static Optional<CurseInstance> remove(CurseHolderAttachment data, Holder<Curse> curse, Set<Identifier> sources,
                                                   Reason reason, long gameTime, @NotNull IEventBus eventBus) {
-        State state = data.instances().get(curse);
-        if (state == null) return Optional.empty();
-        // A frozen instance - its definition is gone from the pack - runs nothing and only ever leaves by an
-        // explicit removal, so neither an expiry nor a cure can quietly turn it into a default effect.
-        if (eventBus.post(new Pre(data, curse, state, sources, reason, gameTime)).isCanceled()) return Optional.empty();
-        CurseLedger ledger = read(data);
-        Optional<CurseInstance> result = ledger.remove(curse);
-        write(data, ledger);
-        result.ifPresent(removed -> eventBus.post(new Post(data, curse, state, sources, reason, gameTime)));
-        return result;
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.CURSE)) {
+            State state = data.instances().get(curse);
+            if (state == null) return Optional.empty();
+            // A frozen instance - its definition is gone from the pack - runs nothing and only ever leaves by an
+            // explicit removal, so neither an expiry nor a cure can quietly turn it into a default effect.
+            if (eventBus.post(new Pre(data, curse, state, sources, reason, gameTime)).isCanceled())
+                return Optional.empty();
+            CurseLedger ledger = read(data);
+            Optional<CurseInstance> result = ledger.remove(curse);
+            write(data, ledger);
+            result.ifPresent(removed -> eventBus.post(new Post(data, curse, state, sources, reason, gameTime)));
+            return result;
+        }
     }
 
     // For callers that have nothing richer than the target's own formula context.
     public static Optional<CurseInstance> remove(Entity target, Holder<Curse> curse, Reason reason, long gameTime) {
-        return remove(target, curse, reason, gameTime, FormulaContext.of(target));
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.CURSE)) {
+            return remove(target, curse, reason, gameTime, FormulaContext.of(target));
+        }
     }
 
     // Runs the action that reason belongs to, then refreshes the due schedule and the runtime subscriptions
     // after the transaction commits.
     public static Optional<CurseInstance> remove(Entity target, Holder<Curse> curse, Reason reason, long gameTime,
                                                  FormulaContext context) {
-        String key = transactionKey(target, curse);
-        if (!IN_TRANSACTION.get().add(key)) return Optional.empty();
-        try {
-            Optional<CurseInstance> result = remove(target.getData(MxtAttachments.CURSE_HOLDER), curse, reason, gameTime, NeoForge.EVENT_BUS);
-            if (result.isPresent()) {
-                runRemovalAction(curse.value(), target, context, reason);
-                CurseScheduler.reschedule(target);
-                CurseTriggerSubscriptions.rebuild(target);
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.CURSE)) {
+            String key = transactionKey(target, curse);
+            if (!IN_TRANSACTION.get().add(key)) return Optional.empty();
+            try {
+                Optional<CurseInstance> result = remove(target.getData(MxtAttachments.CURSE_HOLDER), curse, reason, gameTime, NeoForge.EVENT_BUS);
+                if (result.isPresent()) {
+                    runRemovalAction(curse.value(), target, context, reason);
+                    CurseScheduler.reschedule(target);
+                    CurseTriggerSubscriptions.rebuild(target);
+                }
+                return result;
+            } finally {
+                leave(key);
             }
-            return result;
-        } finally {
-            leave(key);
         }
     }
 
@@ -171,25 +198,27 @@ public final class CurseService {
     // the loss of one. Returns the instance when this release removed it, empty when the curse stays.
     public static Optional<CurseInstance> release(Entity target, Holder<Curse> curse, Identifier source,
                                                   Reason reason, long gameTime, FormulaContext context) {
-        String key = transactionKey(target, curse);
-        if (!IN_TRANSACTION.get().add(key)) return Optional.empty();
-        try {
-            CurseHolderAttachment data = target.getData(MxtAttachments.CURSE_HOLDER);
-            if (!data.sources().holds(curse, source)) return Optional.empty();
-            Set<Identifier> before = data.sources().of(curse);
-            data.sources().revoke(curse, source);
-            if (data.sources().holds(curse)) return Optional.empty();
-            // Reported with the set as it was before this release, so the caller that let go is visible in the
-            // event rather than an empty set that only says "nobody holds it now".
-            Optional<CurseInstance> removed = remove(data, curse, before, reason, gameTime, NeoForge.EVENT_BUS);
-            if (removed.isPresent()) {
-                runRemovalAction(curse.value(), target, context, reason);
-                CurseScheduler.reschedule(target);
-                CurseTriggerSubscriptions.rebuild(target);
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.CURSE)) {
+            String key = transactionKey(target, curse);
+            if (!IN_TRANSACTION.get().add(key)) return Optional.empty();
+            try {
+                CurseHolderAttachment data = target.getData(MxtAttachments.CURSE_HOLDER);
+                if (!data.sources().holds(curse, source)) return Optional.empty();
+                Set<Identifier> before = data.sources().of(curse);
+                data.sources().revoke(curse, source);
+                if (data.sources().holds(curse)) return Optional.empty();
+                // Reported with the set as it was before this release, so the caller that let go is visible in the
+                // event rather than an empty set that only says "nobody holds it now".
+                Optional<CurseInstance> removed = remove(data, curse, before, reason, gameTime, NeoForge.EVENT_BUS);
+                if (removed.isPresent()) {
+                    runRemovalAction(curse.value(), target, context, reason);
+                    CurseScheduler.reschedule(target);
+                    CurseTriggerSubscriptions.rebuild(target);
+                }
+                return removed;
+            } finally {
+                leave(key);
             }
-            return removed;
-        } finally {
-            leave(key);
         }
     }
 
@@ -197,22 +226,24 @@ public final class CurseService {
     // payloads of newly declared curses is the caller's job, because only it knows the stacks and duration.
     public static boolean reconcileSource(Entity target, Identifier source, Collection<Holder<Curse>> desired,
                                           long gameTime, FormulaContext context) {
-        CurseHolderAttachment data = target.getData(MxtAttachments.CURSE_HOLDER);
-        Set<Holder<Curse>> previous = data.sources().keysHeldBy(source);
-        // Read before the reconcile, so an instance losing its last source here still reports the sources that
-        // were keeping it alive rather than the empty set the reconcile leaves behind.
-        Map<Holder<Curse>, Set<Identifier>> before = new LinkedHashMap<>();
-        previous.forEach(curse -> before.put(curse, data.sources().of(curse)));
-        if (!data.sources().reconcile(source, desired)) return false;
-        boolean removedAny = false;
-        for (Holder<Curse> curse : previous) {
-            if (desired.contains(curse) || data.sources().holds(curse)) continue;
-            if (remove(data, curse, before.getOrDefault(curse, Set.of()), Reason.EXPLICIT, gameTime, NeoForge.EVENT_BUS).isPresent())
-                removedAny = true;
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.CURSE)) {
+            CurseHolderAttachment data = target.getData(MxtAttachments.CURSE_HOLDER);
+            Set<Holder<Curse>> previous = data.sources().keysHeldBy(source);
+            // Read before the reconcile, so an instance losing its last source here still reports the sources that
+            // were keeping it alive rather than the empty set the reconcile leaves behind.
+            Map<Holder<Curse>, Set<Identifier>> before = new LinkedHashMap<>();
+            previous.forEach(curse -> before.put(curse, data.sources().of(curse)));
+            if (!data.sources().reconcile(source, desired)) return false;
+            boolean removedAny = false;
+            for (Holder<Curse> curse : previous) {
+                if (desired.contains(curse) || data.sources().holds(curse)) continue;
+                if (remove(data, curse, before.getOrDefault(curse, Set.of()), Reason.EXPLICIT, gameTime, NeoForge.EVENT_BUS).isPresent())
+                    removedAny = true;
+            }
+            CurseScheduler.reschedule(target);
+            if (removedAny) CurseTriggerSubscriptions.rebuild(target);
+            return true;
         }
-        CurseScheduler.reschedule(target);
-        if (removedAny) CurseTriggerSubscriptions.rebuild(target);
-        return true;
     }
 
     // Expiry and cleansing are the only two moments a curse reacts to on its own, so they own an action each;
@@ -229,36 +260,38 @@ public final class CurseService {
 
     public static int tick(Entity target, long gameTime,
                            FormulaContext context) {
-        CurseHolderAttachment data = target.getData(MxtAttachments.CURSE_HOLDER);
-        int executed = 0;
-        boolean changed = false;
-        // The attachment's own order, snapshotted before anything runs: it is the order the instances were
-        // applied in and it is persisted with them, unlike a sort by definition id.
-        for (Entry<Holder<Curse>, State> entry : List.copyOf(data.instances().entrySet())) {
-            Holder<Curse> curse = entry.getKey();
-            State state = entry.getValue();
-            changed |= data.markKnown(curse);
-            Curse definition = curse.value();
-            if (definition.typedType().inert()) continue;
-            if (state.expiredAt(gameTime) && remove(target, curse, Reason.EXPIRED, gameTime, context).isPresent()) {
-                changed = true;
-                continue;
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.CURSE)) {
+            CurseHolderAttachment data = target.getData(MxtAttachments.CURSE_HOLDER);
+            int executed = 0;
+            boolean changed = false;
+            // The attachment's own order, snapshotted before anything runs: it is the order the instances were
+            // applied in and it is persisted with them, unlike a sort by definition id.
+            for (Entry<Holder<Curse>, State> entry : List.copyOf(data.instances().entrySet())) {
+                Holder<Curse> curse = entry.getKey();
+                State state = entry.getValue();
+                changed |= data.markKnown(curse);
+                Curse definition = curse.value();
+                if (definition.typedType().inert()) continue;
+                if (state.expiredAt(gameTime) && remove(target, curse, Reason.EXPIRED, gameTime, context).isPresent()) {
+                    changed = true;
+                    continue;
+                }
+                // A triggered curse waits for its triggers, so this loop never runs its effect.
+                if (definition.typedType() instanceof TriggeredCurseType) continue;
+                double interval = definition.tickInterval().evaluate(context);
+                if (MiscUtil.positive(interval) > 0.0D
+                        && gameTime >= state.appliedAt()
+                        && (gameTime - state.appliedAt()) % Math.max(1L, Math.round(interval)) == 0L) {
+                    definition.onTick().execute(target, context);
+                    executed++;
+                }
             }
-            // A triggered curse waits for its triggers, so this loop never runs its effect.
-            if (definition.typedType() instanceof TriggeredCurseType) continue;
-            double interval = definition.tickInterval().evaluate(context);
-            if (MiscUtil.positive(interval) > 0.0D
-                    && gameTime >= state.appliedAt()
-                    && (gameTime - state.appliedAt()) % Math.max(1L, Math.round(interval)) == 0L) {
-                definition.onTick().execute(target, context);
-                executed++;
+            if (changed) {
+                CurseScheduler.reschedule(target);
+                CurseTriggerSubscriptions.rebuild(target);
             }
+            return executed;
         }
-        if (changed) {
-            CurseScheduler.reschedule(target);
-            CurseTriggerSubscriptions.rebuild(target);
-        }
-        return executed;
     }
 
     private static String transactionKey(Entity entity, Holder<Curse> curse) {

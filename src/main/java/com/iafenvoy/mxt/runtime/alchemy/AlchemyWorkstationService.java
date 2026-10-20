@@ -26,6 +26,8 @@ import com.iafenvoy.mxt.runtime.world.AuraService;
 import com.iafenvoy.mxt.util.MiscUtil;
 import com.iafenvoy.mxt.util.codec.CollectionCodecs;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
+import com.iafenvoy.mxt.util.profiling.ProfilerScope;
+import com.iafenvoy.mxt.util.profiling.ServerProfiling;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -73,70 +75,75 @@ public final class AlchemyWorkstationService {
     }
 
     public static AlchemyPreview preview(ServerPlayer player, AlchemyWorkstation station) {
-        // The potency formulas read no core: the mixture is what decides which formulas match, so a better core must
-        // not move it. Only the recipe's own formulas read the tier (its thresholds, temperature, duration and
-        // environment), and the batch's length shortens by the core tier's own alchemy_modifier in parameters().
-        FormulaContext context = FormulaContext.of(player);
-        AlchemyMixture mixture = AlchemyResolver.mixture(player.registryAccess(), slots(station.container()), context);
-        List<Candidate> candidates = AlchemyResolver.candidates(player.level().getServer().getRecipeManager(), mixture,
-                context.with(AlchemyRecipe.FURNACE_RANK, furnaceRank(player.registryAccess(), station.furnaceItem())));
-        Candidate chosen = AlchemyResolver.dominating(candidates);
-        Failure blocker = recipeBlocker(candidates, chosen);
-        Optional<Parameters> numbers = Optional.empty();
-        List<ItemStack> success = List.of(), failure = List.of();
-        QualityRequirement required = null, inputRequired = null;
-        if (chosen != null) {
-            Optional<RecipeHolder<AlchemyRecipe>> holder = recipe(player.level().getServer().getRecipeManager(), chosen.id());
-            if (holder.isPresent()) {
-                required = holder.get().value().furnaceQuality().orElse(null);
-                inputRequired = holder.get().value().inputQuality().orElse(null);
-                numbers = parameters(player, station, holder.get().value(), chosen.evaluated(), context);
-                List<ItemStack> madeSuccess = create(holder.get().value().successOutputs());
-                List<ItemStack> madeFailure = create(holder.get().value().failureOutputs());
-                if (madeSuccess == null || madeFailure == null) blocker = Failures.INVALID_FORMULA;
-                else {
-                    success = madeSuccess;
-                    failure = madeFailure;
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.ALCHEMY)) {
+            // The potency formulas read no core: the mixture is what decides which formulas match, so a better core must
+            // not move it. Only the recipe's own formulas read the tier (its thresholds, temperature, duration and
+            // environment), and the batch's length shortens by the core tier's own alchemy_modifier in parameters().
+            FormulaContext context = FormulaContext.of(player);
+            AlchemyMixture mixture = AlchemyResolver.mixture(player.registryAccess(), slots(station.container()), context);
+            List<Candidate> candidates = AlchemyResolver.candidates(player.level().getServer().getRecipeManager(), mixture,
+                    context.with(AlchemyRecipe.FURNACE_RANK, furnaceRank(player.registryAccess(), station.furnaceItem())));
+            Candidate chosen = AlchemyResolver.dominating(candidates);
+            Failure blocker = recipeBlocker(candidates, chosen);
+            Optional<Parameters> numbers = Optional.empty();
+            List<ItemStack> success = List.of(), failure = List.of();
+            QualityRequirement required = null, inputRequired = null;
+            if (chosen != null) {
+                Optional<RecipeHolder<AlchemyRecipe>> holder = recipe(player.level().getServer().getRecipeManager(), chosen.id());
+                if (holder.isPresent()) {
+                    required = holder.get().value().furnaceQuality().orElse(null);
+                    inputRequired = holder.get().value().inputQuality().orElse(null);
+                    numbers = parameters(player, station, holder.get().value(), chosen.evaluated(), context);
+                    List<ItemStack> madeSuccess = create(holder.get().value().successOutputs());
+                    List<ItemStack> madeFailure = create(holder.get().value().failureOutputs());
+                    if (madeSuccess == null || madeFailure == null) blocker = Failures.INVALID_FORMULA;
+                    else {
+                        success = madeSuccess;
+                        failure = madeFailure;
+                    }
                 }
+                if (numbers.isEmpty()) blocker = Failures.INVALID_FORMULA;
             }
-            if (numbers.isEmpty()) blocker = Failures.INVALID_FORMULA;
+            if (mixture.inputFailure().isPresent()) blocker = mixture.inputFailure().get();
+            AlchemyFurnaceDefinition spec = station.furnaceDefinition().map(Holder::value).orElse(null);
+            Optional<Failure> qualityFailure = Optional.empty();
+            if (station.state().busy()) blocker = AlchemyFailure.ACTIVE;
+            else if (!station.structureStatus().complete()) blocker = AlchemyFailure.STRUCTURE;
+            else if (spec == null) blocker = AlchemyFailure.NO_FURNACE;
+            else if (QualityService.find(player.registryAccess(), station.furnaceItem()).isEmpty())
+                blocker = AlchemyFailure.FURNACE_QUALITY;
+            else if (required != null && !QualityRequirements.test(player.registryAccess(), station.furnaceItem(), required))
+                blocker = AlchemyFailure.FURNACE_TIER;
+            else if (inputRequired != null && !inputsSatisfy(player.registryAccess(), station.container(), inputRequired))
+                blocker = AlchemyFailure.INPUT_TIER;
+            else {
+                qualityFailure = QualityService.check(player, station.furnaceItem());
+                Failure placed = placement(station.container(), spec);
+                if (qualityFailure.isPresent()) blocker = mapQuality(qualityFailure.get());
+                else if (placed != null) blocker = placed;
+            }
+            // Temperature and output capacity never choose a weaker match. They only accept or reject the dominator.
+            if (blocker == null && numbers.isPresent()) {
+                Parameters process = numbers.get();
+                if (!reachable(station, process)) blocker = AlchemyFailure.TEMPERATURE;
+                else if (!environment(player.level(), station.getBlockPos(), process))
+                    blocker = AlchemyFailure.ENVIRONMENT;
+                else if (!canAccept(station.container(), success)) blocker = AlchemyFailure.OUTPUT_CAPACITY;
+            }
+            Optional<ResourceKey<Recipe<?>>> resolved = chosen == null ? Optional.empty() : Optional.of(chosen.id());
+            return new AlchemyPreview(mixture, candidates, resolved, Optional.ofNullable(blocker), numbers, qualityFailure, success, failure);
         }
-        if (mixture.inputFailure().isPresent()) blocker = mixture.inputFailure().get();
-        AlchemyFurnaceDefinition spec = station.furnaceDefinition().map(Holder::value).orElse(null);
-        Optional<Failure> qualityFailure = Optional.empty();
-        if (station.state().busy()) blocker = AlchemyFailure.ACTIVE;
-        else if (!station.structureStatus().complete()) blocker = AlchemyFailure.STRUCTURE;
-        else if (spec == null) blocker = AlchemyFailure.NO_FURNACE;
-        else if (QualityService.find(player.registryAccess(), station.furnaceItem()).isEmpty())
-            blocker = AlchemyFailure.FURNACE_QUALITY;
-        else if (required != null && !QualityRequirements.test(player.registryAccess(), station.furnaceItem(), required))
-            blocker = AlchemyFailure.FURNACE_TIER;
-        else if (inputRequired != null && !inputsSatisfy(player.registryAccess(), station.container(), inputRequired))
-            blocker = AlchemyFailure.INPUT_TIER;
-        else {
-            qualityFailure = QualityService.check(player, station.furnaceItem());
-            Failure placed = placement(station.container(), spec);
-            if (qualityFailure.isPresent()) blocker = mapQuality(qualityFailure.get());
-            else if (placed != null) blocker = placed;
-        }
-        // Temperature and output capacity never choose a weaker match. They only accept or reject the dominator.
-        if (blocker == null && numbers.isPresent()) {
-            Parameters process = numbers.get();
-            if (!reachable(station, process)) blocker = AlchemyFailure.TEMPERATURE;
-            else if (!environment(player.level(), station.getBlockPos(), process)) blocker = AlchemyFailure.ENVIRONMENT;
-            else if (!canAccept(station.container(), success)) blocker = AlchemyFailure.OUTPUT_CAPACITY;
-        }
-        Optional<ResourceKey<Recipe<?>>> resolved = chosen == null ? Optional.empty() : Optional.of(chosen.id());
-        return new AlchemyPreview(mixture, candidates, resolved, Optional.ofNullable(blocker), numbers, qualityFailure, success, failure);
     }
 
     public static StartResult start(ServerPlayer player, AlchemyWorkstation station) {
-        Set<AlchemyWorkstationState> starting = IN_TRANSACTION.get();
-        if (!starting.add(station.state())) return StartResult.rejected(AlchemyFailure.ACTIVE);
-        try {
-            return startGuarded(player, station);
-        } finally {
-            starting.remove(station.state());
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.ALCHEMY)) {
+            Set<AlchemyWorkstationState> starting = IN_TRANSACTION.get();
+            if (!starting.add(station.state())) return StartResult.rejected(AlchemyFailure.ACTIVE);
+            try {
+                return startGuarded(player, station);
+            } finally {
+                starting.remove(station.state());
+            }
         }
     }
 
@@ -169,47 +176,53 @@ public final class AlchemyWorkstationService {
     }
 
     public static void abort(ServerLevel level, BlockPos pos, AlchemyWorkstation station) {
-        abort(level, pos, station, AlchemyFailure.CANCELLED);
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.ALCHEMY)) {
+            abort(level, pos, station, AlchemyFailure.CANCELLED);
+        }
     }
 
     public static void abort(ServerLevel level, BlockPos pos, AlchemyWorkstation station, Failure reason) {
-        AlchemySession session = station.state().session().orElse(null);
-        if (session == null || session.phase() == AlchemyPhase.READY || session.settled()) return;
-        session.scrap(reason);
-        station.setChanged();
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.ALCHEMY)) {
+            AlchemySession session = station.state().session().orElse(null);
+            if (session == null || session.phase() == AlchemyPhase.READY || session.settled()) return;
+            session.scrap(reason);
+            station.setChanged();
+        }
     }
 
     public static void tick(ServerLevel level, BlockPos pos, AlchemyWorkstation station) {
-        AlchemyWorkstationState state = station.state();
-        AlchemySession session = state.session().orElse(null);
-        double temperature = state.temperature();
-        AlchemyPhase phase = state.phase();
-        long remaining = session == null ? 0 : session.remainingTicks();
-        int badTicks = session == null ? 0 : session.badTicks();
-        Optional<Holder<AlchemyFurnaceDefinition>> furnace = station.furnaceDefinition();
-        if (state.active()) {
-            AlchemyFurnaceStructure.Status structure = station.structureStatus();
-            if (!structure.missing().isEmpty() || !structure.conflicts().isEmpty())
-                abort(level, pos, station, AlchemyFailure.STRUCTURE);
-            else if (!structure.unloaded().isEmpty()) return;
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.ALCHEMY)) {
+            AlchemyWorkstationState state = station.state();
+            AlchemySession session = state.session().orElse(null);
+            double temperature = state.temperature();
+            AlchemyPhase phase = state.phase();
+            long remaining = session == null ? 0 : session.remainingTicks();
+            int badTicks = session == null ? 0 : session.badTicks();
+            Optional<Holder<AlchemyFurnaceDefinition>> furnace = station.furnaceDefinition();
+            if (state.active()) {
+                AlchemyFurnaceStructure.Status structure = station.structureStatus();
+                if (!structure.missing().isEmpty() || !structure.conflicts().isEmpty())
+                    abort(level, pos, station, AlchemyFailure.STRUCTURE);
+                else if (!structure.unloaded().isEmpty()) return;
 
-            if (furnace.isEmpty()) abort(level, pos, station, AlchemyFailure.DISABLED);
-            else {
-                heat(level, station, furnace.get().value());
-                assert session != null;
-                if (session.phase() == AlchemyPhase.WARMING && session.inRange(state.temperature()))
-                    session.enterRunning();
-                if (session.phase() == AlchemyPhase.RUNNING) session.tickRunning(state.temperature());
-                if (session.due()) session.generatePending();
-            }
-        } else
-            furnace.ifPresent(alchemyFurnaceDefinitionHolder -> cool(state, alchemyFurnaceDefinitionHolder.value().coolingPerTick(), 0.0D));
-        if (session != null && session.phase() == AlchemyPhase.READY && !session.settled())
-            settle(level, pos, station, session);
-        if (temperature != state.temperature() || phase != state.phase()
-                || session != state.session().orElse(null)
-                || session != null && (remaining != session.remainingTicks() || badTicks != session.badTicks()))
-            station.setChanged();
+                if (furnace.isEmpty()) abort(level, pos, station, AlchemyFailure.DISABLED);
+                else {
+                    heat(level, station, furnace.get().value());
+                    assert session != null;
+                    if (session.phase() == AlchemyPhase.WARMING && session.inRange(state.temperature()))
+                        session.enterRunning();
+                    if (session.phase() == AlchemyPhase.RUNNING) session.tickRunning(state.temperature());
+                    if (session.due()) session.generatePending();
+                }
+            } else
+                furnace.ifPresent(alchemyFurnaceDefinitionHolder -> cool(state, alchemyFurnaceDefinitionHolder.value().coolingPerTick(), 0.0D));
+            if (session != null && session.phase() == AlchemyPhase.READY && !session.settled())
+                settle(level, pos, station, session);
+            if (temperature != state.temperature() || phase != state.phase()
+                    || session != state.session().orElse(null)
+                    || session != null && (remaining != session.remainingTicks() || badTicks != session.badTicks()))
+                station.setChanged();
+        }
     }
 
     private static void heat(ServerLevel level, AlchemyWorkstation station, AlchemyFurnaceDefinition spec) {

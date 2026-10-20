@@ -2,6 +2,8 @@ package com.iafenvoy.mxt.runtime.economy;
 
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.screen.menu.PlayerTradeMenu;
+import com.iafenvoy.mxt.util.profiling.ProfilerScope;
+import com.iafenvoy.mxt.util.profiling.ServerProfiling;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.ComponentSerialization;
@@ -62,39 +64,43 @@ public final class PlayerTradeService {
     }
 
     public static RequestResult request(ServerPlayer requester, ServerPlayer target) {
-        if (requester.distanceToSqr(target) > 25.0D) return RequestResult.TOO_FAR;
-        if (requester == target) {
-            if (!allowsSelfTrade()) return RequestResult.SELF;
-            if (SESSIONS.containsKey(requester.getUUID())) return RequestResult.BUSY;
-            // No request, no reciprocal confirm: the one player is both sides of the session from here on.
-            new Session(requester, target).open();
-            return RequestResult.STARTED;
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.ECONOMY)) {
+            if (requester.distanceToSqr(target) > 25.0D) return RequestResult.TOO_FAR;
+            if (requester == target) {
+                if (!allowsSelfTrade()) return RequestResult.SELF;
+                if (SESSIONS.containsKey(requester.getUUID())) return RequestResult.BUSY;
+                // No request, no reciprocal confirm: the one player is both sides of the session from here on.
+                new Session(requester, target).open();
+                return RequestResult.STARTED;
+            }
+            if (SESSIONS.containsKey(requester.getUUID()) || SESSIONS.containsKey(target.getUUID()))
+                return RequestResult.BUSY;
+            long now = requester.level().getGameTime();
+            removeExpiredRequests(now);
+            Request reciprocal = REQUESTS.get(target.getUUID());
+            if (reciprocal != null && reciprocal.target().equals(requester.getUUID())) {
+                REQUESTS.remove(target.getUUID());
+                REQUESTS.remove(requester.getUUID());
+                new Session(requester, target).open();
+                return RequestResult.STARTED;
+            }
+            REQUESTS.put(requester.getUUID(), new Request(target.getUUID(), now + REQUEST_LIFETIME_TICKS));
+            return RequestResult.SENT;
         }
-        if (SESSIONS.containsKey(requester.getUUID()) || SESSIONS.containsKey(target.getUUID()))
-            return RequestResult.BUSY;
-        long now = requester.level().getGameTime();
-        removeExpiredRequests(now);
-        Request reciprocal = REQUESTS.get(target.getUUID());
-        if (reciprocal != null && reciprocal.target().equals(requester.getUUID())) {
-            REQUESTS.remove(target.getUUID());
-            REQUESTS.remove(requester.getUUID());
-            new Session(requester, target).open();
-            return RequestResult.STARTED;
-        }
-        REQUESTS.put(requester.getUUID(), new Request(target.getUUID(), now + REQUEST_LIFETIME_TICKS));
-        return RequestResult.SENT;
     }
 
     public static void handleAction(ServerPlayer player, PlayerTradeAction action) {
-        Session session = SESSIONS.get(player.getUUID());
-        if (session == null) return;
-        Side side = session.side(player);
-        if (side == null || (action != PlayerTradeAction.CLOSE && player.containerMenu != side.menu))
-            return;
-        switch (action) {
-            case ACCEPT -> session.setAccepted(side, true);
-            case CANCEL_ACCEPT -> session.setAccepted(side, false);
-            case CLOSE -> session.cancel(player.getDisplayName());
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.ECONOMY)) {
+            Session session = SESSIONS.get(player.getUUID());
+            if (session == null) return;
+            Side side = session.side(player);
+            if (side == null || (action != PlayerTradeAction.CLOSE && player.containerMenu != side.menu))
+                return;
+            switch (action) {
+                case ACCEPT -> session.setAccepted(side, true);
+                case CANCEL_ACCEPT -> session.setAccepted(side, false);
+                case CLOSE -> session.cancel(player.getDisplayName());
+            }
         }
     }
 
@@ -102,13 +108,15 @@ public final class PlayerTradeService {
     // connected, which lazy expiry cannot observe.
     @SubscribeEvent
     public static void onLevelTick(Post event) {
-        if (!(event.getLevel() instanceof ServerLevel level)) return;
-        if (level.getGameTime() % STALE_CHECK_INTERVAL_TICKS != 0L) return;
-        for (Session session : new LinkedHashSet<>(SESSIONS.values())) {
-            if (session.isLive()) continue;
-            session.discard(null);
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.ECONOMY)) {
+            if (!(event.getLevel() instanceof ServerLevel level)) return;
+            if (level.getGameTime() % STALE_CHECK_INTERVAL_TICKS != 0L) return;
+            for (Session session : new LinkedHashSet<>(SESSIONS.values())) {
+                if (session.isLive()) continue;
+                session.discard(null);
+            }
+            removeExpiredRequests(level.getGameTime());
         }
-        removeExpiredRequests(level.getGameTime());
     }
 
     // A disconnect must not leave partner items inside an offer container that nobody can reach.
@@ -137,11 +145,13 @@ public final class PlayerTradeService {
     // A menu that goes away on its own - the vanilla close packet, a replaced menu, a dimension change - ends the
     // session too: the custom CLOSE is a UI intent, never the only way out.
     public static void onMenuClosed(ServerPlayer player, PlayerTradeMenu menu) {
-        Session session = SESSIONS.get(player.getUUID());
-        if (session == null) return;
-        Side side = session.side(player);
-        if (side == null || side.menu != menu) return;
-        session.discard(side);
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.ECONOMY)) {
+            Session session = SESSIONS.get(player.getUUID());
+            if (session == null) return;
+            Side side = session.side(player);
+            if (side == null || side.menu != menu) return;
+            session.discard(side);
+        }
     }
 
     // Whether this player still holds the session's own menu. Server only: a client's mirror menu belongs to a
@@ -156,11 +166,13 @@ public final class PlayerTradeService {
     // Either offer container changed. Both sides' confirmations cover both offers, so a change on one side has to be
     // able to clear the other side's too - which is why this is a session call and not a side one.
     public static void offerChanged(ServerPlayer player, PlayerTradeMenu menu) {
-        Session session = SESSIONS.get(player.getUUID());
-        if (session == null) return;
-        Side side = session.side(player);
-        if (side == null || side.menu != menu) return;
-        session.offerTouched();
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.ECONOMY)) {
+            Session session = SESSIONS.get(player.getUUID());
+            if (session == null) return;
+            Side side = session.side(player);
+            if (side == null || side.menu != menu) return;
+            session.offerTouched();
+        }
     }
 
     // Removes one side's entry only when it still points at the given session, so a newer session registered

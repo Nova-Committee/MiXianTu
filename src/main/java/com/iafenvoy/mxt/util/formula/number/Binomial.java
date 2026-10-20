@@ -20,7 +20,7 @@ public record Binomial(NumberProvider trials, NumberProvider probability) implem
         if (rawTrials < 0.0D || rawTrials > MAX_TRIALS || Math.rint(rawTrials) != rawTrials
                 || !(chance >= 0.0D) || chance > 1.0D) {
             FormulaVariables.LOGGER.log("Number provider Binomial received the invalid parameters n=" + rawTrials
-                        + ", p=" + chance + "; using 0");
+                    + ", p=" + chance + "; using 0");
             return 0.0D;
         }
         int result = 0;

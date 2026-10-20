@@ -3,6 +3,8 @@ package com.iafenvoy.mxt.runtime.perch;
 import com.iafenvoy.mxt.attachment.PerchAttachment;
 import com.iafenvoy.mxt.config.MxtServerConfig;
 import com.iafenvoy.mxt.registry.MxtAttachments;
+import com.iafenvoy.mxt.util.profiling.ProfilerScope;
+import com.iafenvoy.mxt.util.profiling.ServerProfiling;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
@@ -25,19 +27,21 @@ public final class PerchEventBridge {
 
     @SubscribeEvent
     public static void onEntityTick(EntityTickEvent.Post event) {
-        Entity passenger = event.getEntity();
-        if (passenger.level().isClientSide()) return;
-        PerchAttachment perch = passenger.getExistingData(MxtAttachments.PERCH).orElse(null);
-        if (perch == null || !perch.perched()) return;
-        Entity vehicle = passenger.getVehicle();
-        // A vehicle that is gone is not a policy question: the record would otherwise outlive the ride and place
-        // the creature at a stale offset the moment it rode anything else. It goes through the service like every
-        // other clearing, so the ride ends with it and a creature answering the contract is told.
-        if (vehicle == null || !vehicle.isAlive()) {
-            PerchService.release(passenger);
-            return;
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.CREATURE)) {
+            Entity passenger = event.getEntity();
+            if (passenger.level().isClientSide()) return;
+            PerchAttachment perch = passenger.getExistingData(MxtAttachments.PERCH).orElse(null);
+            if (perch == null || !perch.perched()) return;
+            Entity vehicle = passenger.getVehicle();
+            // A vehicle that is gone is not a policy question: the record would otherwise outlive the ride and place
+            // the creature at a stale offset the moment it rode anything else. It goes through the service like every
+            // other clearing, so the ride ends with it and a creature answering the contract is told.
+            if (vehicle == null || !vehicle.isAlive()) {
+                PerchService.release(passenger);
+                return;
+            }
+            if (shouldRelease(vehicle)) PerchService.release(passenger);
         }
-        if (shouldRelease(vehicle)) PerchService.release(passenger);
     }
 
     private static boolean shouldRelease(Entity vehicle) {

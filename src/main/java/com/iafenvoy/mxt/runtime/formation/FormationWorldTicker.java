@@ -13,6 +13,8 @@ import com.iafenvoy.mxt.runtime.Sources;
 import com.iafenvoy.mxt.runtime.cultivation.AuraDistributionService;
 import com.iafenvoy.mxt.runtime.resulting.Result;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
+import com.iafenvoy.mxt.util.profiling.ProfilerScope;
+import com.iafenvoy.mxt.util.profiling.ServerProfiling;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
@@ -48,37 +50,39 @@ public final class FormationWorldTicker {
     // One dispatch pass over every active formation: validate, charge upkeep, run the modules, then the sweep that
     // releases grants from formations a player has left. Only the first two are per period.
     public static void dispatch(ServerLevel level, long gameTime) {
-        boolean period = FormationIntervals.periodDue(gameTime);
-        FormationWorldAttachment world = level.getData(MxtAttachments.FORMATION_WORLD);
-        for (Entry<BlockPos, FormationInstance> entry : world.formations().entrySet()) {
-            Optional<Formation> definition = MxtDatapackRegistries.get(level.registryAccess(), MxtResourceKeys.FORMATION, entry.getValue().formation());
-            // A definition that no longer resolves is taken down at once; a standing structure is re-checked on its
-            // own period, because re-reading a template twice a second is not what a finer beat is for.
-            if (definition.isEmpty()) {
-                FormationWorldService.deactivate(level, entry.getKey());
-                continue;
-            }
-            if (period && !FormationStructureValidator.of(definition.get()).matches(level, entry.getKey(), definition.get())) {
-                FormationWorldService.deactivate(level, entry.getKey());
-                continue;
-            }
-            // The attachment holds the instance itself, so upkeep and its counter are updated in place:
-            // there is no write-back that a later branch could skip and silently drop the payment.
-            FormationInstance instance = entry.getValue();
-            if (period) {
-                if (!definition.get().maintenanceCosts().isEmpty() && !chargeUpkeep(level, entry.getKey(), instance, definition.get()))
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.FORMATION)) {
+            boolean period = FormationIntervals.periodDue(gameTime);
+            FormationWorldAttachment world = level.getData(MxtAttachments.FORMATION_WORLD);
+            for (Entry<BlockPos, FormationInstance> entry : world.formations().entrySet()) {
+                Optional<Formation> definition = MxtDatapackRegistries.get(level.registryAccess(), MxtResourceKeys.FORMATION, entry.getValue().formation());
+                // A definition that no longer resolves is taken down at once; a standing structure is re-checked on its
+                // own period, because re-reading a template twice a second is not what a finer beat is for.
+                if (definition.isEmpty()) {
+                    FormationWorldService.deactivate(level, entry.getKey());
                     continue;
-                NeoForge.EVENT_BUS.post(new Tick(level, entry.getKey(), instance));
+                }
+                if (period && !FormationStructureValidator.of(definition.get()).matches(level, entry.getKey(), definition.get())) {
+                    FormationWorldService.deactivate(level, entry.getKey());
+                    continue;
+                }
+                // The attachment holds the instance itself, so upkeep and its counter are updated in place:
+                // there is no write-back that a later branch could skip and silently drop the payment.
+                FormationInstance instance = entry.getValue();
+                if (period) {
+                    if (!definition.get().maintenanceCosts().isEmpty() && !chargeUpkeep(level, entry.getKey(), instance, definition.get()))
+                        continue;
+                    NeoForge.EVENT_BUS.post(new Tick(level, entry.getKey(), instance));
+                }
+                // Settled and paid for, so observers see it. Cancelling TickEffects skips the work of this one beat.
+                if (NeoForge.EVENT_BUS.post(new TickEffects(level, entry.getKey(), instance)).isCanceled()) continue;
+                // The array's own beat first, then the entities it covers: a per-entity module reads the state the
+                // array's own modules left behind.
+                FormationActionRunner.periodic(definition.get(),
+                        FormationActionContext.array(level, entry.getKey(), instance), gameTime);
+                executeEntityActions(level, entry.getKey(), instance, definition.get());
             }
-            // Settled and paid for, so observers see it. Cancelling TickEffects skips the work of this one beat.
-            if (NeoForge.EVENT_BUS.post(new TickEffects(level, entry.getKey(), instance)).isCanceled()) continue;
-            // The array's own beat first, then the entities it covers: a per-entity module reads the state the
-            // array's own modules left behind.
-            FormationActionRunner.periodic(definition.get(),
-                    FormationActionContext.array(level, entry.getKey(), instance), gameTime);
-            executeEntityActions(level, entry.getKey(), instance, definition.get());
+            if (period) for (ServerPlayer player : level.players()) releaseOutside(level, player);
         }
-        if (period) for (ServerPlayer player : level.players()) releaseOutside(level, player);
     }
 
     // Returns whether the beat may continue; false means the formation was taken down, or a listener cancelled

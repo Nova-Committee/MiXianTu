@@ -11,6 +11,8 @@ import com.iafenvoy.mxt.runtime.resulting.Failures;
 import com.iafenvoy.mxt.runtime.resulting.Result;
 import com.iafenvoy.mxt.runtime.resulting.failures.QualityFailure;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
+import com.iafenvoy.mxt.util.profiling.ProfilerScope;
+import com.iafenvoy.mxt.util.profiling.ServerProfiling;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.world.entity.LivingEntity;
@@ -32,26 +34,28 @@ public final class QualityUpgradeService {
     }
 
     public static UpgradeResult upgrade(LivingEntity actor, ItemStack stack) {
-        if (actor.level().isClientSide()) return UpgradeResult.rejected(Failures.SERVER_ONLY);
-        if (stack.isEmpty()) return UpgradeResult.rejected(QualityFailure.EMPTY);
-        Provider access = actor.level().registryAccess();
-        Holder<ItemQuality> current = QualityService.find(access, stack).orElse(null);
-        if (current == null) return UpgradeResult.rejected(QualityFailure.NO_QUALITY);
-        ChainCache<ItemQuality> ladders = QualityLadders.cache();
-        // A tier no ladder holds has nothing to climb, and a ladder the walk refused whole leaves all of its tiers
-        // out, so a broken ladder lands here too.
-        if (!ladders.contains(current)) return UpgradeResult.rejected(QualityFailure.NO_CHAIN);
-        Holder<ItemQuality> next = ladders.next(current).orElse(null);
-        if (next == null) return UpgradeResult.rejected(QualityFailure.AT_TOP);
-        ItemQuality step = next.value();
-        FormulaContext formula = FormulaContext.of(actor);
-        if (!step.upgradeCondition().test(actor, formula)) return UpgradeResult.rejected(Failures.CONDITION_FAILED);
-        CostContext context = CostContext.of(actor, formula, CostOrigin.QUALITY_UPGRADE);
-        CostPayment.PaymentResult payment = CostPayment.pay(step.upgradeCosts(), context);
-        // The tier is written only after the price is actually paid, so a refusal leaves the stack untouched.
-        if (!payment.isSuccess()) return UpgradeResult.rejected(payment.failure());
-        QualityService.set(stack, next);
-        return UpgradeResult.upgraded(current, next);
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.ITEM)) {
+            if (actor.level().isClientSide()) return UpgradeResult.rejected(Failures.SERVER_ONLY);
+            if (stack.isEmpty()) return UpgradeResult.rejected(QualityFailure.EMPTY);
+            Provider access = actor.level().registryAccess();
+            Holder<ItemQuality> current = QualityService.find(access, stack).orElse(null);
+            if (current == null) return UpgradeResult.rejected(QualityFailure.NO_QUALITY);
+            ChainCache<ItemQuality> ladders = QualityLadders.cache();
+            // A tier no ladder holds has nothing to climb, and a ladder the walk refused whole leaves all of its tiers
+            // out, so a broken ladder lands here too.
+            if (!ladders.contains(current)) return UpgradeResult.rejected(QualityFailure.NO_CHAIN);
+            Holder<ItemQuality> next = ladders.next(current).orElse(null);
+            if (next == null) return UpgradeResult.rejected(QualityFailure.AT_TOP);
+            ItemQuality step = next.value();
+            FormulaContext formula = FormulaContext.of(actor);
+            if (!step.upgradeCondition().test(actor, formula)) return UpgradeResult.rejected(Failures.CONDITION_FAILED);
+            CostContext context = CostContext.of(actor, formula, CostOrigin.QUALITY_UPGRADE);
+            CostPayment.PaymentResult payment = CostPayment.pay(step.upgradeCosts(), context);
+            // The tier is written only after the price is actually paid, so a refusal leaves the stack untouched.
+            if (!payment.isSuccess()) return UpgradeResult.rejected(payment.failure());
+            QualityService.set(stack, next);
+            return UpgradeResult.upgraded(current, next);
+        }
     }
 
     public static boolean canUpgrade(LivingEntity actor, ItemStack stack) {

@@ -3,6 +3,8 @@ package com.iafenvoy.mxt.runtime.world;
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.data.secretrealm.SecretRealm;
 import com.iafenvoy.mxt.data.secretrealm.SecretRealm.StructurePlacement;
+import com.iafenvoy.mxt.util.profiling.ProfilerScope;
+import com.iafenvoy.mxt.util.profiling.ServerProfiling;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.Mth;
@@ -31,25 +33,27 @@ public final class SecretRealmStructurePlacer {
     }
 
     public static void place(ServerLevel level, SecretRealmRecord record, Vec3 anchor) {
-        StructureTemplateManager manager = level.getStructureManager();
-        RandomSource random = RandomSource.create(record.seed().orElse(level.getSeed()) ^ 0x9E3779B97F4A7C15L);
-        for (StructurePlacement placement : record.instance().structures()) {
-            if (placement.chance() < 1.0D && random.nextDouble() >= placement.chance()) continue;
-            Optional<StructureTemplate> template = manager.get(placement.nbt());
-            if (template.isEmpty()) {
-                MiXianTu.LOGGER.error("Missing secret realm structure template {}", placement.nbt());
-                continue;
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.SECRET_REALM)) {
+            StructureTemplateManager manager = level.getStructureManager();
+            RandomSource random = RandomSource.create(record.seed().orElse(level.getSeed()) ^ 0x9E3779B97F4A7C15L);
+            for (StructurePlacement placement : record.instance().structures()) {
+                if (placement.chance() < 1.0D && random.nextDouble() >= placement.chance()) continue;
+                Optional<StructureTemplate> template = manager.get(placement.nbt());
+                if (template.isEmpty()) {
+                    MiXianTu.LOGGER.error("Missing secret realm structure template {}", placement.nbt());
+                    continue;
+                }
+                BlockPos pos = placement.relativeToEntry() ? offset(anchor, placement.pos()) : placement.pos();
+                StructurePlaceSettings settings = new StructurePlaceSettings()
+                        .setRotation(rotation(placement.rotation()))
+                        .setMirror(mirror(placement.mirror()))
+                        .setIgnoreEntities(placement.ignoreEntities())
+                        .setLiquidSettings(placement.keepLiquids() ? LiquidSettings.APPLY_WATERLOGGING : LiquidSettings.IGNORE_WATERLOGGING);
+                if (placement.integrity() < 1.0D)
+                    settings.addProcessor(new BlockRotProcessor((float) placement.integrity()));
+                level.getChunkAt(pos);
+                template.get().placeInWorld(level, pos, pos, settings, random, Block.UPDATE_CLIENTS);
             }
-            BlockPos pos = placement.relativeToEntry() ? offset(anchor, placement.pos()) : placement.pos();
-            StructurePlaceSettings settings = new StructurePlaceSettings()
-                    .setRotation(rotation(placement.rotation()))
-                    .setMirror(mirror(placement.mirror()))
-                    .setIgnoreEntities(placement.ignoreEntities())
-                    .setLiquidSettings(placement.keepLiquids() ? LiquidSettings.APPLY_WATERLOGGING : LiquidSettings.IGNORE_WATERLOGGING);
-            if (placement.integrity() < 1.0D)
-                settings.addProcessor(new BlockRotProcessor((float) placement.integrity()));
-            level.getChunkAt(pos);
-            template.get().placeInWorld(level, pos, pos, settings, random, Block.UPDATE_CLIENTS);
         }
     }
 

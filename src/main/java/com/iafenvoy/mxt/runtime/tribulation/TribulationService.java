@@ -9,7 +9,6 @@ import com.iafenvoy.mxt.data.timeline.TimelineEntry.Outcome;
 import com.iafenvoy.mxt.data.timeline.TimelineJump;
 import com.iafenvoy.mxt.data.timeline.TimelineState;
 import com.iafenvoy.mxt.event.TribulationEvent.*;
-import com.iafenvoy.mxt.runtime.resulting.Failure;
 import com.iafenvoy.mxt.runtime.resulting.Failures;
 import com.iafenvoy.mxt.runtime.resulting.Result;
 import com.iafenvoy.mxt.runtime.resulting.ResultWithData;
@@ -19,6 +18,8 @@ import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.profiling.LoggerDispatcher;
 import com.iafenvoy.mxt.util.profiling.LoggingLevel;
+import com.iafenvoy.mxt.util.profiling.ProfilerScope;
+import com.iafenvoy.mxt.util.profiling.ServerProfiling;
 import com.mojang.logging.LogUtils;
 import net.minecraft.core.Holder;
 import net.minecraft.world.entity.LivingEntity;
@@ -52,95 +53,102 @@ public final class TribulationService {
     }
 
     public static Result start(LivingEntity entity, TribulationAttachment data, Holder<Tribulation> tribulation, long gameTime, FormulaContext context) {
-        Tribulation definition = tribulation.value();
-        if (data.tribulation().isPresent()) return Result.failure(Failures.ALREADY_ACTIVE);
-        List<TimelineEntry> timeline = definition.timeline();
-        if (timeline.isEmpty()) return Result.failure(TribulationFailure.EMPTY_TIMELINE);
-        if (!definition.condition().test(entity, context)) return Result.failure(Failures.CONDITIONS);
-        // Every entry is asked whether it can run before the run begins: this is the only moment a content error
-        // can be reported as a refusal instead of a failure halfway through a committed timeline.
-        FormulaContext runContext = tribulationContext(entity, context);
-        TimelineContext probe = new TimelineContext(entity, runContext, gameTime,
-                definition.difficultyScale().evaluate(runContext), timeline.size(), new TimelineState(), new TimelineJump());
-        for (TimelineEntry entry : timeline) {
-            if (!entry.validate(probe)) return Result.failure(TribulationFailure.INVALID_ENTRY);
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.TRIBULATION)) {
+            Tribulation definition = tribulation.value();
+            if (data.tribulation().isPresent()) return Result.failure(Failures.ALREADY_ACTIVE);
+            List<TimelineEntry> timeline = definition.timeline();
+            if (timeline.isEmpty()) return Result.failure(TribulationFailure.EMPTY_TIMELINE);
+            if (!definition.condition().test(entity, context)) return Result.failure(Failures.CONDITIONS);
+            // Every entry is asked whether it can run before the run begins: this is the only moment a content error
+            // can be reported as a refusal instead of a failure halfway through a committed timeline.
+            FormulaContext runContext = tribulationContext(entity, context);
+            TimelineContext probe = new TimelineContext(entity, runContext, gameTime,
+                    definition.difficultyScale().evaluate(runContext), timeline.size(), new TimelineState(), new TimelineJump());
+            for (TimelineEntry entry : timeline) {
+                if (!entry.validate(probe)) return Result.failure(TribulationFailure.INVALID_ENTRY);
+            }
+            if (NeoForge.EVENT_BUS.post(new StartPre(data, tribulation)).isCanceled())
+                return Result.failure(Failures.CANCELLED);
+            // The wind-up is resolved here, through the same rule every wait uses, and stored with the run: the
+            // countdown a player watches is the number of ticks that will really pass, and a restart resumes it.
+            long windup = Math.max(0L, probe.ticks(definition.windup()));
+            // Nothing is consumed here: the timeline is copied into the attachment, its wind-up runs down first, and
+            // its first entry begins on the tick after that.
+            data.start(tribulation, timeline, windup);
+            NeoForge.EVENT_BUS.post(new StartPost(data, tribulation));
+            return Result.success();
         }
-        if (NeoForge.EVENT_BUS.post(new StartPre(data, tribulation)).isCanceled())
-            return Result.failure(Failures.CANCELLED);
-        // The wind-up is resolved here, through the same rule every wait uses, and stored with the run: the
-        // countdown a player watches is the number of ticks that will really pass, and a restart resumes it.
-        long windup = Math.max(0L, probe.ticks(definition.windup()));
-        // Nothing is consumed here: the timeline is copied into the attachment, its wind-up runs down first, and
-        // its first entry begins on the tick after that.
-        data.start(tribulation, timeline, windup);
-        NeoForge.EVENT_BUS.post(new StartPost(data, tribulation));
-        return Result.success();
     }
 
     // Reincarnation drops a run in progress: no fail action and no completion, because the life that was being
     // tested for is over. Answers whether there was anything to drop.
     public static boolean cancel(TribulationAttachment data) {
-        if (data.tribulation().isEmpty()) return false;
-        data.clear();
-        return true;
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.TRIBULATION)) {
+            if (data.tribulation().isEmpty()) return false;
+            data.clear();
+            return true;
+        }
     }
 
-    public static ResultWithData<State> tick(LivingEntity entity, TribulationAttachment data, Holder<Tribulation> tribulation, long gameTime, FormulaContext context) {        // A run with nothing left to consume cannot progress - a save whose timeline the codec reduced to nothing,
-        // or a cursor that outlived its beats. Dropping it keeps a dead run from blocking the next breakthrough.
-        if (data.peek() == null) {
-            if (data.tribulation().isPresent()) data.clear();
-            return ResultWithData.success(State.IDLE);
-        }
-        // The wind-up is the run counting itself in: the timeline has not started, so nothing is consumed, no
-        // beat begins and no state is written while it lasts.
-        if (data.windup() > 0L) {
-            data.tickWindup();
-            return ResultWithData.success(State.RUNNING);
-        }
-        Tribulation definition = tribulation.value();
-        FormulaContext runContext = tribulationContext(entity, context);
-        double scale = definition.difficultyScale().evaluate(runContext);
-        // The head of the cursor is the beat being consumed. A beat that finishes moves on by one; a branch beat
-        // leaves a target behind, which is the only thing that can send the run backwards.
-        int consumed = 0;
-        while (true) {
-            TimelineEntry entry = data.peek();
-            if (entry == null) {
-                data.clear();
-                definition.successAction().execute(entity, runContext);
-                NeoForge.EVENT_BUS.post(new Complete(data, tribulation));
-                return ResultWithData.success(State.COMPLETED);
+    public static ResultWithData<State> tick(LivingEntity entity, TribulationAttachment data, Holder<Tribulation> tribulation, long gameTime, FormulaContext context) {
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.TRIBULATION)) {
+            // A run with nothing left to consume cannot progress - a save whose timeline the codec reduced to nothing,
+            // or a cursor that outlived its beats. Dropping it keeps a dead run from blocking the next breakthrough.
+            if (data.peek() == null) {
+                if (data.tribulation().isPresent()) data.clear();
+                return ResultWithData.success(State.IDLE);
             }
-            if (++consumed > MAX_BEATS_PER_TICK) {
-                LOGGER.log("Tribulation {} consumed {} beats in one tick without waiting: a branch is "
-                        + "probably cycling", HolderHelper.id(tribulation), consumed - 1);
+            // The wind-up is the run counting itself in: the timeline has not started, so nothing is consumed, no
+            // beat begins and no state is written while it lasts.
+            if (data.windup() > 0L) {
+                data.tickWindup();
                 return ResultWithData.success(State.RUNNING);
             }
-            // The beat reads and writes a draft of the run's state and commits it once it has answered: a beat
-            // that changes nothing leaves the stored value untouched, so nothing has to be saved or synced.
-            TimelineState state = new TimelineState(data.state().orElse(null));
-            TimelineJump jump = new TimelineJump();
-            TimelineContext entryContext = new TimelineContext(entity, runContext, gameTime, scale, data.length(), state, jump);
-            if (!state.isPresent()) {
-                if (NeoForge.EVENT_BUS.post(new EntryPre(data, tribulation, data.consumed(), entry)).isCanceled()) {
-                    data.advance(TimelineJump.NEXT);
-                    continue;
+            Tribulation definition = tribulation.value();
+            FormulaContext runContext = tribulationContext(entity, context);
+            double scale = definition.difficultyScale().evaluate(runContext);
+            // The head of the cursor is the beat being consumed. A beat that finishes moves on by one; a branch beat
+            // leaves a target behind, which is the only thing that can send the run backwards.
+            int consumed = 0;
+            while (true) {
+                TimelineEntry entry = data.peek();
+                if (entry == null) {
+                    data.clear();
+                    definition.successAction().execute(entity, runContext);
+                    NeoForge.EVENT_BUS.post(new Complete(data, tribulation));
+                    return ResultWithData.success(State.COMPLETED);
                 }
-                // "This beat began" is stored before the beat itself runs, so a restart cannot consume the start
-                // of the same beat twice, and a beat that keeps no numbers of its own is still begun.
-                state.set(EntryBegan.INSTANCE);
-                entry.begin(entryContext);
+                if (++consumed > MAX_BEATS_PER_TICK) {
+                    LOGGER.log("Tribulation {} consumed {} beats in one tick without waiting: a branch is "
+                            + "probably cycling", HolderHelper.id(tribulation), consumed - 1);
+                    return ResultWithData.success(State.RUNNING);
+                }
+                // The beat reads and writes a draft of the run's state and commits it once it has answered: a beat
+                // that changes nothing leaves the stored value untouched, so nothing has to be saved or synced.
+                TimelineState state = new TimelineState(data.state().orElse(null));
+                TimelineJump jump = new TimelineJump();
+                TimelineContext entryContext = new TimelineContext(entity, runContext, gameTime, scale, data.length(), state, jump);
+                if (!state.isPresent()) {
+                    if (NeoForge.EVENT_BUS.post(new EntryPre(data, tribulation, data.consumed(), entry)).isCanceled()) {
+                        data.advance(TimelineJump.NEXT);
+                        continue;
+                    }
+                    // "This beat began" is stored before the beat itself runs, so a restart cannot consume the start
+                    // of the same beat twice, and a beat that keeps no numbers of its own is still begun.
+                    state.set(EntryBegan.INSTANCE);
+                    entry.begin(entryContext);
+                }
+                Outcome outcome = entry.consume(entryContext);
+                data.setState(state.get());
+                if (outcome == Outcome.RUNNING) return ResultWithData.success(State.RUNNING);
+                if (outcome == Outcome.FAILED) {
+                    data.clear();
+                    definition.failAction().execute(entity, runContext);
+                    return ResultWithData.failure(State.FAILED, TribulationFailure.INVALID_ENTRY);
+                }
+                NeoForge.EVENT_BUS.post(new EntryPost(data, tribulation, data.consumed(), entry));
+                data.advance(jump.target());
             }
-            Outcome outcome = entry.consume(entryContext);
-            data.setState(state.get());
-            if (outcome == Outcome.RUNNING) return ResultWithData.success(State.RUNNING);
-            if (outcome == Outcome.FAILED) {
-                data.clear();
-                definition.failAction().execute(entity, runContext);
-                return ResultWithData.failure(State.FAILED, TribulationFailure.INVALID_ENTRY);
-            }
-            NeoForge.EVENT_BUS.post(new EntryPost(data, tribulation, data.consumed(), entry));
-            data.advance(jump.target());
         }
     }
 

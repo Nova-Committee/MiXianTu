@@ -30,6 +30,8 @@ import com.iafenvoy.mxt.runtime.trigger.TriggerPublishing;
 import com.iafenvoy.mxt.runtime.trigger.TriggerSubscription;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
+import com.iafenvoy.mxt.util.profiling.ProfilerScope;
+import com.iafenvoy.mxt.util.profiling.ServerProfiling;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
@@ -97,35 +99,47 @@ public final class AbilityEventBridge {
     // HUD resources are part of the player's visible baseline state, so they are created on the first tick rather
     // than the first time something spends one.
     private static void tickResources(LivingEntity entity) {
-        initializeHudResources(entity, entity.getData(MxtAttachments.RESOURCE_HOLDER));
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.RESOURCE)) {
+            initializeHudResources(entity, entity.getData(MxtAttachments.RESOURCE_HOLDER));
+        }
     }
 
     private static void tickSignals(LivingEntity entity) {
-        dispatch(TriggerSignals.TICK, entity, FormulaContext.of(entity));
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.TRIGGER)) {
+            dispatch(TriggerSignals.TICK, entity, FormulaContext.of(entity));
+        }
     }
 
     // Curios is reconciled on a slow cadence, so the index has to follow it here: it is no longer rebuilt as a side
     // effect of the next publication.
     private static void tickCurios(LivingEntity entity) {
-        if (entity.level().getGameTime() % 20L != 0L) return;
-        if (syncCuriosAbilities(entity, entity.getData(MxtAttachments.ABILITY_HOLDER)))
-            rebuildTriggerSubscriptions(entity);
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.ABILITY_RECONCILE)) {
+            if (entity.level().getGameTime() % 20L != 0L) return;
+            if (syncCuriosAbilities(entity, entity.getData(MxtAttachments.ABILITY_HOLDER)))
+                rebuildTriggerSubscriptions(entity);
+        }
     }
 
     private static void tickLifecycle(LivingEntity entity) {
-        tickAbilities(entity, entity.getData(MxtAttachments.ABILITY_HOLDER),
-                entity.getData(MxtAttachments.RESOURCE_HOLDER), entity.level().getGameTime());
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.ABILITY)) {
+            tickAbilities(entity, entity.getData(MxtAttachments.ABILITY_HOLDER),
+                    entity.getData(MxtAttachments.RESOURCE_HOLDER), entity.level().getGameTime());
+        }
     }
 
     private static void tickCasts(LivingEntity entity) {
-        finishDueCasts(entity, entity.getData(MxtAttachments.ABILITY_HOLDER),
-                entity.getData(MxtAttachments.RESOURCE_HOLDER), entity.level().getGameTime());
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.ABILITY_CAST)) {
+            finishDueCasts(entity, entity.getData(MxtAttachments.ABILITY_HOLDER),
+                    entity.getData(MxtAttachments.RESOURCE_HOLDER), entity.level().getGameTime());
+        }
     }
 
     private static void tickChannel(LivingEntity entity) {
-        AbilityAttachment abilities = entity.getData(MxtAttachments.ABILITY_HOLDER);
-        abilities.channelledAbility().ifPresent(ability -> AbilityService.tickChannel(ability, entity, abilities,
-                entity.getData(MxtAttachments.RESOURCE_HOLDER), entity.level().getGameTime(), FormulaContext.of(entity)));
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.ABILITY_CHANNEL)) {
+            AbilityAttachment abilities = entity.getData(MxtAttachments.ABILITY_HOLDER);
+            abilities.channelledAbility().ifPresent(ability -> AbilityService.tickChannel(ability, entity, abilities,
+                    entity.getData(MxtAttachments.RESOURCE_HOLDER), entity.level().getGameTime(), FormulaContext.of(entity)));
+        }
     }
 
     @SubscribeEvent
@@ -292,8 +306,10 @@ public final class AbilityEventBridge {
 
     // Intentionally idempotent, and can be called after datapack reloads or source reconciliation.
     public static void rebuildTriggerSubscriptions(LivingEntity entity) {
-        if (entity.level().isClientSide()) return;
-        syncAbilitySubscriptions(entity);
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.ABILITY_RECONCILE)) {
+            if (entity.level().isClientSide()) return;
+            syncAbilitySubscriptions(entity);
+        }
     }
 
     private static void syncAbilitySubscriptions(LivingEntity entity) {

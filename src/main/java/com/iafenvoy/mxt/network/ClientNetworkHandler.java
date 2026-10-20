@@ -6,11 +6,20 @@ import com.iafenvoy.mxt.screen.menu.AlchemyFurnaceMenu;
 import com.iafenvoy.mxt.screen.menu.TalismanWorkstationMenu;
 import com.iafenvoy.mxt.screen.multiblock.MultiblockStructure;
 import com.iafenvoy.mxt.screen.multiblock.MultiblockStructureScreen;
+import com.iafenvoy.mxt.screen.profiling.ProfilerScreen;
 import com.iafenvoy.mxt.util.ClientPlayerNames;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 import org.jetbrains.annotations.Nullable;
 
 public final class ClientNetworkHandler {
+    static void onProfilerGui(ProfilerGuiS2CPayload payload, IPayloadContext context) {
+        ProfilerScreen.control(payload);
+    }
+
+    static void onProfilerSnapshot(ProfilerSnapshotS2CPayload payload, IPayloadContext context) {
+        ProfilerScreen.receive(payload);
+    }
+
     static void onAuraState(AuraStateS2CPayload payload, IPayloadContext context) {
         AuraClientState.update(payload.source(), payload.actual(), payload.environment());
     }

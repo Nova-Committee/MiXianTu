@@ -7,6 +7,8 @@ import com.iafenvoy.mxt.data.cost.CostPayment;
 import com.iafenvoy.mxt.data.cost.context.CostContext;
 import com.iafenvoy.mxt.data.cost.context.CostOrigin;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
+import com.iafenvoy.mxt.util.profiling.ProfilerScope;
+import com.iafenvoy.mxt.util.profiling.ServerProfiling;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
@@ -37,9 +39,11 @@ public final class ArtifactUpkeepService {
 
     @SubscribeEvent
     public static void onServerTick(ServerTickEvent.Post event) {
-        for (ServerPlayer player : event.getServer().getPlayerList().getPlayers()) {
-            long gameTime = player.level().getGameTime();
-            for (ItemStack stack : carried(player)) upkeep(player, stack, gameTime);
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.ARTIFACT)) {
+            for (ServerPlayer player : event.getServer().getPlayerList().getPlayers()) {
+                long gameTime = player.level().getGameTime();
+                for (ItemStack stack : carried(player)) upkeep(player, stack, gameTime);
+            }
         }
     }
 

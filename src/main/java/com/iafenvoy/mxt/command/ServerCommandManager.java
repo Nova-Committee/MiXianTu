@@ -67,6 +67,7 @@ public final class ServerCommandManager {
         CommandBuildContext context = event.getBuildContext();
 
         LiteralArgumentBuilder<CommandSourceStack> root = literal(MiXianTu.MOD_ID);
+        root.then(DebugCommand.build());
         for (Entry<Function<CommandBuildContext, LiteralArgumentBuilder<CommandSourceStack>>, BooleanEntry> entry : NODES.entrySet()) {
             LiteralArgumentBuilder<CommandSourceStack> node = entry.getKey().apply(context);
             root.then(node);

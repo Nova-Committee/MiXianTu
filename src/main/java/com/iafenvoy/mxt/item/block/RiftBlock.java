@@ -6,6 +6,8 @@ import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.registry.MxtParticleTypes;
 import com.iafenvoy.mxt.runtime.rift.RiftColors;
 import com.iafenvoy.mxt.runtime.rift.RiftTeleportService;
+import com.iafenvoy.mxt.util.profiling.ProfilerScope;
+import com.iafenvoy.mxt.util.profiling.ServerProfiling;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.component.DataComponents;
@@ -67,10 +69,12 @@ public final class RiftBlock extends BaseEntityBlock implements Portal {
 
     @Override
     public void setPlacedBy(@NonNull Level level, @NonNull BlockPos pos, @NonNull BlockState state, @Nullable LivingEntity placer, @NonNull ItemStack stack) {
-        super.setPlacedBy(level, pos, state, placer, stack);
-        if (!(level.getBlockEntity(pos) instanceof RiftBlockEntity rift)) return;
-        RiftComponent component = stack.getOrDefault(MxtDataComponents.RIFT, RiftComponent.EMPTY);
-        rift.configure(component.target(), component.color());
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.RIFT)) {
+            super.setPlacedBy(level, pos, state, placer, stack);
+            if (!(level.getBlockEntity(pos) instanceof RiftBlockEntity rift)) return;
+            RiftComponent component = stack.getOrDefault(MxtDataComponents.RIFT, RiftComponent.EMPTY);
+            rift.configure(component.target(), component.color());
+        }
     }
 
     // Without an override a rift is coloured by where it leads, so a dye is the only way to give it a colour of its own.
@@ -98,8 +102,10 @@ public final class RiftBlock extends BaseEntityBlock implements Portal {
     @Nullable
     @Override
     public TeleportTransition getPortalDestination(@NonNull ServerLevel level, @NonNull Entity entity, @NonNull BlockPos pos) {
-        if (!(level.getBlockEntity(pos) instanceof RiftBlockEntity rift)) return null;
-        return RiftTeleportService.destination(level, rift, entity, pos);
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.RIFT)) {
+            if (!(level.getBlockEntity(pos) instanceof RiftBlockEntity rift)) return null;
+            return RiftTeleportService.destination(level, rift, entity, pos);
+        }
     }
 
     @Override

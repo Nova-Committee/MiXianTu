@@ -28,6 +28,8 @@ import com.iafenvoy.mxt.util.chain.Chain;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
+import com.iafenvoy.mxt.util.profiling.ProfilerScope;
+import com.iafenvoy.mxt.util.profiling.ServerProfiling;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
@@ -56,48 +58,52 @@ public final class CultivationService {
     }
 
     public static BreakthroughResult attempt(LivingEntity entity, CultivationAttachment spirit, ResourceHolderAttachment resources, Holder<Aura> aura, FormulaContext context, BooleanSupplier conditionsMet) {
-        if (entity.level().isClientSide()) return BreakthroughResult.rejected(Failures.SERVER_ONLY, null);
-        Holder<RealmStage> target = next(aura, spirit);
-        if (target == null) return BreakthroughResult.rejected(CultivationFailure.NO_NEXT_REALM, null);
-        return attempt(entity, spirit, resources, aura, target, context, conditionsMet);
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.CULTIVATION)) {
+            if (entity.level().isClientSide()) return BreakthroughResult.rejected(Failures.SERVER_ONLY, null);
+            Holder<RealmStage> target = next(aura, spirit);
+            if (target == null) return BreakthroughResult.rejected(CultivationFailure.NO_NEXT_REALM, null);
+            return attempt(entity, spirit, resources, aura, target, context, conditionsMet);
+        }
     }
 
     // Triggered abilities are dispatched only after the realm state has committed.
     private static BreakthroughResult attempt(LivingEntity entity, CultivationAttachment spirit, ResourceHolderAttachment resources, Holder<Aura> aura, Holder<RealmStage> stage, FormulaContext context, BooleanSupplier conditionsMet) {
-        RealmStage target = stage.value();
-        if (!Objects.equals(target.aura(), aura))
-            return BreakthroughResult.rejected(CultivationFailure.WRONG_AURA, null);
-        FormulaContext resourceContext = ResourceService.formulaContext(entity, aura.value().resource(), context);
-        Threshold threshold = threshold(stage, resourceContext);
-        if (threshold == null) return BreakthroughResult.rejected(Failures.INVALID_FORMULA, null);
-        double minimum = threshold.breakthroughExp();
-        double maximum = threshold.maxExperience();
-        if (!Double.isFinite(minimum) || !Double.isFinite(maximum) || minimum < 0.0D || maximum < 0.0D || minimum > maximum)
-            return BreakthroughResult.rejected(Failures.INVALID_FORMULA, null);
-        double progress = spirit.cultivationProgress(aura);
-        if (progress < minimum) return BreakthroughResult.rejected(CultivationFailure.INSUFFICIENT_PROGRESS, null);
-        boolean configuredConditions = target.breakthrough().test(entity, context);
-        boolean requiredAbilities = RegistryCodecs.resolve(target.abilityRequirements(), entity.level().registryAccess(), MxtResourceKeys.ABILITY)
-                .allMatch(ability -> entity.getData(MxtAttachments.ABILITY_HOLDER).has(ability));
-        BreakthroughResult result = commit(entity, spirit, resources, aura, stage, resourceContext,
-                () -> configuredConditions && requiredAbilities && conditionsMet.getAsBoolean());
-        if (result.isSuccess()) {
-            if (entity instanceof ServerPlayer player)
-                MxtCriteriaTriggers.BREAKTHROUGH.get().trigger(player, HolderHelper.id(stage));
-            target.breakthroughParticle().ifPresent(effect -> {
-                if (entity.level() instanceof ServerLevel level)
-                    effect.send(level, entity.position().add(0.0D, entity.getBbHeight() * 0.5D, 0.0D));
-            });
-            target.successAction().execute(entity, context);
-            grantLifespan(entity, stage, context);
-            // Sampled here so every tribulation phase is scaled by the current environment, not only the
-            // phase that starts at breakthrough.
-            target.tribulation().ifPresent(tribulation -> TribulationService.start(entity, entity.getData(MxtAttachments.TRIBULATION), tribulation, entity.level().getGameTime(), context));
-            AbilityEventBridge.onBreakthrough(entity, context);
-            // The new realm starts on its own first minor stage, which is itself an unlock threshold.
-            MinorStageService.refresh(entity, aura, resourceContext);
-        } else target.failAction().execute(entity, context);
-        return result;
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.CULTIVATION)) {
+            RealmStage target = stage.value();
+            if (!Objects.equals(target.aura(), aura))
+                return BreakthroughResult.rejected(CultivationFailure.WRONG_AURA, null);
+            FormulaContext resourceContext = ResourceService.formulaContext(entity, aura.value().resource(), context);
+            Threshold threshold = threshold(stage, resourceContext);
+            if (threshold == null) return BreakthroughResult.rejected(Failures.INVALID_FORMULA, null);
+            double minimum = threshold.breakthroughExp();
+            double maximum = threshold.maxExperience();
+            if (!Double.isFinite(minimum) || !Double.isFinite(maximum) || minimum < 0.0D || maximum < 0.0D || minimum > maximum)
+                return BreakthroughResult.rejected(Failures.INVALID_FORMULA, null);
+            double progress = spirit.cultivationProgress(aura);
+            if (progress < minimum) return BreakthroughResult.rejected(CultivationFailure.INSUFFICIENT_PROGRESS, null);
+            boolean configuredConditions = target.breakthrough().test(entity, context);
+            boolean requiredAbilities = RegistryCodecs.resolve(target.abilityRequirements(), entity.level().registryAccess(), MxtResourceKeys.ABILITY)
+                    .allMatch(ability -> entity.getData(MxtAttachments.ABILITY_HOLDER).has(ability));
+            BreakthroughResult result = commit(entity, spirit, resources, aura, stage, resourceContext,
+                    () -> configuredConditions && requiredAbilities && conditionsMet.getAsBoolean());
+            if (result.isSuccess()) {
+                if (entity instanceof ServerPlayer player)
+                    MxtCriteriaTriggers.BREAKTHROUGH.get().trigger(player, HolderHelper.id(stage));
+                target.breakthroughParticle().ifPresent(effect -> {
+                    if (entity.level() instanceof ServerLevel level)
+                        effect.send(level, entity.position().add(0.0D, entity.getBbHeight() * 0.5D, 0.0D));
+                });
+                target.successAction().execute(entity, context);
+                grantLifespan(entity, stage, context);
+                // Sampled here so every tribulation phase is scaled by the current environment, not only the
+                // phase that starts at breakthrough.
+                target.tribulation().ifPresent(tribulation -> TribulationService.start(entity, entity.getData(MxtAttachments.TRIBULATION), tribulation, entity.level().getGameTime(), context));
+                AbilityEventBridge.onBreakthrough(entity, context);
+                // The new realm starts on its own first minor stage, which is itself an unlock threshold.
+                MinorStageService.refresh(entity, aura, resourceContext);
+            } else target.failAction().execute(entity, context);
+            return result;
+        }
     }
 
     // A stage's own lifespan is an increment paid once, on the breakthrough that reached it, so a later stage

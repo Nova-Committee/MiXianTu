@@ -13,6 +13,8 @@ import com.iafenvoy.mxt.registry.MxtBlockEntities;
 import com.iafenvoy.mxt.registry.MxtRecipeTypes;
 import com.iafenvoy.mxt.screen.menu.SpiritCraftingMenu;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
+import com.iafenvoy.mxt.util.profiling.ProfilerScope;
+import com.iafenvoy.mxt.util.profiling.ServerProfiling;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import net.minecraft.core.BlockPos;
@@ -80,7 +82,9 @@ public final class SpiritCraftingTableBlockEntity extends BlockEntity implements
     }
 
     public static void serverTick(Level level, BlockPos pos, BlockState state, SpiritCraftingTableBlockEntity table) {
-        if (level.getServer() != null) table.craftAvailable(level, level.getServer().getRecipeManager());
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.CRAFTING)) {
+            if (level.getServer() != null) table.craftAvailable(level, level.getServer().getRecipeManager());
+        }
     }
 
     private void craftAvailable(Level level, RecipeManager recipeManager) {

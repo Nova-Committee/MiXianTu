@@ -14,6 +14,8 @@ import com.iafenvoy.mxt.runtime.resulting.ResultWithData;
 import com.iafenvoy.mxt.runtime.resulting.failures.CostFailure;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.profiling.LoggerDispatcher;
+import com.iafenvoy.mxt.util.profiling.ProfilerScope;
+import com.iafenvoy.mxt.util.profiling.ServerProfiling;
 import com.mojang.logging.LogUtils;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup.Provider;
@@ -57,10 +59,12 @@ public final class CostPayment {
      * store could pay.
      */
     public static PaymentResult pay(List<Cost> costs, CostContext context) {
-        CostPayment payment = of(context);
-        Optional<Failure> refusal = payment.price(costs);
-        return refusal.map(failure -> PaymentResult.denied(failure, payment.failedResource()))
-                .orElseGet(payment::pay);
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.COST)) {
+            CostPayment payment = of(context);
+            Optional<Failure> refusal = payment.price(costs);
+            return refusal.map(failure -> PaymentResult.denied(failure, payment.failedResource()))
+                    .orElseGet(payment::pay);
+        }
     }
 
     /**
@@ -69,7 +73,9 @@ public final class CostPayment {
      * refuses here, and a payment that was priced in part pays nothing at all.
      */
     public Optional<Failure> price(List<Cost> costs) {
-        return this.price(costs, this.context);
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.COST)) {
+            return this.price(costs, this.context);
+        }
     }
 
     /**
@@ -77,13 +83,15 @@ public final class CostPayment {
      * account and a ground out of a world pool without becoming two payments.
      */
     public Optional<Failure> price(List<Cost> costs, CostContext context) {
-        if (this.closed) return Optional.of(CostFailure.BILL_CLOSED);
-        for (Cost cost : costs) {
-            ResultWithData<Cost.Transaction> prepared = cost.prepare(context);
-            if (prepared.isFailure()) return this.broken(prepared.failure(), prepared.failedResource());
-            this.entries.add(new Entry(context, prepared.getData()));
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.COST)) {
+            if (this.closed) return Optional.of(CostFailure.BILL_CLOSED);
+            for (Cost cost : costs) {
+                ResultWithData<Cost.Transaction> prepared = cost.prepare(context);
+                if (prepared.isFailure()) return this.broken(prepared.failure(), prepared.failedResource());
+                this.entries.add(new Entry(context, prepared.getData()));
+            }
+            return Optional.empty();
         }
-        return Optional.empty();
     }
 
     /**
@@ -92,15 +100,17 @@ public final class CostPayment {
      * usable, so a caller can ask again after the inventory moved and then pay.
      */
     public Optional<Failure> test() {
-        if (this.taken != null) return Optional.ofNullable(this.taken.failure());
-        if (this.failure != null) return Optional.of(this.failure);
-        List<Entry> plan = this.plan();
-        if (plan == null) return Optional.of(CostFailure.INVALID_AMOUNT);
-        for (Entry entry : plan) {
-            ResultWithData<List<Debit>> simulated = entry.transaction().execute(true);
-            if (simulated.isFailure()) return Optional.of(simulated.failure());
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.COST)) {
+            if (this.taken != null) return Optional.ofNullable(this.taken.failure());
+            if (this.failure != null) return Optional.of(this.failure);
+            List<Entry> plan = this.plan();
+            if (plan == null) return Optional.of(CostFailure.INVALID_AMOUNT);
+            for (Entry entry : plan) {
+                ResultWithData<List<Debit>> simulated = entry.transaction().execute(true);
+                if (simulated.isFailure()) return Optional.of(simulated.failure());
+            }
+            return Optional.empty();
         }
-        return Optional.empty();
     }
 
     /**
@@ -108,21 +118,23 @@ public final class CostPayment {
      * Repeating this call returns the terminal answer without charging again.
      */
     public PaymentResult pay() {
-        if (this.taken != null) return this.taken;
-        if (this.paying) return PaymentResult.denied(CostFailure.REENTRANT, null);
-        // Asked once the real pass had begun and never answered: whatever it wrote before the throw cannot be taken
-        // back, so a second attempt could charge a fee that is already paid. The bill stays unanswered rather than
-        // guessing, and nothing is written again.
-        if (this.uncertain) return this.taken = PaymentResult.denied(CostFailure.UNCERTAIN, null);
-        if (this.failure != null) return this.taken = PaymentResult.denied(this.failure, this.failedResource);
-        List<Entry> plan = this.plan();
-        if (plan == null) return this.taken = PaymentResult.denied(CostFailure.INVALID_AMOUNT, null);
-        this.closed = true;
-        this.paying = true;
-        try {
-            return this.taken = this.settle(plan);
-        } finally {
-            this.paying = false;
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.COST)) {
+            if (this.taken != null) return this.taken;
+            if (this.paying) return PaymentResult.denied(CostFailure.REENTRANT, null);
+            // Asked once the real pass had begun and never answered: whatever it wrote before the throw cannot be taken
+            // back, so a second attempt could charge a fee that is already paid. The bill stays unanswered rather than
+            // guessing, and nothing is written again.
+            if (this.uncertain) return this.taken = PaymentResult.denied(CostFailure.UNCERTAIN, null);
+            if (this.failure != null) return this.taken = PaymentResult.denied(this.failure, this.failedResource);
+            List<Entry> plan = this.plan();
+            if (plan == null) return this.taken = PaymentResult.denied(CostFailure.INVALID_AMOUNT, null);
+            this.closed = true;
+            this.paying = true;
+            try {
+                return this.taken = this.settle(plan);
+            } finally {
+                this.paying = false;
+            }
         }
     }
 

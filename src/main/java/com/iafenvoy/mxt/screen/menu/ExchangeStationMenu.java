@@ -5,6 +5,8 @@ import com.iafenvoy.mxt.registry.MxtBlocks;
 import com.iafenvoy.mxt.registry.MxtMenus;
 import com.iafenvoy.mxt.runtime.economy.CurrencyValueService;
 import com.iafenvoy.mxt.screen.aui.AuiPages;
+import com.iafenvoy.mxt.util.profiling.ProfilerScope;
+import com.iafenvoy.mxt.util.profiling.ServerProfiling;
 import com.sighs.apricityui.screen.ApricityContainerMenu;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.sounds.SoundEvents;
@@ -98,21 +100,25 @@ public final class ExchangeStationMenu extends ApricityContainerMenu {
 
     @Override
     public boolean clickMenuButton(@NonNull Player player, int buttonId) {
-        if (this.selectedExchange.get() == buttonId) return false;
-        if (!this.isValidExchange(buttonId)) return false;
-        this.selectedExchange.set(buttonId);
-        this.setupResultSlot(buttonId);
-        return true;
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.ECONOMY)) {
+            if (this.selectedExchange.get() == buttonId) return false;
+            if (!this.isValidExchange(buttonId)) return false;
+            this.selectedExchange.set(buttonId);
+            this.setupResultSlot(buttonId);
+            return true;
+        }
     }
 
     @Override
     public void slotsChanged(@NonNull Container changed) {
-        ItemStack current = this.inputSlot.getItem();
-        if (!ItemStack.isSameItemSameComponents(current, this.previousInput)) {
-            this.previousInput = current.copy();
-            this.setupOfferList(current);
-        } else {
-            this.setupResultSlot(this.selectedExchange.get());
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.ECONOMY)) {
+            ItemStack current = this.inputSlot.getItem();
+            if (!ItemStack.isSameItemSameComponents(current, this.previousInput)) {
+                this.previousInput = current.copy();
+                this.setupOfferList(current);
+            } else {
+                this.setupResultSlot(this.selectedExchange.get());
+            }
         }
     }
 
@@ -194,12 +200,14 @@ public final class ExchangeStationMenu extends ApricityContainerMenu {
      * is built before this menu's own body and cannot read its state directly.
      */
     private void takeResult(Player player, ItemStack stack) {
-        Exchange offer = this.selectedOffer();
-        if (offer == null || this.inputSlot.getItem().getCount() < offer.cost()) return;
-        stack.onCraftedBy(player, stack.getCount());
-        this.inputSlot.remove(offer.cost());
-        this.setupResultSlot(this.selectedExchange.get());
-        this.playTakeSound();
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.ECONOMY)) {
+            Exchange offer = this.selectedOffer();
+            if (offer == null || this.inputSlot.getItem().getCount() < offer.cost()) return;
+            stack.onCraftedBy(player, stack.getCount());
+            this.inputSlot.remove(offer.cost());
+            this.setupResultSlot(this.selectedExchange.get());
+            this.playTakeSound();
+        }
     }
 
     /**

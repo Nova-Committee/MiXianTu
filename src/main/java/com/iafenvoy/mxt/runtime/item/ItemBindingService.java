@@ -13,6 +13,8 @@ import com.iafenvoy.mxt.util.matcher.ItemMatcher;
 import com.iafenvoy.mxt.util.matcher.ItemMatcher.Entry;
 import com.iafenvoy.mxt.util.matcher.builtin.ItemEntry;
 import com.iafenvoy.mxt.util.matcher.builtin.TagEntry;
+import com.iafenvoy.mxt.util.profiling.ProfilerScope;
+import com.iafenvoy.mxt.util.profiling.ServerProfiling;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
 import net.minecraft.core.HolderLookup.Provider;
@@ -60,26 +62,34 @@ public final class ItemBindingService {
 
     @SubscribeEvent
     public static void onEntityTick(Post event) {
-        if (event.getEntity() instanceof LivingEntity entity) {
-            refreshEquipped(entity);
-            tickMainHandWeapon(entity);
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.ITEM)) {
+            if (event.getEntity() instanceof LivingEntity entity) {
+                refreshEquipped(entity);
+                tickMainHandWeapon(entity);
+            }
         }
     }
 
     @SubscribeEvent
     public static void onAttack(AttackEntityEvent event) {
-        onMainHandWeaponAttack(event.getEntity(), event.getTarget());
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.ITEM)) {
+            onMainHandWeaponAttack(event.getEntity(), event.getTarget());
+        }
     }
 
     @SubscribeEvent
     public static void onItemUse(RightClickItem event) {
-        if (event.getHand() == InteractionHand.MAIN_HAND)
-            onMainHandWeaponUse(event.getEntity());
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.ITEM)) {
+            if (event.getHand() == InteractionHand.MAIN_HAND)
+                onMainHandWeaponUse(event.getEntity());
+        }
     }
 
     @SubscribeEvent
     public static void onUseFinish(Finish event) {
-        onUseFinish(event.getEntity(), event.getItem());
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.ITEM)) {
+            onUseFinish(event.getEntity(), event.getItem());
+        }
     }
 
     @SubscribeEvent
@@ -199,51 +209,59 @@ public final class ItemBindingService {
     }
 
     public static void tickMainHandWeapon(LivingEntity holder) {
-        if (holder.level().isClientSide()) return;
-        ItemStack stack = holder.getMainHandItem();
-        ResolvedBindings bindings = resolve(holder.level().registryAccess(), stack);
-        if (!QualityService.canUse(holder, stack, bindings)) return;
-        FormulaContext context = FormulaContext.of(holder);
-        bindings.weapon().ifPresent(weapon -> weapon.tickAction().execute(holder, context));
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.ITEM)) {
+            if (holder.level().isClientSide()) return;
+            ItemStack stack = holder.getMainHandItem();
+            ResolvedBindings bindings = resolve(holder.level().registryAccess(), stack);
+            if (!QualityService.canUse(holder, stack, bindings)) return;
+            FormulaContext context = FormulaContext.of(holder);
+            bindings.weapon().ifPresent(weapon -> weapon.tickAction().execute(holder, context));
+        }
     }
 
     public static void onMainHandWeaponAttack(LivingEntity holder, Entity target) {
-        if (holder.level().isClientSide()) return;
-        ItemStack stack = holder.getMainHandItem();
-        ResolvedBindings bindings = resolve(holder.level().registryAccess(), stack);
-        if (!QualityService.canUse(holder, stack, bindings)) return;
-        FormulaContext context = FormulaContext.of(holder, Map.of(
-                "target_is_living", target instanceof LivingEntity ? 1.0D : 0.0D,
-                "target_health", target instanceof LivingEntity living ? (double) living.getHealth() : 0.0D
-        ));
-        bindings.weapon().ifPresent(weapon -> weapon.attackAction().execute(holder, target, context));
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.ITEM)) {
+            if (holder.level().isClientSide()) return;
+            ItemStack stack = holder.getMainHandItem();
+            ResolvedBindings bindings = resolve(holder.level().registryAccess(), stack);
+            if (!QualityService.canUse(holder, stack, bindings)) return;
+            FormulaContext context = FormulaContext.of(holder, Map.of(
+                    "target_is_living", target instanceof LivingEntity ? 1.0D : 0.0D,
+                    "target_health", target instanceof LivingEntity living ? (double) living.getHealth() : 0.0D
+            ));
+            bindings.weapon().ifPresent(weapon -> weapon.attackAction().execute(holder, target, context));
+        }
     }
 
     public static void onMainHandWeaponUse(LivingEntity holder) {
-        if (holder.level().isClientSide()) return;
-        ItemStack stack = holder.getMainHandItem();
-        ResolvedBindings bindings = resolve(holder.level().registryAccess(), stack);
-        if (!QualityService.canUse(holder, stack, bindings)) return;
-        FormulaContext context = FormulaContext.of(holder);
-        bindings.weapon().ifPresent(weapon -> weapon.useAction().execute(holder, context));
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.ITEM)) {
+            if (holder.level().isClientSide()) return;
+            ItemStack stack = holder.getMainHandItem();
+            ResolvedBindings bindings = resolve(holder.level().registryAccess(), stack);
+            if (!QualityService.canUse(holder, stack, bindings)) return;
+            FormulaContext context = FormulaContext.of(holder);
+            bindings.weapon().ifPresent(weapon -> weapon.useAction().execute(holder, context));
+        }
     }
 
     // Finish is after vanilla has already consumed the item. Do not re-check canUse: a condition that the dose
     // itself just changed must not erase this settlement. The Start/Tick gate is what refuses an illegal dose.
     public static void onUseFinish(LivingEntity entity, ItemStack stack) {
-        if (entity.level().isClientSide()) return;
-        Set<UUID> settling = SETTLING.get();
-        if (!settling.add(entity.getUUID())) return;
-        try {
-            ResolvedBindings bindings = resolve(entity.level().registryAccess(), stack);
-            PillResolution pill = bindings.pill();
-            pill.identity().ifPresent(identity -> PillService.registerUse(entity, identity));
-            FormulaContext context = FormulaContext.of(entity);
-            bindings.item().map(ItemBinding::actions).orElse(List.of()).forEach(action -> action.execute(entity, context));
-            pill.effects().ifPresent(effects -> PillService.apply(entity, effects));
-        } finally {
-            settling.remove(entity.getUUID());
-            if (settling.isEmpty()) SETTLING.remove();
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.ITEM)) {
+            if (entity.level().isClientSide()) return;
+            Set<UUID> settling = SETTLING.get();
+            if (!settling.add(entity.getUUID())) return;
+            try {
+                ResolvedBindings bindings = resolve(entity.level().registryAccess(), stack);
+                PillResolution pill = bindings.pill();
+                pill.identity().ifPresent(identity -> PillService.registerUse(entity, identity));
+                FormulaContext context = FormulaContext.of(entity);
+                bindings.item().map(ItemBinding::actions).orElse(List.of()).forEach(action -> action.execute(entity, context));
+                pill.effects().ifPresent(effects -> PillService.apply(entity, effects));
+            } finally {
+                settling.remove(entity.getUUID());
+                if (settling.isEmpty()) SETTLING.remove();
+            }
         }
     }
 

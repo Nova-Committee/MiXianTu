@@ -1,6 +1,8 @@
 package com.iafenvoy.mxt.runtime.talisman;
 
 import com.iafenvoy.mxt.util.MiscUtil;
+import com.iafenvoy.mxt.util.profiling.ProfilerScope;
+import com.iafenvoy.mxt.util.profiling.ServerProfiling;
 
 import java.util.*;
 
@@ -62,91 +64,93 @@ public final class TalismanDrawingScorer {
      * tolerance: pattern.tolerance (fraction of canvas height). Never throws.
      */
     public static Score score(List<Stroke> reference, List<Stroke> player, double tolerance, Judgement judgement) {
-        Judgement params = judgement == null ? Judgement.DEFAULT : judgement;
-        double tolPx = MiscUtil.positive(tolerance) > 0.0D
-                ? tolerance * CANVAS_HEIGHT : DEFAULT_TOLERANCE * CANVAS_HEIGHT;
-        double minStrokePx = MiscUtil.positive(params.minStrokeLength()) * CANVAS_HEIGHT;
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.TALISMAN)) {
+            Judgement params = judgement == null ? Judgement.DEFAULT : judgement;
+            double tolPx = MiscUtil.positive(tolerance) > 0.0D
+                    ? tolerance * CANVAS_HEIGHT : DEFAULT_TOLERANCE * CANVAS_HEIGHT;
+            double minStrokePx = MiscUtil.positive(params.minStrokeLength()) * CANVAS_HEIGHT;
 
-        // Step 0: degenerate input. Points are scaled to pixels first, so both sides share one pipeline.
-        List<List<P>> refRaw = toPixelSpace(reference, CANVAS_WIDTH, CANVAS_HEIGHT);
-        List<List<P>> playerRaw = toPixelSpace(player, 1.0D, 1.0D);
-        if (countPoints(refRaw) < 2 || countPoints(playerRaw) < 2) return degenerate();
+            // Step 0: degenerate input. Points are scaled to pixels first, so both sides share one pipeline.
+            List<List<P>> refRaw = toPixelSpace(reference, CANVAS_WIDTH, CANVAS_HEIGHT);
+            List<List<P>> playerRaw = toPixelSpace(player, 1.0D, 1.0D);
+            if (countPoints(refRaw) < 2 || countPoints(playerRaw) < 2) return degenerate();
 
-        // Step 1.1-1.3: thinning, short player strokes dropped, arc-length resampling.
-        List<List<P>> refThin = thin(refRaw);
-        List<List<P>> playerThin = dropShorterThan(thin(playerRaw), minStrokePx);
-        if (countPoints(refThin) < 2 || countPoints(playerThin) < 2
-                || arcLength(playerThin) < minStrokePx) return degenerate();
+            // Step 1.1-1.3: thinning, short player strokes dropped, arc-length resampling.
+            List<List<P>> refThin = thin(refRaw);
+            List<List<P>> playerThin = dropShorterThan(thin(playerRaw), minStrokePx);
+            if (countPoints(refThin) < 2 || countPoints(playerThin) < 2
+                    || arcLength(playerThin) < minStrokePx) return degenerate();
 
-        List<List<P>> refPx = resample(refThin);
-        List<List<P>> playerPx = resample(playerThin);
+            List<List<P>> refPx = resample(refThin);
+            List<List<P>> playerPx = resample(playerThin);
 
-        // Step 2: centroid + RMS normalisation, no rotation; tolerance follows the reference scale.
-        double refRms = rms(refPx);
-        double playerRms = rms(playerPx);
-        if (refRms <= MIN_RMS || playerRms <= MIN_RMS) return degenerate();
-        double tol2 = (tolPx / refRms) * (tolPx / refRms);
-        double simplifyPx = SIMPLIFY_EPSILON * tolPx;
+            // Step 2: centroid + RMS normalisation, no rotation; tolerance follows the reference scale.
+            double refRms = rms(refPx);
+            double playerRms = rms(playerPx);
+            if (refRms <= MIN_RMS || playerRms <= MIN_RMS) return degenerate();
+            double tol2 = (tolPx / refRms) * (tolPx / refRms);
+            double simplifyPx = SIMPLIFY_EPSILON * tolPx;
 
-        // Step 1.4-1.6: distances use the dense resampled segments, topology uses the simplified key
-        // point graph (splitting it at intersections is what makes nodes / faces countable).
-        List<List<P>> refKeys = simplifyAll(refPx, simplifyPx);
-        List<List<P>> playerKeys = simplifyAll(playerPx, simplifyPx);
-        Side refSide = new Side(translateScale(refPx, refRms), buildGraph(refKeys, tolPx));
-        Side playerSide = new Side(translateScale(playerPx, playerRms), buildGraph(playerKeys, tolPx));
+            // Step 1.4-1.6: distances use the dense resampled segments, topology uses the simplified key
+            // point graph (splitting it at intersections is what makes nodes / faces countable).
+            List<List<P>> refKeys = simplifyAll(refPx, simplifyPx);
+            List<List<P>> playerKeys = simplifyAll(playerPx, simplifyPx);
+            Side refSide = new Side(translateScale(refPx, refRms), buildGraph(refKeys, tolPx));
+            Side playerSide = new Side(translateScale(playerPx, playerRms), buildGraph(playerKeys, tolPx));
 
-        // Step 3-4: cover and the direction term share one nearest-segment query per reference point.
-        double errorSum = 0.0D;
-        double weightSum = 0.0D;
-        double directionSum = 0.0D;
-        for (List<P> stroke : refSide.strokes) {
-            for (int i = 0; i < stroke.size(); i++) {
-                P p = stroke.get(i);
-                int nearest = playerSide.nearest(p, 0, playerSide.segmentCount, tol2);
-                double error = nearest < 0 ? 1.0D : Math.min(1.0D, playerSide.segDist2(nearest, p) / tol2);
-                errorSum += error;
-                double weight = 1.0D - error;
-                if (weight > 0.0D) {
-                    double[] tangent = tangentAt(stroke, i);
-                    double sx = playerSide.sbx[nearest] - playerSide.sax[nearest];
-                    double sy = playerSide.sby[nearest] - playerSide.say[nearest];
-                    if ((tangent[0] != 0.0D || tangent[1] != 0.0D) && (sx != 0.0D || sy != 0.0D)) {
-                        directionSum += weight * foldedAngle(tangent[0], tangent[1], sx, sy) / HALF_PI;
-                        weightSum += weight;
+            // Step 3-4: cover and the direction term share one nearest-segment query per reference point.
+            double errorSum = 0.0D;
+            double weightSum = 0.0D;
+            double directionSum = 0.0D;
+            for (List<P> stroke : refSide.strokes) {
+                for (int i = 0; i < stroke.size(); i++) {
+                    P p = stroke.get(i);
+                    int nearest = playerSide.nearest(p, 0, playerSide.segmentCount, tol2);
+                    double error = nearest < 0 ? 1.0D : Math.min(1.0D, playerSide.segDist2(nearest, p) / tol2);
+                    errorSum += error;
+                    double weight = 1.0D - error;
+                    if (weight > 0.0D) {
+                        double[] tangent = tangentAt(stroke, i);
+                        double sx = playerSide.sbx[nearest] - playerSide.sax[nearest];
+                        double sy = playerSide.sby[nearest] - playerSide.say[nearest];
+                        if ((tangent[0] != 0.0D || tangent[1] != 0.0D) && (sx != 0.0D || sy != 0.0D)) {
+                            directionSum += weight * foldedAngle(tangent[0], tangent[1], sx, sy) / HALF_PI;
+                            weightSum += weight;
+                        }
                     }
                 }
             }
+            double cover = refSide.cloud.isEmpty() ? 0.0D : 1.0D - errorSum / refSide.cloud.size();
+            double direction = weightSum > 0.0D ? directionSum / weightSum : 1.0D;
+
+            double playerErrorSum = 0.0D;
+            for (P p : playerSide.cloud) {
+                int nearest = refSide.nearest(p, 0, refSide.segmentCount, tol2);
+                playerErrorSum += nearest < 0 ? 1.0D : Math.min(1.0D, refSide.segDist2(nearest, p) / tol2);
+            }
+            double precision = playerSide.cloud.isEmpty() ? 0.0D : 1.0D - playerErrorSum / playerSide.cloud.size();
+            double shape = cover + precision > 0.0D ? 2.0D * cover * precision / (cover + precision) : 0.0D;
+
+            double topology = 0.15D * countTerm(refSide.strokeCount, playerSide.strokeCount, 0.0D)
+                    + 0.25D * countTerm(refSide.endpoints, playerSide.endpoints, 1.0D)
+                    // One crossing, or one closed face, is not a difference. With a 12px tolerance whether a line
+                    // touches another or runs a few pixels short of it is a coin flip, and the shape term already
+                    // judges where the lines are; counting it twice is what a merely wobbly trace paid for.
+                    + 0.25D * countTerm(refSide.intersections, playerSide.intersections, 1.0D)
+                    + 0.25D * countTerm(refSide.faces, playerSide.faces, 1.0D)
+                    + 0.10D * lengthTerm(refSide.totalLength, playerSide.totalLength);
+
+            // Step 5-6: order term, total distance and the exponential completion mapping.
+            double order = orderDistance(refSide, playerSide, params, tol2);
+            double sigma = MiscUtil.positive(params.sigma()) > 0.0D
+                    ? params.sigma() : Judgement.DEFAULT.sigma();
+            double total = (1.0D - shape) + MiscUtil.positive(params.directionWeight()) * direction
+                    + MiscUtil.positive(params.topologyWeight()) * topology + MiscUtil.positive(params.orderWeight()) * order;
+            if (!Double.isFinite(total)) return degenerate();
+            double completion = Math.min(1.0D, Math.max(0.0D, Math.exp(-total / sigma)));
+            return new Score(completion, clamp01(cover), clamp01(precision), clamp01(shape), clamp01(direction),
+                    clamp01(topology), clamp01(order), total, countPoints(playerKeys), anyClosed(playerKeys, tolPx), false);
         }
-        double cover = refSide.cloud.isEmpty() ? 0.0D : 1.0D - errorSum / refSide.cloud.size();
-        double direction = weightSum > 0.0D ? directionSum / weightSum : 1.0D;
-
-        double playerErrorSum = 0.0D;
-        for (P p : playerSide.cloud) {
-            int nearest = refSide.nearest(p, 0, refSide.segmentCount, tol2);
-            playerErrorSum += nearest < 0 ? 1.0D : Math.min(1.0D, refSide.segDist2(nearest, p) / tol2);
-        }
-        double precision = playerSide.cloud.isEmpty() ? 0.0D : 1.0D - playerErrorSum / playerSide.cloud.size();
-        double shape = cover + precision > 0.0D ? 2.0D * cover * precision / (cover + precision) : 0.0D;
-
-        double topology = 0.15D * countTerm(refSide.strokeCount, playerSide.strokeCount, 0.0D)
-                + 0.25D * countTerm(refSide.endpoints, playerSide.endpoints, 1.0D)
-                // One crossing, or one closed face, is not a difference. With a 12px tolerance whether a line
-                // touches another or runs a few pixels short of it is a coin flip, and the shape term already
-                // judges where the lines are; counting it twice is what a merely wobbly trace paid for.
-                + 0.25D * countTerm(refSide.intersections, playerSide.intersections, 1.0D)
-                + 0.25D * countTerm(refSide.faces, playerSide.faces, 1.0D)
-                + 0.10D * lengthTerm(refSide.totalLength, playerSide.totalLength);
-
-        // Step 5-6: order term, total distance and the exponential completion mapping.
-        double order = orderDistance(refSide, playerSide, params, tol2);
-        double sigma = MiscUtil.positive(params.sigma()) > 0.0D
-                ? params.sigma() : Judgement.DEFAULT.sigma();
-        double total = (1.0D - shape) + MiscUtil.positive(params.directionWeight()) * direction
-                + MiscUtil.positive(params.topologyWeight()) * topology + MiscUtil.positive(params.orderWeight()) * order;
-        if (!Double.isFinite(total)) return degenerate();
-        double completion = Math.min(1.0D, Math.max(0.0D, Math.exp(-total / sigma)));
-        return new Score(completion, clamp01(cover), clamp01(precision), clamp01(shape), clamp01(direction),
-                clamp01(topology), clamp01(order), total, countPoints(playerKeys), anyClosed(playerKeys, tolPx), false);
     }
 
     /**

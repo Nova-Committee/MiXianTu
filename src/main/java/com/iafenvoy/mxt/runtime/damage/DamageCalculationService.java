@@ -15,6 +15,8 @@ import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
 import com.iafenvoy.mxt.util.formula.number.Constant;
+import com.iafenvoy.mxt.util.profiling.ProfilerScope;
+import com.iafenvoy.mxt.util.profiling.ServerProfiling;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
@@ -61,18 +63,20 @@ public final class DamageCalculationService {
     // The source is built here, not by the caller, so attribution is not each call site's own decision: a kill
     // counts as the attacker's. Reduction is not applied here - it runs in the event this call raises.
     public static double deal(@Nullable Entity attacker, Entity target, double amount, Optional<Holder<DamageType>> damageType, @Nullable FormulaContext context) {
-        if (!(target.level() instanceof ServerLevel level)) return 0.0D;
-        amount = MiscUtil.positive(amount);
-        if (amount <= 0.0D) return 0.0D;
-        DamageSource source = source(level, attacker, damageType);
-        if (bypasses(source)) {
-            target.hurtServer(level, source, (float) amount);
-            return amount;
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.COMBAT)) {
+            if (!(target.level() instanceof ServerLevel level)) return 0.0D;
+            amount = MiscUtil.positive(amount);
+            if (amount <= 0.0D) return 0.0D;
+            DamageSource source = source(level, attacker, damageType);
+            if (bypasses(source)) {
+                target.hurtServer(level, source, (float) amount);
+                return amount;
+            }
+            double shaped = outgoing(attacker, target, amount, context, DamageElements.strike(damageType, attacker));
+            if (shaped <= 0.0D) return 0.0D;
+            target.hurtServer(level, source, (float) shaped);
+            return shaped;
         }
-        double shaped = outgoing(attacker, target, amount, context, DamageElements.strike(damageType, attacker));
-        if (shaped <= 0.0D) return 0.0D;
-        target.hurtServer(level, source, (float) shaped);
-        return shaped;
     }
 
     // Every factor is read from data; anything that is not a positive finite number is reported as no damage at

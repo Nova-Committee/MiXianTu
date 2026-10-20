@@ -29,6 +29,8 @@ import com.iafenvoy.mxt.runtime.trigger.CultivationTriggerService;
 import com.iafenvoy.mxt.runtime.world.AuraResult;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.FormulaContexts;
+import com.iafenvoy.mxt.util.profiling.ProfilerScope;
+import com.iafenvoy.mxt.util.profiling.ServerProfiling;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
 import net.minecraft.network.chat.Component;
@@ -54,19 +56,23 @@ public final class CultivationMethodService {
 
     public static CultivationResult start(CultivationAttachment spirit, @NotNull Holder<Cultivation> action, Cultivation definition,
                                           long gameTime, BooleanSupplier conditionsMet) {
-        if (spirit.cultivating()) return CultivationResult.rejected(Failures.ALREADY_ACTIVE, null);
-        if (spirit.isCultivationOnCooldown(action, gameTime))
-            return CultivationResult.rejected(Failures.COOLDOWN, null);
-        if (!conditionsMet.getAsBoolean()) return CultivationResult.rejected(Failures.CONDITIONS, null);
-        spirit.startCultivation(action, gameTime, gameTime);
-        return CultivationResult.startedResult();
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.CULTIVATION)) {
+            if (spirit.cultivating()) return CultivationResult.rejected(Failures.ALREADY_ACTIVE, null);
+            if (spirit.isCultivationOnCooldown(action, gameTime))
+                return CultivationResult.rejected(Failures.COOLDOWN, null);
+            if (!conditionsMet.getAsBoolean()) return CultivationResult.rejected(Failures.CONDITIONS, null);
+            spirit.startCultivation(action, gameTime, gameTime);
+            return CultivationResult.startedResult();
+        }
     }
 
     public static CultivationResult start(LivingEntity entity, CultivationAttachment spirit, Identifier actionId, Cultivation definition, long gameTime, FormulaContext context) {
-        Holder<Cultivation> action = MxtDatapackRegistries.holder(entity.level().registryAccess(), MxtResourceKeys.CULTIVATION, actionId).orElse(null);
-        if (action == null) return CultivationResult.rejected(Failures.DISABLED, null);
-        boolean conditions = definition.startCondition().test(entity, context) && canStartCultivation(entity, context);
-        return start(spirit, action, definition, gameTime, () -> conditions);
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.CULTIVATION)) {
+            Holder<Cultivation> action = MxtDatapackRegistries.holder(entity.level().registryAccess(), MxtResourceKeys.CULTIVATION, actionId).orElse(null);
+            if (action == null) return CultivationResult.rejected(Failures.DISABLED, null);
+            boolean conditions = definition.startCondition().test(entity, context) && canStartCultivation(entity, context);
+            return start(spirit, action, definition, gameTime, () -> conditions);
+        }
     }
 
     public static boolean canStartCultivation(LivingEntity entity, FormulaContext context) {
@@ -76,115 +82,127 @@ public final class CultivationMethodService {
     }
 
     public static CultivationResult tick(LivingEntity entity, CultivationAttachment spirit, ResourceHolderAttachment resources, AuraResult aura, Holder<Cultivation> action, Cultivation definition, long gameTime, FormulaContext context, BooleanSupplier conditionsMet) {
-        if (!canCultivateInEnvironment(spirit, entity, aura, context))
-            return stop(entity, spirit, action, definition, gameTime, CultivationFailure.ENVIRONMENT);
-        double affinity = CultivationAffinity.multiplier(entity.getData(MxtAttachments.SPIRIT_IDENTITY),
-                entity.getExistingData(MxtAttachments.TECHNIQUE).orElse(null), aura, context);
-        return tick(entity, spirit, resources, aura, action, definition, gameTime, context, conditionsMet, affinity);
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.CULTIVATION)) {
+            if (!canCultivateInEnvironment(spirit, entity, aura, context))
+                return stop(entity, spirit, action, definition, gameTime, CultivationFailure.ENVIRONMENT);
+            double affinity = CultivationAffinity.multiplier(entity.getData(MxtAttachments.SPIRIT_IDENTITY),
+                    entity.getExistingData(MxtAttachments.TECHNIQUE).orElse(null), aura, context);
+            return tick(entity, spirit, resources, aura, action, definition, gameTime, context, conditionsMet, affinity);
+        }
     }
 
     private static CultivationResult tick(LivingEntity entity, CultivationAttachment spirit, ResourceHolderAttachment resources, AuraResult aura, Holder<Cultivation> action, Cultivation definition, long gameTime, FormulaContext context, BooleanSupplier conditionsMet, double affinity) {
-        if (!spirit.cultivating() || spirit.cultivation().filter(action::equals).isEmpty())
-            return CultivationResult.rejected(CultivationFailure.NOT_ACTIVE, null);
-        if (!conditionsMet.getAsBoolean())
-            return stop(entity, spirit, action, definition, gameTime, Failures.CONDITIONS,
-                    definition.abortReason().orElse(null));
-        // Every tick the session carries on, whether or not this one yields anything.
-        definition.tickAction().execute(entity, context);
-        // A tick with no yield: the session carries on, but nothing is paid, gained or scheduled, so the moment the
-        // condition holds again the body settles straight away.
-        if (!definition.cultivateCondition().test(entity, context)) return CultivationResult.waitingResult();
-        ItemAuraService.tick(entity, resources, context);
-        Recovery recovery = recover(entity, spirit, resources, aura, definition, affinity, context);
-        if (!recovery.valid()) return stop(entity, spirit, action, definition, gameTime, Failures.INVALID_FORMULA);
-        convertAll(entity, spirit, resources, context);
-        if (gameTime < spirit.nextCultivateTick()) {
-            return CultivationResult.waitingResult();
-        }
-        // One array, two channels: an mxt:aura entry is the ground's, taken out of the shared pool at the cultivator,
-        // and everything else is the body's, taken out of its own account. The split is by entry type, but both halves
-        // are one bill - a body cost that refused after the ground aura was taken would otherwise leave the aura spent
-        // without a settlement.
-        List<Cost> groundCosts = definition.costs().stream().filter(cost -> cost instanceof AuraCost).toList();
-        List<Cost> bodyCosts = definition.costs().stream().filter(cost -> !(cost instanceof AuraCost)).toList();
-        CostContext auraContext = CostContext.pool(entity, entity.level(), entity.blockPosition(), context, CostOrigin.CULTIVATION);
-        CostContext costContext = CostContext.of(entity, context, CostOrigin.CULTIVATION);
-        CostPayment bill = CostPayment.of(costContext);
-        // Whatever size is available is not asked here: this tick's share is decided below, and the payment is what
-        // checks the pool against the amount actually spent, so both halves are only priced.
-        if (bill.price(groundCosts, auraContext).isPresent() || bill.price(bodyCosts).isPresent())
-            return stop(entity, spirit, action, definition, gameTime, Failures.INVALID_FORMULA);
-        Map<Holder<Aura>, Double> auraCosts = bill.auras();
-        double auraCost = auraCosts.values().stream().mapToDouble(Double::doubleValue).sum();
-        if (!Double.isFinite(affinity) || affinity < 0.0D)
-            return stop(entity, spirit, action, definition, gameTime, Failures.INVALID_FORMULA);
-        Map<Holder<Aura>, Double> gains;
-        try {
-            gains = evaluateGains(definition.auraGains(), context);
-        } catch (IllegalArgumentException | IllegalStateException error) {
-            return stop(entity, spirit, action, definition, gameTime, Failures.INVALID_FORMULA);
-        }
-        double allocationFactor = 1.0D;
-        // Null is "there was no prepass", which keeps every source at its own price and lets the bill check the real
-        // stock. An empty map is a prepass that granted nothing, and that scales every aura fee to nothing - the two
-        // are different answers and the difference is kept here rather than in an empty table that reads as zero.
-        Map<Holder<Aura>, Double> shares = null;
-        if (auraCost > 0.0D && entity instanceof ServerPlayer player) {
-            // The level prepass bounds this from the shared chunk pool; direct callers keep full cost.
-            shares = AuraDistributionService.take(player).orElse(null);
-            if (shares != null) allocationFactor = allocationFactor(auraCosts, shares);
-            if (allocationFactor <= 0.0D && MxtServerConfig.INSTANCE.cultivation.forbidWithoutEligibleAura.getValue())
-                return stop(entity, spirit, action, definition, gameTime, CultivationFailure.INSUFFICIENT_AURA);
-        }
-        // The prepass bounds what this tick may take from the shared pool, and the bill is what replaces the amounts:
-        // a grant is shared out over what the bill asks of that aura, so two entries of one aura split one grant
-        // instead of each taking it whole, and a grant larger than the price does not raise it.
-        if (shares != null) {
-            Map<Holder<Aura>, Double> granted = shares;
-            if (bill.scale(transaction -> transaction.target() instanceof CostTarget.AuraStore,
-                    transaction -> transaction.target() instanceof CostTarget.AuraStore store
-                            ? shareRatio(granted, auraCosts, store.aura()) : 1.0D).isPresent())
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.CULTIVATION)) {
+            if (!spirit.cultivating() || spirit.cultivation().filter(action::equals).isEmpty())
+                return CultivationResult.rejected(CultivationFailure.NOT_ACTIVE, null);
+            if (!conditionsMet.getAsBoolean())
+                return stop(entity, spirit, action, definition, gameTime, Failures.CONDITIONS,
+                        definition.abortReason().orElse(null));
+            // Every tick the session carries on, whether or not this one yields anything.
+            definition.tickAction().execute(entity, context);
+            // A tick with no yield: the session carries on, but nothing is paid, gained or scheduled, so the moment the
+            // condition holds again the body settles straight away.
+            if (!definition.cultivateCondition().test(entity, context)) return CultivationResult.waitingResult();
+            ItemAuraService.tick(entity, resources, context);
+            Recovery recovery = recover(entity, spirit, resources, aura, definition, affinity, context);
+            if (!recovery.valid()) return stop(entity, spirit, action, definition, gameTime, Failures.INVALID_FORMULA);
+            convertAll(entity, spirit, resources, context);
+            if (gameTime < spirit.nextCultivateTick()) {
+                return CultivationResult.waitingResult();
+            }
+            // One array, two channels: an mxt:aura entry is the ground's, taken out of the shared pool at the cultivator,
+            // and everything else is the body's, taken out of its own account. The split is by entry type, but both halves
+            // are one bill - a body cost that refused after the ground aura was taken would otherwise leave the aura spent
+            // without a settlement.
+            List<Cost> groundCosts = definition.costs().stream().filter(cost -> cost instanceof AuraCost).toList();
+            List<Cost> bodyCosts = definition.costs().stream().filter(cost -> !(cost instanceof AuraCost)).toList();
+            CostContext auraContext = CostContext.pool(entity, entity.level(), entity.blockPosition(), context, CostOrigin.CULTIVATION);
+            CostContext costContext = CostContext.of(entity, context, CostOrigin.CULTIVATION);
+            CostPayment bill = CostPayment.of(costContext);
+            // Whatever size is available is not asked here: this tick's share is decided below, and the payment is what
+            // checks the pool against the amount actually spent, so both halves are only priced.
+            if (bill.price(groundCosts, auraContext).isPresent() || bill.price(bodyCosts).isPresent())
                 return stop(entity, spirit, action, definition, gameTime, Failures.INVALID_FORMULA);
+            Map<Holder<Aura>, Double> auraCosts = bill.auras();
+            double auraCost = auraCosts.values().stream().mapToDouble(Double::doubleValue).sum();
+            if (!Double.isFinite(affinity) || affinity < 0.0D)
+                return stop(entity, spirit, action, definition, gameTime, Failures.INVALID_FORMULA);
+            Map<Holder<Aura>, Double> gains;
+            try {
+                gains = evaluateGains(definition.auraGains(), context);
+            } catch (IllegalArgumentException | IllegalStateException error) {
+                return stop(entity, spirit, action, definition, gameTime, Failures.INVALID_FORMULA);
+            }
+            double allocationFactor = 1.0D;
+            // Null is "there was no prepass", which keeps every source at its own price and lets the bill check the real
+            // stock. An empty map is a prepass that granted nothing, and that scales every aura fee to nothing - the two
+            // are different answers and the difference is kept here rather than in an empty table that reads as zero.
+            Map<Holder<Aura>, Double> shares = null;
+            if (auraCost > 0.0D && entity instanceof ServerPlayer player) {
+                // The level prepass bounds this from the shared chunk pool; direct callers keep full cost.
+                shares = AuraDistributionService.take(player).orElse(null);
+                if (shares != null) allocationFactor = allocationFactor(auraCosts, shares);
+                if (allocationFactor <= 0.0D && MxtServerConfig.INSTANCE.cultivation.forbidWithoutEligibleAura.getValue())
+                    return stop(entity, spirit, action, definition, gameTime, CultivationFailure.INSUFFICIENT_AURA);
+            }
+            // The prepass bounds what this tick may take from the shared pool, and the bill is what replaces the amounts:
+            // a grant is shared out over what the bill asks of that aura, so two entries of one aura split one grant
+            // instead of each taking it whole, and a grant larger than the price does not raise it.
+            if (shares != null) {
+                Map<Holder<Aura>, Double> granted = shares;
+                if (bill.scale(transaction -> transaction.target() instanceof CostTarget.AuraStore,
+                        transaction -> transaction.target() instanceof CostTarget.AuraStore store
+                                ? shareRatio(granted, auraCosts, store.aura()) : 1.0D).isPresent())
+                    return stop(entity, spirit, action, definition, gameTime, Failures.INVALID_FORMULA);
+            }
+            double speed = aura.cultivationSpeed() * allocationFactor;
+            gains.replaceAll((id, amount) -> amount * speed);
+            if (!Double.isFinite(speed) || speed < 0.0D)
+                return stop(entity, spirit, action, definition, gameTime, Failures.INVALID_FORMULA);
+            if (!canApplyGains(entity, copyOf(resources), gains, context))
+                return stop(entity, spirit, action, definition, gameTime, Failures.INVALID_FORMULA);
+            // The whole bill is one boundary: every fee is asked before any of them is taken.
+            CostPayment.PaymentResult payment = bill.pay();
+            if (!payment.isSuccess()) return CultivationResult.rejected(payment.failure(), payment.failedResource());
+            applyGains(entity, resources, gains, context);
+            spirit.scheduleCultivateTick(Math.addExact(gameTime, definition.tickInterval()));
+            definition.cultivateAction().execute(entity, context);
+            return CultivationResult.progressed(recovery.cultivation(), payment.resources());
         }
-        double speed = aura.cultivationSpeed() * allocationFactor;
-        gains.replaceAll((id, amount) -> amount * speed);
-        if (!Double.isFinite(speed) || speed < 0.0D)
-            return stop(entity, spirit, action, definition, gameTime, Failures.INVALID_FORMULA);
-        if (!canApplyGains(entity, copyOf(resources), gains, context))
-            return stop(entity, spirit, action, definition, gameTime, Failures.INVALID_FORMULA);
-        // The whole bill is one boundary: every fee is asked before any of them is taken.
-        CostPayment.PaymentResult payment = bill.pay();
-        if (!payment.isSuccess()) return CultivationResult.rejected(payment.failure(), payment.failedResource());
-        applyGains(entity, resources, gains, context);
-        spirit.scheduleCultivateTick(Math.addExact(gameTime, definition.tickInterval()));
-        definition.cultivateAction().execute(entity, context);
-        return CultivationResult.progressed(recovery.cultivation(), payment.resources());
     }
 
     public static CultivationResult stop(LivingEntity entity, CultivationAttachment spirit, Holder<Cultivation> action, Cultivation definition, long gameTime) {
-        return stop(entity, spirit, action, definition, gameTime, null);
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.CULTIVATION)) {
+            return stop(entity, spirit, action, definition, gameTime, null);
+        }
     }
 
     // The abort reason travels with the result so the actionbar can name this pack's own abort instead of the
     // generic "conditions are not met"; every other stop names nothing and keeps the enum's message.
     private static CultivationResult stop(CultivationAttachment spirit, Holder<Cultivation> action, Cultivation definition, long gameTime,
                                           Failure reason, @Nullable Component abortReason) {
-        spirit.stopCultivation(action, Math.addExact(gameTime, definition.cooldownTicks()));
-        return reason == null ? CultivationResult.stoppedResult() : CultivationResult.rejected(reason, null, abortReason);
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.CULTIVATION)) {
+            spirit.stopCultivation(action, Math.addExact(gameTime, definition.cooldownTicks()));
+            return reason == null ? CultivationResult.stoppedResult() : CultivationResult.rejected(reason, null, abortReason);
+        }
     }
 
     private static CultivationResult stop(LivingEntity entity, CultivationAttachment spirit, Holder<Cultivation> action, Cultivation definition,
                                           long gameTime, Failure reason) {
-        return stop(entity, spirit, action, definition, gameTime, reason, null);
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.CULTIVATION)) {
+            return stop(entity, spirit, action, definition, gameTime, reason, null);
+        }
     }
 
     private static CultivationResult stop(LivingEntity entity, CultivationAttachment spirit, Holder<Cultivation> action, Cultivation definition,
                                           long gameTime, Failure reason, @Nullable Component abortReason) {
-        ItemAuraService.returnFloatingItem(entity);
-        // Breakthrough listeners are derived runtime state and must disappear as soon as cultivation
-        // stops, including on failure paths inside the tick.
-        CultivationTriggerService.clear(entity);
-        return stop(spirit, action, definition, gameTime, reason, abortReason);
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.CULTIVATION)) {
+            ItemAuraService.returnFloatingItem(entity);
+            // Breakthrough listeners are derived runtime state and must disappear as soon as cultivation
+            // stops, including on failure paths inside the tick.
+            CultivationTriggerService.clear(entity);
+            return stop(spirit, action, definition, gameTime, reason, abortReason);
+        }
     }
 
     private static ResourceHolderAttachment copyOf(ResourceHolderAttachment source) {

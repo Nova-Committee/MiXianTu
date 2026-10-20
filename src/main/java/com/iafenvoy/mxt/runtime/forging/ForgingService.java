@@ -17,6 +17,8 @@ import com.iafenvoy.mxt.runtime.resulting.Result;
 import com.iafenvoy.mxt.runtime.resulting.ResultWithData;
 import com.iafenvoy.mxt.runtime.resulting.failures.ForgingFailure;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
+import com.iafenvoy.mxt.util.profiling.ProfilerScope;
+import com.iafenvoy.mxt.util.profiling.ServerProfiling;
 import com.mojang.logging.LogUtils;
 import net.minecraft.core.Holder;
 import net.minecraft.core.RegistryAccess;
@@ -44,48 +46,56 @@ public final class ForgingService {
     }
 
     public static StartResult start(ServerPlayer player, ForgingSurface surface, ForgingBlueprint blueprint, RegistryAccess registries) {
-        Failure refusal = postEvent(new Start(player, surface.pos(), blueprint));
-        if (refusal != null) return StartResult.rejected(refusal);
-        ForgingPlan plan;
-        try {
-            plan = ForgingPlan.of(blueprint, registries);
-        } catch (IllegalArgumentException exception) {
-            return StartResult.rejected(ForgingFailure.INVALID_BLUEPRINT);
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.FORGING)) {
+            Failure refusal = postEvent(new Start(player, surface.pos(), blueprint));
+            if (refusal != null) return StartResult.rejected(refusal);
+            ForgingPlan plan;
+            try {
+                plan = ForgingPlan.of(blueprint, registries);
+            } catch (IllegalArgumentException exception) {
+                return StartResult.rejected(ForgingFailure.INVALID_BLUEPRINT);
+            }
+            // After the try, and deliberately so: a `Started` listener throwing an IllegalArgumentException
+            // would land in that catch and be reported as a broken blueprint.
+            ForgingSession session = new ForgingSession(plan);
+            notifyListeners(new Started(player, surface.pos(), new ForgingSessionView(session)));
+            return StartResult.started(session);
         }
-        // After the try, and deliberately so: a `Started` listener throwing an IllegalArgumentException
-        // would land in that catch and be reported as a broken blueprint.
-        ForgingSession session = new ForgingSession(plan);
-        notifyListeners(new Started(player, surface.pos(), new ForgingSessionView(session)));
-        return StartResult.started(session);
     }
 
     public static StrikeResult strike(ServerPlayer player, ForgingSurface surface, ForgingSession session, Holder<ForgingMethod> method,
                                       ResourceHolderAttachment resources, FormulaContext context, BooleanSupplier conditions) {
-        if (!conditions.getAsBoolean()) return StrikeResult.rejected(Failures.CONDITIONS, null);
-        if (!session.canStrike(method)) return StrikeResult.rejected(ForgingFailure.INVALID_STRIKE, null);
-        StrikePre event = new StrikePre(player, surface.pos(), new ForgingSessionView(session), method, resources, context);
-        Failure refusal = postEvent(event);
-        if (refusal != null) return StrikeResult.rejected(refusal, null);
-        CostContext costContext = CostContext.of(player, context, CostOrigin.FORGING);
-        CostPayment plan = CostPayment.of(costContext);
-        if (plan.price(event.getCosts()).isPresent())
-            return StrikeResult.rejected(Failures.INVALID_FORMULA, null);
-        CostPayment.PaymentResult payment = plan.pay();
-        if (!payment.isSuccess())
-            return StrikeResult.rejected(Failures.INSUFFICIENT_RESOURCE, payment.failedResource());
-        if (!session.strike(method))
-            throw new IllegalStateException("Forging session changed after its strike precheck");
-        notifyListeners(new StrikePost(player, surface.pos(), new ForgingSessionView(session)));
-        return StrikeResult.struck(session.value(), session.steps(), payment.resources());
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.FORGING)) {
+            if (!conditions.getAsBoolean()) return StrikeResult.rejected(Failures.CONDITIONS, null);
+            if (!session.canStrike(method)) return StrikeResult.rejected(ForgingFailure.INVALID_STRIKE, null);
+            StrikePre event = new StrikePre(player, surface.pos(), new ForgingSessionView(session), method, resources, context);
+            Failure refusal = postEvent(event);
+            if (refusal != null) return StrikeResult.rejected(refusal, null);
+            CostContext costContext = CostContext.of(player, context, CostOrigin.FORGING);
+            CostPayment plan = CostPayment.of(costContext);
+            if (plan.price(event.getCosts()).isPresent())
+                return StrikeResult.rejected(Failures.INVALID_FORMULA, null);
+            CostPayment.PaymentResult payment = plan.pay();
+            if (!payment.isSuccess())
+                return StrikeResult.rejected(Failures.INSUFFICIENT_RESOURCE, payment.failedResource());
+            if (!session.strike(method))
+                throw new IllegalStateException("Forging session changed after its strike precheck");
+            notifyListeners(new StrikePost(player, surface.pos(), new ForgingSessionView(session)));
+            return StrikeResult.struck(session.value(), session.steps(), payment.resources());
+        }
     }
 
     public static FinishResult finish(ServerPlayer player, ForgingSurface surface, Holder<ForgingBlueprint> blueprint, ForgingSession session) {
-        return finish(player, surface, blueprint, session, blueprint.value()::qualityFor);
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.FORGING)) {
+            return finish(player, surface, blueprint, session, blueprint.value()::qualityFor);
+        }
     }
 
     public static FinishResult finish(ServerPlayer player, ForgingSurface surface, Holder<ForgingBlueprint> blueprint, ForgingSession session,
                                       IntFunction<Holder<ItemQuality>> qualityForExtraSteps) {
-        return finish(player, surface, blueprint, session, qualityForExtraSteps, QualityService.DEFAULT_MODIFIER);
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.FORGING)) {
+            return finish(player, surface, blueprint, session, qualityForExtraSteps, QualityService.DEFAULT_MODIFIER);
+        }
     }
 
     // The modifier divides the extra count because extra steps are the penalty for not finishing optimally: a
@@ -133,7 +143,9 @@ public final class ForgingService {
     // Cancels a session before its input is returned by the owning inventory adapter. Returns the refusal to
     // report, or null when the cancellation stands.
     public static @Nullable Failure cancel(ServerPlayer player, ForgingSurface surface, ForgingSession session) {
-        return postEvent(new Cancel(player, surface.pos(), new ForgingSessionView(session)));
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.FORGING)) {
+            return postEvent(new Cancel(player, surface.pos(), new ForgingSessionView(session)));
+        }
     }
 
     // A listener that throws refuses the operation under its own name rather than escaping, because NeoForge

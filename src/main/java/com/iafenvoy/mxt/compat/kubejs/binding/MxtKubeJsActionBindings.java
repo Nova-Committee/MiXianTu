@@ -2,14 +2,14 @@ package com.iafenvoy.mxt.compat.kubejs.binding;
 
 import com.google.gson.JsonObject;
 import com.iafenvoy.mxt.compat.kubejs.callback.MxtJsActionCallbacks;
-import com.iafenvoy.mxt.util.function.QuadConsumer;
-import com.iafenvoy.mxt.util.function.TriConsumer;
 import com.iafenvoy.mxt.compat.kubejs.codec.MxtKubeJsDataCodec;
 import com.iafenvoy.mxt.data.action.BiEntityAction;
 import com.iafenvoy.mxt.data.action.BlockAction;
 import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.action.ItemAction;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
+import com.iafenvoy.mxt.util.function.QuadConsumer;
+import com.iafenvoy.mxt.util.function.TriConsumer;
 import dev.latvian.mods.kubejs.typings.Info;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.Entity;

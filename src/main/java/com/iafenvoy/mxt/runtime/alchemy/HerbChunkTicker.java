@@ -3,6 +3,8 @@ package com.iafenvoy.mxt.runtime.alchemy;
 import com.iafenvoy.mxt.attachment.HerbChunkAttachment;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.world.AuraChunkTicker;
+import com.iafenvoy.mxt.util.profiling.ProfilerScope;
+import com.iafenvoy.mxt.util.profiling.ServerProfiling;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.chunk.LevelChunk;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -24,12 +26,14 @@ public final class HerbChunkTicker {
 
     @SubscribeEvent
     public static void onLevelTick(Post event) {
-        if (!(event.getLevel() instanceof ServerLevel level)) return;
-        if (level.getGameTime() % SpiritHerbGrowthService.PERIOD != 0L) return;
-        for (LevelChunk chunk : AuraChunkTicker.loadedChunks(level)) {
-            HerbChunkAttachment attachment = chunk.getExistingDataOrNull(MxtAttachments.HERB_CHUNK.get());
-            if (attachment == null) continue;
-            SpiritHerbGrowthService.settle(level, chunk, attachment);
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.HERB)) {
+            if (!(event.getLevel() instanceof ServerLevel level)) return;
+            if (level.getGameTime() % SpiritHerbGrowthService.PERIOD != 0L) return;
+            for (LevelChunk chunk : AuraChunkTicker.loadedChunks(level)) {
+                HerbChunkAttachment attachment = chunk.getExistingDataOrNull(MxtAttachments.HERB_CHUNK.get());
+                if (attachment == null) continue;
+                SpiritHerbGrowthService.settle(level, chunk, attachment);
+            }
         }
     }
 
@@ -37,14 +41,18 @@ public final class HerbChunkTicker {
     // action did; a block the world generated never comes through here and is picked up as a wild plant instead.
     @SubscribeEvent
     public static void onBlockPlace(EntityPlaceEvent event) {
-        if (!(event.getLevel() instanceof ServerLevel level)) return;
-        SpiritHerbGrowthService.placed(level, event.getPos(), event.getPlacedBlock());
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.HERB)) {
+            if (!(event.getLevel() instanceof ServerLevel level)) return;
+            SpiritHerbGrowthService.placed(level, event.getPos(), event.getPlacedBlock());
+        }
     }
 
     // The block is already gone or is about to be, so the age is read from the event's own state rather than asked
     // of the level - which is why this runs on the drops event and not on the break event.
     @SubscribeEvent
     public static void onBlockDrops(BlockDropsEvent event) {
-        SpiritHerbGrowthService.harvested(event.getLevel(), event.getPos(), event.getState(), event.getDrops());
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.HERB)) {
+            SpiritHerbGrowthService.harvested(event.getLevel(), event.getPos(), event.getState(), event.getDrops());
+        }
     }
 }

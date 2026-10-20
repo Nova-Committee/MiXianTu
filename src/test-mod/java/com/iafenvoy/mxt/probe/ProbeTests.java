@@ -36,6 +36,10 @@ import com.iafenvoy.mxt.probe.verify.EconomyVerifyProbes;
 import com.iafenvoy.mxt.probe.verify.FriendVerifyProbes;
 import com.iafenvoy.mxt.probe.verify.GeneratedNameVerifyProbes;
 import com.iafenvoy.mxt.probe.verify.MinorStageVerifyProbes;
+import com.iafenvoy.mxt.probe.verify.ProfilerVerifyProbes;
+import com.iafenvoy.mxt.probe.verify.ProfilerChartVerifyProbes;
+import com.iafenvoy.mxt.probe.verify.ServerProfilingVerifyProbes;
+import com.iafenvoy.mxt.probe.verify.ProfilerGuiVerifyProbes;
 import com.iafenvoy.mxt.probe.verify.ScopeVerifyProbes;
 import com.iafenvoy.mxt.probe.verify.StoreVerifyProbes;
 import com.iafenvoy.mxt.probe.verify.TalismanSessionVerifyProbes;
@@ -108,6 +112,10 @@ public final class ProbeTests {
             EconomyVerifyProbes::probes,
             GeneratedNameVerifyProbes::probes,
             MinorStageVerifyProbes::probes,
+            ProfilerVerifyProbes::probes,
+            ServerProfilingVerifyProbes::probes,
+            ProfilerGuiVerifyProbes::probes,
+            ProfilerChartVerifyProbes::probes,
             TalismanVerifyProbes::probes,
             TalismanSessionVerifyProbes::probes,
             ScopeVerifyProbes::probes,

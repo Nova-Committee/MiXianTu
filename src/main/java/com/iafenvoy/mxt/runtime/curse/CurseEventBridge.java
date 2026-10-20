@@ -10,6 +10,8 @@ import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.runtime.Sources;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
+import com.iafenvoy.mxt.util.profiling.ProfilerScope;
+import com.iafenvoy.mxt.util.profiling.ServerProfiling;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
@@ -46,30 +48,38 @@ public final class CurseEventBridge {
 
     @SubscribeEvent
     public static void onEntityJoin(EntityJoinLevelEvent event) {
-        if (event.getLevel().isClientSide()) return;
-        CurseScheduler.reschedule(event.getEntity());
-        if (event.getEntity() instanceof LivingEntity living) syncCarried(living);
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.CURSE)) {
+            if (event.getLevel().isClientSide()) return;
+            CurseScheduler.reschedule(event.getEntity());
+            if (event.getEntity() instanceof LivingEntity living) syncCarried(living);
+        }
     }
 
     // Answers an equipment change at once, rather than waiting for the slow cadence.
     @SubscribeEvent
     public static void onEquipmentChange(LivingEquipmentChangeEvent event) {
-        if (event.getEntity().level().isClientSide()) return;
-        syncCarried(event.getEntity());
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.CURSE)) {
+            if (event.getEntity().level().isClientSide()) return;
+            syncCarried(event.getEntity());
+        }
     }
 
     // The slow cadence: what makes Curios carry curses, and what lets a carried curse come back by itself after
     // it expired, was cleansed, or was released by the source that held it before.
     @SubscribeEvent
     public static void onEntityTick(EntityTickEvent.Post event) {
-        if (!(event.getEntity() instanceof LivingEntity entity) || entity.level().isClientSide()) return;
-        if (entity.level().getGameTime() % RECONCILE_INTERVAL != 0L) return;
-        syncCarried(entity);
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.CURSE)) {
+            if (!(event.getEntity() instanceof LivingEntity entity) || entity.level().isClientSide()) return;
+            if (entity.level().getGameTime() % RECONCILE_INTERVAL != 0L) return;
+            syncCarried(entity);
+        }
     }
 
     @SubscribeEvent
     public static void onLevelTick(Post event) {
-        if (event.getLevel() instanceof ServerLevel level) CurseScheduler.onLevelTick(level);
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.CURSE)) {
+            if (event.getLevel() instanceof ServerLevel level) CurseScheduler.onLevelTick(level);
+        }
     }
 
     // Per source: a stack applies what nobody holds yet, joins the ledger for what is already there, and releases

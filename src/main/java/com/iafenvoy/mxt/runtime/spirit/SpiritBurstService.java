@@ -12,6 +12,8 @@ import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.resource.ResourceService;
 import com.iafenvoy.mxt.runtime.resource.ResourceUseService;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
+import com.iafenvoy.mxt.util.profiling.ProfilerScope;
+import com.iafenvoy.mxt.util.profiling.ServerProfiling;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.LivingEntity;
@@ -38,21 +40,23 @@ public final class SpiritBurstService {
     }
 
     public static void setFiring(LivingEntity holder, Optional<Identifier> auraId, boolean firing) {
-        UUID holderId = holder.getUUID();
-        if (auraId.isEmpty()) {
-            if (!firing) ACTIVE_AURAS.remove(holderId);
-            return;
-        }
-        Optional<Holder<Aura>> valid = auraId.flatMap(id -> MxtDatapackRegistries.holder(holder.level().registryAccess(), MxtResourceKeys.AURA, id))
-                .filter(aura -> aura.value().auraType().isPresent() && ResourceUseService.canUse(holder, aura));
-        if (valid.isEmpty()) return;
-        Set<Holder<Aura>> active = ACTIVE_AURAS.computeIfAbsent(holderId, ignored -> new HashSet<>());
-        if (firing) {
-            boolean added = active.add(valid.get());
-            if (added) fire(holder, valid.get());
-        } else {
-            active.remove(valid.get());
-            if (active.isEmpty()) ACTIVE_AURAS.remove(holderId);
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.SPIRIT)) {
+            UUID holderId = holder.getUUID();
+            if (auraId.isEmpty()) {
+                if (!firing) ACTIVE_AURAS.remove(holderId);
+                return;
+            }
+            Optional<Holder<Aura>> valid = auraId.flatMap(id -> MxtDatapackRegistries.holder(holder.level().registryAccess(), MxtResourceKeys.AURA, id))
+                    .filter(aura -> aura.value().auraType().isPresent() && ResourceUseService.canUse(holder, aura));
+            if (valid.isEmpty()) return;
+            Set<Holder<Aura>> active = ACTIVE_AURAS.computeIfAbsent(holderId, ignored -> new HashSet<>());
+            if (firing) {
+                boolean added = active.add(valid.get());
+                if (added) fire(holder, valid.get());
+            } else {
+                active.remove(valid.get());
+                if (active.isEmpty()) ACTIVE_AURAS.remove(holderId);
+            }
         }
     }
 
@@ -60,14 +64,16 @@ public final class SpiritBurstService {
     // would otherwise hand an empty cooldown table to every mob in the level.
     @SubscribeEvent
     public static void onEntityTick(Post event) {
-        if (!(event.getEntity() instanceof LivingEntity holder) || holder.level().isClientSide()) return;
-        Set<Holder<Aura>> active = ACTIVE_AURAS.get(holder.getUUID());
-        if ((active == null || active.isEmpty()) && !holder.hasData(MxtAttachments.SPIRIT_BURST_COOLDOWNS.get()))
-            return;
-        SpiritBurstCooldownAttachment cooldowns = holder.getData(MxtAttachments.SPIRIT_BURST_COOLDOWNS);
-        cooldowns.clearExpired(holder.level().getGameTime());
-        if (active == null || active.isEmpty()) return;
-        for (Holder<Aura> aura : Set.copyOf(active)) fire(holder, aura);
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.SPIRIT)) {
+            if (!(event.getEntity() instanceof LivingEntity holder) || holder.level().isClientSide()) return;
+            Set<Holder<Aura>> active = ACTIVE_AURAS.get(holder.getUUID());
+            if ((active == null || active.isEmpty()) && !holder.hasData(MxtAttachments.SPIRIT_BURST_COOLDOWNS.get()))
+                return;
+            SpiritBurstCooldownAttachment cooldowns = holder.getData(MxtAttachments.SPIRIT_BURST_COOLDOWNS);
+            cooldowns.clearExpired(holder.level().getGameTime());
+            if (active == null || active.isEmpty()) return;
+            for (Holder<Aura> aura : Set.copyOf(active)) fire(holder, aura);
+        }
     }
 
     @SubscribeEvent
@@ -78,11 +84,13 @@ public final class SpiritBurstService {
     // Same gate, cooldown and payment as the held path, so the wheel cannot fire a burst in a situation where
     // a held key would have refused it. Returns whether a burst was actually fired.
     public static boolean fireOnce(LivingEntity holder, Identifier auraId) {
-        if (auraId == null) return false;
-        Holder<Aura> aura = MxtDatapackRegistries.holder(holder.level().registryAccess(), MxtResourceKeys.AURA, auraId)
-                .filter(value -> value.value().auraType().isPresent() && ResourceUseService.canUse(holder, value))
-                .orElse(null);
-        return aura != null && attempt(holder, aura);
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.SPIRIT)) {
+            if (auraId == null) return false;
+            Holder<Aura> aura = MxtDatapackRegistries.holder(holder.level().registryAccess(), MxtResourceKeys.AURA, auraId)
+                    .filter(value -> value.value().auraType().isPresent() && ResourceUseService.canUse(holder, value))
+                    .orElse(null);
+            return aura != null && attempt(holder, aura);
+        }
     }
 
     private static void fire(LivingEntity holder, Holder<Aura> aura) {

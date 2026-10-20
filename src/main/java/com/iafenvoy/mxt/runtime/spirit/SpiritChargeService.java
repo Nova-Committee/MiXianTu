@@ -19,6 +19,8 @@ import com.iafenvoy.mxt.runtime.spirit.SpiritPour.Entry;
 import com.iafenvoy.mxt.util.MiscUtil;
 import com.iafenvoy.mxt.util.TooltipText;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
+import com.iafenvoy.mxt.util.profiling.ProfilerScope;
+import com.iafenvoy.mxt.util.profiling.ServerProfiling;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup.Provider;
@@ -81,63 +83,65 @@ public final class SpiritChargeService {
     // Server only: the charge is item state, and the client's copy arrives through the component sync.
     @SubscribeEvent
     public static void onUseTick(Tick event) {
-        LivingEntity entity = event.getEntity();
-        if (entity.level().isClientSide()) return;
-        ItemStack stack = event.getItem();
-        if (!(HoldLookup.hold(stack) instanceof SpiritChargeHold)) return;
-        if (!(stack.getItem() instanceof UseItemAuraAccess access)) return;
-        // A tick is paid for before the item answers it, so an item that would refuse this tick says so first.
-        if (!access.canPourInto(entity, stack)) return;
-        Provider registries = entity.level().registryAccess();
-        // Which aura is poured does not depend on the holder, so it is read first: the rates are read against
-        // that aura's own context.
-        Charge probe = resolve(registries, stack);
-        if (probe == null) return;
-        Holder<Aura> aura = probe.aura();
-        // The pool that pays is the resource the aura is counted in - the one conversion needing no lookup.
-        Holder<Resource> resource = aura.value().resource();
-        FormulaContext context = ResourceService.formulaContext(entity, resource, FormulaContext.of(entity));
-        Charge charge = resolve(registries, stack, context);
-        if (charge == null) return;
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.SPIRIT)) {
+            LivingEntity entity = event.getEntity();
+            if (entity.level().isClientSide()) return;
+            ItemStack stack = event.getItem();
+            if (!(HoldLookup.hold(stack) instanceof SpiritChargeHold)) return;
+            if (!(stack.getItem() instanceof UseItemAuraAccess access)) return;
+            // A tick is paid for before the item answers it, so an item that would refuse this tick says so first.
+            if (!access.canPourInto(entity, stack)) return;
+            Provider registries = entity.level().registryAccess();
+            // Which aura is poured does not depend on the holder, so it is read first: the rates are read against
+            // that aura's own context.
+            Charge probe = resolve(registries, stack);
+            if (probe == null) return;
+            Holder<Aura> aura = probe.aura();
+            // The pool that pays is the resource the aura is counted in - the one conversion needing no lookup.
+            Holder<Resource> resource = aura.value().resource();
+            FormulaContext context = ResourceService.formulaContext(entity, resource, FormulaContext.of(entity));
+            Charge charge = resolve(registries, stack, context);
+            if (charge == null) return;
 
-        int want = charge.intake();
-        if (want <= 0) return;
-        // What the item will really take, asked before anything is paid for: a full item, or one storing
-        // another aura, answers zero.
-        int units = want - access.insert(entity, registries, stack, aura, want, false, true);
-        if (units <= 0) {
-            show(entity, Component.translatable("actionbar.mxt.charge.full"), "full");
-            return;
-        }
+            int want = charge.intake();
+            if (want <= 0) return;
+            // What the item will really take, asked before anything is paid for: a full item, or one storing
+            // another aura, answers zero.
+            int units = want - access.insert(entity, registries, stack, aura, want, false, true);
+            if (units <= 0) {
+                show(entity, Component.translatable("actionbar.mxt.charge.full"), "full");
+                return;
+            }
 
-        double unitCost = charge.costPerUnit();
-        if (unitCost > 0.0D) {
-            ResourceHolderAttachment resources = entity.getData(MxtAttachments.RESOURCE_HOLDER);
-            // Decided before anything moves: a partial payment that bought no whole unit would be aura taken
-            // for nothing.
-            units = Math.min(units, (int) Math.floor(resources.get(resource) / unitCost));
-            if (units <= 0) {
-                show(entity, Component.translatable("actionbar.mxt.charge.insufficient"), "insufficient");
-                return;
+            double unitCost = charge.costPerUnit();
+            if (unitCost > 0.0D) {
+                ResourceHolderAttachment resources = entity.getData(MxtAttachments.RESOURCE_HOLDER);
+                // Decided before anything moves: a partial payment that bought no whole unit would be aura taken
+                // for nothing.
+                units = Math.min(units, (int) Math.floor(resources.get(resource) / unitCost));
+                if (units <= 0) {
+                    show(entity, Component.translatable("actionbar.mxt.charge.insufficient"), "insufficient");
+                    return;
+                }
+                double before = resources.get(resource);
+                // Spent through the resource service so the definition's bounds and audit trail apply: what is
+                // charged for is what was actually taken, and a bound may only trim the payment, never raise it.
+                Result paid = ResourceService.change(resources, resource, -(units * unitCost), context);
+                if (!paid.valid()) {
+                    show(entity, Component.translatable("actionbar.mxt.charge.insufficient"), "insufficient");
+                    return;
+                }
+                units = Math.min(units, (int) Math.floor(Math.max(0.0D, before - paid.value()) / unitCost));
+                if (units <= 0) {
+                    show(entity, Component.translatable("actionbar.mxt.charge.insufficient"), "insufficient");
+                    return;
+                }
             }
-            double before = resources.get(resource);
-            // Spent through the resource service so the definition's bounds and audit trail apply: what is
-            // charged for is what was actually taken, and a bound may only trim the payment, never raise it.
-            Result paid = ResourceService.change(resources, resource, -(units * unitCost), context);
-            if (!paid.valid()) {
-                show(entity, Component.translatable("actionbar.mxt.charge.insufficient"), "insufficient");
-                return;
-            }
-            units = Math.min(units, (int) Math.floor(Math.max(0.0D, before - paid.value()) / unitCost));
-            if (units <= 0) {
-                show(entity, Component.translatable("actionbar.mxt.charge.insufficient"), "insufficient");
-                return;
-            }
+            access.insert(entity, registries, stack, aura, units, false, false);
+            showProgress(entity, resolve(registries, stack, context));
+            // The item decides whether that was the moment it filled, so a talisman carrier can spend itself here.
+            access.onCharged(SpiritSource.of(entity), stack);
         }
-        access.insert(entity, registries, stack, aura, units, false, false);
-        showProgress(entity, resolve(registries, stack, context));
-        // The item decides whether that was the moment it filled, so a talisman carrier can spend itself here.
-        access.onCharged(SpiritSource.of(entity), stack);
     }
 
     // Answers null for anything this module does not charge: an empty stack, a non-ItemAuraAccess item, one that

@@ -11,6 +11,8 @@ import com.iafenvoy.mxt.runtime.economy.CurrencyValueService;
 import com.iafenvoy.mxt.screen.EconomySlots.Input;
 import com.iafenvoy.mxt.screen.EconomySlots.Output;
 import com.iafenvoy.mxt.screen.aui.AuiPages;
+import com.iafenvoy.mxt.util.profiling.ProfilerScope;
+import com.iafenvoy.mxt.util.profiling.ServerProfiling;
 import com.sighs.apricityui.screen.ApricityContainerMenu;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.player.Inventory;
@@ -57,29 +59,35 @@ public final class ChequeTableMenu extends ApricityContainerMenu {
     }
 
     public boolean checkIn(@NotNull Player player) {
-        ItemStack blank = this.setup.chequeInput().getItem(0);
-        if (!blank.is(MxtItems.CHEQUE.get()) || blank.getOrDefault(MxtDataComponents.CHEQUE.get(), ChequeComponent.EMPTY).value() != 0L)
-            return false;
-        OptionalLong value = CurrencyPaymentService.collectCurrency(this.setup.currency(), player);
-        if (value.isEmpty() || value.getAsLong() <= 0L || !this.setup.chequeOutput().getItem(0).isEmpty()) return false;
-        this.setup.chequeOutput().setItem(0, ChequeItem.create(value.getAsLong(), player.getGameProfile().name()));
-        blank.shrink(1);
-        this.setup.currency().clearContent();
-        this.broadcastChanges();
-        return true;
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.ECONOMY)) {
+            ItemStack blank = this.setup.chequeInput().getItem(0);
+            if (!blank.is(MxtItems.CHEQUE.get()) || blank.getOrDefault(MxtDataComponents.CHEQUE.get(), ChequeComponent.EMPTY).value() != 0L)
+                return false;
+            OptionalLong value = CurrencyPaymentService.collectCurrency(this.setup.currency(), player);
+            if (value.isEmpty() || value.getAsLong() <= 0L || !this.setup.chequeOutput().getItem(0).isEmpty())
+                return false;
+            this.setup.chequeOutput().setItem(0, ChequeItem.create(value.getAsLong(), player.getGameProfile().name()));
+            blank.shrink(1);
+            this.setup.currency().clearContent();
+            this.broadcastChanges();
+            return true;
+        }
     }
 
     public boolean checkOut(@NotNull Player player) {
-        ItemStack cheque = this.setup.chequeInput().getItem(0);
-        ChequeComponent data = cheque.getOrDefault(MxtDataComponents.CHEQUE.get(), ChequeComponent.EMPTY);
-        if (!cheque.is(MxtItems.CHEQUE.get()) || data.value() <= 0L || !this.setup.currency().isEmpty()) return false;
-        List<ItemStack> change = CurrencyPaymentService.makeChange(player.level().registryAccess(), data.value(),
-                this.setup.currency().getContainerSize()).orElse(null);
-        if (change == null) return false;
-        for (int index = 0; index < change.size(); index++) this.setup.currency().setItem(index, change.get(index));
-        cheque.shrink(1);
-        this.broadcastChanges();
-        return true;
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.ECONOMY)) {
+            ItemStack cheque = this.setup.chequeInput().getItem(0);
+            ChequeComponent data = cheque.getOrDefault(MxtDataComponents.CHEQUE.get(), ChequeComponent.EMPTY);
+            if (!cheque.is(MxtItems.CHEQUE.get()) || data.value() <= 0L || !this.setup.currency().isEmpty())
+                return false;
+            List<ItemStack> change = CurrencyPaymentService.makeChange(player.level().registryAccess(), data.value(),
+                    this.setup.currency().getContainerSize()).orElse(null);
+            if (change == null) return false;
+            for (int index = 0; index < change.size(); index++) this.setup.currency().setItem(index, change.get(index));
+            cheque.shrink(1);
+            this.broadcastChanges();
+            return true;
+        }
     }
 
     @Override

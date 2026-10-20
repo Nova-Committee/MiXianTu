@@ -6,6 +6,8 @@ import com.iafenvoy.mxt.registry.MxtEntityDataSerializers;
 import com.iafenvoy.mxt.registry.MxtEntityTypes;
 import com.iafenvoy.mxt.registry.MxtItems;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
+import com.iafenvoy.mxt.util.profiling.ProfilerScope;
+import com.iafenvoy.mxt.util.profiling.ServerProfiling;
 import net.minecraft.core.Holder;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.SynchedEntityData;
@@ -68,8 +70,10 @@ public final class TalismanProjectileEntity extends ThrowableItemProjectile {
 
     @Override
     public void tick() {
-        super.tick();
-        if (!this.level().isClientSide() && this.tickCount >= MAX_LIFETIME_TICKS) this.discard();
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.ENTITY)) {
+            super.tick();
+            if (!this.level().isClientSide() && this.tickCount >= MAX_LIFETIME_TICKS) this.discard();
+        }
     }
 
     @Override

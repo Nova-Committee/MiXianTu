@@ -9,6 +9,8 @@ import com.iafenvoy.mxt.runtime.world.AuraResult;
 import com.iafenvoy.mxt.runtime.world.AuraService;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
+import com.iafenvoy.mxt.util.profiling.ProfilerScope;
+import com.iafenvoy.mxt.util.profiling.ServerProfiling;
 import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
@@ -35,36 +37,38 @@ public final class CreatureProfileService {
     }
 
     public static boolean apply(Mob creature, Identifier id, CreatureProfile definition, FormulaContext context) {
-        if (!definition.condition().test(creature, context))
-            return false;
-        AuraResult aura = AuraService.getPositionAura(creature.level(), creature.blockPosition());
-        if (!definition.minimumAura().entrySet().stream().allMatch(entry -> {
-            double minimum = entry.getValue().evaluate(context);
-            return Double.isFinite(minimum) && minimum >= 0.0D && aura.pool(entry.getKey()).amount() >= minimum;
-        })
-                || (!definition.preferredAuraElements().isEmpty() && aura.aura().entrySet().stream().noneMatch(element -> element.getValue().amount() > 0.0D
-                && element.getKey().value().auraType()
-                .filter(type -> RegistryCodecs.matches(definition.preferredAuraElements(), type)).isPresent())))
-            return false;
-        final double intelligence;
-        try {
-            intelligence = definition.intelligence().evaluate(context);
-        } catch (RuntimeException exception) {
-            return false;
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.CREATURE)) {
+            if (!definition.condition().test(creature, context))
+                return false;
+            AuraResult aura = AuraService.getPositionAura(creature.level(), creature.blockPosition());
+            if (!definition.minimumAura().entrySet().stream().allMatch(entry -> {
+                double minimum = entry.getValue().evaluate(context);
+                return Double.isFinite(minimum) && minimum >= 0.0D && aura.pool(entry.getKey()).amount() >= minimum;
+            })
+                    || (!definition.preferredAuraElements().isEmpty() && aura.aura().entrySet().stream().noneMatch(element -> element.getValue().amount() > 0.0D
+                    && element.getKey().value().auraType()
+                    .filter(type -> RegistryCodecs.matches(definition.preferredAuraElements(), type)).isPresent())))
+                return false;
+            final double intelligence;
+            try {
+                intelligence = definition.intelligence().evaluate(context);
+            } catch (RuntimeException exception) {
+                return false;
+            }
+            if (!Double.isFinite(intelligence) || intelligence < 0.0D) return false;
+            MxtDatapackRegistries.holder(creature.level().registryAccess(), MxtResourceKeys.CREATURE_PROFILE, id)
+                    .ifPresent(profile -> {
+                        creature.getData(MxtAttachments.CREATURE_SPIRIT)
+                                .apply(profile, intelligence, definition.innerCore().map(ItemStackTemplate::create).orElse(ItemStack.EMPTY));
+                        // A profile that owns a chain hands this creature that chain, so the level it stands on is
+                        // granted together with the write.
+                        AbilityGrantService.recalculate(creature);
+                        // The profile is written once per creature, so its spawn action runs once: after the write, so
+                        // the action can already read the profile it belongs to.
+                        definition.spawnAction().execute(creature, context);
+                    });
+            return true;
         }
-        if (!Double.isFinite(intelligence) || intelligence < 0.0D) return false;
-        MxtDatapackRegistries.holder(creature.level().registryAccess(), MxtResourceKeys.CREATURE_PROFILE, id)
-                .ifPresent(profile -> {
-                    creature.getData(MxtAttachments.CREATURE_SPIRIT)
-                            .apply(profile, intelligence, definition.innerCore().map(ItemStackTemplate::create).orElse(ItemStack.EMPTY));
-                    // A profile that owns a chain hands this creature that chain, so the level it stands on is
-                    // granted together with the write.
-                    AbilityGrantService.recalculate(creature);
-                    // The profile is written once per creature, so its spawn action runs once: after the write, so
-                    // the action can already read the profile it belongs to.
-                    definition.spawnAction().execute(creature, context);
-                });
-        return true;
     }
 
     public static boolean matchesType(Mob creature, CreatureProfile definition) {
@@ -72,8 +76,10 @@ public final class CreatureProfileService {
     }
 
     public static boolean applySelected(Mob creature) {
-        if (creature.getData(MxtAttachments.CREATURE_SPIRIT).profile().isPresent()) return false;
-        Identifier id = select(creature).orElse(null);
-        return id != null && MxtDatapackRegistries.get(creature.level().registryAccess(), MxtResourceKeys.CREATURE_PROFILE, id).map(definition -> apply(creature, id, definition, FormulaContext.of(creature))).orElse(false);
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.CREATURE)) {
+            if (creature.getData(MxtAttachments.CREATURE_SPIRIT).profile().isPresent()) return false;
+            Identifier id = select(creature).orElse(null);
+            return id != null && MxtDatapackRegistries.get(creature.level().registryAccess(), MxtResourceKeys.CREATURE_PROFILE, id).map(definition -> apply(creature, id, definition, FormulaContext.of(creature))).orElse(false);
+        }
     }
 }

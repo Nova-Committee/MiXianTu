@@ -15,6 +15,8 @@ import com.iafenvoy.mxt.runtime.resource.ResourceService;
 import com.iafenvoy.mxt.util.MiscUtil;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.matcher.ItemMatcher;
+import com.iafenvoy.mxt.util.profiling.ProfilerScope;
+import com.iafenvoy.mxt.util.profiling.ServerProfiling;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.HolderLookup.Provider;
@@ -80,37 +82,39 @@ public final class ItemAuraService {
     // Advances by one server tick. A missing fuel first resumes the smallest partially consumed matching
     // stack, then takes a fresh matching item from the hands or the inventory.
     public static TickResult tick(LivingEntity entity, ResourceHolderAttachment resources, FormulaContext context) {
-        FloatHoldingItemAttachment holding = entity.getData(MxtAttachments.FLOAT_HOLDING_ITEM);
-        ItemStack item = holding.item();
-        Holder<ItemAura> active = activeDefinition(entity, item);
-        if (active == null) {
-            if (!item.isEmpty()) return TickResult.EMPTY;
-            item = loadNextItem(entity, context);
-            active = activeDefinition(entity, item);
-            if (active == null) return TickResult.EMPTY;
-        }
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.CULTIVATION)) {
+            FloatHoldingItemAttachment holding = entity.getData(MxtAttachments.FLOAT_HOLDING_ITEM);
+            ItemStack item = holding.item();
+            Holder<ItemAura> active = activeDefinition(entity, item);
+            if (active == null) {
+                if (!item.isEmpty()) return TickResult.EMPTY;
+                item = loadNextItem(entity, context);
+                active = activeDefinition(entity, item);
+                if (active == null) return TickResult.EMPTY;
+            }
 
-        ItemAuraComponent state = item.get(MxtDataComponents.ITEM_AURA);
-        if (state == null) return TickResult.INVALID;
-        if (state.remain() <= EPSILON) {
-            exhaust(entity, item, active, context);
-            return new TickResult(0.0D, 0.0D, true, true);
-        }
-        int stackSize = Math.max(1, item.getCount());
-        double speed = MiscUtil.positive(active.value().consumeSpeed().evaluate(context) * stackSize);
-        if (speed <= 0.0D) return TickResult.INVALID;
+            ItemAuraComponent state = item.get(MxtDataComponents.ITEM_AURA);
+            if (state == null) return TickResult.INVALID;
+            if (state.remain() <= EPSILON) {
+                exhaust(entity, item, active, context);
+                return new TickResult(0.0D, 0.0D, true, true);
+            }
+            int stackSize = Math.max(1, item.getCount());
+            double speed = MiscUtil.positive(active.value().consumeSpeed().evaluate(context) * stackSize);
+            if (speed <= 0.0D) return TickResult.INVALID;
 
-        double consumed = Math.min(state.remain(), speed);
-        double remaining = state.remain() - consumed;
-        double released = release(entity, resources, active.value().type(),
-                active.value().releaseSpeed().evaluate(context) * stackSize, context);
-        if (remaining <= EPSILON) {
-            exhaust(entity, item, active, context);
-            return new TickResult(consumed, released, true, true);
+            double consumed = Math.min(state.remain(), speed);
+            double remaining = state.remain() - consumed;
+            double released = release(entity, resources, active.value().type(),
+                    active.value().releaseSpeed().evaluate(context) * stackSize, context);
+            if (remaining <= EPSILON) {
+                exhaust(entity, item, active, context);
+                return new TickResult(consumed, released, true, true);
+            }
+            item.set(MxtDataComponents.ITEM_AURA, new ItemAuraComponent(remaining));
+            holding.markDirty();
+            return new TickResult(consumed, released, false, true);
         }
-        item.set(MxtDataComponents.ITEM_AURA, new ItemAuraComponent(remaining));
-        holding.markDirty();
-        return new TickResult(consumed, released, false, true);
     }
 
     public static void returnFloatingItem(LivingEntity entity) {

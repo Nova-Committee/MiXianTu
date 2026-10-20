@@ -6,6 +6,8 @@ import com.iafenvoy.mxt.screen.EconomySlots.Display;
 import com.iafenvoy.mxt.screen.EconomySlots.Ghost;
 import com.iafenvoy.mxt.screen.aui.AuiPages;
 import com.iafenvoy.mxt.util.InventoryUtil;
+import com.iafenvoy.mxt.util.profiling.ProfilerScope;
+import com.iafenvoy.mxt.util.profiling.ServerProfiling;
 import com.sighs.apricityui.screen.ApricityContainerMenu;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.Container;
@@ -100,37 +102,39 @@ public final class StationMenu extends ApricityContainerMenu {
      * Performs one offer after proving each inventory mutation can complete.
      */
     public boolean trade(Player player) {
-        if (!this.isCustomer()) return false;
-        Inventory playerInventory = player.getInventory();
-        Container playerPreview = InventoryUtil.copy(playerInventory);
-        if (!InventoryUtil.removeItems(playerPreview, this.costs)) {
-            player.sendSystemMessage(Component.translatable("screen.mxt.failure.no_enough_money"));
-            return false;
-        }
-        if (!InventoryUtil.insertItems(playerPreview, this.rewards)) {
-            player.sendSystemMessage(Component.translatable("screen.mxt.failure.no_enough_space"));
-            return false;
-        }
-
-        if (this.mode == Mode.TRADE_CUSTOMER) {
-            if (this.stock == null) return false;
-            Container stockPreview = InventoryUtil.copy(this.stock);
-            if (!InventoryUtil.removeItems(stockPreview, this.rewards)) {
-                player.sendSystemMessage(Component.translatable("screen.mxt.failure.no_enough_goods"));
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.ECONOMY)) {
+            if (!this.isCustomer()) return false;
+            Inventory playerInventory = player.getInventory();
+            Container playerPreview = InventoryUtil.copy(playerInventory);
+            if (!InventoryUtil.removeItems(playerPreview, this.costs)) {
+                player.sendSystemMessage(Component.translatable("screen.mxt.failure.no_enough_money"));
                 return false;
             }
-            if (!InventoryUtil.insertItems(stockPreview, this.costs)) {
+            if (!InventoryUtil.insertItems(playerPreview, this.rewards)) {
                 player.sendSystemMessage(Component.translatable("screen.mxt.failure.no_enough_space"));
                 return false;
             }
-            InventoryUtil.removeItems(this.stock, this.rewards);
-            InventoryUtil.insertItems(this.stock, this.costs);
-        }
 
-        InventoryUtil.removeItems(playerInventory, this.costs);
-        InventoryUtil.insertItems(playerInventory, this.rewards);
-        this.broadcastChanges();
-        return true;
+            if (this.mode == Mode.TRADE_CUSTOMER) {
+                if (this.stock == null) return false;
+                Container stockPreview = InventoryUtil.copy(this.stock);
+                if (!InventoryUtil.removeItems(stockPreview, this.rewards)) {
+                    player.sendSystemMessage(Component.translatable("screen.mxt.failure.no_enough_goods"));
+                    return false;
+                }
+                if (!InventoryUtil.insertItems(stockPreview, this.costs)) {
+                    player.sendSystemMessage(Component.translatable("screen.mxt.failure.no_enough_space"));
+                    return false;
+                }
+                InventoryUtil.removeItems(this.stock, this.rewards);
+                InventoryUtil.insertItems(this.stock, this.costs);
+            }
+
+            InventoryUtil.removeItems(playerInventory, this.costs);
+            InventoryUtil.insertItems(playerInventory, this.rewards);
+            this.broadcastChanges();
+            return true;
+        }
     }
 
     @Override

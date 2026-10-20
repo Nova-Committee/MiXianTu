@@ -10,6 +10,8 @@ import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.EntityTickStages;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationMethodService;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
+import com.iafenvoy.mxt.util.profiling.ProfilerScope;
+import com.iafenvoy.mxt.util.profiling.ServerProfiling;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
 import net.minecraft.world.entity.LivingEntity;
@@ -31,16 +33,18 @@ public final class ResourceRegenStage {
     }
 
     private static void tick(LivingEntity entity) {
-        ResourceHolderAttachment holder = entity.getExistingData(MxtAttachments.RESOURCE_HOLDER).orElse(null);
-        if (holder == null) return;
-        // Only profiled values are visited at all: a plain counter is never looked at, and a profiled value
-        // with no stored entry yet is created by its first change instead of by this loop.
-        for (Reference<Aura> cultivation : MxtDatapackRegistries.holders(entity.level().registryAccess(), MxtResourceKeys.AURA).toList()) {
-            Holder<Resource> resource = cultivation.value().resource();
-            if (!holder.contains(resource)) continue;
-            if (CultivationMethodService.handlesNaturalRegeneration(entity, cultivation)) continue;
-            ResourceService.regenerate(holder, resource, cultivation.value().regen(), 1L,
-                    ResourceService.formulaContext(entity, resource, FormulaContext.EMPTY));
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.RESOURCE)) {
+            ResourceHolderAttachment holder = entity.getExistingData(MxtAttachments.RESOURCE_HOLDER).orElse(null);
+            if (holder == null) return;
+            // Only profiled values are visited at all: a plain counter is never looked at, and a profiled value
+            // with no stored entry yet is created by its first change instead of by this loop.
+            for (Reference<Aura> cultivation : MxtDatapackRegistries.holders(entity.level().registryAccess(), MxtResourceKeys.AURA).toList()) {
+                Holder<Resource> resource = cultivation.value().resource();
+                if (!holder.contains(resource)) continue;
+                if (CultivationMethodService.handlesNaturalRegeneration(entity, cultivation)) continue;
+                ResourceService.regenerate(holder, resource, cultivation.value().regen(), 1L,
+                        ResourceService.formulaContext(entity, resource, FormulaContext.EMPTY));
+            }
         }
     }
 }

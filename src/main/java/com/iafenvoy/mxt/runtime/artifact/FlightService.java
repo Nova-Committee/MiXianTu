@@ -20,6 +20,8 @@ import com.iafenvoy.mxt.runtime.resulting.ResultWithData;
 import com.iafenvoy.mxt.runtime.resulting.failures.FlightFailure;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
+import com.iafenvoy.mxt.util.profiling.ProfilerScope;
+import com.iafenvoy.mxt.util.profiling.ServerProfiling;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
 import net.minecraft.core.HolderLookup.Provider;
@@ -107,49 +109,51 @@ public final class FlightService {
     }
 
     public static ResultWithData<State> mount(LivingEntity holder, Holder<Ability> skill, FormulaContext context) {
-        Failure refusal = canMount(holder, skill, context);
-        if (refusal != null) return ResultWithData.failure(State.REJECTED, refusal);
-        FlightControlAbilityType control = (FlightControlAbilityType) skill.value().type();
-        Mount found = find(holder, control.hand());
-        FlightAttachment data = holder.getData(MxtAttachments.FLIGHT);
-        assert found != null;
-        double speed = speed(found.type(), control, context);
-        MountVehicle vehicle = createVehicle(holder.level(), found.type()).orElse(null);
-        if (vehicle == null) return ResultWithData.failure(State.REJECTED, FlightFailure.CANNOT_MOUNT);
-        // The contract promises a body, not one that is an entity: only an entity can be created by an EntityType and
-        // only an entity can be ridden, so this cast cannot fail where it is made.
-        Entity body = (Entity) vehicle;
-        body.setPos(holder.getX(), holder.getY(), holder.getZ());
-        vehicle.setFlightSpeed(speed);
-        vehicle.setOwner(holder.getUUID());
-        // The artifact leaves the hand and rides inside the mount: that is the custody this design has, and it is also
-        // why the press cannot live on the artifact's own entry - its grants end the moment the stack leaves.
-        holder.setItemInHand(found.hand(), ItemStack.EMPTY);
-        vehicle.setVisual(found.stack());
-        // A summon the world refuses never reaches a removal, so the artifact is handed back here rather than left
-        // inside an entity nothing will ever remove.
-        if (!holder.level().addFreshEntity(body)) {
-            giveBack(vehicle);
-            return ResultWithData.failure(State.REJECTED, FlightFailure.CANNOT_MOUNT);
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.ARTIFACT)) {
+            Failure refusal = canMount(holder, skill, context);
+            if (refusal != null) return ResultWithData.failure(State.REJECTED, refusal);
+            FlightControlAbilityType control = (FlightControlAbilityType) skill.value().type();
+            Mount found = find(holder, control.hand());
+            FlightAttachment data = holder.getData(MxtAttachments.FLIGHT);
+            assert found != null;
+            double speed = speed(found.type(), control, context);
+            MountVehicle vehicle = createVehicle(holder.level(), found.type()).orElse(null);
+            if (vehicle == null) return ResultWithData.failure(State.REJECTED, FlightFailure.CANNOT_MOUNT);
+            // The contract promises a body, not one that is an entity: only an entity can be created by an EntityType and
+            // only an entity can be ridden, so this cast cannot fail where it is made.
+            Entity body = (Entity) vehicle;
+            body.setPos(holder.getX(), holder.getY(), holder.getZ());
+            vehicle.setFlightSpeed(speed);
+            vehicle.setOwner(holder.getUUID());
+            // The artifact leaves the hand and rides inside the mount: that is the custody this design has, and it is also
+            // why the press cannot live on the artifact's own entry - its grants end the moment the stack leaves.
+            holder.setItemInHand(found.hand(), ItemStack.EMPTY);
+            vehicle.setVisual(found.stack());
+            // A summon the world refuses never reaches a removal, so the artifact is handed back here rather than left
+            // inside an entity nothing will ever remove.
+            if (!holder.level().addFreshEntity(body)) {
+                giveBack(vehicle);
+                return ResultWithData.failure(State.REJECTED, FlightFailure.CANNOT_MOUNT);
+            }
+            if (!holder.startRiding(body, true, true)) {
+                // Discarding is a removal, which is what hands the artifact back, so a failed start costs nothing.
+                body.discard();
+                return ResultWithData.failure(State.REJECTED, FlightFailure.CANNOT_MOUNT);
+            }
+            // The flight allowance is an attribute ({@code NeoForgeMod.CREATIVE_FLIGHT}); the mayfly flag is the
+            // deprecated view of it, and reading the attribute is what can actually be written back. Only a player has
+            // any of that to remember, and only a player's entity type carries the attribute at all - asking a beast for
+            // it throws - so the snapshot stays at its defaults for anything else.
+            Player pilot = holder instanceof Player value ? value : null;
+            data.start(skill, found.ability(), holder.level().getGameTime(),
+                    pilot == null ? 0.0D : pilot.getAttributeValue(NeoForgeMod.CREATIVE_FLIGHT),
+                    pilot != null && pilot.getAbilities().flying,
+                    pilot == null ? 0.0F : pilot.getAbilities().getFlyingSpeed(), body.getUUID());
+            // The mount's own "the flight has begun" hook. It runs on the driver, because that is the entity a pack can
+            // actually give an effect or a resource to; the mount itself is data with a body.
+            found.type().actions().onMount().execute(holder, context);
+            return ResultWithData.success(State.MOUNTED);
         }
-        if (!holder.startRiding(body, true, true)) {
-            // Discarding is a removal, which is what hands the artifact back, so a failed start costs nothing.
-            body.discard();
-            return ResultWithData.failure(State.REJECTED, FlightFailure.CANNOT_MOUNT);
-        }
-        // The flight allowance is an attribute ({@code NeoForgeMod.CREATIVE_FLIGHT}); the mayfly flag is the
-        // deprecated view of it, and reading the attribute is what can actually be written back. Only a player has
-        // any of that to remember, and only a player's entity type carries the attribute at all - asking a beast for
-        // it throws - so the snapshot stays at its defaults for anything else.
-        Player pilot = holder instanceof Player value ? value : null;
-        data.start(skill, found.ability(), holder.level().getGameTime(),
-                pilot == null ? 0.0D : pilot.getAttributeValue(NeoForgeMod.CREATIVE_FLIGHT),
-                pilot != null && pilot.getAbilities().flying,
-                pilot == null ? 0.0F : pilot.getAbilities().getFlyingSpeed(), body.getUUID());
-        // The mount's own "the flight has begun" hook. It runs on the driver, because that is the entity a pack can
-        // actually give an effect or a resource to; the mount itself is data with a body.
-        found.type().actions().onMount().execute(holder, context);
-        return ResultWithData.success(State.MOUNTED);
     }
 
     // Only the hands: an artifact that is not held is not being used, and a flight never has to ask where the thing
@@ -176,29 +180,31 @@ public final class FlightService {
     }
 
     public static ResultWithData<State> tick(LivingEntity holder, Holder<Ability> skill, Holder<Ability> vehicle, FormulaContext context) {
-        FlightAttachment data = holder.getData(MxtAttachments.FLIGHT);
-        if (!data.active()) return ResultWithData.success(State.INACTIVE);
-        if (!(skill.value().type() instanceof FlightControlAbilityType control))
-            return dismount(holder, FlightFailure.NOT_FLYABLE);
-        if (!(vehicle.value().type() instanceof MountAbilityType mount))
-            return dismount(holder, FlightFailure.NOT_FLYABLE);
-        Entity body = holder.getVehicle();
-        if (!(body instanceof MountVehicle mountVehicle) || data.mount().filter(body.getUUID()::equals).isEmpty()) {
-            return dismount(holder, FlightFailure.MOUNT_LOST);
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.ARTIFACT)) {
+            FlightAttachment data = holder.getData(MxtAttachments.FLIGHT);
+            if (!data.active()) return ResultWithData.success(State.INACTIVE);
+            if (!(skill.value().type() instanceof FlightControlAbilityType control))
+                return dismount(holder, FlightFailure.NOT_FLYABLE);
+            if (!(vehicle.value().type() instanceof MountAbilityType mount))
+                return dismount(holder, FlightFailure.NOT_FLYABLE);
+            Entity body = holder.getVehicle();
+            if (!(body instanceof MountVehicle mountVehicle) || data.mount().filter(body.getUUID()::equals).isEmpty()) {
+                return dismount(holder, FlightFailure.MOUNT_LOST);
+            }
+            double speed = speed(mount, control, context);
+            if (!mount.canMove(speed)) return dismount(holder, Failures.INVALID_FORMULA);
+            mountVehicle.setFlightSpeed(speed);
+            if (!vehicle.value().condition().test(holder, context)) return dismount(holder, Failures.CONDITION_FAILED);
+            // The mount moves for real every tick, so hitting a wall or the ground ends the flight instead of grinding
+            // along it - see the vehicle's own tick for why the prediction that used to guard this made it dead code.
+            if (body.horizontalCollision || body.verticalCollision) return dismount(holder, FlightFailure.COLLISION);
+            List<Cost> costs = vehicle.value().costs();
+            if (!costs.isEmpty() && !payFuel(holder, mountVehicle, body.level(), costs, context))
+                return dismount(holder, Failures.INSUFFICIENT_RESOURCE);
+            // After the fuel, so a tick this hook runs for is a tick that was paid for.
+            mount.actions().tick().execute(holder, context);
+            return ResultWithData.success(State.FLYING);
         }
-        double speed = speed(mount, control, context);
-        if (!mount.canMove(speed)) return dismount(holder, Failures.INVALID_FORMULA);
-        mountVehicle.setFlightSpeed(speed);
-        if (!vehicle.value().condition().test(holder, context)) return dismount(holder, Failures.CONDITION_FAILED);
-        // The mount moves for real every tick, so hitting a wall or the ground ends the flight instead of grinding
-        // along it - see the vehicle's own tick for why the prediction that used to guard this made it dead code.
-        if (body.horizontalCollision || body.verticalCollision) return dismount(holder, FlightFailure.COLLISION);
-        List<Cost> costs = vehicle.value().costs();
-        if (!costs.isEmpty() && !payFuel(holder, mountVehicle, body.level(), costs, context))
-            return dismount(holder, Failures.INSUFFICIENT_RESOURCE);
-        // After the fuel, so a tick this hook runs for is a tick that was paid for.
-        mount.actions().tick().execute(holder, context);
-        return ResultWithData.success(State.FLYING);
     }
 
     // The fuel is bought out of the mount's own artifact before the rider's pool: the stack that became this
@@ -303,26 +309,28 @@ public final class FlightService {
     // Whatever is left of the flight restores the holder's own pre-flight state, which only a player has. The mount
     // hands the artifact back from its own removal path, so this only has to end the ride.
     public static ResultWithData<State> dismount(LivingEntity holder, Failure reason) {
-        FlightAttachment data = holder.getData(MxtAttachments.FLIGHT);
-        Entity body = holder.getVehicle();
-        if (body instanceof MountVehicle vehicle) {
-            // Before the seat is given up, so the hook still sees a rider on a mount. A flight whose driver is
-            // already gone has nobody to run it on, which is why the logout path has no hook.
-            vehicle.mountDefinition().ifPresent(mount -> mount.actions().onDismount().execute(holder, FormulaContext.of(holder)));
-            holder.stopRiding();
-            // Discarding is a removal, and a removal is what hands the artifact back and clears the seat markers:
-            // see EntityMountRemovalMixin, which is the one place that rule lives.
-            body.discard();
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.ARTIFACT)) {
+            FlightAttachment data = holder.getData(MxtAttachments.FLIGHT);
+            Entity body = holder.getVehicle();
+            if (body instanceof MountVehicle vehicle) {
+                // Before the seat is given up, so the hook still sees a rider on a mount. A flight whose driver is
+                // already gone has nobody to run it on, which is why the logout path has no hook.
+                vehicle.mountDefinition().ifPresent(mount -> mount.actions().onDismount().execute(holder, FormulaContext.of(holder)));
+                holder.stopRiding();
+                // Discarding is a removal, and a removal is what hands the artifact back and clears the seat markers:
+                // see EntityMountRemovalMixin, which is the one place that rule lives.
+                body.discard();
+            }
+            if (holder instanceof Player player) {
+                player.getAbilities().flying = data.previousFlight() > 0.0D && data.previousFlying();
+                AttributeInstance flight = player.getAttribute(NeoForgeMod.CREATIVE_FLIGHT);
+                if (flight != null) flight.setBaseValue(data.previousFlight());
+                player.getAbilities().setFlyingSpeed(data.previousFlyingSpeed());
+                player.onUpdateAbilities();
+            }
+            data.stop();
+            return ResultWithData.failure(State.STOPPED, reason);
         }
-        if (holder instanceof Player player) {
-            player.getAbilities().flying = data.previousFlight() > 0.0D && data.previousFlying();
-            AttributeInstance flight = player.getAttribute(NeoForgeMod.CREATIVE_FLIGHT);
-            if (flight != null) flight.setBaseValue(data.previousFlight());
-            player.getAbilities().setFlyingSpeed(data.previousFlyingSpeed());
-            player.onUpdateAbilities();
-        }
-        data.stop();
-        return ResultWithData.failure(State.STOPPED, reason);
     }
 
     public enum State {INACTIVE, MOUNTED, FLYING, STOPPED, REJECTED}

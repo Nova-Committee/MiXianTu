@@ -16,6 +16,7 @@ import java.util.function.Predicate;
  */
 public final class TriggerSubscription {
     private static final LoggerDispatcher LOGGER = LoggerDispatcher.of(LogUtils.getLogger(), LoggingLevel.ERROR, LoggingLevel.ERROR);
+
     public enum State {DISABLED, ARMED, CONSUMED}
 
     private final UUID owner;

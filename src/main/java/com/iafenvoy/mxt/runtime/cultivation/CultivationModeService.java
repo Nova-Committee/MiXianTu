@@ -10,6 +10,8 @@ import com.iafenvoy.mxt.runtime.resulting.Failures;
 import com.iafenvoy.mxt.runtime.trigger.CultivationTriggerService;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.FormulaContexts;
+import com.iafenvoy.mxt.util.profiling.ProfilerScope;
+import com.iafenvoy.mxt.util.profiling.ServerProfiling;
 import net.minecraft.core.Holder;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
@@ -29,15 +31,17 @@ public final class CultivationModeService {
     }
 
     public static CultivationResult toggle(ServerPlayer player) {
-        CultivationAttachment spirit = player.getData(MxtAttachments.CULTIVATION);
-        // Stopping goes by the stored method: once the running one no longer applies the selector picks another
-        // (or none at all), and stopping by that pick would leave the body cultivating.
-        Holder<Cultivation> running = spirit.cultivation().orElse(null);
-        if (spirit.cultivating() && running != null) return stop(player, spirit, running);
-        FormulaContext context = FormulaContexts.forEntity(player);
-        Holder<Cultivation> action = select(player, context).orElse(null);
-        if (action == null) return CultivationResult.rejected(Failures.NOT_APPLICABLE, null);
-        return start(player, spirit, action, context);
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.CULTIVATION)) {
+            CultivationAttachment spirit = player.getData(MxtAttachments.CULTIVATION);
+            // Stopping goes by the stored method: once the running one no longer applies the selector picks another
+            // (or none at all), and stopping by that pick would leave the body cultivating.
+            Holder<Cultivation> running = spirit.cultivation().orElse(null);
+            if (spirit.cultivating() && running != null) return stop(player, spirit, running);
+            FormulaContext context = FormulaContexts.forEntity(player);
+            Holder<Cultivation> action = select(player, context).orElse(null);
+            if (action == null) return CultivationResult.rejected(Failures.NOT_APPLICABLE, null);
+            return start(player, spirit, action, context);
+        }
     }
 
     // Applicability is the filter, priority is the order: an equal priority keeps registry order.
@@ -59,25 +63,29 @@ public final class CultivationModeService {
 
     public static CultivationResult start(LivingEntity entity, CultivationAttachment spirit, Holder<Cultivation> action,
                                           FormulaContext context) {
-        Cultivation definition = action.value();
-        CultivationResult result = CultivationMethodService.start(spirit, action, definition, entity.level().getGameTime(),
-                () -> applicable(entity, action, context));
-        if (result.started()) {
-            if (entity instanceof ServerPlayer player) CultivationMovementService.reconcile(player);
-            entity.refreshDimensions();
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.CULTIVATION)) {
+            Cultivation definition = action.value();
+            CultivationResult result = CultivationMethodService.start(spirit, action, definition, entity.level().getGameTime(),
+                    () -> applicable(entity, action, context));
+            if (result.started()) {
+                if (entity instanceof ServerPlayer player) CultivationMovementService.reconcile(player);
+                entity.refreshDimensions();
+            }
+            return result;
         }
-        return result;
     }
 
     public static CultivationResult stop(LivingEntity entity, CultivationAttachment spirit, Holder<Cultivation> action) {
-        CultivationResult result = CultivationMethodService.stop(entity, spirit, action, action.value(),
-                entity.level().getGameTime());
-        if (result.stopped()) {
-            if (entity instanceof ServerPlayer player) CultivationMovementService.clear(player);
-            entity.refreshDimensions();
-            CultivationTriggerService.clear(entity);
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.CULTIVATION)) {
+            CultivationResult result = CultivationMethodService.stop(entity, spirit, action, action.value(),
+                    entity.level().getGameTime());
+            if (result.stopped()) {
+                if (entity instanceof ServerPlayer player) CultivationMovementService.clear(player);
+                entity.refreshDimensions();
+                CultivationTriggerService.clear(entity);
+            }
+            return result;
         }
-        return result;
     }
 
     // The explicit pick behind {@code /mxt cultivate select}: a named method runs now even when the pack's ordering

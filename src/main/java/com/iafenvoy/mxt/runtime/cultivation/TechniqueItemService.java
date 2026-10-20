@@ -18,6 +18,8 @@ import com.iafenvoy.mxt.runtime.resulting.Failure;
 import com.iafenvoy.mxt.runtime.resulting.Result;
 import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
+import com.iafenvoy.mxt.util.profiling.ProfilerScope;
+import com.iafenvoy.mxt.util.profiling.ServerProfiling;
 import com.mojang.logging.LogUtils;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.Holder;
@@ -108,21 +110,23 @@ public final class TechniqueItemService {
     // percentage would be a lie here.
     @SubscribeEvent
     public static void onUseTick(Tick event) {
-        LivingEntity entity = event.getEntity();
-        if (entity.level().isClientSide()) return;
-        if (!(HoldLookup.hold(event.getItem()) instanceof TechniqueHold)) return;
-        // Recorded for every entity, not just players: the audit drives a hold on a pig.
-        int remaining = event.getDuration();
-        HOLD_TIMING.merge(entity.getUUID(), HoldTiming.started(remaining),
-                (existing, added) -> existing.ticked(remaining));
-        if (!(entity instanceof ServerPlayer player)) return;
-        int percent = HoldService.displayPercent(learnTime(entity, event.getItem()), remaining);
-        long now = entity.level().getGameTime();
-        ShownProgress shown = LAST_PROGRESS.get(player.getUUID());
-        if (shown != null && shown.percent() == percent && now - shown.tick() < PROGRESS_KEEP_ALIVE_TICKS) return;
-        LAST_PROGRESS.put(player.getUUID(), new ShownProgress(percent, now));
-        player.sendSystemMessage(Component.translatable("actionbar.mxt.technique.holding", bar(percent), percent)
-                .withStyle(ChatFormatting.AQUA), true);
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.CULTIVATION)) {
+            LivingEntity entity = event.getEntity();
+            if (entity.level().isClientSide()) return;
+            if (!(HoldLookup.hold(event.getItem()) instanceof TechniqueHold)) return;
+            // Recorded for every entity, not just players: the audit drives a hold on a pig.
+            int remaining = event.getDuration();
+            HOLD_TIMING.merge(entity.getUUID(), HoldTiming.started(remaining),
+                    (existing, added) -> existing.ticked(remaining));
+            if (!(entity instanceof ServerPlayer player)) return;
+            int percent = HoldService.displayPercent(learnTime(entity, event.getItem()), remaining);
+            long now = entity.level().getGameTime();
+            ShownProgress shown = LAST_PROGRESS.get(player.getUUID());
+            if (shown != null && shown.percent() == percent && now - shown.tick() < PROGRESS_KEEP_ALIVE_TICKS) return;
+            LAST_PROGRESS.put(player.getUUID(), new ShownProgress(percent, now));
+            player.sendSystemMessage(Component.translatable("actionbar.mxt.technique.holding", bar(percent), percent)
+                    .withStyle(ChatFormatting.AQUA), true);
+        }
     }
 
     private static String bar(int percent) {
@@ -208,20 +212,22 @@ public final class TechniqueItemService {
     // A matching binding claims the interaction even when learning is rejected by its conditions; a binding
     // that asks for a hold answers false so the click falls through to the hold module.
     public static boolean use(LivingEntity entity, ItemStack stack) {
-        if (entity.level().isClientSide()) return false;
-        Optional<TechniqueBinding> binding = ItemBindingService.technique(entity.level().registryAccess(), stack);
-        if (binding.isEmpty()) return false;
-        TechniqueBinding value = binding.orElseThrow();
-        Optional<Failure> refused = QualityService.check(entity, stack);
-        if (refused.isPresent()) {
-            QualityService.notifyCannotUse(entity, refused.orElseThrow());
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.CULTIVATION)) {
+            if (entity.level().isClientSide()) return false;
+            Optional<TechniqueBinding> binding = ItemBindingService.technique(entity.level().registryAccess(), stack);
+            if (binding.isEmpty()) return false;
+            TechniqueBinding value = binding.orElseThrow();
+            Optional<Failure> refused = QualityService.check(entity, stack);
+            if (refused.isPresent()) {
+                QualityService.notifyCannotUse(entity, refused.orElseThrow());
+                return true;
+            }
+            // A hold manual must not also teach on the click that starts it, but it still says what it is on that click.
+            readOut(entity, stack, value.technique());
+            if (requiresHold(entity, stack)) return false;
+            learn(entity, stack, value);
             return true;
         }
-        // A hold manual must not also teach on the click that starts it, but it still says what it is on that click.
-        readOut(entity, stack, value.technique());
-        if (requiresHold(entity, stack)) return false;
-        learn(entity, stack, value);
-        return true;
     }
 
     // What reading a manual prints: the text written on it, then the technique it names and, when the pack

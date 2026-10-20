@@ -3,6 +3,8 @@ package com.iafenvoy.mxt.runtime.world;
 import com.iafenvoy.mxt.attachment.AuraChunkAttachment;
 import com.iafenvoy.mxt.config.MxtServerConfig;
 import com.iafenvoy.mxt.registry.MxtAttachments;
+import com.iafenvoy.mxt.util.profiling.ProfilerScope;
+import com.iafenvoy.mxt.util.profiling.ServerProfiling;
 import it.unimi.dsi.fastutil.ints.Int2LongMap;
 import it.unimi.dsi.fastutil.ints.Int2LongOpenHashMap;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
@@ -43,19 +45,23 @@ public final class AuraChunkTicker {
 
     @SubscribeEvent
     public static void onChunkLoad(ChunkEvent.Load event) {
-        if (!(event.getChunk().getLevel() instanceof ServerLevel level)) return;
-        LevelChunk chunk = event.getChunk();
-        LOADED.computeIfAbsent(level, ignored -> Collections.newSetFromMap(new IdentityHashMap<>())).add(chunk);
-        PENDING.computeIfAbsent(level, ignored -> Collections.newSetFromMap(new IdentityHashMap<>())).add(chunk);
-        // The save can be older than the world, so the whole column is rebuilt before anything may read it.
-        BlockAuraService.rebuild(chunk);
-        refreshDeadlines(level, chunk);
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.AURA)) {
+            if (!(event.getChunk().getLevel() instanceof ServerLevel level)) return;
+            LevelChunk chunk = event.getChunk();
+            LOADED.computeIfAbsent(level, ignored -> Collections.newSetFromMap(new IdentityHashMap<>())).add(chunk);
+            PENDING.computeIfAbsent(level, ignored -> Collections.newSetFromMap(new IdentityHashMap<>())).add(chunk);
+            // The save can be older than the world, so the whole column is rebuilt before anything may read it.
+            BlockAuraService.rebuild(chunk);
+            refreshDeadlines(level, chunk);
+        }
     }
 
     @SubscribeEvent
     public static void onChunkUnload(ChunkEvent.Unload event) {
-        if (!(event.getChunk().getLevel() instanceof ServerLevel level)) return;
-        forget(level, event.getChunk());
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.AURA)) {
+            if (!(event.getChunk().getLevel() instanceof ServerLevel level)) return;
+            forget(level, event.getChunk());
+        }
     }
 
     @SubscribeEvent
@@ -79,37 +85,41 @@ public final class AuraChunkTicker {
     // Clears then immediately rebuilds the persisted block-aura subsection caches of the loaded chunks around
     // a position; returns how many chunks were invalidated.
     public static int clearBlockAuraCachesAround(ServerLevel level, BlockPos center, int radius) {
-        if (radius < 0) throw new IllegalArgumentException("Cache clear radius cannot be negative");
-        Set<LevelChunk> chunks = LOADED.get(level);
-        if (chunks == null) return 0;
-        int centerX = SectionPos.blockToSectionCoord(center.getX());
-        int centerZ = SectionPos.blockToSectionCoord(center.getZ());
-        int cleared = 0;
-        for (LevelChunk chunk : new LinkedHashSet<>(chunks)) {
-            int x = chunk.getPos().x() - centerX, z = chunk.getPos().z() - centerZ;
-            if (Math.abs(x) > radius || Math.abs(z) > radius) continue;
-            BlockAuraService.rebuild(chunk);
-            cleared++;
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.AURA)) {
+            if (radius < 0) throw new IllegalArgumentException("Cache clear radius cannot be negative");
+            Set<LevelChunk> chunks = LOADED.get(level);
+            if (chunks == null) return 0;
+            int centerX = SectionPos.blockToSectionCoord(center.getX());
+            int centerZ = SectionPos.blockToSectionCoord(center.getZ());
+            int cleared = 0;
+            for (LevelChunk chunk : new LinkedHashSet<>(chunks)) {
+                int x = chunk.getPos().x() - centerX, z = chunk.getPos().z() - centerZ;
+                if (Math.abs(x) > radius || Math.abs(z) > radius) continue;
+                BlockAuraService.rebuild(chunk);
+                cleared++;
+            }
+            return cleared;
         }
-        return cleared;
     }
 
     @SubscribeEvent(priority = EventPriority.HIGH)
     public static void onLevelTick(LevelTickEvent.Post event) {
-        if (!(event.getLevel() instanceof ServerLevel level)) return;
-        seedPending(level);
-        long interval = MxtServerConfig.INSTANCE.aura.blockAuraTickInterval.getValue();
-        if (level.getGameTime() % interval != 0L) return;
-        Set<LevelChunk> chunks = LOADED.get(level);
-        if (chunks == null) return;
-        refreshAuraVisitors(level);
-        Map<LevelChunk, Int2LongMap> deadlines = REFRESH.get(level);
-        for (LevelChunk chunk : new LinkedHashSet<>(chunks)) {
-            AuraChunkAttachment aura = chunk.getData(MxtAttachments.AURA_CHUNK);
-            if (deadlines != null) refreshDue(level, chunk, deadlines.get(chunk));
-            if (!aura.seeded())
-                AuraService.getPositionAura(level, chunk.getPos().getMiddleBlockPosition(level.getMinY()));
-            aura.regenerateAuras(interval);
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.AURA)) {
+            if (!(event.getLevel() instanceof ServerLevel level)) return;
+            seedPending(level);
+            long interval = MxtServerConfig.INSTANCE.aura.blockAuraTickInterval.getValue();
+            if (level.getGameTime() % interval != 0L) return;
+            Set<LevelChunk> chunks = LOADED.get(level);
+            if (chunks == null) return;
+            refreshAuraVisitors(level);
+            Map<LevelChunk, Int2LongMap> deadlines = REFRESH.get(level);
+            for (LevelChunk chunk : new LinkedHashSet<>(chunks)) {
+                AuraChunkAttachment aura = chunk.getData(MxtAttachments.AURA_CHUNK);
+                if (deadlines != null) refreshDue(level, chunk, deadlines.get(chunk));
+                if (!aura.seeded())
+                    AuraService.getPositionAura(level, chunk.getPos().getMiddleBlockPosition(level.getMinY()));
+                aura.regenerateAuras(interval);
+            }
         }
     }
 
@@ -201,21 +211,25 @@ public final class AuraChunkTicker {
     // Both handlers run last so a cancelled edit never reaches the cache, and touch only the block that changed.
     @SubscribeEvent(priority = EventPriority.LOW)
     public static void onBlockBreak(BreakBlockEvent event) {
-        if (event.isCanceled() || !(event.getLevel() instanceof ServerLevel level)) return;
-        LevelChunk chunk = AuraService.loadedChunk(level, event.getPos());
-        if (chunk == null) return;
-        // Announced before the block is gone, so the state it leaves behind comes from the state itself.
-        BlockAuraService.updateBlock(level, chunk, event.getPos(), event.getState(),
-                event.getState().getFluidState().createLegacyBlock());
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.AURA)) {
+            if (event.isCanceled() || !(event.getLevel() instanceof ServerLevel level)) return;
+            LevelChunk chunk = AuraService.loadedChunk(level, event.getPos());
+            if (chunk == null) return;
+            // Announced before the block is gone, so the state it leaves behind comes from the state itself.
+            BlockAuraService.updateBlock(level, chunk, event.getPos(), event.getState(),
+                    event.getState().getFluidState().createLegacyBlock());
+        }
     }
 
     @SubscribeEvent(priority = EventPriority.LOW)
     public static void onBlockPlace(EntityPlaceEvent event) {
-        if (event.isCanceled() || !(event.getLevel() instanceof ServerLevel level)) return;
-        LevelChunk chunk = AuraService.loadedChunk(level, event.getPos());
-        if (chunk == null) return;
-        // The snapshot holds the state that was there before; for a player the event is post-placement, so
-        // getState() is the new state and only the snapshot can tell what was replaced.
-        BlockAuraService.updateBlock(level, chunk, event.getPos(), event.getBlockSnapshot().getState(), event.getPlacedBlock());
+        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.AURA)) {
+            if (event.isCanceled() || !(event.getLevel() instanceof ServerLevel level)) return;
+            LevelChunk chunk = AuraService.loadedChunk(level, event.getPos());
+            if (chunk == null) return;
+            // The snapshot holds the state that was there before; for a player the event is post-placement, so
+            // getState() is the new state and only the snapshot can tell what was replaced.
+            BlockAuraService.updateBlock(level, chunk, event.getPos(), event.getBlockSnapshot().getState(), event.getPlacedBlock());
+        }
     }
 }
