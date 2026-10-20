@@ -1,12 +1,18 @@
 package com.iafenvoy.mxt.probe.verify;
 
+import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.aura.AuraZone.Distribution;
 import com.iafenvoy.mxt.probe.Probe;
 import com.iafenvoy.mxt.probe.ProbeContext;
+import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.cultivation.AuraDistributionService;
+import com.iafenvoy.mxt.runtime.cultivation.CultivationMethodService;
+import net.minecraft.core.Holder;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.RandomSource;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * The shared-aura split, driven through its one public entry point: what a consumer is granted, and what the sum of the
@@ -22,8 +28,28 @@ public final class CultivationDistributionVerifyProbes {
     public static List<Probe> probes() {
         return List.of(
                 Probe.of("verify/cultivation/distribution_total", CultivationDistributionVerifyProbes::withinStock),
-                Probe.of("verify/cultivation/distribution_weight", CultivationDistributionVerifyProbes::weightFallback)
+                Probe.of("verify/cultivation/distribution_weight", CultivationDistributionVerifyProbes::weightFallback),
+                Probe.of("verify/cultivation/share_ratio", CultivationDistributionVerifyProbes::shareRatio)
         );
+    }
+
+    // How much of one aura fee a prepass grant pays for. Nothing preallocated keeps the whole price - a body that
+    // ticks outside the level prepass, a direct caller, a non-player - while a prepass shares its grant out over
+    // everything the bill asks of that aura, and never past the price itself.
+    private static void shareRatio(ProbeContext context) {
+        Holder<Aura> aura = context.require(MxtResourceKeys.AURA, Identifier.fromNamespaceAndPath("mxt_test", "qi"));
+        Map<Holder<Aura>, Double> asked = Map.of(aura, 5.0D);
+        context.expect("no prepass keeps the whole price", CultivationMethodService.shareRatio(null, asked, aura), 1.0D);
+        // Two entries of one aura, 2 and 3, with one unit granted between them: each is charged its share of that one
+        // unit, not the whole unit, so their sum cannot exceed what was granted.
+        context.expect("one grant of five requested is a fifth of each entry",
+                CultivationMethodService.shareRatio(Map.of(aura, 1.0D), asked, aura), 0.2D);
+        context.expect("a grant larger than the price does not raise it",
+                CultivationMethodService.shareRatio(Map.of(aura, 10.0D), asked, aura), 1.0D);
+        context.expect("a prepass that granted nothing charges nothing",
+                CultivationMethodService.shareRatio(Map.of(), asked, aura), 0.0D);
+        context.expect("an aura this bill does not ask for is not charged",
+                CultivationMethodService.shareRatio(Map.of(aura, 1.0D), Map.of(), aura), 0.0D);
     }
 
     // No rule may hand out more than it was given: every grant is bounded by its own request, and their sum by the

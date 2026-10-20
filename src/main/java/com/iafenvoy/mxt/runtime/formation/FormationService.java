@@ -32,20 +32,20 @@ public final class FormationService {
     private FormationService() {
     }
 
-    public static ActivateResult activate(Identifier id, Formation definition, ResourceHolderAttachment resources, FormulaContext context) {
+    public static ResultWithData<FormationInstance> activate(Identifier id, Formation definition, ResourceHolderAttachment resources, FormulaContext context) {
         return activate(id, definition, resources, context, null);
     }
 
-    public static ActivateResult activate(Identifier id, Formation definition, ResourceHolderAttachment resources, FormulaContext context, UUID owner) {
+    public static ResultWithData<FormationInstance> activate(Identifier id, Formation definition, ResourceHolderAttachment resources, FormulaContext context, UUID owner) {
         double radius = MiscUtil.positive(definition.radius().evaluate(context));
-        if (radius <= 0.0D) return ActivateResult.rejected(Failures.INVALID_FORMULA, null);
+        if (radius <= 0.0D) return ResultWithData.failure(null, Failures.INVALID_FORMULA);
         // The activating player's own account is named directly: activation is driven from a controller block, so
         // there is no entity here to take a channel from, only an account to charge.
         CostPayment.PaymentResult payment = CostPayment.pay(definition.activationCosts(),
                 CostContext.account(resources, null, context, CostOrigin.FORMATION_ACTIVATION));
         if (!payment.isSuccess())
-            return ActivateResult.rejected(Failures.INSUFFICIENT_RESOURCE, payment.failedResource());
-        return ActivateResult.activated(owner == null ? new FormationInstance(id, radius) : new FormationInstance(id, radius, owner));
+            return ResultWithData.failure(null, Failures.INSUFFICIENT_RESOURCE, payment.failedResource());
+        return ResultWithData.success(owner == null ? new FormationInstance(id, radius) : new FormationInstance(id, radius, owner));
     }
 
     public static Result maintain(FormationInstance instance, Formation definition, ResourceHolderAttachment resources, FormulaContext context) {
@@ -165,20 +165,5 @@ public final class FormationService {
             }
         }
     }
-
-    public static final class ActivateResult extends ResultWithData<FormationInstance> {
-        private ActivateResult(@Nullable FormationInstance instance, Failure failure, Identifier failedResource) {
-            super(instance, failure, failedResource);
-        }
-
-        static ActivateResult activated(FormationInstance instance) {
-            return new ActivateResult(instance, null, null);
-        }
-
-        static ActivateResult rejected(Failure failure, Identifier resource) {
-            return new ActivateResult(null, failure, resource);
-        }
-    }
-
 
 }

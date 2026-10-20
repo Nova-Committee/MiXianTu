@@ -85,17 +85,17 @@ public final class TribulationService {
         return true;
     }
 
-    public static TickResult tick(LivingEntity entity, TribulationAttachment data, Holder<Tribulation> tribulation, long gameTime, FormulaContext context) {        // A run with nothing left to consume cannot progress - a save whose timeline the codec reduced to nothing,
+    public static ResultWithData<State> tick(LivingEntity entity, TribulationAttachment data, Holder<Tribulation> tribulation, long gameTime, FormulaContext context) {        // A run with nothing left to consume cannot progress - a save whose timeline the codec reduced to nothing,
         // or a cursor that outlived its beats. Dropping it keeps a dead run from blocking the next breakthrough.
         if (data.peek() == null) {
             if (data.tribulation().isPresent()) data.clear();
-            return TickResult.idle();
+            return ResultWithData.success(State.IDLE);
         }
         // The wind-up is the run counting itself in: the timeline has not started, so nothing is consumed, no
         // beat begins and no state is written while it lasts.
         if (data.windup() > 0L) {
             data.tickWindup();
-            return TickResult.running();
+            return ResultWithData.success(State.RUNNING);
         }
         Tribulation definition = tribulation.value();
         FormulaContext runContext = tribulationContext(entity, context);
@@ -109,12 +109,12 @@ public final class TribulationService {
                 data.clear();
                 definition.successAction().execute(entity, runContext);
                 NeoForge.EVENT_BUS.post(new Complete(data, tribulation));
-                return TickResult.completed();
+                return ResultWithData.success(State.COMPLETED);
             }
             if (++consumed > MAX_BEATS_PER_TICK) {
                 LOGGER.log("Tribulation {} consumed {} beats in one tick without waiting: a branch is "
                         + "probably cycling", HolderHelper.id(tribulation), consumed - 1);
-                return TickResult.running();
+                return ResultWithData.success(State.RUNNING);
             }
             // The beat reads and writes a draft of the run's state and commits it once it has answered: a beat
             // that changes nothing leaves the stored value untouched, so nothing has to be saved or synced.
@@ -133,39 +133,17 @@ public final class TribulationService {
             }
             Outcome outcome = entry.consume(entryContext);
             data.setState(state.get());
-            if (outcome == Outcome.RUNNING) return TickResult.running();
+            if (outcome == Outcome.RUNNING) return ResultWithData.success(State.RUNNING);
             if (outcome == Outcome.FAILED) {
                 data.clear();
                 definition.failAction().execute(entity, runContext);
-                return TickResult.failed(TribulationFailure.INVALID_ENTRY);
+                return ResultWithData.failure(State.FAILED, TribulationFailure.INVALID_ENTRY);
             }
             NeoForge.EVENT_BUS.post(new EntryPost(data, tribulation, data.consumed(), entry));
             data.advance(jump.target());
         }
     }
 
-
-    public static final class TickResult extends ResultWithData<State> {
-        private TickResult(State state, Failure failure) {
-            super(state, failure, null);
-        }
-
-        static TickResult idle() {
-            return new TickResult(State.IDLE, null);
-        }
-
-        static TickResult running() {
-            return new TickResult(State.RUNNING, null);
-        }
-
-        static TickResult completed() {
-            return new TickResult(State.COMPLETED, null);
-        }
-
-        static TickResult failed(Failure failure) {
-            return new TickResult(State.FAILED, failure);
-        }
-    }
 
     public enum State {IDLE, RUNNING, COMPLETED, FAILED}
 }

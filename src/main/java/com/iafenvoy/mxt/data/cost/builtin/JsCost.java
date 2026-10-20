@@ -45,8 +45,10 @@ public record JsCost(String id, JsonObject params) implements Cost {
         // The payer is bound here - a script cannot be paid by somebody else later - and the parameters are frozen as a
         // copy, so nothing a script does to them can reach the definition being replayed. A context without a player is
         // bound as absent and refused when the fee is paid.
-        CostTarget target = new CostTarget.Script(this.id(), CALLS.incrementAndGet());
-        return ResultWithData.success(new ScriptTransaction(target, context.player(), this.id(), this.params().deepCopy()));
+        Player player = context.player();
+        CostTarget target = new CostTarget.Script(this.id(), CALLS.incrementAndGet(),
+                player == null ? null : player.getUUID());
+        return ResultWithData.success(new ScriptTransaction(target, player, this.id(), this.params().deepCopy()));
     }
 
     @Override

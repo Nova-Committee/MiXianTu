@@ -6,14 +6,7 @@ import net.minecraft.core.RegistryAccess;
 import java.util.List;
 import java.util.OptionalLong;
 
-/**
- * The denomination set a counter pays change out of, checked when the pack loads.
- * <p>
- * Change is made greedily, which is only correct for a set the greedy answer always solves. A set that is not - values
- * 4 and 3 cannot pay 6 the greedy way although 3 + 3 can - is reported at load time instead of surfacing as a cheque that
- * cannot be cashed at a counter that looks like it should. It is a report and not a refusal: the rest of the pack is
- * still usable, and an author needs the message to fix the set.
- */
+// Load-time greedy diagnostics do not restrict the exact payout planner.
 public final class CurrencyChangeCache extends RegistryCache<CurrencyChangeCache> {
     private volatile List<Long> values = List.of();
     private volatile OptionalLong firstFailure = OptionalLong.empty();
@@ -31,7 +24,7 @@ public final class CurrencyChangeCache extends RegistryCache<CurrencyChangeCache
         long bound = CurrencyPaymentService.checkBound(declared);
         this.firstFailure = CurrencyPaymentService.greedyFailure(declared, bound);
         if (this.firstFailure.isEmpty()) return;
-        LOGGER.error("The currency denominations cannot make change greedily: {} is reachable but not by always taking the largest denomination that fits", this.firstFailure.orElse(-1));
+        LOGGER.warn("Greedy currency change leaves a remainder at {}; exact change planning will search for a combination within the available slots", this.firstFailure.orElse(-1));
     }
 
     @Override
@@ -45,10 +38,7 @@ public final class CurrencyChangeCache extends RegistryCache<CurrencyChangeCache
         return this;
     }
 
-    /**
-     * Whether this pack's denominations can be paid out by taking the largest denomination that fits, which is what a
-     * counter does when it hands a cheque's value back as items.
-     */
+    // No counterexample in the checked interval; this does not certify other values or slot budgets.
     public boolean solvable() {
         return this.firstFailure.isEmpty();
     }

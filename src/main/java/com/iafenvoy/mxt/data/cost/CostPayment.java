@@ -32,7 +32,6 @@ import java.util.function.ToDoubleFunction;
 public final class CostPayment {
     private static final Logger LOGGER = LogUtils.getLogger();
     private static final LoggerDispatcher DUPLICATE_TARGET = LoggerDispatcher.of(LOGGER);
-    private static final ThreadLocal<Set<Object>> PAYING = ThreadLocal.withInitial(HashSet::new);
     private final CostContext context;
     private final List<Entry> entries = new ArrayList<>();
     private @Nullable Failure failure;
@@ -98,7 +97,7 @@ public final class CostPayment {
         List<Entry> plan = this.plan();
         if (plan == null) return Optional.of(CostFailure.INVALID_AMOUNT);
         for (Entry entry : plan) {
-            ResultWithData<List<Debit>> simulated = this.run(entry, true);
+            ResultWithData<List<Debit>> simulated = entry.transaction().execute(true);
             if (simulated.isFailure()) return Optional.of(simulated.failure());
         }
         return Optional.empty();
@@ -129,7 +128,7 @@ public final class CostPayment {
 
     private PaymentResult settle(List<Entry> plan) {
         for (Entry entry : plan) {
-            ResultWithData<List<Debit>> simulated = this.run(entry, true);
+            ResultWithData<List<Debit>> simulated = entry.transaction().execute(true);
             if (simulated.isFailure()) return PaymentResult.denied(simulated.failure(), simulated.failedResource());
         }
         List<Debit> debits = new ArrayList<>(plan.size());
@@ -137,7 +136,7 @@ public final class CostPayment {
         this.uncertain = true;
         for (Entry entry : plan) {
             try {
-                ResultWithData<List<Debit>> result = this.run(entry, false);
+                ResultWithData<List<Debit>> result = entry.transaction().execute(false);
                 debits.addAll(result.getData());
                 if (result.isFailure())
                     LOGGER.warn("Cost deduction failed for {} (origin {}, reason {}, resource {}); continuing payment",
@@ -317,20 +316,6 @@ public final class CostPayment {
             plan.add(entry);
         }
         return List.copyOf(plan);
-    }
-
-    // A nested payment touching a store this one is writing is refused rather than interleaved, while an independent
-    // one on another store goes through. The guard is the target's own answer to "is this the same store", which is the
-    // target itself except where the identity is deliberately per-entry (see CostTarget#guard).
-    private ResultWithData<List<Debit>> run(Entry entry, boolean simulate) {
-        CostTarget target = entry.transaction().target();
-        Set<Object> paying = PAYING.get();
-        if (!paying.add(target.guard())) return ResultWithData.failure(List.of(), CostFailure.REENTRANT);
-        try {
-            return entry.transaction().execute(simulate);
-        } finally {
-            paying.remove(target.guard());
-        }
     }
 
     private CostContext resourceContext() {

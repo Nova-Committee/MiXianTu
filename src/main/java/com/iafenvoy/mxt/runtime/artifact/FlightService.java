@@ -106,16 +106,16 @@ public final class FlightService {
         return found.type().canMove(speed(found.type(), control, context)) ? null : Failures.INVALID_FORMULA;
     }
 
-    public static FlightResult mount(LivingEntity holder, Holder<Ability> skill, FormulaContext context) {
+    public static ResultWithData<State> mount(LivingEntity holder, Holder<Ability> skill, FormulaContext context) {
         Failure refusal = canMount(holder, skill, context);
-        if (refusal != null) return FlightResult.rejected(refusal);
+        if (refusal != null) return ResultWithData.failure(State.REJECTED, refusal);
         FlightControlAbilityType control = (FlightControlAbilityType) skill.value().type();
         Mount found = find(holder, control.hand());
         FlightAttachment data = holder.getData(MxtAttachments.FLIGHT);
         assert found != null;
         double speed = speed(found.type(), control, context);
         MountVehicle vehicle = createVehicle(holder.level(), found.type()).orElse(null);
-        if (vehicle == null) return FlightResult.rejected(FlightFailure.CANNOT_MOUNT);
+        if (vehicle == null) return ResultWithData.failure(State.REJECTED, FlightFailure.CANNOT_MOUNT);
         // The contract promises a body, not one that is an entity: only an entity can be created by an EntityType and
         // only an entity can be ridden, so this cast cannot fail where it is made.
         Entity body = (Entity) vehicle;
@@ -130,12 +130,12 @@ public final class FlightService {
         // inside an entity nothing will ever remove.
         if (!holder.level().addFreshEntity(body)) {
             giveBack(vehicle);
-            return FlightResult.rejected(FlightFailure.CANNOT_MOUNT);
+            return ResultWithData.failure(State.REJECTED, FlightFailure.CANNOT_MOUNT);
         }
         if (!holder.startRiding(body, true, true)) {
             // Discarding is a removal, which is what hands the artifact back, so a failed start costs nothing.
             body.discard();
-            return FlightResult.rejected(FlightFailure.CANNOT_MOUNT);
+            return ResultWithData.failure(State.REJECTED, FlightFailure.CANNOT_MOUNT);
         }
         // The flight allowance is an attribute ({@code NeoForgeMod.CREATIVE_FLIGHT}); the mayfly flag is the
         // deprecated view of it, and reading the attribute is what can actually be written back. Only a player has
@@ -149,7 +149,7 @@ public final class FlightService {
         // The mount's own "the flight has begun" hook. It runs on the driver, because that is the entity a pack can
         // actually give an effect or a resource to; the mount itself is data with a body.
         found.type().actions().onMount().execute(holder, context);
-        return FlightResult.mounted();
+        return ResultWithData.success(State.MOUNTED);
     }
 
     // Only the hands: an artifact that is not held is not being used, and a flight never has to ask where the thing
@@ -175,9 +175,9 @@ public final class FlightService {
         return mount.speed().evaluate(context) * control.speedMultiplier().evaluate(context);
     }
 
-    public static FlightResult tick(LivingEntity holder, Holder<Ability> skill, Holder<Ability> vehicle, FormulaContext context) {
+    public static ResultWithData<State> tick(LivingEntity holder, Holder<Ability> skill, Holder<Ability> vehicle, FormulaContext context) {
         FlightAttachment data = holder.getData(MxtAttachments.FLIGHT);
-        if (!data.active()) return FlightResult.inactive();
+        if (!data.active()) return ResultWithData.success(State.INACTIVE);
         if (!(skill.value().type() instanceof FlightControlAbilityType control))
             return dismount(holder, FlightFailure.NOT_FLYABLE);
         if (!(vehicle.value().type() instanceof MountAbilityType mount))
@@ -198,7 +198,7 @@ public final class FlightService {
             return dismount(holder, Failures.INSUFFICIENT_RESOURCE);
         // After the fuel, so a tick this hook runs for is a tick that was paid for.
         mount.actions().tick().execute(holder, context);
-        return FlightResult.flying();
+        return ResultWithData.success(State.FLYING);
     }
 
     // The fuel is bought out of the mount's own artifact before the rider's pool: the stack that became this
@@ -302,7 +302,7 @@ public final class FlightService {
 
     // Whatever is left of the flight restores the holder's own pre-flight state, which only a player has. The mount
     // hands the artifact back from its own removal path, so this only has to end the ride.
-    public static FlightResult dismount(LivingEntity holder, Failure reason) {
+    public static ResultWithData<State> dismount(LivingEntity holder, Failure reason) {
         FlightAttachment data = holder.getData(MxtAttachments.FLIGHT);
         Entity body = holder.getVehicle();
         if (body instanceof MountVehicle vehicle) {
@@ -322,35 +322,8 @@ public final class FlightService {
             player.onUpdateAbilities();
         }
         data.stop();
-        return FlightResult.stopped(reason);
+        return ResultWithData.failure(State.STOPPED, reason);
     }
 
     public enum State {INACTIVE, MOUNTED, FLYING, STOPPED, REJECTED}
-
-    public static final class FlightResult extends ResultWithData<State> {
-        private FlightResult(State state, Failure failure) {
-            super(state, failure, null);
-        }
-
-        static FlightResult mounted() {
-            return new FlightResult(State.MOUNTED, null);
-        }
-
-        static FlightResult flying() {
-            return new FlightResult(State.FLYING, null);
-        }
-
-        static FlightResult inactive() {
-            return new FlightResult(State.INACTIVE, null);
-        }
-
-        static FlightResult rejected(Failure failure) {
-            return new FlightResult(State.REJECTED, failure);
-        }
-
-        static FlightResult stopped(Failure failure) {
-            return new FlightResult(State.STOPPED, failure);
-        }
-
-    }
 }

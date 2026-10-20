@@ -293,47 +293,38 @@ public final class PlayerTradeService {
         private void complete() {
             if (this.closed) return;
             if (this.offerChanged()) return;
-            this.swap(this.first, this.second);
-            this.swap(this.second, this.first);
+            // Each side hands its own grid to the other; reading and writing are always different sides, so no
+            // hand-over can clear the grid it is about to deliver.
+            this.handOver(this.first, this.second);
+            this.handOver(this.second, this.first);
             this.eachSide(player -> player.sendSystemMessage(Component.translatable("command.mxt.trade.success")));
             this.close();
         }
 
-        // Moves source.offer into receiver's inventory, then clears the offer so no item can be handed out
-        // twice. Whatever does not fit is handed to the overflow list, which the close drops next to the receiver.
-        private void swap(Side receiver, Side source) {
-            this.returnOffer(receiver);
-            this.emptyOffer(source);
-        }
-
-        // The one way items leave an offer container: into the inventory, and past that onto the overflow list. An
-        // item that neither reaches the inventory nor the list would be stranded in a container nobody can open, so
-        // every exit - settle, cancel, disconnect, death - goes through here.
-        private void returnOffer(Side side) {
+        // The one way items leave an offer container: into the receiver's inventory, and past that onto the receiver's
+        // overflow list, which the close drops next to them. Cancel and discard pass the owner as both source and
+        // receiver; a completed trade passes the other side.
+        private void handOver(Side source, Side receiver) {
             this.settling = true;
             try {
-                for (int index = 0; index < side.offer.getContainerSize(); index++) {
-                    ItemStack stack = side.offer.getItem(index);
+                for (int index = 0; index < source.offer.getContainerSize(); index++) {
+                    ItemStack stack = source.offer.getItem(index);
                     if (stack.isEmpty()) continue;
                     ItemStack remainder = stack.copy();
-                    side.player.getInventory().add(remainder);
-                    if (!remainder.isEmpty()) side.overflow.add(remainder);
-                    side.offer.setItem(index, ItemStack.EMPTY);
+                    receiver.player.getInventory().add(remainder);
+                    if (!remainder.isEmpty()) receiver.overflow.add(remainder);
+                    source.offer.setItem(index, ItemStack.EMPTY);
                 }
-                side.offer.setChanged();
+                source.offer.setChanged();
             } finally {
                 this.settling = false;
             }
         }
 
-        private void emptyOffer(Side side) {
-            this.settling = true;
-            try {
-                side.offer.clearContent();
-                side.offer.setChanged();
-            } finally {
-                this.settling = false;
-            }
+        // An item that neither reaches the inventory nor the overflow list would be stranded in a container nobody can
+        // open, so every exit - settle, cancel, disconnect, death - goes through handOver.
+        private void returnOffer(Side side) {
+            this.handOver(side, side);
         }
 
         // Inventory.add empties the stack it successfully inserts, so the common path has nothing left to drop.

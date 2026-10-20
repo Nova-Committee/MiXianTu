@@ -14,6 +14,7 @@ import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
+import java.util.UUID;
 
 /**
  * The physical store a bound fee comes out of, used for duplicate diagnostics and re-entrancy guards.
@@ -57,9 +58,9 @@ public sealed interface CostTarget {
 
     /**
      * One script call, kept distinct by its entry number. Duplicate diagnostics compare script id and payer instead;
-     * the re-entrancy guard currently uses the script id alone.
+     * the re-entrancy guard is the payer and the script together, so one payer's call is never mistaken for another's.
      */
-    record Script(String id, long entry) implements CostTarget {
+    record Script(String id, long entry, @Nullable UUID payer) implements CostTarget {
         @Override
         public String label() {
             return "script " + this.id;
@@ -67,7 +68,13 @@ public sealed interface CostTarget {
 
         @Override
         public Object guard() {
-            return "script " + this.id;
+            return new Scope(this.payer, this.id);
+        }
+
+        /**
+         * Who is really running one script: the script's own id and the payer it was bound to.
+         */
+        record Scope(@Nullable UUID payer, String id) {
         }
     }
 

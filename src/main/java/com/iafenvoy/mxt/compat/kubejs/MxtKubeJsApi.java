@@ -31,8 +31,8 @@ import com.iafenvoy.mxt.runtime.ability.AbilityService;
 import com.iafenvoy.mxt.runtime.ability.AbilityService.UseResult;
 import com.iafenvoy.mxt.runtime.cultivation.*;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService.BreakthroughResult;
+import com.iafenvoy.mxt.runtime.curse.CurseInstance;
 import com.iafenvoy.mxt.runtime.curse.CurseService;
-import com.iafenvoy.mxt.runtime.curse.CurseService.ApplyResult;
 import com.iafenvoy.mxt.runtime.element.ElementReactionService;
 import com.iafenvoy.mxt.runtime.item.QualityRequirements;
 import com.iafenvoy.mxt.runtime.item.QualityService;
@@ -170,11 +170,11 @@ public final class MxtKubeJsApi {
         return abilityKeys(entity).filter(held -> held.is(id)).findFirst();
     }
 
-    public static ApplyResult applyCurse(@NotNull Entity target, Identifier id, int stacks, Identifier source, FormulaContext context) {
+    public static ResultWithData<CurseInstance> applyCurse(@NotNull Entity target, Identifier id, int stacks, Identifier source, FormulaContext context) {
         if (target.level().isClientSide())
-            return ApplyResult.rejected(Failures.SERVER_ONLY);
+            return ResultWithData.failure(null, Failures.SERVER_ONLY);
         Holder<Curse> curse = MxtDatapackRegistries.holder(target.level().registryAccess(), MxtResourceKeys.CURSE, id).orElse(null);
-        if (curse == null) return ApplyResult.rejected(CurseFailure.CONDITION);
+        if (curse == null) return ResultWithData.failure(null, CurseFailure.CONDITION);
         return CurseService.apply(target, curse, stacks, target.level().getGameTime(), context, source);
     }
 
@@ -204,14 +204,14 @@ public final class MxtKubeJsApi {
     /**
      * {@link #applyCurse} with a duration the definition may shorten but never be outlasted by.
      */
-    public static ApplyResult applyCurseFor(@NotNull Entity target, Identifier id, int stacks, Identifier source,
-                                            long durationTicks, FormulaContext context) {
-        if (target.level().isClientSide()) return ApplyResult.rejected(Failures.SERVER_ONLY);
+    public static ResultWithData<CurseInstance> applyCurseFor(@NotNull Entity target, Identifier id, int stacks, Identifier source,
+                                                             long durationTicks, FormulaContext context) {
+        if (target.level().isClientSide()) return ResultWithData.failure(null, Failures.SERVER_ONLY);
         if (durationTicks < 0L) throw new IllegalArgumentException("Curse duration must not be negative");
         return MxtDatapackRegistries.holder(target.level().registryAccess(), MxtResourceKeys.CURSE, id)
                 .map(curse -> CurseService.applyWithDuration(target, curse, stacks, target.level().getGameTime(),
                         context, source, OptionalLong.of(durationTicks)))
-                .orElseGet(() -> ApplyResult.rejected(CurseFailure.UNKNOWN));
+                .orElseGet(() -> ResultWithData.failure(null, CurseFailure.UNKNOWN));
     }
 
     /**

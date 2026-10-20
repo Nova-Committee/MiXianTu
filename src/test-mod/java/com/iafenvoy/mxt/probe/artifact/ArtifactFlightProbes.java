@@ -21,6 +21,7 @@ import com.iafenvoy.mxt.runtime.artifact.FlightService;
 import com.iafenvoy.mxt.entity.FlyingSwordEntity;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationIdentityService;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService;
+import com.iafenvoy.mxt.runtime.resulting.ResultWithData;
 import com.iafenvoy.mxt.runtime.resulting.failures.AbilityFailure;
 import com.iafenvoy.mxt.runtime.resulting.failures.FlightFailure;
 import com.iafenvoy.mxt.runtime.wheel.WheelEntryKinds;
@@ -234,7 +235,7 @@ public final class ArtifactFlightProbes {
                 BlockPos wall = crashSword.blockPosition().relative(Direction.SOUTH);
                 context.level().setBlockAndUpdate(wall, Blocks.STONE.defaultBlockState());
                 crashSword.move(MoverType.SELF, new Vec3(0.0D, 0.0D, 1.0D));
-                FlightService.FlightResult crashed = FlightService.tick(crasher, controlAbility, mountAbility, FormulaContext.of(crasher));
+                ResultWithData<FlightService.State> crashed = FlightService.tick(crasher, controlAbility, mountAbility, FormulaContext.of(crasher));
                 boolean hit = crashSword.horizontalCollision;
                 boolean stopped = crashed.getData() == FlightService.State.STOPPED;
                 boolean blocked = crashed.failure() == FlightFailure.COLLISION;

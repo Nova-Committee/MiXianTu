@@ -33,6 +33,7 @@ import com.iafenvoy.mxt.runtime.artifact.ArtifactService;
 import com.iafenvoy.mxt.runtime.formation.FormationInstance;
 import com.iafenvoy.mxt.runtime.formation.FormationOwners;
 import com.iafenvoy.mxt.runtime.formation.FormationService;
+import com.iafenvoy.mxt.runtime.resulting.ResultWithData;
 import com.iafenvoy.mxt.runtime.tribulation.TribulationService;
 import com.iafenvoy.mxt.runtime.trigger.TriggerDispatcher;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
@@ -314,7 +315,7 @@ public final class ClosureVerifyProbes {
             Holder<Tribulation> branch = context.require(MxtResourceKeys.TRIBULATION, ProbeDefinitions.id("probe_branch"));
             if (!TribulationService.start(player, data, branch, level.getGameTime(), FormulaContext.of(player)).isSuccess())
                 return "the branching timeline was refused";
-            TribulationService.TickResult branchTick = TribulationService.tick(player, data, branch, level.getGameTime(), FormulaContext.of(player));
+            ResultWithData<TribulationService.State> branchTick = TribulationService.tick(player, data, branch, level.getGameTime(), FormulaContext.of(player));
             if (branchTick.getData() != TribulationService.State.COMPLETED)
                 return "the branching timeline ended as " + branchTick.getData();
             double branched = resources.get(probe);
@@ -329,7 +330,7 @@ public final class ClosureVerifyProbes {
             if (TribulationService.tick(player, data, timeout, level.getGameTime(), FormulaContext.of(player)).getData()
                     != TribulationService.State.RUNNING)
                 return "a wait with a two-tick timeout did not hold the run on its first tick";
-            TribulationService.TickResult waitTick = TribulationService.tick(player, data, timeout, level.getGameTime(), FormulaContext.of(player));
+            ResultWithData<TribulationService.State> waitTick = TribulationService.tick(player, data, timeout, level.getGameTime(), FormulaContext.of(player));
             if (waitTick.getData() != TribulationService.State.COMPLETED)
                 return "a wait that ran out finished as " + waitTick.getData();
             if (!close(resources.get(probe), 10.0D))
@@ -342,7 +343,7 @@ public final class ClosureVerifyProbes {
             Holder<Tribulation> cycle = context.require(MxtResourceKeys.TRIBULATION, ProbeDefinitions.id("probe_branch_cycle"));
             if (!TribulationService.start(player, data, cycle, level.getGameTime(), FormulaContext.of(player)).isSuccess())
                 return "the cycling timeline was refused";
-            TribulationService.TickResult cycleTick = TribulationService.tick(player, data, cycle, level.getGameTime(), FormulaContext.of(player));
+            ResultWithData<TribulationService.State> cycleTick = TribulationService.tick(player, data, cycle, level.getGameTime(), FormulaContext.of(player));
             if (cycleTick.getData() != TribulationService.State.RUNNING)
                 return "a cycling branch ended as " + cycleTick.getData() + " instead of parking the run";
             if (!close(resources.get(probe), 0.0D))

@@ -7,8 +7,9 @@ import com.iafenvoy.mxt.data.curse.Curse;
 import com.iafenvoy.mxt.event.CurseRemoveEvent.Reason;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.runtime.curse.CurseInstance;
 import com.iafenvoy.mxt.runtime.curse.CurseService;
-import com.iafenvoy.mxt.runtime.curse.CurseService.ApplyResult;
+import com.iafenvoy.mxt.runtime.resulting.ResultWithData;
 import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
@@ -101,7 +102,7 @@ public final class CurseCommand {
         Collection<? extends Entity> targets = EntityArgument.getEntities(ctx, "targets");
         int applied = 0;
         for (Entity target : targets) {
-            ApplyResult result = CurseService.applyWithDuration(target, curse, stacks,
+            ResultWithData<CurseInstance> result = CurseService.applyWithDuration(target, curse, stacks,
                     target.level().getGameTime(), FormulaContext.of(target), SOURCE, durationTicks);
             if (result.isSuccess()) {
                 applied++;

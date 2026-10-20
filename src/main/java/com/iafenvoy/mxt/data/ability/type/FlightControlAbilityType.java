@@ -7,6 +7,7 @@ import com.iafenvoy.mxt.data.storage.builtin.CooldownDataStorage;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.artifact.FlightService;
 import com.iafenvoy.mxt.runtime.resulting.Failure;
+import com.iafenvoy.mxt.runtime.resulting.ResultWithData;
 import com.iafenvoy.mxt.runtime.resulting.failures.FlightFailure;
 import com.iafenvoy.mxt.util.OptionalBoolean;
 import com.iafenvoy.mxt.util.formula.NumberProvider;
@@ -87,7 +88,7 @@ public record FlightControlAbilityType(Hand hand, NumberProvider speedMultiplier
             FlightService.dismount(context.holder(), FlightFailure.STOPPED);
             return PressResult.activated();
         }
-        FlightService.FlightResult mounted = FlightService.mount(context.holder(), context.ability(), context.formula());
+        ResultWithData<FlightService.State> mounted = FlightService.mount(context.holder(), context.ability(), context.formula());
         if (mounted.failure() == null) return PressResult.activated();
         // Each reason a take-off can give is reported as itself; NOT_FLYABLE is the one failure this type cannot
         // produce, since the type was just read.

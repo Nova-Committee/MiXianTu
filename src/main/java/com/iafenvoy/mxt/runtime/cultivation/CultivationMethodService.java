@@ -125,7 +125,10 @@ public final class CultivationMethodService {
             return stop(entity, spirit, action, definition, gameTime, Failures.INVALID_FORMULA);
         }
         double allocationFactor = 1.0D;
-        Map<Holder<Aura>, Double> shares = Map.of();
+        // Null is "there was no prepass", which keeps every source at its own price and lets the bill check the real
+        // stock. An empty map is a prepass that granted nothing, and that scales every aura fee to nothing - the two
+        // are different answers and the difference is kept here rather than in an empty table that reads as zero.
+        Map<Holder<Aura>, Double> shares = null;
         if (auraCost > 0.0D && entity instanceof ServerPlayer player) {
             // The level prepass bounds this from the shared chunk pool; direct callers keep full cost.
             shares = AuraDistributionService.take(player).orElse(null);
@@ -134,13 +137,13 @@ public final class CultivationMethodService {
                 return stop(entity, spirit, action, definition, gameTime, CultivationFailure.INSUFFICIENT_AURA);
         }
         // The prepass bounds what this tick may take from the shared pool, and the bill is what replaces the amounts:
-        // each source is scaled by its own grant, so a source nobody was granted is not charged at another's expense.
-        // Null shares means there was no prepass and every source is kept whole.
+        // a grant is shared out over what the bill asks of that aura, so two entries of one aura split one grant
+        // instead of each taking it whole, and a grant larger than the price does not raise it.
         if (shares != null) {
             Map<Holder<Aura>, Double> granted = shares;
             if (bill.scale(transaction -> transaction.target() instanceof CostTarget.AuraStore,
                     transaction -> transaction.target() instanceof CostTarget.AuraStore store
-                            ? granted.getOrDefault(store.aura(), 0.0D) / transaction.amount() : 1.0D).isPresent())
+                            ? shareRatio(granted, auraCosts, store.aura()) : 1.0D).isPresent())
                 return stop(entity, spirit, action, definition, gameTime, Failures.INVALID_FORMULA);
         }
         double speed = aura.cultivationSpeed() * allocationFactor;
@@ -257,6 +260,23 @@ public final class CultivationMethodService {
             cultivation += overflow;
         }
         return new Recovery(restored, cultivation, true);
+    }
+
+    /**
+     * The ratio one aura fee is charged at once a prepass has granted shares of the shared pool: the grant over
+     * everything this bill asks of that aura, so two entries of one aura split one grant instead of each taking it
+     * whole, and never above one, so a grant larger than the price cannot raise it.
+     * <p>
+     * A null {@code shares} is "nothing was preallocated" - a body ticking outside the level prepass, a direct caller,
+     * a non-player - and then every fee keeps its own price and the bill checks the real stock. An empty table is a
+     * prepass that granted nothing, which is a different answer and scales to nothing.
+     */
+    public static double shareRatio(@Nullable Map<Holder<Aura>, Double> shares, Map<Holder<Aura>, Double> requested,
+                                    Holder<Aura> aura) {
+        if (shares == null) return 1.0D;
+        double asked = requested.getOrDefault(aura, 0.0D);
+        if (!(asked > 0.0D)) return 0.0D;
+        return Math.clamp(shares.getOrDefault(aura, 0.0D) / asked, 0.0D, 1.0D);
     }
 
     // The gain multiplier a tick is worth: how much of what it asked for was actually granted, summed over its sources

@@ -22,6 +22,7 @@ import net.minecraft.core.Holder;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import java.util.function.Function;
 
 public final class CostSettlementVerifyProbes {
@@ -33,8 +34,80 @@ public final class CostSettlementVerifyProbes {
                 Probe.of("verify/cost_duplicate_order", CostSettlementVerifyProbes::duplicateOrder),
                 Probe.of("verify/cost_entry_order", CostSettlementVerifyProbes::entryOrder),
                 Probe.of("verify/cost_real_failure", CostSettlementVerifyProbes::realFailure),
-                Probe.of("verify/cost_real_exception", CostSettlementVerifyProbes::realException)
+                Probe.of("verify/cost_real_exception", CostSettlementVerifyProbes::realException),
+                Probe.of("verify/cost_transaction_guard", CostSettlementVerifyProbes::transactionGuard),
+                Probe.of("verify/cost_simulate_after_pay", CostSettlementVerifyProbes::simulateAfterPay)
         );
+    }
+
+    // The guard that keeps a store from being written twice at once lives in the transaction, not in the bill, so a
+    // script that executes a transaction directly is guarded too. It names the store and, for a script, the payer: the
+    // same script charged to two payers is two scopes and must not be refused.
+    private static void transactionGuard(ProbeContext context) {
+        Holder<Resource> resource = resource(context);
+        ResourceHolderAttachment account = new ResourceHolderAttachment();
+        account.set(resource, 10.0D);
+        CostTarget shared = new CostTarget.Account(account, resource);
+        CostContext costs = costs(context, account);
+        // An inner transaction on the same store, run from inside the outer one's own pass.
+        boolean[] innerRefused = {false};
+        FixtureCost outer = new FixtureCost(shared, 1.0D, simulate -> {
+            innerRefused[0] = child(shared, 1.0D).execute(simulate).failure() == CostFailure.REENTRANT;
+            return ResultWithData.success(List.of());
+        });
+        ResultWithData<List<Debit>> executed = outer.prepare(costs).getData().execute(true);
+        context.check("a nested pass over the store being written is refused", innerRefused[0]);
+        context.check("the outer pass itself still runs", executed.isSuccess());
+        // A different store is independent: that one runs inside the same pass.
+        boolean[] otherRan = {false};
+        Holder<Resource> second = context.require(MxtResourceKeys.RESOURCE, ProbeDefinitions.id("true_essence"));
+        FixtureCost independent = new FixtureCost(new CostTarget.Account(new ResourceHolderAttachment(), second), 1.0D, simulate -> {
+            otherRan[0] = child(new CostTarget.Account(new ResourceHolderAttachment(), second), 1.0D).execute(simulate).isSuccess();
+            return ResultWithData.success(List.of());
+        });
+        independent.prepare(costs).getData().execute(true);
+        context.check("an unrelated store is not blocked by the pass in progress", otherRan[0]);
+        // Two payers running one script are two scopes: the second is not mistaken for the first re-entering itself.
+        CostTarget.Script firstPayer = new CostTarget.Script("probe:shared", 1, context.player().getUUID());
+        CostTarget.Script otherPayer = new CostTarget.Script("probe:shared", 2, UUID.randomUUID());
+        boolean[] otherPayerRan = {false};
+        FixtureCost byFirst = new FixtureCost(firstPayer, 1.0D, simulate -> {
+            otherPayerRan[0] = child(otherPayer, 1.0D).execute(simulate).isSuccess();
+            return ResultWithData.success(List.of());
+        });
+        byFirst.prepare(costs).getData().execute(true);
+        context.check("the same script charged to another payer is a separate scope", otherPayerRan[0]);
+        // The same script and the same payer is one scope, however many entries name it.
+        CostTarget.Script same = new CostTarget.Script("probe:shared", 3, context.player().getUUID());
+        boolean[] samePayerRefused = {false};
+        FixtureCost bySame = new FixtureCost(same, 1.0D, simulate -> {
+            samePayerRefused[0] = child(new CostTarget.Script("probe:shared", 4, context.player().getUUID()), 1.0D)
+                    .execute(simulate).failure() == CostFailure.REENTRANT;
+            return ResultWithData.success(List.of());
+        });
+        bySame.prepare(costs).getData().execute(true);
+        context.check("the same script for the same payer is one scope", samePayerRefused[0]);
+    }
+
+    // A settled transaction is still settled, but a simulation of it never reports real charges: only a real pass
+    // produces debits, whichever order the two were asked in.
+    private static void simulateAfterPay(ProbeContext context) {
+        Holder<Resource> resource = resource(context);
+        ResourceHolderAttachment account = new ResourceHolderAttachment();
+        account.set(resource, 10.0D);
+        CostTarget target = new CostTarget.Account(account, resource);
+        FixtureTransaction charged = child(target, 1.0D);
+        ResultWithData<List<Debit>> real = charged.execute(false);
+        context.expect("a real pass reports its own charge", real.getData().size(), 1);
+        ResultWithData<List<Debit>> simulated = charged.execute(true);
+        context.check("a simulation of a settled transaction still succeeded", simulated.isSuccess());
+        context.expect("a simulation of a settled transaction reports no real charge", simulated.getData().size(), 0);
+        context.expect("the terminal answer keeps its charge", charged.execute(false).getData().size(), 1);
+    }
+
+    private static FixtureTransaction child(CostTarget target, double amount) {
+        return new FixtureTransaction(target, amount, simulate -> ResultWithData.success(
+                simulate ? List.of() : List.of(Debit.of(target, amount))));
     }
 
     private static void duplicateOrder(ProbeContext context) {
@@ -58,9 +131,9 @@ public final class CostSettlementVerifyProbes {
         List<String> calls = new ArrayList<>();
         CostContext costs = CostContext.of(context.player(), CostOrigin.SCRIPT);
         CostPayment.PaymentResult paid = CostPayment.pay(List.of(
-                observed(new CostTarget.Script("probe:first", 1), "first", calls),
+                observed(new CostTarget.Script("probe:first", 1, context.player().getUUID()), "first", calls),
                 observed(new CostTarget.Account(new ResourceHolderAttachment(), resource(context)), "account", calls),
-                observed(new CostTarget.Script("probe:last", 2), "last", calls)
+                observed(new CostTarget.Script("probe:last", 2, context.player().getUUID()), "last", calls)
         ), costs);
         context.expect("the ordered bill succeeds", paid.isSuccess(), true);
         context.expect("scripts keep their place in both passes", calls,

@@ -10,8 +10,8 @@ import com.iafenvoy.mxt.runtime.formation.FormationCenters;
 import com.iafenvoy.mxt.runtime.formation.FormationCenters.Match;
 import com.iafenvoy.mxt.runtime.formation.FormationInstance;
 import com.iafenvoy.mxt.runtime.formation.FormationRelations;
-import com.iafenvoy.mxt.runtime.formation.FormationService.ActivateResult;
 import com.iafenvoy.mxt.runtime.formation.FormationWorldService;
+import com.iafenvoy.mxt.runtime.resulting.ResultWithData;
 import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContexts;
@@ -101,7 +101,7 @@ public final class FormationPlateItem extends Item {
     private static InteractionResult activateAt(ServerLevel level, BlockPos center, ServerPlayer player, Holder<Formation> formation) {
         if (level.getData(MxtAttachments.FORMATION_WORLD).get(center).isPresent())
             return dismantle(level, center, player);
-        ActivateResult result = FormationWorldService.activate(level, center, HolderHelper.id(formation),
+        ResultWithData<FormationInstance> result = FormationWorldService.activate(level, center, HolderHelper.id(formation),
                 formation.value(), player.getData(MxtAttachments.RESOURCE_HOLDER), FormulaContexts.forEntity(player), player.getUUID());
         if (!result.isSuccess()) {
             Component message = Component.translatable("item.mxt.formation_plate.failed", result.failure().message());

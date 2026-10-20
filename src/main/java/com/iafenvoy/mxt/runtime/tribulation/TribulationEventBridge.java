@@ -4,7 +4,7 @@ import com.iafenvoy.mxt.attachment.TribulationAttachment;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtCriteriaTriggers;
 import com.iafenvoy.mxt.runtime.tribulation.TribulationService.State;
-import com.iafenvoy.mxt.runtime.tribulation.TribulationService.TickResult;
+import com.iafenvoy.mxt.runtime.resulting.ResultWithData;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContexts;
 import net.minecraft.server.level.ServerPlayer;
@@ -26,7 +26,7 @@ public final class TribulationEventBridge {
         if (!(event.getEntity() instanceof LivingEntity entity) || entity.level().isClientSide()) return;
         TribulationAttachment data = entity.getData(MxtAttachments.TRIBULATION);
         data.tribulation().ifPresent(holder -> {
-            TickResult result = TribulationService.tick(entity, data, holder, entity.level().getGameTime(), FormulaContexts.forEntity(entity));
+            ResultWithData<State> result = TribulationService.tick(entity, data, holder, entity.level().getGameTime(), FormulaContexts.forEntity(entity));
             if (result.getData() == State.COMPLETED && entity instanceof ServerPlayer player) {
                 MxtCriteriaTriggers.TRIBULATION.get().trigger(player, HolderHelper.id(holder));
             }

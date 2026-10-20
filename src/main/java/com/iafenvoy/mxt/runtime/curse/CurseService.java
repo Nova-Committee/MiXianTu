@@ -11,7 +11,6 @@ import com.iafenvoy.mxt.event.CurseRemoveEvent.Post;
 import com.iafenvoy.mxt.event.CurseRemoveEvent.Pre;
 import com.iafenvoy.mxt.event.CurseRemoveEvent.Reason;
 import com.iafenvoy.mxt.registry.MxtAttachments;
-import com.iafenvoy.mxt.runtime.resulting.Failure;
 import com.iafenvoy.mxt.runtime.resulting.Failures;
 import com.iafenvoy.mxt.runtime.resulting.ResultWithData;
 import com.iafenvoy.mxt.runtime.resulting.failures.CurseFailure;
@@ -24,7 +23,6 @@ import net.minecraft.world.entity.Entity;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.common.NeoForge;
 import org.jetbrains.annotations.NotNull;
-import org.jspecify.annotations.Nullable;
 
 import java.util.*;
 import java.util.Map.Entry;
@@ -44,27 +42,27 @@ public final class CurseService {
     private CurseService() {
     }
 
-    public static ApplyResult apply(CurseHolderAttachment data, Holder<Curse> curse, int stacks, long gameTime, FormulaContext context, Identifier source) {
+    public static ResultWithData<CurseInstance> apply(CurseHolderAttachment data, Holder<Curse> curse, int stacks, long gameTime, FormulaContext context, Identifier source) {
         return apply(data, curse, stacks, gameTime, context, source, NeoForge.EVENT_BUS);
     }
 
     /**
      * Variant for integrations that own a dedicated event bus.
      */
-    public static ApplyResult apply(CurseHolderAttachment data, Holder<Curse> curse, int stacks, long gameTime, FormulaContext context, Identifier source, @NotNull IEventBus eventBus) {
+    public static ResultWithData<CurseInstance> apply(CurseHolderAttachment data, Holder<Curse> curse, int stacks, long gameTime, FormulaContext context, Identifier source, @NotNull IEventBus eventBus) {
         return apply(data, curse, stacks, gameTime, context, source, eventBus, OptionalLong.empty());
     }
 
-    public static ApplyResult apply(CurseHolderAttachment data, Holder<Curse> curse, int stacks, long gameTime, FormulaContext context, Identifier source, IEventBus eventBus, OptionalLong durationOverride) {
+    public static ResultWithData<CurseInstance> apply(CurseHolderAttachment data, Holder<Curse> curse, int stacks, long gameTime, FormulaContext context, Identifier source, IEventBus eventBus, OptionalLong durationOverride) {
         CurseApplyEvent.Pre event = new CurseApplyEvent.Pre(data, curse, stacks, gameTime, context, source);
-        if (eventBus.post(event).isCanceled()) return ApplyResult.cancelledResult();
+        if (eventBus.post(event).isCanceled()) return ResultWithData.failure(null, Failures.CANCELLED);
         // A replacement discards an existing instance and reports the displaced one as a removal, so listeners
         // still learn it disappeared; it runs no action of its own, being an outside decision.
         State displaced = curse.value().stackingMode() == StackingMode.REPLACE ? data.instances().get(curse) : null;
         Set<Identifier> displacedFrom = data.sources().of(curse);
         CurseLedger ledger = read(data);
         Optional<CurseInstance> applied = ledger.apply(curse, event.getStacks(), gameTime, context, durationOverride);
-        if (applied.isEmpty()) return ApplyResult.rejected(CurseFailure.INVALID_DURATION);
+        if (applied.isEmpty()) return ResultWithData.failure(null, CurseFailure.INVALID_DURATION);
         CurseInstance result = applied.get();
         write(data, ledger);
         // The shared rule with ability grants: a source leaving cannot remove another source's curse.
@@ -73,38 +71,38 @@ public final class CurseService {
         if (displaced != null)
             eventBus.post(new Post(data, curse, displaced, displacedFrom, Reason.REPLACED, gameTime));
         eventBus.post(new CurseApplyEvent.Post(data, curse, gameTime, context, result));
-        return ApplyResult.applied(result);
+        return ResultWithData.success(result);
     }
 
-    public static ApplyResult apply(Entity target, Holder<Curse> curse, int stacks,
-                                    long gameTime, FormulaContext context, Identifier source) {
+    public static ResultWithData<CurseInstance> apply(Entity target, Holder<Curse> curse, int stacks,
+                                                      long gameTime, FormulaContext context, Identifier source) {
         return apply(target, curse, stacks, gameTime, context, source, NeoForge.EVENT_BUS, OptionalLong.empty());
     }
 
-    public static ApplyResult apply(@NotNull Entity target, Holder<Curse> curse, int stacks,
-                                    long gameTime, FormulaContext context, Identifier source, IEventBus eventBus) {
+    public static ResultWithData<CurseInstance> apply(@NotNull Entity target, Holder<Curse> curse, int stacks,
+                                                      long gameTime, FormulaContext context, Identifier source, IEventBus eventBus) {
         return apply(target, curse, stacks, gameTime, context, source, eventBus, OptionalLong.empty());
     }
 
-    public static ApplyResult applyWithDuration(Entity target, Holder<Curse> curse, int stacks,
-                                                long gameTime, FormulaContext context, Identifier source,
-                                                OptionalLong durationOverride) {
+    public static ResultWithData<CurseInstance> applyWithDuration(Entity target, Holder<Curse> curse, int stacks,
+                                                                  long gameTime, FormulaContext context, Identifier source,
+                                                                  OptionalLong durationOverride) {
         return apply(target, curse, stacks, gameTime, context, source, NeoForge.EVENT_BUS, durationOverride);
     }
 
     // Full entity-facing transaction: state mutation plus the behaviour a newly created instance owes and the
     // runtime subscriptions that follow it.
-    private static ApplyResult apply(Entity target, Holder<Curse> curse, int stacks, long gameTime,
-                                     FormulaContext context, Identifier source, IEventBus eventBus, OptionalLong durationOverride) {
+    private static ResultWithData<CurseInstance> apply(Entity target, Holder<Curse> curse, int stacks, long gameTime,
+                                                       FormulaContext context, Identifier source, IEventBus eventBus, OptionalLong durationOverride) {
         Curse definition = curse.value();
         if (!definition.applicationCondition().test(target, context))
-            return ApplyResult.rejected(CurseFailure.CONDITION);
+            return ResultWithData.failure(null, CurseFailure.CONDITION);
         String key = transactionKey(target, curse);
-        if (!IN_TRANSACTION.get().add(key)) return ApplyResult.rejected(CurseFailure.REENTRANT);
+        if (!IN_TRANSACTION.get().add(key)) return ResultWithData.failure(null, CurseFailure.REENTRANT);
         try {
             boolean created = !target.getData(MxtAttachments.CURSE_HOLDER).instances().containsKey(curse)
                     || definition.stackingMode() == StackingMode.REPLACE;
-            ApplyResult result = apply(target.getData(MxtAttachments.CURSE_HOLDER), curse, stacks, gameTime,
+            ResultWithData<CurseInstance> result = apply(target.getData(MxtAttachments.CURSE_HOLDER), curse, stacks, gameTime,
                     context, source, eventBus, durationOverride);
             if (result.isSuccess()) {
                 // "On apply" means the instance was created: stacking onto, or refreshing, a curse already held is
@@ -261,24 +259,6 @@ public final class CurseService {
             CurseTriggerSubscriptions.rebuild(target);
         }
         return executed;
-    }
-
-    public static final class ApplyResult extends ResultWithData<CurseInstance> {
-        private ApplyResult(@Nullable CurseInstance instance, Failure failure) {
-            super(instance, failure, null);
-        }
-
-        private static ApplyResult applied(CurseInstance instance) {
-            return new ApplyResult(instance, null);
-        }
-
-        private static ApplyResult cancelledResult() {
-            return new ApplyResult(null, Failures.CANCELLED);
-        }
-
-        public static ApplyResult rejected(Failure failure) {
-            return new ApplyResult(null, failure);
-        }
     }
 
     private static String transactionKey(Entity entity, Holder<Curse> curse) {

@@ -4,6 +4,7 @@ import com.iafenvoy.mxt.probe.Probe;
 import com.iafenvoy.mxt.probe.ProbeContext;
 import com.iafenvoy.mxt.registry.MxtItems;
 import com.iafenvoy.mxt.runtime.economy.CurrencyPaymentService;
+import com.iafenvoy.mxt.runtime.economy.CurrencyPaymentService.Denomination;
 import com.iafenvoy.mxt.runtime.economy.CurrencyValueService;
 import com.iafenvoy.mxt.runtime.economy.PlayerTradeAction;
 import com.iafenvoy.mxt.runtime.economy.PlayerTradeService;
@@ -12,6 +13,7 @@ import com.iafenvoy.mxt.screen.menu.PlayerTradeMenu;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 
@@ -33,9 +35,60 @@ public final class EconomyVerifyProbes {
     public static List<Probe> probes() {
         return List.of(
                 Probe.of("verify/economy/change_plan", EconomyVerifyProbes::changePlan),
+                Probe.of("verify/economy/change_combination", EconomyVerifyProbes::changeCombination),
                 Probe.of("verify/economy/trade_offer_change", EconomyVerifyProbes::tradeOfferChange),
-                Probe.of("verify/economy/trade_full_cancel", EconomyVerifyProbes::tradeFullCancel)
+                Probe.of("verify/economy/trade_full_cancel", EconomyVerifyProbes::tradeFullCancel),
+                Probe.of("verify/economy/trade_complete", EconomyVerifyProbes::tradeComplete)
         );
+    }
+
+    // A set the greedy answer cannot solve is still paid: 4 and 3 cannot make 6 by taking 4 first, while 3 + 3 can, so
+    // the plan is searched for instead of refused. The search never invents a value either: 5 has no answer, and a plan
+    // past the slot count is refused.
+    private static void changeCombination(ProbeContext context) {
+        List<Denomination> broken = List.of(new Denomination(Items.GOLD_INGOT, 4L),
+                new Denomination(Items.DIAMOND, 3L));
+        Optional<long[]> six = CurrencyPaymentService.planCounts(broken, 6L, 16);
+        if (six.isEmpty()) {
+            context.fail("4 and 3 refused a value 3 + 3 can pay");
+            return;
+        }
+        context.expect("a searched plan pays the whole value", paidValue(broken, six.get()), 6L);
+        context.check("a value nothing can pay is refused", CurrencyPaymentService.planCounts(broken, 5L, 16).isEmpty());
+        // A single stack of the large coin cannot pay 6, and nothing else can either: the slot budget is part of the
+        // question, so the two smaller coins do not fit in a counter with no room.
+        context.check("a plan past the slot budget is refused", CurrencyPaymentService.planCounts(broken, 6L, 0).isEmpty());
+        context.check("the same plan fits one slot", CurrencyPaymentService.planCounts(broken, 6L, 1).isPresent());
+        // Face values past the old search ceiling: the plan is one stack of two large coins, so no absolute value
+        // limit may refuse it, and a value no combination of the faces can reach stays refused.
+        List<Denomination> large = List.of(new Denomination(Items.GOLD_INGOT, 4_000_000L),
+                new Denomination(Items.DIAMOND, 3_000_000L));
+        Optional<long[]> bigSix = CurrencyPaymentService.planCounts(large, 6_000_000L, 1);
+        if (bigSix.isEmpty()) {
+            context.fail("two 3M coins were refused a 6M cheque in one slot");
+            return;
+        }
+        context.expect("a large-face plan pays the whole value", paidValue(large, bigSix.get()), 6_000_000L);
+        context.check("a large-face value nothing can pay is refused",
+                CurrencyPaymentService.planCounts(large, 5_000_000L, 16).isEmpty());
+        // 10 + 7 is two stacks and no combination is one: the slot budget bounds the searched plan too.
+        List<Denomination> pair = List.of(new Denomination(Items.GOLD_INGOT, 10L),
+                new Denomination(Items.DIAMOND, 7L));
+        context.check("a searched plan that needs two slots is refused one", CurrencyPaymentService.planCounts(pair, 17L, 1).isEmpty());
+        context.check("the same plan is accepted with two slots", CurrencyPaymentService.planCounts(pair, 17L, 2).isPresent());
+        // The largest possible cheque against a denomination of one: the stack count overflows a long if it is added up
+        // naively, and the payout must be refused as too large rather than counted as fitting in one slot.
+        List<Denomination> single = List.of(new Denomination(Items.EMERALD, 1L));
+        context.check("a cheque past the slot count is refused without overflowing",
+                CurrencyPaymentService.planCounts(single, Long.MAX_VALUE, 15).isEmpty());
+        context.check("the same pack pays a value it has room for",
+                CurrencyPaymentService.planCounts(single, 64L, 1).isPresent());
+    }
+
+    private static long paidValue(List<Denomination> denominations, long[] counts) {
+        long total = 0L;
+        for (int index = 0; index < counts.length; index++) total += counts[index] * denominations.get(index).value();
+        return total;
     }
 
     // A plan that cannot fit is refused while counting, and a set the greedy answer cannot solve is named at load
@@ -55,6 +108,11 @@ public final class EconomyVerifyProbes {
         // The bound is the sum of the two largest: past it no new gap can open.
         context.expect("the check bound is the sum of the two largest values",
                 CurrencyPaymentService.checkBound(shipped), 110_000L);
+        // Two denominations near the long limit must not wrap into a negative bound, which would read as "nothing to
+        // check" and hide every disagreement.
+        context.expect("a bound past the long limit saturates instead of wrapping",
+                CurrencyPaymentService.checkBound(List.of(Long.MAX_VALUE, Long.MAX_VALUE - 1L)),
+                CurrencyPaymentService.MAX_CHECKED_VALUE);
 
         // The plan is bounded by the slot count it is asked for. The value is counted in whole stacks of the pack's
         // largest denomination, so the exact number of stacks is read off the plan rather than assumed.
@@ -136,5 +194,48 @@ public final class EconomyVerifyProbes {
             if (entity.getItem().is(MxtItems.CHEQUE.get())) kept += entity.getItem().getCount();
         }
         context.expect("a cancelled offer of a full inventory is kept as one item", kept, 1L);
+    }
+
+    // A completed trade hands each side the other's offer: what one player gave up is what the other holds, and nothing
+    // is left in either grid. Each side hands its own grid over, so one hand-over cannot clear the grid it delivers.
+    private static void tradeComplete(ProbeContext context) {
+        ServerPlayer first = context.player();
+        ServerPlayer second = context.joinBeside(first, 2.0D, 0.0D);
+        context.expect("a trade request between two nearby players is sent",
+                PlayerTradeService.request(first, second), RequestResult.SENT);
+        context.expect("the answer to that request starts the trade",
+                PlayerTradeService.request(second, first), RequestResult.STARTED);
+        if (!(first.containerMenu instanceof PlayerTradeMenu firstMenu)) {
+            context.fail("the first side of the trade did not open a menu");
+            return;
+        }
+        if (!(second.containerMenu instanceof PlayerTradeMenu secondMenu)) {
+            context.fail("the second side of the trade did not open a menu");
+            return;
+        }
+        firstMenu.getSlot(0).set(new ItemStack(Items.EMERALD, 2));
+        secondMenu.getSlot(0).set(new ItemStack(Items.DIAMOND, 3));
+        PlayerTradeService.handleAction(first, PlayerTradeAction.ACCEPT);
+        PlayerTradeService.handleAction(second, PlayerTradeAction.ACCEPT);
+        context.check("a completed trade leaves both grids empty",
+                firstMenu.getSlot(0).getItem().isEmpty() && secondMenu.getSlot(0).getItem().isEmpty());
+        context.expect("the first side keeps what it offered", kept(first, Items.EMERALD), 0L);
+        context.expect("the first side holds what the partner offered", kept(first, Items.DIAMOND), 3L);
+        context.expect("the second side keeps what it offered", kept(second, Items.DIAMOND), 0L);
+        context.expect("the second side holds what the partner offered", kept(second, Items.EMERALD), 2L);
+    }
+
+    // What one player really keeps: the inventory plus anything the session had to drop next to them.
+    private static long kept(ServerPlayer player, Item item) {
+        long total = 0L;
+        for (int slot = 0; slot < player.getInventory().getContainerSize(); slot++) {
+            ItemStack stack = player.getInventory().getItem(slot);
+            if (stack.is(item)) total += stack.getCount();
+        }
+        for (ItemEntity entity : player.level().getEntitiesOfClass(ItemEntity.class,
+                player.getBoundingBox().inflate(8.0D))) {
+            if (entity.getItem().is(item)) total += entity.getItem().getCount();
+        }
+        return total;
     }
 }
