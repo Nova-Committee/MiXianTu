@@ -19,5 +19,5 @@ public final class MxtParticleTypes {
     // hands it to the figure it names and removes it, so it is registered without a sprite set and has no entry in the
     // particle json folder.
     public static final DeferredHolder<ParticleType<?>, ParticleType<FormationParticleOptions>> FORMATION = REGISTRY.register("formation", FormationParticleType::new);
-    public static final DeferredHolder<ParticleType<?>, ParticleType<LaserParticleOptions>> LASER = REGISTRY.register("laser", LaserParticleType::new);
+    public static final DeferredHolder<ParticleType<?>, ParticleType<LightBeamParticleOptions>> LIGHT_BEAM = REGISTRY.register("light_beam", LightBeamParticleType::new);
 }

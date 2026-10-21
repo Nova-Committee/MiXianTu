@@ -28,6 +28,7 @@ import com.iafenvoy.mxt.probe.verify.AbilityCooldownVerifyProbes;
 import com.iafenvoy.mxt.probe.verify.AuraVerifyProbes;
 import com.iafenvoy.mxt.probe.verify.BlockAuraRefreshVerifyProbes;
 import com.iafenvoy.mxt.probe.verify.ClosureVerifyProbes;
+import com.iafenvoy.mxt.probe.verify.CloseableResourcesVerifyProbes;
 import com.iafenvoy.mxt.probe.verify.CostStoreVerifyProbes;
 import com.iafenvoy.mxt.probe.verify.CostSettlementVerifyProbes;
 import com.iafenvoy.mxt.probe.verify.CostVerifyProbes;
@@ -36,6 +37,7 @@ import com.iafenvoy.mxt.probe.verify.DevModeVerifyProbes;
 import com.iafenvoy.mxt.probe.verify.EconomyVerifyProbes;
 import com.iafenvoy.mxt.probe.verify.FriendVerifyProbes;
 import com.iafenvoy.mxt.probe.verify.GeneratedNameVerifyProbes;
+import com.iafenvoy.mxt.probe.verify.LightBeamParticleVerifyProbes;
 import com.iafenvoy.mxt.probe.verify.MinorStageVerifyProbes;
 import com.iafenvoy.mxt.probe.verify.ProfilerVerifyProbes;
 import com.iafenvoy.mxt.probe.verify.ProfilerChartVerifyProbes;
@@ -107,6 +109,8 @@ public final class ProbeTests {
             AbilityCooldownVerifyProbes::probes,
             AuraVerifyProbes::probes,
             BlockAuraRefreshVerifyProbes::probes,
+            LightBeamParticleVerifyProbes::probes,
+            CloseableResourcesVerifyProbes::probes,
             ClosureVerifyProbes::probes,
             CostVerifyProbes::probes,
             CostStoreVerifyProbes::probes,

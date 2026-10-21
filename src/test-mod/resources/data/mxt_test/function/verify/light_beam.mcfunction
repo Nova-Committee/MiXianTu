@@ -1,0 +1,10 @@
+particle mxt:light_beam{color:"#FF22FFFF",y_max:12.0f,radius:1.0f,density:16.0f,width:0.18f,lifetime:1200,spread:false} ~-2 ~ ~6 0 0 0 0 1 force
+particle mxt:light_beam{color:"#FF22FFFF",y_max:12.0f,radius:1.0f,density:16.0f,width:0.18f,lifetime:1200,spread:true} ~2 ~ ~6 0 0 0 0 1 force
+particle mxt:light_beam{color:"#FFFFAA33",y_max:12.0f,radius:2.0f,density:16.0f,width:0.18f,lifetime:1200,spread:true} ~6 ~ ~6 0 0 0 0 1 force
+particle mxt:light_beam{color:"#FF22FFFF",y_max:8.0f,radius:0.8f,width:0.18f,lifetime:1200,spread:true,bottom_effect:true,top_effect:true} ~-4 ~ ~14 0 0 0 0 1 force
+particle mxt:light_beam{color:"#FFFF79BF",y_max:8.0f,radius:0.8f,width:0.18f,lifetime:1200,spread:true,flow_direction:"down",bottom_effect:true,top_effect:true} ~1 ~ ~14 0 0 0 0 1 force
+particle mxt:light_beam{color:"#FFFFAA33",y_max:8.0f,radius:0.8f,width:0.18f,lifetime:1200,spread:false,flow_direction:"down",bottom_effect:true} ~6 ~ ~14 0 0 0 0 1 force
+particle mxt:light_beam{color:"#FF22FFFF",y_max:8.0f,radius:1.0f,width:0.18f,lifetime:1200,spread:true,filled:true,glow:false} ~-6 ~ ~22 0 0 0 0 1 force
+particle mxt:light_beam{color:"#FF22FFFF",y_max:8.0f,radius:1.0f,width:0.18f,lifetime:1200,spread:true,filled:false,glow:false} ~-2 ~ ~22 0 0 0 0 1 force
+particle mxt:light_beam{color:"#FF22FFFF",y_max:8.0f,radius:1.0f,width:0.18f,lifetime:1200,spread:true,filled:true,glow:true} ~2 ~ ~22 0 0 0 0 1 force
+particle mxt:light_beam{color:"#FF22FFFF",y_max:8.0f,radius:1.0f,width:0.18f,lifetime:1200,spread:true,filled:false,glow:true} ~6 ~ ~22 0 0 0 0 1 force
