@@ -124,8 +124,8 @@ public final class AuraChunkTicker {
             seedPending(level);
             RefreshState refresh = REFRESH.get(level);
             if (refresh != null) {
-                var report = refresh.dispatcher.tick(level.getGameTime());
-                for (var failure : report.failures())
+                TickDispatcher.TickReport<RefreshTask> report = refresh.dispatcher.tick(level.getGameTime());
+                for (TickDispatcher.TaskFailure<RefreshTask> failure : report.failures())
                     MiXianTu.LOGGER.warn("Failed to refresh block aura cache in {} at chunk {} section {}",
                             level.dimension().identifier(), failure.key().chunk.getPos(), failure.key().sectionY, failure.exception());
             }

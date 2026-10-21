@@ -4,6 +4,7 @@ import com.iafenvoy.mxt.network.payload.ProfilerGuiS2CPayload;
 import com.iafenvoy.mxt.network.payload.ProfilerSnapshotS2CPayload;
 import com.iafenvoy.mxt.probe.Probe;
 import com.iafenvoy.mxt.probe.ProbeContext;
+import com.iafenvoy.mxt.screen.profiling.ProfilerSourceTips;
 import com.iafenvoy.mxt.util.profiling.*;
 import com.mojang.brigadier.tree.CommandNode;
 import io.netty.buffer.Unpooled;
@@ -50,6 +51,15 @@ public final class ProfilerGuiVerifyProbes {
         expect(context, "every category follows the label namespace", Arrays.stream(ServerProfiling.Source.values())
                 .allMatch(source -> source.translationKey().startsWith("mxt.profiling.mxt.") && !source.translationKey().contains("/")), true);
         expect(context, "display labels leave sampling ids unchanged", ServerProfiling.Source.AURA_QUERY.id(), "server/aura/query");
+        expect(context, "every category has its own tooltip key", Arrays.stream(ServerProfiling.Source.values())
+                .map(ServerProfiling.Source::tooltipKey).distinct().count(), 32L);
+        expect(context, "a tooltip key sits under its label key", Arrays.stream(ServerProfiling.Source.values())
+                .allMatch(source -> source.tooltipKey().equals(source.translationKey() + ".tooltip")), true);
+        expect(context, "a known source answers hover text", ProfilerSourceTips.lines(ServerProfiling.Source.COST).isEmpty(), false);
+        try (Profiler profiler = new Profiler()) {
+            ProfilerSource unknown = profiler.sources().register("probe:unknown");
+            expect(context, "a source this client does not know answers none", ProfilerSourceTips.lines(unknown).isEmpty(), true);
+        }
     }
 
     private static void permissions(ProbeContext context) {

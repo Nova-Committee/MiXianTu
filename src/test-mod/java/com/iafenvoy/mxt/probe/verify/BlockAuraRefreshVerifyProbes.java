@@ -335,7 +335,7 @@ public final class BlockAuraRefreshVerifyProbes {
         private final Holder<Aura> aura;
         private final long previousTime;
         private final int previousInterval;
-        private final Map<String, Object> previous = new java.util.HashMap<>();
+        private final Map<String, Object> previous = new HashMap<>();
 
         private Fixture(ProbeContext context) {
             this(context, 1200);
@@ -413,7 +413,7 @@ public final class BlockAuraRefreshVerifyProbes {
         public void close() {
             try {
                 AuraChunkTicker.onLevelUnload(new LevelEvent.Unload(this.level));
-                for (var entry : this.previous.entrySet())
+                for (Map.Entry<String, Object> entry : this.previous.entrySet())
                     if (entry.getValue() != null) state(entry.getKey()).put(this.level, entry.getValue());
             } finally {
                 this.clock.setGameTime(this.previousTime);

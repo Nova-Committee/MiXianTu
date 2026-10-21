@@ -131,6 +131,11 @@ public final class ServerProfiling {
         public String translationKey() {
             return "mxt.profiling.mxt." + this.id.substring("server/".length()).replace('/', '.');
         }
+
+        // What this bucket counts, one line, shown while the pointer rests on a row's source label.
+        public String tooltipKey() {
+            return this.translationKey() + ".tooltip";
+        }
     }
 
     private static final class Session {

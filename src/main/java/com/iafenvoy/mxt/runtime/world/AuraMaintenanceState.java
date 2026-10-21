@@ -62,8 +62,8 @@ final class AuraMaintenanceState {
     void tick(long now, int interval) {
         this.align(now, interval);
         this.refreshVisitors();
-        var report = this.dispatcher.tick(now);
-        for (var failure : report.failures())
+        TickDispatcher.TickReport<LevelChunk> report = this.dispatcher.tick(now);
+        for (TickDispatcher.TaskFailure<LevelChunk> failure : report.failures())
             MiXianTu.LOGGER.warn("Failed to regenerate aura in {} at chunk {}",
                     this.level.dimension().identifier(), failure.key().getPos(), failure.exception());
     }

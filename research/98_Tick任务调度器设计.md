@@ -6,7 +6,7 @@
 
 ## 1. 范围与职责
 
-新增 `com.iafenvoy.mxt.util.dispatcher`，只依赖 JDK：
+新增 `com.iafenvoy.mxt.util.dispatcher`，调度逻辑只使用 JDK，参数注解沿用项目现有约定：
 
 | 类 | 职责 |
 | --- | --- |

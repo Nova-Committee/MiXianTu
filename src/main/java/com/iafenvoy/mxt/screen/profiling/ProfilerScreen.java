@@ -6,7 +6,10 @@ import com.iafenvoy.mxt.network.payload.ProfilerSubscriptionC2SPayload;
 import com.iafenvoy.mxt.screen.aui.*;
 import com.iafenvoy.mxt.util.profiling.*;
 import com.sighs.apricityui.element.Canvas;
+import com.sighs.apricityui.init.Document;
 import com.sighs.apricityui.init.Element;
+import com.sighs.apricityui.layout.Position;
+import com.sighs.apricityui.layout.Size;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -130,6 +133,28 @@ public final class ProfilerScreen extends AuiScreen {
         return source.id();
     }
 
+    // Only the label answers this: it is the one piece of a row that is cut to its column, so the tooltip is where
+    // the name in full and what that bucket counts both live.
+    private void extractSourceTooltip(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
+        AuiScrollList.Cell cell = this.list == null ? null : this.list.hoveredCell(mouseX, mouseY);
+        if (cell == null || !(cell.entry() instanceof Row row)) return;
+        if (!this.pointerOn(cell.part(0), mouseX, mouseY)) return;
+        List<Component> lines = ProfilerSourceTips.lines(row.source);
+        if (!lines.isEmpty()) graphics.setComponentTooltipForNextFrame(this.font, lines, mouseX, mouseY);
+    }
+
+    // The pointer arrives in screen coordinates while element rectangles are in document coordinates.
+    private boolean pointerOn(Element element, double mouseX, double mouseY) {
+        Document document = this.getLinkedDocument();
+        if (document == null) return false;
+        Position pointer = document.screenToDocumentPosition(new Position(mouseX, mouseY));
+        Position at = Position.of(element);
+        Size size = Size.of(element);
+        return size.width() > 0 && size.height() > 0
+                && pointer.x >= at.x && pointer.x < at.x + size.width()
+                && pointer.y >= at.y && pointer.y < at.y + size.height();
+    }
+
     @Override
     public void bindPage() {
         this.panel = this.getOrThrow("panel");
@@ -220,6 +245,7 @@ public final class ProfilerScreen extends AuiScreen {
             this.layout();
         }
         super.extractRenderState(graphics, mouseX, mouseY, partialTick);
+        this.extractSourceTooltip(graphics, mouseX, mouseY);
     }
 
     @Override

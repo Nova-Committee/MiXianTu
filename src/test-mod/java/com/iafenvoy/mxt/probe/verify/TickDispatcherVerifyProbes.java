@@ -9,6 +9,7 @@ import com.iafenvoy.mxt.util.dispatcher.TickInterval;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.IntStream;
 
 public final class TickDispatcherVerifyProbes {
     private TickDispatcherVerifyProbes() {
@@ -127,7 +128,7 @@ public final class TickDispatcherVerifyProbes {
         context.expect("the next tick drains another capped batch", second.executed(), 40);
         context.expect("the oldest deadline reports real lateness", second.oldestOverdueTicks(), 1L);
         context.expect("the last tick drains the remainder", dispatcher.tick(2L).executed(), 25);
-        context.expect("every task executes once in order", executed, java.util.stream.IntStream.range(0, 105).boxed().toList());
+        context.expect("every task executes once in order", executed, IntStream.range(0, 105).boxed().toList());
         context.expect("an old report is a stable snapshot", first.scheduled(), 65);
 
         for (int i = 0; i < 100; i++)

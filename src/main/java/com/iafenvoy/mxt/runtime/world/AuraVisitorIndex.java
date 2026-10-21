@@ -31,7 +31,7 @@ public final class AuraVisitorIndex {
         int changed = 0;
         Iterator<Map.Entry<UUID, SectionPos>> iterator = this.players.entrySet().iterator();
         while (iterator.hasNext()) {
-            var entry = iterator.next();
+            Map.Entry<UUID, SectionPos> entry = iterator.next();
             if (present.contains(entry.getKey())) continue;
             changed += this.change(entry.getValue(), null, -1, changes);
             iterator.remove();
