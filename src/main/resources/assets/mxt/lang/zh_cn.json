@@ -435,7 +435,7 @@
   "config.mxt.server.alchemy.toxicity_decay_per_second.tooltip": "已有丹毒的活跃实体每秒消退多少。0 表示不自然消退。离线不消退，也不会给没服过丹的实体建立附件。",
   "config.mxt.server.aura": "灵气",
   "config.mxt.server.aura.block_aura_tick_interval": "方块灵气周期",
-  "config.mxt.server.aura.block_aura_tick_interval.tooltip": "方块灵气重算的间隔（刻）；越小越灵敏，开销也越大。",
+  "config.mxt.server.aura.block_aura_tick_interval.tooltip": "区块灵气库存再生的目标间隔（刻）；各区块错峰执行并按实际经过时间恢复，访问人数每刻增量维护。子区块方块缓存另按600～1199刻的随机目标间隔刷新，积压时顺延。",
   "config.mxt.server.aura.entity_refresh_interval": "实体灵气周期",
   "config.mxt.server.aura.entity_refresh_interval.tooltip": "静止实体灵气重算的间隔（刻）。",
   "config.mxt.server.aura.query_stats": "耗时统计",

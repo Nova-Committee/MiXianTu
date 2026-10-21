@@ -168,6 +168,7 @@ public final class AuraService {
                 chunk.initializeAuras(computePools(resolved.zone.value(), pos, 0L), minSectionY, sections);
                 chunk.setTemplate(resolved.zone);
             }
+            chunk.startRegeneration(level.getGameTime());
         }
     }
 

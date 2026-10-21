@@ -27,8 +27,7 @@ public final class TriggerRehydrators {
             if (entity.level().isClientSide()) return;
             int before = TriggerDispatcher.subscriptionCount(entity.getUUID());
             NeoForge.EVENT_BUS.post(new TriggerRehydrateEvent(entity));
-            LOGGER.log("Rehydrated trigger subscriptions for {}: {} -> {}",
-                    entity.getUUID(), before, TriggerDispatcher.subscriptionCount(entity.getUUID()));
+            LOGGER.log("Rehydrated trigger subscriptions for {}: {} -> {}", entity.getUUID(), before, TriggerDispatcher.subscriptionCount(entity.getUUID()));
         }
     }
 

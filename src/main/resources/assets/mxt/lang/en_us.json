@@ -434,7 +434,7 @@
   "config.mxt.server.alchemy.toxicity_decay_per_second.tooltip": "How much accumulated pill toxicity an active entity loses every second. 0 keeps toxicity until something clears it. Offline entities do not decay, and entities that have never taken a pill do not gain an attachment.",
   "config.mxt.server.aura": "Aura",
   "config.mxt.server.aura.block_aura_tick_interval": "Block Aura Period",
-  "config.mxt.server.aura.block_aura_tick_interval.tooltip": "Ticks between block aura recalculations; smaller is more responsive and more expensive.",
+  "config.mxt.server.aura.block_aura_tick_interval.tooltip": "Target ticks between chunk aura regeneration. Chunks run at staggered phases and recover by actual elapsed time; visitor counts update incrementally every tick. Section block caches have separate random target intervals of 600–1199 ticks and may be delayed by queued work.",
   "config.mxt.server.aura.entity_refresh_interval": "Entity Aura Period",
   "config.mxt.server.aura.entity_refresh_interval.tooltip": "Ticks between aura recalculations for a still entity.",
   "config.mxt.server.aura.query_stats": "Timing Stats",

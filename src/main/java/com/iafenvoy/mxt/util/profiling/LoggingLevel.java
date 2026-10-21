@@ -10,7 +10,7 @@ public enum LoggingLevel {
     ERROR(logger -> logger::error, logger -> logger::error),
     WARN(logger -> logger::warn, logger -> logger::warn),
     INFO(logger -> logger::info, logger -> logger::info),
-    DEBUG(logger -> logger::info, logger -> logger::info),
+    DEBUG(logger -> logger::debug, logger -> logger::debug),
     NONE(null, null);
     @Nullable
     private final Function<Logger, BiConsumer<String, Object[]>> logMethod;

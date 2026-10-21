@@ -26,6 +26,7 @@ import com.iafenvoy.mxt.probe.talisman.StationProbes;
 import com.iafenvoy.mxt.probe.talisman.TalismanProbes;
 import com.iafenvoy.mxt.probe.verify.AbilityCooldownVerifyProbes;
 import com.iafenvoy.mxt.probe.verify.AuraVerifyProbes;
+import com.iafenvoy.mxt.probe.verify.BlockAuraRefreshVerifyProbes;
 import com.iafenvoy.mxt.probe.verify.ClosureVerifyProbes;
 import com.iafenvoy.mxt.probe.verify.CostStoreVerifyProbes;
 import com.iafenvoy.mxt.probe.verify.CostSettlementVerifyProbes;
@@ -45,6 +46,7 @@ import com.iafenvoy.mxt.probe.verify.StoreVerifyProbes;
 import com.iafenvoy.mxt.probe.verify.TalismanSessionVerifyProbes;
 import com.iafenvoy.mxt.probe.verify.TalismanVerifyProbes;
 import com.iafenvoy.mxt.probe.verify.TargetSelectorVerifyProbes;
+import com.iafenvoy.mxt.probe.verify.TickDispatcherVerifyProbes;
 import com.iafenvoy.mxt.probe.verify.WheelVerifyProbes;
 import com.iafenvoy.mxt.probe.world.RiftProbes;
 import com.iafenvoy.mxt.probe.world.SecretRealmProbes;
@@ -104,11 +106,13 @@ public final class ProbeTests {
             TalismanProbes::probes,
             AbilityCooldownVerifyProbes::probes,
             AuraVerifyProbes::probes,
+            BlockAuraRefreshVerifyProbes::probes,
             ClosureVerifyProbes::probes,
             CostVerifyProbes::probes,
             CostStoreVerifyProbes::probes,
             CostSettlementVerifyProbes::probes,
             CultivationDistributionVerifyProbes::probes,
+            TickDispatcherVerifyProbes::probes,
             EconomyVerifyProbes::probes,
             GeneratedNameVerifyProbes::probes,
             MinorStageVerifyProbes::probes,

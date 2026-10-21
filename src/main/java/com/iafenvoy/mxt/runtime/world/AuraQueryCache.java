@@ -149,6 +149,10 @@ public final class AuraQueryCache {
         if (!value) clear();
     }
 
+    static void invalidateResults(ServerLevel level) {
+        RESULT.remove(level);
+    }
+
     static void clear() {
         EPOCH.clear();
         STATIC.clear();

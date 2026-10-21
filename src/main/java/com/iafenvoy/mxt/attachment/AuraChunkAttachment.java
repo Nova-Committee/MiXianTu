@@ -32,6 +32,7 @@ public final class AuraChunkAttachment {
     private final Int2ObjectMap<Map<Holder<Aura>, AuraPool>> auras;
     // Runtime-only; never saved.
     private final Map<SectionPos, Integer> auraVisitors = new LinkedHashMap<>();
+    private long regenerationTick = -1L;
 
     public AuraChunkAttachment() {
         this(Optional.empty(), new Int2ObjectOpenHashMap<>(), new Int2ObjectOpenHashMap<>());
@@ -98,12 +99,19 @@ public final class AuraChunkAttachment {
     }
 
     public void addAuraVisitor(SectionPos section) {
-        this.auraVisitors.merge(section, 1, Integer::sum);
+        this.changeAuraVisitors(section, 1);
+    }
+
+    public void changeAuraVisitors(SectionPos section, int delta) {
+        int count = this.auraVisitors.getOrDefault(section, 0) + delta;
+        if (count <= 0) this.auraVisitors.remove(section);
+        else this.auraVisitors.put(section, count);
     }
 
     // The zone's stock is one chunk-sized amount, so it is split evenly across the sections: the world total stays
     // what the zone declares, and no section can be drained on behalf of another.
     public void initializeAuras(Map<Holder<Aura>, AuraPool> values, int minSectionY, int sectionCount) {
+        this.regenerationTick = -1L;
         int sections = Math.max(1, sectionCount);
         this.auras.clear();
         for (int i = 0; i < sections; i++) {
@@ -150,9 +158,37 @@ public final class AuraChunkAttachment {
     }
 
     public void regenerateAuras(long elapsedTicks) {
+        this.regenerate(elapsedTicks);
+    }
+
+    public void startRegeneration(long now) {
+        if (now < 0L) throw new IllegalArgumentException("Tick cannot be negative");
+        this.regenerationTick = now;
+    }
+
+    public boolean regenerateAurasUntil(long now) {
+        if (now < 0L) throw new IllegalArgumentException("Tick cannot be negative");
+        long previous = this.regenerationTick;
+        this.regenerationTick = now;
+        return previous >= 0L && now > previous && this.regenerate(now - previous);
+    }
+
+    private boolean regenerate(long elapsedTicks) {
         if (elapsedTicks < 0L) throw new IllegalArgumentException("Elapsed ticks cannot be negative");
-        this.auras.values().forEach(pools -> pools.values()
-                .forEach(pool -> pool.change(pool.regenPerTick() * elapsedTicks)));
+        if (elapsedTicks == 0L) return false;
+        boolean changed = false;
+        for (Map<Holder<Aura>, AuraPool> pools : this.auras.values()) {
+            for (AuraPool pool : pools.values()) {
+                double current = pool.amount();
+                double rate = pool.regenPerTick();
+                if (rate == 0.0D || rate > 0.0D && current >= pool.maximum() || rate < 0.0D && current <= 0.0D) continue;
+                double next = Math.clamp(current + rate * elapsedTicks, 0.0D, Math.min(Double.MAX_VALUE, pool.maximum()));
+                if (next == current) continue;
+                pool.change(next - current);
+                changed = true;
+            }
+        }
+        return changed;
     }
 
     // One section only: every other section's pools are left alone.
