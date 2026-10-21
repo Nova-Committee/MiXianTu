@@ -1,14 +1,15 @@
 package com.iafenvoy.mxt.render.particle;
 
 import com.iafenvoy.mxt.MiXianTu;
+import com.iafenvoy.mxt.render.effect.EffectTargets;
+import com.iafenvoy.mxt.render.effect.SceneDepth;
+import com.iafenvoy.mxt.render.effect.WorldEffectSource;
+import com.iafenvoy.mxt.render.effect.WorldEffects;
 import com.iafenvoy.mxt.util.ClientRenderResources;
 import com.iafenvoy.mxt.util.CloseableResources;
 import com.mojang.blaze3d.buffers.GpuBuffer;
 import com.mojang.blaze3d.buffers.GpuBufferSlice;
-import com.mojang.blaze3d.pipeline.BlendFunction;
-import com.mojang.blaze3d.pipeline.ColorTargetState;
-import com.mojang.blaze3d.pipeline.DepthStencilState;
-import com.mojang.blaze3d.pipeline.RenderPipeline;
+import com.mojang.blaze3d.pipeline.*;
 import com.mojang.blaze3d.platform.CompareOp;
 import com.mojang.blaze3d.shaders.UniformType;
 import com.mojang.blaze3d.systems.RenderPass;
@@ -16,6 +17,7 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.client.Camera;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.particle.ParticleEngine;
 import net.minecraft.client.particle.ParticleGroup;
 import net.minecraft.client.particle.ParticleRenderType;
@@ -38,6 +40,7 @@ import net.neoforged.neoforge.client.event.RegisterRenderPipelinesEvent;
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
 import org.joml.Vector4f;
+import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 import org.lwjgl.system.MemoryUtil;
 
@@ -58,6 +61,8 @@ public final class LightBeamParticleGroup extends ParticleGroup<LightBeamParticl
             .withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT))
             .withDepthStencilState(new DepthStencilState(CompareOp.LESS_THAN_OR_EQUAL, false))
             .withCull(true).build();
+    private static final RenderPipeline DEPTH_PIPELINE = depthPipeline("light_beam_depth", CompareOp.LESS_THAN_OR_EQUAL);
+    private static final RenderPipeline GLOW_PIPELINE = depthPipeline("light_beam_glow_depth", CompareOp.ALWAYS_PASS);
     private static final CloseableResources.Slot<Buffers> BUFFERS = ClientRenderResources.world(Buffers::new);
     private final State state = new State();
 
@@ -73,10 +78,27 @@ public final class LightBeamParticleGroup extends ParticleGroup<LightBeamParticl
     @SubscribeEvent
     public static void registerPipelines(RegisterRenderPipelinesEvent event) {
         event.registerPipeline(PIPELINE);
+        event.registerPipeline(DEPTH_PIPELINE);
+        event.registerPipeline(GLOW_PIPELINE);
+    }
+
+    private static RenderPipeline depthPipeline(String name, CompareOp depth) {
+        return RenderPipeline.builder(RenderPipelines.MATRICES_FOG_SNIPPET)
+                .withLocation(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "pipeline/" + name))
+                .withVertexShader(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "core/light_beam"))
+                .withFragmentShader(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "core/light_beam"))
+                .withShaderDefine("MXT_SCENE_DEPTH")
+                .withUniform("LightBeamInstances", UniformType.UNIFORM_BUFFER)
+                .withUniform("BeamDraw", UniformType.UNIFORM_BUFFER)
+                .withSampler("SceneDepth")
+                .withVertexFormat(DefaultVertexFormat.POSITION_TEX, VertexFormat.Mode.TRIANGLES)
+                .withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT))
+                .withDepthStencilState(new DepthStencilState(depth, false))
+                .withCull(true).build();
     }
 
     @Override
-    public ParticleGroupRenderState extractRenderState(Frustum frustum, Camera camera, float partialTickTime) {
+    public @NonNull ParticleGroupRenderState extractRenderState(@NonNull Frustum frustum, Camera camera, float partialTickTime) {
         this.state.frame.clear();
         this.state.camera = camera.position();
         for (LightBeamParticle particle : this.particles)
@@ -86,13 +108,23 @@ public final class LightBeamParticleGroup extends ParticleGroup<LightBeamParticl
         return this.state;
     }
 
-    private static final class State implements ParticleGroupRenderState, SubmitNodeCollector.ParticleGroupRenderer {
+    private static final class State implements ParticleGroupRenderState, SubmitNodeCollector.ParticleGroupRenderer, WorldEffectSource {
         private final LightBeamParticleFrame frame = new LightBeamParticleFrame();
         private Vec3 camera = Vec3.ZERO;
+        private WorldEffects.@Nullable Frame effects;
+        private @Nullable SceneDepth depth;
+
+        @Override
+        public void collect(WorldEffects.Frame frame) {
+            this.effects = this.camera.equals(frame.camera()) ? frame : null;
+            if (this.effects != null && !this.isEmpty()) frame.requestDepth();
+        }
 
         @Override
         public void clear() {
             this.frame.clear();
+            this.effects = null;
+            this.depth = null;
         }
 
         @Override
@@ -101,27 +133,32 @@ public final class LightBeamParticleGroup extends ParticleGroup<LightBeamParticl
         }
 
         @Override
-        public void submit(SubmitNodeCollector collector, CameraRenderState camera) {
+        public void submit(@NonNull SubmitNodeCollector collector, @NonNull CameraRenderState camera) {
             if (!this.isEmpty()) collector.submitParticleGroup(this);
         }
 
         @Override
-        public QuadParticleRenderState.@Nullable PreparedBuffers prepare(ParticleFeatureRenderer.ParticleBufferCache cache, boolean translucent) {
+        public QuadParticleRenderState.@Nullable PreparedBuffers prepare(ParticleFeatureRenderer.@NonNull ParticleBufferCache cache, boolean translucent) {
             if (!translucent || this.isEmpty()) return null;
             Buffers buffers = BUFFERS.get();
             if (buffers == null) return null;
-            buffers.prepare(this.frame.entries(), this.camera);
+            RenderTarget target = EffectTargets.particles(Minecraft.getInstance().levelRenderer);
+            this.depth = this.effects == null || target == null ? null : this.effects.depth(target);
+            if (this.depth != null && (!RenderSystem.getDevice().precompilePipeline(DEPTH_PIPELINE).isValid()
+                    || !RenderSystem.getDevice().precompilePipeline(GLOW_PIPELINE).isValid())) this.depth = null;
+            buffers.prepare(this.frame.entries(), this.camera, this.depth != null);
             return new QuadParticleRenderState.PreparedBuffers(0, RenderSystem.getDynamicUniforms()
                     .writeTransform(RenderSystem.getModelViewMatrix(), new Vector4f(1.0F), new Vector3f(), new Matrix4f()), Map.of());
         }
 
         @Override
-        public void render(QuadParticleRenderState.PreparedBuffers prepared, ParticleFeatureRenderer.ParticleBufferCache cache, RenderPass pass, TextureManager textures) {
+        public void render(QuadParticleRenderState.@NonNull PreparedBuffers prepared, ParticleFeatureRenderer.@NonNull ParticleBufferCache cache, @NonNull RenderPass pass, @NonNull TextureManager textures) {
             Buffers buffers = BUFFERS.peek();
             if (buffers == null) return;
             pass.setPipeline(PIPELINE);
             pass.setUniform("DynamicTransforms", prepared.dynamicTransforms());
-            buffers.render(pass);
+            if (this.depth != null) this.depth.bind(pass);
+            buffers.render(pass, this.depth != null);
         }
     }
 
@@ -132,9 +169,11 @@ public final class LightBeamParticleGroup extends ParticleGroup<LightBeamParticl
         private final GpuBuffer[] indices = new GpuBuffer[LightBeamParticleMesh.LOD_COUNT];
         private final List<AutoCloseable> allocations = new ArrayList<>();
         private final GpuBufferSlice[] batches = new GpuBufferSlice[MAX_BATCHES];
-        private final int[] counts = new int[MAX_BATCHES];
         private final int[] lods = new int[MAX_BATCHES];
+        private final LightBeamParticleDraws draws = new LightBeamParticleDraws();
         private final int stride;
+        private final int selectorStride;
+        private final GpuBuffer selectors;
         private final MappableRingBuffer instances;
         private final ByteBuffer staging;
         private int batchCount;
@@ -145,10 +184,22 @@ public final class LightBeamParticleGroup extends ParticleGroup<LightBeamParticl
             try {
                 int alignment = RenderSystem.getDevice().getUniformOffsetAlignment();
                 this.stride = Math.ceilDiv(BATCH_BYTES, alignment) * alignment;
+                this.selectorStride = Math.ceilDiv(16, alignment) * alignment;
                 this.staging = MemoryUtil.memCalloc(this.stride * MAX_BATCHES);
                 this.allocations.add(() -> MemoryUtil.memFree(this.staging));
                 this.instances = new MappableRingBuffer(() -> "Light beam instances", GpuBuffer.USAGE_UNIFORM | GpuBuffer.USAGE_MAP_WRITE | GpuBuffer.USAGE_COPY_DST, this.staging.capacity());
                 this.allocations.add(this.instances);
+                ByteBuffer selectorData = MemoryUtil.memCalloc(this.selectorStride * LightBeamParticleMesh.BATCH_SIZE);
+                try {
+                    for (int i = 0; i < LightBeamParticleMesh.BATCH_SIZE; i++)
+                        selectorData.putFloat(i * this.selectorStride, i)
+                                .putFloat(i * this.selectorStride + 4, RenderSystem.getDevice().isZZeroToOne() ? 1 : 0)
+                                .putFloat(i * this.selectorStride + 8, 0.12F);
+                    this.selectors = RenderSystem.getDevice().createBuffer(() -> "Light beam draw selectors", GpuBuffer.USAGE_UNIFORM, selectorData);
+                    this.allocations.add(this.selectors);
+                } finally {
+                    MemoryUtil.memFree(selectorData);
+                }
                 for (int lod = 0; lod < LightBeamParticleMesh.LOD_COUNT; lod++) {
                     ByteBuffer vertexData = MemoryUtil.memAlloc(LightBeamParticleMesh.vertexCount(lod) * 20);
                     ByteBuffer indexData = null;
@@ -176,7 +227,7 @@ public final class LightBeamParticleGroup extends ParticleGroup<LightBeamParticl
             }
         }
 
-        private void prepare(List<LightBeamParticleFrame.Entry> entries, Vec3 camera) {
+        private void prepare(List<LightBeamParticleFrame.Entry> entries, Vec3 camera, boolean depth) {
             // The previous draw's RenderPass is closed before this preparation starts.
             if (this.pendingRotation) {
                 this.instances.rotate();
@@ -185,6 +236,7 @@ public final class LightBeamParticleGroup extends ParticleGroup<LightBeamParticl
             GpuBuffer buffer = this.instances.currentBuffer();
             this.staging.clear();
             this.batchCount = 0;
+            this.draws.build(entries, depth);
             for (int start = 0; start < entries.size(); start += LightBeamParticleMesh.BATCH_SIZE) {
                 int count = Math.min(LightBeamParticleMesh.BATCH_SIZE, entries.size() - start);
                 int offset = this.batchCount * this.stride;
@@ -195,7 +247,6 @@ public final class LightBeamParticleGroup extends ParticleGroup<LightBeamParticl
                 }
                 // Bind the full declared UBO array, including unused records in the final batch.
                 while (this.staging.position() < offset + BATCH_BYTES) this.staging.putFloat(0);
-                this.counts[this.batchCount] = count;
                 this.lods[this.batchCount] = LightBeamParticleMesh.lod(entries.get(start + count - 1).distanceSquared());
                 this.batches[this.batchCount++] = buffer.slice(offset, BATCH_BYTES);
             }
@@ -203,14 +254,19 @@ public final class LightBeamParticleGroup extends ParticleGroup<LightBeamParticl
             RenderSystem.getDevice().createCommandEncoder().writeToBuffer(buffer.slice(0, this.staging.remaining()), this.staging);
         }
 
-        private void render(RenderPass pass) {
+        private void render(RenderPass pass, boolean depth) {
             this.pendingRotation = true;
-            for (int batch = 0; batch < this.batchCount; batch++) {
+            for (int draw = 0; draw < this.draws.size(); draw++) {
+                int batch = this.draws.batch(draw);
                 int lod = this.lods[batch];
+                if (depth) {
+                    pass.setPipeline(this.draws.glow(draw) ? GLOW_PIPELINE : DEPTH_PIPELINE);
+                    pass.setUniform("BeamDraw", this.selectors.slice((long) this.draws.first(draw) * this.selectorStride, 16));
+                }
                 pass.setUniform("LightBeamInstances", this.batches[batch]);
                 pass.setVertexBuffer(0, this.vertices[lod]);
                 pass.setIndexBuffer(this.indices[lod], VertexFormat.IndexType.SHORT);
-                pass.drawIndexed(0, 0, LightBeamParticleMesh.indexCount(lod), this.counts[batch]);
+                pass.drawIndexed(0, 0, LightBeamParticleMesh.indexCount(lod), this.draws.count(draw));
             }
         }
 

@@ -50,6 +50,7 @@ import com.iafenvoy.mxt.probe.verify.TalismanVerifyProbes;
 import com.iafenvoy.mxt.probe.verify.TargetSelectorVerifyProbes;
 import com.iafenvoy.mxt.probe.verify.TickDispatcherVerifyProbes;
 import com.iafenvoy.mxt.probe.verify.WheelVerifyProbes;
+import com.iafenvoy.mxt.probe.verify.WorldEffectsVerifyProbes;
 import com.iafenvoy.mxt.probe.world.RiftProbes;
 import com.iafenvoy.mxt.probe.world.SecretRealmProbes;
 import com.iafenvoy.mxt.testmod.MxtTestMod;
@@ -80,7 +81,7 @@ import java.util.function.Supplier;
  * the level clock or a whole dimension from racing another one.
  */
 public final class ProbeTests {
-    private static final List<Supplier<List<Probe>>> DOMAINS = List.of(
+    private static final List<Supplier<List<Probe>>> DOMAINS = List.<Supplier<List<Probe>>>of(
             SmokeProbes::probes,
             MessageProbes::probes,
             FormationProbes::probes,
@@ -110,6 +111,7 @@ public final class ProbeTests {
             AuraVerifyProbes::probes,
             BlockAuraRefreshVerifyProbes::probes,
             LightBeamParticleVerifyProbes::probes,
+            WorldEffectsVerifyProbes::probes,
             CloseableResourcesVerifyProbes::probes,
             ClosureVerifyProbes::probes,
             CostVerifyProbes::probes,

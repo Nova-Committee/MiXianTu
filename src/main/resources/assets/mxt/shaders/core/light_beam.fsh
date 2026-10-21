@@ -1,6 +1,8 @@
 #version 330
 
 #moj_import <minecraft:fog.glsl>
+#moj_import <mxt:light_beam_draw.glsl>
+#moj_import <mxt:scene_depth.glsl>
 
 in vec3 viewPosition;
 in vec2 surfaceCoord;
@@ -14,13 +16,12 @@ flat in vec2 glowSize;
 
 out vec4 fragColor;
 
-float columnGlow() {
-    vec3 start = glowCoord - viewPosition;
-    vec3 direction = viewPosition / max(length(viewPosition), 0.00001);
+float columnGlow(vec3 rayOrigin, vec3 direction, float sceneDistance) {
+    vec3 start = rayOrigin + glowCoord - viewPosition;
     float radius = glowSize.x, height = glowSize.y;
     bool inside = dot(start.xz, start.xz) < radius * radius && start.y > 0.0 && start.y < height;
     if ((haloLayer < 0.5) != inside) return 0.0;
-    float from = 0.0, to = 1.0e20;
+    float from = 0.0, to = sceneDistance;
     float a = dot(direction.xz, direction.xz);
     if (a > 1.0e-12) {
         float b = dot(start.xz, direction.xz);
@@ -49,10 +50,19 @@ float columnGlow() {
 }
 
 void main() {
+#ifdef MXT_SCENE_DEPTH
+    MxtSceneRay sceneRay = mxt_scene_ray(BeamDrawParams.y > 0.5);
+    if (!sceneRay.valid) discard;
+#endif
     float fog = total_fog_value(fog_spherical_distance(viewPosition), fog_cylindrical_distance(viewPosition),
                                FogEnvironmentalStart, FogEnvironmentalEnd, FogRenderDistanceStart, FogRenderDistanceEnd);
     if (tapered > 1.5) {
-        float alpha = vertexColor.a * columnGlow() * (1.0 - fog);
+#ifdef MXT_SCENE_DEPTH
+        float glow = columnGlow(sceneRay.origin, sceneRay.direction, sceneRay.distance);
+#else
+        float glow = columnGlow(vec3(0), viewPosition / max(length(viewPosition), 0.00001), 1e20);
+#endif
+        float alpha = vertexColor.a * glow * (1.0 - fog);
         if (alpha < 0.002) discard;
         fragColor = vec4(vertexColor.rgb, alpha);
         return;
@@ -72,6 +82,10 @@ void main() {
     endFade = cap ? 1.0 : mix(endFade, 1.0, axial * axial * axial * axial * (1.0 - curvedSurface));
     float alpha = vertexColor.a * radial * endFade;
     alpha *= 1.0 - fog;
+#ifdef MXT_SCENE_DEPTH
+    float fragmentDistance = dot(viewPosition - sceneRay.origin, sceneRay.direction);
+    alpha *= clamp((sceneRay.distance - fragmentDistance) / max(BeamDrawParams.z, 1e-5), 0.0, 1.0);
+#endif
     if (alpha < 0.002) discard;
     fragColor = vec4(vertexColor.rgb * (0.75 + 0.25 * facing), alpha);
 }

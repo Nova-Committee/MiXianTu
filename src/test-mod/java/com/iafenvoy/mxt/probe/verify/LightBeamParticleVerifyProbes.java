@@ -16,7 +16,6 @@ import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.resources.Identifier;
-import net.minecraft.util.ARGB;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.joml.FrustumIntersection;
@@ -28,12 +27,14 @@ import java.io.InputStream;
 import java.io.UncheckedIOException;
 import java.lang.classfile.ClassFile;
 import java.lang.classfile.CompoundElement;
+import java.lang.classfile.MethodModel;
 import java.lang.classfile.instruction.InvokeInstruction;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 
 public final class LightBeamParticleVerifyProbes {
     private LightBeamParticleVerifyProbes() {
@@ -62,7 +63,7 @@ public final class LightBeamParticleVerifyProbes {
                         for (FlowDirection direction : FlowDirection.values()) {
                             String label = " filled=" + filled + " glow=" + glow + " spread=" + spread
                                     + " terminals=" + terminals + " direction=" + direction;
-                            var options = new LightBeamParticleOptions(0xCC55CCFF, 3, -2, -4, 8, .18F,
+                            LightBeamParticleOptions options = new LightBeamParticleOptions(0xCC55CCFF, 3, -2, -4, 8, .18F,
                                     direction, 2, 200, spread, 2, 4, terminals, terminals, filled, glow);
                             expect(context, "all fields survive JSON" + label, LightBeamParticleOptions.CODEC.codec().parse(JsonOps.INSTANCE,
                                     LightBeamParticleOptions.CODEC.codec().encodeStart(JsonOps.INSTANCE, options).getOrThrow()).getOrThrow(), options);
@@ -74,13 +75,13 @@ public final class LightBeamParticleVerifyProbes {
                             } finally {
                                 network.release();
                             }
-                            var shape = new LightBeamParticleShape(options, origin.x(), origin.y(), origin.z(), 117L);
-                            var before = segments(shape, 20, 0);
-                            var later = segments(shape, 40, 9);
+                            LightBeamParticleShape shape = new LightBeamParticleShape(options, origin.x(), origin.y(), origin.z(), 117L);
+                            List<LightBeamParticleShape.Segment> before = segments(shape, 20, 0);
+                            List<LightBeamParticleShape.Segment> later = segments(shape, 40, 9);
                             List<LightBeamParticleShape.Segment> glowSegments = before.stream().filter(LightBeamParticleShape.Segment::glow).toList();
                             expect(context, "one optional stationary glow instance" + label, glowSegments.size(), glow ? 1 : 0);
                             boolean placement = true, filledInterior = false, bounds = true, finite = true;
-                            for (var segment : before) {
+                            for (LightBeamParticleShape.Segment segment : before) {
                                 if (!segment.glow()) {
                                     double radius = Math.hypot(segment.center().x() - origin.x() - options.x(),
                                             segment.center().z() - origin.z() - options.z());
@@ -105,7 +106,7 @@ public final class LightBeamParticleVerifyProbes {
                             expect(context, "CPU reference and instance fields remain finite" + label, finite, true);
                             expect(context, "the complete and per-instance bounds contain every vertex" + label, bounds, true);
                             if (glow) {
-                                var column = glowSegments.getFirst();
+                                LightBeamParticleShape.Segment column = glowSegments.getFirst();
                                 expect(context, "glow has no age or phase motion" + label,
                                         later.stream().filter(LightBeamParticleShape.Segment::glow).toList(), glowSegments);
                                 close(context, "glow starts at the lower plane" + label, column.bottom(), origin.y() + options.yMin());
@@ -123,8 +124,8 @@ public final class LightBeamParticleVerifyProbes {
                                 expect(context, "glow and streaks share the quota limit=" + limit + label, limited.size() <= limit, true);
                             }
                         }
-        var frame = new LightBeamParticleFrame();
-        var glowing = new LightBeamParticleOptions(0xFFFFFFFF, 0, 0, 0, 12, .18F, FlowDirection.UP, 1,
+        LightBeamParticleFrame frame = new LightBeamParticleFrame();
+        LightBeamParticleOptions glowing = new LightBeamParticleOptions(0xFFFFFFFF, 0, 0, 0, 12, .18F, FlowDirection.UP, 1,
                 200, true, 2, 16, true, true, false, true);
         for (int beam = 0; beam < 200; beam++)
             frame.add(new LightBeamParticleShape(glowing, beam % 20, 0, beam / 20, beam), 20, 0, Vec3.ZERO);
@@ -133,10 +134,10 @@ public final class LightBeamParticleVerifyProbes {
         expect(context, "each accepted visible beam keeps its glow", frame.entries().stream().filter(entry -> entry.segment().glow()).count(), 200L);
         frame.build(Vec3.ZERO, box -> false);
         expect(context, "the glow obeys per-instance frustum culling", frame.entries().isEmpty(), true);
-        var tiny = new LightBeamParticleOptions(0xFFFFFFFF, 0, 0, 0, .001F, .18F, FlowDirection.UP, 1,
+        LightBeamParticleOptions tiny = new LightBeamParticleOptions(0xFFFFFFFF, 0, 0, 0, .001F, .18F, FlowDirection.UP, 1,
                 200, true, 64, 1, true, true, false, true);
-        var tinyShape = new LightBeamParticleShape(tiny, 0, 0, 0, 117L);
-        var tinyGlow = segments(tinyShape, 20, 0).stream().filter(LightBeamParticleShape.Segment::glow).findFirst().orElseThrow();
+        LightBeamParticleShape tinyShape = new LightBeamParticleShape(tiny, 0, 0, 0, 117L);
+        LightBeamParticleShape.Segment tinyGlow = segments(tinyShape, 20, 0).stream().filter(LightBeamParticleShape.Segment::glow).findFirst().orElseThrow();
         expect(context, "very short wide glow has finite geometry", vertices(tinyShape, tinyGlow, Vec3.ZERO).stream().allMatch(Vertex::finite), true);
     }
 
@@ -161,12 +162,12 @@ public final class LightBeamParticleVerifyProbes {
             for (boolean top : new boolean[]{false, true})
                 for (boolean spread : new boolean[]{false, true})
                     for (FlowDirection direction : FlowDirection.values()) {
-                        var shape = new LightBeamParticleShape(new LightBeamParticleOptions(0xCC55CCFF, 0, 0, 0, 12, .18F,
+                        LightBeamParticleShape shape = new LightBeamParticleShape(new LightBeamParticleOptions(0xCC55CCFF, 0, 0, 0, 12, .18F,
                                 direction, 1, 200, spread, 1, 16, bottom, top), origin.x(), origin.y(), origin.z(), 117L);
-                        var baseline = segments(shape, 20, 0);
+                        List<LightBeamParticleShape.Segment> baseline = segments(shape, 20, 0);
                         segments(shape, 150, 30);
                         stable &= baseline.equals(segments(shape, 20, 0));
-                        for (var segment : baseline) {
+                        for (LightBeamParticleShape.Segment segment : baseline) {
                             ByteBuffer data = ByteBuffer.allocate(LightBeamParticleMesh.INSTANCE_BYTES).order(ByteOrder.nativeOrder());
                             shape.writeInstance(segment, origin, data);
                             packed &= data.position() == LightBeamParticleMesh.INSTANCE_BYTES;
@@ -201,7 +202,7 @@ public final class LightBeamParticleVerifyProbes {
         expect(context, "clearing a frame drops previous requests", frame.entries().isEmpty(), true);
         try (InputStream stream = Objects.requireNonNull(LightBeamParticleShape.class.getResourceAsStream(
                 "LightBeamParticleGroup$Buffers.class"))) {
-            var methods = ClassFile.of().parse(stream.readAllBytes()).methods();
+            List<MethodModel> methods = ClassFile.of().parse(stream.readAllBytes()).methods();
             List<InvokeInstruction> drawCalls = methods.stream().filter(method -> method.methodName().equalsString("render"))
                     .flatMap(method -> method.code().stream()).flatMap(CompoundElement::elementStream)
                     .filter(InvokeInstruction.class::isInstance).map(InvokeInstruction.class::cast).toList();
@@ -289,7 +290,7 @@ public final class LightBeamParticleVerifyProbes {
                     false, options.radius(), options.density());
             LightBeamParticleShape shape = new LightBeamParticleShape(options, 0, 0, 0);
             expect(context, "spread preserves complete culling bounds=" + enabled, shape.bounds(), normal.bounds(0, 0, 0));
-            var sample = segments(shape, 20, 0).stream().filter(segment -> segment.bottom() > options.yMin()
+            LightBeamParticleShape.Segment sample = segments(shape, 20, 0).stream().filter(segment -> segment.bottom() > options.yMin()
                     && segment.bottom() + segment.length() < options.yMax()).findFirst().orElseThrow();
             Vec3 camera = sample.center();
             List<Vertex> mesh = vertices(shape, sample, camera);
@@ -331,8 +332,8 @@ public final class LightBeamParticleVerifyProbes {
                 List<LightBeamParticleShape.Segment> baseline = segments(new LightBeamParticleShape(normal, 0, 0, 0), 20, 0);
                 List<LightBeamParticleShape.Segment> wide = segments(shape, 20, 0);
                 int compared = 0;
-                for (var segment : wide) {
-                    var match = baseline.stream().filter(other -> other.channel() == segment.channel() && other.cell() == segment.cell()).findFirst();
+                for (LightBeamParticleShape.Segment segment : wide) {
+                    Optional<LightBeamParticleShape.Segment> match = baseline.stream().filter(other -> other.channel() == segment.channel() && other.cell() == segment.cell()).findFirst();
                     if (match.isEmpty()) continue;
                     expect(context, "spread lengthens each matching streak channel=" + segment.channel(), segment.length() > match.get().length(), true);
                     compared++;
@@ -370,12 +371,12 @@ public final class LightBeamParticleVerifyProbes {
                         boolean contained = true, countMatches = true;
                         int bottomPlane = 0, topPlane = 0, movingSamples = 0;
                         double movementError = 0;
-                        for (var segment : before) {
+                        for (LightBeamParticleShape.Segment segment : before) {
                             List<Vertex> mesh = vertices(shape, segment, origin);
                             contained &= mesh.stream().allMatch(v -> v.finite() && shape.bounds().inflate(1.0E-4D).contains(origin.add(point(v))));
                             countMatches &= mesh.size() == shape.vertexCount(segment);
                             Vec3 center = shape.sortCenter(segment);
-                            var next = after.stream().filter(other -> other.channel() == segment.channel() && other.cell() == segment.cell()).findFirst();
+                            Optional<LightBeamParticleShape.Segment> next = after.stream().filter(other -> other.channel() == segment.channel() && other.cell() == segment.cell()).findFirst();
                             if (next.isEmpty()) continue;
                             Vec3 following = shape.sortCenter(next.get());
                             boolean onBottom = Math.abs(center.y() - origin.y()) < 1.0E-7D && Math.abs(following.y() - origin.y()) < 1.0E-7D;
@@ -402,29 +403,29 @@ public final class LightBeamParticleVerifyProbes {
                         expect(context, "horizontal speed has unclipped samples" + label, movingSamples > 0, bottom || top);
                         close(context, "horizontal flow keeps constant speed and reverses with the beam" + label, movementError, 0);
                     }
-        var options = new LightBeamParticleOptions(0xFF55CCFF, 0, 0, 0, 8, .18F, FlowDirection.UP, 0, 200, false, 1, 16, true, true);
-        var shape = new LightBeamParticleShape(options, 0, 0, 0);
-        var sample = new LightBeamParticleShape.Segment(0, 0, new Vec3(.4, 0, 0), -.05D, .1D, .03D, .08D, 0, options.color(), 1);
+        LightBeamParticleOptions options = new LightBeamParticleOptions(0xFF55CCFF, 0, 0, 0, 8, .18F, FlowDirection.UP, 0, 200, false, 1, 16, true, true);
+        LightBeamParticleShape shape = new LightBeamParticleShape(options, 0, 0, 0);
+        LightBeamParticleShape.Segment sample = new LightBeamParticleShape.Segment(0, 0, new Vec3(.4, 0, 0), -.05D, .1D, .03D, .08D, 0, options.color(), 1);
         double bend = .75D;
         Vec3 arc = shape.sortCenter(sample);
         close(context, "bottom turn follows a quarter-circle in the radial plane X", arc.x(), .4D + bend * (1.0D - Math.cos(1.0D)));
         close(context, "bottom turn follows a quarter-circle in the radial plane Y", arc.y(), bend * (1.0D - Math.sin(1.0D)));
-        var horizontal = new LightBeamParticleShape.Segment(0, 0, new Vec3(.4, -.75D, 0), -.8D, .1D, .03D, .08D, 0, options.color(), 1);
+        LightBeamParticleShape.Segment horizontal = new LightBeamParticleShape.Segment(0, 0, new Vec3(.4, -.75D, 0), -.8D, .1D, .03D, .08D, 0, options.color(), 1);
         List<Vertex> mesh = vertices(shape, horizontal, Vec3.ZERO);
         double yDiameter = mesh.subList(0, LightBeamParticleShape.SIDES * 4).stream().mapToDouble(Vertex::y).max().orElseThrow()
                 - mesh.subList(0, LightBeamParticleShape.SIDES * 4).stream().mapToDouble(Vertex::y).min().orElseThrow();
         close(context, "a horizontal streak retains its round cross-section", yDiameter, .06D);
         expect(context, "zero speed freezes both terminal streams", segments(shape, 20, 0), segments(shape, 20.5F, 0));
-        var extreme = new LightBeamParticleShape(new LightBeamParticleOptions(options.color(), 0, 0, 0, .001F, 64,
+        LightBeamParticleShape extreme = new LightBeamParticleShape(new LightBeamParticleOptions(options.color(), 0, 0, 0, .001F, 64,
                 FlowDirection.DOWN, 100, 200, false, 64, 1024, true, true), 0, 0, 0);
-        var extremeSegments = segments(extreme, 20, 0);
+        List<LightBeamParticleShape.Segment> extremeSegments = segments(extreme, 20, 0);
         expect(context, "tiny height and huge terminals respect segment budget", extremeSegments.size() <= LightBeamParticleShape.MAX_SEGMENTS, true);
         expect(context, "tiny height and huge terminals remain finite and bounded", extremeSegments.stream().allMatch(segment ->
                 vertices(extreme, segment, Vec3.ZERO).stream().allMatch(vertex -> vertex.finite()
                         && extreme.bounds().inflate(1.0E-4D).contains(point(vertex)))), true);
         Vec3 player = context.player().position();
-        var wide = new LightBeamParticleOptions(options.color(), 0, 0, 0, 8, .18F, FlowDirection.UP, 1, 200, false, 8, 16, true, false);
-        var plain = new LightBeamParticleOptions(options.color(), 0, 0, 0, 8, .18F, FlowDirection.UP, 1, 200, false, 8, 16);
+        LightBeamParticleOptions wide = new LightBeamParticleOptions(options.color(), 0, 0, 0, 8, .18F, FlowDirection.UP, 1, 200, false, 8, 16, true, false);
+        LightBeamParticleOptions plain = new LightBeamParticleOptions(options.color(), 0, 0, 0, 8, .18F, FlowDirection.UP, 1, 200, false, 8, 16);
         expect(context, "terminal extension does not expand vanilla delivery range", send(context, wide, player.add(45, 0, 0), false), false);
         expect(context, "a disabled terminal uses the same vanilla delivery range", send(context, plain, player.add(45, 0, 0), false), false);
         FrustumIntersection frustum = new FrustumIntersection(new Matrix4f());
@@ -440,7 +441,7 @@ public final class LightBeamParticleVerifyProbes {
         expect(context, "particle shape uses complete volume bounds", bounds, options.bounds(origin.x(), origin.y(), origin.z()));
         List<LightBeamParticleShape.Segment> segments = segments(shape, 20, 0);
         expect(context, "the volume contains actual short cylinders", segments.size() > 0, true);
-        var sample = segments.stream().filter(segment -> segment.bottom() > bounds.minY && segment.bottom() + segment.length() < bounds.maxY).findFirst().orElseThrow();
+        LightBeamParticleShape.Segment sample = segments.stream().filter(segment -> segment.bottom() > bounds.minY && segment.bottom() + segment.length() < bounds.maxY).findFirst().orElseThrow();
         List<Vertex> baseline = vertices(shape, sample, origin);
         expect(context, "every cylinder has two capped eight-sided shells", baseline.size(), LightBeamParticleShape.VERTICES_PER_SEGMENT);
         Vertex first = baseline.get(1), next = baseline.get(2);
@@ -466,7 +467,7 @@ public final class LightBeamParticleVerifyProbes {
             close(context, "cylinders never rotate with the camera at angle=" + angle, drift, 0);
         }
         boolean contained = true, insideDisk = true;
-        for (var segment : segments) {
+        for (LightBeamParticleShape.Segment segment : segments) {
             insideDisk &= Math.hypot(segment.center().x() - origin.x() - options.x(),
                     segment.center().z() - origin.z() - options.z()) <= options.radius() + 1.0E-7D;
             contained &= vertices(shape, segment, origin).stream().allMatch(v -> v.finite() && bounds.inflate(1.0E-5D).contains(origin.add(point(v))));
@@ -506,15 +507,15 @@ public final class LightBeamParticleVerifyProbes {
         LightBeamParticleShape down = new LightBeamParticleShape(options(0, 0, 0, 128, 0.5F, FlowDirection.DOWN, 2), 0, 0, 0);
         LightBeamParticleShape still = new LightBeamParticleShape(options(0, 0, 0, 128, 0.5F, FlowDirection.UP, 0), 0, 0, 0);
         expect(context, "zero speed freezes emission positions", segments(still, 10, 0), segments(still, 10.5F, 0));
-        for (var shape : List.of(up, down)) {
+        for (LightBeamParticleShape shape : List.of(up, down)) {
             List<LightBeamParticleShape.Segment> before = segments(shape, 10, 0);
             List<LightBeamParticleShape.Segment> after = segments(shape, 10.5F, 0);
             int count = 0;
             double drift = 0, speedError = 0;
-            for (var first : before) {
-                var match = after.stream().filter(second -> second.channel() == first.channel() && second.cell() == first.cell()).findFirst();
+            for (LightBeamParticleShape.Segment first : before) {
+                Optional<LightBeamParticleShape.Segment> match = after.stream().filter(second -> second.channel() == first.channel() && second.cell() == first.cell()).findFirst();
                 if (match.isEmpty()) continue;
-                var second = match.get();
+                LightBeamParticleShape.Segment second = match.get();
                 drift = Math.max(drift, Math.hypot(second.center().x() - first.center().x(), second.center().z() - first.center().z()));
                 speedError = Math.max(speedError, Math.abs(second.center().y() - first.center().y() - (shape == up ? 0.96D : -0.96D)));
                 count++;
@@ -522,8 +523,8 @@ public final class LightBeamParticleVerifyProbes {
             expect(context, "partial-tick comparison covers actual traveling streaks", count > 0, true);
             close(context, "moving streaks keep their random transverse positions", drift, 0);
             close(context, "partial ticks retain the expected direction and speed", speedError, 0);
-            var sample = before.stream().filter(segment -> segment.bottom() > 1 && segment.bottom() + segment.length() < 127).findFirst().orElseThrow();
-            var second = after.stream().filter(segment -> segment.channel() == sample.channel() && segment.cell() == sample.cell()).findFirst().orElseThrow();
+            LightBeamParticleShape.Segment sample = before.stream().filter(segment -> segment.bottom() > 1 && segment.bottom() + segment.length() < 127).findFirst().orElseThrow();
+            LightBeamParticleShape.Segment second = after.stream().filter(segment -> segment.channel() == sample.channel() && segment.cell() == sample.cell()).findFirst().orElseThrow();
             List<Vertex> firstVertices = vertices(shape, sample, Vec3.ZERO), nextVertices = vertices(shape, second, Vec3.ZERO);
             double geometryError = 0;
             for (int index = 0; index < firstVertices.size(); index++)

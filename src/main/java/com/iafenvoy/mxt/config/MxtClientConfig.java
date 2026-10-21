@@ -26,6 +26,7 @@ public final class MxtClientConfig extends AutoInitConfigContainer {
     public final Wheel wheel = new Wheel();
     public final Tooltips tooltips = new Tooltips();
     public final Flames flames = new Flames();
+    public final Effects effects = new Effects();
 
     private MxtClientConfig() {
         super(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "client"), "config.mxt.client", "./config/mxt/mxt-client.json");
@@ -152,6 +153,15 @@ public final class MxtClientConfig extends AutoInitConfigContainer {
         private static IntegerEntry particles(String name, int count) {
             String key = "config.mxt.client.flames." + name;
             return IntegerEntry.builder(key, count).key(name).tooltip(key + ".tooltip").range(1, 256).build();
+        }
+    }
+
+    public static final class Effects extends AutoInitConfigCategoryBase {
+        public final BooleanEntry sceneDepth = BooleanEntry.builder("config.mxt.client.effects.scene_depth", false)
+                .key("scene_depth").tooltip("config.mxt.client.effects.scene_depth.tooltip").build();
+
+        private Effects() {
+            super("effects", "config.mxt.client.effects");
         }
     }
 

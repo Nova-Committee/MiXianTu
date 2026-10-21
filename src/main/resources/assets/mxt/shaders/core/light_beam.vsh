@@ -2,6 +2,9 @@
 
 #moj_import <minecraft:dynamictransforms.glsl>
 #moj_import <minecraft:projection.glsl>
+#moj_import <mxt:light_beam_draw.glsl>
+#define MXT_DEPTH_VERTEX
+#moj_import <mxt:scene_depth.glsl>
 
 struct Beam {
     vec4 origin;
@@ -59,7 +62,12 @@ float smoothRange(float from, float to, float value) {
 }
 
 void main() {
-    Beam beam = Beams[gl_InstanceID];
+    int instance = gl_InstanceID;
+#ifdef MXT_SCENE_DEPTH
+    instance += int(BeamDrawParams.x);
+    mxt_depth_vertex(ProjMat * ModelViewMat);
+#endif
+    Beam beam = Beams[instance];
     float lod = floor(UV0.x / 4.0);
     float flags = UV0.x - lod * 4.0;
     haloLayer = mod(flags, 2.0);

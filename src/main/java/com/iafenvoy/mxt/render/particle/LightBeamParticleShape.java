@@ -124,7 +124,7 @@ public final class LightBeamParticleShape {
             this.samples = new Sample[Integer.highestOneBit(capacity - 1) << 1];
         }
         long hash = (cell ^ channel * 0x9E3779B97F4A7C15L) * 0xBF58476D1CE4E5B9L;
-        int index = (int) (hash ^ hash >>> 32) & (this.samples.length - 1);
+        int index = Long.hashCode(hash) & (this.samples.length - 1);
         Sample cached = this.samples[index];
         if (cached != null && cached.channel == channel && cached.cell == cell) return cached;
         double variation = this.random(channel, cell, 13), widthVariation = this.random(channel, cell, 53);

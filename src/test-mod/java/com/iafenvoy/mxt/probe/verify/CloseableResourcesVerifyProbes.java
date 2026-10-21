@@ -27,12 +27,12 @@ public final class CloseableResourcesVerifyProbes {
         AtomicInteger created = new AtomicInteger();
         AtomicInteger closed = new AtomicInteger();
         List<Exception> failures = new ArrayList<>();
-        try (var resources = new CloseableResources(() -> {}, available::get, failures::add)) {
-            var slot = resources.register(() -> {
+        try (CloseableResources resources = new CloseableResources(() -> {}, available::get, failures::add)) {
+            CloseableResources.Slot<AutoCloseable> slot = resources.register(() -> {
                 created.incrementAndGet();
                 return (AutoCloseable) closed::incrementAndGet;
             });
-            var unused = resources.register(() -> {
+            CloseableResources.Slot<AutoCloseable> unused = resources.register(() -> {
                 throw new AssertionError("An unused slot must not allocate");
             });
             context.expect("registration does not construct resources", created.get(), 0);
@@ -65,10 +65,10 @@ public final class CloseableResourcesVerifyProbes {
         AtomicInteger attempts = new AtomicInteger();
         AtomicInteger closed = new AtomicInteger();
         List<Exception> failures = new ArrayList<>();
-        var constructionFailure = new IllegalStateException("construction probe");
-        var closeFailure = new IllegalStateException("close probe");
-        try (var resources = new CloseableResources(() -> {}, () -> true, failures::add)) {
-            var retry = resources.register(() -> {
+        IllegalStateException constructionFailure = new IllegalStateException("construction probe");
+        IllegalStateException closeFailure = new IllegalStateException("close probe");
+        try (CloseableResources resources = new CloseableResources(() -> {}, () -> true, failures::add)) {
+            CloseableResources.Slot<AutoCloseable> retry = resources.register(() -> {
                 if (attempts.incrementAndGet() == 1) throw constructionFailure;
                 return (AutoCloseable) closed::incrementAndGet;
             });
@@ -84,14 +84,14 @@ public final class CloseableResourcesVerifyProbes {
             context.expect("construction was retried exactly once", attempts.get(), 2);
 
             AtomicReference<CloseableResources.Slot<AutoCloseable>> brokenRef = new AtomicReference<>();
-            var broken = resources.<AutoCloseable>register(() -> () -> {
+            CloseableResources.Slot<AutoCloseable> broken = resources.register(() -> () -> {
                 context.expect("close first detaches the resource", brokenRef.get().peek(), null);
                 context.expect("close cannot reenter acquisition", brokenRef.get().get(), null);
                 closed.incrementAndGet();
                 throw closeFailure;
             });
             brokenRef.set(broken);
-            var later = resources.register(() -> (AutoCloseable) closed::incrementAndGet);
+            CloseableResources.Slot<AutoCloseable> later = resources.register(() -> (AutoCloseable) closed::incrementAndGet);
             broken.get();
             later.get();
             resources.release();
@@ -106,9 +106,9 @@ public final class CloseableResourcesVerifyProbes {
         AtomicInteger created = new AtomicInteger();
         AtomicInteger closed = new AtomicInteger();
         List<Exception> failures = new ArrayList<>();
-        var resources = new CloseableResources(() -> {}, () -> true, failures::add);
+        CloseableResources resources = new CloseableResources(() -> {}, () -> true, failures::add);
         AtomicReference<CloseableResources.Slot<AutoCloseable>> reference = new AtomicReference<>();
-        var slot = resources.<AutoCloseable>register(() -> {
+        CloseableResources.Slot<AutoCloseable> slot = resources.register(() -> {
             created.incrementAndGet();
             return () -> {
                 closed.incrementAndGet();
@@ -123,15 +123,15 @@ public final class CloseableResourcesVerifyProbes {
         resources.release();
         context.expect("terminal shutdown closes once even when reentered", closed.get(), 1);
         context.expect("a later render cannot reopen the resource", slot.get(), null);
-        var late = resources.register(() -> {
+        CloseableResources.Slot<AutoCloseable> late = resources.register(() -> {
             created.incrementAndGet();
             return (AutoCloseable) closed::incrementAndGet;
         });
         context.expect("late registration cannot revive a closed owner", late.get(), null);
         context.expect("no allocation occurs after shutdown", created.get(), 1);
 
-        var interrupted = new CloseableResources(() -> {}, () -> true, failures::add);
-        var interruptedSlot = interrupted.register(() -> {
+        CloseableResources interrupted = new CloseableResources(() -> {}, () -> true, failures::add);
+        CloseableResources.Slot<AutoCloseable> interruptedSlot = interrupted.register(() -> {
             interrupted.close();
             return (AutoCloseable) closed::incrementAndGet;
         });
@@ -139,8 +139,8 @@ public final class CloseableResourcesVerifyProbes {
         context.expect("a resource completed during shutdown is released", closed.get(), 2);
         interrupted.close();
 
-        var unloaded = new CloseableResources(() -> {}, () -> true, failures::add);
-        var unloadedSlot = unloaded.register(() -> {
+        CloseableResources unloaded = new CloseableResources(() -> {}, () -> true, failures::add);
+        CloseableResources.Slot<AutoCloseable> unloadedSlot = unloaded.register(() -> {
             unloaded.release();
             return (AutoCloseable) closed::incrementAndGet;
         });
@@ -156,10 +156,10 @@ public final class CloseableResourcesVerifyProbes {
         AtomicInteger closed = new AtomicInteger();
         AtomicInteger rejected = new AtomicInteger();
         List<Exception> failures = new ArrayList<>();
-        try (var resources = new CloseableResources(() -> {
+        try (CloseableResources resources = new CloseableResources(() -> {
             if (Thread.currentThread() != owner) throw new IllegalStateException("Wrong resource thread");
         }, () -> true, failures::add)) {
-            var slot = resources.register(() -> {
+            CloseableResources.Slot<AutoCloseable> slot = resources.register(() -> {
                 created.incrementAndGet();
                 return (AutoCloseable) closed::incrementAndGet;
             });
