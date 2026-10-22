@@ -26,6 +26,7 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectMap.Entry;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
+import net.minecraft.core.QuartPos;
 import net.minecraft.core.Registry;
 import net.minecraft.core.SectionPos;
 import net.minecraft.core.registries.Registries;
@@ -78,12 +79,7 @@ public final class AuraService {
         // A query never loads a chunk: outside the loaded ones there is no stock to read, so the environment is
         // the whole answer - the same trade the neighbour scan makes when it skips unloaded chunks.
         LevelChunk chunk = loadedChunk(level, pos);
-        AuraChunkAttachment attachment = chunk == null ? null : chunk.getData(MxtAttachments.AURA_CHUNK);
-        if (attachment != null) {
-            Holder<AuraZone> template = staticResolved == null ? null : staticResolved.zone;
-            if (!attachment.ready(sectionY) || !Objects.equals(attachment.template(), template))
-                initialize(level, attachment, staticResolved, pos);
-        }
+        AuraChunkAttachment attachment = chunk == null ? null : ensureInitialized(chunk, pos, staticResolved);
         Resolved resolved = customZone(level, pos).orElse(staticResolved);
         // A formation's override is announced before it is applied, so a listener can refuse it; and it is only
         // announced when there is a zone holder to name, so a nameless one falls through silently.
@@ -112,8 +108,29 @@ public final class AuraService {
     // Never loads: an unloaded chunk has no readable stock, and a query must not generate terrain to find that out.
     @Nullable
     static LevelChunk loadedChunk(Level level, BlockPos pos) {
-        int x = SectionPos.blockToSectionCoord(pos.getX()), z = SectionPos.blockToSectionCoord(pos.getZ());
-        return level.getChunkSource().hasChunk(x, z) ? level.getChunk(x, z) : null;
+        return loadedChunk(level, SectionPos.blockToSectionCoord(pos.getX()), SectionPos.blockToSectionCoord(pos.getZ()));
+    }
+
+    // hasChunk tests ticket eligibility, not completion; even getChunk(FULL, false) can wait for generation.
+    @Nullable
+    public static LevelChunk loadedChunk(Level level, int chunkX, int chunkZ) {
+        return level.getChunkSource().getChunkNow(chunkX, chunkZ);
+    }
+
+    // Seeding needs the static template and local stock, never formation overrides or neighbouring sources.
+    public static void ensureInitialized(LevelChunk chunk, BlockPos pos) {
+        ensureInitialized(chunk, pos, staticZone(chunk.getLevel(), pos));
+    }
+
+    private static AuraChunkAttachment ensureInitialized(LevelChunk chunk, BlockPos pos, @Nullable Resolved resolved) {
+        AuraChunkAttachment attachment = chunk.getData(MxtAttachments.AURA_CHUNK);
+        Holder<AuraZone> template = resolved == null ? null : resolved.zone;
+        if (!attachment.ready(SectionPos.blockToSectionCoord(pos.getY())) || !Objects.equals(attachment.template(), template)) {
+            initialize(chunk.getLevel(), attachment, resolved, pos);
+            chunk.markUnsaved();
+            if (chunk.getLevel() instanceof ServerLevel server) AuraQueryCache.invalidateResults(server);
+        }
+        return attachment;
     }
 
     // Environmental concentration only: the mutable chunk stock is deliberately excluded, so stored aura
@@ -143,7 +160,8 @@ public final class AuraService {
     public static boolean consume(Level level, BlockPos pos, Map<Holder<Aura>, Double> costs) {
         try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.AURA)) {
             if (costs.values().stream().anyMatch(value -> !Double.isFinite(value) || value < 0.0D)) return false;
-            return level.getChunkAt(pos).getData(MxtAttachments.AURA_CHUNK).consume(SectionPos.blockToSectionCoord(pos.getY()), costs);
+            LevelChunk chunk = loadedChunk(level, pos);
+            return chunk != null && chunk.getData(MxtAttachments.AURA_CHUNK).consume(SectionPos.blockToSectionCoord(pos.getY()), costs);
         }
     }
 
@@ -151,7 +169,8 @@ public final class AuraService {
     public static void change(Level level, BlockPos pos, Map<Holder<Aura>, Double> amounts) {
         try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.AURA)) {
             if (amounts.values().stream().anyMatch(value -> !Double.isFinite(value))) return;
-            level.getChunkAt(pos).getData(MxtAttachments.AURA_CHUNK).change(SectionPos.blockToSectionCoord(pos.getY()), amounts);
+            LevelChunk chunk = loadedChunk(level, pos);
+            if (chunk != null) chunk.getData(MxtAttachments.AURA_CHUNK).change(SectionPos.blockToSectionCoord(pos.getY()), amounts);
         }
     }
 
@@ -183,19 +202,32 @@ public final class AuraService {
         if (cached.isPresent()) return cached.get();
         long started = AuraQueryCache.timing() ? System.nanoTime() : 0L;
         Identifier dimension = level.dimension().identifier();
-        Holder<Biome> memoised = location == null ? null : AuraQueryCache.biome(server, location);
-        if (memoised == null) {
-            memoised = level.getBiome(pos);
-            if (started != 0L) AuraQueryCache.countBiome(System.nanoTime() - started);
-            if (location != null) AuraQueryCache.cacheBiome(server, location, memoised);
+        Optional<Resolved> result = best(level, holder -> matchesDimension(level, holder.value(), dimension))
+                .map(holder -> new Resolved(holder, SourceKind.DIMENSION, Map.of()));
+        if (result.isEmpty()) {
+            Holder<Biome> memoised = location == null ? null : AuraQueryCache.biome(server, location);
+            if (memoised == null) {
+                memoised = biome(level, pos);
+                if (started != 0L) AuraQueryCache.countBiome(System.nanoTime() - started);
+                if (location != null) AuraQueryCache.cacheBiome(server, location, memoised);
+            }
+            Holder<Biome> biome = memoised;
+            result = best(level, holder -> RegistryCodecs.matches(holder.value().biomes(), biome))
+                    .map(holder -> new Resolved(holder, SourceKind.BIOME, Map.of()));
         }
-        Holder<Biome> biome = memoised;
-        Optional<Resolved> dimensionResult = best(level, holder -> matchesDimension(level, holder.value(), dimension)).map(holder -> new Resolved(holder, SourceKind.DIMENSION, Map.of()))
-                .or(() -> best(level, holder1 -> RegistryCodecs.matches(holder1.value().biomes(), biome)).map(holder1 -> new Resolved(holder1, SourceKind.BIOME, Map.of())));
-        if (location != null && dimensionResult.isPresent())
-            AuraQueryCache.cacheStaticZone(server, location, dimensionResult.get());
+        if (location != null && result.isPresent())
+            AuraQueryCache.cacheStaticZone(server, location, result.get());
         if (started != 0L) AuraQueryCache.countStatic(System.nanoTime() - started);
-        return dimensionResult.orElse(null);
+        return result.orElse(null);
+    }
+
+    // Keep vanilla's seeded biome zoom; unfinished sample chunks use the generator without loading terrain.
+    static Holder<Biome> biome(Level level, BlockPos pos) {
+        return level.getBiomeManager().withDifferentSource((quartX, quartY, quartZ) -> {
+            LevelChunk chunk = loadedChunk(level, QuartPos.toSection(quartX), QuartPos.toSection(quartZ));
+            return chunk == null ? level.getUncachedNoiseBiome(quartX, quartY, quartZ)
+                    : chunk.getNoiseBiome(quartX, quartY, quartZ);
+        }).getBiome(pos);
     }
 
     private static Optional<Reference<AuraZone>> best(Level level, Predicate<Reference<AuraZone>> matches) {
@@ -285,8 +317,8 @@ public final class AuraService {
             for (int dz = -BLOCK_SEARCH_RADIUS; dz <= BLOCK_SEARCH_RADIUS; dz++) {
                 int sectionX = querySection.x() + dx;
                 int sectionZ = querySection.z() + dz;
-                if (!level.getChunkSource().hasChunk(sectionX, sectionZ)) continue;
-                LevelChunk sourceChunk = level.getChunk(sectionX, sectionZ);
+                LevelChunk sourceChunk = loadedChunk(level, sectionX, sectionZ);
+                if (sourceChunk == null) continue;
                 AuraChunkAttachment sourceAttachment = sourceChunk.getData(MxtAttachments.AURA_CHUNK);
                 if (sourceAttachment.blockAuraSections().isEmpty()) continue;
 

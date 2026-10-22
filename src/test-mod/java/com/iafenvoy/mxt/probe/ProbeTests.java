@@ -77,6 +77,7 @@ public final class ProbeTests {
             TalismanProbes::probes,
             AbilityCooldownVerifyProbes::probes,
             AuraVerifyProbes::probes,
+            AuraLoadingVerifyProbes::probes,
             AuraDoubleVerifyProbes::probes,
             AuiBindingVerifyProbes::probes,
             AuiGeometryVerifyProbes::probes,

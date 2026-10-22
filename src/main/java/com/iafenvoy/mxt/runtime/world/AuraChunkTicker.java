@@ -143,7 +143,7 @@ public final class AuraChunkTicker {
         for (LevelChunk chunk : new LinkedHashSet<>(pending)) {
             if (chunk.getLevel() != level) continue;
             if (chunk.getData(MxtAttachments.AURA_CHUNK).seeded()) continue;
-            AuraService.getPositionAura(level, chunk.getPos().getMiddleBlockPosition(level.getMinY()));
+            AuraService.ensureInitialized(chunk, chunk.getPos().getMiddleBlockPosition(level.getMinY()));
         }
         pending.clear();
         PENDING.remove(level);

@@ -34,7 +34,6 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.chunk.LevelChunk;
-import net.minecraft.world.level.chunk.status.ChunkStatus;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
@@ -115,8 +114,8 @@ public final class AuraDistributionService {
                                  Map<Holder<Aura>, Double> taken) {
         int chunkX = (int) slot.chunk();
         int chunkZ = (int) (slot.chunk() >> 32);
-        if (!(level.getChunkSource().getChunk(chunkX, chunkZ, ChunkStatus.FULL, false) instanceof LevelChunk chunk))
-            return;
+        LevelChunk chunk = AuraService.loadedChunk(level, chunkX, chunkZ);
+        if (chunk == null) return;
         Map<Holder<Aura>, AuraPool> stock = chunk.getData(MxtAttachments.AURA_CHUNK).pools(slot.sectionY());
         claimed.forEach((aura, claimedAmount) -> {
             AuraPool pool = stock.get(aura);
@@ -197,8 +196,8 @@ public final class AuraDistributionService {
         int maxChunkZ = (int) Math.floor((controller.getZ() + radius) / 16.0D);
         for (int chunkX = minChunkX; chunkX <= maxChunkX; chunkX++) {
             for (int chunkZ = minChunkZ; chunkZ <= maxChunkZ; chunkZ++) {
-                if (!level.getChunkSource().hasChunk(chunkX, chunkZ)) continue;
-                LevelChunk chunk = level.getChunk(chunkX, chunkZ);
+                LevelChunk chunk = AuraService.loadedChunk(level, chunkX, chunkZ);
+                if (chunk == null) continue;
                 long key = chunkKey(chunkX, chunkZ);
                 Int2ObjectMap<Map<Holder<Aura>, Double>> sections = BlockAuraService.groundInSphere(level, chunk, controller, radiusSquared);
                 for (Int2ObjectMap.Entry<Map<Holder<Aura>, Double>> section : sections.int2ObjectEntrySet())
@@ -244,8 +243,8 @@ public final class AuraDistributionService {
     private static void reserve(ServerLevel level, long gameTime, long period, Slot slot, List<Claim> claims) {
         // A chunk that unloaded after its ground was measured is skipped rather than loaded again: a claim is
         // worth nothing for a chunk nobody is standing in.
-        if (!(level.getChunkSource().getChunk((int) slot.chunk(), (int) (slot.chunk() >> 32), ChunkStatus.FULL, false) instanceof LevelChunk chunk))
-            return;
+        LevelChunk chunk = AuraService.loadedChunk(level, (int) slot.chunk(), (int) (slot.chunk() >> 32));
+        if (chunk == null) return;
         claims.sort(Comparator.comparing(Claim::sortKey));
         Map<Holder<Aura>, AuraPool> stock = chunk.getData(MxtAttachments.AURA_CHUNK).pools(slot.sectionY());
         // The stock is section-scoped, so it follows the resolved zone policy of the first claimant.
