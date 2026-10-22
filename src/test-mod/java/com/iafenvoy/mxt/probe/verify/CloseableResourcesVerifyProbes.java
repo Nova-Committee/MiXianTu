@@ -27,10 +27,11 @@ public final class CloseableResourcesVerifyProbes {
         AtomicInteger created = new AtomicInteger();
         AtomicInteger closed = new AtomicInteger();
         List<Exception> failures = new ArrayList<>();
-        try (CloseableResources resources = new CloseableResources(() -> {}, available::get, failures::add)) {
+        try (CloseableResources resources = new CloseableResources(() -> {
+        }, available::get, failures::add)) {
             CloseableResources.Slot<AutoCloseable> slot = resources.register(() -> {
                 created.incrementAndGet();
-                return (AutoCloseable) closed::incrementAndGet;
+                return closed::incrementAndGet;
             });
             CloseableResources.Slot<AutoCloseable> unused = resources.register(() -> {
                 throw new AssertionError("An unused slot must not allocate");
@@ -67,10 +68,11 @@ public final class CloseableResourcesVerifyProbes {
         List<Exception> failures = new ArrayList<>();
         IllegalStateException constructionFailure = new IllegalStateException("construction probe");
         IllegalStateException closeFailure = new IllegalStateException("close probe");
-        try (CloseableResources resources = new CloseableResources(() -> {}, () -> true, failures::add)) {
+        try (CloseableResources resources = new CloseableResources(() -> {
+        }, () -> true, failures::add)) {
             CloseableResources.Slot<AutoCloseable> retry = resources.register(() -> {
                 if (attempts.incrementAndGet() == 1) throw constructionFailure;
-                return (AutoCloseable) closed::incrementAndGet;
+                return closed::incrementAndGet;
             });
             RuntimeException caught = null;
             try {
@@ -91,7 +93,7 @@ public final class CloseableResourcesVerifyProbes {
                 throw closeFailure;
             });
             brokenRef.set(broken);
-            CloseableResources.Slot<AutoCloseable> later = resources.register(() -> (AutoCloseable) closed::incrementAndGet);
+            CloseableResources.Slot<AutoCloseable> later = resources.register(() -> closed::incrementAndGet);
             broken.get();
             later.get();
             resources.release();
@@ -106,7 +108,8 @@ public final class CloseableResourcesVerifyProbes {
         AtomicInteger created = new AtomicInteger();
         AtomicInteger closed = new AtomicInteger();
         List<Exception> failures = new ArrayList<>();
-        CloseableResources resources = new CloseableResources(() -> {}, () -> true, failures::add);
+        CloseableResources resources = new CloseableResources(() -> {
+        }, () -> true, failures::add);
         AtomicReference<CloseableResources.Slot<AutoCloseable>> reference = new AtomicReference<>();
         CloseableResources.Slot<AutoCloseable> slot = resources.register(() -> {
             created.incrementAndGet();
@@ -125,24 +128,26 @@ public final class CloseableResourcesVerifyProbes {
         context.expect("a later render cannot reopen the resource", slot.get(), null);
         CloseableResources.Slot<AutoCloseable> late = resources.register(() -> {
             created.incrementAndGet();
-            return (AutoCloseable) closed::incrementAndGet;
+            return closed::incrementAndGet;
         });
         context.expect("late registration cannot revive a closed owner", late.get(), null);
         context.expect("no allocation occurs after shutdown", created.get(), 1);
 
-        CloseableResources interrupted = new CloseableResources(() -> {}, () -> true, failures::add);
+        CloseableResources interrupted = new CloseableResources(() -> {
+        }, () -> true, failures::add);
         CloseableResources.Slot<AutoCloseable> interruptedSlot = interrupted.register(() -> {
             interrupted.close();
-            return (AutoCloseable) closed::incrementAndGet;
+            return closed::incrementAndGet;
         });
         context.expect("shutdown during construction does not publish a resource", interruptedSlot.get(), null);
         context.expect("a resource completed during shutdown is released", closed.get(), 2);
         interrupted.close();
 
-        CloseableResources unloaded = new CloseableResources(() -> {}, () -> true, failures::add);
+        CloseableResources unloaded = new CloseableResources(() -> {
+        }, () -> true, failures::add);
         CloseableResources.Slot<AutoCloseable> unloadedSlot = unloaded.register(() -> {
             unloaded.release();
-            return (AutoCloseable) closed::incrementAndGet;
+            return closed::incrementAndGet;
         });
         context.expect("unload during construction invalidates that acquisition", unloadedSlot.get(), null);
         context.expect("an invalidated construction is also released", closed.get(), 3);
@@ -161,7 +166,7 @@ public final class CloseableResourcesVerifyProbes {
         }, () -> true, failures::add)) {
             CloseableResources.Slot<AutoCloseable> slot = resources.register(() -> {
                 created.incrementAndGet();
-                return (AutoCloseable) closed::incrementAndGet;
+                return closed::incrementAndGet;
             });
             slot.get();
             Thread worker = Thread.ofPlatform().start(() -> {

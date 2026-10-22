@@ -160,8 +160,8 @@ public final class AuiScrollList<E> {
         if (!this.scrollbarContains(mouseX, mouseY)) return false;
         Position pointer = this.local(this.scrollTrack, mouseX, mouseY);
         double thumbTop = Math.round((this.height - this.thumbHeight) * this.scroll / this.maxScroll());
-        this.scrollbarGrab = pointer.y >= thumbTop && pointer.y < thumbTop + this.thumbHeight
-                ? pointer.y - thumbTop : this.thumbHeight / 2D;
+        assert pointer != null;
+        this.scrollbarGrab = pointer.y >= thumbTop && pointer.y < thumbTop + this.thumbHeight ? pointer.y - thumbTop : this.thumbHeight / 2D;
         this.draggingScrollbar = true;
         return this.scrollbarDragged(mouseX, mouseY, font);
     }

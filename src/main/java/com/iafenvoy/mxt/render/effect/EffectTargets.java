@@ -17,7 +17,8 @@ public final class EffectTargets implements AutoCloseable {
     public EffectTargetPool<Description, Texture>.@Nullable Lease acquire(Description description) {
         RenderSystem.assertOnRenderThread();
         int maxSize = RenderSystem.getDevice().getMaxTextureSize();
-        if (description.width <= 0 || description.height <= 0 || description.width > maxSize || description.height > maxSize) return null;
+        if (description.width <= 0 || description.height <= 0 || description.width > maxSize || description.height > maxSize)
+            return null;
         long bytes = (long) description.width * description.height * description.format.pixelSize();
         return this.pool.acquire(description, bytes, () -> new Texture(description));
     }

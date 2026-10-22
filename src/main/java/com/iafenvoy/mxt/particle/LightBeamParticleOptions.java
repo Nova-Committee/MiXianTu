@@ -17,7 +17,8 @@ import org.jspecify.annotations.NonNull;
 public record LightBeamParticleOptions(int color, float x, float z, float yMin, float yMax, float width,
                                        FlowDirection flowDirection, float flowSpeed,
                                        int lifetime, boolean spread, float radius, float density,
-                                       boolean bottomEffect, boolean topEffect, boolean filled, boolean glow) implements ParticleOptions {
+                                       boolean bottomEffect, boolean topEffect, boolean filled,
+                                       boolean glow) implements ParticleOptions {
     public static final int DEFAULT_COLOR = 0xFFFFE8A8;
     public static final float DEFAULT_WIDTH = 0.18F;
     public static final float DEFAULT_RADIUS = 0.5F;

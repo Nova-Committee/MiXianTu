@@ -2,7 +2,9 @@ package com.iafenvoy.mxt.render.particle;
 
 import com.iafenvoy.mxt.particle.LightBeamParticleOptions;
 import net.minecraft.client.multiplayer.ClientLevel;
-import net.minecraft.client.particle.*;
+import net.minecraft.client.particle.Particle;
+import net.minecraft.client.particle.ParticleProvider;
+import net.minecraft.client.particle.ParticleRenderType;
 import net.minecraft.util.RandomSource;
 import org.jspecify.annotations.NonNull;
 
@@ -11,7 +13,7 @@ public final class LightBeamParticle extends Particle {
     final float phase;
 
     private LightBeamParticle(ClientLevel level, double x, double y, double z, LightBeamParticleOptions options,
-                          float phase, long seed) {
+                              float phase, long seed) {
         super(level, x, y, z);
         this.shape = new LightBeamParticleShape(options, x, y, z, seed);
         this.phase = phase;

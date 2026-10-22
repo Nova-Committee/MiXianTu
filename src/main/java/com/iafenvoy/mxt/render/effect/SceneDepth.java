@@ -58,7 +58,8 @@ public final class SceneDepth implements AutoCloseable {
 
     public void bind(RenderPass pass) {
         EffectTargets.Texture texture = this.lease.get();
-        if (texture != null) pass.bindTexture("SceneDepth", texture.view(), RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST));
+        if (texture != null)
+            pass.bindTexture("SceneDepth", texture.view(), RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST));
     }
 
     @Override

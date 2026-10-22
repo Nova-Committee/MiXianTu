@@ -124,6 +124,7 @@ public record ItemCost(List<Entry> entries, NumberProvider amount) implements It
         // container is the same plan.
         private @Nullable List<Take> plan(int required) {
             List<Take> plan = new ArrayList<>();
+            assert this.store != null;
             for (int slot = 0; slot < this.store.getContainerSize() && required > 0; slot++) {
                 ItemStack stack = this.store.getItem(slot);
                 if (stack.isEmpty() || !this.matches(stack)) continue;

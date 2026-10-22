@@ -1,5 +1,6 @@
 package com.iafenvoy.mxt.screen.multiblock;
 
+import com.iafenvoy.mxt.render.MxtRenderTypes;
 import com.mojang.blaze3d.platform.Lighting;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
@@ -82,7 +83,7 @@ final class MultiblockSceneRenderer extends PictureInPictureRenderer<MultiblockS
         MultiblockSceneRenderState.SceneBlock hovered = renderState.hoveredBlock();
         if (hovered == null) return;
         int guiScale = minecraft.gameRenderer.getGameRenderState().windowRenderState.guiScale;
-        VertexConsumer outline = this.bufferSource.getBuffer(MultiblockOutlineRenderTypes.outline());
+        VertexConsumer outline = this.bufferSource.getBuffer(MxtRenderTypes.multiblockOutline());
         poseStack.pushPose();
         poseStack.translate(hovered.x(), hovered.y(), hovered.z());
         ShapeRenderer.renderShape(poseStack, outline, Shapes.block(), 0.0D, 0.0D, 0.0D, HOVER_COLOR, HOVER_LINE_WIDTH * guiScale);

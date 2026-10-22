@@ -23,8 +23,7 @@ public final class ProgressionDamageMultiplier {
         for (ProgressionOwners.Owner<?> owner : ProgressionOwners.heldBy(holder)) {
             Holder<Progression> current = ProgressionService.current(owner).orElse(null);
             if (current == null) continue;
-            boolean grants = ProgressionService.grantedAbilities(owner.definition(), current, access).stream()
-                    .anyMatch(unlocked -> unlocked.is(ability));
+            boolean grants = ProgressionService.grantedAbilities(owner.definition(), current, access).stream().anyMatch(ability::equals);
             if (!grants) continue;
             double multiplier = current.value().damageMultiplier();
             if (Double.isFinite(multiplier) && multiplier > best) best = multiplier;

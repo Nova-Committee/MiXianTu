@@ -78,7 +78,8 @@ public final class WorldEffects implements AutoCloseable {
                 if (depth != null) frame.owner.captureFailureLogged = false;
                 return depth;
             } catch (RuntimeException failure) {
-                if (!frame.owner.captureFailureLogged) MiXianTu.LOGGER.warn("World effect scene depth is unavailable; using basic rendering", failure);
+                if (!frame.owner.captureFailureLogged)
+                    MiXianTu.LOGGER.warn("World effect scene depth is unavailable; using basic rendering", failure);
                 frame.owner.captureFailureLogged = true;
                 return null;
             }

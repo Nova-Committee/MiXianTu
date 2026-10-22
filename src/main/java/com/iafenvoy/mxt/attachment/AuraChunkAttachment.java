@@ -181,7 +181,8 @@ public final class AuraChunkAttachment {
             for (AuraPool pool : pools.values()) {
                 double current = pool.amount();
                 double rate = pool.regenPerTick();
-                if (rate == 0.0D || rate > 0.0D && current >= pool.maximum() || rate < 0.0D && current <= 0.0D) continue;
+                if (rate == 0.0D || rate > 0.0D && current >= pool.maximum() || rate < 0.0D && current <= 0.0D)
+                    continue;
                 double next = Math.clamp(current + rate * elapsedTicks, 0.0D, Math.min(Double.MAX_VALUE, pool.maximum()));
                 if (next == current) continue;
                 pool.change(next - current);

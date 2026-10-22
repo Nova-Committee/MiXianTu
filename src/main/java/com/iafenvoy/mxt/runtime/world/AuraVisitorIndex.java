@@ -2,11 +2,7 @@ package com.iafenvoy.mxt.runtime.world;
 
 import net.minecraft.core.SectionPos;
 
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.function.Consumer;
 import java.util.function.ObjIntConsumer;
 

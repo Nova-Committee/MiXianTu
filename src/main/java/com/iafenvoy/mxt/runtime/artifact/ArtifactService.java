@@ -264,7 +264,7 @@ public final class ArtifactService {
     public static List<Holder<Aura>> aurasFor(ItemStack stack, Holder<Resource> resource) {
         List<Holder<Aura>> found = new ArrayList<>();
         store(stack).amounts().keySet().stream()
-                .filter(aura -> aura.value().resource().is(resource))
+                .filter(aura -> Objects.equals(aura.value().resource(), resource))
                 .sorted(Comparator.comparing(aura -> HolderHelper.id(aura).toString()))
                 .forEach(found::add);
         return found;

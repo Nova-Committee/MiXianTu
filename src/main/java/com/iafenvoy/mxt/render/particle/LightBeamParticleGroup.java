@@ -1,6 +1,6 @@
 package com.iafenvoy.mxt.render.particle;
 
-import com.iafenvoy.mxt.MiXianTu;
+import com.iafenvoy.mxt.render.MxtRenderPipelines;
 import com.iafenvoy.mxt.render.effect.EffectTargets;
 import com.iafenvoy.mxt.render.effect.SceneDepth;
 import com.iafenvoy.mxt.render.effect.WorldEffectSource;
@@ -9,12 +9,9 @@ import com.iafenvoy.mxt.util.ClientRenderResources;
 import com.iafenvoy.mxt.util.CloseableResources;
 import com.mojang.blaze3d.buffers.GpuBuffer;
 import com.mojang.blaze3d.buffers.GpuBufferSlice;
-import com.mojang.blaze3d.pipeline.*;
-import com.mojang.blaze3d.platform.CompareOp;
-import com.mojang.blaze3d.shaders.UniformType;
+import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.systems.RenderPass;
 import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
@@ -22,7 +19,6 @@ import net.minecraft.client.particle.ParticleEngine;
 import net.minecraft.client.particle.ParticleGroup;
 import net.minecraft.client.particle.ParticleRenderType;
 import net.minecraft.client.renderer.MappableRingBuffer;
-import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.culling.Frustum;
 import net.minecraft.client.renderer.feature.ParticleFeatureRenderer;
@@ -30,13 +26,11 @@ import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.client.renderer.state.level.ParticleGroupRenderState;
 import net.minecraft.client.renderer.state.level.QuadParticleRenderState;
 import net.minecraft.client.renderer.texture.TextureManager;
-import net.minecraft.resources.Identifier;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.RegisterParticleGroupsEvent;
-import net.neoforged.neoforge.client.event.RegisterRenderPipelinesEvent;
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
 import org.joml.Vector4f;
@@ -52,17 +46,6 @@ import java.util.Map;
 @EventBusSubscriber(Dist.CLIENT)
 public final class LightBeamParticleGroup extends ParticleGroup<LightBeamParticle> {
     public static final ParticleRenderType TYPE = new ParticleRenderType("mxt:light_beam");
-    private static final RenderPipeline PIPELINE = RenderPipeline.builder(RenderPipelines.MATRICES_FOG_SNIPPET)
-            .withLocation(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "pipeline/light_beam"))
-            .withVertexShader(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "core/light_beam"))
-            .withFragmentShader(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "core/light_beam"))
-            .withUniform("LightBeamInstances", UniformType.UNIFORM_BUFFER)
-            .withVertexFormat(DefaultVertexFormat.POSITION_TEX, VertexFormat.Mode.TRIANGLES)
-            .withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT))
-            .withDepthStencilState(new DepthStencilState(CompareOp.LESS_THAN_OR_EQUAL, false))
-            .withCull(true).build();
-    private static final RenderPipeline DEPTH_PIPELINE = depthPipeline("light_beam_depth", CompareOp.LESS_THAN_OR_EQUAL);
-    private static final RenderPipeline GLOW_PIPELINE = depthPipeline("light_beam_glow_depth", CompareOp.ALWAYS_PASS);
     private static final CloseableResources.Slot<Buffers> BUFFERS = ClientRenderResources.world(Buffers::new);
     private final State state = new State();
 
@@ -73,28 +56,6 @@ public final class LightBeamParticleGroup extends ParticleGroup<LightBeamParticl
     @SubscribeEvent
     public static void registerGroups(RegisterParticleGroupsEvent event) {
         event.register(TYPE, LightBeamParticleGroup::new);
-    }
-
-    @SubscribeEvent
-    public static void registerPipelines(RegisterRenderPipelinesEvent event) {
-        event.registerPipeline(PIPELINE);
-        event.registerPipeline(DEPTH_PIPELINE);
-        event.registerPipeline(GLOW_PIPELINE);
-    }
-
-    private static RenderPipeline depthPipeline(String name, CompareOp depth) {
-        return RenderPipeline.builder(RenderPipelines.MATRICES_FOG_SNIPPET)
-                .withLocation(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "pipeline/" + name))
-                .withVertexShader(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "core/light_beam"))
-                .withFragmentShader(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "core/light_beam"))
-                .withShaderDefine("MXT_SCENE_DEPTH")
-                .withUniform("LightBeamInstances", UniformType.UNIFORM_BUFFER)
-                .withUniform("BeamDraw", UniformType.UNIFORM_BUFFER)
-                .withSampler("SceneDepth")
-                .withVertexFormat(DefaultVertexFormat.POSITION_TEX, VertexFormat.Mode.TRIANGLES)
-                .withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT))
-                .withDepthStencilState(new DepthStencilState(depth, false))
-                .withCull(true).build();
     }
 
     @Override
@@ -144,8 +105,9 @@ public final class LightBeamParticleGroup extends ParticleGroup<LightBeamParticl
             if (buffers == null) return null;
             RenderTarget target = EffectTargets.particles(Minecraft.getInstance().levelRenderer);
             this.depth = this.effects == null || target == null ? null : this.effects.depth(target);
-            if (this.depth != null && (!RenderSystem.getDevice().precompilePipeline(DEPTH_PIPELINE).isValid()
-                    || !RenderSystem.getDevice().precompilePipeline(GLOW_PIPELINE).isValid())) this.depth = null;
+            if (this.depth != null && (!RenderSystem.getDevice().precompilePipeline(MxtRenderPipelines.LIGHT_BEAM_DEPTH).isValid()
+                    || !RenderSystem.getDevice().precompilePipeline(MxtRenderPipelines.LIGHT_BEAM_GLOW_DEPTH).isValid()))
+                this.depth = null;
             buffers.prepare(this.frame.entries(), this.camera, this.depth != null);
             return new QuadParticleRenderState.PreparedBuffers(0, RenderSystem.getDynamicUniforms()
                     .writeTransform(RenderSystem.getModelViewMatrix(), new Vector4f(1.0F), new Vector3f(), new Matrix4f()), Map.of());
@@ -155,7 +117,7 @@ public final class LightBeamParticleGroup extends ParticleGroup<LightBeamParticl
         public void render(QuadParticleRenderState.@NonNull PreparedBuffers prepared, ParticleFeatureRenderer.@NonNull ParticleBufferCache cache, @NonNull RenderPass pass, @NonNull TextureManager textures) {
             Buffers buffers = BUFFERS.peek();
             if (buffers == null) return;
-            pass.setPipeline(PIPELINE);
+            pass.setPipeline(MxtRenderPipelines.LIGHT_BEAM);
             pass.setUniform("DynamicTransforms", prepared.dynamicTransforms());
             if (this.depth != null) this.depth.bind(pass);
             buffers.render(pass, this.depth != null);
@@ -176,7 +138,6 @@ public final class LightBeamParticleGroup extends ParticleGroup<LightBeamParticl
         private final GpuBuffer selectors;
         private final MappableRingBuffer instances;
         private final ByteBuffer staging;
-        private int batchCount;
         private boolean closed;
         private boolean pendingRotation;
 
@@ -235,11 +196,11 @@ public final class LightBeamParticleGroup extends ParticleGroup<LightBeamParticl
             }
             GpuBuffer buffer = this.instances.currentBuffer();
             this.staging.clear();
-            this.batchCount = 0;
+            int batchCount = 0;
             this.draws.build(entries, depth);
             for (int start = 0; start < entries.size(); start += LightBeamParticleMesh.BATCH_SIZE) {
                 int count = Math.min(LightBeamParticleMesh.BATCH_SIZE, entries.size() - start);
-                int offset = this.batchCount * this.stride;
+                int offset = batchCount * this.stride;
                 this.staging.position(offset);
                 for (int i = 0; i < count; i++) {
                     LightBeamParticleFrame.Entry entry = entries.get(start + i);
@@ -247,10 +208,10 @@ public final class LightBeamParticleGroup extends ParticleGroup<LightBeamParticl
                 }
                 // Bind the full declared UBO array, including unused records in the final batch.
                 while (this.staging.position() < offset + BATCH_BYTES) this.staging.putFloat(0);
-                this.lods[this.batchCount] = LightBeamParticleMesh.lod(entries.get(start + count - 1).distanceSquared());
-                this.batches[this.batchCount++] = buffer.slice(offset, BATCH_BYTES);
+                this.lods[batchCount] = LightBeamParticleMesh.lod(entries.get(start + count - 1).distanceSquared());
+                this.batches[batchCount++] = buffer.slice(offset, BATCH_BYTES);
             }
-            this.staging.limit(this.batchCount * this.stride).position(0);
+            this.staging.limit(batchCount * this.stride).position(0);
             RenderSystem.getDevice().createCommandEncoder().writeToBuffer(buffer.slice(0, this.staging.remaining()), this.staging);
         }
 
@@ -260,7 +221,7 @@ public final class LightBeamParticleGroup extends ParticleGroup<LightBeamParticl
                 int batch = this.draws.batch(draw);
                 int lod = this.lods[batch];
                 if (depth) {
-                    pass.setPipeline(this.draws.glow(draw) ? GLOW_PIPELINE : DEPTH_PIPELINE);
+                    pass.setPipeline(this.draws.glow(draw) ? MxtRenderPipelines.LIGHT_BEAM_GLOW_DEPTH : MxtRenderPipelines.LIGHT_BEAM_DEPTH);
                     pass.setUniform("BeamDraw", this.selectors.slice((long) this.draws.first(draw) * this.selectorStride, 16));
                 }
                 pass.setUniform("LightBeamInstances", this.batches[batch]);

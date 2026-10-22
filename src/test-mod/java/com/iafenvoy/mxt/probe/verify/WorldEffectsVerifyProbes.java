@@ -32,12 +32,12 @@ public final class WorldEffectsVerifyProbes {
         Object view = new Object();
         List<Exception> failures = new ArrayList<>();
         AtomicInteger copies = new AtomicInteger(), closes = new AtomicInteger();
-        try (EffectFrame<String, AutoCloseable> unused = new EffectFrame<String, AutoCloseable>(view, 7, failures::add)) {
+        try (EffectFrame<String, AutoCloseable> unused = new EffectFrame<>(view, 7, failures::add)) {
             unused.capture(() -> { copies.incrementAndGet(); return closes::incrementAndGet; });
             context.expect("zero demand performs zero copies", copies.get(), 0);
             context.expect("a demand after capture is rejected", unused.requestDepth(), false);
         }
-        EffectFrame<String, AutoCloseable> frame = new EffectFrame<String, AutoCloseable>(view, 7, failures::add);
+        EffectFrame<String, AutoCloseable> frame = new EffectFrame<>(view, 7, failures::add);
         context.expect("same view and generation match", frame.matches(view, 7), true);
         context.expect("a different view cannot share the frame", frame.matches(new Object(), 7), false);
         context.expect("a later generation cannot share the frame", frame.matches(view, 8), false);
@@ -61,7 +61,7 @@ public final class WorldEffectsVerifyProbes {
         context.expect("a closed frame loses its view credential", frame.matches(view, 7), false);
         context.expect("closed frames expose no depth", frame.resource(), null);
         context.expect("successful frames report no cleanup failures", failures.size(), 0);
-        try (EffectFrame<Integer, AutoCloseable> bounded = new EffectFrame<Integer, AutoCloseable>(view, 8, failures::add)) {
+        try (EffectFrame<Integer, AutoCloseable> bounded = new EffectFrame<>(view, 8, failures::add)) {
             int accepted = 0;
             for (int i = 0; i < 1025; i++) if (bounded.submit(i)) accepted++;
             context.expect("stage task count is bounded", accepted, 1024);
@@ -71,7 +71,7 @@ public final class WorldEffectsVerifyProbes {
     private static void targets(ProbeContext context) {
         List<Exception> failures = new ArrayList<>();
         AtomicInteger closes = new AtomicInteger();
-        EffectTargetPool<String, AutoCloseable> pool = new EffectTargetPool<String, AutoCloseable>(12, 3, failures::add);
+        EffectTargetPool<String, AutoCloseable> pool = new EffectTargetPool<>(12, 3, failures::add);
         EffectTargetPool<String, AutoCloseable>.Lease a = pool.acquire("depth", 4, () -> closes::incrementAndGet);
         EffectTargetPool<String, AutoCloseable>.Lease b = pool.acquire("depth", 4, () -> closes::incrementAndGet);
         context.expect("simultaneous views get separate targets", a != null && b != null && a.get() != b.get(), true);
@@ -108,18 +108,18 @@ public final class WorldEffectsVerifyProbes {
     private static void failures(ProbeContext context) {
         List<Exception> failures = new ArrayList<>();
         AtomicInteger closes = new AtomicInteger(), calls = new AtomicInteger();
-        EffectFrame<Integer, AutoCloseable> frame = new EffectFrame<Integer, AutoCloseable>(new Object(), 1, failures::add);
+        EffectFrame<Integer, AutoCloseable> frame = new EffectFrame<>(new Object(), 1, failures::add);
         frame.requestDepth();
         frame.capture(() -> { frame.close(); return closes::incrementAndGet; });
         context.expect("capture construction reentry releases its result", closes.get(), 1);
         context.expect("capture construction reentry publishes nothing", frame.resource(), null);
-        try (EffectFrame<Integer, AutoCloseable> earlyDrain = new EffectFrame<Integer, AutoCloseable>(new Object(), 2, failures::add)) {
+        try (EffectFrame<Integer, AutoCloseable> earlyDrain = new EffectFrame<>(new Object(), 2, failures::add)) {
             earlyDrain.requestDepth();
             earlyDrain.capture(() -> { earlyDrain.drain(_ -> {}); return closes::incrementAndGet; });
             context.expect("draining during capture also releases its late result", closes.get(), 2);
             context.expect("a late capture cannot publish after drain", earlyDrain.resource(), null);
         }
-        try (EffectFrame<Integer, AutoCloseable> drain = new EffectFrame<Integer, AutoCloseable>(new Object(), 2, failures::add)) {
+        try (EffectFrame<Integer, AutoCloseable> drain = new EffectFrame<>(new Object(), 2, failures::add)) {
             drain.requestDepth();
             drain.submit(1);
             drain.submit(2);
@@ -127,7 +127,7 @@ public final class WorldEffectsVerifyProbes {
             context.expect("closing a frame during drain cancels remaining work", calls.get(), 1);
             drain.capture(() -> { throw new AssertionError("capture after drain"); });
         }
-        try (EffectFrame<Integer, AutoCloseable> failed = new EffectFrame<Integer, AutoCloseable>(new Object(), 3, failures::add)) {
+        try (EffectFrame<Integer, AutoCloseable> failed = new EffectFrame<>(new Object(), 3, failures::add)) {
             failed.requestDepth();
             try {
                 failed.capture(() -> { throw new IllegalStateException("capture probe"); });
@@ -137,7 +137,7 @@ public final class WorldEffectsVerifyProbes {
             failed.capture(() -> { throw new AssertionError("capture retry"); });
         }
         context.expect("capture failure propagates once without a same-frame retry", calls.get(), 2);
-        EffectTargetPool<String, AutoCloseable> pool = new EffectTargetPool<String, AutoCloseable>(8, 2, failures::add);
+        EffectTargetPool<String, AutoCloseable> pool = new EffectTargetPool<>(8, 2, failures::add);
         try {
             pool.acquire("failed", 8, () -> { throw new IllegalStateException("allocation probe"); });
         } catch (IllegalStateException expected) {
@@ -151,13 +151,13 @@ public final class WorldEffectsVerifyProbes {
         context.expect("close failure is reported once", failures.size(), 1);
         context.expect("failed close leaves no budget", pool.bytes(), 0L);
         context.expect("both leases are invalid after shutdown", bad.get() == null && good.get() == null, true);
-        EffectTargetPool<String, AutoCloseable> reentrant = new EffectTargetPool<String, AutoCloseable>(4, 1, failures::add);
+        EffectTargetPool<String, AutoCloseable> reentrant = new EffectTargetPool<>(4, 1, failures::add);
         EffectTargetPool<String, AutoCloseable>.Lease discarded = reentrant.acquire("reentry", 4, () -> { reentrant.close(); return closes::incrementAndGet; });
         context.expect("shutdown during construction does not publish a lease", discarded, null);
         context.expect("shutdown during construction releases its allocation", closes.get(), 4);
         context.expect("shutdown during construction leaves no budget", reentrant.bytes(), 0L);
-        EffectTargetPool<String, AutoCloseable> eviction = new EffectTargetPool<String, AutoCloseable>(4, 1, failures::add);
-        EffectTargetPool<String, AutoCloseable>.Lease evicted = eviction.acquire("old", 4, () -> eviction::close);
+        EffectTargetPool<String, AutoCloseable> eviction = new EffectTargetPool<>(4, 1, failures::add);
+        EffectTargetPool<String, AutoCloseable>.Lease evicted = eviction.acquire("old", 4, () -> eviction);
         evicted.close();
         context.expect("shutdown from eviction prevents further allocation", eviction.acquire("new", 4, () -> { throw new AssertionError("allocation after eviction shutdown"); }), null);
     }

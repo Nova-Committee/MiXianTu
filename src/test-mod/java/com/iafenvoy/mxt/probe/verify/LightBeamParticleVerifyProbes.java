@@ -440,7 +440,7 @@ public final class LightBeamParticleVerifyProbes {
         AABB bounds = shape.bounds();
         expect(context, "particle shape uses complete volume bounds", bounds, options.bounds(origin.x(), origin.y(), origin.z()));
         List<LightBeamParticleShape.Segment> segments = segments(shape, 20, 0);
-        expect(context, "the volume contains actual short cylinders", segments.size() > 0, true);
+        expect(context, "the volume contains actual short cylinders", !segments.isEmpty(), true);
         LightBeamParticleShape.Segment sample = segments.stream().filter(segment -> segment.bottom() > bounds.minY && segment.bottom() + segment.length() < bounds.maxY).findFirst().orElseThrow();
         List<Vertex> baseline = vertices(shape, sample, origin);
         expect(context, "every cylinder has two capped eight-sided shells", baseline.size(), LightBeamParticleShape.VERTICES_PER_SEGMENT);

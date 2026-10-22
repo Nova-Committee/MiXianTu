@@ -205,8 +205,7 @@ public final class AlchemyFurnaceMenu extends ApricityContainerMenu {
             case TEMPERATURE -> this.acknowledgeTemperature(furnace, payload.temperature());
             case START -> {
                 AlchemyWorkstationService.StartResult result = AlchemyWorkstationService.start(player, furnace);
-                if (result.isFailure())
-                    player.sendSystemMessage(result.failure().message(), true);
+                if (result.failure() != null) player.sendSystemMessage(result.failure().message(), true);
             }
             case ABORT -> AlchemyWorkstationService.abort(player.level(), furnace.getBlockPos(), furnace);
         }

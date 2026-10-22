@@ -11,9 +11,10 @@ public final class LightBeamParticleDraws {
     private int size;
 
     public void build(List<LightBeamParticleFrame.Entry> entries, boolean depth) {
-        if (entries.size() > LightBeamParticleMesh.MAX_INSTANCES) throw new IllegalArgumentException("Light beam instance limit exceeded");
+        if (entries.size() > LightBeamParticleMesh.MAX_INSTANCES)
+            throw new IllegalArgumentException("Light beam instance limit exceeded");
         this.size = 0;
-        for (int start = 0; start < entries.size();) {
+        for (int start = 0; start < entries.size(); ) {
             int batch = start / LightBeamParticleMesh.BATCH_SIZE;
             int limit = Math.min(entries.size(), (batch + 1) * LightBeamParticleMesh.BATCH_SIZE);
             boolean glow = depth && entries.get(start).segment().glow();

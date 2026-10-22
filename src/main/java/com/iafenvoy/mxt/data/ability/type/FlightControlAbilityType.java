@@ -65,7 +65,7 @@ public record FlightControlAbilityType(Hand hand, NumberProvider speedMultiplier
     public OptionalBoolean state(ToggleContext context) {
         FlightAttachment data = context.holder().getExistingData(MxtAttachments.FLIGHT).orElse(null);
         if (data == null || !data.active()) return OptionalBoolean.of(false);
-        return OptionalBoolean.of(data.archetype().filter(skill -> skill.is(context.ability())).isPresent());
+        return OptionalBoolean.of(data.archetype().filter(context.ability()::equals).isPresent());
     }
 
     // Landing is free: whatever the flight cost was paid per tick while it lasted, and charging a price for coming
