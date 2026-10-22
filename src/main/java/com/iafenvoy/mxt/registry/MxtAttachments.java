@@ -55,6 +55,8 @@ public final class MxtAttachments {
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<FriendAttachment>> FRIEND = entityServerOnly("friend", FriendAttachment::new, FriendAttachment.CODEC);
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<TriggerCooldownAttachment>> TRIGGER_COOLDOWNS = entityServerOnly("trigger_cooldowns", TriggerCooldownAttachment::new, TriggerCooldownAttachment.CODEC);
     // Level
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<RiftWorldAttachment>> RIFT_WORLD = REGISTRY.register("rift_world", () -> AttachmentType.builder(RiftWorldAttachment::new).serialize(RiftWorldAttachment.CODEC).build());
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<RiftChunkAttachment>> RIFT_CHUNK = REGISTRY.register("rift_chunk", () -> AttachmentType.builder(RiftChunkAttachment::new).serialize(RiftChunkAttachment.CODEC).build());
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<AuraWorldAttachment>> AURA_WORLD = REGISTRY.register("aura_world", () -> AttachmentType.builder(AuraWorldAttachment::new).serialize(AuraWorldAttachment.MAP_CODEC).build());
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<FormationWorldAttachment>> FORMATION_WORLD = REGISTRY.register("formation_world", () -> AttachmentType.builder(FormationWorldAttachment::new).serialize(FormationWorldAttachment.MAP_CODEC).build());
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<AuraChunkAttachment>> AURA_CHUNK = REGISTRY.register("aura_chunk", () -> AttachmentType.builder(AuraChunkAttachment::new).serialize(AuraChunkAttachment.CODEC).build());

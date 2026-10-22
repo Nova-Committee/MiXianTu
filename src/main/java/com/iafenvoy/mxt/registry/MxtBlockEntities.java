@@ -18,5 +18,4 @@ public final class MxtBlockEntities {
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<AlchemyFurnaceBlockEntity>> ALCHEMY_FURNACE = REGISTRY.register("alchemy_furnace", () -> new BlockEntityType<>(AlchemyFurnaceBlockEntity::new, MxtBlocks.ALCHEMY_FURNACE.get()));
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<AlchemyFurnaceCasingBlockEntity>> ALCHEMY_FURNACE_CASING = REGISTRY.register("alchemy_furnace_casing", () -> new BlockEntityType<>(AlchemyFurnaceCasingBlockEntity::new, MxtBlocks.ALCHEMY_FURNACE_CASING.get()));
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<AlchemyFurnaceInventoryBlockEntity>> ALCHEMY_FURNACE_INVENTORY = REGISTRY.register("alchemy_furnace_inventory", () -> new BlockEntityType<>(AlchemyFurnaceInventoryBlockEntity::new, MxtBlocks.ALCHEMY_MAIN_INPUT.get(), MxtBlocks.ALCHEMY_AUXILIARY_INPUT.get(), MxtBlocks.ALCHEMY_OUTPUT.get()));
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<RiftBlockEntity>> RIFT = REGISTRY.register("rift", () -> new BlockEntityType<>(RiftBlockEntity::new, MxtBlocks.RIFT.get()));
 }

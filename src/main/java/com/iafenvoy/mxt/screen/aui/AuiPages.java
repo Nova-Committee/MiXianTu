@@ -57,6 +57,10 @@ public final class AuiPages {
     public static final String TALISMAN = "mxt/talisman";
     public static final String PROFILER = "mxt/profiler";
 
+    public static String riftPage() {
+        return page("mxt/rift", "editor");
+    }
+
     private static final String HTML_SUFFIX = ".html";
 
     private AuiPages() {
@@ -95,24 +99,13 @@ public final class AuiPages {
     }
 
     /**
-     * The name of a page path - its last segment without the suffix - which is what a host names the page by in the
-     * log; the path is the only thing a host names, the name follows from it.
-     */
-    public static String pageName(String path) {
-        int slash = path.lastIndexOf('/');
-        String name = slash < 0 ? path : path.substring(slash + 1);
-        return name.endsWith(HTML_SUFFIX) ? name.substring(0, name.length() - HTML_SUFFIX.length()) : name;
-    }
-
-    /**
      * Prepares the stylesheets a page links, so its document is styled from the first frame; ApricityUI warms up
      * every page its scan found on each resource reload, so this is normally a cache hit. It also reads the page
      * back when its template is not in the table at all - which is what makes {@code Document.create} find it.
      */
     public static void warmUpStyles(String path) {
         HTML.TemplateResources template = templateResources(path);
-        if (template == null) return;
-        if (template.externalStyleSrcs().isEmpty()) return;
+        if (template == null || template.externalStyleSrcs().isEmpty()) return;
         StyleAsyncHandler.INSTANCE.warmUpTemplateStyles(template.path(), template.externalStyleSrcs(), template.inlineStyles(), warmUpViewport(path));
     }
 
@@ -131,9 +124,9 @@ public final class AuiPages {
 
     @Nullable
     private static HTML.TemplateResources findTemplate(String path) {
-        for (HTML.TemplateResources template : HTML.preparedTemplateResources()) {
-            if (template.path().equals(path)) return template;
-        }
+        for (HTML.TemplateResources template : HTML.preparedTemplateResources())
+            if (template.path().equals(path))
+                return template;
         return null;
     }
 
@@ -143,8 +136,7 @@ public final class AuiPages {
      */
     private static Size warmUpViewport(String path) {
         try {
-            ApricityViewport viewport = ApricityViewport.spec(path).createState(path)
-                    .resolve(Minecraft.getInstance().getWindow());
+            ApricityViewport viewport = ApricityViewport.spec(path).createState(path).resolve(Minecraft.getInstance().getWindow());
             return new Size(viewport.layoutWidth(), viewport.layoutHeight());
         } catch (RuntimeException | LinkageError exception) {
             return new Size(1024, 768);

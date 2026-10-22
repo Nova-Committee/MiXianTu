@@ -24,6 +24,7 @@ import com.iafenvoy.mxt.data.progression.Progression;
 import com.iafenvoy.mxt.data.quality.DefaultQuality;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.data.resource.Resource;
+import com.iafenvoy.mxt.data.rift.RiftPreset;
 import com.iafenvoy.mxt.data.secretrealm.SecretRealm;
 import com.iafenvoy.mxt.data.talisman.Talisman;
 import com.iafenvoy.mxt.data.trigger.TriggerRule;
@@ -91,6 +92,7 @@ public final class MxtDatapackRegistries {
         register(event, MxtResourceKeys.CREATURE_PROFILE, CreatureProfile.DIRECT_CODEC);
         register(event, MxtResourceKeys.CONTRACT_TYPE, ContractType.DIRECT_CODEC);
         register(event, MxtResourceKeys.SECRET_REALM, SecretRealm.DIRECT_CODEC);
+        register(event, MxtResourceKeys.RIFT, RiftPreset.DIRECT_CODEC);
 
         register(event, MxtResourceKeys.BLOCK_AURA, BlockAura.CODEC);
         register(event, MxtResourceKeys.CURRENCY, CurrencyValue.CODEC);

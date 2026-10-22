@@ -61,13 +61,14 @@ public interface AuiWrappedScreen extends AuiLinkedScreen {
     }
 
     /**
-     * Resolves the page contract again; a refresh (hot reload) replaces every element, which is when the page's
-     * listeners have to be bound again.
+     * Resolves each document generation once; only a fresh DOM can accept another set of listeners safely.
      */
     default void auiRebind() {
-        this.auiClearBindings();
         State state = this.auiState();
         Document current = this.getLinkedDocument();
+        if (current != null && state.boundDocument == current
+                && state.boundGeneration == current.getRefreshGeneration()) return;
+        this.auiClearBindings();
         if (current == null) return;
         try {
             this.bindPage();
@@ -76,6 +77,7 @@ public interface AuiWrappedScreen extends AuiLinkedScreen {
             return;
         }
         state.pageBound = true;
+        state.boundDocument = current;
         state.boundGeneration = current.getRefreshGeneration();
         this.onPageBound();
     }
@@ -87,6 +89,7 @@ public interface AuiWrappedScreen extends AuiLinkedScreen {
     default void auiClearBindings() {
         State state = this.auiState();
         state.pageBound = false;
+        state.boundDocument = null;
         state.boundGeneration = Long.MIN_VALUE;
         this.onBindingsCleared();
     }
@@ -120,7 +123,7 @@ public interface AuiWrappedScreen extends AuiLinkedScreen {
         Document current = this.getLinkedDocument();
         if (current == null) return false;
         State state = this.auiState();
-        if (current.getRefreshGeneration() != state.boundGeneration) {
+        if (current != state.boundDocument || current.getRefreshGeneration() != state.boundGeneration) {
             this.auiRebind();
             return false;
         }
@@ -222,6 +225,7 @@ public interface AuiWrappedScreen extends AuiLinkedScreen {
         Document current = this.getLinkedDocument();
         long generation = current == null ? Long.MIN_VALUE : current.getRefreshGeneration();
         this.auiClearBindings();
+        state.boundDocument = current;
         state.boundGeneration = generation;
         MiXianTu.LOGGER.warn("Page does not match its contract: {}", missing);
     }
@@ -242,6 +246,7 @@ public interface AuiWrappedScreen extends AuiLinkedScreen {
     }
 
     final class State {
+        Document boundDocument;
         /**
          * Whether the contract is bound; a page that failed its bind stays unbound until the DOM is rebuilt.
          */

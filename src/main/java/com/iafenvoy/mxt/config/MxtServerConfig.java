@@ -27,6 +27,15 @@ public final class MxtServerConfig extends AutoInitConfigContainer {
     public final Alchemy alchemy = new Alchemy();
     public final Compat compat = new Compat();
     public final Debug debug = new Debug();
+    public final Rifts rifts = new Rifts();
+
+    public static final class Rifts extends AutoInitConfigCategoryBase {
+        public final IntegerEntry maxPerWorld = IntegerEntry.builder("config.mxt.server.rifts.max_per_world", 1024).key("max_per_world").range(1, 4096).build();
+        public final IntegerEntry maxPerSection = IntegerEntry.builder("config.mxt.server.rifts.max_per_section", 32).key("max_per_section").range(1, 128).build();
+        public final IntegerEntry maxVertices = IntegerEntry.builder("config.mxt.server.rifts.max_vertices", 128).key("max_vertices").range(3, 128).build();
+        public final IntegerEntry maxPerPlayer = IntegerEntry.builder("config.mxt.server.rifts.max_per_player", 8).key("max_per_player").range(1, 128).build();
+        private Rifts() { super("rifts", "config.mxt.server.rifts"); }
+    }
 
     private MxtServerConfig() {
         super(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "server"), "config.mxt.server", "./config/mxt/mxt-server.json");

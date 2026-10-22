@@ -1,14 +1,8 @@
 package com.iafenvoy.mxt.runtime.rift;
 
-import com.iafenvoy.mxt.item.block.entity.RiftBlockEntity;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
 
-/**
- * Colours of a rift. A rift without an explicit override is coloured by its target dimension, derived from the
- * dimension id alone, which keeps every client in agreement without any packet and without the server storing a
- * colour per block. Opacity is deliberately not part of this: a rift is drawn fully opaque.
- */
 public final class RiftColors {
     // Marks "no override": the colour follows the target dimension.
     public static final int AUTO = -1;
@@ -23,11 +17,6 @@ public final class RiftColors {
         return 0xFF000000 | hsv(hue, 0.72F, 1.0F);
     }
 
-    public static int resolve(RiftBlockEntity rift) {
-        return rift.color() == AUTO ? forDimension(rift.target()) : rift.color();
-    }
-
-    // Used for the point at a rift's centre, so a node stands out against the links and fills that meet at it.
     public static int rim(int argb) {
         int red = (argb >> 16) & 0xFF;
         int green = (argb >> 8) & 0xFF;

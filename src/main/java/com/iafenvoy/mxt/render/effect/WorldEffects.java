@@ -36,6 +36,7 @@ public final class WorldEffects implements AutoCloseable {
     private final List<Frame> frames = new ArrayList<>();
     private long generation;
     private boolean captureFailureLogged;
+    private boolean opaqueUnavailable;
     private boolean closed;
 
     private WorldEffects() {
@@ -71,6 +72,9 @@ public final class WorldEffects implements AutoCloseable {
     public static void opaque(RenderLevelStageEvent.AfterOpaqueFeatures event) {
         Frame frame = event.getLevelRenderState().getRenderData(FRAME);
         if (frame == null || frame.renderer != event.getLevelRenderer() || !frame.active()) return;
+        frame.opaqueReached = true;
+        RenderTarget main = Minecraft.getInstance().getMainRenderTarget();
+        if (frame.opaqueSurface() && EffectTargets.valid(main)) frame.opaque.drain(draw -> frame.render(draw, main));
         frame.state.capture(() -> {
             if (!MxtClientConfig.INSTANCE.effects.sceneDepth.getValue() || frame.panoramic) return null;
             try {
@@ -120,8 +124,10 @@ public final class WorldEffects implements AutoCloseable {
         private final LevelRenderState view;
         private final LevelRenderer renderer;
         private final EffectFrame<EffectDraw, SceneDepth> state;
+        private final EffectFrame<EffectDraw, SceneDepth> opaque;
         private final Vec3 camera;
         private final boolean panoramic;
+        private boolean opaqueSubmitted, opaqueReached;
         private @Nullable ExtractLevelRenderStateEvent extraction;
 
         private Frame(ExtractLevelRenderStateEvent event) {
@@ -132,6 +138,8 @@ public final class WorldEffects implements AutoCloseable {
             this.panoramic = this.view.cameraRenderState.isPanoramicMode;
             this.state = new EffectFrame<>(this.view, WorldEffects.this.generation,
                     exception -> MiXianTu.LOGGER.error("Failed to finish a world effect view", exception));
+            this.opaque = new EffectFrame<>(this.view, WorldEffects.this.generation,
+                    exception -> MiXianTu.LOGGER.error("Failed to finish an opaque world effect view", exception));
         }
 
         public boolean active() {
@@ -145,11 +153,21 @@ public final class WorldEffects implements AutoCloseable {
             return this.camera;
         }
 
+        public boolean opaqueSurface() {
+            return !this.owner.opaqueUnavailable && !this.panoramic && this.renderer == Minecraft.getInstance().levelRenderer
+                    && this.renderer.getClass() == LevelRenderer.class;
+        }
+
         public boolean requestDepth() {
             return this.active() && this.state.requestDepth();
         }
 
         public boolean submit(EffectDraw draw) {
+            if (draw.stage() == EffectDraw.Stage.OPAQUE_SURFACE) {
+                boolean accepted = this.active() && this.opaqueSurface() && !draw.needsDepth() && this.opaque.submit(draw);
+                this.opaqueSubmitted |= accepted;
+                return accepted;
+            }
             return this.active() && (!draw.needsDepth() || this.state.requestDepth()) && this.state.submit(draw);
         }
 
@@ -183,7 +201,9 @@ public final class WorldEffects implements AutoCloseable {
         @Override
         public void close() {
             RenderSystem.assertOnRenderThread();
+            if (this.opaqueSubmitted && !this.opaqueReached) this.owner.opaqueUnavailable = true;
             this.extraction = null;
+            this.opaque.close();
             this.state.close();
             this.owner.frames.remove(this);
         }

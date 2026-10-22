@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta name="aui-viewport" content="mode=gui">
+        <link rel="stylesheet" href="../common/theme.css">
+        <link rel="stylesheet" href="editor.css">
+    </head>
+    <body>
+        <div class="panel" id="panel">
+            <div class="header">
+                <div class="button" id="undo">
+                </div>
+                <div class="button" id="redo">
+                </div>
+                <div class="button" id="reload">
+                </div>
+                <div class="button" id="preview">
+                </div>
+                <div class="button" id="camera">
+                </div>
+            </div>
+            <div id="body">
+                <div id="tools">
+                    <div class="button tab" id="tool_select">
+                    </div>
+                    <div class="button tab" id="tool_draw">
+                    </div>
+                    <div class="button tab" id="tool_edge">
+                    </div>
+                    <div class="button tab" id="tool_move">
+                    </div>
+                    <div class="button tab" id="tool_plane">
+                    </div>
+                    <div class="button tab" id="tool_fit">
+                    </div>
+                </div>
+                <canvas blur="false" id="canvas" width="320" height="256">
+                </canvas>
+                <div id="properties">
+                    <div id="tabs">
+                        <div class="button tab" id="tab_shape">
+                        </div>
+                        <div class="button tab" id="tab_placement">
+                        </div>
+                        <div class="button tab" id="tab_target">
+                        </div>
+                        <div class="button tab" id="tab_appearance">
+                        </div>
+                        <div class="button tab" id="tab_blueprint">
+                        </div>
+                    </div>
+                    <div id="scroll">
+                        <div class="section" id="section_shape">
+                            <div class="row">
+                                <div class="button" id="generate_rectangle"></div>
+                                <div class="button" id="generate_rounded"></div>
+                            </div>
+                            <div class="row">
+                                <div class="button" id="generate_ellipse"></div>
+                                <div class="button" id="generate_polygon"></div>
+                            </div>
+                            <div class="row">
+                                <div class="button" id="generate_arch"></div>
+                                <div class="button" id="generate_fissure"></div>
+                            </div>
+                            <div class="row">
+                                <div class="field">
+                                    <label class="t dim" id="label_width" for="width"></label>
+                                    <input class="input" id="width" type="number" step="0.001" min="0.001" max="32" value="2">
+                                </div>
+                                <div class="field">
+                                    <label class="t dim" id="label_height" for="height"></label>
+                                    <input class="input" id="height" type="number" step="0.001" min="0.001" max="32" value="2.5">
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="field">
+                                    <label class="t dim" id="label_count" for="count"></label>
+                                    <input class="input" id="count" type="number" step="1" min="3" max="128" value="16">
+                                </div>
+                                <div class="field">
+                                    <label class="t dim" id="label_seed" for="seed"></label>
+                                    <input class="input" id="seed" type="number" step="1" value="0">
+                                </div>
+                            </div>
+                            <div class="field">
+                                <label class="t dim" id="label_snap" for="snap"></label>
+                                <input class="input" id="snap" type="number" step="0.001" min="0" max="32" value="0.0625">
+                            </div>
+                            <div class="row">
+                                <div class="button" id="select_all"></div>
+                                <div class="button" id="delete_vertex"></div>
+                            </div>
+                            <div class="button" id="insert"></div>
+                            <div class="row">
+                                <div class="field">
+                                    <label class="t dim" id="label_vertex_u" for="vertex_u"></label>
+                                    <input class="input" id="vertex_u" type="number" step="0.001" value="0">
+                                </div>
+                                <div class="field">
+                                    <label class="t dim" id="label_vertex_v" for="vertex_v"></label>
+                                    <input class="input" id="vertex_v" type="number" step="0.001" value="0">
+                                </div>
+                            </div>
+                            <div class="button" id="vertex_apply"></div>
+                            <div class="row">
+                                <div class="field">
+                                    <label class="t dim" id="label_vertex_index" for="vertex_index"></label>
+                                    <input class="input" id="vertex_index" type="number" step="1" min="0" max="127" value="0">
+                                </div>
+                                <div class="button" id="vertex_select"></div>
+                            </div>
+                            <div class="row">
+                                <div class="field">
+                                    <label class="t dim" id="label_pivot_u" for="pivot_u"></label>
+                                    <input class="input" id="pivot_u" type="number" step="0.001" value="0">
+                                </div>
+                                <div class="field">
+                                    <label class="t dim" id="label_pivot_v" for="pivot_v"></label>
+                                    <input class="input" id="pivot_v" type="number" step="0.001" value="0">
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="field">
+                                    <label class="t dim" id="label_du" for="du"></label>
+                                    <input class="input" id="du" type="number" step="0.001" value="0">
+                                </div>
+                                <div class="field">
+                                    <label class="t dim" id="label_dv" for="dv"></label>
+                                    <input class="input" id="dv" type="number" step="0.001" value="0">
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="field">
+                                    <label class="t dim" id="label_angle" for="angle"></label>
+                                    <input class="input" id="angle" type="number" step="0.001" value="0">
+                                </div>
+                                <div class="field">
+                                    <label class="t dim" id="label_shear" for="shear"></label>
+                                    <input class="input" id="shear" type="number" step="0.001" value="0">
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="field">
+                                    <label class="t dim" id="label_scale_u" for="scale_u"></label>
+                                    <input class="input" id="scale_u" type="number" step="0.001" value="1">
+                                </div>
+                                <div class="field">
+                                    <label class="t dim" id="label_scale_v" for="scale_v"></label>
+                                    <input class="input" id="scale_v" type="number" step="0.001" value="1">
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="button" id="transform"></div>
+                                <div class="button" id="mirror"></div>
+                            </div>
+                            <div class="button" id="rebase"></div>
+                            <div class="row">
+                                <div class="button" id="align_horizontal"></div>
+                                <div class="button" id="align_vertical"></div>
+                            </div>
+                            <div class="field">
+                                <label class="t dim" id="label_amount" for="amount"></label>
+                                <input class="input" id="amount" type="number" step="0.001" value="0.1">
+                            </div>
+                            <div class="row">
+                                <div class="button" id="chamfer"></div>
+                                <div class="button" id="offset"></div>
+                            </div>
+                            <div class="row">
+                                <div class="field">
+                                    <label class="t dim" id="label_c1u" for="c1u"></label>
+                                    <input class="input" id="c1u" type="number" step="0.001" value="0">
+                                </div>
+                                <div class="field">
+                                    <label class="t dim" id="label_c1v" for="c1v"></label>
+                                    <input class="input" id="c1v" type="number" step="0.001" value="3">
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="field">
+                                    <label class="t dim" id="label_c2u" for="c2u"></label>
+                                    <input class="input" id="c2u" type="number" step="0.001" value="1">
+                                </div>
+                                <div class="field">
+                                    <label class="t dim" id="label_c2v" for="c2v"></label>
+                                    <input class="input" id="c2v" type="number" step="0.001" value="3">
+                                </div>
+                            </div>
+                            <div class="field">
+                                <label class="t dim" id="label_tolerance" for="tolerance"></label>
+                                <input class="input" id="tolerance" type="number" step="0.001" min="0.001" value="0.02">
+                            </div>
+                            <div class="button" id="curve"></div>
+                        </div>
+                        <div class="section" id="section_placement">
+                            <div class="field">
+                                <div class="t dim" id="label_origin"></div>
+                                <div class="row">
+                                    <div class="axis-field">
+                                        <label class="t dim axis" for="origin_x">X</label>
+                                        <input class="input" type="number" step="0.001" id="origin_x" value="0">
+                                    </div>
+                                    <div class="axis-field">
+                                        <label class="t dim axis" for="origin_y">Y</label>
+                                        <input class="input" type="number" step="0.001" id="origin_y" value="64">
+                                    </div>
+                                    <div class="axis-field">
+                                        <label class="t dim axis" for="origin_z">Z</label>
+                                        <input class="input" type="number" step="0.001" id="origin_z" value="0">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="field">
+                                <div class="t dim" id="label_normal"></div>
+                                <div class="row">
+                                    <div class="axis-field">
+                                        <label class="t dim axis" for="normal_x">X</label>
+                                        <input class="input" type="number" step="0.001" id="normal_x" value="0">
+                                    </div>
+                                    <div class="axis-field">
+                                        <label class="t dim axis" for="normal_y">Y</label>
+                                        <input class="input" type="number" step="0.001" id="normal_y" value="0">
+                                    </div>
+                                    <div class="axis-field">
+                                        <label class="t dim axis" for="normal_z">Z</label>
+                                        <input class="input" type="number" step="0.001" id="normal_z" value="1">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="field">
+                                <div class="t dim" id="label_tangent"></div>
+                                <div class="row">
+                                    <div class="axis-field">
+                                        <label class="t dim axis" for="tangent_x">X</label>
+                                        <input class="input" type="number" step="0.001" id="tangent_x" value="1">
+                                    </div>
+                                    <div class="axis-field">
+                                        <label class="t dim axis" for="tangent_y">Y</label>
+                                        <input class="input" type="number" step="0.001" id="tangent_y" value="0">
+                                    </div>
+                                    <div class="axis-field">
+                                        <label class="t dim axis" for="tangent_z">Z</label>
+                                        <input class="input" type="number" step="0.001" id="tangent_z" value="0">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="field">
+                                <label class="t dim" id="label_duration" for="duration"></label>
+                                <input class="input" id="duration" type="number" step="1" min="0" value="0">
+                            </div>
+                            <div class="field check-field">
+                                <input class="checkbox" type="checkbox" id="enabled">
+                                <label class="t dim" id="label_enabled" for="enabled"></label>
+                            </div>
+                            <div class="row">
+                                <div class="button" id="renew"></div>
+                                <div class="button" id="copy"></div>
+                            </div>
+                            <div class="button" id="remove"></div>
+                        </div>
+                        <div class="section" id="section_target">
+                            <div class="field">
+                                <label class="t dim" id="label_target_type" for="target_type"></label>
+                                <select class="input" id="target_type">
+                                    <option id="option_position" value="position">position</option>
+                                    <option id="option_secret_realm" value="secret_realm">secret_realm</option>
+                                    <option id="option_return" value="return">return</option>
+                                </select>
+                            </div>
+                            <div class="target-fields" id="target_position">
+                                <div class="field">
+                                    <label class="t dim" id="label_dimension" for="dimension"></label>
+                                    <input class="input" id="dimension" type="text" value="minecraft:overworld">
+                                </div>
+                                <div class="field">
+                                    <div class="t dim" id="label_target_pos"></div>
+                                    <div class="row">
+                                        <div class="axis-field">
+                                            <label class="t dim axis" for="target_pos_x">X</label>
+                                            <input class="input" type="number" step="0.001" id="target_pos_x" value="0">
+                                        </div>
+                                        <div class="axis-field">
+                                            <label class="t dim axis" for="target_pos_y">Y</label>
+                                            <input class="input" type="number" step="0.001" id="target_pos_y" value="64">
+                                        </div>
+                                        <div class="axis-field">
+                                            <label class="t dim axis" for="target_pos_z">Z</label>
+                                            <input class="input" type="number" step="0.001" id="target_pos_z" value="0">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="field">
+                                        <label class="t dim" id="label_yaw" for="yaw"></label>
+                                        <input class="input" id="yaw" type="number" step="0.001" value="">
+                                    </div>
+                                    <div class="field">
+                                        <label class="t dim" id="label_pitch" for="pitch"></label>
+                                        <input class="input" id="pitch" type="number" step="0.001" value="">
+                                    </div>
+                                </div>
+                                <div class="field check-field">
+                                    <input class="checkbox" type="checkbox" id="nearby">
+                                    <label class="t dim" id="label_nearby" for="nearby"></label>
+                                </div>
+                            </div>
+                            <div class="target-fields" id="target_secret_realm">
+                                <div class="field">
+                                    <label class="t dim" id="label_realm" for="realm"></label>
+                                    <input class="input" id="realm" type="text" value="mxt_test:trial_realm">
+                                </div>
+                            </div>
+                            <div class="button" id="record_target"></div>
+                        </div>
+                        <div class="section" id="section_appearance">
+                            <div class="field">
+                                <label class="t dim" id="label_style" for="style"></label>
+                                <select class="input" id="style">
+                                    <option id="option_rift" value="rift">rift</option>
+                                    <option id="option_portal" value="portal">portal</option>
+                                </select>
+                            </div>
+                            <div class="field">
+                                <label class="t dim" id="label_color" for="color"></label>
+                                <input class="input" id="color" type="text" value="auto">
+                            </div>
+                            <div class="field">
+                                <label class="t dim" id="label_edge_color" for="edge_color"></label>
+                                <input class="input" id="edge_color" type="text" value="auto">
+                            </div>
+                            <div class="row">
+                                <div class="field">
+                                    <label class="t dim" id="label_speed" for="speed"></label>
+                                    <input class="input" id="speed" type="number" step="0.001" min="0" max="10" value="1">
+                                </div>
+                                <div class="field">
+                                    <label class="t dim" id="label_edge_width" for="edge_width"></label>
+                                    <input class="input" id="edge_width" type="number" step="0.001" min="0" max="0.5" value="0.06">
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="field">
+                                    <label class="t dim" id="label_glow" for="glow"></label>
+                                    <input class="input" id="glow" type="number" step="0.001" min="0" max="1" value="0.2">
+                                </div>
+                                <div class="field">
+                                    <label class="t dim" id="label_particles" for="particles"></label>
+                                    <input class="input" id="particles" type="number" step="0.001" min="0" max="1" value="0.1">
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="field">
+                                    <label class="t dim" id="label_texture_scale" for="texture_scale"></label>
+                                    <input class="input" id="texture_scale" type="number" step="0.001" min="0.01" max="100" value="1">
+                                </div>
+                                <div class="field">
+                                    <label class="t dim" id="label_texture_rotation" for="texture_rotation"></label>
+                                    <input class="input" id="texture_rotation" type="number" step="0.001" min="-360" max="360" value="0">
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="field">
+                                    <label class="t dim" id="label_texture_u" for="texture_u"></label>
+                                    <input class="input" id="texture_u" type="number" step="0.001" min="-1024" max="1024" value="0">
+                                </div>
+                                <div class="field">
+                                    <label class="t dim" id="label_texture_v" for="texture_v"></label>
+                                    <input class="input" id="texture_v" type="number" step="0.001" min="-1024" max="1024" value="0">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="section" id="section_blueprint">
+                            <div class="field">
+                                <label class="t dim" id="label_key" for="key"></label>
+                                <input class="input" id="key" type="text" value="portal">
+                            </div>
+                            <div class="button" id="blueprint"></div>
+                            <div class="row">
+                                <div class="button" id="read_json"></div>
+                                <div class="button" id="copy_json"></div>
+                            </div>
+                            <div class="row">
+                                <div class="button" id="export_preset"></div>
+                                <div class="button" id="export_layout"></div>
+                            </div>
+                            <div class="button" id="export_relative"></div>
+                            <div class="button" id="export_local"></div>
+                            <div class="button" id="export_world"></div>
+                            <div class="field">
+                                <label class="t dim" id="label_filename" for="filename"></label>
+                                <input class="input" id="filename" type="text" value="portal">
+                            </div>
+                            <div class="button" id="save_file"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="t" id="status">
+            </div>
+            <div class="footer">
+                <div class="button" id="restore">
+                </div>
+                <div class="button" id="close">
+                </div>
+                <div class="button" id="apply">
+                </div>
+            </div>
+        </div>
+    </body>
+</html>

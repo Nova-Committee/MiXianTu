@@ -30,6 +30,7 @@ public final class EntityTickStages {
     public static final int ABILITIES = 600;
     public static final int CASTS = 700;
     public static final int CHANNEL = 800;
+    public static final int RIFTS = 900;
 
     // Collected on the first server tick, which is after every module has subscribed; server thread only.
     private static List<Stage> ordered;

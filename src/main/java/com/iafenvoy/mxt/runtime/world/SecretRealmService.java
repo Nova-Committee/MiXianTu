@@ -9,6 +9,8 @@ import com.iafenvoy.mxt.runtime.resulting.Failure;
 import com.iafenvoy.mxt.runtime.resulting.Failures;
 import com.iafenvoy.mxt.runtime.resulting.Result;
 import com.iafenvoy.mxt.runtime.resulting.failures.SecretRealmFailure;
+import com.iafenvoy.mxt.runtime.rift.RiftLanding;
+import com.iafenvoy.mxt.runtime.rift.RiftService;
 import com.iafenvoy.mxt.runtime.world.SecretRealmEntryLocator.Arrival;
 import com.iafenvoy.mxt.runtime.world.SecretRealmEntryLocator.Landing;
 import com.iafenvoy.mxt.util.HolderHelper;
@@ -45,6 +47,59 @@ public final class SecretRealmService {
     }
 
     public static TravelResult enter(LivingEntity traveller, MinecraftServer server, Holder<SecretRealm> definition) {
+        return enter(traveller, server, definition, null, null, null, true);
+    }
+
+    public static TravelResult enterFromPortal(LivingEntity traveller, Holder<SecretRealm> definition, Vec3 origin) {
+        return enter(traveller, traveller.level().getServer(), definition, null, null, origin, true);
+    }
+
+    public static TravelResult enterInstance(LivingEntity traveller, SecretRealmRecord selected, @Nullable Arrival arrival, @Nullable Vec3 origin) {
+        return enterInstance(traveller, selected, arrival, origin, arrival == null);
+    }
+
+    private static TravelResult enterInstance(LivingEntity traveller, SecretRealmRecord selected, @Nullable Arrival arrival, @Nullable Vec3 origin, boolean nearby) {
+        SecretRealmRecord current = SecretRealmRegistry.at(selected.dimension()).orElse(null);
+        if (current == null || current.index() != selected.index() || !current.instanceId().equals(selected.instanceId()) || !current.definition().equals(selected.definition())
+                || current.expired(traveller.level().getServer().overworld().getGameTime()))
+            return TravelResult.rejected(SecretRealmFailure.MISSING_DIMENSION);
+        return enter(traveller, traveller.level().getServer(), current.definition(), current, arrival, origin, nearby);
+    }
+
+    public static TravelResult moveToPosition(LivingEntity traveller, ServerLevel destination, Arrival arrival) {
+        return moveToPosition(traveller, destination, arrival, null);
+    }
+
+    public static TravelResult moveToPosition(LivingEntity traveller, ServerLevel destination, Arrival arrival, @Nullable Vec3 origin) {
+        return moveToPosition(traveller, destination, arrival, origin, false);
+    }
+
+    public static TravelResult moveToPosition(LivingEntity traveller, ServerLevel destination, Arrival arrival, @Nullable Vec3 origin, boolean nearby) {
+        SecretRealmRecord target = SecretRealmRegistry.at(destination.dimension()).orElse(null);
+        SecretRealmRecord held = SecretRealmRegistry.ofMember(traveller.getUUID()).orElse(null);
+        if (target != null && !(target.instance().generation() instanceof ExistingGeneration)
+                && (held == null || !held.dimension().equals(target.dimension())))
+            return enterInstance(traveller, target, arrival, origin, nearby);
+        if (held != null && !held.dimension().equals(destination.dimension())) {
+            SecretRealmTravelAttachment travel = travel(traveller);
+            if (travel == null || !travel.active()) return TravelResult.rejected(SecretRealmFailure.NOT_TRAVELLING);
+            if (!held.instance().exitCondition().test(traveller, FormulaContext.of(traveller)))
+                return TravelResult.rejected(SecretRealmFailure.EXIT_DENIED, held.instance().exitDeniedMessage());
+            Moved moved = leave(traveller, true, destination, arrival, nearby);
+            return moved.failure() == null ? TravelResult.exited(moved.traveller()) : TravelResult.rejected(moved.failure());
+        }
+        RiftLanding.Inspection landing = prepareArrival(destination, traveller, arrival.position(), nearby);
+        if (landing.isFailure()) {
+            TravelDiagnostics.rejected(traveller, destination, arrival.position(), "position_landing", landing.failure().getSerializedName(),
+                    "nearby=" + nearby + " primary=" + landing);
+            return TravelResult.rejected(landing.failure());
+        }
+        LivingEntity moved = move(traveller, destination, landing.position().x, landing.position().y, landing.position().z, arrival.yaw(), arrival.pitch());
+        return moved == null ? TravelResult.rejected(SecretRealmFailure.TELEPORT_FAILED) : TravelResult.entered(moved);
+    }
+
+    private static TravelResult enter(LivingEntity traveller, MinecraftServer server, Holder<SecretRealm> definition,
+                                      @Nullable SecretRealmRecord selected, @Nullable Arrival fixedArrival, @Nullable Vec3 fixedOrigin, boolean nearby) {
         try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.SECRET_REALM)) {
             // A token can outlive the definition it names, so the current registry is the last word on whether this realm
             // still exists. Kept here rather than at the token, because every caller has to be held to it.
@@ -68,7 +123,7 @@ public final class SecretRealmService {
 
             SecretRealmRecord record;
             boolean created = false;
-            Optional<SecretRealmRecord> joinable = SecretRealmRegistry.joinable(definition, member);
+            Optional<SecretRealmRecord> joinable = selected == null ? SecretRealmRegistry.joinable(definition, member) : Optional.of(selected);
             if (joinable.isPresent()) {
                 record = joinable.get();
                 if (!record.holds(member) && record.full()) return TravelResult.rejected(SecretRealmFailure.FULL);
@@ -105,17 +160,30 @@ public final class SecretRealmService {
             List<UUID> members = new ArrayList<>(record.members());
             boolean joining = !members.contains(member);
             int slot = joining ? members.size() : members.indexOf(member);
-            Arrival arrival = SecretRealmEntryLocator.arrival(destination, record, slot, traveller.getYRot(), traveller.getXRot());
+            Arrival arrival = fixedArrival != null ? fixedArrival : SecretRealmEntryLocator.arrival(destination, record, slot, traveller.getYRot(), traveller.getXRot());
+            {
+                RiftLanding.Inspection landing = prepareArrival(destination, traveller, arrival.position(), nearby);
+                if (landing.isFailure()) {
+                    TravelDiagnostics.rejected(traveller, destination, arrival.position(), "realm_entry_landing",
+                            landing.failure().getSerializedName(), "realm=" + definition.unwrapKey().orElseThrow().identifier()
+                                    + " instance=" + record.instanceId() + " nearby=" + nearby + " primary=" + landing);
+                    if (created && record.empty()) retire(server, record);
+                    return TravelResult.rejected(landing.failure());
+                }
+                arrival = new Arrival(landing.position(), arrival.yaw(), arrival.pitch());
+            }
             Identifier originDimension = traveller.level().dimension().identifier();
-            double originX = traveller.getX();
-            double originY = traveller.getY();
-            double originZ = traveller.getZ();
+            double originX = fixedOrigin == null ? traveller.getX() : fixedOrigin.x;
+            double originY = fixedOrigin == null ? traveller.getY() : fixedOrigin.y;
+            double originZ = fixedOrigin == null ? traveller.getZ() : fixedOrigin.z;
             float originYaw = traveller.getYRot();
             float originPitch = traveller.getXRot();
             LivingEntity arrived = move(traveller, destination, arrival.position().x, arrival.position().y,
                     arrival.position().z, arrival.yaw(), arrival.pitch());
-            if (arrived == null)
+            if (arrived == null) {
+                if (created && record.empty()) retire(server, record);
                 return TravelResult.rejected(SecretRealmFailure.TELEPORT_FAILED);
+            }
             if (joining) {
                 members.add(member);
                 record = record.with(members);
@@ -156,15 +224,26 @@ public final class SecretRealmService {
     // then retires the record once on its own, so a member's exit on that path must neither retire it early nor post a
     // Destroy of its own - which is what "settle" switches off.
     private static Moved leave(LivingEntity traveller, boolean settle) {
+        return leave(traveller, settle, null, null, true);
+    }
+
+    private static Moved leave(LivingEntity traveller, boolean settle, @Nullable ServerLevel destination, @Nullable Arrival arrival, boolean nearby) {
         SecretRealmTravelAttachment travel = travel(traveller);
         Holder<SecretRealm> definition = travel == null ? null : travel.realm().orElse(null);
         if (definition == null || !travel.active()) return Moved.arrived(traveller);
         MinecraftServer server = traveller.level().getServer();
-        ServerLevel origin = origin(server, travel).orElse(null);
+        ServerLevel origin = destination == null ? origin(server, travel).orElse(null) : destination;
         if (origin == null) return Moved.refused(SecretRealmFailure.MISSING_ORIGIN);
         Optional<SecretRealmRecord> held = SecretRealmRegistry.ofMember(traveller.getUUID());
-        LivingEntity arrived = move(traveller, origin, travel.originX(), travel.originY(), travel.originZ(),
-                travel.originYaw(), travel.originPitch());
+        Arrival requested = arrival == null ? new Arrival(new Vec3(travel.originX(), travel.originY(), travel.originZ()),
+                travel.originYaw(), travel.originPitch()) : arrival;
+        RiftLanding.Inspection landing = prepareArrival(origin, traveller, requested.position(), nearby);
+        if (landing.isFailure()) {
+            TravelDiagnostics.rejected(traveller, origin, requested.position(), "realm_exit_landing", landing.failure().getSerializedName(),
+                    "realm=" + definition.unwrapKey().orElseThrow().identifier() + " primary=" + landing);
+            return Moved.refused(landing.failure());
+        }
+        LivingEntity arrived = move(traveller, origin, landing.position().x, landing.position().y, landing.position().z, requested.yaw(), requested.pitch());
         if (arrived == null) return Moved.refused(SecretRealmFailure.TELEPORT_FAILED);
         arrived.getData(MxtAttachments.SECRET_REALM_TRAVEL).clear();
         if (held.isPresent()) {
@@ -192,10 +271,35 @@ public final class SecretRealmService {
     // teleported in place and comes back as itself, and null means the platform refused the move.
     private static @Nullable LivingEntity move(LivingEntity traveller, ServerLevel destination, double x, double y,
                                                double z, float yaw, float pitch) {
+        Vec3 position = new Vec3(x, y, z);
+        String reason = !(traveller.level() instanceof ServerLevel) ? "client_side"
+                : !((ServerLevel) traveller.level()).isAllowedToEnterPortal(destination) ? "portal_rule_denied"
+                : !traveller.isAlive() || traveller.isRemoved() ? "entity_unavailable"
+                : traveller.isPassenger() ? "passenger"
+                : traveller.isVehicle() ? "carrying_passengers"
+                : !traveller.canUsePortal(false) ? "entity_cannot_use_portal"
+                : !traveller.canTeleport(traveller.level(), destination) ? "entity_cannot_change_dimension" : null;
+        if (reason != null) {
+            TravelDiagnostics.rejected(traveller, destination, position, "teleport_precheck", reason, "yaw=" + yaw + " pitch=" + pitch);
+            return null;
+        }
         TeleportTransition transition = new TeleportTransition(destination, new Vec3(x, y, z), Vec3.ZERO, yaw, pitch,
                 Set.of(), TeleportTransition.DO_NOTHING);
         Entity moved = traveller.teleport(transition);
-        return moved instanceof LivingEntity living ? living : null;
+        if (moved instanceof LivingEntity living) return living;
+        TravelDiagnostics.rejected(traveller, destination, position, "teleport", moved == null ? "platform_refused" : "unexpected_entity_type",
+                "yaw=" + yaw + " pitch=" + pitch + " result=" + moved);
+        return null;
+    }
+
+    public static RiftLanding.Inspection checkArrival(ServerLevel level, Entity traveller, Vec3 position, boolean nearby) {
+        RiftLanding.loadArea(level, traveller, position, nearby);
+        return RiftLanding.search(level, traveller, position, nearby);
+    }
+
+    private static RiftLanding.Inspection prepareArrival(ServerLevel level, Entity traveller, Vec3 position, boolean nearby) {
+        RiftLanding.loadArea(level, traveller, position, nearby);
+        return RiftLanding.resolve(level, traveller, position, nearby);
     }
 
     // Only a read: a traveller that never entered a secret realm should not be handed an attachment for asking.
@@ -302,7 +406,10 @@ public final class SecretRealmService {
             if (current.prepared()) return Optional.of(current);
             Landing landing = SecretRealmEntryLocator.plan(level, current);
             SecretRealmStructurePlacer.place(level, current, landing.position());
-            current = current.withAnchor(SecretRealmEntryLocator.finish(level, landing)).asPrepared();
+            current = current.withAnchor(SecretRealmEntryLocator.finish(level, landing));
+            if (!RiftService.layout(level, current.instanceId().toString(),
+                    current.anchor().orElseThrow(), current.instance().portals())) return Optional.empty();
+            current = current.asPrepared();
             return SecretRealmRegistry.replace(current);
         }
     }

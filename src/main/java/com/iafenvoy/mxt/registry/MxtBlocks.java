@@ -42,7 +42,6 @@ public final class MxtBlocks {
     public static final DeferredBlock<DisplayStandBlock> JUNGLE_DISPLAY_STAND = registerNoOcclusion("jungle_display_stand", DisplayStandBlock::new);
     public static final DeferredBlock<DisplayStandBlock> ACACIA_DISPLAY_STAND = registerNoOcclusion("acacia_display_stand", DisplayStandBlock::new);
     public static final DeferredBlock<DisplayStandBlock> DARK_OAK_DISPLAY_STAND = registerNoOcclusion("dark_oak_display_stand", DisplayStandBlock::new);
-    public static final DeferredBlock<RiftBlock> RIFT = register("rift", RiftBlock::new, Properties.of().mapColor(MapColor.COLOR_BLACK).strength(-1.0F, 3_600_000.0F).sound(SoundType.GLASS).lightLevel(state -> 15).noCollision().noOcclusion().noTerrainParticles().noLootTable());
 
     public static <T extends Block> DeferredBlock<T> registerNoOcclusion(String path, Function<Properties, T> factory) {
         return register(path, factory, Properties.ofFullCopy(Blocks.CRAFTING_TABLE).noOcclusion());

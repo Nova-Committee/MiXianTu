@@ -1,0 +1,146 @@
+/* Shared controls use absolute positioning; this editor keeps them in normal flow. */
+#panel .button,
+#panel .t,
+#panel .input {
+    position: relative;
+    flex-shrink: 0;
+}
+
+#panel {
+    width: 760px;
+    max-width: calc(100vw - 16px);
+    height: 400px;
+    max-height: calc(100vh - 16px);
+    display: flex;
+    flex-direction: column;
+    padding: 8px;
+    gap: 6px;
+}
+
+#panel.world-preview {
+    height: auto;
+    align-self: flex-start;
+    margin-top: 8px;
+}
+
+.header,
+.footer,
+#tabs {
+    display: flex;
+    flex-direction: row;
+    gap: 4px;
+    flex-wrap: wrap;
+    flex-shrink: 0;
+}
+
+#panel .button {
+    min-height: 22px;
+    padding: 5px 7px;
+    font-size: 9px;
+}
+
+.header .button { min-width: 48px; }
+.footer { justify-content: flex-end; }
+.footer .button { min-width: 66px; }
+#restore { margin-right: auto; }
+
+#body {
+    display: flex;
+    flex-direction: row;
+    flex: 1;
+    min-height: 0;
+    gap: 8px;
+}
+
+#tools {
+    width: 84px;
+    flex-shrink: 0;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    overflow-y: auto;
+}
+
+#canvas {
+    width: min(320px, 42vw, calc(125vh - 165px));
+    height: auto;
+    aspect-ratio: 5 / 4;
+    align-self: center;
+    flex-shrink: 0;
+}
+
+#properties {
+    flex: 1;
+    min-width: 0;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+#tabs .button { flex: 1; min-width: 36px; }
+
+#scroll {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding-right: 6px;
+}
+
+.section {
+    display: none;
+    flex-direction: column;
+    gap: 5px;
+    padding: 2px;
+}
+
+.field {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    flex-shrink: 0;
+    min-width: 0;
+}
+
+.row {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-end;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.row > .field,
+.row > .button,
+.axis-field {
+    flex: 1;
+    width: 0;
+    min-width: 0;
+}
+
+.axis-field {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 3px;
+}
+
+#panel .axis-field .input { flex: 1; width: 0; min-width: 0; }
+#panel .axis { width: 6px; }
+#panel .check-field { flex-direction: row; align-items: center; gap: 6px; }
+#panel .checkbox { width: 14px; height: 14px; padding: 0; flex-shrink: 0; }
+.target-fields { display: flex; flex-direction: column; gap: 5px; }
+
+#panel .field .t { height: 12px; line-height: 12px; }
+#panel .input { height: 22px; width: 100%; padding: 3px 5px; }
+#status { height: 12px; line-height: 12px; }
+
+@media (max-width: 620px) {
+    #panel { padding: 6px; gap: 4px; }
+    #body { gap: 5px; }
+    #tools { width: 66px; }
+    #panel #tools .button { padding: 5px 2px; }
+    #canvas { width: min(220px, 32vw, calc(125vh - 165px)); }
+    #panel #tabs .button { min-width: 30px; padding: 5px 3px; }
+}

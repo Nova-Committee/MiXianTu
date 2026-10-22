@@ -74,6 +74,7 @@ public final class MxtItems {
     public static final DeferredItem<FormationPlateItem> FORMATION_PLATE = register("formation_plate", properties -> new FormationPlateItem(properties.stacksTo(1).component(MxtDataComponents.FORMATION_PLATE, FormationPlateComponent.EMPTY)));
     public static final DeferredItem<SecretRealmTokenItem> SECRET_REALM_TOKEN = register("secret_realm_token", properties -> new SecretRealmTokenItem(properties.stacksTo(1).component(MxtDataComponents.SECRET_REALM_TOKEN, SecretRealmTokenComponent.EMPTY)));
     public static final DeferredItem<RewardBoxItem> REWARD_BOX = register("reward_box", RewardBoxItem::new);
+    public static final DeferredItem<RiftAnchorItem> RIFT = register("rift", properties -> new RiftAnchorItem(properties.stacksTo(1)));
     public static final DeferredItem<RiftAnchorItem> RIFT_ANCHOR = register("rift_anchor", properties -> new RiftAnchorItem(properties.stacksTo(1).component(MxtDataComponents.RIFT, RiftComponent.EMPTY)));
     public static final DeferredItem<TokenItem> WOODEN_TOKEN = register("wooden_token", properties -> new TokenItem(properties.component(MxtDataComponents.TOKEN, TokenComponent.EMPTY)));
     public static final DeferredItem<TokenItem> STONE_TOKEN = register("stone_token", properties -> new TokenItem(properties.component(MxtDataComponents.TOKEN, TokenComponent.EMPTY)));

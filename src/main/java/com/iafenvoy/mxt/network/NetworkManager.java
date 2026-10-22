@@ -1,6 +1,9 @@
 package com.iafenvoy.mxt.network;
 
 import com.iafenvoy.mxt.network.payload.*;
+import com.iafenvoy.mxt.render.rift.RiftClientState;
+import com.iafenvoy.mxt.runtime.rift.RiftEditorService;
+import com.iafenvoy.mxt.screen.rift.RiftEditorScreen;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -23,6 +26,7 @@ public final class NetworkManager {
     @SubscribeEvent
     public static void registerPayloads(RegisterPayloadHandlersEvent event) {
         PayloadRegistrar registrar = event.registrar("2")
+                .playToServer(RiftEditC2SPayload.TYPE, RiftEditC2SPayload.STREAM_CODEC, new MainThreadPayloadHandler<>(RiftEditorService::handle))
                 .playToServer(ProfilerSubscriptionC2SPayload.TYPE, ProfilerSubscriptionC2SPayload.STREAM_CODEC, new MainThreadPayloadHandler<>(ServerNetworkHandler::onProfilerSubscription))
                 .playToServer(WheelActionC2SPayload.TYPE, WheelActionC2SPayload.STREAM_CODEC, new MainThreadPayloadHandler<>(ServerNetworkHandler::onWheelAction))
                 .playToServer(ForgingActionC2SPayload.TYPE, ForgingActionC2SPayload.STREAM_CODEC, new MainThreadPayloadHandler<>(ServerNetworkHandler::onForgingAction))
@@ -42,6 +46,8 @@ public final class NetworkManager {
                 .playToServer(TalismanCancelC2SPayload.TYPE, TalismanCancelC2SPayload.STREAM_CODEC, new MainThreadPayloadHandler<>(ServerNetworkHandler::onTalismanCancel));
         // A dedicated server never runs one of these, so it registers the codec and nothing else.
         if (FMLEnvironment.getDist() != Dist.CLIENT) {
+            registrar.playToClient(RiftSyncS2CPayload.TYPE, RiftSyncS2CPayload.STREAM_CODEC)
+                    .playToClient(RiftEditorS2CPayload.TYPE, RiftEditorS2CPayload.STREAM_CODEC);
             registrar.playToClient(ProfilerGuiS2CPayload.TYPE, ProfilerGuiS2CPayload.STREAM_CODEC)
                     .playToClient(ProfilerSnapshotS2CPayload.TYPE, ProfilerSnapshotS2CPayload.STREAM_CODEC);
             registrar.playToClient(AuraStateS2CPayload.TYPE, AuraStateS2CPayload.STREAM_CODEC)
@@ -55,6 +61,8 @@ public final class NetworkManager {
                     .playToClient(TalismanResultS2CPayload.TYPE, TalismanResultS2CPayload.STREAM_CODEC);
             return;
         }
+        registrar.playToClient(RiftSyncS2CPayload.TYPE, RiftSyncS2CPayload.STREAM_CODEC, new MainThreadPayloadHandler<>((payload, _) -> RiftClientState.accept(payload)))
+                .playToClient(RiftEditorS2CPayload.TYPE, RiftEditorS2CPayload.STREAM_CODEC, new MainThreadPayloadHandler<>((payload, _) -> RiftEditorScreen.receive(payload)));
         registrar.playToClient(ProfilerGuiS2CPayload.TYPE, ProfilerGuiS2CPayload.STREAM_CODEC,
                         new MainThreadPayloadHandler<>(ClientNetworkHandler::onProfilerGui))
                 .playToClient(ProfilerSnapshotS2CPayload.TYPE, ProfilerSnapshotS2CPayload.STREAM_CODEC,

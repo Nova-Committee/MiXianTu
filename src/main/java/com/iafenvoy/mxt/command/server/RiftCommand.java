@@ -1,148 +1,128 @@
 package com.iafenvoy.mxt.command.server;
 
 import com.iafenvoy.mxt.command.ServerCommandManager;
-import com.iafenvoy.mxt.data.item.RiftComponent;
-import com.iafenvoy.mxt.item.RiftAnchorItem;
-import com.iafenvoy.mxt.item.block.entity.RiftBlockEntity;
-import com.iafenvoy.mxt.registry.MxtBlocks;
-import com.iafenvoy.mxt.registry.MxtDataComponents;
-import com.iafenvoy.mxt.runtime.curse.CurseService;
-import com.iafenvoy.mxt.runtime.rift.RiftColors;
-import com.iafenvoy.mxt.runtime.rift.RiftConnections;
-import com.mojang.brigadier.arguments.StringArgumentType;
-import com.mojang.brigadier.builder.LiteralArgumentBuilder;
+import com.iafenvoy.mxt.data.rift.*;
+import com.iafenvoy.mxt.runtime.rift.*;
+import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.mojang.brigadier.arguments.*;
+import com.mojang.brigadier.builder.*;
+import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
-import net.minecraft.commands.CommandSourceStack;
-import net.minecraft.commands.arguments.DimensionArgument;
-import net.minecraft.commands.arguments.IdentifierArgument;
-import net.minecraft.commands.arguments.coordinates.BlockPosArgument;
-import net.minecraft.core.BlockPos;
+import net.minecraft.commands.*;
+import net.minecraft.commands.arguments.*;
+import net.minecraft.commands.arguments.coordinates.Vec3Argument;
+import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.Identifier;
-import net.minecraft.server.level.ServerLevel;
-import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.block.Block;
-import org.jetbrains.annotations.Nullable;
+import net.minecraft.world.phys.Vec3;
+import java.util.*;
+import static net.minecraft.commands.Commands.*;
 
-import java.util.List;
-
-import static net.minecraft.commands.Commands.argument;
-import static net.minecraft.commands.Commands.literal;
-
-/**
- * The {@code /curse} command; also reachable as {@code /mxt curse}. Reading the executing player's own curses needs
- * no permission, while changing anybody's - applying, removing or cleansing - keeps its operator requirement in
- * both positions. It is an administrator's mirror of the transactions content uses, going through
- * {@link CurseService}, so a curse applied here obeys its own condition and stacking.
- */
 public final class RiftCommand {
-    public static LiteralArgumentBuilder<CommandSourceStack> build() {
-        return literal("rift")
-                .requires(ServerCommandManager::mayChange)
-                .then(literal("info").then(argument("pos", BlockPosArgument.blockPos())
-                        .executes(ctx -> riftInfo(ctx.getSource(), BlockPosArgument.getBlockPos(ctx, "pos")))))
-                .then(literal("target").then(argument("pos", BlockPosArgument.blockPos())
-                        .then(argument("dimension", DimensionArgument.dimension())
-                                .executes(ctx -> setRiftTarget(ctx.getSource(), BlockPosArgument.getBlockPos(ctx, "pos"), IdentifierArgument.getId(ctx, "dimension"))))))
-                .then(literal("color").then(argument("pos", BlockPosArgument.blockPos())
-                        .then(argument("color", StringArgumentType.word())
-                                .executes(ctx -> setRiftColor(ctx.getSource(), BlockPosArgument.getBlockPos(ctx, "pos"), StringArgumentType.getString(ctx, "color"))))))
-                .then(literal("place").then(argument("pos", BlockPosArgument.blockPos())
-                        .then(argument("dimension", DimensionArgument.dimension())
-                                .executes(ctx -> placeRift(ctx.getSource(), BlockPosArgument.getBlockPos(ctx, "pos"), IdentifierArgument.getId(ctx, "dimension"))))))
-                .then(literal("bind").then(argument("dimension", DimensionArgument.dimension())
-                        .executes(ctx -> bindRiftAnchor(ctx.getSource(), IdentifierArgument.getId(ctx, "dimension"), null))
-                        .then(argument("color", StringArgumentType.word())
-                                .executes(ctx -> bindRiftAnchor(ctx.getSource(), IdentifierArgument.getId(ctx, "dimension"), StringArgumentType.getString(ctx, "color"))))));
-    }
+    private RiftCommand() { }
 
-    @Nullable
-    private static RiftBlockEntity riftAt(CommandSourceStack source, BlockPos pos) {
-        if (source.getLevel().getBlockEntity(pos) instanceof RiftBlockEntity rift) return rift;
-        source.sendFailure(Component.translatable("command.mxt.rift.missing", formatPos(pos)));
-        return null;
-    }
-
-    private static int riftInfo(CommandSourceStack source, BlockPos pos) {
-        RiftBlockEntity rift = riftAt(source, pos);
-        if (rift == null) return 0;
-        ServerLevel level = source.getLevel();
-        List<BlockPos> links = RiftConnections.connected(level, pos);
-        int triangles = RiftConnections.loops(pos, links).size();
-        source.sendSuccess(() -> Component.translatable("command.mxt.rift.info", formatPos(pos)), false);
-        source.sendSuccess(() -> Component.translatable("command.mxt.rift.info.target", rift.target().toString()), false);
-        source.sendSuccess(() -> Component.translatable("command.mxt.rift.info.color", RiftColors.format(RiftColors.resolve(rift)),
-                Component.translatable(rift.color() == RiftColors.AUTO
-                        ? "command.mxt.rift.color.auto" : "command.mxt.rift.color.override")), false);
-        source.sendSuccess(() -> Component.translatable("command.mxt.rift.info.shape", links.size(), triangles,
-                links.isEmpty() ? 1 : RiftConnections.componentSize(level, pos)), false);
-        source.sendSuccess(() -> Component.translatable("command.mxt.rift.info.isolated",
-                Component.translatable(RiftConnections.isolated(level, pos)
-                        ? "command.mxt.rift.info.isolated.yes" : "command.mxt.rift.info.isolated.no")), false);
-        return 1;
-    }
-
-    private static int setRiftTarget(CommandSourceStack source, BlockPos pos, Identifier dimension) {
-        RiftBlockEntity rift = riftAt(source, pos);
-        if (rift == null) return 0;
-        rift.setTarget(dimension);
-        source.sendSuccess(() -> Component.translatable("block.mxt.rift.retargeted", dimension.toString()), true);
-        return 1;
-    }
-
-    private static int setRiftColor(CommandSourceStack source, BlockPos pos, String color) {
-        RiftBlockEntity rift = riftAt(source, pos);
-        if (rift == null) return 0;
-        if (color.equalsIgnoreCase("auto")) {
-            rift.setColor(RiftColors.AUTO);
-            source.sendSuccess(() -> Component.translatable("command.mxt.rift.color.reset"), true);
+    public static LiteralArgumentBuilder<CommandSourceStack> build(CommandBuildContext build) {
+        LiteralArgumentBuilder<CommandSourceStack> root = literal("rift").requires(ServerCommandManager::mayChange);
+        RequiredArgumentBuilder<CommandSourceStack, String> spawn = argument("facing", StringArgumentType.word()).suggests((_, b) -> SharedSuggestionProvider.suggest(List.of("north", "south", "east", "west", "up", "down"), b));
+        targets(spawn, build, true);
+        root.then(literal("spawn").then(argument("preset", ResourceArgument.resource(build, MxtResourceKeys.RIFT))
+                .then(argument("origin", Vec3Argument.vec3()).then(spawn))));
+        RequiredArgumentBuilder<CommandSourceStack, UUID> target = id(); targets(target, build, false); root.then(literal("target").then(target));
+        root.then(literal("edit").executes(c -> edit(c, false)).then(id().executes(c -> edit(c, true))));
+        root.then(literal("info").executes(c -> {
+            for (RiftRecord r : RiftService.records(c.getSource().getLevel())) info(c.getSource(), r);
             return 1;
+        }).then(id().executes(c -> {
+            RiftRecord r = record(c); if (r == null) return 0; info(c.getSource(), r); return 1; })));
+        root.then(literal("remove").then(id().executes(c -> record(c) == null ? 0 : RiftService.remove(c.getSource().getLevel(), UuidArgument.getUuid(c, "id")) ? 1 : 0)));
+        root.then(literal("duration").then(id().then(argument("ticks", LongArgumentType.longArg(0)).executes(c -> {
+            RiftRecord r = record(c); if (r == null) return 0;
+            RiftTemplate d = r.data();
+            return publish(c, r, new RiftTemplate(d.key(), d.placement(), false, d.shape(), d.destination(), d.appearance(), LongArgumentType.getLong(c, "ticks"), d.enabled()), true);
+        }))));
+        root.then(literal("enabled").then(id().then(argument("enabled", BoolArgumentType.bool()).executes(c -> {
+            RiftRecord r = record(c); if (r == null) return 0;
+            RiftTemplate d = r.data();
+            return publish(c, r, new RiftTemplate(d.key(), d.placement(), false, d.shape(), d.destination(), d.appearance(), d.durationTicks(), BoolArgumentType.getBool(c, "enabled")), false);
+        }))));
+        root.then(literal("copy").then(id().then(argument("origin", Vec3Argument.vec3()).executes(c -> {
+            RiftRecord r = record(c); if (r == null) return 0;
+            RiftPlacement p = r.data().placement();
+            return publish(c, null, RiftEdits.placement(r.data(), new RiftPlacement(Vec3Argument.getVec3(c, "origin"), p.normal(), p.tangent())), true);
+        }))));
+        RequiredArgumentBuilder<CommandSourceStack, UUID> transforms = id();
+        transforms.then(literal("move").then(argument("offset", Vec3Argument.vec3(false)).executes(c -> {
+            RiftRecord r = record(c); if (r == null) return 0;
+            RiftPlacement p = r.data().placement();
+            return publish(c, r, RiftEdits.placement(r.data(), new RiftPlacement(p.origin().add(Vec3Argument.getVec3(c, "offset")), p.normal(), p.tangent())), false);
+        })));
+        for (String operation : List.of("rotate", "scale", "mirror")) {
+            if (operation.equals("mirror")) transforms.then(literal(operation).executes(c -> transform(c, operation, -1)));
+            else transforms.then(literal(operation).then(argument("value", DoubleArgumentType.doubleArg(operation.equals("scale") ? 0.001 : -360, operation.equals("scale") ? 100 : 360))
+                    .executes(c -> transform(c, operation, DoubleArgumentType.getDouble(c, "value")))));
         }
-        int parsed = RiftColors.parse(color);
-        if (parsed == RiftColors.AUTO) {
-            source.sendFailure(Component.translatable("command.mxt.rift.color.invalid", color));
-            return 0;
-        }
-        rift.setColor(parsed);
-        source.sendSuccess(() -> Component.translatable("block.mxt.rift.recolored", RiftColors.format(parsed)), true);
-        return 1;
+        root.then(literal("transform").then(transforms));
+        root.then(literal("export").then(id().then(argument("format", StringArgumentType.word()).suggests((_, b) -> SharedSuggestionProvider.suggest(List.of("preset", "layout"), b)).executes(c -> {
+            RiftRecord r = record(c); if (r == null) return 0; String format = StringArgumentType.getString(c, "format");
+            if (!format.equals("preset") && !format.equals("layout")) return 0;
+            String json = format.equals("preset") ? RiftExport.preset(r.data()) : RiftExport.layout(List.of(r.data()), Optional.empty(), Optional.empty());
+            c.getSource().sendSuccess(() -> Component.literal(json), false); return 1;
+        }))));
+        return root;
     }
 
-    private static int placeRift(CommandSourceStack source, BlockPos pos, Identifier dimension) {
-        ServerLevel level = source.getLevel();
-        if (level.isOutsideBuildHeight(pos) || !level.getBlockState(pos).canBeReplaced()) {
-            source.sendFailure(Component.translatable("command.mxt.rift.place.blocked", formatPos(pos)));
-            return 0;
-        }
-        level.setBlock(pos, MxtBlocks.RIFT.get().defaultBlockState(), Block.UPDATE_ALL);
-        if (level.getBlockEntity(pos) instanceof RiftBlockEntity rift)
-            rift.configure(dimension, RiftColors.AUTO);
-        source.sendSuccess(() -> Component.translatable("command.mxt.rift.place.done", formatPos(pos), dimension.toString()), true);
-        return 1;
+    private static int transform(CommandContext<CommandSourceStack> c, String operation, double value) {
+        RiftRecord r = record(c); if (r == null) return 0;
+        return publish(c, r, RiftEdits.shape(r.data(), RiftEdits.transform(r.data().shape(), Set.of(), new RiftVertex(0, 0), 0, 0,
+                operation.equals("rotate") ? value : 0, operation.equals("rotate") ? 1 : value, operation.equals("scale") ? value : 1, 0)), false);
     }
 
-    private static int bindRiftAnchor(CommandSourceStack source, Identifier dimension, @Nullable String color) throws CommandSyntaxException {
-        ServerPlayer player = source.getPlayerOrException();
-        ItemStack stack = player.getMainHandItem();
-        if (!(stack.getItem() instanceof RiftAnchorItem)) {
-            source.sendFailure(Component.translatable("command.mxt.rift.bind.missing"));
-            return 0;
-        }
-        int parsed = RiftColors.AUTO;
-        if (color != null && !color.equalsIgnoreCase("auto")) {
-            parsed = RiftColors.parse(color);
-            if (parsed == RiftColors.AUTO) {
-                source.sendFailure(Component.translatable("command.mxt.rift.color.invalid", color));
-                return 0;
-            }
-        }
-        stack.set(MxtDataComponents.RIFT, new RiftComponent(dimension, parsed));
-        source.sendSuccess(() -> Component.translatable("command.mxt.rift.bind.done", dimension.toString()), true);
-        return 1;
+    private static void targets(ArgumentBuilder<CommandSourceStack, ?> parent, CommandBuildContext build, boolean spawn) {
+        parent.then(literal("position").then(argument("dimension", DimensionArgument.dimension()).then(argument("destination", Vec3Argument.vec3()).executes(c -> target(c, spawn,
+                new RiftDestination.Position(Optional.of(DimensionArgument.getDimension(c, "dimension").dimension().identifier()), Vec3Argument.getVec3(c, "destination"), Optional.empty(), Optional.empty(), false))))));
+        parent.then(literal("secret_realm").then(argument("definition", ResourceArgument.resource(build, MxtResourceKeys.SECRET_REALM)).executes(c -> target(c, spawn,
+                new RiftDestination.Realm(ResourceArgument.getResource(c, "definition", MxtResourceKeys.SECRET_REALM).key().identifier())))));
+        parent.then(literal("return").executes(c -> target(c, spawn, new RiftDestination.Return())));
     }
 
-    private static String formatPos(BlockPos pos) {
-        return "%d %d %d".formatted(pos.getX(), pos.getY(), pos.getZ());
+    private static int target(CommandContext<CommandSourceStack> c, boolean spawn, RiftDestination destination) throws CommandSyntaxException {
+        RiftTemplate data; RiftRecord r = null;
+        if (spawn) {
+            RiftPreset preset = ResourceArgument.getResource(c, "preset", MxtResourceKeys.RIFT).value();
+            Direction direction = Direction.byName(StringArgumentType.getString(c, "facing"));
+            if (direction == null) return 0;
+            Vec3 normal = new Vec3(direction.getStepX(), direction.getStepY(), direction.getStepZ());
+            Vec3 tangent = direction.getAxis().isVertical() ? new Vec3(1, 0, 0) : new Vec3(normal.z, 0, -normal.x);
+            data = new RiftTemplate("portal", new RiftPlacement(Vec3Argument.getVec3(c, "origin"), normal, tangent), false,
+                    preset.shape(), destination, preset.appearance(), 0, true);
+        } else {
+            r = record(c); if (r == null) return 0;
+            RiftTemplate d = r.data();
+            data = new RiftTemplate(d.key(), d.placement(), false, d.shape(), destination, d.appearance(), d.durationTicks(), d.enabled());
+        }
+        return publish(c, r, data, spawn);
+    }
+
+    private static RequiredArgumentBuilder<CommandSourceStack, UUID> id() {
+        return argument("id", UuidArgument.uuid()).suggests((c, b) -> SharedSuggestionProvider.suggest(
+                RiftService.world(c.getSource().getLevel()).locations().stream().filter(r -> !r.expired(RiftService.now(c.getSource().getLevel())))
+                        .map(r -> r.id().toString()), b));
+    }
+    private static RiftRecord record(CommandContext<CommandSourceStack> c) {
+        RiftRecord r = RiftService.get(c.getSource().getLevel(), UuidArgument.getUuid(c, "id"));
+        if (r == null) c.getSource().sendFailure(Component.translatable("rift.mxt.failure.missing"));
+        return r;
+    }
+    private static int edit(CommandContext<CommandSourceStack> c, boolean selected) throws CommandSyntaxException {
+        RiftEditorService.open(c.getSource().getPlayerOrException(), selected ? UuidArgument.getUuid(c, "id") : null, null); return 1;
+    }
+    private static int publish(CommandContext<CommandSourceStack> c, RiftRecord old, RiftTemplate data, boolean reset) {
+        RiftResult result = RiftService.publish(c.getSource().getLevel(), old == null ? null : old.id(), old == null ? 0 : old.revision(), data,
+                c.getSource().getEntity() == null ? null : c.getSource().getEntity().getUUID(), reset);
+        if (result.isFailure()) { c.getSource().sendFailure(Component.translatable("rift.mxt.failure.edit", result.detail())); return 0; }
+        c.getSource().sendSuccess(() -> Component.translatable("command.mxt.rift.saved", result.record().id().toString()), true); return 1;
+    }
+    private static void info(CommandSourceStack source, RiftRecord r) {
+        source.sendSuccess(() -> Component.translatable("command.mxt.rift.record", r.id().toString(), r.revision(), r.data().shape().vertices().size(),
+                r.data().destination().type(), r.data().durationTicks(), r.data().enabled()), false);
     }
 }

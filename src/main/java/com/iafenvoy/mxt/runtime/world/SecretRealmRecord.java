@@ -6,6 +6,7 @@ import com.iafenvoy.mxt.util.codec.OptionalCodecs;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
+import net.minecraft.core.UUIDUtil;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.Level;
@@ -24,7 +25,7 @@ import java.util.UUID;
  */
 public record SecretRealmRecord(Holder<SecretRealm> definition, int index, ResourceKey<Level> dimension,
                                 OptionalLong seed, Optional<UUID> owner, long startedAt, long expiresAt,
-                                Optional<Vec3> anchor, boolean prepared, List<UUID> members) {
+                                Optional<Vec3> anchor, boolean prepared, List<UUID> members, UUID instanceId) {
     public static final Codec<UUID> UUID_CODEC = Codec.STRING.xmap(UUID::fromString, UUID::toString);
     public static final Codec<SecretRealmRecord> CODEC = RecordCodecBuilder.create(i -> i.group(
             SecretRealm.CODEC.fieldOf("definition").forGetter(SecretRealmRecord::definition),
@@ -36,8 +37,17 @@ public record SecretRealmRecord(Holder<SecretRealm> definition, int index, Resou
             Codec.LONG.lenientOptionalFieldOf("expires_at", -1L).forGetter(SecretRealmRecord::expiresAt),
             Vec3.CODEC.lenientOptionalFieldOf("anchor").forGetter(SecretRealmRecord::anchor),
             Codec.BOOL.lenientOptionalFieldOf("prepared", false).forGetter(SecretRealmRecord::prepared),
-            UUID_CODEC.listOf().lenientOptionalFieldOf("members", List.of()).forGetter(SecretRealmRecord::members)
-    ).apply(i, SecretRealmRecord::new));
+            UUID_CODEC.listOf().lenientOptionalFieldOf("members", List.of()).forGetter(SecretRealmRecord::members),
+            UUIDUtil.CODEC.optionalFieldOf("instance_id").forGetter(record -> Optional.of(record.instanceId()))
+    ).apply(i, (definition, index, dimension, seed, owner, started, expires, anchor, prepared, members, identity) ->
+            new SecretRealmRecord(definition, index, dimension, seed, owner, started, expires, anchor, prepared, members,
+                    identity.orElseGet(UUID::randomUUID))));
+
+    public SecretRealmRecord(Holder<SecretRealm> definition, int index, ResourceKey<Level> dimension,
+                             OptionalLong seed, Optional<UUID> owner, long startedAt, long expiresAt,
+                             Optional<Vec3> anchor, boolean prepared, List<UUID> members) {
+        this(definition, index, dimension, seed, owner, startedAt, expiresAt, anchor, prepared, members, UUID.randomUUID());
+    }
 
     public SecretRealm instance() {
         return this.definition.value();
@@ -72,38 +82,38 @@ public record SecretRealmRecord(Holder<SecretRealm> definition, int index, Resou
     // Nobody inside: the clock stops until the next arrival, and the claim and terrain stay.
     public SecretRealmRecord idle() {
         return new SecretRealmRecord(this.definition, this.index, this.dimension, this.seed, this.owner, -1L, -1L,
-                this.anchor, this.prepared, List.of());
+                this.anchor, this.prepared, List.of(), this.instanceId);
     }
 
     public SecretRealmRecord with(List<UUID> value) {
         return new SecretRealmRecord(this.definition, this.index, this.dimension, this.seed, this.owner, this.startedAt,
-                this.expiresAt, this.anchor, this.prepared, List.copyOf(value));
+                this.expiresAt, this.anchor, this.prepared, List.copyOf(value), this.instanceId);
     }
 
     public SecretRealmRecord withOwner(UUID id) {
         return new SecretRealmRecord(this.definition, this.index, this.dimension, this.seed, Optional.of(id), this.startedAt,
-                this.expiresAt, this.anchor, this.prepared, this.members);
+                this.expiresAt, this.anchor, this.prepared, this.members, this.instanceId);
     }
 
     public SecretRealmRecord withAnchor(Vec3 value) {
         return new SecretRealmRecord(this.definition, this.index, this.dimension, this.seed, this.owner, this.startedAt,
-                this.expiresAt, Optional.of(value), this.prepared, this.members);
+                this.expiresAt, Optional.of(value), this.prepared, this.members, this.instanceId);
     }
 
     public SecretRealmRecord asPrepared() {
         return new SecretRealmRecord(this.definition, this.index, this.dimension, this.seed, this.owner, this.startedAt,
-                this.expiresAt, this.anchor, true, this.members);
+                this.expiresAt, this.anchor, true, this.members, this.instanceId);
     }
 
     // A timed secret realm restarts its clock, so a claimed secret realm cannot expire while it is dormant.
     public SecretRealmRecord restarted(long gameTime) {
         long duration = this.instance().durationTicks();
         return new SecretRealmRecord(this.definition, this.index, this.dimension, this.seed, this.owner, gameTime,
-                duration <= 0L ? -1L : gameTime + duration, this.anchor, this.prepared, List.of());
+                duration <= 0L ? -1L : gameTime + duration, this.anchor, this.prepared, List.of(), this.instanceId);
     }
 
     public SecretRealmRecord dormant() {
         return new SecretRealmRecord(this.definition, this.index, this.dimension, this.seed, this.owner, this.startedAt,
-                this.expiresAt, this.anchor, this.prepared, List.of());
+                this.expiresAt, this.anchor, this.prepared, List.of(), this.instanceId);
     }
 }

@@ -77,6 +77,8 @@ public final class SecretRealmEntryLocator {
     // The height of the first blocking block; the world floor for a secret realm with no floor at all.
     public static double surface(ServerLevel level, double x, double z) {
         BlockPos column = new BlockPos(Mth.floor(x), level.getMinY(), Mth.floor(z));
+        // Level#getHeight returns the world floor for an unloaded column instead of preparing its terrain.
+        level.getChunkAt(column);
         return level.getHeight(Types.MOTION_BLOCKING_NO_LEAVES, column.getX(), column.getZ());
     }
 

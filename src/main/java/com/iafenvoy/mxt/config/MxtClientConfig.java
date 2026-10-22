@@ -7,7 +7,6 @@ import com.iafenvoy.jupiter.config.entry.EnumEntry;
 import com.iafenvoy.jupiter.config.entry.IntegerEntry;
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.runtime.cultivation.TechniqueProgress.Mode;
-import com.iafenvoy.mxt.runtime.rift.RiftMesh;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 
@@ -78,20 +77,11 @@ public final class MxtClientConfig extends AutoInitConfigContainer {
     }
 
     public static final class Rifts extends AutoInitConfigCategoryBase {
-        // Off switches to plain translucent colour, which is what a shader pack or driver that disagrees with
-        // the custom pipeline falls back on.
+        // Basic rendering keeps the same opaque geometry without the animated material.
         public final BooleanEntry shaders = BooleanEntry.builder("config.mxt.client.rifts.shaders", true)
                 .key("shaders")
                 .tooltip("config.mxt.client.rifts.shaders.tooltip")
                 .build();
-        // One measurement for a node's cube, a link's diameter and a fill slab's thickness: the floor keeps a
-        // subtle rift visible and the ceiling keeps one block from overfilling its own cube.
-        public final DoubleEntry thickness = DoubleEntry.builder("config.mxt.client.rifts.thickness", RiftMesh.DEFAULT_THICKNESS)
-                .key("thickness")
-                .tooltip("config.mxt.client.rifts.thickness.tooltip")
-                .range(RiftMesh.MIN_THICKNESS, RiftMesh.MAX_THICKNESS)
-                .build();
-
         private Rifts() {
             super("rifts", "config.mxt.client.rifts");
         }

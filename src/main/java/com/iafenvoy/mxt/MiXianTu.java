@@ -9,29 +9,24 @@ import com.iafenvoy.mxt.registry.*;
 import com.iafenvoy.mxt.registry.cache.RegistryCaches;
 import com.mojang.logging.LogUtils;
 import net.neoforged.bus.api.IEventBus;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.fml.loading.FMLEnvironment;
 import org.slf4j.Logger;
 
 @Mod(MiXianTu.MOD_ID)
+@EventBusSubscriber
 public final class MiXianTu {
     public static final String MOD_ID = "mxt";
     public static final Logger LOGGER = LogUtils.getLogger();
 
     public MiXianTu(IEventBus bus) {
-        // Before any world can load: the registry caches are only rebuilt if they were registered before the first
-        // TagsUpdatedEvent, and nothing else touches that class this early.
-        RegistryCaches.init();
-
         ConfigManager.getInstance().registerServerConfigHandler(MxtServerConfig.INSTANCE, PermissionChecker.IS_OPERATOR);
 
-        CuriosIntegration.registerPredicates();
-
-        MxtDataStorages.REGISTRY.register(bus);
-        MxtTriggers.REGISTRY.register(bus);
-        MxtAbilityTypes.REGISTRY.register(bus);
         MxtAbilityTargetSelectors.REGISTRY.register(bus);
-        MxtCosts.REGISTRY.register(bus);
+        MxtAbilityTypes.REGISTRY.register(bus);
         MxtAttachments.REGISTRY.register(bus);
         MxtAuraMaximums.REGISTRY.register(bus);
         MxtBiEntityActions.REGISTRY.register(bus);
@@ -40,11 +35,13 @@ public final class MiXianTu {
         MxtBlockConditions.REGISTRY.register(bus);
         MxtBlockEntities.REGISTRY.register(bus);
         MxtBlocks.REGISTRY.register(bus);
+        MxtCosts.REGISTRY.register(bus);
         MxtCreativeTabs.REGISTRY.register(bus);
         MxtCriteriaTriggers.REGISTRY.register(bus);
         MxtCurseTypes.REGISTRY.register(bus);
         MxtDamageConditions.REGISTRY.register(bus);
         MxtDataComponents.REGISTRY.register(bus);
+        MxtDataStorages.REGISTRY.register(bus);
         MxtEntityActions.REGISTRY.register(bus);
         MxtEntityConditions.REGISTRY.register(bus);
         MxtEntityDataSerializers.REGISTRY.register(bus);
@@ -66,16 +63,21 @@ public final class MiXianTu {
         MxtParticleTypes.REGISTRY.register(bus);
         MxtRecipeSerializers.REGISTRY.register(bus);
         MxtRecipeTypes.REGISTRY.register(bus);
-        MxtSecretRealmGenerations.REGISTRY.register(bus);
-        MxtTalismanTypes.REGISTRY.register(bus);
-        MxtResourceBarRenderers.REGISTRY.register(bus);
         MxtResourceBarContexts.REGISTRY.register(bus);
+        MxtResourceBarRenderers.REGISTRY.register(bus);
         MxtResourceBarVisibilities.REGISTRY.register(bus);
         MxtResourceValueProviders.REGISTRY.register(bus);
+        MxtSecretRealmGenerations.REGISTRY.register(bus);
+        MxtTalismanTypes.REGISTRY.register(bus);
+        MxtTicketTypes.REGISTRY.register(bus);
         MxtTimelineEntries.REGISTRY.register(bus);
+        MxtTriggers.REGISTRY.register(bus);
+    }
 
-        // What the picker shows for this mod's registries; the picker itself owns the screen, the command and the
-        // packet, so this is the only place our content meets it.
+    @SubscribeEvent
+    public static void onInit(FMLCommonSetupEvent event) {
+        RegistryCaches.init();
+        CuriosIntegration.registerPredicates();
         PickerCategories.register();
     }
 

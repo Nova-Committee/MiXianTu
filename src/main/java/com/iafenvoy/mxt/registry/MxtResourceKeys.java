@@ -38,6 +38,7 @@ import com.iafenvoy.mxt.data.resource.ResourceValueProvider;
 import com.iafenvoy.mxt.data.resourcebar.ResourceBarContext;
 import com.iafenvoy.mxt.data.resourcebar.ResourceBarRenderData;
 import com.iafenvoy.mxt.data.resourcebar.ResourceBarVisibility;
+import com.iafenvoy.mxt.data.rift.RiftPreset;
 import com.iafenvoy.mxt.data.secretrealm.SecretRealm;
 import com.iafenvoy.mxt.data.secretrealm.SecretRealmGeneration;
 import com.iafenvoy.mxt.data.storage.DataStorage;
@@ -60,6 +61,7 @@ import net.objecthunter.exp4j.function.Function;
  * codecs and runtime services can read registry identity without depending on a registration class.
  */
 public final class MxtResourceKeys {
+    public static final ResourceKey<Registry<RiftPreset>> RIFT = create("rift");
     // Builtin registries
     public static final ResourceKey<Registry<MapCodec<? extends AbilityType>>> ABILITY_TYPE = create("ability_type");
     public static final ResourceKey<Registry<MapCodec<? extends TargetSelector>>> ABILITY_TARGET_SELECTOR_TYPE = create("ability_target_selector_type");

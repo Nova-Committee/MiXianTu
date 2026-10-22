@@ -32,16 +32,21 @@ public final class MxtRenderPipelines {
             .withDepthStencilState(DepthStencilState.DEFAULT)
             .withCull(false)
             .build();
-    public static final RenderPipeline RIFT = RenderPipeline.builder(RenderPipelines.MATRICES_PROJECTION_SNIPPET, RenderPipelines.GLOBALS_SNIPPET)
-            .withLocation(id("pipeline/rift"))
-            .withVertexShader(id("core/rift"))
-            .withFragmentShader(id("core/rift"))
-            .withSampler("Sampler0")
-            .withVertexFormat(DefaultVertexFormat.POSITION_COLOR, VertexFormat.Mode.QUADS)
-            .withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT))
-            .withDepthStencilState(DepthStencilState.DEFAULT)
-            .withCull(false)
-            .build();
+    public static final RenderPipeline RIFT = riftPipeline("rift");
+    public static final RenderPipeline RIFT_BASIC = riftPipeline("rift_basic");
+    public static final RenderPipeline RIFT_FALLBACK = RenderPipeline.builder(RenderPipelines.MATRICES_PROJECTION_SNIPPET)
+            .withLocation(id("pipeline/rift_fallback")).withVertexShader("core/position_color").withFragmentShader("core/position_color")
+            .withVertexFormat(DefaultVertexFormat.POSITION_COLOR, VertexFormat.Mode.TRIANGLES)
+            .withColorTargetState(new ColorTargetState(Optional.empty(), ColorTargetState.WRITE_COLOR))
+            .withDepthStencilState(DepthStencilState.DEFAULT).withCull(false).build();
+    private static RenderPipeline riftPipeline(String shader) {
+        return RenderPipeline.builder(RenderPipelines.MATRICES_PROJECTION_SNIPPET, RenderPipelines.GLOBALS_SNIPPET)
+                .withLocation(id("pipeline/" + shader)).withVertexShader(id("core/rift"))
+                .withFragmentShader(id("core/" + shader)).withUniform("RiftParameters", UniformType.UNIFORM_BUFFER)
+                .withVertexFormat(DefaultVertexFormat.POSITION_TEX, VertexFormat.Mode.TRIANGLES)
+                .withColorTargetState(new ColorTargetState(Optional.empty(), ColorTargetState.WRITE_COLOR))
+                .withDepthStencilState(DepthStencilState.DEFAULT).withCull(false).build();
+    }
     public static final RenderPipeline SWORD_FLUID = flameBase("sword_fluid")
             .withSampler("FluidField")
             .withDepthStencilState(Optional.empty())
@@ -120,6 +125,8 @@ public final class MxtRenderPipelines {
     public static void registerPipelines(RegisterRenderPipelinesEvent event) {
         event.registerPipeline(SWORD_BLADE);
         event.registerPipeline(RIFT);
+        event.registerPipeline(RIFT_BASIC);
+        event.registerPipeline(RIFT_FALLBACK);
         event.registerPipeline(SWORD_FLUID);
         event.registerPipeline(SWORD_FLAME_SURFACE);
         event.registerPipeline(SWORD_FLAME_PARTICLE);

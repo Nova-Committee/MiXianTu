@@ -5,7 +5,6 @@ import com.iafenvoy.mxt.compat.geckolib.GeckoLibMountRenderers;
 import com.iafenvoy.mxt.render.accessory.BackWeaponRenderer;
 import com.iafenvoy.mxt.render.accessory.BeltWeaponRenderer;
 import com.iafenvoy.mxt.render.block.DisplayStandBlockEntityRenderer;
-import com.iafenvoy.mxt.render.block.RiftBlockEntityRenderer;
 import com.iafenvoy.mxt.render.block.StationBlockEntityRenderer;
 import com.iafenvoy.mxt.render.entity.*;
 import com.iafenvoy.mxt.render.mount.MountRenderers;
@@ -52,7 +51,6 @@ public final class MxtRenderers {
         event.registerBlockEntityRenderer(MxtBlockEntities.TRADE_STATION.get(), StationBlockEntityRenderer::new);
         event.registerBlockEntityRenderer(MxtBlockEntities.SYSTEM_STATION.get(), StationBlockEntityRenderer::new);
         event.registerBlockEntityRenderer(MxtBlockEntities.DISPLAY_STAND.get(), DisplayStandBlockEntityRenderer::new);
-        event.registerBlockEntityRenderer(MxtBlockEntities.RIFT.get(), RiftBlockEntityRenderer::new);
     }
 
     @SubscribeEvent
