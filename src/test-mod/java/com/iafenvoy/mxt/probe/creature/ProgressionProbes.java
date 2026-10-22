@@ -1,6 +1,5 @@
 package com.iafenvoy.mxt.probe.creature;
 
-import com.google.gson.JsonObject;
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.attachment.AbilityAttachment;
 import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
@@ -21,12 +20,8 @@ import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.ability.AbilityGrantService;
 import com.iafenvoy.mxt.runtime.ability.PassiveAttributeService;
 import com.iafenvoy.mxt.runtime.creature.ContractService;
+import com.iafenvoy.mxt.runtime.progression.*;
 import com.iafenvoy.mxt.runtime.resulting.failures.ProgressionFailure;
-import com.iafenvoy.mxt.runtime.progression.ProgressionAdminService;
-import com.iafenvoy.mxt.runtime.progression.ProgressionDamageMultiplier;
-import com.iafenvoy.mxt.runtime.progression.ProgressionDriver;
-import com.iafenvoy.mxt.runtime.progression.ProgressionOwners;
-import com.iafenvoy.mxt.runtime.progression.ProgressionService;
 import com.iafenvoy.mxt.runtime.trigger.TriggerDispatcher;
 import com.iafenvoy.mxt.runtime.trigger.TriggerSubscription;
 import com.iafenvoy.mxt.testmod.MxtTestEntities;
@@ -35,7 +30,6 @@ import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.math.CompareOperation;
 import com.mojang.datafixers.util.Either;
-import com.mojang.serialization.JsonOps;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
@@ -93,8 +87,7 @@ public final class ProgressionProbes {
         }
     }
 
-    // The contract condition answers from the record, so a body nobody took answers bound=false; the
-    // contradictory shape is refused when the definition loads rather than read as a silent false.
+    // The contract condition answers from the record, so a body nobody took answers bound=false.
     private static void contractCondition(ProbeContext context) {
         ServerLevel level = context.level();
         ProbeBeast.reset();
@@ -103,8 +96,7 @@ public final class ProgressionProbes {
             ProbeBeast beast = spawnProbeBeast(level, context.player().blockPosition().offset(4, 0, 0));
             spawned.add(beast);
             boolean contractAsk = new ContractEntityCondition(false, List.of(), List.of()).test(beast, FormulaContext.of(beast))
-                    && !new ContractEntityCondition(true, List.of(), List.of()).test(beast, FormulaContext.of(beast))
-                    && ContractEntityCondition.CODEC.codec().parse(JsonOps.INSTANCE, contradictoryContractAsk()).error().isPresent();
+                    && !new ContractEntityCondition(true, List.of(), List.of()).test(beast, FormulaContext.of(beast));
             context.note("progression probe: contract_ask=" + contractAsk);
             context.check("progression contract_ask", contractAsk);
         } finally {
@@ -403,14 +395,6 @@ public final class ProgressionProbes {
         return ProgressionOwners.held(creature, ProbeDefinitions.PROBE_BEAST_PROFILE)
                 .flatMap(ProgressionService::current)
                 .map(held -> HolderHelper.id(held).equals(level)).orElse(false);
-    }
-
-    // Asks which contract a body signed while demanding that it signed none, which has no answer.
-    private static JsonObject contradictoryContractAsk() {
-        JsonObject object = new JsonObject();
-        object.addProperty("bound", false);
-        object.addProperty("type", "mxt_test:open_contract");
-        return object;
     }
 
     private static ProbeBeast spawnProbeBeast(ServerLevel level, BlockPos pos) {

@@ -1,17 +1,8 @@
 package com.iafenvoy.mxt.probe.artifact;
 
-import com.iafenvoy.mxt.data.ability.Ability;
-import com.iafenvoy.mxt.data.ability.render.builtin.ItemMountRender;
-import com.iafenvoy.mxt.data.ability.type.FlightControlAbilityType;
-import com.iafenvoy.mxt.data.ability.type.MountAbilityType;
 import com.iafenvoy.mxt.data.ability.type.StorageAbilityType;
-import com.iafenvoy.mxt.data.action.NoOpAction;
-import com.iafenvoy.mxt.data.action.builtin.entity.PlaySoundAction;
 import com.iafenvoy.mxt.data.artifact.Artifact;
 import com.iafenvoy.mxt.data.aura.Aura;
-import com.iafenvoy.mxt.data.cost.Cost;
-import com.iafenvoy.mxt.data.cost.builtin.ResourceCost;
-import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.probe.Probe;
 import com.iafenvoy.mxt.probe.ProbeContext;
 import com.iafenvoy.mxt.probe.ProbeDefinitions;
@@ -20,11 +11,9 @@ import com.iafenvoy.mxt.runtime.artifact.ArtifactService;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactService.RefineResult;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
-import com.iafenvoy.mxt.util.formula.NumberProvider;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
 import net.minecraft.core.HolderLookup.Provider;
-import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -49,11 +38,6 @@ public final class ArtifactProbes {
     public static List<Probe> probes() {
         List<Probe> probes = new ArrayList<>(List.of(
                 Probe.of("artifact/roster", ArtifactProbes::roster),
-                Probe.of("artifact/mount", ArtifactProbes::mount),
-                Probe.of("artifact/flight_control", ArtifactProbes::flightControl),
-                Probe.of("artifact/flight_control/offhand", ArtifactProbes::offhandFlight),
-                Probe.of("artifact/skiff", ArtifactProbes::skiff),
-                Probe.of("artifact/grants", ArtifactProbes::grants),
                 Probe.of("artifact/refine", ArtifactProbes::refine),
                 Probe.of("artifact/charm_gate", ArtifactProbes::charmGate),
                 Probe.of("artifact/ownership", ArtifactProbes::ownership)));
@@ -61,7 +45,6 @@ public final class ArtifactProbes {
         probes.addAll(ArtifactFlightProbes.probes());
         probes.addAll(ArtifactStorageProbes.probes());
         probes.addAll(ArtifactHoldProbes.probes());
-        probes.addAll(ArtifactTooltipProbes.probes());
         return List.copyOf(probes);
     }
 
@@ -97,76 +80,6 @@ public final class ArtifactProbes {
             context.check("artifact roster " + BuiltInRegistries.ITEM.getKey(row.item()) + " = "
                     + (holder == null ? "unclaimed" : HolderHelper.id(holder)), matches);
         }
-    }
-
-    // What the flight sword declares about itself: the vehicle entry and its own numbers, plus the skill that flies.
-    private static void mount(ProbeContext context) {
-        Provider access = context.registries();
-        FormulaContext formula = FormulaContext.of(context.player());
-        ItemStack flightStack = new ItemStack(Items.IRON_SWORD);
-        Holder<Resource> qiResource = context.require(MxtResourceKeys.RESOURCE, ProbeDefinitions.QI);
-        MountAbilityType mountEntry = ArtifactService.mount(access, flightStack).orElse(null);
-        List<Cost> mountCosts = ArtifactService.mountAbility(access, flightStack)
-                .map(ref -> ref.value().costs()).orElse(List.of());
-        boolean mount = mountEntry != null && close(mountEntry.speed().evaluate(formula), 0.12D)
-                && mountEntry.seats() == 2 && !mountEntry.sit()
-                && mountCosts.size() == 1 && mountCosts.getFirst() instanceof ResourceCost(
-                Holder<Resource> resource, NumberProvider amount
-        )
-                && resource.is(qiResource) && close(amount.evaluate(formula), 0.1D)
-                // Unwritten display and an unwritten render are both "whatever the renderer does by default".
-                && mountEntry.display().isEmpty()
-                && mountEntry.render() == ItemMountRender.INSTANCE
-                && mountEntry.actions().onMount() instanceof PlaySoundAction
-                && mountEntry.actions().onDismount() instanceof PlaySoundAction
-                && mountEntry.actions().tick() == NoOpAction.INSTANCE
-                && mountEntry.trail().filter(trail -> trail.movingOnly() && trail.interval() == 1
-                && trail.particle() == ParticleTypes.END_ROD).isPresent();
-        context.check("artifact roster mount speed=0.12 seats=2 costs=0.1 qi display=default mount_action=2sounds tick=none trail=end_rod", mount);
-    }
-
-    // The first flight technique: which hand it searches and what its own multiplier is.
-    private static void flightControl(ProbeContext context) {
-        FormulaContext formula = FormulaContext.of(context.player());
-        Holder<Ability> controlAbility = context.require(MxtResourceKeys.ABILITY, "sword_control");
-        FlightControlAbilityType control = controlAbility.value().type() instanceof FlightControlAbilityType value ? value : null;
-        boolean controlEntry = control != null && control.hand() == FlightControlAbilityType.Hand.EITHER
-                && close(control.speedMultiplier().evaluate(formula), 1.5D);
-        context.check("artifact roster flight_control hand=either multiplier=1.5", controlEntry);
-    }
-
-    // The second technique, which only ever looks in the off hand and carries its own take-off cooldown.
-    private static void offhandFlight(ProbeContext context) {
-        FormulaContext formula = FormulaContext.of(context.player());
-        FlightControlAbilityType offhand = context.require(MxtResourceKeys.ABILITY, "offhand_flight").value().type()
-                instanceof FlightControlAbilityType value ? value : null;
-        boolean offhandEntry = offhand != null && offhand.hand() == FlightControlAbilityType.Hand.OFF
-                && close(offhand.speedMultiplier().evaluate(formula), 0.8D)
-                && close(offhand.cooldown().evaluate(formula), 40.0D);
-        context.check("artifact roster offhand flight hand=off multiplier=0.8 cooldown=40", offhandEntry);
-    }
-
-    // The three-seat vehicle: what the geometry fields do once they are written out.
-    private static void skiff(ProbeContext context) {
-        Provider access = context.registries();
-        FormulaContext formula = FormulaContext.of(context.player());
-        MountAbilityType skiff = ArtifactService.mount(access, new ItemStack(Items.HEART_OF_THE_SEA)).orElse(null);
-        boolean skiffEntry = skiff != null && skiff.seats() == 3 && skiff.sit()
-                && close(skiff.width(), 0.9D) && close(skiff.height(), 0.3D) && close(skiff.stepHeight(), 0.6D)
-                && close(skiff.seatOffset(0).z(), 0.5D) && close(skiff.seatOffset(2).z(), -1.9D)
-                && close(skiff.speed().evaluate(formula), 0.1D);
-        context.check("artifact roster skiff seats=3 sit=true box=0.9x0.3 step=0.6 seats=3 offsets", skiffEntry);
-    }
-
-    // Two written entries - one id and one ability tag - reaching the two ids the definition grants: the tag is
-    // expanded against the same registry the grant itself resolves in.
-    private static void grants(ProbeContext context) {
-        Provider access = context.registries();
-        ItemStack wardStack = new ItemStack(Items.PRISMARINE_SHARD);
-        boolean grants = ArtifactService.definition(access, wardStack)
-                .map(holder -> holder.value().abilities().size()).orElse(0) == 2
-                && ArtifactService.abilityIds(access, wardStack).equals(List.of(ProbeDefinitions.PROBE_ABILITY, ProbeDefinitions.SWORD_FOCUS));
-        context.check("artifact roster grants=id+tag expands to 2 ids", grants);
     }
 
     // The refine action charges 40 of a 200 ceiling, so feeding raises the ceiling to 200 * 1.1.

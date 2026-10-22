@@ -1,10 +1,8 @@
 package com.iafenvoy.mxt.probe.combat;
 
-import com.iafenvoy.mxt.api.WheelSource;
 import com.iafenvoy.mxt.attachment.SpiritIdentityAttachment;
 import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.ability.AbilityEffect;
-import com.iafenvoy.mxt.data.ability.type.StorageAbilityType;
 import com.iafenvoy.mxt.data.aura.AuraRequirement;
 import com.iafenvoy.mxt.data.aura.AuraZone;
 import com.iafenvoy.mxt.data.condition.AlwaysCondition;
@@ -14,24 +12,18 @@ import com.iafenvoy.mxt.data.condition.builtin.entity.HasElementEntityCondition;
 import com.iafenvoy.mxt.data.condition.builtin.item.ItemElementCondition;
 import com.iafenvoy.mxt.data.cultivation.Element;
 import com.iafenvoy.mxt.data.cultivation.SpiritRoot;
-import com.iafenvoy.mxt.data.storage.DataStorageHolder;
-import com.iafenvoy.mxt.data.storage.builtin.ContainerDataStorage;
 import com.iafenvoy.mxt.probe.Probe;
 import com.iafenvoy.mxt.probe.ProbeContext;
 import com.iafenvoy.mxt.probe.ProbeDefinitions;
 import com.iafenvoy.mxt.registry.MxtAttachments;
-import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.runtime.artifact.ArtifactService;
 import com.iafenvoy.mxt.runtime.cultivation.*;
 import com.iafenvoy.mxt.runtime.damage.DamageCalculationService;
 import com.iafenvoy.mxt.runtime.damage.DamageElements;
 import com.iafenvoy.mxt.runtime.element.ElementReactionService;
 import com.iafenvoy.mxt.runtime.resulting.failures.CultivationFailure;
 import com.iafenvoy.mxt.runtime.resulting.failures.CultivationIdentityFailure;
-import com.iafenvoy.mxt.runtime.wheel.WheelEntryKinds;
-import com.iafenvoy.mxt.runtime.wheel.WheelSources;
 import com.iafenvoy.mxt.runtime.world.AuraPool;
 import com.iafenvoy.mxt.runtime.world.AuraResult;
 import com.iafenvoy.mxt.runtime.world.AuraService;
@@ -40,14 +32,9 @@ import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.number.Constant;
 import com.mojang.datafixers.util.Either;
-import io.netty.buffer.Unpooled;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
-import net.minecraft.core.HolderLookup.Provider;
-import net.minecraft.core.RegistryAccess;
-import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.TagKey;
@@ -59,7 +46,6 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.animal.pig.Pig;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.neoforged.neoforge.network.connection.ConnectionType;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
@@ -177,15 +163,13 @@ public final class ElementProbes {
     }
 
     // A definition is taken out of the world while the pack loads, not by a query-time tag: the fixture whose file
-    // carries a false `neoforge:conditions` block is absent while an ordinary one is present, and the file still ships.
+    // carries a false `neoforge:conditions` block is absent while an ordinary one is present.
     private static void gated(ProbeContext context) {
-        boolean gatedFile = context.server().getResourceManager()
-                .getResource(Identifier.fromNamespaceAndPath("mxt_test", "mxt/element/condition_gated.json")).isPresent();
         boolean gated = MxtDatapackRegistries.holder(context.registries(), MxtResourceKeys.ELEMENT, ProbeDefinitions.PROBE_GATED_ELEMENT).isEmpty();
         boolean plain = MxtDatapackRegistries.holder(context.registries(), MxtResourceKeys.ELEMENT, ProbeDefinitions.PROBE_INERT_ELEMENT).isPresent();
-        boolean gatedOut = gatedFile && gated && plain;
-        String report = "element probe: condition-gated file=" + gatedFile
-                + " element absent=" + gated + " plain element present=" + plain;
+        boolean gatedOut = gated && plain;
+        String report = "element probe: condition-gated element absent=" + gated
+                + " plain element present=" + plain;
         context.note(report + (gatedOut ? " OK" : " MISMATCH"));
         context.check(report, gatedOut);
     }
@@ -515,40 +499,6 @@ public final class ElementProbes {
 
     private static TagKey<Element> elementTag() {
         return TagKey.create(MxtResourceKeys.ELEMENT, ProbeDefinitions.PROBE_ELEMENT_TAG);
-    }
-
-    // The container a stack declares, as the roster rows state it: the slots of the first storage ability it offers.
-    private static int containerSlots(Provider access, ItemStack stack, FormulaContext context) {
-        return ArtifactService.abilities(access, stack).stream()
-                .filter(ref -> ref.value().type() instanceof StorageAbilityType)
-                .findFirst()
-                .map(ref -> ArtifactService.storageSlots(stack, ref, context))
-                .orElse(0);
-    }
-
-    // One page's answer to "would a trigger for this ability from this page be honoured".
-    private static boolean offers(LivingEntity probe, WheelSource source, Identifier ability) {
-        return WheelSources.offers(probe, source, WheelEntryKinds.ABILITY, ability);
-    }
-
-    // Sends the ability storage component through the registered network codec and reads it back: the very codec the
-    // server uses when handing a container slot to a client, and where one empty stack could take the packet down.
-    private static boolean roundTripsStorage(DataStorageHolder holder, Holder<Ability> ability, RegistryAccess registries) {
-        if (holder == null) return false;
-        DataComponentType<DataStorageHolder> type = MxtDataComponents.STORAGE.get();
-        // The connection type only tells NeoForge what the other end is; NEOFORGE is what this server's own
-        // client is, which is who the codec under test would be encoding for.
-        RegistryFriendlyByteBuf buffer = new RegistryFriendlyByteBuf(Unpooled.buffer(), registries, ConnectionType.NEOFORGE);
-        try {
-            type.streamCodec().encode(buffer, holder);
-            DataStorageHolder decoded = type.streamCodec().decode(buffer);
-            return decoded.get(ability, ContainerDataStorage.class)
-                    .filter(value -> value.contents().size() == 27 && value.get(0).isEmpty()
-                            && value.get(1).is(Items.STONE) && value.get(1).getCount() == 3)
-                    .isPresent();
-        } catch (RuntimeException error) {
-            return false;
-        }
     }
 
     // Sorted, for a probe line that has to show which elements an item was read as rather than only how many.

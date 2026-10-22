@@ -16,6 +16,8 @@ import com.iafenvoy.mxt.probe.ProbeDefinitions;
 import com.iafenvoy.mxt.registry.*;
 import com.iafenvoy.mxt.runtime.ability.AbilityGrantService;
 import com.iafenvoy.mxt.runtime.creature.*;
+import com.iafenvoy.mxt.runtime.resulting.Failures;
+import com.iafenvoy.mxt.runtime.resulting.Result;
 import com.iafenvoy.mxt.runtime.resulting.failures.ContractFailure;
 import com.iafenvoy.mxt.runtime.wheel.WheelEntryKinds;
 import com.iafenvoy.mxt.runtime.wheel.WheelService;
@@ -45,8 +47,6 @@ import net.neoforged.neoforge.event.tick.EntityTickEvent;
 
 import java.util.ArrayList;
 import java.util.List;
-import com.iafenvoy.mxt.runtime.resulting.Failures;
-import com.iafenvoy.mxt.runtime.resulting.Result;
 
 /**
  * The contract lifecycle, driven through the interfaces a creature implements itself: eligibility, the price before

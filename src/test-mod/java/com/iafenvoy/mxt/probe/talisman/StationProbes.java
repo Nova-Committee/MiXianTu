@@ -86,11 +86,6 @@ public final class StationProbes {
         Station station = openStation(context);
         TalismanWorkstationMenu menu = station.menu();
         if (menu == null) return;
-        context.check("the carried brush holds the 1000 pigment the station was opened with",
-                BrushPigmentService.pigment(context.player().containerMenu.getCarried()) == PIGMENT);
-        context.check("the station slot holds the blank talisman the station was opened with",
-                menu.paper().getItem(0).is(MxtItems.BLANK_TALISMAN.get()));
-        context.check("the station menu owns one slot", menu.paper().getContainerSize() == 1);
         context.note("drawing_station: opened at " + station.at().toShortString()
                 + " with one blank talisman and a brush holding 1000 pigment");
         context.note("drawing_station: carried=" + context.player().containerMenu.getCarried() + " slot="

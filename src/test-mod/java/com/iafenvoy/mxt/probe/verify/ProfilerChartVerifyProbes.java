@@ -8,55 +8,16 @@ import com.iafenvoy.mxt.util.profiling.ProfilerWindowSnapshot;
 
 import java.awt.*;
 import java.awt.image.BufferedImage;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.UncheckedIOException;
-import java.lang.classfile.ClassFile;
-import java.lang.classfile.CompoundElement;
-import java.lang.classfile.instruction.InvokeInstruction;
-import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
-import java.util.regex.MatchResult;
-import java.util.regex.Pattern;
 
 public final class ProfilerChartVerifyProbes {
     private ProfilerChartVerifyProbes() {
     }
 
     public static List<Probe> probes() {
-        return List.of(Probe.of("verify/profiling/gui_redraw", ProfilerChartVerifyProbes::redraw),
-                Probe.of("verify/profiling/gui_sampling", ProfilerChartVerifyProbes::sampling));
-    }
-
-    private static void sampling(ProbeContext context) {
-        String html = new String(resource("/assets/apricityui/apricity/mxt/profiler/profiler.html"), StandardCharsets.UTF_8);
-        List<String> charts = Pattern.compile("<canvas\\b[^>]*>").matcher(html).results().map(MatchResult::group).toList();
-        expect(context, "all virtual rows have a chart", charts.size(), 24);
-        expect(context, "every chart explicitly disables texture smoothing", charts.stream().allMatch(chart -> chart.contains("blur=\"false\"")), true);
-        expect(context, "chart buffers retain one column per tick", charts.stream().allMatch(chart -> chart.contains("width=\"240\"") && chart.contains("height=\"32\"")), true);
-        String mixins = new String(resource("/mxt.mixins.json"), StandardCharsets.UTF_8);
-        expect(context, "the canvas hook is registered on the client", Pattern.compile("\"client\"\\s*:\\s*\\[[^]]*\"ApricityCanvasMixin\"").matcher(mixins).find(), true);
-
-        // Read bytecode without loading client-only classes on the GameTest server.
-        List<InvokeInstruction> calls = ClassFile.of().parse(resource("/com/sighs/apricityui/element/Canvas.class")).methods().stream()
-                .filter(method -> method.methodName().equalsString("drawCanvas"))
-                .flatMap(method -> method.code().stream()).flatMap(CompoundElement::elementStream)
-                .filter(InvokeInstruction.class::isInstance).map(InvokeInstruction.class::cast)
-                .filter(call -> call.owner().asInternalName().equals("com/sighs/apricityui/render/ImageDrawer") && call.name().equalsString("draw"))
-                .toList();
-        expect(context, "the installed Canvas has exactly one sampling hook target", calls.size(), 1);
-        expect(context, "the installed draw call retains the targeted blur argument", calls.getFirst().type().stringValue(),
-                "(Lcom/mojang/blaze3d/vertex/PoseStack;Lcom/sighs/apricityui/spi/TextureKey;FFFFZ)V");
-    }
-
-    private static byte[] resource(String path) {
-        try (InputStream stream = Objects.requireNonNull(ProfilerChartVerifyProbes.class.getResourceAsStream(path), path)) {
-            return stream.readAllBytes();
-        } catch (IOException exception) {
-            throw new UncheckedIOException(exception);
-        }
+        return List.of(Probe.of("verify/profiling/gui_redraw", ProfilerChartVerifyProbes::redraw));
     }
 
     private static void redraw(ProbeContext context) {

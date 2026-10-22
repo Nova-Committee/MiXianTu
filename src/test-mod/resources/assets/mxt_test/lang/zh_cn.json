@@ -325,5 +325,7 @@
   "mxt.realm_stage.mxt_test.core_forming.minor_stage.0": "金丹初期",
   "mxt.realm_stage.mxt_test.core_forming.minor_stage.1": "金丹中期",
   "mxt.realm_stage.mxt_test.core_forming.minor_stage.2": "金丹后期",
-  "mxt.element.mxt_test.metal.description": "夹具用的金元素。"
+  "mxt.element.mxt_test.metal.description": "夹具用的金元素。",
+  "mxt.secret_realm.mxt_test.flat_realm": "超平坦测试秘境",
+  "mxt.secret_realm.mxt_test.flat_realm.description": "草地入口位于 Y=65，前方有回程门；离开后保留地形。"
 }

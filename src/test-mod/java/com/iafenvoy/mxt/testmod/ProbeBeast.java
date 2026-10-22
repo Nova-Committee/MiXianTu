@@ -1,16 +1,12 @@
 package com.iafenvoy.mxt.testmod;
 
 import com.iafenvoy.mxt.api.CaptureListener;
-import com.iafenvoy.mxt.api.Contractable;
 import com.iafenvoy.mxt.api.ContractOperations;
+import com.iafenvoy.mxt.api.Contractable;
 import com.iafenvoy.mxt.api.Perchable;
 import com.iafenvoy.mxt.data.creature.ContractBehavior;
 import com.iafenvoy.mxt.data.creature.ContractContext;
-import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.EntityReference;
-import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.PathfinderMob;
+import net.minecraft.world.entity.*;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Player;

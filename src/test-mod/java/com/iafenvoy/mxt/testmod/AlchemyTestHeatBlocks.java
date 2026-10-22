@@ -26,14 +26,22 @@ import net.neoforged.neoforge.registries.DeferredRegister;
 public final class AlchemyTestHeatBlocks {
     public static final DeferredRegister.Blocks BLOCKS = DeferredRegister.createBlocks(MxtTestMod.MOD_ID);
     public static final DeferredRegister.Items ITEMS = DeferredRegister.createItems(MxtTestMod.MOD_ID);
-    /** 150 maximum, 40 degrees per tick, from the block tag entry. Matches the old furnace heating rate. */
+    /**
+     * 150 maximum, 40 degrees per tick, from the block tag entry. Matches the old furnace heating rate.
+     */
     public static final DeferredBlock<Block> FIRE = register("alchemy_test_fire");
-    /** 80 maximum, 10 degrees per tick: the entry for this block outranks the tag's. Cannot reach a 100±5 recipe. */
+    /**
+     * 80 maximum, 10 degrees per tick: the entry for this block outranks the tag's. Cannot reach a 100±5 recipe.
+     */
     public static final DeferredBlock<Block> WEAK_FIRE = register("alchemy_weak_fire");
-    /** 250 / 25 while lit and nothing while unlit, whatever the table says. */
+    /**
+     * 250 / 25 while lit and nothing while unlit, whatever the table says.
+     */
     public static final DeferredBlock<Block> ADVANCED_FIRE = BLOCKS.register("alchemy_advanced_fire",
             () -> new AdvancedFire(properties("alchemy_advanced_fire")));
-    /** The advanced block's own switch; the probes flip it to see the API answer change. */
+    /**
+     * The advanced block's own switch; the probes flip it to see the API answer change.
+     */
     public static final BooleanProperty ADVANCED_LIT = BooleanProperty.create("lit");
 
     private AlchemyTestHeatBlocks() {

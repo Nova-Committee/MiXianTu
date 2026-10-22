@@ -18,7 +18,7 @@
     { "nbt": "mxt_test:probe/tower", "pos": [8, 64, 8] }
   ],
   "entry": {
-    "pos": [0.5, 65.0, 0.5],
+    "pos": [9.5, 65.0, 9.5],
     "yaw": 90.0,
     "pitch": 0.0
   },

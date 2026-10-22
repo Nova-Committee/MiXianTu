@@ -11,7 +11,9 @@ import net.neoforged.neoforge.registries.DeferredRegister.Items;
 
 import java.util.function.Function;
 
-/** Items owned only by the development scenario. */
+/**
+ * Items owned only by the development scenario.
+ */
 public final class MxtTestItems {
     public static final Items REGISTRY = DeferredRegister.createItems(MxtTestMod.MOD_ID);
     public static final DeferredItem<Item> QINGXIAO_SPIRIT_CRYSTAL = register("qingxiao_spirit_crystal", Item::new);

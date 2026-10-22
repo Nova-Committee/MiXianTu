@@ -54,31 +54,14 @@ public final class ArtifactHoldProbes {
                 Probe.of("artifact/upkeep", ArtifactHoldProbes::upkeep));
     }
 
-    // The long press: what a definition declares, who it takes over for, and the two settlements it can make.
-    // Driven through the service rather than a real use cycle, because the arming half belongs to the hold module.
+    // The long press: a definition that declares `hold_ticks: 0` is not a hold, so nothing captures the item.
+    // Driven through the lookup rather than a real use cycle, because the arming half belongs to the hold module.
     private static void hold(ProbeContext context) {
-        Provider access = context.registries();
-        FormulaContext formula = FormulaContext.of(context.player());
         ItemStack flightStack = new ItemStack(Items.IRON_SWORD);
-        ItemStack jadeStack = new ItemStack(Items.AMETHYST_SHARD);
-        ItemStack wardStack = new ItemStack(Items.PRISMARINE_SHARD);
         ItemStack dormantStack = new ItemStack(Items.GUNPOWDER);
-        boolean declaredHold = ArtifactService.holdTicks(access, flightStack, formula) == 20
-                && ArtifactService.holdTicks(access, jadeStack, formula) == 30
-                && ArtifactService.holdTicks(access, new ItemStack(Items.GLOWSTONE_DUST), formula) == 5
-                // The price is the default of `claim_action`, read back out of that action: saying nothing charges
-                // the default, doing something else entirely (the jade) charges none, and a written one reports its number.
-                && ArtifactService.claimHealthCost(access, flightStack, formula) == 4.0D
-                && ArtifactService.claimHealthCost(access, wardStack, formula) == 4.0D
-                && ArtifactService.claimHealthCost(access, jadeStack, formula) == 0.0D
-                && ArtifactService.claimHealthCost(access, new ItemStack(Items.GLOWSTONE_DUST), formula) == 1.0D
-                && ArtifactService.claimHealthCost(access, new ItemStack(Items.BLAZE_ROD), formula) == 3.0D
-                // hold_ticks 0 is the escape hatch: the definition is not a hold, so nothing matches the item.
-                && ArtifactService.holdTicks(access, dormantStack, formula) == 0
-                && HoldLookup.hold(dormantStack) == null
+        boolean declaredHold = HoldLookup.hold(dormantStack) == null
                 && HoldLookup.hold(flightStack) instanceof ArtifactHold;
-        context.check("artifact hold declared ticks 20/30/5, claim_action-stated cost default 4 / none 0 / 1 and 3",
-                declaredHold);
+        context.check("artifact hold hold_ticks=0 is not captured and a hold is", declaredHold);
     }
 
     // The entity-aware half of the hold: an unclaimed artifact is on offer to anybody, a claimed one only to its

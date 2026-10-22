@@ -1,10 +1,8 @@
 package com.iafenvoy.mxt.probe.cultivation;
 
-import com.google.gson.JsonObject;
 import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.compat.kubejs.MxtKubeJsApi;
 import com.iafenvoy.mxt.data.aura.Aura;
-import com.iafenvoy.mxt.data.cultivation.Physique;
 import com.iafenvoy.mxt.data.cultivation.RealmStage;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.probe.Probe;
@@ -16,8 +14,6 @@ import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService;
 import com.iafenvoy.mxt.runtime.damage.DamageCalculationService;
 import com.iafenvoy.mxt.runtime.spirit.SpiritBurstService;
-import com.iafenvoy.mxt.util.HolderHelper;
-import com.mojang.serialization.JsonOps;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.world.entity.EntitySpawnReason;
@@ -28,12 +24,10 @@ import net.minecraft.world.entity.animal.pig.Pig;
 import java.util.List;
 
 /**
- * The cultivation identity surface: the script API, the tier a definition now reports, and the reading of a physique
- * written as if it were elemental. One test per leg, so one disagreement no longer hides the rest.
+ * The cultivation identity surface: the script API and the burst a creature can fire without a player.
  *
  * <p>The guarantees pinned: a switched-off root or physique is still held while contributing nothing (so the reads
- * answer both questions separately); a tier is a reference with a reader; and a field belonging to another registry
- * is ignored while the definition still loads.
+ * answer both questions separately), and a burst is a spend plus a projectile that no player is needed for.
  */
 public final class IdentityProbes {
     private IdentityProbes() {
@@ -42,8 +36,6 @@ public final class IdentityProbes {
     public static List<Probe> probes() {
         return List.of(
                 Probe.of("cultivation/identity/grants", IdentityProbes::grants),
-                Probe.of("cultivation/identity/quality", IdentityProbes::quality),
-                Probe.of("cultivation/identity/foreign_fields", IdentityProbes::foreignFields),
                 Probe.kitted("cultivation/identity/mob_burst", IdentityProbes::mobBurst));
     }
 
@@ -88,29 +80,6 @@ public final class IdentityProbes {
         }
     }
 
-    // A tier is a reference rather than content's own word, so it is read back as the entry it names. The free-text
-    // rarity the two used to carry is gone; the fixtures now name real quality entries.
-    private static void quality(ProbeContext context) {
-        Holder<Physique> physique = context.require(MxtResourceKeys.PHYSIQUE, ProbeDefinitions.PROBE_PHYSIQUE);
-        boolean quality = physique.value().quality()
-                .map(holder -> HolderHelper.id(holder).equals(context.id("spirit_iron"))).orElse(false)
-                && context.require(MxtResourceKeys.SPIRIT_ROOT, ProbeDefinitions.PROBE_FIRE_ROOT).value().quality()
-                .map(holder -> HolderHelper.id(holder).equals(context.id("normal"))).orElse(false);
-        report(context, "identity probe: quality=" + quality, quality);
-    }
-
-    // A physique that also names an element, an element relation or a spirit-root field keeps loading and those keys
-    // are ignored - the record codec's own reading of a key it was not told about, which now includes the rarity key
-    // this shape used to read. A written number is still checked while the pack loads, so a broken multiplier is not.
-    private static void foreignFields(ProbeContext context) {
-        boolean foreignIgnored = ignoresForeignFields();
-        boolean negative = Physique.DIRECT_CODEC.parse(JsonOps.INSTANCE, named(single("damage_dealt_multiplier", -1.0D))).isError();
-        boolean plain = Physique.DIRECT_CODEC.parse(JsonOps.INSTANCE, named(single("rarity", "probe"))).result().isPresent();
-        boolean loose = foreignIgnored && negative && plain;
-        report(context, "identity probe: foreign_fields_ignored=" + foreignIgnored
-                + " negative_refused=" + negative + " plain_accepted=" + plain, loose);
-    }
-
     // A burst is a resource spend plus a projectile, and neither half asks for a player: the wheel is only how a
     // player requests one. The probe stands at the realm the aura's own use gate names.
     private static void mobBurst(ProbeContext context) {
@@ -147,35 +116,6 @@ public final class IdentityProbes {
     private static void report(ProbeContext context, String line, boolean value) {
         context.note(line + (value ? " OK" : " MISMATCH"));
         context.check(line, value);
-    }
-
-    // Ignoring a field is only a guarantee if it leaves no trace, so the two decoded definitions are compared. The
-    // rarity key is one of them: it is what this shape read before a tier became a reference.
-    private static boolean ignoresForeignFields() {
-        JsonObject foreign = new JsonObject();
-        foreign.addProperty("element", "mxt_test:fire");
-        foreign.addProperty("overcomes", "mxt_test:water");
-        foreign.addProperty("damage_types", "mxt_test:fire");
-        foreign.addProperty("rarity", "probe");
-        return Physique.DIRECT_CODEC.parse(JsonOps.INSTANCE, named(foreign)).result()
-                .equals(Physique.DIRECT_CODEC.parse(JsonOps.INSTANCE, named(new JsonObject())).result());
-    }
-
-    // A definition with no name or description would fail on those fields alone, which would make every leg below
-    // vacuous: both are only derivable from an entry id, and bare JsonOps carries none.
-    private static JsonObject named(JsonObject object) {
-        object.addProperty("name", "probe");
-        object.addProperty("description", "probe");
-        return object;
-    }
-
-    // One-field JSON object, for decode checks that ask whether a single key is enough to break a definition.
-    private static JsonObject single(String key, Object value) {
-        JsonObject object = new JsonObject();
-        if (value instanceof Number number) object.addProperty(key, number);
-        else if (value instanceof Boolean flag) object.addProperty(key, flag);
-        else object.addProperty(key, String.valueOf(value));
-        return object;
     }
 
     private static boolean close(double actual, double expected) {

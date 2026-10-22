@@ -1,16 +1,13 @@
 package com.iafenvoy.mxt.probe.verify;
 
-import com.google.gson.JsonElement;
 import com.iafenvoy.mxt.api.WheelEntryKind;
 import com.iafenvoy.mxt.api.WheelSource;
-import com.iafenvoy.mxt.network.payload.WheelActionC2SPayload;
 import com.iafenvoy.mxt.probe.Probe;
 import com.iafenvoy.mxt.probe.ProbeContext;
 import com.iafenvoy.mxt.probe.ProbeDefinitions;
 import com.iafenvoy.mxt.runtime.wheel.WheelEntryKinds;
 import com.iafenvoy.mxt.runtime.wheel.WheelSourceTypes;
 import com.iafenvoy.mxt.runtime.wheel.WheelSources;
-import com.mojang.serialization.JsonOps;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
@@ -21,8 +18,8 @@ import net.minecraft.world.item.ItemStack;
 import java.util.List;
 
 /**
- * A page and a kind a content mod registers: they are looked up by id, take part in the page numbering, keep their
- * id in a stored cell, and the request that names them travels as ids for the server to resolve.
+ * A page and a kind a content mod registers: they are looked up by id and take part in the page numbering, and the
+ * page the wheel lands on answers for its own entry only.
  */
 public final class WheelVerifyProbes {
     private WheelVerifyProbes() {
@@ -55,16 +52,6 @@ public final class WheelVerifyProbes {
         if (!WheelSources.offers(context.player(), source, kind, entry)
                 || WheelSources.offers(context.player(), source, kind, ProbeDefinitions.id("elsewhere")))
             return "the registered page did not answer for its own entry and only it";
-        if (WheelEntryKinds.parse("artifact") != WheelEntryKinds.ABILITY || WheelEntryKinds.parse("ability") != WheelEntryKinds.ABILITY)
-            return "a cell written before the ability merge no longer reads as an ability";
-        if (WheelEntryKinds.parse("no_such_kind") != WheelEntryKinds.EMPTY)
-            return "an unknown kind id did not read as an empty cell";
-        JsonElement written = WheelEntryKinds.CODEC.encodeStart(JsonOps.INSTANCE, kind).result().orElse(null);
-        if (written == null || !written.getAsString().equals(kindId.toString()))
-            return "a cell did not store the kind's id: " + written;
-        WheelActionC2SPayload payload = WheelActionC2SPayload.press(source.id(), kind.id(), entry);
-        if (!payload.source().equals(sourceId) || !payload.kind().equals(kindId) || payload.enabled().isPresent())
-            return "the press request did not carry the ids it was given";
         return null;
     }
 

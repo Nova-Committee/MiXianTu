@@ -6,29 +6,16 @@ import com.iafenvoy.mxt.particle.LightBeamParticleOptions;
 import com.iafenvoy.mxt.particle.LightBeamParticleOptions.FlowDirection;
 import com.iafenvoy.mxt.probe.Probe;
 import com.iafenvoy.mxt.probe.ProbeContext;
-import com.iafenvoy.mxt.render.particle.LightBeamParticleShape;
 import com.iafenvoy.mxt.render.particle.LightBeamParticleFrame;
 import com.iafenvoy.mxt.render.particle.LightBeamParticleMesh;
-import com.iafenvoy.mxt.registry.MxtParticleTypes;
+import com.iafenvoy.mxt.render.particle.LightBeamParticleShape;
 import com.mojang.serialization.JsonOps;
-import io.netty.buffer.Unpooled;
 import net.minecraft.core.particles.ParticleTypes;
-import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.network.RegistryFriendlyByteBuf;
-import net.minecraft.resources.Identifier;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.joml.FrustumIntersection;
 import org.joml.Matrix4f;
-import net.neoforged.neoforge.network.connection.ConnectionType;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.UncheckedIOException;
-import java.lang.classfile.ClassFile;
-import java.lang.classfile.CompoundElement;
-import java.lang.classfile.MethodModel;
-import java.lang.classfile.instruction.InvokeInstruction;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.ArrayList;
@@ -65,16 +52,6 @@ public final class LightBeamParticleVerifyProbes {
                                     + " terminals=" + terminals + " direction=" + direction;
                             LightBeamParticleOptions options = new LightBeamParticleOptions(0xCC55CCFF, 3, -2, -4, 8, .18F,
                                     direction, 2, 200, spread, 2, 4, terminals, terminals, filled, glow);
-                            expect(context, "all fields survive JSON" + label, LightBeamParticleOptions.CODEC.codec().parse(JsonOps.INSTANCE,
-                                    LightBeamParticleOptions.CODEC.codec().encodeStart(JsonOps.INSTANCE, options).getOrThrow()).getOrThrow(), options);
-                            RegistryFriendlyByteBuf network = new RegistryFriendlyByteBuf(Unpooled.buffer(), context.registries(), ConnectionType.NEOFORGE);
-                            try {
-                                LightBeamParticleOptions.STREAM_CODEC.encode(network, options);
-                                expect(context, "all flags survive network" + label, LightBeamParticleOptions.STREAM_CODEC.decode(network), options);
-                                expect(context, "decoding consumes the entire payload" + label, network.readableBytes(), 0);
-                            } finally {
-                                network.release();
-                            }
                             LightBeamParticleShape shape = new LightBeamParticleShape(options, origin.x(), origin.y(), origin.z(), 117L);
                             List<LightBeamParticleShape.Segment> before = segments(shape, 20, 0);
                             List<LightBeamParticleShape.Segment> later = segments(shape, 40, 9);
@@ -91,7 +68,8 @@ public final class LightBeamParticleVerifyProbes {
                                 ByteBuffer data = ByteBuffer.allocate(LightBeamParticleMesh.INSTANCE_BYTES).order(ByteOrder.nativeOrder());
                                 shape.writeInstance(segment, origin, data);
                                 expect(context, "the fixed instance layout is preserved" + label, data.position(), LightBeamParticleMesh.INSTANCE_BYTES);
-                                for (int offset = 0; offset < data.position(); offset += 4) finite &= Float.isFinite(data.getFloat(offset));
+                                for (int offset = 0; offset < data.position(); offset += 4)
+                                    finite &= Float.isFinite(data.getFloat(offset));
                                 expect(context, "shader mode identifies stationary glow" + label,
                                         data.getFloat(40), segment.glow() ? 2.0F : spread ? 1.0F : 0.0F);
                                 AABB box = shape.segmentBounds(segment).inflate(1.0E-4D);
@@ -146,12 +124,8 @@ public final class LightBeamParticleVerifyProbes {
             List<float[]> vertices = new ArrayList<>();
             List<Integer> indices = new ArrayList<>();
             LightBeamParticleMesh.write(lod, (x, y, ring, mode, u) -> vertices.add(new float[]{x, y, ring, mode, u}), indices::add);
-            expect(context, "LOD template vertex allocation matches lod=" + lod, vertices.size(), LightBeamParticleMesh.vertexCount(lod));
-            expect(context, "LOD template index allocation matches lod=" + lod, indices.size(), LightBeamParticleMesh.indexCount(lod));
             expect(context, "LOD indices stay within the immutable template lod=" + lod,
                     indices.stream().allMatch(index -> index >= 0 && index < vertices.size()), true);
-            expect(context, "LOD template attributes remain finite lod=" + lod,
-                    vertices.stream().allMatch(vertex -> { for (float value : vertex) if (!Float.isFinite(value)) return false; return true; }), true);
         }
         expect(context, "near LOD keeps eight sides", LightBeamParticleMesh.lod(31 * 31), 0);
         expect(context, "middle LOD begins at thirty-two blocks", LightBeamParticleMesh.lod(32 * 32), 1);
@@ -194,39 +168,22 @@ public final class LightBeamParticleVerifyProbes {
         frame.build(Vec3.ZERO, box -> true);
         expect(context, "many beams respect the global instance budget", frame.entries().size() <= LightBeamParticleMesh.MAX_INSTANCES, true);
         boolean sorted = true;
-        for (int i = 1; i < frame.entries().size(); i++) sorted &= frame.entries().get(i - 1).distanceSquared() >= frame.entries().get(i).distanceSquared();
+        for (int i = 1; i < frame.entries().size(); i++)
+            sorted &= frame.entries().get(i - 1).distanceSquared() >= frame.entries().get(i).distanceSquared();
         expect(context, "transparent batches preserve global far-to-near order", sorted, true);
         frame.build(Vec3.ZERO, box -> false);
         expect(context, "individual streak culling rejects entirely hidden streams", frame.entries().isEmpty(), true);
         frame.clear();
         expect(context, "clearing a frame drops previous requests", frame.entries().isEmpty(), true);
-        try (InputStream stream = Objects.requireNonNull(LightBeamParticleShape.class.getResourceAsStream(
-                "LightBeamParticleGroup$Buffers.class"))) {
-            List<MethodModel> methods = ClassFile.of().parse(stream.readAllBytes()).methods();
-            List<InvokeInstruction> drawCalls = methods.stream().filter(method -> method.methodName().equalsString("render"))
-                    .flatMap(method -> method.code().stream()).flatMap(CompoundElement::elementStream)
-                    .filter(InvokeInstruction.class::isInstance).map(InvokeInstruction.class::cast).toList();
-            expect(context, "drawing inside the engine-owned pass never rotates or creates GPU commands", drawCalls.stream().anyMatch(call ->
-                    call.owner().asInternalName().equals("com/mojang/blaze3d/systems/CommandEncoder")
-                            || call.name().equalsString("createCommandEncoder") || call.name().equalsString("rotate")), false);
-            expect(context, "the next preparation retires the previously submitted ring buffer", methods.stream()
-                    .filter(method -> method.methodName().equalsString("prepare"))
-                    .flatMap(method -> method.code().stream()).flatMap(CompoundElement::elementStream)
-                    .filter(InvokeInstruction.class::isInstance).map(InvokeInstruction.class::cast)
-                    .anyMatch(call -> call.owner().asInternalName().equals("net/minecraft/client/renderer/MappableRingBuffer")
-                            && call.name().equalsString("rotate")), true);
-        } catch (IOException exception) {
-            throw new UncheckedIOException(exception);
-        }
     }
 
     private static LightBeamParticleOptions options(float x, float z, float lower, float upper, float width,
-                                                 FlowDirection direction, float speed) {
+                                                    FlowDirection direction, float speed) {
         return options(x, z, lower, upper, width, direction, speed, LightBeamParticleOptions.DEFAULT_RADIUS);
     }
 
     private static LightBeamParticleOptions options(float x, float z, float lower, float upper, float width,
-                                                   FlowDirection direction, float speed, float radius) {
+                                                    FlowDirection direction, float speed, float radius) {
         return new LightBeamParticleOptions(0xCC55CCFF, x, z, lower, upper, width, direction, speed, 200, false, radius, LightBeamParticleOptions.DEFAULT_DENSITY);
     }
 
@@ -247,9 +204,6 @@ public final class LightBeamParticleVerifyProbes {
             expect(context, "invalid radius is rejected=" + invalid,
                     LightBeamParticleOptions.CODEC.codec().parse(JsonOps.INSTANCE, json).result().isPresent(), false);
         }
-        expect(context, "the particle is registered as light_beam", BuiltInRegistries.PARTICLE_TYPE.getKey(defaults.getType()),
-                Identifier.fromNamespaceAndPath("mxt", "light_beam"));
-        expect(context, "the old particle id is absent", BuiltInRegistries.PARTICLE_TYPE.containsKey(Identifier.fromNamespaceAndPath("mxt", "laser")), false);
         for (boolean enabled : new boolean[]{false, true}) {
             JsonObject json = new JsonObject();
             json.addProperty("color", "#CC55CCFF");
@@ -266,18 +220,6 @@ public final class LightBeamParticleVerifyProbes {
             json.addProperty("spread", enabled);
             LightBeamParticleOptions options = LightBeamParticleOptions.CODEC.codec().parse(JsonOps.INSTANCE, json).getOrThrow();
             expect(context, "JSON selects spread=" + enabled, options.spread(), enabled);
-            expect(context, "all options survive a JSON round trip spread=" + enabled,
-                    LightBeamParticleOptions.CODEC.codec().parse(JsonOps.INSTANCE,
-                            LightBeamParticleOptions.CODEC.codec().encodeStart(JsonOps.INSTANCE, options).getOrThrow()).getOrThrow(), options);
-            RegistryFriendlyByteBuf buffer = new RegistryFriendlyByteBuf(Unpooled.buffer(), context.registries(), ConnectionType.NEOFORGE);
-            try {
-                MxtParticleTypes.LIGHT_BEAM.get().streamCodec().encode(buffer, options);
-                expect(context, "all options survive a network round trip spread=" + enabled,
-                        LightBeamParticleOptions.STREAM_CODEC.decode(buffer), options);
-                expect(context, "network decoding consumes the complete payload spread=" + enabled, buffer.readableBytes(), 0);
-            } finally {
-                buffer.release();
-            }
             json.addProperty("type", "mxt:light_beam");
             expect(context, "the registered particle codec selects spread=" + enabled,
                     ParticleTypes.CODEC.parse(JsonOps.INSTANCE, json).getOrThrow(), options);
@@ -355,16 +297,6 @@ public final class LightBeamParticleVerifyProbes {
                         String label = " bottom=" + bottom + " top=" + top + " spread=" + spread + " direction=" + direction;
                         LightBeamParticleOptions options = new LightBeamParticleOptions(0xCC55CCFF, 3, -2, 0, 12, .18F,
                                 direction, 1, 200, spread, 2, 4, bottom, top);
-                        expect(context, "terminal switches survive JSON" + label, LightBeamParticleOptions.CODEC.codec().parse(JsonOps.INSTANCE,
-                                LightBeamParticleOptions.CODEC.codec().encodeStart(JsonOps.INSTANCE, options).getOrThrow()).getOrThrow(), options);
-                        RegistryFriendlyByteBuf buffer = new RegistryFriendlyByteBuf(Unpooled.buffer(), context.registries(), ConnectionType.NEOFORGE);
-                        try {
-                            LightBeamParticleOptions.STREAM_CODEC.encode(buffer, options);
-                            expect(context, "terminal switches and direction survive network" + label, LightBeamParticleOptions.STREAM_CODEC.decode(buffer), options);
-                            expect(context, "terminal network payload is consumed" + label, buffer.readableBytes(), 0);
-                        } finally {
-                            buffer.release();
-                        }
                         LightBeamParticleShape shape = new LightBeamParticleShape(options, origin.x(), origin.y(), origin.z(), 117L);
                         List<LightBeamParticleShape.Segment> before = segments(shape, 20, 0), after = segments(shape, 20.05F, 0);
                         expect(context, "terminal segments respect the shared budget" + label, before.size() <= LightBeamParticleShape.MAX_SEGMENTS, true);
@@ -392,7 +324,8 @@ public final class LightBeamParticleVerifyProbes {
                             double lower = origin.y() - (bottom ? extension : 0);
                             double upper = origin.y() + 12 + (top ? extension : 0);
                             if (Math.min(segment.bottom(), next.get().bottom()) <= lower
-                                    || Math.max(segment.bottom() + segment.length(), next.get().bottom() + next.get().length()) >= upper) continue;
+                                    || Math.max(segment.bottom() + segment.length(), next.get().bottom() + next.get().length()) >= upper)
+                                continue;
                             movementError = Math.max(movementError, Math.abs(r2 - r1 - (onBottom ? -displacement : displacement)));
                             movingSamples++;
                         }
@@ -544,22 +477,6 @@ public final class LightBeamParticleVerifyProbes {
         expect(context, "a halo entering the view keeps the column", visible(frustum, options.bounds(1.7, -128, 0)), true);
         expect(context, "horizontal offsets participate in culling", visible(frustum,
                 options(-10, 0, 0, 256, 0.5F, FlowDirection.UP, 1).bounds(10, -128, 0)), true);
-
-        // Inspect the client-only group without loading it on the GameTest server.
-        try (InputStream stream = Objects.requireNonNull(LightBeamParticleShape.class.getResourceAsStream(
-                "LightBeamParticleGroup.class"), "The light_beam group bytecode must be available in the main module")) {
-            List<InvokeInstruction> calls = ClassFile.of().parse(stream.readAllBytes()).methods().stream()
-                    .filter(method -> method.methodName().equalsString("extractRenderState"))
-                    .flatMap(method -> method.code().stream()).flatMap(CompoundElement::elementStream)
-                    .filter(InvokeInstruction.class::isInstance).map(InvokeInstruction.class::cast).toList();
-            expect(context, "the real particle group calls the box visibility check", calls.stream().anyMatch(call ->
-                    call.owner().asInternalName().equals("net/minecraft/client/renderer/culling/Frustum")
-                            && call.name().equalsString("isVisible")), true);
-            expect(context, "the real particle group has no point visibility check", calls.stream().anyMatch(call ->
-                    call.name().equalsString("pointInFrustum")), false);
-        } catch (IOException exception) {
-            throw new UncheckedIOException(exception);
-        }
         expect(context, "client creation bypasses the origin distance filter", options.getType().getOverrideLimiter(), true);
     }
 

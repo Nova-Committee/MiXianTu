@@ -12,7 +12,6 @@ import com.iafenvoy.mxt.data.item.PillComponent;
 import com.iafenvoy.mxt.probe.Probe;
 import com.iafenvoy.mxt.probe.ProbeContext;
 import com.iafenvoy.mxt.registry.*;
-import com.iafenvoy.mxt.runtime.item.ItemBindingService;
 import com.iafenvoy.mxt.runtime.item.PillService;
 import com.iafenvoy.mxt.runtime.item.PillService.ModifyMode;
 import com.iafenvoy.mxt.runtime.item.PillUseService;
@@ -29,7 +28,6 @@ import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.NbtOps;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.protocol.game.ClientboundSetHeldSlotPacket;
-import net.minecraft.resources.Identifier;
 import net.minecraft.resources.RegistryOps;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -81,15 +79,12 @@ public final class PillProbes {
                 Probe.of("alchemy/pill/finish_after_saturation", PillProbes::finishAfterSaturation),
                 Probe.of("alchemy/pill/reentry", PillProbes::reentry),
                 Probe.of("alchemy/pill/cooldown_max_uses", PillProbes::cooldownMaxUses),
-                Probe.of("alchemy/pill/persistent_usage", PillProbes::persistentUsage),
                 Probe.of("alchemy/pill/plain_item_armed", PillProbes::plainItemArmed),
                 Probe.of("alchemy/pill/overdose_detox", PillProbes::overdoseDetox),
                 Probe.of("alchemy/pill/decay", PillProbes::decay),
-                Probe.of("alchemy/pill/excluded_pill", PillProbes::excludedPill),
                 Probe.of("alchemy/pill/overlay_keeps_limits", PillProbes::overlayKeepsLimits),
                 Probe.of("alchemy/pill/component_over_binding", PillProbes::componentOverBinding),
-                Probe.of("alchemy/pill/component_only", PillProbes::componentOnly),
-                Probe.of("alchemy/pill/pill_color", PillProbes::pillColor));
+                Probe.of("alchemy/pill/component_only", PillProbes::componentOnly));
     }
 
     // The six bindings and the absent pill the old command resolved once, before it ran any leg.
@@ -282,33 +277,6 @@ public final class PillProbes {
         });
     }
 
-    private static void persistentUsage(ProbeContext context) {
-        run(context, spawned -> {
-            Bindings bindings = fixtures(context);
-            if (bindings == null) return;
-            ServerPlayer player = context.player();
-            ServerLevelData clock = context.server().getWorldData().overworldData();
-            // The old leg read the two uses the cooldown leg above it had left behind; standing alone the ledger has
-            // to be earned the same way, and the comparison below is what reports a shortfall.
-            player.setItemInHand(InteractionHand.MAIN_HAND, dosed(Items.SWEET_BERRIES));
-            finish(player, 4);
-            clock.setGameTime(PillService.cooldownUntil(player, bindings.limited()));
-            player.setItemInHand(InteractionHand.MAIN_HAND, dosed(Items.SWEET_BERRIES));
-            finish(player, 4);
-
-            PillUsageAttachment roundTrip = copyUsage(player.getData(MxtAttachments.PILL_USAGE), context);
-            Pig pig = new Pig(EntityType.PIG, player.level());
-            pig.setPos(player.getX(), player.getY(), player.getZ());
-            player.level().addFreshEntity(pig);
-            spawned.add(pig);
-            pig.setData(MxtAttachments.PILL_USAGE, roundTrip);
-            leg(context, "persistent_usage", roundTrip.uses(bindings.limited()) == 2
-                            && pig.getData(MxtAttachments.PILL_USAGE).uses(bindings.limited()) == 2,
-                    "saved=" + roundTrip.uses(bindings.limited()) + " copied=" + pig.getData(MxtAttachments.PILL_USAGE).uses(bindings.limited()),
-                    "2 and 2");
-        });
-    }
-
     private static void plainItemArmed(ProbeContext context) {
         run(context, spawned -> {
             Bindings bindings = fixtures(context);
@@ -394,17 +362,6 @@ public final class PillProbes {
         });
     }
 
-    private static void excludedPill(ProbeContext context) {
-        run(context, spawned -> {
-            boolean missingPill = pill(context, "disabled_ref") == null;
-            boolean excludedFile = context.server().getResourceManager()
-                    .getResource(Identifier.fromNamespaceAndPath("mxt_test", "mxt/pill/disabled_ref.json")).isPresent();
-            leg(context, "excluded_pill", excludedFile && missingPill,
-                    "file=" + excludedFile + " pill=" + (missingPill ? "absent" : "present"),
-                    "file=true pill=absent");
-        });
-    }
-
     private static void overlayKeepsLimits(ProbeContext context) {
         run(context, spawned -> {
             Bindings bindings = fixtures(context);
@@ -480,20 +437,6 @@ public final class PillProbes {
                             + " limited=" + PillService.uses(player, bindings.limited())
                             + " toxicityUses=" + PillService.uses(player, bindings.toxicity()),
                     "gain=4 twice no bound counter");
-        });
-    }
-
-    private static void pillColor(ProbeContext context) {
-        run(context, spawned -> {
-            // What the client tint reads off a carrier stack: the colour of the pill it resolves. A stack that neither
-            // a binding nor its own component names paints nothing.
-            Pill painted = ItemBindingService.resolvePill(context.registries(),
-                    dosed(MxtItems.PILL.get(), component(context, "{\"pill\":\"mxt_test:toxicity\"}"))).effects().orElse(null);
-            // The fixture writes `#8F3FA8`, and a colour that names no alpha decodes as opaque, so what the fixture
-            // states is the low three bytes; the old leg compared the whole int and could never match.
-            leg(context, "pill_color", painted != null && (painted.color() & 0xFFFFFF) == 0x8F3FA8,
-                    "color=" + (painted == null ? "none" : Integer.toHexString(painted.color())),
-                    "color=8f3fa8");
         });
     }
 

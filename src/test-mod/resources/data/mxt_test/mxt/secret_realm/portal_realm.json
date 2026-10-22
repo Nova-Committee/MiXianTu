@@ -1,0 +1,66 @@
+{
+  "generation": {
+    "type": "mxt:void",
+    "biome": "minecraft:the_void",
+    "dimension_type": "minecraft:the_end"
+  },
+  "border": {
+    "size": 128
+  },
+  "max_members": 1,
+  "max_instances": 2,
+  "owned": true,
+  "entry": {
+    "pos": [
+      0.5,
+      65,
+      0.5
+    ]
+  },
+  "portals": [
+    {
+      "key": "return",
+      "relative_to_entry": true,
+      "placement": {
+        "origin": [
+          3,
+          0,
+          0
+        ],
+        "normal": [
+          0,
+          0,
+          1
+        ],
+        "tangent": [
+          1,
+          0,
+          0
+        ]
+      },
+      "shape": {
+        "vertices": [
+          [
+            -1,
+            0
+          ],
+          [
+            1,
+            0
+          ],
+          [
+            1,
+            2.5
+          ],
+          [
+            -1,
+            2.5
+          ]
+        ]
+      },
+      "destination": {
+        "type": "return"
+      }
+    }
+  ]
+}

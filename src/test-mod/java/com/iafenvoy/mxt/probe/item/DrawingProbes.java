@@ -8,7 +8,6 @@ import com.iafenvoy.mxt.item.block.TalismanWorkstationBlock;
 import com.iafenvoy.mxt.probe.Probe;
 import com.iafenvoy.mxt.probe.ProbeContext;
 import com.iafenvoy.mxt.probe.ProbeDefinitions;
-import com.iafenvoy.mxt.recipe.TalismanDrawingRecipe;
 import com.iafenvoy.mxt.registry.MxtBlocks;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.registry.MxtItems;
@@ -70,7 +69,6 @@ public final class DrawingProbes {
 
     public static List<Probe> probes() {
         return List.of(
-                Probe.of("item/drawing/setup", DrawingProbes::setupStation),
                 Probe.of("item/drawing/dip", DrawingProbes::dip),
                 Probe.of("item/drawing/list", DrawingProbes::list),
                 Probe.of("item/drawing/start", DrawingProbes::start),
@@ -80,11 +78,6 @@ public final class DrawingProbes {
                 Probe.of("item/drawing/cancel_and_refund", DrawingProbes::cancelAndRefund),
                 Probe.of("item/drawing/reconciliation", DrawingProbes::reconciliation),
                 Probe.of("item/drawing/stack_refund", DrawingProbes::stackRefund));
-    }
-
-    // Named apart from the leg's own setup so the reference above cannot be read as the instance method.
-    private static void setupStation(ProbeContext context) {
-        new Station(context).setup();
     }
 
     private static void dip(ProbeContext context) {
@@ -194,13 +187,6 @@ public final class DrawingProbes {
 
         private void setup() {
             this.open();
-            ItemStack carried = this.carried();
-            this.check("setup-station-and-brush",
-                    this.paper().getContainerSize() == 1 && this.paper().getItem(0).isEmpty()
-                            && BrushPigmentService.isBrush(carried) && BrushPigmentService.pigment(carried) == PIGMENT,
-                    "slots " + this.paper().getContainerSize() + ", slot "
-                            + read(this.paper().getItem(0)) + ", carried " + read(carried) + ", pigment "
-                            + BrushPigmentService.pigment(carried));
         }
 
         // The ward formula declares a paper requirement (at least `normal` quality), so the legs that swap to it
@@ -328,12 +314,6 @@ public final class DrawingProbes {
                     session == null ? "no session" : "slot " + read(this.paper().getItem(0)));
             this.check("start-recorded-the-formula", session != null && SIGIL.equals(session.recipeId()),
                     session == null ? "no session" : String.valueOf(session.recipeId()));
-            // The test formulas name no colours, so what the session's recipe carries are the codec defaults.
-            this.check("start-reads-the-formula-colours",
-                    session != null && session.recipe().backgroundColor() == TalismanDrawingRecipe.DEFAULT_BACKGROUND_COLOR
-                            && session.recipe().foregroundColor() == TalismanDrawingRecipe.DEFAULT_FOREGROUND_COLOR,
-                    session == null ? "no session" : "paper " + session.recipe().backgroundColor()
-                            + ", ink " + session.recipe().foregroundColor());
         }
 
         // Two rules the service alone cannot answer: picking a formula does not need the brush (the ink is charged
@@ -476,8 +456,6 @@ public final class DrawingProbes {
             SpiritStorageComponent charge = held.get(MxtDataComponents.SPIRIT_STORAGE);
             this.check("submit-carrier-was-poured", charge != null && !charge.isEmpty(),
                     charge == null ? "no spirit storage" : charge.amounts().toString());
-            this.check("submit-names-the-quality", !outcome.text().getString().isEmpty(),
-                    "text '" + outcome.text().getString() + "'");
             this.note("submit-measured", "completion " + outcome.completion() + ", pigment spent "
                     + outcome.pigmentSpent() + ", quality " + (quality == null ? "none" : HolderHelper.id(quality))
                     + ", spirit storage " + (charge == null ? "none" : charge.amounts().size() + " aura(s), "

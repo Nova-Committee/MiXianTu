@@ -1,19 +1,15 @@
 package com.iafenvoy.mxt.probe.creature;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
 import com.iafenvoy.mxt.config.MxtServerConfig;
-import com.iafenvoy.mxt.data.cultivation.Physique;
 import com.iafenvoy.mxt.probe.Probe;
 import com.iafenvoy.mxt.probe.ProbeContext;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationIdentityService;
-import com.iafenvoy.mxt.runtime.resulting.failures.PerchFailure;
 import com.iafenvoy.mxt.runtime.perch.PerchEventBridge;
 import com.iafenvoy.mxt.runtime.perch.PerchService;
+import com.iafenvoy.mxt.runtime.resulting.failures.PerchFailure;
 import com.iafenvoy.mxt.testmod.MxtTestEntities;
 import com.iafenvoy.mxt.testmod.ProbeBeast;
-import com.mojang.serialization.JsonOps;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
@@ -329,43 +325,6 @@ public final class PerchProbes {
             settings.dropInPowderSnow.setValue(wasPowder);
             for (Entity entity : spawned) entity.discard();
         }
-    }
-
-    /**
-     * Ignoring a field is only a guarantee if it leaves no trace, so the two decoded definitions are compared. The
-     * rarity key is one of them: it is what this shape read before a tier became a reference.
-     */
-    private static boolean ignoresForeignFields() {
-        JsonObject foreign = new JsonObject();
-        foreign.addProperty("element", "mxt_test:fire");
-        foreign.addProperty("overcomes", "mxt_test:water");
-        foreign.addProperty("damage_types", "mxt_test:fire");
-        foreign.addProperty("rarity", "probe");
-        return Physique.DIRECT_CODEC.parse(JsonOps.INSTANCE, named(foreign)).result()
-                .equals(Physique.DIRECT_CODEC.parse(JsonOps.INSTANCE, named(new JsonObject())).result());
-    }
-
-    // A definition with no name or description would fail on those fields alone, which would make every leg below
-    // vacuous: both are only derivable from an entry id, and bare JsonOps carries none.
-    private static JsonObject named(JsonObject object) {
-        object.addProperty("name", "probe");
-        object.addProperty("description", "probe");
-        return object;
-    }
-
-    // One-field JSON object, for decode checks that ask whether a single key is enough to break a definition.
-    private static JsonObject single(String key, Object value) {
-        JsonObject object = new JsonObject();
-        if (value instanceof Number number) object.addProperty(key, number);
-        else if (value instanceof Boolean flag) object.addProperty(key, flag);
-        else object.addProperty(key, String.valueOf(value));
-        return object;
-    }
-
-    private static JsonArray numbers(double... values) {
-        JsonArray array = new JsonArray();
-        for (double value : values) array.add(value);
-        return array;
     }
 
     // One disposable probe entity carrying exactly one spirit root, so the element it strikes or is struck with is

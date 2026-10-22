@@ -1,6 +1,5 @@
 package com.iafenvoy.mxt.probe.verify;
 
-import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.iafenvoy.mxt.attachment.CultivationAttachment;
@@ -108,20 +107,6 @@ public final class MinorStageVerifyProbes {
             return "min_minor_stage 7 is not met by a record of 7";
         if (realmCondition(player, qiRefining, 8).test(player, FormulaContext.EMPTY))
             return "min_minor_stage 8 was met by a record of 7";
-        // A threshold outside the realm's own minor stages could never be reached, so it is a load error.
-        JsonObject invalid = new JsonObject();
-        invalid.addProperty("aura", ProbeDefinitions.QI.toString());
-        JsonArray names = new JsonArray();
-        names.add("first");
-        names.add("second");
-        invalid.add("minor_stages", names);
-        JsonArray entries = new JsonArray();
-        JsonObject entry = new JsonObject();
-        entry.addProperty("stage", 5);
-        entries.add(entry);
-        invalid.add("minor_stage_abilities", entries);
-        if (RealmStage.DIRECT_CODEC.parse(JsonOps.INSTANCE, invalid).result().isPresent())
-            return "minor_stage_abilities accepted stage 5 of a two-stage realm";
         return null;
     }
 

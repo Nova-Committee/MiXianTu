@@ -23,11 +23,7 @@ import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.JsonOps;
 import it.unimi.dsi.fastutil.objects.Object2DoubleMap;
 import it.unimi.dsi.fastutil.objects.Object2DoubleMaps;
-import net.minecraft.core.Holder;
-import net.minecraft.core.HolderLookup;
-import net.minecraft.core.RegistryAccess;
-import net.minecraft.core.SectionPos;
-import net.minecraft.core.BlockPos;
+import net.minecraft.core.*;
 import net.minecraft.resources.RegistryOps;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.SimpleContainer;
@@ -267,19 +263,19 @@ public final class CostStoreVerifyProbes {
 
         @Override
         public Object2DoubleMap<Holder<Aura>> getCapacity(@Nullable LivingEntity entity,
-                                                       @NotNull HolderLookup.Provider registries) {
+                                                          @NotNull HolderLookup.Provider registries) {
             return Object2DoubleMaps.emptyMap();
         }
 
         @Override
         public double insert(@Nullable LivingEntity entity,
-                          @NotNull HolderLookup.Provider registries, Holder<Aura> aura, double amount, boolean exact, boolean simulate) {
+                             @NotNull HolderLookup.Provider registries, Holder<Aura> aura, double amount, boolean exact, boolean simulate) {
             return amount;
         }
 
         @Override
         public double extract(@Nullable LivingEntity entity,
-                           @NotNull HolderLookup.Provider registries, Holder<Aura> aura, double amount, boolean exact, boolean simulate) {
+                              @NotNull HolderLookup.Provider registries, Holder<Aura> aura, double amount, boolean exact, boolean simulate) {
             // Asked exactly, it promises the whole amount: this is the store that empties between the two passes.
             if (simulate) return 0;
             double taken = Math.min(this.willing, amount);

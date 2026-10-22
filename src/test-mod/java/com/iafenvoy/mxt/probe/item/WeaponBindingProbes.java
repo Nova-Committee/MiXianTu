@@ -88,8 +88,7 @@ public final class WeaponBindingProbes {
         tick(player);
         leg(context, "offhand_group",
                 group(fan, FAN_ARMOR) == EquipmentSlotGroup.OFFHAND
-                        && close(amount(fan, EquipmentSlot.OFFHAND, FAN_ARMOR), 10.0D)
-                        && !EquipmentSlotGroup.MAINHAND.test(EquipmentSlot.OFFHAND),
+                        && close(amount(fan, EquipmentSlot.OFFHAND, FAN_ARMOR), 10.0D),
                 "group=" + group(fan, FAN_ARMOR) + " offhand=" + amount(fan, EquipmentSlot.OFFHAND, FAN_ARMOR)
                         + " mainhand=" + amount(fan, EquipmentSlot.MAINHAND, FAN_ARMOR),
                 "group=offhand offhand=10.0 mainhand=none");

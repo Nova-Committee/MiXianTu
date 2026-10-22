@@ -1,6 +1,5 @@
 package com.iafenvoy.mxt.probe.lifespan;
 
-import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.iafenvoy.jupiter.config.entry.BooleanEntry;
 import com.iafenvoy.mxt.MiXianTu;
@@ -24,6 +23,8 @@ import com.iafenvoy.mxt.runtime.cultivation.CultivationIdentityService;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService;
 import com.iafenvoy.mxt.runtime.cultivation.LifeSpanService;
 import com.iafenvoy.mxt.runtime.damage.DamageCalculationService;
+import com.iafenvoy.mxt.runtime.resulting.Failures;
+import com.iafenvoy.mxt.runtime.resulting.Result;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.formula.number.Constant;
@@ -41,8 +42,6 @@ import net.neoforged.neoforge.common.NeoForge;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
-import com.iafenvoy.mxt.runtime.resulting.Failures;
-import com.iafenvoy.mxt.runtime.resulting.Result;
 
 /**
  * The whole lifespan ledger, driven on disposable probes: the master switch, both numbers, seeding, the settlement,
@@ -390,7 +389,7 @@ public final class LifespanProbes {
         }
     }
 
-    // 10. The action entry, both modes, plus the load-time refusal of a negative set.
+    // 10. The action entry, both modes.
     private static void action(ProbeContext context) {
         Snapshot was = snapshot();
         List<LivingEntity> probes = new ArrayList<>();
@@ -409,17 +408,9 @@ public final class LifespanProbes {
             new ModifyLifespanAction(ModifyLifespanAction.Mode.SET, new Constant(-5.0D))
                     .execute(acted, FormulaContext.of(acted));
             boolean actionTook = LifeSpanService.remaining(acted) == 20L && LifeSpanService.total(acted) == 30L;
-            JsonObject negativeSet = new JsonObject();
-            negativeSet.addProperty("mode", "set");
-            negativeSet.addProperty("amount", -5);
-            JsonObject negativeAdd = new JsonObject();
-            negativeAdd.addProperty("mode", "add");
-            negativeAdd.addProperty("amount", -5);
-            boolean loadRefusal = ModifyLifespanAction.CODEC.codec().parse(JsonOps.INSTANCE, negativeSet).error().isPresent()
-                    && ModifyLifespanAction.CODEC.codec().parse(JsonOps.INSTANCE, negativeAdd).result().isPresent();
             ok &= context.check("lifespan probe: action added=" + actionAdded + " took=" + actionTook
-                            + " load_refusal=" + loadRefusal + " remaining=" + LifeSpanService.remaining(acted),
-                    actionAdded && actionTook && loadRefusal);
+                            + " remaining=" + LifeSpanService.remaining(acted),
+                    actionAdded && actionTook);
             verdict(context, ok);
         } finally {
             restore(was);

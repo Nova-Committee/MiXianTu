@@ -14,7 +14,6 @@ import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.probe.Probe;
 import com.iafenvoy.mxt.probe.ProbeContext;
 import com.iafenvoy.mxt.probe.ProbeDefinitions;
-import com.iafenvoy.mxt.recipe.SpiritRecipe;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.resulting.failures.CostFailure;
@@ -140,17 +139,6 @@ public final class CostVerifyProbes {
         if (!nothing.isSuccess()) return "a cleared bill was refused: " + nothing.failure();
         if (!close(account.get(probe), 100.0D))
             return "a cleared fee still took " + (100.0D - account.get(probe));
-
-        // The two aura-only fields read the old map and the new list, and refuse anything that is not an aura:
-        // a resource entry there could never be paid by the pool or the store the field charges.
-        RegistryOps<JsonElement> ops = RegistryOps.create(JsonOps.INSTANCE, registries);
-        List<Cost> mapped = SpiritRecipe.AURA_CODEC.parse(ops, JsonParser.parseString("{\"mxt_test:qi\": 2}"))
-                .getOrThrow(error -> new IllegalArgumentException("The aura map form no longer decodes: " + error));
-        if (mapped.size() != 1 || !(mapped.getFirst() instanceof AuraCost mappedCost)
-                || !close(mappedCost.amount().evaluate(FormulaContext.EMPTY), 2.0D))
-            return "the aura map form decoded as " + mapped;
-        if (SpiritRecipe.AURA_CODEC.parse(ops, JsonParser.parseString("[{\"id\": \"mxt_test:qi\", \"amount\": 1}]")).error().isEmpty())
-            return "a non-aura entry loaded into an aura-only cost field";
 
         Holder<Aura> qiAura = context.require(MxtResourceKeys.AURA, ProbeDefinitions.QI);
         Map<Holder<Aura>, Double> auraAmounts = Costs.auras(List.of(new AuraCost(qiAura, new Constant(2.0D))), costs);

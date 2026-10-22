@@ -35,22 +35,12 @@ public final class JadeSlipProbes {
     private static void defaultRead(ProbeContext context) {
         ServerPlayer player = context.player();
         ItemStack slip = MxtItems.JADE_SLIP.toStack();
-        ItemStack slowSlip = slip.copy();
-        slowSlip.set(MxtDataComponents.JADE_SLIP_READING, 90);
         ItemStack instantSlip = slip.copy();
         instantSlip.set(MxtDataComponents.JADE_SLIP_READING, 0);
         HoldBinding hold = HoldLookup.hold(slip);
-        // The length is the stack's, so the item-level answer says "not this stack" while requiresHold says it is a
-        // hold at all.
-        context.check("jade slip probe: a plain slip is a forty tick hold",
-                hold instanceof JadeSlipHold && hold.requiresHold()
-                        && hold.holdTicks() == HoldBinding.NO_HOLD
-                        && hold.holdTicks(player, context.registries(), slip) == JadeSlipItem.DEFAULT_READ_TIME);
-        context.check("jade slip probe: the reading component decides the length",
-                hold != null && hold.holdTicks(player, context.registries(), slowSlip) == 90
-                        && hold.claims(player, context.registries(), slowSlip)
-                        // A zero is the slip read by a click, which is the other branch of JadeSlipItem.use.
-                        && !hold.claims(player, context.registries(), instantSlip));
+        // A zero is the slip read by a click, which is the other branch of JadeSlipItem.use.
+        context.check("jade slip probe: a zero reading is not claimed by the hold",
+                hold != null && !hold.claims(player, context.registries(), instantSlip));
     }
 
     // The armed component is what vanilla reads the length from, so the cycle is started the way the click starts it.

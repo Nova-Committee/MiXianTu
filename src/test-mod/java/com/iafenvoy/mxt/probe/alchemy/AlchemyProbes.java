@@ -1,10 +1,10 @@
 package com.iafenvoy.mxt.probe.alchemy;
 
-import com.google.gson.JsonElement;
 import com.iafenvoy.mxt.data.alchemy.AlchemyFurnaceDefinition;
 import com.iafenvoy.mxt.data.alchemy.MedicinalProperty;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.item.PillComponent;
+import com.iafenvoy.mxt.entity.SpiritBurstEntity;
 import com.iafenvoy.mxt.event.AlchemyCraftEvent;
 import com.iafenvoy.mxt.item.block.AlchemyFurnaceBlock;
 import com.iafenvoy.mxt.item.block.AlchemyFurnaceCasingBlock;
@@ -22,18 +22,15 @@ import com.iafenvoy.mxt.runtime.alchemy.*;
 import com.iafenvoy.mxt.runtime.alchemy.AlchemyResolver.Candidate;
 import com.iafenvoy.mxt.runtime.alchemy.AlchemyWorkstationService.AlchemyPreview;
 import com.iafenvoy.mxt.runtime.alchemy.AlchemyWorkstationService.StartResult;
-import com.iafenvoy.mxt.entity.SpiritBurstEntity;
 import com.iafenvoy.mxt.runtime.resulting.failures.AlchemyFailure;
 import com.iafenvoy.mxt.screen.menu.AlchemyFurnaceMenu;
 import com.iafenvoy.mxt.testmod.AlchemyTestHeatBlocks;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.mojang.authlib.GameProfile;
-import com.mojang.serialization.JsonOps;
 import net.minecraft.advancements.AdvancementHolder;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Holder;
-import net.minecraft.core.HolderLookup;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
@@ -157,7 +154,7 @@ public final class AlchemyProbes {
             context.expect("century-main", getMain(century, mainProperty, -1.0D), 6.0D);
             context.expect("century-resolved", resolvedId(century), PRACTICE);
             context.expect("century-only", matchedCount(century), 1);
-            context.expect("century-edible", ediblePractice(level.registryAccess(), century.successOutputs()), true);
+            context.expect("century-edible", ediblePractice(century.successOutputs()), true);
             furnace.container().setItem(1, new ItemStack(Items.DANDELION));
             AlchemyPreview conflict = AlchemyWorkstationService.preview(player, furnace);
             context.expect("conflict", conflict.blocker().orElse(null), AlchemyFailure.CONFLICT);
@@ -168,7 +165,7 @@ public final class AlchemyProbes {
             furnace.container().setItem(1, ItemStack.EMPTY);
             context.expect("practice-start", AlchemyWorkstationService.start(player, furnace).isSuccess(), true);
             tickUntil(level, furnace, 220, phase -> phase == AlchemyPhase.IDLE);
-            context.expect("practice-pills", ediblePractice(level.registryAccess(), List.of(stored(furnace, MxtItems.PILL.get()))), true);
+            context.expect("practice-pills", ediblePractice(List.of(stored(furnace, MxtItems.PILL.get()))), true);
         });
     }
 
@@ -1160,15 +1157,13 @@ public final class AlchemyProbes {
         return count;
     }
 
-    private static boolean ediblePractice(HolderLookup.Provider access, List<ItemStack> stacks) {
+    private static boolean ediblePractice(List<ItemStack> stacks) {
         for (ItemStack stack : stacks) {
             if (!stack.is(MxtItems.PILL.get()) || stack.getCount() != 4 || !stack.has(DataComponents.CONSUMABLE))
                 continue;
             PillComponent pill = stack.get(MxtDataComponents.PILL.get());
             if (pill == null) return false;
-            JsonElement encoded = PillComponent.CODEC.encodeStart(access.createSerializationContext(JsonOps.INSTANCE), pill).getOrThrow();
-            return encoded.isJsonObject() && encoded.getAsJsonObject().has("pill")
-                    && "mxt_test:toxicity".equals(encoded.getAsJsonObject().get("pill").getAsString());
+            return pill.pill().map(held -> HolderHelper.id(held).equals(ProbeDefinitions.id("toxicity"))).orElse(false);
         }
         return false;
     }

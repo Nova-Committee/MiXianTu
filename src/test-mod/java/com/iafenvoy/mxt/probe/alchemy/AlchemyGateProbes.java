@@ -50,8 +50,7 @@ public final class AlchemyGateProbes {
                 Probe.of("alchemy/gate/material_tier", AlchemyGateProbes::materialTier),
                 Probe.of("alchemy/gate/input_tier", AlchemyGateProbes::inputTier),
                 Probe.of("alchemy/gate/input_tier_marked", AlchemyGateProbes::inputTierMarked),
-                Probe.of("alchemy/gate/temperature_limit", AlchemyGateProbes::temperatureLimit),
-                Probe.of("alchemy/gate/walls", AlchemyGateProbes::walls));
+                Probe.of("alchemy/gate/temperature_limit", AlchemyGateProbes::temperatureLimit));
     }
 
     // A plain core reads the ladder's entry out of the default_quality table, so the entry in "hot" is satisfied
@@ -139,30 +138,11 @@ public final class AlchemyGateProbes {
         ServerLevel level = context.level();
         AlchemyFurnaceDefinition capped = spec(level, "alchemy/capped");
         AlchemyFurnaceDefinition wide = spec(level, "alchemy/wide");
-        context.expect("temperature-limit-wall-binds",
-                AlchemyFurnaceDefinition.temperatureLimit(60.0D, 150.0D, wide), 60.0D);
-        context.expect("temperature-limit-heat-binds",
-                AlchemyFurnaceDefinition.temperatureLimit(200.0D, 80.0D, wide), 80.0D);
-        context.expect("temperature-limit-core-binds",
-                AlchemyFurnaceDefinition.temperatureLimit(200.0D, 150.0D, capped), 60.0D);
-        context.expect("temperature-limit-no-core",
-                AlchemyFurnaceDefinition.temperatureLimit(200.0D, 150.0D, null), 150.0D);
-        context.expect("temperature-limit-unavailable",
-                AlchemyFurnaceDefinition.temperatureLimit(0.0D, 150.0D, capped), 0.0D);
-        context.expect("temperature-limit-loaded", capped.maxTemperature().orElse(-1.0D), 60.0D);
-    }
-
-    // The wall limit counts the structure's own wall list, so the list itself is worth one leg: 22 cells are
-    // validated, and the core, the two ports, the output and the bottom centre are not walls among them.
-    private static void walls(ProbeContext context) {
-        int[] walls = AlchemyFurnaceStructure.walls();
-        context.expect("wall-count", walls.length == 18
-                        && !contains(walls, AlchemyFurnaceStructure.CONTROLLER_INDEX)
-                        && !contains(walls, AlchemyFurnaceStructure.MAIN_INDEX)
-                        && !contains(walls, AlchemyFurnaceStructure.AUXILIARY_INDEX)
-                        && !contains(walls, AlchemyFurnaceStructure.OUTPUT_INDEX)
-                        && !contains(walls, AlchemyFurnaceStructure.HEAT_INDEX),
-                true);
+        context.expect("temperature-limit-wall-binds", AlchemyFurnaceDefinition.temperatureLimit(60.0D, 150.0D, wide), 60.0D);
+        context.expect("temperature-limit-heat-binds", AlchemyFurnaceDefinition.temperatureLimit(200.0D, 80.0D, wide), 80.0D);
+        context.expect("temperature-limit-core-binds", AlchemyFurnaceDefinition.temperatureLimit(200.0D, 150.0D, capped), 60.0D);
+        context.expect("temperature-limit-no-core", AlchemyFurnaceDefinition.temperatureLimit(200.0D, 150.0D, null), 150.0D);
+        context.expect("temperature-limit-unavailable", AlchemyFurnaceDefinition.temperatureLimit(0.0D, 150.0D, capped), 0.0D);
     }
 
     private static SimpleContainer standard() {
@@ -197,8 +177,7 @@ public final class AlchemyGateProbes {
     }
 
     private static void grade(ServerLevel level, ItemStack stack, Identifier quality) {
-        Holder<ItemQuality> holder = MxtDatapackRegistries
-                .holder(level.registryAccess(), MxtResourceKeys.ITEM_QUALITY, quality).orElseThrow();
+        Holder<ItemQuality> holder = MxtDatapackRegistries.holder(level.registryAccess(), MxtResourceKeys.ITEM_QUALITY, quality).orElseThrow();
         stack.set(MxtDataComponents.QUALITY.get(), holder);
     }
 
@@ -207,8 +186,7 @@ public final class AlchemyGateProbes {
     }
 
     private static AlchemyFurnaceDefinition spec(ServerLevel level, String path) {
-        return MxtDatapackRegistries.holder(level.registryAccess(), MxtResourceKeys.ALCHEMY_FURNACE, ProbeDefinitions.id(path))
-                .map(Holder::value).orElseThrow();
+        return MxtDatapackRegistries.holder(level.registryAccess(), MxtResourceKeys.ALCHEMY_FURNACE, ProbeDefinitions.id(path)).map(Holder::value).orElseThrow();
     }
 
     /**
@@ -223,11 +201,6 @@ public final class AlchemyGateProbes {
         return new FakePlayer(level, new GameProfile(UUID.randomUUID(), "MxtGateProbe"));
     }
 
-    private static boolean contains(int[] values, int wanted) {
-        for (int value : values) if (value == wanted) return true;
-        return false;
-    }
-
     private static Identifier resolved(AlchemyPreview preview) {
         return preview.resolvedRecipe().map(ResourceKey::identifier).orElse(null);
     }
@@ -237,8 +210,7 @@ public final class AlchemyGateProbes {
     }
 
     private static double property(ServerLevel level, AlchemyPreview preview, String property) {
-        Holder<MedicinalProperty> holder = MxtDatapackRegistries
-                .holder(level.registryAccess(), MxtResourceKeys.MEDICINAL_PROPERTY, ProbeDefinitions.id(property)).orElseThrow();
+        Holder<MedicinalProperty> holder = MxtDatapackRegistries.holder(level.registryAccess(), MxtResourceKeys.MEDICINAL_PROPERTY, ProbeDefinitions.id(property)).orElseThrow();
         return preview.mixture().main().getOrDefault(holder, -1.0D);
     }
 

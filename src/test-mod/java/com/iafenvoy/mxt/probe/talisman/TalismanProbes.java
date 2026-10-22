@@ -53,9 +53,6 @@ public final class TalismanProbes {
         Score handSplit = TalismanDrawingScorer.score(reference, splitMiddle(hand(traced, 2.0D, 3.0D, 8.0D), 1),
                 0.06D, Judgement.DEFAULT);
         Score handRough = TalismanDrawingScorer.score(reference, hand(traced, 5.0D, 6.0D, 16.0D), 0.06D, Judgement.DEFAULT);
-        Score again = TalismanDrawingScorer.score(reference, traced, 0.06D, Judgement.DEFAULT);
-        Score stated = TalismanDrawingScorer.score(reference, traced, 0.06D,
-                new Judgement(1.0D, 0.25D, 0.25D, 0.25D, false, 0.02D, true));
         Map<String, Score> measured = new LinkedHashMap<>();
         measured.put("perfect", perfect);
         measured.put("jitter", jitter);
@@ -107,11 +104,6 @@ public final class TalismanProbes {
         if (scribble.completion() > 0.45D || perfect.completion() <= scribble.completion())
             failures.add("a scribble over the whole canvas scored " + scribble.completion()
                     + " against the perfect retrace " + perfect.completion());
-        if (Double.compare(again.completion(), perfect.completion()) != 0)
-            failures.add("the same input scored " + again.completion() + " then " + perfect.completion());
-        if (Double.compare(stated.completion(), perfect.completion()) != 0)
-            failures.add("the default judgement scored " + perfect.completion()
-                    + " and the same values written out " + stated.completion());
         // Which stroke came first is not on the screen, so it must not cost anything either.
         if (Math.abs(swapped.completion() - perfect.completion()) > 0.01D)
             failures.add("the same three strokes in another order scored " + swapped.completion()

@@ -1,0 +1,42 @@
+{
+  "generation": {
+    "type": "mxt:flat",
+    "preset": "minecraft:bedrock,124*minecraft:stone,3*minecraft:dirt,minecraft:grass_block;minecraft:plains",
+    "dimension_type": "minecraft:overworld",
+    "structures": false
+  },
+  "seed": 12345,
+  "border": {
+    "center": [0.0, 0.0],
+    "size": 256.0
+  },
+  "max_instances": 1,
+  "max_members": 16,
+  "owned": true,
+  "entry": {
+    "pos": [0.5, 65.0, 0.5],
+    "yaw": -90.0,
+    "pitch": 0.0,
+    "spread": 2.0
+  },
+  "portals": [
+    {
+      "key": "return",
+      "relative_to_entry": true,
+      "placement": {
+        "origin": [3.0, 0.0, 0.0],
+        "normal": [1.0, 0.0, 0.0],
+        "tangent": [0.0, 0.0, -1.0]
+      },
+      "shape": {
+        "vertices": [[-1.0, 0.0], [1.0, 0.0], [1.0, 3.0], [-1.0, 3.0]]
+      },
+      "destination": {
+        "type": "return"
+      },
+      "appearance": {
+        "style": "portal"
+      }
+    }
+  ]
+}

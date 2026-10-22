@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.probe.verify;
 
-import com.iafenvoy.mxt.config.MxtServerConfig;
 import com.iafenvoy.mxt.attachment.AuraChunkAttachment;
+import com.iafenvoy.mxt.config.MxtServerConfig;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.aura.AuraValue;
 import com.iafenvoy.mxt.probe.Probe;
@@ -25,13 +25,7 @@ import net.neoforged.neoforge.event.level.LevelEvent;
 import net.neoforged.neoforge.event.tick.LevelTickEvent;
 
 import java.lang.reflect.Field;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.HashMap;
-import java.util.Random;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.function.ObjIntConsumer;
 
 public final class BlockAuraRefreshVerifyProbes {
@@ -308,10 +302,13 @@ public final class BlockAuraRefreshVerifyProbes {
             index.retain(players.keySet(), changes);
             Map<SectionPos, Integer> expected = new HashMap<>();
             for (SectionPos center : players.values()) {
-                for (int dx = -3; dx <= 3; dx++) for (int dy = -3; dy <= 3; dy++) for (int dz = -3; dz <= 3; dz++) {
-                    int y = center.y() + dy;
-                    if (y >= -4 && y < 20) expected.merge(SectionPos.of(center.x() + dx, y, center.z() + dz), 1, Integer::sum);
-                }
+                for (int dx = -3; dx <= 3; dx++)
+                    for (int dy = -3; dy <= 3; dy++)
+                        for (int dz = -3; dz <= 3; dz++) {
+                            int y = center.y() + dy;
+                            if (y >= -4 && y < 20)
+                                expected.merge(SectionPos.of(center.x() + dx, y, center.z() + dz), 1, Integer::sum);
+                        }
             }
             context.expect("incremental coverage matches brute force at step " + step, actual.equals(expected), true);
         }
@@ -347,7 +344,8 @@ public final class BlockAuraRefreshVerifyProbes {
             this.aura = context.require(MxtResourceKeys.AURA, ProbeDefinitions.QI);
             this.previousTime = this.clock.getGameTime();
             this.previousInterval = MxtServerConfig.INSTANCE.aura.blockAuraTickInterval.getValue();
-            for (String name : List.of("LOADED", "PENDING", "REFRESH", "MAINTENANCE")) this.previous.put(name, state(name).remove(this.level));
+            for (String name : List.of("LOADED", "PENDING", "REFRESH", "MAINTENANCE"))
+                this.previous.put(name, state(name).remove(this.level));
             this.clock.setGameTime(100L);
             MxtServerConfig.INSTANCE.aura.blockAuraTickInterval.setValue(interval);
         }

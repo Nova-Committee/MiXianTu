@@ -325,5 +325,7 @@
   "mxt.realm_stage.mxt_test.core_forming.minor_stage.0": "Early Core",
   "mxt.realm_stage.mxt_test.core_forming.minor_stage.1": "Middle Core",
   "mxt.realm_stage.mxt_test.core_forming.minor_stage.2": "Late Core",
-  "mxt.element.mxt_test.metal.description": "The fixture's metal element."
+  "mxt.element.mxt_test.metal.description": "The fixture's metal element.",
+  "mxt.secret_realm.mxt_test.flat_realm": "Superflat Test Realm",
+  "mxt.secret_realm.mxt_test.flat_realm.description": "Land on grass at Y=65 with a return portal ahead; terrain persists after leaving."
 }

@@ -67,7 +67,12 @@ public final class ProbeContext {
     static void run(Probe probe, GameTestHelper helper) {
         ProbeContext context = new ProbeContext(helper);
         if (probe.kit()) ProbeKit.scenario(context);
-        probe.body().accept(context);
+        try {
+            probe.body().accept(context);
+        } catch (RuntimeException failure) {
+            LOGGER.error("probe {} threw unexpectedly", probe.id(), failure);
+            throw failure;
+        }
         if (!context.deferred) context.done();
     }
 

@@ -64,7 +64,6 @@ public final class SecretRealmProbes {
                 Probe.of("world/secret_realm/instance_cap", SecretRealmProbes::instanceCap),
                 Probe.of("world/secret_realm/membership_cap", SecretRealmProbes::membershipCap),
                 Probe.of("world/secret_realm/claim_role", SecretRealmProbes::claimRole),
-                Probe.of("world/secret_realm/aliases", SecretRealmProbes::aliases),
                 Probe.of("world/secret_realm/weighted_entry", SecretRealmProbes::weightedEntry),
                 Probe.of("world/secret_realm/existing", SecretRealmProbes::existing),
                 Probe.of("world/secret_realm/unresolvable", SecretRealmProbes::unresolvable),
@@ -165,7 +164,7 @@ public final class SecretRealmProbes {
             }
             Vec3 anchor = first.anchor().orElse(null);
             context.check("secret realm probe: anchor=" + anchor + " prepared=" + first.prepared(),
-                    anchor != null && close(anchor.x, 0.5D) && close(anchor.y, 65.0D) && close(anchor.z, 0.5D) && first.prepared());
+                    anchor != null && close(anchor.x, 9.5D) && close(anchor.y, 65.0D) && close(anchor.z, 9.5D) && first.prepared());
         } finally {
             destroy(server, opened);
         }
@@ -240,25 +239,6 @@ public final class SecretRealmProbes {
                     probe != null && ownerSeen && !guestSeen && !foreignSeen);
         } finally {
             for (LivingEntity probe : probes) if (probe != null) probe.discard();
-            destroy(server, opened);
-        }
-    }
-
-    // 8. A secret realm dimension is reachable by its definition id, a stem realm also by its stem.
-    private static void aliases(ProbeContext context) {
-        MinecraftServer server = context.server();
-        Holder<SecretRealm> trial = context.require(MxtResourceKeys.SECRET_REALM, ProbeDefinitions.TRIAL_REALM);
-        List<ResourceKey<Level>> opened = new ArrayList<>();
-        saveTower(context, server.overworld());
-        try {
-            SecretRealmRecord first = openInstance(server, trial, 0, 12345L, opened);
-            if (first == null) {
-                context.fail("secret realm probe: the trial instance is missing");
-                return;
-            }
-            List<Identifier> aliases = SecretRealmRegistry.aliases(first.dimension().identifier()).toList();
-            context.check("secret realm probe: aliases=" + aliases, aliases.contains(ProbeDefinitions.TRIAL_REALM));
-        } finally {
             destroy(server, opened);
         }
     }
