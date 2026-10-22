@@ -7,7 +7,7 @@ import com.iafenvoy.mxt.data.cost.*;
 import com.iafenvoy.mxt.data.cost.builtin.JsCost;
 import com.iafenvoy.mxt.data.cost.builtin.ResourceCost;
 import com.iafenvoy.mxt.data.cost.context.CostContext;
-import com.iafenvoy.mxt.data.cost.context.CostOrigin;
+import com.iafenvoy.mxt.data.cost.context.CostOrigins;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.probe.Probe;
 import com.iafenvoy.mxt.probe.ProbeContext;
@@ -129,7 +129,7 @@ public final class CostSettlementVerifyProbes {
 
     private static void entryOrder(ProbeContext context) {
         List<String> calls = new ArrayList<>();
-        CostContext costs = CostContext.of(context.player(), CostOrigin.SCRIPT);
+        CostContext costs = CostContext.of(context.player(), CostOrigins.SCRIPT);
         CostPayment.PaymentResult paid = CostPayment.pay(List.of(
                 observed(new CostTarget.Script("probe:first", 1, context.player().getUUID()), "first", calls),
                 observed(new CostTarget.Account(new ResourceHolderAttachment(), resource(context)), "account", calls),
@@ -195,7 +195,7 @@ public final class CostSettlementVerifyProbes {
     }
 
     private static CostContext costs(ProbeContext context, ResourceHolderAttachment account) {
-        return CostContext.account(account, context.player(), FormulaContext.of(context.player()), CostOrigin.SCRIPT);
+        return CostContext.account(account, context.player(), FormulaContext.of(context.player()), CostOrigins.SCRIPT);
     }
 
     private record FixtureCost(CostTarget target, double amount,

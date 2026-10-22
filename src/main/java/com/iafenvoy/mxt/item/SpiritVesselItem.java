@@ -1,6 +1,7 @@
 package com.iafenvoy.mxt.item;
 
 import com.iafenvoy.mxt.api.AuraAccess;
+import com.iafenvoy.mxt.runtime.spirit.AuraTransfers;
 import com.iafenvoy.mxt.api.ItemAuraAccess;
 import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.data.aura.Aura;
@@ -128,38 +129,34 @@ public final class SpiritVesselItem extends Item implements ItemAuraAccess {
     }
 
     @Override
-    public Object2IntMap<Holder<Aura>> getCapacity(@Nullable LivingEntity entity, HolderLookup.@NotNull Provider registries, ItemStack stack) {
-        // Naming auras takes a registry, so a caller without one gets nothing here; the aura-scoped question below
-        // answers from the resource alone, and that is the one a stand asks.
-        if (entity == null) return Object2IntMaps.emptyMap();
-        Object2IntMap<Holder<Aura>> room = new Object2IntOpenHashMap<>();
-        entity.level().registryAccess().lookupOrThrow(MxtResourceKeys.AURA).listElements().forEach(aura -> {
-            int fits = room(stack, aura.value().resource());
+    public Object2DoubleMap<Holder<Aura>> getCapacity(@Nullable LivingEntity entity, HolderLookup.@NotNull Provider registries, ItemStack stack) {
+        Object2DoubleMap<Holder<Aura>> room = new Object2DoubleOpenHashMap<>();
+        registries.lookupOrThrow(MxtResourceKeys.AURA).listElements().forEach(aura -> {
+            double fits = room(stack, aura.value().resource());
             if (fits > 0) room.put(aura, fits);
         });
         return room;
     }
 
     @Override
-    public int getCapacity(@Nullable LivingEntity entity, @NotNull HolderLookup.Provider registries, ItemStack stack, Holder<Aura> aura) {
+    public double getCapacity(@Nullable LivingEntity entity, @NotNull HolderLookup.Provider registries, ItemStack stack, Holder<Aura> aura) {
         return room(stack, aura.value().resource());
     }
 
     @Override
-    public int insert(@Nullable LivingEntity entity, @NotNull HolderLookup.Provider registries, ItemStack stack, Holder<Aura> aura, int amount, boolean exact, boolean simulate) {
+    public double insert(@Nullable LivingEntity entity, @NotNull HolderLookup.Provider registries, ItemStack stack, Holder<Aura> aura, double amount, boolean exact, boolean simulate) {
         AuraAccess.requireNonNegative(amount);
-        int moved = Math.min(amount, room(stack, aura.value().resource()));
-        if (exact && moved != amount) return amount;
-        if (!simulate && moved > 0) {
-            Holder<Resource> resource = aura.value().resource();
-            ResourceContainerComponent container = stack.getOrDefault(MxtDataComponents.RESOURCE_CONTAINER, ResourceContainerComponent.EMPTY);
-            stack.set(MxtDataComponents.RESOURCE_CONTAINER, container.with(resource, container.stored(resource) + moved));
-        }
-        return amount - moved;
+        Holder<Resource> resource = aura.value().resource();
+        ResourceContainerComponent container = stack.getOrDefault(MxtDataComponents.RESOURCE_CONTAINER, ResourceContainerComponent.EMPTY);
+        double capacity = stack.getOrDefault(MxtDataComponents.RESOURCE_CAPACITY, ResourceCapacityComponent.EMPTY).capacityOf(resource);
+        AuraTransfers.Transfer transfer = AuraTransfers.insert(container.stored(resource), capacity, amount, exact);
+        if (!simulate && transfer.remainder() != amount)
+            stack.set(MxtDataComponents.RESOURCE_CONTAINER, container.with(resource, transfer.stored()));
+        return transfer.remainder();
     }
 
     @Override
-    public int extract(@Nullable LivingEntity entity, @NotNull HolderLookup.Provider registries, ItemStack stack, Holder<Aura> aura, int amount, boolean exact, boolean simulate) {
+    public double extract(@Nullable LivingEntity entity, @NotNull HolderLookup.Provider registries, ItemStack stack, Holder<Aura> aura, double amount, boolean exact, boolean simulate) {
         // A vessel is poured into, never drained through the store protocol: what leaves it leaves through the hold,
         // where the holder's own account is on the other side. Nothing can be taken at all, which is the same answer
         // under either mode.
@@ -167,10 +164,10 @@ public final class SpiritVesselItem extends Item implements ItemAuraAccess {
         return amount;
     }
 
-    // Whole aura units only, and only as far as the cap written for the resource that aura is counted in.
-    private static int room(ItemStack stack, Holder<Resource> resource) {
+    // Intake is bounded by the resource capacity written on the stack.
+    private static double room(ItemStack stack, Holder<Resource> resource) {
         double room = stack.getOrDefault(MxtDataComponents.RESOURCE_CAPACITY, ResourceCapacityComponent.EMPTY).capacityOf(resource)
                 - stack.getOrDefault(MxtDataComponents.RESOURCE_CONTAINER, ResourceContainerComponent.EMPTY).stored(resource);
-        return room <= 0.0D ? 0 : (int) Math.floor(room);
+        return Math.max(0.0D, room);
     }
 }

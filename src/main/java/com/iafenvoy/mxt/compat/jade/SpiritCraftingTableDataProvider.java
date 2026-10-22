@@ -25,9 +25,9 @@ public enum SpiritCraftingTableDataProvider implements IServerDataProvider<Block
         if (!(accessor.getBlockEntity() instanceof SpiritCraftingTableBlockEntity table)
                 || table.requiredAura().isEmpty()) return;
         CompoundTag required = new CompoundTag();
-        table.requiredAura().forEach((element, amount) -> required.putInt(HolderHelper.id(element).toString(), amount));
+        table.requiredAura().forEach((element, amount) -> required.putDouble(HolderHelper.id(element).toString(), amount));
         CompoundTag stored = new CompoundTag();
-        table.auras().forEach((element, amount) -> stored.putInt(HolderHelper.id(element).toString(), amount));
+        table.auras().forEach((element, amount) -> stored.putDouble(HolderHelper.id(element).toString(), amount));
         data.put(REQUIRED, required);
         data.put(STORED, stored);
     }

@@ -7,7 +7,7 @@ import com.iafenvoy.mxt.data.ability.type.WordAbilityType;
 import com.iafenvoy.mxt.data.ability.type.WordAbilityType.WordEffect;
 import com.iafenvoy.mxt.data.cost.CostPayment;
 import com.iafenvoy.mxt.data.cost.context.CostContext;
-import com.iafenvoy.mxt.data.cost.context.CostOrigin;
+import com.iafenvoy.mxt.data.cost.context.CostOrigins;
 import com.iafenvoy.mxt.data.storage.builtin.ChargesDataStorage;
 import com.iafenvoy.mxt.data.storage.runtime.CastDeadline;
 import com.iafenvoy.mxt.data.storage.runtime.ChannelPulse;
@@ -97,7 +97,7 @@ public final class AbilityService {
         // check right after asks every store whether the whole bill can be paid. The same payment is what the commit
         // spends, so "can this be paid" has one implementation.
         CostPayment cost = payment != null ? payment
-                : CostPayment.of(CostContext.of(payer, context, CostOrigin.ABILITY));
+                : CostPayment.of(CostContext.of(payer, context, CostOrigins.ABILITY));
         Optional<Failure> refusal = cost.price(definition.costs());
         if (refusal.isPresent()) return ResultWithData.failure(null, refusal.get(), cost.failedResource());
         refusal = cost.test();
@@ -259,7 +259,7 @@ public final class AbilityService {
         if (!definition.condition().test(holder, formula)) return Result.failure(Failures.CONDITION_FAILED, null);
         double cooldown = cooldownOf(ability, formula);
         if (!Double.isFinite(cooldown) || cooldown < 0.0D) return Result.failure(Failures.INVALID_FORMULA, null);
-        CostPayment plan = CostPayment.of(CostContext.of(holder, formula, CostOrigin.ABILITY));
+        CostPayment plan = CostPayment.of(CostContext.of(holder, formula, CostOrigins.ABILITY));
         Optional<Failure> refusal = plan.price(definition.costs());
         if (refusal.isPresent()) return Result.failure(refusal.get(), null);
         CostPayment.PaymentResult payment = plan.pay();
@@ -306,7 +306,7 @@ public final class AbilityService {
                 stopChannel(abilities);
                 return ChannelResult.stopped(Failures.INVALID_FORMULA);
             }
-            CostContext upkeepContext = CostContext.of(actor instanceof LivingEntity living ? living : null, context, CostOrigin.CHANNEL_UPKEEP);
+            CostContext upkeepContext = CostContext.of(actor instanceof LivingEntity living ? living : null, context, CostOrigins.CHANNEL_UPKEEP);
             CostPayment upkeep = CostPayment.of(upkeepContext);
             Optional<Failure> unpaid = upkeep.price(channel.upkeepCosts());
             if (unpaid.isPresent()) {

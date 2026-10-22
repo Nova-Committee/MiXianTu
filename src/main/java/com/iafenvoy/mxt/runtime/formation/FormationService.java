@@ -4,7 +4,8 @@ import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.cost.CostPayment;
 import com.iafenvoy.mxt.data.cost.context.CostContext;
-import com.iafenvoy.mxt.data.cost.context.CostOrigin;
+import com.iafenvoy.mxt.data.cost.context.AuraCostSources;
+import com.iafenvoy.mxt.data.cost.context.CostOrigins;
 import com.iafenvoy.mxt.data.formation.Formation;
 import com.iafenvoy.mxt.data.formation.Formation.Storage;
 import com.iafenvoy.mxt.runtime.formation.FormationService.MaintainRule.PaymentPlan;
@@ -46,7 +47,7 @@ public final class FormationService {
             // The activating player's own account is named directly: activation is driven from a controller block, so
             // there is no entity here to take a channel from, only an account to charge.
             CostPayment.PaymentResult payment = CostPayment.pay(definition.activationCosts(),
-                    CostContext.account(resources, null, context, CostOrigin.FORMATION_ACTIVATION));
+                    CostContext.account(resources, null, context, CostOrigins.FORMATION_ACTIVATION));
             if (!payment.isSuccess())
                 return ResultWithData.failure(null, Failures.INSUFFICIENT_RESOURCE, payment.failedResource());
             return ResultWithData.success(owner == null ? new FormationInstance(id, radius) : new FormationInstance(id, radius, owner));
@@ -69,7 +70,7 @@ public final class FormationService {
                     .orElse(Map.of());
             // A formation pays from its own stores first and then from an account that may have no owner behind it,
             // so the account is named directly rather than reached through a payer.
-            CostContext costContext = CostContext.account(resources, null, context, CostOrigin.FORMATION_MAINTENANCE);
+            CostContext costContext = CostContext.account(resources, null, context, CostOrigins.FORMATION_MAINTENANCE);
             PaymentPlan plan = MaintainRule.plan(definition, costContext, supplied, instance.stored(), capacity);
             if (plan == null) return Result.failure(Failures.UNKNOWN);
             ResultWithData<Map<Identifier, Double>> payment = ResourceTransactions.tryConsume(resources, Evaluation.of(context.registries(), plan.fromOwner()));
@@ -117,7 +118,7 @@ public final class FormationService {
                                                  Map<Holder<Aura>, Double> stored, Map<Holder<Aura>, Double> capacity) {
             // Whatever the bill names is charged in the value it is measured in, and only loaded: the caller asks
             // what the owner can afford of the remainder. An item charge has no channel here, so it refuses.
-            CostPayment bill = CostPayment.of(context.withAuraTarget(CostContext.AuraTarget.VALUE));
+            CostPayment bill = CostPayment.of(context.withAuraSource(AuraCostSources.ACCOUNT));
             if (bill.price(definition.maintenanceCosts()).isPresent() || bill.beyondResources()) return null;
             Map<Identifier, Double> cost = bill.resources();
             Map<Identifier, Holder<Aura>> byValue = new LinkedHashMap<>();

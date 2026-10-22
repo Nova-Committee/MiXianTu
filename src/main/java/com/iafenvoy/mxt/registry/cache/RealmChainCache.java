@@ -43,13 +43,13 @@ public class RealmChainCache extends ChainCache<RealmStage> {
     }
 
     @Override
-    public <R> RealmChainCache validate(Function<RealmStage, R> mapper, BiPredicate<R, R> predicate) {
-        return (RealmChainCache) super.validate(mapper, predicate);
+    public <R> RealmChainCache validateOrder(Function<RealmStage, R> mapper, BiPredicate<R, R> predicate) {
+        return (RealmChainCache) super.validateOrder(mapper, predicate);
     }
 
     @Override
-    public RealmChainCache require(Predicate<Chain<RealmStage>> rule) {
-        return (RealmChainCache) super.require(rule);
+    public RealmChainCache validateChain(Predicate<Chain<RealmStage>> rule) {
+        return (RealmChainCache) super.validateChain(rule);
     }
 
     public Optional<Chain<RealmStage>> getChainByAura(Holder<Aura> holder) {

@@ -10,7 +10,7 @@ import com.iafenvoy.mxt.data.cost.CostPayment;
 import com.iafenvoy.mxt.data.cost.CostTarget;
 import com.iafenvoy.mxt.data.cost.Debit;
 import com.iafenvoy.mxt.data.cost.context.CostContext;
-import com.iafenvoy.mxt.data.cost.context.CostOrigin;
+import com.iafenvoy.mxt.data.cost.context.CostOrigins;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.probe.Probe;
 import com.iafenvoy.mxt.probe.ProbeContext;
@@ -21,8 +21,8 @@ import com.iafenvoy.mxt.runtime.resulting.ResultWithData;
 import com.iafenvoy.mxt.runtime.resulting.failures.CostFailure;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.mojang.serialization.JsonOps;
-import it.unimi.dsi.fastutil.objects.Object2IntMap;
-import it.unimi.dsi.fastutil.objects.Object2IntMaps;
+import it.unimi.dsi.fastutil.objects.Object2DoubleMap;
+import it.unimi.dsi.fastutil.objects.Object2DoubleMaps;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.RegistryAccess;
@@ -85,9 +85,9 @@ public final class CostStoreVerifyProbes {
         // The price projection sums the amounts without merging the actual transactions.
         Holder<Aura> qi = context.require(MxtResourceKeys.AURA, ProbeDefinitions.QI);
         CostContext here = CostContext.pool(context.player(), context.level(), base,
-                FormulaContext.of(context.player()), CostOrigin.SCRIPT);
+                FormulaContext.of(context.player()), CostOrigins.SCRIPT);
         CostContext there = CostContext.pool(context.player(), context.level(), sibling,
-                FormulaContext.of(context.player()), CostOrigin.SCRIPT);
+                FormulaContext.of(context.player()), CostOrigins.SCRIPT);
         CostPayment bill = CostPayment.of(here);
         String entry = "[{\"type\": \"mxt:aura\", \"aura\": \"mxt_test:qi\", \"amount\": 1}]";
         if (bill.price(decodeCosts(registries, entry), here).isPresent()
@@ -105,7 +105,7 @@ public final class CostStoreVerifyProbes {
         RegistryAccess registries = context.registries();
         SimpleContainer container = new SimpleContainer(1);
         container.setItem(0, new ItemStack(Items.EMERALD, 2));
-        CostContext costs = CostContext.of(context.player(), CostOrigin.SCRIPT).withItemTarget(container);
+        CostContext costs = CostContext.of(context.player(), CostOrigins.SCRIPT).withItemTarget(container);
         CostPayment.PaymentResult paid = CostPayment.pay(decodeCosts(registries,
                 "[{\"type\": \"mxt:item\", \"items\": [\"minecraft:emerald\"], \"amount\": 2}]"), costs);
         if (!paid.isSuccess()) {
@@ -128,14 +128,14 @@ public final class CostStoreVerifyProbes {
     }
 
     // A short real transfer warns without cancelling the bill, and reports only the amount that really left.
-    // An amount the bank cannot express is still refused before the real pass.
+    // Large fractional amounts remain expressible by a bank.
     private static void bankExact(ProbeContext context) {
         RegistryAccess registries = context.registries();
         Holder<Aura> qi = context.require(MxtResourceKeys.AURA, ProbeDefinitions.QI);
         // Answers "all of it" when asked, then hands over 3 of the 5 it was asked for.
         ShortBank bank = new ShortBank(3);
         CostContext costs = CostContext.bank(bank, context.player(), FormulaContext.of(context.player()),
-                CostOrigin.SCRIPT);
+                CostOrigins.SCRIPT);
         CostPayment.PaymentResult paid = CostPayment.pay(decodeCosts(registries,
                 "[{\"type\": \"mxt:aura\", \"aura\": \"mxt_test:qi\", \"amount\": 5}]"), costs);
         if (paid.isFailure()) {
@@ -143,22 +143,20 @@ public final class CostStoreVerifyProbes {
             return;
         }
         context.expect("the part the bank did hand over is reported", paid.auras().getOrDefault(qi, 0.0D), 3.0D);
-        context.expect("the bank really lost the part it reported", bank.removed, 3);
+        context.expect("the bank really lost the part it reported", bank.removed, 3.0D);
 
-        // The amount a bank cannot express is a refusal, not a silently smaller charge.
-        ShortBank whole = new ShortBank(Integer.MAX_VALUE);
+        ShortBank whole = new ShortBank(3_000_000_000.25D);
         CostContext huge = CostContext.bank(whole, context.player(), FormulaContext.of(context.player()),
-                CostOrigin.SCRIPT);
-        CostPayment.PaymentResult refused = CostPayment.pay(decodeCosts(registries,
-                "[{\"type\": \"mxt:aura\", \"aura\": \"mxt_test:qi\", \"amount\": 3000000000}]"), huge);
-        if (refused.isSuccess() || refused.failure() != CostFailure.INVALID_AMOUNT)
-            context.fail("an amount past the integer range read as " + refused.failure());
-        context.expect("an amount past the integer range took nothing", whole.removed, 0);
+                CostOrigins.SCRIPT);
+        CostPayment.PaymentResult large = CostPayment.pay(decodeCosts(registries,
+                "[{\"type\": \"mxt:aura\", \"aura\": \"mxt_test:qi\", \"amount\": 3000000000.25}]"), huge);
+        if (large.isFailure()) context.fail("a double bank amount was refused: " + large.failure());
+        context.expect("a bank preserves a large fractional amount", whole.removed, 3_000_000_000.25D);
 
         // An item demand past the integer range is the same refusal, and takes nothing either.
         SimpleContainer container = new SimpleContainer(1);
         container.setItem(0, new ItemStack(Items.EMERALD, 3));
-        CostContext items = CostContext.of(context.player(), CostOrigin.SCRIPT).withItemTarget(container);
+        CostContext items = CostContext.of(context.player(), CostOrigins.SCRIPT).withItemTarget(container);
         CostPayment.PaymentResult tooMany = CostPayment.pay(decodeCosts(registries,
                 "[{\"type\": \"mxt:item\", \"items\": [\"minecraft:emerald\"], \"amount\": 3000000000}]"), items);
         if (tooMany.isSuccess() || tooMany.failure() != CostFailure.INVALID_AMOUNT)
@@ -172,7 +170,7 @@ public final class CostStoreVerifyProbes {
         Holder<Resource> probe = context.require(MxtResourceKeys.RESOURCE, ProbeDefinitions.id("trigger_probe"));
         ResourceHolderAttachment account = new ResourceHolderAttachment();
         account.set(probe, 10.0D, 0.0D, 10_000.0D, -1L, "probe");
-        CostContext costs = CostContext.account(account, null, FormulaContext.of(context.player()), CostOrigin.SCRIPT);
+        CostContext costs = CostContext.account(account, null, FormulaContext.of(context.player()), CostOrigins.SCRIPT);
         Cost fee = decodeCosts(registries, "[{\"id\": \"mxt_test:trigger_probe\", \"amount\": 4}]").getFirst();
         ResultWithData<Cost.Transaction> prepared = fee.prepare(costs);
         if (prepared.isFailure()) {
@@ -198,8 +196,8 @@ public final class CostStoreVerifyProbes {
         ResourceHolderAttachment second = new ResourceHolderAttachment();
         second.set(probe, 10.0D, 0.0D, 10_000.0D, -1L, "probe");
         FormulaContext formula = FormulaContext.of(context.player());
-        CostContext one = CostContext.account(first, null, formula, CostOrigin.SCRIPT);
-        CostContext two = CostContext.account(second, null, formula, CostOrigin.SCRIPT);
+        CostContext one = CostContext.account(first, null, formula, CostOrigins.SCRIPT);
+        CostContext two = CostContext.account(second, null, formula, CostOrigins.SCRIPT);
         String entry = "[{\"id\": \"mxt_test:trigger_probe\", \"amount\": 2}]";
         CostPayment mixed = CostPayment.of(one);
         if (mixed.price(decodeCosts(registries, entry), one).isPresent()
@@ -229,7 +227,7 @@ public final class CostStoreVerifyProbes {
         Holder<Aura> qi = context.require(MxtResourceKeys.AURA, ProbeDefinitions.QI);
         Holder<Aura> spirit = context.require(MxtResourceKeys.AURA, ProbeDefinitions.SPIRIT_POWER);
         CostContext here = CostContext.pool(context.player(), context.level(), context.at(1, 1, 1),
-                FormulaContext.of(context.player()), CostOrigin.SCRIPT);
+                FormulaContext.of(context.player()), CostOrigins.SCRIPT);
         CostPayment bill = CostPayment.of(here);
         String entries = "[{\"type\": \"mxt:aura\", \"aura\": \"mxt_test:qi\", \"amount\": 10},"
                 + "{\"type\": \"mxt:aura\", \"aura\": \"mxt_test:spirit_power\", \"amount\": 10}]";
@@ -260,31 +258,31 @@ public final class CostStoreVerifyProbes {
 
     // A store that says it can pay and then parts with less: the one shape a bank's answer cannot rule out.
     private static final class ShortBank implements AuraAccess {
-        private final int willing;
-        private int removed;
+        private final double willing;
+        private double removed;
 
-        private ShortBank(int willing) {
+        private ShortBank(double willing) {
             this.willing = willing;
         }
 
         @Override
-        public Object2IntMap<Holder<Aura>> getCapacity(@Nullable LivingEntity entity,
+        public Object2DoubleMap<Holder<Aura>> getCapacity(@Nullable LivingEntity entity,
                                                        @NotNull HolderLookup.Provider registries) {
-            return Object2IntMaps.emptyMap();
+            return Object2DoubleMaps.emptyMap();
         }
 
         @Override
-        public int insert(@Nullable LivingEntity entity,
-                          @NotNull HolderLookup.Provider registries, Holder<Aura> aura, int amount, boolean exact, boolean simulate) {
+        public double insert(@Nullable LivingEntity entity,
+                          @NotNull HolderLookup.Provider registries, Holder<Aura> aura, double amount, boolean exact, boolean simulate) {
             return amount;
         }
 
         @Override
-        public int extract(@Nullable LivingEntity entity,
-                           @NotNull HolderLookup.Provider registries, Holder<Aura> aura, int amount, boolean exact, boolean simulate) {
+        public double extract(@Nullable LivingEntity entity,
+                           @NotNull HolderLookup.Provider registries, Holder<Aura> aura, double amount, boolean exact, boolean simulate) {
             // Asked exactly, it promises the whole amount: this is the store that empties between the two passes.
             if (simulate) return 0;
-            int taken = Math.min(this.willing, amount);
+            double taken = Math.min(this.willing, amount);
             this.removed += taken;
             return amount - taken;
         }

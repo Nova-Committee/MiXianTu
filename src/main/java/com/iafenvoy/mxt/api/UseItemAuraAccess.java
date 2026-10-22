@@ -11,7 +11,7 @@ import java.util.Optional;
 
 /**
  * An {@link ItemAuraAccess} item that is filled by hand: holding it down pours the holder's own aura into it,
- * one whole unit a tick - the gesture {@link com.iafenvoy.mxt.runtime.spirit.SpiritChargeService} drives and
+ * up to one unit a tick - the gesture {@link com.iafenvoy.mxt.runtime.spirit.SpiritChargeService} drives and
  * {@link com.iafenvoy.mxt.runtime.spirit.SpiritChargeHold} declares. Rates and costs belong to that gesture,
  * so none of the three questions below is about them.
  */

@@ -20,6 +20,7 @@ import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.MiscUtil;
+import com.iafenvoy.mxt.runtime.spirit.AuraTransfers;
 import com.iafenvoy.mxt.util.PlayerNames;
 import com.iafenvoy.mxt.util.codec.RegistryCodecs;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
@@ -238,7 +239,7 @@ public final class ArtifactService {
     // What the definition declares plus the bonus earned by being fed. A stack claiming no definition, or one
     // that does not name this aura, falls back to the caller's capacity - so a caller with its own ceiling keeps
     // working and an unmentioned aura stays unstorable.
-    public static int capacity(Provider access, ItemStack stack, Holder<Aura> aura, double fallbackCapacity, FormulaContext context) {
+    public static double capacity(Provider access, ItemStack stack, Holder<Aura> aura, double fallbackCapacity, FormulaContext context) {
         double declared = definition(access, stack)
                 .map(holder -> holder.value().spiritCapacity().get(aura))
                 .map(provider -> evaluate(provider, context))
@@ -247,7 +248,7 @@ public final class ArtifactService {
         if (declared <= 0.0D) return 0;
         double resolved = declared * (1.0D + NOURISHMENT_CAPACITY_BONUS * Math.clamp(state(stack).nourishment(), 0.0D, MAX_NOURISHMENT));
         // Saturate rather than hand an infinity to a store that would have to reject it.
-        return Double.isFinite(resolved) ? (int) Math.clamp(Math.floor(resolved), 0.0D, Integer.MAX_VALUE) : Integer.MAX_VALUE;
+        return Double.isFinite(resolved) ? resolved : Double.MAX_VALUE;
     }
 
     public static double stored(ItemStack stack, Holder<Aura> aura) {
@@ -278,9 +279,10 @@ public final class ArtifactService {
         if (amount <= 0.0D) return 0.0D;
         double capacity = capacity(access, stack, aura, fallbackCapacity, context);
         double stored = stored(stack, aura);
-        double accepted = Math.min(amount, Math.max(0.0D, capacity - stored));
+        AuraTransfers.Transfer transfer = AuraTransfers.insert(stored, capacity, amount, false);
+        double accepted = amount - transfer.remainder();
         if (accepted <= 0.0D) return 0.0D;
-        setEnergy(stack, aura, stored + accepted);
+        setEnergy(stack, aura, transfer.stored());
         if (capacity > 0.0D) feed(stack, accepted / capacity);
         return accepted;
     }
@@ -289,8 +291,9 @@ public final class ArtifactService {
         amount = MiscUtil.positive(amount);
         if (amount <= 0.0D) return 0.0D;
         double stored = stored(stack, aura);
-        double extracted = Math.min(amount, Math.max(0.0D, stored));
-        if (extracted > 0.0D) setEnergy(stack, aura, stored - extracted);
+        AuraTransfers.Transfer transfer = AuraTransfers.extract(stored, amount, false);
+        double extracted = amount - transfer.remainder();
+        if (extracted > 0.0D) setEnergy(stack, aura, transfer.stored());
         return extracted;
     }
 
@@ -301,9 +304,10 @@ public final class ArtifactService {
         capacity = MiscUtil.positive(capacity);
         if (amount <= 0.0D || capacity <= 0.0D) return 0.0D;
         double stored = stored(stack, aura);
-        double accepted = Math.min(amount, Math.max(0.0D, capacity - stored));
+        AuraTransfers.Transfer transfer = AuraTransfers.insert(stored, capacity, amount, false);
+        double accepted = amount - transfer.remainder();
         if (accepted <= 0.0D) return 0.0D;
-        setEnergy(stack, aura, stored + accepted);
+        setEnergy(stack, aura, transfer.stored());
         return accepted;
     }
 

@@ -26,6 +26,7 @@ import com.iafenvoy.mxt.probe.talisman.StationProbes;
 import com.iafenvoy.mxt.probe.talisman.TalismanProbes;
 import com.iafenvoy.mxt.probe.verify.AbilityCooldownVerifyProbes;
 import com.iafenvoy.mxt.probe.verify.AuraVerifyProbes;
+import com.iafenvoy.mxt.probe.verify.AuraDoubleVerifyProbes;
 import com.iafenvoy.mxt.probe.verify.BlockAuraRefreshVerifyProbes;
 import com.iafenvoy.mxt.probe.verify.ClosureVerifyProbes;
 import com.iafenvoy.mxt.probe.verify.CloseableResourcesVerifyProbes;
@@ -109,6 +110,7 @@ public final class ProbeTests {
             TalismanProbes::probes,
             AbilityCooldownVerifyProbes::probes,
             AuraVerifyProbes::probes,
+            AuraDoubleVerifyProbes::probes,
             BlockAuraRefreshVerifyProbes::probes,
             LightBeamParticleVerifyProbes::probes,
             WorldEffectsVerifyProbes::probes,

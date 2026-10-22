@@ -116,7 +116,8 @@ public final class SpiritBurstService {
         if (definition.auraType().isEmpty() || !ResourceUseService.canUse(holder, aura)) return false;
         Holder<Resource> resource = definition.resource();
         FormulaContext context = ResourceService.formulaContext(holder, resource, FormulaContext.of(holder));
-        int amount = asWholeAmount(definition.burstAmount().evaluate(context));
+        double amount = definition.burstAmount().evaluate(context);
+        if (!Double.isFinite(amount)) return false;
         if (amount <= 0) return false;
         if (!ResourceService.initialize(resources, resource, context).valid() || resources.get(resource) < amount)
             return false;
@@ -136,14 +137,10 @@ public final class SpiritBurstService {
 
     // The vessel this burst charges instead of firing, or null when it is a burst after all: a vessel in the main
     // hand that would really take some of what is being fired.
-    private static @Nullable SpiritVesselItem heldVessel(LivingEntity holder, Holder<Aura> aura, int amount) {
+    private static @Nullable SpiritVesselItem heldVessel(LivingEntity holder, Holder<Aura> aura, double amount) {
         ItemStack stack = holder.getMainHandItem();
         if (!(stack.getItem() instanceof SpiritVesselItem vessel)) return null;
         return vessel.insert(holder, holder.registryAccess(), stack, aura, amount, false, true) < amount ? vessel : null;
     }
 
-    private static int asWholeAmount(double value) {
-        if (!Double.isFinite(value) || value < 1.0D) return 0;
-        return (int) Math.min(Integer.MAX_VALUE, Math.floor(value));
-    }
 }

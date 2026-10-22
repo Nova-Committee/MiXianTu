@@ -1,9 +1,7 @@
 package com.iafenvoy.mxt.runtime.resource;
 
-import com.iafenvoy.mxt.attachment.CultivationAttachment;
 import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.data.resource.Resource;
-import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
@@ -74,18 +72,8 @@ public final class ResourceService {
     }
 
     // absorbed_aura is zero when the player has no realm stage in this resource's chain.
-    public static FormulaContext formulaContext(CultivationAttachment spirit, Holder<Resource> resource, FormulaContext base) {
-        return base.withResource(spirit, resource);
-    }
-
-    public static FormulaContext formulaContext(CultivationAttachment spirit, Identifier resource, FormulaContext base) {
-        return resource(base.registries(), resource)
-                .map(value -> formulaContext(spirit, value, base)).orElse(base);
-    }
-
     public static FormulaContext formulaContext(LivingEntity entity, Holder<Resource> resource, FormulaContext base) {
-        return FormulaContexts.forEntity(entity, base)
-                .withResource(entity.getData(MxtAttachments.CULTIVATION), resource);
+        return FormulaContexts.forEntity(entity, base).withResource(resource);
     }
 
     public static FormulaContext formulaContext(LivingEntity entity, Identifier resource, FormulaContext base) {

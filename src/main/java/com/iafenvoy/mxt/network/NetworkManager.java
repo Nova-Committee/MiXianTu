@@ -45,6 +45,7 @@ public final class NetworkManager {
             registrar.playToClient(ProfilerGuiS2CPayload.TYPE, ProfilerGuiS2CPayload.STREAM_CODEC)
                     .playToClient(ProfilerSnapshotS2CPayload.TYPE, ProfilerSnapshotS2CPayload.STREAM_CODEC);
             registrar.playToClient(AuraStateS2CPayload.TYPE, AuraStateS2CPayload.STREAM_CODEC)
+                    .playToClient(SpiritCraftingStateS2CPayload.TYPE, SpiritCraftingStateS2CPayload.STREAM_CODEC)
                     .playToClient(AlchemyStateS2CPayload.TYPE, AlchemyStateS2CPayload.STREAM_CODEC)
                     .playToClient(FormationStructureS2CPayload.TYPE, FormationStructureS2CPayload.STREAM_CODEC)
                     .playToClient(OwnerNameS2CPayload.TYPE, OwnerNameS2CPayload.STREAM_CODEC)
@@ -60,6 +61,8 @@ public final class NetworkManager {
                         new MainThreadPayloadHandler<>(ClientNetworkHandler::onProfilerSnapshot))
                 .playToClient(AuraStateS2CPayload.TYPE, AuraStateS2CPayload.STREAM_CODEC,
                         new MainThreadPayloadHandler<>(ClientNetworkHandler::onAuraState))
+                .playToClient(SpiritCraftingStateS2CPayload.TYPE, SpiritCraftingStateS2CPayload.STREAM_CODEC,
+                        new MainThreadPayloadHandler<>(ClientNetworkHandler::onSpiritCraftingState))
                 .playToClient(AlchemyStateS2CPayload.TYPE, AlchemyStateS2CPayload.STREAM_CODEC,
                         new MainThreadPayloadHandler<>(ClientNetworkHandler::onAlchemyState))
                 .playToClient(FormationStructureS2CPayload.TYPE, FormationStructureS2CPayload.STREAM_CODEC,

@@ -25,7 +25,6 @@ import java.util.Optional;
  * sides resolve it here - and what lets the configuration screen offer a pool of its own.
  */
 public final class WheelEntryKinds {
-    // FIXME:: Change to no dispatch
     public static final WheelEntryKind EMPTY = new EmptyKind();
     public static final WheelEntryKind ABILITY = new AbilityKind();
     public static final WheelEntryKind AURA = new AuraKind();

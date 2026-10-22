@@ -5,7 +5,7 @@ import com.iafenvoy.mxt.data.ability.type.UpkeepAbilityType;
 import com.iafenvoy.mxt.data.cost.Cost;
 import com.iafenvoy.mxt.data.cost.CostPayment;
 import com.iafenvoy.mxt.data.cost.context.CostContext;
-import com.iafenvoy.mxt.data.cost.context.CostOrigin;
+import com.iafenvoy.mxt.data.cost.context.CostOrigins;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.profiling.ProfilerScope;
 import com.iafenvoy.mxt.util.profiling.ServerProfiling;
@@ -71,7 +71,7 @@ public final class ArtifactUpkeepService {
         long interval = interval(upkeep.type(), context);
         if (gameTime % interval != 0L) return false;
         CostPayment.PaymentResult payment = CostPayment.pay(costs,
-                CostContext.of(holder, context, CostOrigin.ARTIFACT_UPKEEP));
+                CostContext.of(holder, context, CostOrigins.ARTIFACT_UPKEEP));
         if (payment.isSuccess()) return true;
         upkeep.type().onFail().execute(holder, stack, context);
         return false;

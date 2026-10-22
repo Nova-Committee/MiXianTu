@@ -12,8 +12,7 @@ import java.util.Optional;
 
 /**
  * Persistent store on an item stack that implements {@code ItemAuraAccess}: how much of which auras the stack
- * holds. Amounts are doubles, so an artifact's fuel can be bought a fraction a tick while a talisman is still
- * filled one whole unit at a time; a pour only ever writes whole units. The key is an {@link Aura}, never the
+ * holds. Amounts and transfers support fractions. The key is an {@link Aura}, never the
  * {@code resource} it is counted in - a plain counter carries no aura and has no business here. A missing
  * component means whatever the item says (pristine stone is full, untouched carrier is empty); an empty map is a
  * third thing, a store that was drained.

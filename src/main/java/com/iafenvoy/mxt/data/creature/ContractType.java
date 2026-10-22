@@ -30,10 +30,6 @@ import java.util.Optional;
  * <p>{@code quality} is the tier a scroll of this contract starts on, which several contracts sharing one built-in
  * scroll cannot state by item.</p>
  */
-// TODO: may be removed. Eligibility is a code fact and the owner belongs to the entity, so what is left here is
-// the two conditions, the actions, the price and the caps; ContractService, the type stored in
-// ContractAttachment and the /contract command would go with it if the creature ever declares that itself.
-// Marked, not scheduled.
 public record ContractType(Optional<Holder<ItemQuality>> quality, EntityCondition ownerCondition,
                            EntityCondition creatureCondition, EntityAction followAction, BiEntityAction combatAction,
                            EntityAction releaseAction, EntityAction deathAction, EntityAction ownerBindAction,

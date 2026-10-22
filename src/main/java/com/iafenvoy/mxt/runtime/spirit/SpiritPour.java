@@ -17,9 +17,9 @@ public record SpiritPour(List<Entry> entries) {
         entries = List.copyOf(entries);
     }
 
-    public record Entry(Holder<Aura> aura, int stored, int capacity) {
+    public record Entry(Holder<Aura> aura, double stored, double capacity) {
         public boolean full() {
-            return this.stored >= this.capacity;
+            return AuraTransfers.covers(this.stored, this.capacity);
         }
     }
 

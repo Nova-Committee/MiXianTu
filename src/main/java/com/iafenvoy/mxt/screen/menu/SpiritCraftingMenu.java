@@ -1,31 +1,33 @@
 package com.iafenvoy.mxt.screen.menu;
 
 import com.iafenvoy.mxt.data.aura.Aura;
+import com.iafenvoy.mxt.network.payload.SpiritCraftingStateS2CPayload;
+import com.iafenvoy.mxt.network.payload.SpiritCraftingStateS2CPayload.Row;
+import net.minecraft.server.level.ServerPlayer;
+import net.neoforged.neoforge.network.PacketDistributor;
+import java.util.ArrayList;
 import com.iafenvoy.mxt.data.cost.Cost;
 import com.iafenvoy.mxt.data.cost.Costs;
 import com.iafenvoy.mxt.data.cost.context.CostContext;
-import com.iafenvoy.mxt.data.cost.context.CostOrigin;
+import com.iafenvoy.mxt.data.cost.context.CostOrigins;
 import com.iafenvoy.mxt.item.block.entity.SpiritCraftingTableBlockEntity;
 import com.iafenvoy.mxt.recipe.SpiritCraftingInput;
 import com.iafenvoy.mxt.recipe.SpiritRecipe;
 import com.iafenvoy.mxt.registry.MxtBlocks;
 import com.iafenvoy.mxt.registry.MxtMenus;
 import com.iafenvoy.mxt.registry.MxtRecipeTypes;
-import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.screen.aui.AuiPages;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.profiling.ProfilerScope;
 import com.iafenvoy.mxt.util.profiling.ServerProfiling;
 import com.sighs.apricityui.screen.ApricityContainerMenu;
 import net.minecraft.core.Holder;
-import net.minecraft.core.Registry;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.Container;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.ContainerLevelAccess;
-import net.minecraft.world.inventory.DataSlot;
 import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
@@ -33,6 +35,7 @@ import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.item.crafting.RecipeManager;
 import org.jspecify.annotations.NonNull;
 
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -50,16 +53,15 @@ import java.util.stream.IntStream;
  * ApricityUI maps a page slot to a menu slot by container, and each container is one contiguous range.
  */
 public final class SpiritCraftingMenu extends ApricityContainerMenu {
-    private static final int MAX_PROGRESS_ENTRIES = 8;
+    private static final int MAX_PROGRESS_ENTRIES = SpiritCraftingStateS2CPayload.MAX_ROWS;
     private static final int RESULT_SLOT = 0;
     private static final int GRID_START = 1;
     private static final int PLAYER_START = 10;
     private final Setup setup;
     private final Player player;
     private final ContainerLevelAccess access;
-    private final DataSlot[] progressTypes = new DataSlot[MAX_PROGRESS_ENTRIES];
-    private final DataSlot[] progressAmounts = new DataSlot[MAX_PROGRESS_ENTRIES];
-    private final DataSlot[] progressRequirements = new DataSlot[MAX_PROGRESS_ENTRIES];
+    private List<Row> progress = List.of();
+    private List<Row> sentProgress;
     private RecipeMatch current;
 
     public SpiritCraftingMenu(int id, Inventory inventory) {
@@ -75,15 +77,6 @@ public final class SpiritCraftingMenu extends ApricityContainerMenu {
         this.setup = setup;
         this.player = inventory.player;
         this.access = access;
-        for (int index = 0; index < MAX_PROGRESS_ENTRIES; index++) {
-            this.progressTypes[index] = DataSlot.standalone();
-            this.progressAmounts[index] = DataSlot.standalone();
-            this.progressRequirements[index] = DataSlot.standalone();
-            this.progressTypes[index].set(-1);
-            this.addDataSlot(this.progressTypes[index]);
-            this.addDataSlot(this.progressAmounts[index]);
-            this.addDataSlot(this.progressRequirements[index]);
-        }
         this.updateResult();
     }
 
@@ -105,19 +98,19 @@ public final class SpiritCraftingMenu extends ApricityContainerMenu {
     }
 
     public Holder<Aura> progressAura(int index) {
-        if (index < 0 || index >= MAX_PROGRESS_ENTRIES) return null;
-        int rawId = this.progressTypes[index].get();
-        if (rawId < 0) return null;
-        Registry<Aura> registry = this.player.level().registryAccess().lookupOrThrow(MxtResourceKeys.AURA);
-        return registry.get(rawId).orElse(null);
+        return index < 0 || index >= this.progress.size() ? null : this.progress.get(index).aura();
     }
 
-    public int progressAmount(int index) {
-        return index < 0 || index >= MAX_PROGRESS_ENTRIES ? 0 : this.progressAmounts[index].get();
+    public double progressAmount(int index) {
+        return index < 0 || index >= this.progress.size() ? 0.0D : this.progress.get(index).stored();
     }
 
-    public int progressRequirement(int index) {
-        return index < 0 || index >= MAX_PROGRESS_ENTRIES ? 0 : this.progressRequirements[index].get();
+    public double progressRequirement(int index) {
+        return index < 0 || index >= this.progress.size() ? 0.0D : this.progress.get(index).required();
+    }
+
+    public void acceptProgress(List<Row> rows) {
+        this.progress = List.copyOf(rows);
     }
 
     @Override
@@ -134,34 +127,28 @@ public final class SpiritCraftingMenu extends ApricityContainerMenu {
     private void updateResult() {
         try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.CRAFTING)) {
             this.current = this.findRecipe();
-            Map<Holder<Aura>, Integer> costs = this.current == null ? Map.of() : this.current.costs();
+            Map<Holder<Aura>, Double> costs = this.current == null ? Map.of() : this.current.costs();
             this.withTable(table -> table.configureAuraCosts(costs));
             this.syncProgress();
         }
     }
 
     private void syncProgress() {
-        // The whole row is read in one visit to the block; no block means no rows written at all, which
-        // leaves the client's data slots holding what the server published.
+        if (!(this.player instanceof ServerPlayer serverPlayer)) return;
+        List<Row> rows = new ArrayList<>();
         this.withTable(table -> {
-            Registry<Aura> registry = this.player.level().registryAccess().lookupOrThrow(MxtResourceKeys.AURA);
-            int index = 0;
-            if (this.current != null) {
-                for (Entry<Holder<Aura>, Integer> entry : this.current.costs().entrySet()) {
-                    if (index >= MAX_PROGRESS_ENTRIES) break;
-                    this.progressTypes[index].set(registry.getId(entry.getKey().value()));
-                    this.progressAmounts[index].set(Math.clamp(table.aura(entry.getKey()), 0, Short.MAX_VALUE));
-                    this.progressRequirements[index].set(Math.clamp(entry.getValue(), 0, Short.MAX_VALUE));
-                    index++;
-                }
-            }
-            while (index < MAX_PROGRESS_ENTRIES) {
-                this.progressTypes[index].set(-1);
-                this.progressAmounts[index].set(0);
-                this.progressRequirements[index].set(0);
-                index++;
+            if (this.current == null) return;
+            for (Entry<Holder<Aura>, Double> entry : this.current.costs().entrySet()) {
+                if (rows.size() >= MAX_PROGRESS_ENTRIES) break;
+                rows.add(new Row(entry.getKey(), table.aura(entry.getKey()), entry.getValue()));
             }
         });
+        this.progress = List.copyOf(rows);
+        // Wait until the open-screen packet has installed this menu before sending its first double snapshot.
+        if (!this.progress.equals(this.sentProgress) && serverPlayer.containerMenu == this) {
+            PacketDistributor.sendToPlayer(serverPlayer, new SpiritCraftingStateS2CPayload(this.containerId, this.progress));
+            this.sentProgress = this.progress;
+        }
     }
 
     private RecipeMatch findRecipe() {
@@ -178,17 +165,11 @@ public final class SpiritCraftingMenu extends ApricityContainerMenu {
         return new RecipeMatch(recipe, this.costs(recipe.aura()));
     }
 
-    private Map<Holder<Aura>, Integer> costs(List<Cost> aura) {
+    private Map<Holder<Aura>, Double> costs(List<Cost> aura) {
         Map<Holder<Aura>, Double> amounts = Costs.auras(aura,
-                CostContext.of(this.player, FormulaContext.of(this.player), CostOrigin.RECIPE));
+                CostContext.of(this.player, FormulaContext.of(this.player), CostOrigins.RECIPE));
         if (amounts == null) return Map.of();
-        Map<Holder<Aura>, Integer> costs = new LinkedHashMap<>();
-        for (Entry<Holder<Aura>, Double> entry : amounts.entrySet()) {
-            double value = entry.getValue();
-            if (!Double.isFinite(value) || value < 0.0D || value > Integer.MAX_VALUE) return Map.of();
-            costs.put(entry.getKey(), (int) Math.ceil(value));
-        }
-        return costs;
+        return Collections.unmodifiableMap(new LinkedHashMap<>(amounts));
     }
 
     private SpiritCraftingInput input() {
@@ -275,6 +256,6 @@ public final class SpiritCraftingMenu extends ApricityContainerMenu {
         }
     }
 
-    private record RecipeMatch(SpiritRecipe recipe, Map<Holder<Aura>, Integer> costs) {
+    private record RecipeMatch(SpiritRecipe recipe, Map<Holder<Aura>, Double> costs) {
     }
 }

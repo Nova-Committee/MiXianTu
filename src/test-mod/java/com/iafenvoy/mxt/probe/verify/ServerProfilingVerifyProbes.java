@@ -4,7 +4,7 @@ import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.command.server.DebugCommand;
 import com.iafenvoy.mxt.data.cost.CostPayment;
 import com.iafenvoy.mxt.data.cost.context.CostContext;
-import com.iafenvoy.mxt.data.cost.context.CostOrigin;
+import com.iafenvoy.mxt.data.cost.context.CostOrigins;
 import com.iafenvoy.mxt.probe.Probe;
 import com.iafenvoy.mxt.probe.ProbeContext;
 import com.iafenvoy.mxt.runtime.economy.CurrencyPaymentService;
@@ -73,7 +73,7 @@ public final class ServerProfilingVerifyProbes {
             }
             expect(context, "a second change keeps its result", change(), 3L);
             expect(context, "profiled empty payment still succeeds",
-                    CostPayment.pay(List.of(), CostContext.of(context.player(), CostOrigin.ABILITY)).isSuccess(), true);
+                    CostPayment.pay(List.of(), CostContext.of(context.player(), CostOrigins.ABILITY)).isSuccess(), true);
             AtomicLong workerResult = new AtomicLong(-1L);
             Thread worker = Thread.ofPlatform().start(() -> workerResult.set(change()));
             try {

@@ -52,7 +52,7 @@ public final class SpiritChargeService {
 
     // The gesture's own rate, used for a store that declares only what it holds; an item described by the
     // shared item_aura definition states its own pair instead.
-    public static final int POUR_INTAKE_PER_TICK = 1;
+    public static final double POUR_INTAKE_PER_TICK = 1.0D;
     public static final double POUR_COST_PER_UNIT = 1.0D;
 
     private SpiritChargeService() {
@@ -103,11 +103,11 @@ public final class SpiritChargeService {
             Charge charge = resolve(registries, stack, context);
             if (charge == null) return;
 
-            int want = charge.intake();
+            double want = charge.intake();
             if (want <= 0) return;
             // What the item will really take, asked before anything is paid for: a full item, or one storing
             // another aura, answers zero.
-            int units = want - access.insert(entity, registries, stack, aura, want, false, true);
+            double units = want - access.insert(entity, registries, stack, aura, want, false, true);
             if (units <= 0) {
                 show(entity, Component.translatable("actionbar.mxt.charge.full"), "full");
                 return;
@@ -116,9 +116,9 @@ public final class SpiritChargeService {
             double unitCost = charge.costPerUnit();
             if (unitCost > 0.0D) {
                 ResourceHolderAttachment resources = entity.getData(MxtAttachments.RESOURCE_HOLDER);
-                // Decided before anything moves: a partial payment that bought no whole unit would be aura taken
+                // Decided before anything moves: a payment that bought no transfer would be aura taken
                 // for nothing.
-                units = Math.min(units, (int) Math.floor(resources.get(resource) / unitCost));
+                units = Math.min(units, resources.get(resource) / unitCost);
                 if (units <= 0) {
                     show(entity, Component.translatable("actionbar.mxt.charge.insufficient"), "insufficient");
                     return;
@@ -131,7 +131,7 @@ public final class SpiritChargeService {
                     show(entity, Component.translatable("actionbar.mxt.charge.insufficient"), "insufficient");
                     return;
                 }
-                units = Math.min(units, (int) Math.floor(Math.max(0.0D, before - paid.value()) / unitCost));
+                units = Math.min(units, Math.max(0.0D, before - paid.value()) / unitCost);
                 if (units <= 0) {
                     show(entity, Component.translatable("actionbar.mxt.charge.insufficient"), "insufficient");
                     return;
@@ -162,7 +162,7 @@ public final class SpiritChargeService {
         // items, and a missing component is a pristine, fully charged item.
         Holder<ItemAura> definition = ItemAuraService.find(registries, stack).orElse(null);
         if (definition == null) return null;
-        int capacity = ItemAuraService.capacity(registries, stack, context);
+        double capacity = ItemAuraService.capacity(registries, stack, context);
         if (capacity <= 0) return null;
         int count = Math.max(1, stack.getCount());
         double intakeSpeed = MiscUtil.positive(definition.value().consumeSpeed().evaluate(context) * count);
@@ -173,11 +173,11 @@ public final class SpiritChargeService {
         SpiritStorageComponent component = stack.get(MxtDataComponents.SPIRIT_STORAGE);
         Holder<Aura> aura = (component == null ? Optional.<Holder<Aura>>empty() : component.soleAura())
                 .orElse(definition.value().type());
-        int stored = component == null ? capacity : (int) Math.clamp(Math.floor(component.get(aura)), 0.0D, capacity);
-        // What one whole unit costs: the ratio of the two speeds, the same for one item and for a stack.
+        double stored = component == null ? capacity : component.get(aura);
+        // What one unit costs: the ratio of the two speeds, the same for one item and for a stack.
         double unitCost = MiscUtil.positive(costSpeed) <= 0.0D ? 0.0D : costSpeed / intakeSpeed;
         return new Charge(aura, stored, capacity,
-                Math.max(1, (int) Math.floor(intakeSpeed)), unitCost);
+                intakeSpeed, unitCost);
     }
 
     // The same reading against a context built from the access alone - what a hold is sized by.
@@ -210,7 +210,7 @@ public final class SpiritChargeService {
         show(entity, Component.translatable("actionbar.mxt.charge.progress", TooltipText.number(charge.stored()),
                         TooltipText.number(charge.capacity()),
                         Component.literal(percentage + "%").withColor(color(percentage)))
-                .withStyle(ChatFormatting.AQUA), "progress:" + percentage);
+                .withStyle(ChatFormatting.AQUA), "progress:" + TooltipText.number(charge.stored()) + "/" + TooltipText.number(charge.capacity()));
     }
 
     // Writes one action-bar line per holder, and only when it differs from the last one, so a refusal repeated
@@ -222,24 +222,24 @@ public final class SpiritChargeService {
     }
 
     // One item's store as one tick of pouring sees it.
-    public record Charge(Holder<Aura> aura, int stored, int capacity, int intake, double costPerUnit) {
+    public record Charge(Holder<Aura> aura, double stored, double capacity, double intake, double costPerUnit) {
         // Ceiling on how long a pour may last: an item whose capacity dwarfs its intake would otherwise ask for
         // a hold nobody would ever finish, so past this the gesture stops and is repeated instead.
         public static final int MAX_HOLD_TICKS = 200;
 
         public int percentage() {
-            return this.capacity <= 0 ? 0 : (int) Math.round(this.stored * 100.0D / this.capacity);
+            return this.capacity <= 0 ? 0 : (int) Math.round(Math.clamp(this.stored / this.capacity, 0.0D, 1.0D) * 100.0D);
         }
 
         public boolean full() {
-            return this.stored >= this.capacity;
+            return AuraTransfers.covers(this.stored, this.capacity);
         }
 
         // Sized by the capacity rather than the deficit, because the length must be a function of the stack and not
         // of the tick: the sound's cadence is read from it every tick, and a shrinking length would drop it.
         public int holdTicks() {
             if (this.full() || this.intake <= 0) return HoldBinding.NO_HOLD;
-            return Mth.clamp((int) Math.ceil((double) this.capacity / this.intake), 1, MAX_HOLD_TICKS);
+            return Mth.clamp((int) Math.ceil(this.capacity / this.intake), 1, MAX_HOLD_TICKS);
         }
     }
 }

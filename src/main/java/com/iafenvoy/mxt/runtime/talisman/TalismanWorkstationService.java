@@ -9,7 +9,7 @@ import com.iafenvoy.mxt.data.cost.Cost;
 import com.iafenvoy.mxt.data.cost.CostPayment;
 import com.iafenvoy.mxt.data.cost.builtin.ItemCost;
 import com.iafenvoy.mxt.data.cost.context.CostContext;
-import com.iafenvoy.mxt.data.cost.context.CostOrigin;
+import com.iafenvoy.mxt.data.cost.context.CostOrigins;
 import com.iafenvoy.mxt.data.item.TalismanComponent;
 import com.iafenvoy.mxt.data.item.TalismanComponent.TriggerMode;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
@@ -296,8 +296,8 @@ public final class TalismanWorkstationService {
     private static void pour(ServerPlayer player, ItemStack stack, double ratio) {
         if (!(stack.getItem() instanceof ItemAuraAccess access)) return;
         Provider registries = player.registryAccess();
-        for (Map.Entry<Holder<Aura>, Integer> entry : TalismanService.capacity(stack).entrySet()) {
-            int units = (int) Math.ceil(entry.getValue() * Math.min(1.0D, ratio));
+        for (Map.Entry<Holder<Aura>, Double> entry : TalismanService.capacity(stack).entrySet()) {
+            double units = entry.getValue() * Math.min(1.0D, ratio);
             if (units > 0) access.insert(player, registries, stack, entry.getKey(), units, false, false);
         }
     }
@@ -389,7 +389,7 @@ public final class TalismanWorkstationService {
     }
 
     private static CostContext context(ServerPlayer player, Container paperSlot) {
-        return CostContext.of(player, CostOrigin.TALISMAN_DRAWING).withItemTarget(paperSlot);
+        return CostContext.of(player, CostOrigins.TALISMAN_DRAWING).withItemTarget(paperSlot);
     }
 
     private static ItemStack carried(ServerPlayer player) {

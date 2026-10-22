@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.api;
 
 import com.iafenvoy.mxt.data.aura.Aura;
-import it.unimi.dsi.fastutil.objects.Object2IntMap;
+import it.unimi.dsi.fastutil.objects.Object2DoubleMap;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.world.entity.LivingEntity;
@@ -9,8 +9,9 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * A block entity that can exchange whole units of one aura at a time.
+ * A block entity that can exchange fractional amounts of one aura at a time.
  * Both operations return the part of {@code amount} that could not be moved.
+ * Amounts and capacities must be finite and non-negative; simulation and exact refusals must not write.
  * <p>
  * {@code exact} is what a payment asks and a fill does not: {@code true} means the whole amount moves or none of it
  * does, so {@code 0} promises that all of it moved and the unchanged {@code amount} promises that nothing did. A store
@@ -27,18 +28,18 @@ import org.jetbrains.annotations.Nullable;
  * nobody stands - a display stand reading the stack it shows - and naming auras takes a registry either way.
  */
 public interface AuraAccess {
-    Object2IntMap<Holder<Aura>> getCapacity(@Nullable LivingEntity entity, @NotNull Provider registries);
+    Object2DoubleMap<Holder<Aura>> getCapacity(@Nullable LivingEntity entity, @NotNull Provider registries);
 
-    default int getCapacity(@Nullable LivingEntity entity, @NotNull Provider registries, Holder<Aura> aura) {
-        return this.getCapacity(entity, registries).getInt(aura);
+    default double getCapacity(@Nullable LivingEntity entity, @NotNull Provider registries, Holder<Aura> aura) {
+        return this.getCapacity(entity, registries).getDouble(aura);
     }
 
-    int insert(@Nullable LivingEntity entity, @NotNull Provider registries, Holder<Aura> aura, int amount, boolean exact, boolean simulate);
+    double insert(@Nullable LivingEntity entity, @NotNull Provider registries, Holder<Aura> aura, double amount, boolean exact, boolean simulate);
 
-    int extract(@Nullable LivingEntity entity, @NotNull Provider registries, Holder<Aura> aura, int amount, boolean exact, boolean simulate);
+    double extract(@Nullable LivingEntity entity, @NotNull Provider registries, Holder<Aura> aura, double amount, boolean exact, boolean simulate);
 
-    static int requireNonNegative(int amount) {
-        if (amount < 0) throw new IllegalArgumentException("Aura amount must not be negative");
+    static double requireNonNegative(double amount) {
+        if (!Double.isFinite(amount) || amount < 0.0D) throw new IllegalArgumentException("Aura amount must be finite and non-negative");
         return amount;
     }
 }

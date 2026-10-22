@@ -4,7 +4,7 @@ import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.data.artifact.ForgingResultComponent;
 import com.iafenvoy.mxt.data.cost.CostPayment;
 import com.iafenvoy.mxt.data.cost.context.CostContext;
-import com.iafenvoy.mxt.data.cost.context.CostOrigin;
+import com.iafenvoy.mxt.data.cost.context.CostOrigins;
 import com.iafenvoy.mxt.data.forging.ForgingBlueprint;
 import com.iafenvoy.mxt.data.forging.ForgingMethod;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
@@ -71,7 +71,7 @@ public final class ForgingService {
             StrikePre event = new StrikePre(player, surface.pos(), new ForgingSessionView(session), method, resources, context);
             Failure refusal = postEvent(event);
             if (refusal != null) return StrikeResult.rejected(refusal, null);
-            CostContext costContext = CostContext.of(player, context, CostOrigin.FORGING);
+            CostContext costContext = CostContext.of(player, context, CostOrigins.FORGING);
             CostPayment plan = CostPayment.of(costContext);
             if (plan.price(event.getCosts()).isPresent())
                 return StrikeResult.rejected(Failures.INVALID_FORMULA, null);

@@ -12,7 +12,7 @@ import com.iafenvoy.mxt.data.cost.CostPayment;
 import com.iafenvoy.mxt.data.cost.CostTarget;
 import com.iafenvoy.mxt.data.cost.builtin.AuraCost;
 import com.iafenvoy.mxt.data.cost.context.CostContext;
-import com.iafenvoy.mxt.data.cost.context.CostOrigin;
+import com.iafenvoy.mxt.data.cost.context.CostOrigins;
 import com.iafenvoy.mxt.data.cultivation.Cultivation;
 import com.iafenvoy.mxt.data.cultivation.RealmStage;
 import com.iafenvoy.mxt.data.resource.Resource;
@@ -116,8 +116,8 @@ public final class CultivationMethodService {
             // without a settlement.
             List<Cost> groundCosts = definition.costs().stream().filter(cost -> cost instanceof AuraCost).toList();
             List<Cost> bodyCosts = definition.costs().stream().filter(cost -> !(cost instanceof AuraCost)).toList();
-            CostContext auraContext = CostContext.pool(entity, entity.level(), entity.blockPosition(), context, CostOrigin.CULTIVATION);
-            CostContext costContext = CostContext.of(entity, context, CostOrigin.CULTIVATION);
+            CostContext auraContext = CostContext.pool(entity, entity.level(), entity.blockPosition(), context, CostOrigins.CULTIVATION);
+            CostContext costContext = CostContext.of(entity, context, CostOrigins.CULTIVATION);
             CostPayment bill = CostPayment.of(costContext);
             // Whatever size is available is not asked here: this tick's share is decided below, and the payment is what
             // checks the pool against the amount actually spent, so both halves are only priced.

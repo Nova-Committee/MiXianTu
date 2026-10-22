@@ -39,8 +39,6 @@ import java.util.Optional;
  */
 @EventBusSubscriber
 public final class ItemAuraService {
-    private static final double EPSILON = 1.0E-9D;
-
     private ItemAuraService() {
     }
 
@@ -63,20 +61,20 @@ public final class ItemAuraService {
         return server == null ? Optional.empty() : type(server.registryAccess(), stack);
     }
 
-    public static int capacity(Provider access, ItemStack stack, FormulaContext context) {
+    public static double capacity(Provider access, ItemStack stack, FormulaContext context) {
         return find(access, stack)
-                .map(holder -> saturatingMultiply(capacity(holder.value(), context), stack.getCount()))
-                .orElse(0);
+                .map(holder -> scale(capacity(holder.value(), context), stack.getCount()))
+                .orElse(0.0D);
     }
 
-    public static int capacity(HolderLookup.Provider registries, ItemStack stack) {
+    public static double capacity(HolderLookup.Provider registries, ItemStack stack) {
         return capacity(registries, stack, FormulaContext.of(registries));
     }
 
-    private static int capacity(ItemAura definition, FormulaContext context) {
+    private static double capacity(ItemAura definition, FormulaContext context) {
         double total = MiscUtil.positive(definition.aura().evaluate(context));
         if (total <= 0.0D) return 0;
-        return total >= Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) Math.floor(total);
+        return total;
     }
 
     // Advances by one server tick. A missing fuel first resumes the smallest partially consumed matching
@@ -95,7 +93,7 @@ public final class ItemAuraService {
 
             ItemAuraComponent state = item.get(MxtDataComponents.ITEM_AURA);
             if (state == null) return TickResult.INVALID;
-            if (state.remain() <= EPSILON) {
+            if (state.remain() <= 0.0D) {
                 exhaust(entity, item, active, context);
                 return new TickResult(0.0D, 0.0D, true, true);
             }
@@ -107,7 +105,7 @@ public final class ItemAuraService {
             double remaining = state.remain() - consumed;
             double released = release(entity, resources, active.value().type(),
                     active.value().releaseSpeed().evaluate(context) * stackSize, context);
-            if (remaining <= EPSILON) {
+            if (remaining <= 0.0D) {
                 exhaust(entity, item, active, context);
                 return new TickResult(consumed, released, true, true);
             }
@@ -162,9 +160,9 @@ public final class ItemAuraService {
             }
             if (item.getItem() instanceof ItemAuraAccess access) {
                 Provider registries = entity.registryAccess();
-                int capacity = Math.max(0, access.getCapacity(entity, registries, item).getInt(definition.value().type()));
-                int unavailable = access.extract(entity, registries, item, definition.value().type(), capacity, false, true);
-                int available = Math.max(0, capacity - unavailable);
+                double capacity = access.getCapacity(entity, registries, item, definition.value().type());
+                double unavailable = access.extract(entity, registries, item, definition.value().type(), capacity, false, true);
+                double available = Math.max(0.0D, capacity - unavailable);
                 if (available == 0) {
                     holding.clear();
                     giveItem(entity, item);
@@ -185,7 +183,7 @@ public final class ItemAuraService {
         for (int slot = 0; slot < player.getInventory().getContainerSize(); slot++) {
             ItemStack stack = player.getInventory().getItem(slot);
             ItemAuraComponent state = stack.get(MxtDataComponents.ITEM_AURA);
-            if (state == null || state.remain() <= EPSILON || state.remain() >= smallestRemainder || find(entity, stack).isEmpty())
+            if (state == null || state.remain() <= 0.0D || state.remain() >= smallestRemainder || find(entity, stack).isEmpty())
                 continue;
             selectedSlot = slot;
             smallestRemainder = state.remain();
@@ -210,7 +208,7 @@ public final class ItemAuraService {
 
     private static boolean isPartialFuel(LivingEntity entity, ItemStack stack) {
         ItemAuraComponent state = stack.get(MxtDataComponents.ITEM_AURA);
-        return state != null && state.remain() > EPSILON && find(entity, stack).isPresent();
+        return state != null && state.remain() > 0.0D && find(entity, stack).isPresent();
     }
 
     private static ItemStack takeFreshHeldItem(LivingEntity entity) {
@@ -244,16 +242,12 @@ public final class ItemAuraService {
         return Double.isFinite(result) ? result : Double.MAX_VALUE;
     }
 
-    private static int saturatingMultiply(int value, int count) {
-        if (value <= 0 || count <= 0) return 0;
-        long result = (long) value * count;
-        return result >= Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) result;
-    }
-
     private static void exhaust(LivingEntity entity, ItemStack item, Holder<ItemAura> active, FormulaContext context) {
         entity.getData(MxtAttachments.FLOAT_HOLDING_ITEM).clear();
         if (item.getItem() instanceof ItemAuraAccess access) {
-            access.extract(entity, entity.registryAccess(), item, active.value().type(), Integer.MAX_VALUE, false, false);
+            double capacity = access.getCapacity(entity, entity.registryAccess(), item, active.value().type());
+            double available = capacity - access.extract(entity, entity.registryAccess(), item, active.value().type(), capacity, false, true);
+            access.extract(entity, entity.registryAccess(), item, active.value().type(), available, true, false);
             item.remove(MxtDataComponents.ITEM_AURA);
             giveItem(entity, item);
         } else {

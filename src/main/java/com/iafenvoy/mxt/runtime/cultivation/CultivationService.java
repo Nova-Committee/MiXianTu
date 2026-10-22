@@ -6,7 +6,7 @@ import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.cost.CostPayment;
 import com.iafenvoy.mxt.data.cost.context.CostContext;
-import com.iafenvoy.mxt.data.cost.context.CostOrigin;
+import com.iafenvoy.mxt.data.cost.context.CostOrigins;
 import com.iafenvoy.mxt.data.cultivation.CultivateConditions;
 import com.iafenvoy.mxt.data.cultivation.RealmStage;
 import com.iafenvoy.mxt.event.CultivationBreakEvent.Post;
@@ -127,7 +127,7 @@ public final class CultivationService {
         double progress = spirit.cultivationProgress(aura);
         if (progress < minimum) return BreakthroughResult.rejected(CultivationFailure.INSUFFICIENT_PROGRESS, null);
         if (!conditionsMet.getAsBoolean()) return BreakthroughResult.rejected(Failures.CONDITIONS, null);
-        CostContext costContext = CostContext.of(entity, context, CostOrigin.BREAKTHROUGH);
+        CostContext costContext = CostContext.of(entity, context, CostOrigins.BREAKTHROUGH);
         CostPayment plan = CostPayment.of(costContext);
         Optional<Failure> refusal = plan.price(target.breakthroughCosts());
         if (refusal.isPresent()) return BreakthroughResult.rejected(refusal.get(), null);

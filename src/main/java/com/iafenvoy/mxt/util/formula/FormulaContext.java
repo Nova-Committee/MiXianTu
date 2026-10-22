@@ -1,6 +1,5 @@
 package com.iafenvoy.mxt.util.formula;
 
-import com.iafenvoy.mxt.attachment.CultivationAttachment;
 import com.iafenvoy.mxt.data.resource.Resource;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup.Provider;
@@ -16,9 +15,9 @@ import java.util.Map;
 import java.util.Objects;
 
 /**
- * The objects a formula is evaluated against — caster, target, resource subject, random source, registry access —
- * plus the explicit values {@link #variables()} carries. Variables read their number out of the objects on demand,
- * and a derived context shares the explicit value map instead of copying it.
+ * The objects a formula is evaluated against — caster, target, the resource it is evaluated for, random source,
+ * registry access — plus the explicit values {@link #variables()} carries. Variables read their number out of the
+ * objects on demand, and a derived context shares the explicit value map instead of copying it.
  */
 public final class FormulaContext {
     public static final FormulaContext EMPTY = new FormulaContext(Map.of(), RandomSource.create(), null, null, null, null, null, false);
@@ -31,10 +30,10 @@ public final class FormulaContext {
     @Nullable
     private final Entity caster, target;
     @Nullable
-    private final ResourceSubject resource;
+    private final Holder<Resource> resource;
 
     // copy=false is only safe for a map the caller owns and will not mutate afterwards.
-    public FormulaContext(@NotNull Map<String, Double> variables, @NotNull RandomSource random, @Nullable Provider registries, @Nullable Player player, @Nullable Entity caster, @Nullable Entity target, @Nullable ResourceSubject resource, boolean copy) {
+    public FormulaContext(@NotNull Map<String, Double> variables, @NotNull RandomSource random, @Nullable Provider registries, @Nullable Player player, @Nullable Entity caster, @Nullable Entity target, @Nullable Holder<Resource> resource, boolean copy) {
         Objects.requireNonNull(variables, "variables");
         this.variables = copy ? new LinkedHashMap<>(variables) : variables;
         this.random = Objects.requireNonNull(random, "random");
@@ -106,7 +105,7 @@ public final class FormulaContext {
     }
 
     @Nullable
-    public ResourceSubject resource() {
+    public Holder<Resource> resource() {
         return this.resource;
     }
 
@@ -152,21 +151,14 @@ public final class FormulaContext {
         return new FormulaContext(this.variables, this.random, registries, playerOf(this.caster, target), this.caster, target, this.resource, false);
     }
 
-    public FormulaContext withResource(CultivationAttachment cultivation, Holder<Resource> resource) {
+    // The value a formula is evaluated for: the chain the cultivation variables read, and nothing else.
+    public FormulaContext withResource(@Nullable Holder<Resource> resource) {
         return new FormulaContext(this.variables, this.random, this.registries, this.player, this.caster, this.target,
-                new ResourceSubject(cultivation, resource), false);
+                resource, false);
     }
 
     private static Player playerOf(@Nullable Entity caster, @Nullable Entity target) {
         if (caster instanceof Player player) return player;
         return target instanceof Player player ? player : null;
-    }
-
-    //FIXME:?
-    public record ResourceSubject(CultivationAttachment cultivation, Holder<Resource> resource) {
-        public ResourceSubject {
-            Objects.requireNonNull(cultivation, "cultivation");
-            Objects.requireNonNull(resource, "resource");
-        }
     }
 }

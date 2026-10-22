@@ -1,6 +1,7 @@
 package com.iafenvoy.mxt.item;
 
 import com.iafenvoy.mxt.api.AuraAccess;
+import com.iafenvoy.mxt.runtime.spirit.AuraTransfers;
 import com.iafenvoy.mxt.api.UseItemAuraAccess;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.aura.SpiritStorageComponent;
@@ -10,8 +11,8 @@ import com.iafenvoy.mxt.runtime.spirit.SpiritPour;
 import com.iafenvoy.mxt.runtime.spirit.SpiritPour.Entry;
 import com.iafenvoy.mxt.runtime.spirit.SpiritSource;
 import com.iafenvoy.mxt.runtime.talisman.TalismanService;
-import it.unimi.dsi.fastutil.objects.Object2IntMap;
-import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
+import it.unimi.dsi.fastutil.objects.Object2DoubleMap;
+import it.unimi.dsi.fastutil.objects.Object2DoubleOpenHashMap;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.core.component.DataComponents;
@@ -67,39 +68,39 @@ public class TalismanItem extends Item implements UseItemAuraAccess {
     }
 
     @Override
-    public Object2IntMap<Holder<Aura>> getCapacity(@Nullable LivingEntity entity, @NotNull Provider registries, ItemStack stack) {
-        Object2IntMap<Holder<Aura>> capacities = new Object2IntOpenHashMap<>();
-        for (Map.Entry<Holder<Aura>, Integer> entry : TalismanService.capacity(stack).entrySet())
-            capacities.put(entry.getKey(), entry.getValue().intValue());
+    public Object2DoubleMap<Holder<Aura>> getCapacity(@Nullable LivingEntity entity, @NotNull Provider registries, ItemStack stack) {
+        Object2DoubleMap<Holder<Aura>> capacities = new Object2DoubleOpenHashMap<>();
+        for (Map.Entry<Holder<Aura>, Double> entry : TalismanService.capacity(stack).entrySet())
+            capacities.put(entry.getKey(), entry.getValue().doubleValue());
         return capacities;
     }
 
     @Override
-    public int insert(@Nullable LivingEntity entity, @NotNull Provider registries, ItemStack stack, Holder<Aura> aura, int amount, boolean exact, boolean simulate) {
+    public double insert(@Nullable LivingEntity entity, @NotNull Provider registries, ItemStack stack, Holder<Aura> aura, double amount, boolean exact, boolean simulate) {
         AuraAccess.requireNonNegative(amount);
-        int capacity = this.getCapacity(entity, registries, stack, aura);
+        double capacity = this.getCapacity(entity, registries, stack, aura);
         if (capacity <= 0) return amount;
         SpiritStorageComponent charge = this.store(stack);
-        int stored = (int) Math.clamp(Math.floor(charge.get(aura)), 0.0D, capacity);
-        int accepted = Math.min(amount, capacity - stored);
-        if (exact && accepted != amount) return amount;
+        double stored = charge.get(aura);
+        AuraTransfers.Transfer transfer = AuraTransfers.insert(stored, capacity, amount, exact);
+        double accepted = amount - transfer.remainder();
         if (!simulate && accepted > 0)
-            stack.set(MxtDataComponents.SPIRIT_STORAGE, charge.with(aura, stored + accepted));
-        return amount - accepted;
+            stack.set(MxtDataComponents.SPIRIT_STORAGE, charge.with(aura, transfer.stored()));
+        return transfer.remainder();
     }
 
     @Override
-    public int extract(@Nullable LivingEntity entity, @NotNull Provider registries, ItemStack stack, Holder<Aura> aura, int amount, boolean exact, boolean simulate) {
+    public double extract(@Nullable LivingEntity entity, @NotNull Provider registries, ItemStack stack, Holder<Aura> aura, double amount, boolean exact, boolean simulate) {
         AuraAccess.requireNonNegative(amount);
-        int capacity = this.getCapacity(entity, registries, stack, aura);
+        double capacity = this.getCapacity(entity, registries, stack, aura);
         if (capacity <= 0) return amount;
         SpiritStorageComponent charge = this.store(stack);
-        int stored = (int) Math.clamp(Math.floor(charge.get(aura)), 0.0D, capacity);
-        int extracted = Math.min(amount, stored);
-        if (exact && extracted != amount) return amount;
+        double stored = charge.get(aura);
+        AuraTransfers.Transfer transfer = AuraTransfers.extract(stored, amount, exact);
+        double extracted = amount - transfer.remainder();
         if (!simulate && extracted > 0)
-            stack.set(MxtDataComponents.SPIRIT_STORAGE, charge.with(aura, stored - extracted));
-        return amount - extracted;
+            stack.set(MxtDataComponents.SPIRIT_STORAGE, charge.with(aura, transfer.stored()));
+        return transfer.remainder();
     }
 
     // The same component a spirit stone keeps its charge in: both answer "how many units of which aura are in this

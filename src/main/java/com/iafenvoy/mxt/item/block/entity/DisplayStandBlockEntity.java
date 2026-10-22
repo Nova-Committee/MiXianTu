@@ -6,8 +6,8 @@ import com.iafenvoy.mxt.api.UseItemAuraAccess;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.registry.MxtBlockEntities;
 import com.iafenvoy.mxt.runtime.spirit.SpiritSource;
-import it.unimi.dsi.fastutil.objects.Object2IntMap;
-import it.unimi.dsi.fastutil.objects.Object2IntMaps;
+import it.unimi.dsi.fastutil.objects.Object2DoubleMap;
+import it.unimi.dsi.fastutil.objects.Object2DoubleMaps;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup;
@@ -52,20 +52,20 @@ public final class DisplayStandBlockEntity extends BlockEntity implements AuraAc
     }
 
     @Override
-    public Object2IntMap<Holder<Aura>> getCapacity(@Nullable LivingEntity entity, @NotNull HolderLookup.Provider registries) {
+    public Object2DoubleMap<Holder<Aura>> getCapacity(@Nullable LivingEntity entity, @NotNull HolderLookup.Provider registries) {
         if (this.displayedItem.getItem() instanceof ItemAuraAccess access)
             return access.getCapacity(entity, registries, this.displayedItem);
-        return Object2IntMaps.emptyMap();
+        return Object2DoubleMaps.emptyMap();
     }
 
     @Override
-    public int insert(@Nullable LivingEntity entity, @NotNull HolderLookup.Provider registries, Holder<Aura> aura, int amount, boolean exact, boolean simulate) {
+    public double insert(@Nullable LivingEntity entity, @NotNull HolderLookup.Provider registries, Holder<Aura> aura, double amount, boolean exact, boolean simulate) {
         AuraAccess.requireNonNegative(amount);
         // Only a store that asked to be poured into is filled here: the reading is the storing interface, the
         // report is the manual one.
         if (!(this.displayedItem.getItem() instanceof ItemAuraAccess access)) return amount;
         if (this.level == null) return amount;
-        int remaining = access.insert(entity, registries, this.displayedItem, aura, amount, exact, simulate);
+        double remaining = access.insert(entity, registries, this.displayedItem, aura, amount, exact, simulate);
         if (!simulate && remaining != amount) {
             if (access instanceof UseItemAuraAccess manual) {
                 // The store is in nobody's hands, so the place it is at travels with the report instead of being read
@@ -80,7 +80,7 @@ public final class DisplayStandBlockEntity extends BlockEntity implements AuraAc
     }
 
     @Override
-    public int extract(@Nullable LivingEntity entity, @NotNull HolderLookup.Provider registries, Holder<Aura> aura, int amount, boolean exact, boolean simulate) {
+    public double extract(@Nullable LivingEntity entity, @NotNull HolderLookup.Provider registries, Holder<Aura> aura, double amount, boolean exact, boolean simulate) {
         return AuraAccess.requireNonNegative(amount);
     }
 

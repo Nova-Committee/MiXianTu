@@ -21,7 +21,7 @@ public final class TooltipText {
     }
 
     public static String number(double value) {
-        return String.format(Locale.ROOT, "%.2f", value).replaceAll("\\.00$", "").replaceAll("(\\.\\d)0$", "$1");
+        return String.format(Locale.ROOT, "%.2f", Math.abs(value) < 0.005D ? 0.0D : value);
     }
 
     public static String signed(double value) {

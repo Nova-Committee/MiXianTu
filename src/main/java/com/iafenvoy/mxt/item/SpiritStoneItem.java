@@ -1,14 +1,15 @@
 package com.iafenvoy.mxt.item;
 
 import com.iafenvoy.mxt.api.AuraAccess;
+import com.iafenvoy.mxt.runtime.spirit.AuraTransfers;
 import com.iafenvoy.mxt.api.UseItemAuraAccess;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.aura.ItemAuraComponent;
 import com.iafenvoy.mxt.data.aura.SpiritStorageComponent;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.runtime.cultivation.ItemAuraService;
-import it.unimi.dsi.fastutil.objects.Object2IntMap;
-import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
+import it.unimi.dsi.fastutil.objects.Object2DoubleMap;
+import it.unimi.dsi.fastutil.objects.Object2DoubleOpenHashMap;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.world.entity.LivingEntity;
@@ -32,46 +33,46 @@ public class SpiritStoneItem extends Item implements UseItemAuraAccess {
     }
 
     @Override
-    public Object2IntMap<Holder<Aura>> getCapacity(@Nullable LivingEntity entity, @NotNull HolderLookup.Provider registries, ItemStack stack) {
-        Object2IntMap<Holder<Aura>> result = new Object2IntOpenHashMap<>();
+    public Object2DoubleMap<Holder<Aura>> getCapacity(@Nullable LivingEntity entity, @NotNull HolderLookup.Provider registries, ItemStack stack) {
+        Object2DoubleMap<Holder<Aura>> result = new Object2DoubleOpenHashMap<>();
         Holder<Aura> aura = this.contentType(stack);
         if (aura != null) result.put(aura, ItemAuraService.capacity(registries, stack));
         return result;
     }
 
     @Override
-    public int insert(@Nullable LivingEntity entity, @NotNull HolderLookup.Provider registries, ItemStack stack, Holder<Aura> aura, int amount, boolean exact, boolean simulate) {
-        int capacity = this.getCapacity(entity, registries, stack, aura);
+    public double insert(@Nullable LivingEntity entity, @NotNull HolderLookup.Provider registries, ItemStack stack, Holder<Aura> aura, double amount, boolean exact, boolean simulate) {
+        double capacity = this.getCapacity(entity, registries, stack, aura);
         AuraAccess.requireNonNegative(capacity);
         AuraAccess.requireNonNegative(amount);
         if (stack.getItem() != this || !aura.equals(this.contentType(stack))) return amount;
 
-        int stored = this.normalizeStored(stack, capacity, aura, simulate);
-        int accepted = Math.min(amount, capacity - stored);
-        if (exact && accepted != amount) return amount;
+        double stored = this.normalizeStored(stack, capacity, aura);
+        AuraTransfers.Transfer transfer = AuraTransfers.insert(stored, capacity, amount, exact);
+        double accepted = amount - transfer.remainder();
         if (!simulate && accepted > 0) {
-            stack.set(MxtDataComponents.SPIRIT_STORAGE, this.store(stack).with(aura, stored + accepted));
+            stack.set(MxtDataComponents.SPIRIT_STORAGE, this.store(stack).with(aura, transfer.stored()));
             ItemAuraComponent fuel = stack.get(MxtDataComponents.ITEM_AURA);
             if (fuel != null && fuel.remain() <= 0.0D) stack.remove(MxtDataComponents.ITEM_AURA);
         }
-        return amount - accepted;
+        return transfer.remainder();
     }
 
     @Override
-    public int extract(@Nullable LivingEntity entity, @NotNull HolderLookup.Provider registries, ItemStack stack, Holder<Aura> aura, int amount, boolean exact, boolean simulate) {
-        int capacity = this.getCapacity(entity, registries, stack, aura);
+    public double extract(@Nullable LivingEntity entity, @NotNull HolderLookup.Provider registries, ItemStack stack, Holder<Aura> aura, double amount, boolean exact, boolean simulate) {
+        double capacity = this.getCapacity(entity, registries, stack, aura);
         AuraAccess.requireNonNegative(capacity);
         AuraAccess.requireNonNegative(amount);
         if (stack.getItem() != this || !aura.equals(this.contentType(stack))) return amount;
 
-        int stored = this.normalizeStored(stack, capacity, aura, simulate);
-        int extracted = Math.min(amount, stored);
-        if (exact && extracted != amount) return amount;
+        double stored = this.normalizeStored(stack, capacity, aura);
+        AuraTransfers.Transfer transfer = AuraTransfers.extract(stored, amount, exact);
+        double extracted = amount - transfer.remainder();
         // Emptying the store takes its key with it, so a drained stone is an empty store rather than one holding
         // zero of the aura it used to carry.
         if (!simulate && extracted > 0)
-            stack.set(MxtDataComponents.SPIRIT_STORAGE, this.store(stack).with(aura, stored - extracted));
-        return amount - extracted;
+            stack.set(MxtDataComponents.SPIRIT_STORAGE, this.store(stack).with(aura, transfer.stored()));
+        return transfer.remainder();
     }
 
     // The store is asked before the definition because a store cannot be reinterpreted: its amounts are filed under
@@ -87,13 +88,10 @@ public class SpiritStoneItem extends Item implements UseItemAuraAccess {
     }
 
     // A missing component means a pristine, fully charged spirit stone.
-    private int normalizeStored(ItemStack stack, int capacity, Holder<Aura> aura, boolean simulate) {
+    private double normalizeStored(ItemStack stack, double capacity, Holder<Aura> aura) {
         SpiritStorageComponent component = stack.get(MxtDataComponents.SPIRIT_STORAGE);
         if (component == null) return capacity;
 
-        int stored = (int) Math.min(capacity, Math.floor(component.get(aura)));
-        if (!simulate && stored != component.get(aura))
-            stack.set(MxtDataComponents.SPIRIT_STORAGE, component.with(aura, stored));
-        return stored;
+        return component.get(aura);
     }
 }

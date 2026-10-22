@@ -3,6 +3,7 @@ package com.iafenvoy.mxt.data.cost;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.cost.builtin.AuraCost;
 import com.iafenvoy.mxt.data.cost.context.CostContext;
+import com.iafenvoy.mxt.data.cost.context.AuraCostSources;
 import com.mojang.serialization.DataResult;
 import net.minecraft.core.Holder;
 import org.jetbrains.annotations.Nullable;
@@ -40,7 +41,7 @@ public final class Costs {
     public static @Nullable Map<Holder<Aura>, Double> auras(List<Cost> costs, CostContext context) {
         List<Cost> auras = costs.stream().filter(cost -> cost instanceof AuraCost).toList();
         if (auras.isEmpty()) return Map.of();
-        CostPayment payment = CostPayment.of(context.withAuraTarget(CostContext.AuraTarget.POOL));
+        CostPayment payment = CostPayment.of(context.withAuraSource(AuraCostSources.QUOTE));
         if (payment.price(auras).isPresent()) return null;
         return payment.auras();
     }

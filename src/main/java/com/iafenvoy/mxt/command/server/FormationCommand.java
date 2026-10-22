@@ -3,7 +3,7 @@ package com.iafenvoy.mxt.command.server;
 import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.command.ServerCommandManager;
 import com.iafenvoy.mxt.data.cost.context.CostContext;
-import com.iafenvoy.mxt.data.cost.context.CostOrigin;
+import com.iafenvoy.mxt.data.cost.context.CostOrigins;
 import com.iafenvoy.mxt.data.formation.Formation;
 import com.iafenvoy.mxt.data.formation.Formation.RequiredBlock;
 import com.iafenvoy.mxt.data.item.FormationPlateComponent;
@@ -217,7 +217,7 @@ public final class FormationCommand {
             Formation definition = MxtDatapackRegistries.get(source.registryAccess(), MxtResourceKeys.FORMATION, instance.formation()).orElse(null);
             if (definition == null) continue;
             CostContext context = CostContext.account(new ResourceHolderAttachment(), null,
-                    FormulaContext.of(player), CostOrigin.FORMATION_MAINTENANCE);
+                    FormulaContext.of(player), CostOrigins.FORMATION_MAINTENANCE);
             Map<Identifier, Double> owed = FormationService.MaintainRule.remaining(definition, context,
                     AuraDistributionService.projectedSupply(level, controller, instance.radius()));
             source.sendSuccess(() -> Component.literal(line(controller, instance) + " owed=" + owed(owed)), false);

@@ -16,7 +16,7 @@ import com.iafenvoy.mxt.data.artifact.ItemAbilitiesComponent;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.context.action.ItemActionContext;
 import com.iafenvoy.mxt.data.cost.context.CostContext;
-import com.iafenvoy.mxt.data.cost.context.CostOrigin;
+import com.iafenvoy.mxt.data.cost.context.CostOrigins;
 import com.iafenvoy.mxt.data.formation.Formation;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.data.resourcebar.builtin.renderdata.OriginsRenderData;
@@ -290,7 +290,7 @@ public final class ClosureVerifyProbes {
                 .orElseThrow(() -> new IllegalStateException("The upkeep fixture does not decode"));
         Holder<Aura> qi = context.require(MxtResourceKeys.AURA, ProbeDefinitions.QI);
         CostContext costs = CostContext.account(new ResourceHolderAttachment(), null, FormulaContext.of(player),
-                CostOrigin.FORMATION_MAINTENANCE);
+                CostOrigins.FORMATION_MAINTENANCE);
         Map<Identifier, Double> owed = FormationService.MaintainRule.remaining(definition, costs, Map.of());
         if (owed.size() != 1 || !close(owed.getOrDefault(ProbeDefinitions.QI, -1.0D), 4.0D))
             return "the upkeep bill with nothing supplied read " + owed;

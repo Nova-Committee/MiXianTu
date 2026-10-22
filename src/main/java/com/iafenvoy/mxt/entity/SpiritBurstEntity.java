@@ -43,7 +43,7 @@ public final class SpiritBurstEntity extends ThrowableProjectile {
     private static final int MAX_LIFETIME_TICKS = 100;
     private static final double PARTICLE_SPACING = 0.16D;
     private static final float TRAIL_PARTICLE_SIZE = 0.085F;
-    private static final EntityDataAccessor<Integer> AMOUNT = SynchedEntityData.defineId(SpiritBurstEntity.class, EntityDataSerializers.INT);
+    private static final EntityDataAccessor<Double> AMOUNT = SynchedEntityData.defineId(SpiritBurstEntity.class, MxtEntityDataSerializers.DOUBLE.get());
     private static final EntityDataAccessor<Integer> PARTICLE_COLOR = SynchedEntityData.defineId(SpiritBurstEntity.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Optional<Holder<Aura>>> AURA = SynchedEntityData.defineId(SpiritBurstEntity.class, MxtEntityDataSerializers.AURA.get());
 
@@ -51,7 +51,7 @@ public final class SpiritBurstEntity extends ThrowableProjectile {
         super(type, level);
     }
 
-    public SpiritBurstEntity(Level level, LivingEntity owner, Holder<Aura> aura, int amount, int particleColor) {
+    public SpiritBurstEntity(Level level, LivingEntity owner, Holder<Aura> aura, double amount, int particleColor) {
         this(MxtEntityTypes.SPIRIT_BURST.get(), level);
         this.setOwner(owner);
         this.setAura(aura);
@@ -63,7 +63,7 @@ public final class SpiritBurstEntity extends ThrowableProjectile {
 
     @Override
     protected void defineSynchedData(SynchedEntityData.@NonNull Builder builder) {
-        builder.define(AMOUNT, 0);
+        builder.define(AMOUNT, 0.0D);
         builder.define(PARTICLE_COLOR, 0xFFFFFF);
         builder.define(AURA, Optional.empty());
     }
@@ -101,14 +101,14 @@ public final class SpiritBurstEntity extends ThrowableProjectile {
 
     @Override
     protected void readAdditionalSaveData(@NonNull ValueInput input) {
-        this.setAmount(input.getIntOr("amount", 0));
+        this.setAmount(input.getDoubleOr("amount", 0.0D));
         this.setParticleColor(input.getIntOr("particle_color", 0xFFFFFF));
         input.read("aura", Aura.CODEC).ifPresent(this::setAura);
     }
 
     @Override
     protected void addAdditionalSaveData(@NonNull ValueOutput output) {
-        output.putInt("amount", this.getAmount());
+        output.putDouble("amount", this.getAmount());
         output.putInt("particle_color", this.getParticleColor());
         this.getAura().ifPresent(aura -> output.store("aura", Aura.CODEC, aura));
     }
@@ -118,11 +118,11 @@ public final class SpiritBurstEntity extends ThrowableProjectile {
         return false;
     }
 
-    public int getAmount() {
+    public double getAmount() {
         return this.getEntityData().get(AMOUNT);
     }
 
-    public void setAmount(int amount) {
+    public void setAmount(double amount) {
         this.getEntityData().set(AMOUNT, AuraAccess.requireNonNegative(amount));
     }
 

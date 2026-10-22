@@ -15,6 +15,7 @@ import com.iafenvoy.mxt.runtime.resource.ResourceService.Result;
 import com.iafenvoy.mxt.util.DefinitionText;
 import com.iafenvoy.mxt.util.HolderHelper;
 import com.iafenvoy.mxt.util.TooltipText;
+import com.iafenvoy.mxt.runtime.spirit.AuraTransfers;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.Holder;
@@ -49,7 +50,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public final class ArtifactHoldService {
     // One whole unit a tick per declared aura, one for one: a definition declaring several auras just takes
     // longer to fill, and one that is full costs nothing.
-    public static final int POUR_INTAKE_PER_TICK = 1;
+    public static final double POUR_INTAKE_PER_TICK = 1.0D;
     public static final double POUR_COST_PER_UNIT = 1.0D;
 
     // One line per holder, keyed by code rather than message because the message is rebuilt from the numbers.
@@ -59,7 +60,7 @@ public final class ArtifactHoldService {
     // so a total cleared per cycle would restart from zero once per hold_ticks, which reads as the artifact having
     // been emptied. The total is kept while pour ticks keep arriving and starts over only after
     // SESSION_GAP_TICKS.
-    private record Session(int total, long lastTick) {
+    private record Session(double total, long lastTick) {
     }
 
     // Far longer than the gap between two use cycles of one held button, far shorter than anybody picks an item
@@ -115,7 +116,7 @@ public final class ArtifactHoldService {
         // Claiming and pouring are two different gestures on the same input: the claim is what finishing the
         // hold does, so an unclaimed stack is left exactly as it is until then.
         if (!ArtifactService.hasOwner(stack) || !ArtifactService.isOwner(stack, holder.getUUID())) return;
-        int moved = pour(holder, stack, holder.level().registryAccess(), artifact);
+        double moved = pour(holder, stack, holder.level().registryAccess(), artifact);
         if (moved <= 0) {
             // The two reasons are told apart rather than lumped together: an artifact that is full for everything
             // it declares says nothing, while one whose aura the holder cannot pay names that aura. Asking "is
@@ -128,10 +129,10 @@ public final class ArtifactHoldService {
         }
         long gameTime = holder.level().getGameTime();
         Session previous = POURED.get(holder.getUUID());
-        int total = (previous == null || gameTime - previous.lastTick() > SESSION_GAP_TICKS ? 0 : previous.total()) + moved;
+        double total = (previous == null || gameTime - previous.lastTick() > SESSION_GAP_TICKS ? 0 : previous.total()) + moved;
         POURED.put(holder.getUUID(), new Session(total, gameTime));
         runPourAction(holder, stack);
-        show(holder, Component.translatable("actionbar.mxt.artifact.pouring", total), "pouring:" + total);
+        show(holder, Component.translatable("actionbar.mxt.artifact.pouring", TooltipText.number(total)), "pouring:" + total);
     }
 
     // A hold released early never reaches here, which is what makes the claim require the full gesture. The
@@ -155,7 +156,7 @@ public final class ArtifactHoldService {
         }
         Session poured = POURED.get(holder.getUUID());
         if (poured != null && poured.total() > 0)
-            show(holder, Component.translatable("actionbar.mxt.artifact.poured", poured.total()), "poured");
+            show(holder, Component.translatable("actionbar.mxt.artifact.poured", TooltipText.number(poured.total())), "poured");
         runUseAction(holder, stack);
     }
 
@@ -179,7 +180,7 @@ public final class ArtifactHoldService {
             double pool = resources == null ? 0.0D : resources.get(aura.value().resource());
             // The first aura with room decides: if it can be paid the tick above would have moved something, so a
             // shortfall can only be somebody else's - and if it cannot, it is this one.
-            return pool / POUR_COST_PER_UNIT >= 1.0D ? null : aura;
+            return pool / POUR_COST_PER_UNIT > 0.0D ? null : aura;
         }
         return null;
     }
@@ -215,28 +216,29 @@ public final class ArtifactHoldService {
                 holder_.value().useAction().execute(holder, stack, FormulaContext.of(holder)));
     }
 
-    // A pool that cannot afford a unit skips that aura for this tick rather than failing the whole gesture, and a
+    // A pool with no affordable amount skips that aura for this tick rather than failing the whole gesture, and a
     // payment is measured rather than assumed (a resource bound may trim what was asked for), so what is stored is
     // what was really paid.
-    public static int pour(LivingEntity holder, ItemStack stack, Provider access, Artifact artifact) {
+    public static double pour(LivingEntity holder, ItemStack stack, Provider access, Artifact artifact) {
         FormulaContext formula = FormulaContext.of(holder);
         ResourceHolderAttachment resources = holder.getData(MxtAttachments.RESOURCE_HOLDER);
-        int moved = 0;
+        double moved = 0.0D;
         for (Holder<Aura> aura : artifact.spiritCapacity().keySet()) {
             double room = ArtifactService.capacity(access, stack, aura, 0.0D, formula) - ArtifactService.stored(stack, aura);
             if (room <= 0.0D) continue;
-            // The gesture pours whole units; only the store it writes into holds fractions.
-            int units = (int) Math.min(POUR_INTAKE_PER_TICK, room);
+            double units = Math.min(POUR_INTAKE_PER_TICK, room);
             Holder<Resource> resource = aura.value().resource();
             FormulaContext pool = ResourceService.formulaContext(holder, resource, formula);
             double before = resources.get(resource);
-            units = Math.min(units, (int) Math.floor(before / POUR_COST_PER_UNIT));
+            units = Math.min(units, before / POUR_COST_PER_UNIT);
+            units -= AuraTransfers.insert(ArtifactService.stored(stack, aura),
+                    ArtifactService.capacity(access, stack, aura, 0.0D, formula), units, false).remainder();
             if (units <= 0) continue;
             Result paid = ResourceService.change(resources, resource, -(units * POUR_COST_PER_UNIT), pool);
             if (!paid.valid()) continue;
-            units = Math.min(units, (int) Math.floor(Math.max(0.0D, before - paid.value()) / POUR_COST_PER_UNIT));
+            units = Math.min(units, Math.max(0.0D, before - paid.value()) / POUR_COST_PER_UNIT);
             if (units <= 0) continue;
-            moved += (int) Math.floor(ArtifactService.addEnergy(access, stack, aura, units, 0.0D, formula));
+            moved += ArtifactService.addEnergy(access, stack, aura, units, 0.0D, formula);
         }
         return moved;
     }

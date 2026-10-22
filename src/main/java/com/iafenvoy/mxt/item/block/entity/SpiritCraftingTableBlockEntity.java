@@ -1,12 +1,13 @@
 package com.iafenvoy.mxt.item.block.entity;
 
 import com.iafenvoy.mxt.api.AuraAccess;
+import com.iafenvoy.mxt.runtime.spirit.AuraTransfers;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.cost.Cost;
 import com.iafenvoy.mxt.data.cost.CostPayment;
 import com.iafenvoy.mxt.data.cost.Costs;
 import com.iafenvoy.mxt.data.cost.context.CostContext;
-import com.iafenvoy.mxt.data.cost.context.CostOrigin;
+import com.iafenvoy.mxt.data.cost.context.CostOrigins;
 import com.iafenvoy.mxt.recipe.SpiritCraftingInput;
 import com.iafenvoy.mxt.recipe.SpiritRecipe;
 import com.iafenvoy.mxt.registry.MxtBlockEntities;
@@ -15,8 +16,8 @@ import com.iafenvoy.mxt.screen.menu.SpiritCraftingMenu;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.profiling.ProfilerScope;
 import com.iafenvoy.mxt.util.profiling.ServerProfiling;
-import it.unimi.dsi.fastutil.objects.Object2IntMap;
-import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
+import it.unimi.dsi.fastutil.objects.Object2DoubleMap;
+import it.unimi.dsi.fastutil.objects.Object2DoubleOpenHashMap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Holder;
@@ -42,10 +43,10 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jspecify.annotations.NonNull;
 
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.stream.IntStream;
 
 /**
@@ -59,7 +60,7 @@ public final class SpiritCraftingTableBlockEntity extends BlockEntity implements
             SpiritCraftingTableBlockEntity.this.markChangedAndSync();
         }
     };
-    private final Map<Holder<Aura>, Integer> aura = new LinkedHashMap<>();
+    private final Map<Holder<Aura>, Double> aura = new LinkedHashMap<>();
     private final SimpleContainer result = new SimpleContainer(1) {
         @Override
         public void setChanged() {
@@ -67,7 +68,7 @@ public final class SpiritCraftingTableBlockEntity extends BlockEntity implements
             SpiritCraftingTableBlockEntity.this.markChangedAndSync();
         }
     };
-    private Map<Holder<Aura>, Integer> requiredAura = Map.of();
+    private Map<Holder<Aura>, Double> requiredAura = Map.of();
 
     public SpiritCraftingTableBlockEntity(BlockPos pos, BlockState state) {
         super(MxtBlockEntities.SPIRIT_CRAFTING_TABLE.get(), pos, state);
@@ -96,7 +97,7 @@ public final class SpiritCraftingTableBlockEntity extends BlockEntity implements
             this.clearAura();
             return;
         }
-        Map<Holder<Aura>, Integer> costs = this.costs(recipe.aura());
+        Map<Holder<Aura>, Double> costs = this.costs(recipe.aura());
         this.configureAuraCosts(costs);
         ItemStack produced = recipe.result().create();
         ItemStack stored = this.result.getItem(0);
@@ -104,7 +105,7 @@ public final class SpiritCraftingTableBlockEntity extends BlockEntity implements
         if (!this.hasAura(costs) || (!stored.isEmpty() && (!ItemStack.isSameItemSameComponents(stored, produced)
                 || stored.getCount() + produced.getCount() > max))) return;
         // Paid through the shared transaction, so a recipe's aura price behaves like every other cost.
-        CostContext bankContext = CostContext.bank(this, null, FormulaContext.of(this.level), CostOrigin.RECIPE);
+        CostContext bankContext = CostContext.bank(this, null, FormulaContext.of(this.level), CostOrigins.RECIPE);
         if (!CostPayment.pay(recipe.aura(), bankContext).isSuccess()) return;
         for (int index = 0; index < this.grid.getContainerSize(); index++) this.grid.getItem(index).shrink(1);
         if (stored.isEmpty()) this.result.setItem(0, produced);
@@ -113,41 +114,35 @@ public final class SpiritCraftingTableBlockEntity extends BlockEntity implements
         this.result.setChanged();
     }
 
-    private Map<Holder<Aura>, Integer> costs(List<Cost> aura) {
+    private Map<Holder<Aura>, Double> costs(List<Cost> aura) {
         Map<Holder<Aura>, Double> amounts = Costs.auras(aura,
-                CostContext.account(null, null, FormulaContext.of(this.level), CostOrigin.RECIPE));
+                CostContext.account(null, null, FormulaContext.of(this.level), CostOrigins.RECIPE));
         if (amounts == null) return Map.of();
-        Map<Holder<Aura>, Integer> costs = new LinkedHashMap<>();
-        for (Entry<Holder<Aura>, Double> entry : amounts.entrySet()) {
-            double value = entry.getValue();
-            if (!Double.isFinite(value) || value < 0.0D || value > Integer.MAX_VALUE) return Map.of();
-            costs.put(entry.getKey(), (int) Math.ceil(value));
-        }
-        return costs;
+        return Collections.unmodifiableMap(new LinkedHashMap<>(amounts));
     }
 
-    public int aura(Holder<Aura> aura) {
-        return this.aura.getOrDefault(aura, 0);
+    public double aura(Holder<Aura> aura) {
+        return this.aura.getOrDefault(aura, 0.0D);
     }
 
-    public Map<Holder<Aura>, Integer> auras() {
+    public Map<Holder<Aura>, Double> auras() {
         return this.aura;
     }
 
-    public Map<Holder<Aura>, Integer> requiredAura() {
+    public Map<Holder<Aura>, Double> requiredAura() {
         return this.requiredAura;
     }
 
     @Override
-    public Object2IntMap<Holder<Aura>> getCapacity(@Nullable LivingEntity entity, @NotNull HolderLookup.Provider registries) {
-        Object2IntMap<Holder<Aura>> result = new Object2IntOpenHashMap<>();
+    public Object2DoubleMap<Holder<Aura>> getCapacity(@Nullable LivingEntity entity, @NotNull HolderLookup.Provider registries) {
+        Object2DoubleMap<Holder<Aura>> result = new Object2DoubleOpenHashMap<>();
         this.requiredAura.forEach((aura, amount) -> result.put(aura,
-                (int) Math.clamp((long) amount * 99L, 0L, Integer.MAX_VALUE)));
+                AuraTransfers.multiply(amount, 99.0D)));
         return result;
     }
 
     // Changing the grid or recipe invalidates any partially supplied aura rather than keeping it as general storage.
-    public void configureAuraCosts(Map<Holder<Aura>, Integer> costs) {
+    public void configureAuraCosts(Map<Holder<Aura>, Double> costs) {
         if (this.requiredAura.equals(costs)) return;
         this.requiredAura = new LinkedHashMap<>(costs);
         this.clearAura();
@@ -159,8 +154,8 @@ public final class SpiritCraftingTableBlockEntity extends BlockEntity implements
         this.markChangedAndSync();
     }
 
-    public boolean hasAura(Map<Holder<Aura>, Integer> costs) {
-        return costs.entrySet().stream().allMatch(entry -> entry.getValue() >= 0 && this.aura(entry.getKey()) >= entry.getValue());
+    public boolean hasAura(Map<Holder<Aura>, Double> costs) {
+        return costs.entrySet().stream().allMatch(entry -> entry.getValue() >= 0 && AuraTransfers.covers(this.aura(entry.getKey()), entry.getValue()));
     }
 
     @Override
@@ -221,34 +216,25 @@ public final class SpiritCraftingTableBlockEntity extends BlockEntity implements
     }
 
     @Override
-    public int insert(@Nullable LivingEntity entity, @NotNull HolderLookup.Provider registries, Holder<Aura> aura, int amount, boolean exact, boolean simulate) {
-        AuraAccess.requireNonNegative(amount);
-        int required = (int) Math.clamp((long) this.requiredAura.getOrDefault(aura, 0) * 99L,
-                0L, Integer.MAX_VALUE);
-        int accepted = Math.min(amount, Math.max(0, required - this.aura(aura)));
-        if (exact && accepted != amount) return amount;
-        if (!simulate && accepted > 0) {
-            this.aura.put(aura, this.aura(aura) + accepted);
+    public double insert(@Nullable LivingEntity entity, @NotNull HolderLookup.Provider registries, Holder<Aura> aura, double amount, boolean exact, boolean simulate) {
+        double capacity = AuraTransfers.multiply(this.requiredAura.getOrDefault(aura, 0.0D), 99.0D);
+        AuraTransfers.Transfer transfer = AuraTransfers.insert(this.aura(aura), capacity, amount, exact);
+        if (!simulate && transfer.remainder() != amount) {
+            this.aura.put(aura, transfer.stored());
             this.markChangedAndSync();
         }
-        return amount - accepted;
+        return transfer.remainder();
     }
 
     @Override
-    public int extract(@Nullable LivingEntity entity, @NotNull HolderLookup.Provider registries, Holder<Aura> aura, int amount, boolean exact, boolean simulate) {
-        AuraAccess.requireNonNegative(amount);
-        int available = this.aura(aura);
-        // The exact form is the one a payment asks through: the stock is read once and the whole amount leaves or
-        // none of it does, which is why the two branches cannot share their arithmetic.
-        if (exact && available < amount) return amount;
-        int extracted = Math.min(amount, available);
-        if (!simulate && extracted > 0) {
-            int remaining = available - extracted;
-            if (remaining == 0) this.aura.remove(aura);
-            else this.aura.put(aura, remaining);
+    public double extract(@Nullable LivingEntity entity, @NotNull HolderLookup.Provider registries, Holder<Aura> aura, double amount, boolean exact, boolean simulate) {
+        AuraTransfers.Transfer transfer = AuraTransfers.extract(this.aura(aura), amount, exact);
+        if (!simulate && transfer.remainder() != amount) {
+            if (transfer.stored() == 0.0D) this.aura.remove(aura);
+            else this.aura.put(aura, transfer.stored());
             this.markChangedAndSync();
         }
-        return amount - extracted;
+        return transfer.remainder();
     }
 
     @Override

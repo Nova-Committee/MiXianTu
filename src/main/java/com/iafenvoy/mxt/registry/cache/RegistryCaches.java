@@ -25,15 +25,15 @@ import net.minecraft.world.level.block.Block;
 import java.util.*;
 
 public final class RegistryCaches {
-    public static final RealmChainCache REALM_CHAIN = new RealmChainCache().validate(RealmStage::aura, Objects::equals)
-            .require(ladder -> ladder.nodes().stream().map(node -> node.value().aura()).distinct().count() == 1);
+    public static final RealmChainCache REALM_CHAIN = new RealmChainCache().validateOrder(RealmStage::aura, Objects::equals)
+            .validateChain(ladder -> ladder.nodes().stream().map(node -> node.value().aura()).distinct().count() == 1);
     public static final ChainCache<Progression> PROGRESSION_CHAIN = new ChainCache<>(MxtResourceKeys.PROGRESSION).callback(RegistryCaches::validateTechniqueLevels);
     // A ladder is allowed to name itself only once and inherit that name downwards, so two tiers on one line may
     // not write different names; the link check only catches the conflicting pair, and the whole-line rule below
     // is what actually keeps a misnamed ladder out of the index.
     public static final ChainCache<ItemQuality> QUALITY_CHAIN = new ChainCache<>(MxtResourceKeys.ITEM_QUALITY)
-            .validate(ItemQuality::quality, RegistryCaches::inheritsName)
-            .require(RegistryCaches::oneLadderName);
+            .validateOrder(ItemQuality::quality, RegistryCaches::inheritsName)
+            .validateChain(RegistryCaches::oneLadderName);
     public static final HeatSourceCache HEAT_SOURCE = new HeatSourceCache();
     public static final ReverseMappingListCache<Identifier, TriggerRule> TRIGGER_RULES_BY_SIGNAL = new ReverseMappingListCache<>(MxtResourceKeys.TRIGGER, rule -> List.of(rule.value().trigger().signalType()));
     public static final ReverseMappingListCache<Block, BlockAura> BLOCK_AURA = new ReverseMappingListCache<>(MxtResourceKeys.BLOCK_AURA, (aura) -> RegistryCodecs.resolve(aura.value().blocks(), BuiltInRegistries.BLOCK).map(Holder::value).toList());

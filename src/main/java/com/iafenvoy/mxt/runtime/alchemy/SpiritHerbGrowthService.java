@@ -6,7 +6,7 @@ import com.iafenvoy.mxt.data.alchemy.SpiritHerb;
 import com.iafenvoy.mxt.data.alchemy.SpiritHerb.Growth;
 import com.iafenvoy.mxt.data.cost.CostPayment;
 import com.iafenvoy.mxt.data.cost.context.CostContext;
-import com.iafenvoy.mxt.data.cost.context.CostOrigin;
+import com.iafenvoy.mxt.data.cost.context.CostOrigins;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.runtime.item.QualityService;
@@ -201,7 +201,7 @@ public final class SpiritHerbGrowthService {
         FormulaContext formula = FormulaContext.of(level).with(SpiritHerbService.HERB_AGE, age);
         if (!growth.condition().test(level, pos, formula)) return age;
         double amount = SpiritHerbService.appliedGrowth(growth.growthRate(), formula, bonus);
-        CostPayment.pay(growth.costs(), CostContext.pool(null, level, pos, formula, CostOrigin.HERB_GROWTH));
+        CostPayment.pay(growth.costs(), CostContext.pool(null, level, pos, formula, CostOrigins.HERB_GROWTH));
         return Math.min(growth.maxAge(), age + amount);
     }
 

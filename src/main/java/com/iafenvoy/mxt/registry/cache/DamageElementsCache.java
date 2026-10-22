@@ -44,7 +44,6 @@ public class DamageElementsCache extends RegistryCache<ListMultimap<Holder<Damag
         }
     }
 
-    //FIXME::
     private void claim(Holder<DamageType> type, Holder<Element> element, double attachment) {
         for (Claim existing : this.data.get(type)) if (existing.element().equals(element)) return;
         // Every claim multiplies downstream, so a second claimant for one type is worth a warning.

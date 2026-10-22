@@ -34,8 +34,8 @@ public enum SpiritCraftingTableComponentProvider implements IBlockComponentProvi
         for (String idText : elements) {
             Identifier id = Identifier.tryParse(idText);
             Component element = id == null ? Component.literal(idText) : auraName(accessor, id);
-            int current = stored.getIntOr(idText, 0);
-            int needed = required.getIntOr(idText, 0);
+            double current = stored.getDoubleOr(idText, 0.0D);
+            double needed = required.getDoubleOr(idText, 0.0D);
             tooltip.add(Component.translatable("jade.mxt.spirit_crafting.aura", element,
                     TooltipText.number(current), TooltipText.number(needed)), SpiritCraftingTableDataProvider.ID);
         }

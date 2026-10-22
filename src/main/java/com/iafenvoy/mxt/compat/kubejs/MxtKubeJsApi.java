@@ -10,7 +10,7 @@ import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.cost.Cost;
 import com.iafenvoy.mxt.data.cost.CostPayment;
 import com.iafenvoy.mxt.data.cost.context.CostContext;
-import com.iafenvoy.mxt.data.cost.context.CostOrigin;
+import com.iafenvoy.mxt.data.cost.context.CostOrigins;
 import com.iafenvoy.mxt.data.cultivation.Element;
 import com.iafenvoy.mxt.data.cultivation.Physique;
 import com.iafenvoy.mxt.data.cultivation.SpiritRoot;
@@ -552,7 +552,7 @@ public final class MxtKubeJsApi {
     public static ResultWithData<Map<Identifier, Double>> tryConsumeResources(Entity entity, List<Cost> costs, FormulaContext context) {
         if (!(entity instanceof LivingEntity payer) || entity.level().isClientSide())
             return ResultWithData.failure(Map.of(), Failures.UNKNOWN);
-        CostPayment.PaymentResult payment = CostPayment.pay(costs, CostContext.of(payer, context, CostOrigin.SCRIPT));
+        CostPayment.PaymentResult payment = CostPayment.pay(costs, CostContext.of(payer, context, CostOrigins.SCRIPT));
         return payment.isSuccess() ? ResultWithData.success(payment.resources()) : ResultWithData.failure(payment.resources(), Failures.UNKNOWN, payment.failedResource());
     }
 

@@ -21,6 +21,7 @@ import java.util.Optional;
 public final class MxtEntityDataSerializers {
     public static final DeferredRegister<EntityDataSerializer<?>> REGISTRY = DeferredRegister.create(NeoForgeRegistries.ENTITY_DATA_SERIALIZERS, MiXianTu.MOD_ID);
 
+    public static final DeferredHolder<EntityDataSerializer<?>, EntityDataSerializer<Double>> DOUBLE = REGISTRY.register("double", () -> EntityDataSerializer.forValueType(ByteBufCodecs.DOUBLE));
     public static final DeferredHolder<EntityDataSerializer<?>, EntityDataSerializer<List<Integer>>> COLOR_LIST = REGISTRY.register("color_list", () -> EntityDataSerializer.forValueType(ByteBufCodecs.VAR_INT.apply(ByteBufCodecs.list())));
     public static final DeferredHolder<EntityDataSerializer<?>, EntityDataSerializer<Optional<Holder<Aura>>>> AURA = REGISTRY.register("aura", () -> EntityDataSerializer.forValueType(ByteBufCodecs.optional(Aura.STREAM_CODEC)));
     public static final DeferredHolder<EntityDataSerializer<?>, EntityDataSerializer<Optional<Holder<Talisman>>>> TALISMAN = REGISTRY.register("talisman", () -> EntityDataSerializer.forValueType(ByteBufCodecs.optional(Talisman.STREAM_CODEC)));

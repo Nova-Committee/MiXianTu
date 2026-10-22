@@ -106,7 +106,7 @@ public final class ArtifactDescription {
     private static void appendAuras(List<Component> lines, Provider registries, ItemStack stack, Artifact artifact,
                                     FormulaContext formula) {
         artifact.spiritCapacity().keySet().forEach(aura -> {
-            int capacity = ArtifactService.capacity(registries, stack, aura, 0.0D, formula);
+            double capacity = ArtifactService.capacity(registries, stack, aura, 0.0D, formula);
             double stored = ArtifactService.stored(stack, aura);
             int percentage = capacity <= 0 ? 0 : Math.clamp(Math.round(stored * 100.0D / capacity), 0, 100);
             Component amount = Component.literal(TooltipText.number(stored) + " / " + TooltipText.number(capacity))

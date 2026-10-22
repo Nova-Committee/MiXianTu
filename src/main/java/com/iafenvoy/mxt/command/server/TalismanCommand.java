@@ -114,8 +114,8 @@ public final class TalismanCommand {
     // written to hold and nothing has to be configured twice.
     private static void charge(ServerPlayer player, ItemStack stack) {
         if (!(stack.getItem() instanceof ItemAuraAccess access)) return;
-        for (Entry<Holder<Aura>, Integer> entry : TalismanService.capacity(stack).entrySet()) {
-            int units = entry.getValue();
+        for (Entry<Holder<Aura>, Double> entry : TalismanService.capacity(stack).entrySet()) {
+            double units = entry.getValue();
             if (units > 0) access.insert(player, player.registryAccess(), stack, entry.getKey(), units, false, false);
         }
     }

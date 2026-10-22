@@ -40,33 +40,33 @@ public final class StoreVerifyProbes {
             context.fail("a talisman carrier no longer stores aura");
             return;
         }
-        int capacity = store.getCapacity(context.player(), context.registries(), stack, aura);
+        double capacity = store.getCapacity(context.player(), context.registries(), stack, aura);
         if (!context.check("the fixture has room to fill", capacity > 0)) return;
-        int over = capacity + 1;
+        double over = capacity + 1;
         // A fill past the room is what a partial store does; asked exactly, it must move nothing.
         context.expect("an exact fill past the room takes nothing",
                 store.insert(context.player(), context.registries(), stack, aura, over, true, false), over);
         context.expect("and writes nothing", stored(stack, aura), 0.0D);
         // The same ask without exact is logistics: fill what fits, report the rest.
         context.expect("a partial fill reports the leftover",
-                store.insert(context.player(), context.registries(), stack, aura, over, false, false), 1);
-        context.expect("and filled the room it had", stored(stack, aura), (double) capacity);
+                store.insert(context.player(), context.registries(), stack, aura, over, false, false), 1.0D);
+        context.expect("and filled the room it had", stored(stack, aura), capacity);
         // Draining is the same question from the other side: one unit short of the whole amount moves nothing.
         context.expect("an exact drain past the stock takes nothing",
                 store.extract(context.player(), context.registries(), stack, aura, over, true, false), over);
-        context.expect("and leaves the stock alone", stored(stack, aura), (double) capacity);
+        context.expect("and leaves the stock alone", stored(stack, aura), capacity);
         context.expect("a partial drain reports the leftover",
-                store.extract(context.player(), context.registries(), stack, aura, over, false, false), 1);
+                store.extract(context.player(), context.registries(), stack, aura, over, false, false), 1.0D);
         context.expect("and emptied what was there", stored(stack, aura), 0.0D);
         // An amount that does fit is moved whole either way.
         context.expect("an exact fill that fits moves all of it",
-                store.insert(context.player(), context.registries(), stack, aura, capacity, true, false), 0);
+                store.insert(context.player(), context.registries(), stack, aura, capacity, true, false), 0.0D);
         // Simulating the exact form is how a fee asks without spending anything.
         context.expect("a simulated exact drain answers yes",
-                store.extract(context.player(), context.registries(), stack, aura, capacity, true, true), 0);
-        context.expect("and simulated nothing away", stored(stack, aura), (double) capacity);
+                store.extract(context.player(), context.registries(), stack, aura, capacity, true, true), 0.0D);
+        context.expect("and simulated nothing away", stored(stack, aura), capacity);
         context.expect("an exact drain that fits moves all of it",
-                store.extract(context.player(), context.registries(), stack, aura, capacity, true, false), 0);
+                store.extract(context.player(), context.registries(), stack, aura, capacity, true, false), 0.0D);
         context.expect("and emptied the store", stored(stack, aura), 0.0D);
     }
 

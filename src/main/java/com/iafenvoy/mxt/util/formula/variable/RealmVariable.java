@@ -1,13 +1,16 @@
 package com.iafenvoy.mxt.util.formula.variable;
 
+import com.iafenvoy.mxt.attachment.CultivationAttachment;
 import com.iafenvoy.mxt.data.aura.Aura;
+import com.iafenvoy.mxt.data.resource.Resource;
+import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.cache.RegistryCaches;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationRanks;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
-import com.iafenvoy.mxt.util.formula.FormulaContext.ResourceSubject;
 import com.iafenvoy.mxt.util.formula.FormulaVariable;
 import net.minecraft.core.Holder;
+import net.minecraft.world.entity.LivingEntity;
 
 import java.util.Set;
 
@@ -27,14 +30,15 @@ public final class RealmVariable implements FormulaVariable {
     @Override
     public double value(String key, String suffix, FormulaContext context) {
         if (!suffix.isEmpty()) return Double.NaN;
-        ResourceSubject subject = context.resource();
-        if (subject == null) return Double.NaN;
-        Holder<Aura> aura = RegistryCaches.RESOURCE_AURA.get(subject.resource()).orElse(null);
+        Holder<Resource> resource = context.resource();
+        if (resource == null || !(context.caster() instanceof LivingEntity caster)) return Double.NaN;
+        CultivationAttachment spirit = caster.getData(MxtAttachments.CULTIVATION);
+        Holder<Aura> aura = RegistryCaches.RESOURCE_AURA.get(resource).orElse(null);
         if (key.equals("minor_stage"))
-            return aura == null ? Double.NaN : CultivationService.minorStage(aura, subject.cultivation(), context);
-        int rank = aura == null ? -1 : CultivationRanks.realmRank(subject.cultivation(), aura);
+            return aura == null ? Double.NaN : CultivationService.minorStage(aura, spirit, context);
+        int rank = aura == null ? -1 : CultivationRanks.realmRank(spirit, aura);
         if (key.equals("absorbed_aura") || key.equals("cultivation_progress"))
-            return rank < 0 ? 0.0D : subject.cultivation().cultivationProgress(aura);
+            return rank < 0 ? 0.0D : spirit.cultivationProgress(aura);
         return Math.max(0, rank);
     }
 }

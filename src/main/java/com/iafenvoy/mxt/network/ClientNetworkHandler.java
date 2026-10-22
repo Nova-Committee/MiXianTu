@@ -3,6 +3,7 @@ package com.iafenvoy.mxt.network;
 import com.iafenvoy.mxt.network.payload.*;
 import com.iafenvoy.mxt.runtime.world.AuraClientState;
 import com.iafenvoy.mxt.screen.menu.AlchemyFurnaceMenu;
+import com.iafenvoy.mxt.screen.menu.SpiritCraftingMenu;
 import com.iafenvoy.mxt.screen.menu.TalismanWorkstationMenu;
 import com.iafenvoy.mxt.screen.multiblock.MultiblockStructure;
 import com.iafenvoy.mxt.screen.multiblock.MultiblockStructureScreen;
@@ -12,6 +13,11 @@ import net.neoforged.neoforge.network.handling.IPayloadContext;
 import org.jetbrains.annotations.Nullable;
 
 public final class ClientNetworkHandler {
+    static void onSpiritCraftingState(SpiritCraftingStateS2CPayload payload, IPayloadContext context) {
+        if (context.player().containerMenu instanceof SpiritCraftingMenu menu && menu.containerId == payload.containerId())
+            menu.acceptProgress(payload.rows());
+    }
+
     static void onProfilerGui(ProfilerGuiS2CPayload payload, IPayloadContext context) {
         ProfilerScreen.control(payload);
     }

@@ -9,7 +9,7 @@ import com.iafenvoy.mxt.data.cost.CostPayment;
 import com.iafenvoy.mxt.data.cost.Costs;
 import com.iafenvoy.mxt.data.cost.builtin.AuraCost;
 import com.iafenvoy.mxt.data.cost.context.CostContext;
-import com.iafenvoy.mxt.data.cost.context.CostOrigin;
+import com.iafenvoy.mxt.data.cost.context.CostOrigins;
 import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.probe.Probe;
 import com.iafenvoy.mxt.probe.ProbeContext;
@@ -56,7 +56,7 @@ public final class CostVerifyProbes {
         Holder<Resource> qi = context.require(MxtResourceKeys.RESOURCE, ProbeDefinitions.QI);
         ResourceHolderAttachment account = new ResourceHolderAttachment();
         account.set(probe, 100.0D, 0.0D, 10_000.0D, -1L, "probe");
-        CostContext costs = CostContext.account(account, null, FormulaContext.of(context.player()), CostOrigin.SCRIPT);
+        CostContext costs = CostContext.account(account, null, FormulaContext.of(context.player()), CostOrigins.SCRIPT);
 
         CostPayment.PaymentResult plain = CostPayment.pay(decodeCosts(registries,
                 "[{\"id\": \"mxt_test:trigger_probe\", \"amount\": 3}]"), costs);
@@ -96,7 +96,7 @@ public final class CostVerifyProbes {
         personal.set(probe, 10.0D, 0.0D, 10_000.0D, -1L, "probe");
         CostPayment.PaymentResult onPlayer = CostPayment.pay(decodeCosts(registries,
                         "[{\"id\": \"mxt_test:trigger_probe\", \"amount\": 2}]"),
-                CostContext.of(context.player(), FormulaContext.of(context.player()), CostOrigin.SCRIPT));
+                CostContext.of(context.player(), FormulaContext.of(context.player()), CostOrigins.SCRIPT));
         double left = personal.get(probe);
         personal.set(probe, previous, 0.0D, 10_000.0D, -1L, "probe");
         if (!onPlayer.isSuccess()) return "a payer-paid resource cost was refused: " + onPlayer.failure();

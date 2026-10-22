@@ -1,6 +1,7 @@
 package com.iafenvoy.mxt.runtime.talisman;
 
 import com.iafenvoy.mxt.api.UseItemAuraAccess;
+import com.iafenvoy.mxt.runtime.spirit.AuraTransfers;
 import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.config.MxtServerConfig;
 import com.iafenvoy.mxt.data.aura.Aura;
@@ -9,7 +10,7 @@ import com.iafenvoy.mxt.data.cost.Cost;
 import com.iafenvoy.mxt.data.cost.CostPayment;
 import com.iafenvoy.mxt.data.cost.builtin.AuraCost;
 import com.iafenvoy.mxt.data.cost.context.CostContext;
-import com.iafenvoy.mxt.data.cost.context.CostOrigin;
+import com.iafenvoy.mxt.data.cost.context.CostOrigins;
 import com.iafenvoy.mxt.data.item.TalismanComponent;
 import com.iafenvoy.mxt.data.item.TalismanComponent.TriggerMode;
 import com.iafenvoy.mxt.data.resource.Resource;
@@ -66,11 +67,9 @@ public final class TalismanService {
     private record PlannedUse(TalismanUse use, TalismanType.Plan plan) {
     }
 
-    // One entry per aura, each the aura one invocation wants times the multiplier, rounded up to the whole units a
-    // pour moves in. Priced against the empty context because it has to be: the capacity is also how long a pour
-    // lasts, and the client sizes the same gesture from the same stack.
-    public static Map<Holder<Aura>, Integer> capacity(ItemStack stack) {
-        Map<Holder<Aura>, Integer> capacity = new LinkedHashMap<>();
+    // One invocation times the capacity multiplier, priced without a holder so both sides size the same gesture.
+    public static Map<Holder<Aura>, Double> capacity(ItemStack stack) {
+        Map<Holder<Aura>, Double> capacity = new LinkedHashMap<>();
         Holder<Talisman> written = inscribed(stack);
         if (written == null) return capacity;
         // What the carrier can still spend caps what it can hold: a carrier with two invocations of wear left is
@@ -79,7 +78,7 @@ public final class TalismanService {
         for (Cost cost : written.value().costs())
             if (cost instanceof AuraCost(Holder<Aura> aura, NumberProvider amount)) {
                 double value = MiscUtil.positive(amount.evaluate(FormulaContext.EMPTY));
-                if (value > 0.0D) capacity.put(aura, units(value * multiplier));
+                if (value > 0.0D) capacity.put(aura, AuraTransfers.multiply(value, multiplier));
             }
         return capacity;
     }
@@ -110,27 +109,20 @@ public final class TalismanService {
         return Math.max(1, (cap - stack.getDamageValue()) / cost);
     }
 
-    // Whole units, the same rounding the shared stores use: a capacity of half an aura is still one whole one.
-    private static int units(double amount) {
-        amount = MiscUtil.positive(amount);
-        if (amount <= 0.0D) return 0;
-        return amount >= Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) Math.ceil(amount);
-    }
-
     // Whether the store covers one invocation, which is what a click needs to be a firing rather than a pour. A
     // carrier billed no aura at all answers yes and is fired by the same click as a filled one.
     public static boolean ready(ItemStack stack) {
         Map<Holder<Aura>, Double> draw = draw(inscribed(stack));
         if (draw.isEmpty()) return true;
         SpiritStorageComponent charge = store(stack);
-        return draw.entrySet().stream().allMatch(entry -> charge.get(entry.getKey()) >= entry.getValue());
+        return draw.entrySet().stream().allMatch(entry -> AuraTransfers.extract(charge.get(entry.getKey()), entry.getValue(), true).remainder() == 0.0D);
     }
 
     // What one invocation takes off the store, leaving the rest for the invocations after it.
     private static SpiritStorageComponent drain(SpiritStorageComponent charge, Map<Holder<Aura>, Double> draw) {
         SpiritStorageComponent left = charge;
         for (Map.Entry<Holder<Aura>, Double> entry : draw.entrySet())
-            left = left.with(entry.getKey(), Math.max(0.0D, left.get(entry.getKey()) - entry.getValue()));
+            left = left.with(entry.getKey(), AuraTransfers.extract(left.get(entry.getKey()), entry.getValue(), true).stored());
         return left;
     }
 
@@ -274,7 +266,7 @@ public final class TalismanService {
             // an aura comes out of the carrier's own store rather than from an account.
             List<Cost> holderCosts = written.value().costs().stream()
                     .filter(cost -> !(cost instanceof AuraCost)).toList();
-            CostContext costContext = CostContext.of(holder, context, CostOrigin.TALISMAN);
+            CostContext costContext = CostContext.of(holder, context, CostOrigins.TALISMAN);
             CostPayment payment = CostPayment.of(costContext);
             Optional<Failure> priced = payment.price(holderCosts);
             if (priced.isPresent()) {
@@ -396,12 +388,12 @@ public final class TalismanService {
     // The whole store of a stack as the pour reads it: one entry per aura, in the order capacity was written,
     // with whatever has been poured in so far.
     public static List<Entry> entries(ItemStack stack) {
-        Map<Holder<Aura>, Integer> capacity = capacity(stack);
+        Map<Holder<Aura>, Double> capacity = capacity(stack);
         if (capacity.isEmpty()) return List.of();
         SpiritStorageComponent charge = store(stack);
         List<Entry> entries = new ArrayList<>(capacity.size());
         capacity.forEach((aura, size) -> entries.add(new Entry(aura,
-                (int) Math.clamp(Math.floor(charge.get(aura)), 0.0D, size), size)));
+                charge.get(aura), size)));
         return List.copyOf(entries);
     }
 

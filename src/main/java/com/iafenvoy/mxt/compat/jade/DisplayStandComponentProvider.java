@@ -83,8 +83,8 @@ public enum DisplayStandComponentProvider implements IComponentProvider<BlockAcc
         private static final int BAR_WIDTH = 100;
         private static final int BAR_HEIGHT = 8;
         private final int percentage;
-        private final int stored;
-        private final int capacity;
+        private final double stored;
+        private final double capacity;
 
         private ChargeBarElement(Charge charge) {
             this.percentage = charge.percentage();

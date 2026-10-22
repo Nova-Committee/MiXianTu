@@ -223,8 +223,8 @@ public final class TalismanVerifyProbes {
         double before = resources.get(resource);
         try {
             resources.set(resource, 0.0D, 0.0D, 100_000.0D, -1L, "closure");
-            Map<Holder<Aura>, Integer> capacity = TalismanService.capacity(stack);
-            if (capacity.getOrDefault(aura, 0) != 9)
+            Map<Holder<Aura>, Double> capacity = TalismanService.capacity(stack);
+            if (capacity.getOrDefault(aura, 0.0D) != 9)
                 return "a carrier written for five invocations over three of wear read " + capacity + " instead of 9";
             if (TalismanService.ready(stack)) return "an empty carrier was ready to fire";
             access.insert(context.player(), context.registries(), stack, aura, 9, false, false);
@@ -266,7 +266,7 @@ public final class TalismanVerifyProbes {
             // damaged past the point the store was sized for is what leaves aura behind when it finally breaks.
             TalismanService.applyDurability(stack);
             stack.setDamageValue(2);
-            if (TalismanService.capacity(stack).getOrDefault(aura, 0) != 4)
+            if (TalismanService.capacity(stack).getOrDefault(aura, 0.0D) != 4)
                 return "a carrier with two invocations of wear left read a capacity of "
                         + TalismanService.capacity(stack) + " instead of 4";
             // One invocation of the two points of wear the fixture declares: the carrier survives, so what it spent

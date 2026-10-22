@@ -6,6 +6,7 @@ import com.iafenvoy.mxt.screen.aui.AuiElements;
 import com.iafenvoy.mxt.screen.aui.AuiStyles;
 import com.iafenvoy.mxt.screen.menu.SpiritCraftingMenu;
 import com.iafenvoy.mxt.util.DefinitionText;
+import com.iafenvoy.mxt.util.TooltipText;
 import com.sighs.apricityui.init.Element;
 import net.minecraft.core.Holder;
 import net.minecraft.network.chat.Component;
@@ -17,7 +18,7 @@ import java.util.List;
 
 /**
  * The vanilla crafting grid plus the aura progress panel, both drawn by one page. The progress rows are the menu's
- * own data slots. The page declares a single row and the screen copies it once per aura the recipe on the grid
+ * own snapshots. The page declares a single row and the screen copies it once per aura the recipe on the grid
  * needs, so an empty grid leaves the panel with no rows at all while a recipe that asks for many still fits.
  * <p>
  * The page's containers map straight onto the menu's slots - {@code result} cell 0, {@code crafting} cells 0..8,
@@ -94,13 +95,13 @@ public final class SpiritCraftingScreen extends AuiContainerScreen<SpiritCraftin
                 row.hide();
                 continue;
             }
-            int required = this.menu.progressRequirement(index);
-            int amount = Math.min(this.menu.progressAmount(index), required);
+            double required = this.menu.progressRequirement(index);
+            double amount = Math.min(this.menu.progressAmount(index), required);
             // The aura's own particle colour, lifted so it stays readable on the dark skin.
             String color = AuiStyles.hex(AuiStyles.readableOnDark(aura.value().resource().value().particleColor()));
-            int filled = required <= 0 ? 0 : Math.round(BAR_WIDTH * amount / (float) required);
+            int filled = required <= 0 ? 0 : (int) Math.round(amount / required * BAR_WIDTH);
             row.show(AURA_PADDING + index * pitch, DefinitionText.nameOrId(aura).getString(),
-                    amount + " / " + required, color, filled);
+                    TooltipText.number(amount) + " / " + TooltipText.number(required), color, filled);
         }
     }
 

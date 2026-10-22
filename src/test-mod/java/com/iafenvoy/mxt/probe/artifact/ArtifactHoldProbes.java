@@ -208,7 +208,7 @@ public final class ArtifactHoldProbes {
         double qiPool = pools.get(qi.value().resource());
         double waterPool = pools.get(waterPower.value().resource());
         double soulPool = pools.get(soulPower.value().resource());
-        int poured = ArtifactHoldService.pour(player, pourStack, access,
+        double poured = ArtifactHoldService.pour(player, pourStack, access,
                 ArtifactService.definition(access, pourStack).map(Reference::value).orElseThrow());
         boolean pourLeg = poured == 3
                 && ArtifactService.stored(pourStack, qi) == 41

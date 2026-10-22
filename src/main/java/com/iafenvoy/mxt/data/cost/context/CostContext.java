@@ -1,6 +1,7 @@
 package com.iafenvoy.mxt.data.cost.context;
 
 import com.iafenvoy.mxt.api.AuraAccess;
+import com.iafenvoy.mxt.api.AuraCostSource;
 import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
@@ -12,120 +13,55 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.Nullable;
 
-/**
- * Who is paying, where, and which channels this payment may use. The payer is a {@link LivingEntity} and not a
- * player: the resource attachment is an entity attachment, so any living entity can pay one. The inventory and
- * script channels are only offered when the payer happens to be a {@link Player} - or, for items, when the
- * caller names a container to take them from instead - which is what a cost entry that needs them is checked
- * against: a missing channel is a plain "cannot pay", not an error.
- * <p>
- * A resource account can also be named without a payer at all, which is how a formation pays its upkeep while its
- * owner is offline: there is an account to charge and nobody to ask.
- */
-// FIXME::Too many
-public record CostContext(@Nullable LivingEntity payer, FormulaContext formula, CostOrigin origin,
-                          @Nullable Level level, @Nullable BlockPos pos, @Nullable AuraAccess bank,
-                          @Nullable ResourceHolderAttachment account, AuraTarget auraTarget,
+public record CostContext(@Nullable LivingEntity payer, FormulaContext formula, String origin,
+                          @Nullable ResourceHolderAttachment account, AuraCostSource auraSource,
                           @Nullable Container itemTarget) {
     public HolderLookup.Provider registries() {
         return this.formula.registries();
     }
 
-    /**
-     * Where an {@code mxt:aura} entry takes its aura from.
-     */
-    public enum AuraTarget {
-        /**
-         * As the resource that aura is measured in, out of the context's resource account.
-         */
-        VALUE,
-        /**
-         * The shared aura pool at the context position.
-         */
-        POOL,
-        /**
-         * A block entity's own store.
-         */
-        BANK
+    public static CostContext of(@Nullable LivingEntity payer, FormulaContext formula, String origin) {
+        return new CostContext(payer, formula, origin, null, AuraCostSources.ACCOUNT, null);
     }
 
-    /**
-     * A payer and nothing else: aura costs become the resource that aura is counted in.
-     */
-    public static CostContext of(@Nullable LivingEntity payer, FormulaContext formula, CostOrigin origin) {
-        return new CostContext(payer, formula, origin, null, null, null, null, AuraTarget.VALUE, null);
-    }
-
-    public static CostContext of(@Nullable LivingEntity payer, CostOrigin origin) {
+    public static CostContext of(@Nullable LivingEntity payer, String origin) {
         return of(payer, payer == null ? FormulaContext.EMPTY : FormulaContext.of(payer), origin);
     }
 
-    /**
-     * An explicit resource account, optionally with a payer that owns it.
-     */
-    public static CostContext account(ResourceHolderAttachment account, @Nullable LivingEntity payer,
-                                      FormulaContext formula, CostOrigin origin) {
-        return new CostContext(payer, formula, origin, null, null, null, account, AuraTarget.VALUE, null);
+    public static CostContext account(@Nullable ResourceHolderAttachment account, @Nullable LivingEntity payer, FormulaContext formula, String origin) {
+        return new CostContext(payer, formula, origin, account, AuraCostSources.ACCOUNT, null);
     }
 
-    /**
-     * The shared aura pool at a position (cultivation cycles).
-     */
-    public static CostContext pool(@Nullable LivingEntity payer, Level level, BlockPos pos, FormulaContext formula,
-                                   CostOrigin origin) {
-        return new CostContext(payer, formula, origin, level, pos.immutable(), null, null, AuraTarget.POOL, null);
+    public static CostContext pool(@Nullable LivingEntity payer, Level level, BlockPos pos, FormulaContext formula, String origin) {
+        return new CostContext(payer, formula, origin, null, AuraCostSources.pool(level, pos), null);
     }
 
-    /**
-     * A block entity's own store (spirit crafting, formation upkeep).
-     */
-    public static CostContext bank(AuraAccess bank, @Nullable LivingEntity payer, FormulaContext formula,
-                                   CostOrigin origin) {
-        return new CostContext(payer, formula, origin, null, null, bank, null, AuraTarget.BANK, null);
+    public static CostContext bank(AuraAccess bank, @Nullable LivingEntity payer, FormulaContext formula, String origin) {
+        return new CostContext(payer, formula, origin, null, AuraCostSources.bank(bank), null);
     }
 
     public CostContext withPayer(@Nullable LivingEntity payer) {
-        return new CostContext(payer, this.formula, this.origin, this.level, this.pos, this.bank, this.account,
-                this.auraTarget, this.itemTarget);
+        return new CostContext(payer, this.formula, this.origin, this.account, this.auraSource, this.itemTarget);
     }
 
     public CostContext withFormula(FormulaContext formula) {
-        return new CostContext(this.payer, formula, this.origin, this.level, this.pos, this.bank, this.account,
-                this.auraTarget, this.itemTarget);
+        return new CostContext(this.payer, formula, this.origin, this.account, this.auraSource, this.itemTarget);
     }
 
-    public CostContext withAuraTarget(AuraTarget auraTarget) {
-        return new CostContext(this.payer, this.formula, this.origin, this.level, this.pos, this.bank, this.account,
-                auraTarget, this.itemTarget);
+    public CostContext withAuraSource(AuraCostSource source) {
+        return new CostContext(this.payer, this.formula, this.origin, this.account, source, this.itemTarget);
     }
 
-    /**
-     * Item entries come out of this container instead of the payer's inventory (the talisman workstation's own
-     * paper slot). Everything else still comes from the payer.
-     */
     public CostContext withItemTarget(Container itemTarget) {
-        return new CostContext(this.payer, this.formula, this.origin, this.level, this.pos, this.bank, this.account,
-                this.auraTarget, itemTarget);
+        return new CostContext(this.payer, this.formula, this.origin, this.account, this.auraSource, itemTarget);
     }
 
     public @Nullable Player player() {
         return this.payer instanceof Player player ? player : null;
     }
 
-    /**
-     * The account resource amounts come out of: the named one, or the payer's own attachment.
-     */
     public @Nullable ResourceHolderAttachment resourceTarget() {
         if (this.account != null) return this.account;
         return this.payer == null ? null : this.payer.getData(MxtAttachments.RESOURCE_HOLDER);
-    }
-
-    public boolean hasChannel(CostChannel channel) {
-        return switch (channel) {
-            case RESOURCE_ACCOUNT -> this.resourceTarget() != null;
-            case PLAYER_INVENTORY, SCRIPT -> this.itemTarget != null || this.player() != null;
-            case WORLD_AURA -> this.level != null && this.pos != null;
-            case AURA_BANK -> this.bank != null;
-        };
     }
 }

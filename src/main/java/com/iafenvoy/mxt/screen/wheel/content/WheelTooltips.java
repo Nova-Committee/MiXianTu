@@ -3,7 +3,7 @@ package com.iafenvoy.mxt.screen.wheel.content;
 import com.iafenvoy.mxt.data.cost.Cost;
 import com.iafenvoy.mxt.data.cost.CostPayment;
 import com.iafenvoy.mxt.data.cost.context.CostContext;
-import com.iafenvoy.mxt.data.cost.context.CostOrigin;
+import com.iafenvoy.mxt.data.cost.context.CostOrigins;
 import com.iafenvoy.mxt.data.cultivation.Element;
 import com.iafenvoy.mxt.screen.wheel.WheelDuration;
 import com.iafenvoy.mxt.util.DefinitionText;
@@ -37,7 +37,7 @@ final class WheelTooltips {
     // amounts are what the server would collect for the whole array, in the context it would collect it in. Pricing is
     // one pass with no store asked, so entries that reach the same resource add up the way they will when it is paid.
     static Component costs(List<Cost> costs, Player player) {
-        CostContext context = CostContext.of(player, CostOrigin.ABILITY);
+        CostContext context = CostContext.of(player, CostOrigins.ABILITY);
         CostPayment payment = CostPayment.of(context);
         boolean other = payment.price(costs).isPresent();
         List<Component> parts = new ArrayList<>(costs.size());

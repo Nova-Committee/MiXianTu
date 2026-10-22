@@ -6,7 +6,7 @@ import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.aura.AuraZone.Distribution;
 import com.iafenvoy.mxt.data.cost.Costs;
 import com.iafenvoy.mxt.data.cost.context.CostContext;
-import com.iafenvoy.mxt.data.cost.context.CostOrigin;
+import com.iafenvoy.mxt.data.cost.context.CostOrigins;
 import com.iafenvoy.mxt.data.cultivation.Cultivation;
 import com.iafenvoy.mxt.data.formation.Formation;
 import com.iafenvoy.mxt.data.formation.FormationIntervals;
@@ -364,7 +364,7 @@ public final class AuraDistributionService {
     }
 
     private static Map<Holder<Aura>, Double> evaluateCosts(Cultivation action, FormulaContext context) {
-        return Costs.auras(action.costs(), CostContext.of(null, context, CostOrigin.CULTIVATION));
+        return Costs.auras(action.costs(), CostContext.of(null, context, CostOrigins.CULTIVATION));
     }
 
     private record Slot(long chunk, int sectionY) {

@@ -169,7 +169,7 @@ public final class ArtifactProbes {
         context.check("artifact roster grants=id+tag expands to 2 ids", grants);
     }
 
-    // The refine action charges 40 of a 200 ceiling, so that feeding raises the ceiling to floor(200 * 1.1).
+    // The refine action charges 40 of a 200 ceiling, so feeding raises the ceiling to 200 * 1.1.
     private static void refine(ProbeContext context) {
         Provider access = context.registries();
         FormulaContext formula = FormulaContext.of(context.player());
@@ -177,9 +177,9 @@ public final class ArtifactProbes {
         ItemStack jadeStack = new ItemStack(Items.AMETHYST_SHARD);
         boolean refined = ArtifactService.refine(jadeStack, context.player()) == RefineResult.REFINED;
         double jadeStored = ArtifactService.stored(jadeStack, qi);
-        int jadeCeiling = ArtifactService.capacity(access, jadeStack, qi, 0.0D, formula);
+        double jadeCeiling = ArtifactService.capacity(access, jadeStack, qi, 0.0D, formula);
         context.check("artifact roster claim_action stored=" + jadeStored + " ceiling=" + jadeCeiling,
-                refined && ArtifactService.isOwner(jadeStack, context.player().getUUID()) && jadeStored == 40 && jadeCeiling == 220);
+                refined && ArtifactService.isOwner(jadeStack, context.player().getUUID()) && close(jadeStored, 40.0D) && close(jadeCeiling, 220.0D));
     }
 
     // What Curios is told about these items: the two definitions that declare the slot fit it, the sword does not.

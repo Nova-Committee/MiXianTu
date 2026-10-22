@@ -2,7 +2,7 @@ package com.iafenvoy.mxt.runtime.item;
 
 import com.iafenvoy.mxt.data.cost.CostPayment;
 import com.iafenvoy.mxt.data.cost.context.CostContext;
-import com.iafenvoy.mxt.data.cost.context.CostOrigin;
+import com.iafenvoy.mxt.data.cost.context.CostOrigins;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.data.quality.QualityLadders;
 import com.iafenvoy.mxt.registry.cache.ChainCache;
@@ -49,7 +49,7 @@ public final class QualityUpgradeService {
             ItemQuality step = next.value();
             FormulaContext formula = FormulaContext.of(actor);
             if (!step.upgradeCondition().test(actor, formula)) return UpgradeResult.rejected(Failures.CONDITION_FAILED);
-            CostContext context = CostContext.of(actor, formula, CostOrigin.QUALITY_UPGRADE);
+            CostContext context = CostContext.of(actor, formula, CostOrigins.QUALITY_UPGRADE);
             CostPayment.PaymentResult payment = CostPayment.pay(step.upgradeCosts(), context);
             // The tier is written only after the price is actually paid, so a refusal leaves the stack untouched.
             if (!payment.isSuccess()) return UpgradeResult.rejected(payment.failure());
