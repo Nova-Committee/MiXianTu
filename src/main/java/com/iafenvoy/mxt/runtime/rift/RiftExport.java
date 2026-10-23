@@ -4,7 +4,10 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
-import com.iafenvoy.mxt.data.rift.*;
+import com.iafenvoy.mxt.data.rift.RiftDestination;
+import com.iafenvoy.mxt.data.rift.RiftPlacement;
+import com.iafenvoy.mxt.data.rift.RiftPreset;
+import com.iafenvoy.mxt.data.rift.RiftTemplate;
 import com.mojang.serialization.JsonOps;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.phys.Vec3;
@@ -14,7 +17,9 @@ import java.util.Optional;
 
 public final class RiftExport {
     private static final Gson JSON = new GsonBuilder().setPrettyPrinting().create();
-    private RiftExport() { }
+
+    private RiftExport() {
+    }
 
     public static String preset(RiftTemplate data) {
         return JSON.toJson(RiftPreset.DIRECT_CODEC.encodeStart(JsonOps.INSTANCE, new RiftPreset(data.shape(), data.appearance())).result().orElseThrow());
@@ -36,9 +41,12 @@ public final class RiftExport {
                     data.shape(), destination, data.appearance(), data.durationTicks(), data.enabled());
             portals.add(RiftTemplate.CODEC.encodeStart(JsonOps.INSTANCE, template).result().orElseThrow());
         }
-        JsonObject result = new JsonObject(); result.add("portals", portals);
+        JsonObject result = new JsonObject();
+        result.add("portals", portals);
         return JSON.toJson(result);
     }
 
-    public static String template(RiftTemplate data) { return JSON.toJson(RiftTemplate.CODEC.encodeStart(JsonOps.INSTANCE, data).result().orElseThrow()); }
+    public static String template(RiftTemplate data) {
+        return JSON.toJson(RiftTemplate.CODEC.encodeStart(JsonOps.INSTANCE, data).result().orElseThrow());
+    }
 }

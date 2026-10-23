@@ -5,7 +5,8 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.resources.Identifier;
 
-public record RiftVisual(RiftPlacement placement, RiftShape shape, RiftAppearance appearance, int color, boolean enabled) {
+public record RiftVisual(RiftPlacement placement, RiftShape shape, RiftAppearance appearance, int color,
+                         boolean enabled) {
     public static final Codec<RiftVisual> CODEC = RecordCodecBuilder.create(i -> i.group(
             RiftPlacement.CODEC.fieldOf("placement").forGetter(RiftVisual::placement),
             RiftShape.CODEC.fieldOf("shape").forGetter(RiftVisual::shape),

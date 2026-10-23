@@ -39,14 +39,6 @@ public final class MxtRenderPipelines {
             .withVertexFormat(DefaultVertexFormat.POSITION_COLOR, VertexFormat.Mode.TRIANGLES)
             .withColorTargetState(new ColorTargetState(Optional.empty(), ColorTargetState.WRITE_COLOR))
             .withDepthStencilState(DepthStencilState.DEFAULT).withCull(false).build();
-    private static RenderPipeline riftPipeline(String shader) {
-        return RenderPipeline.builder(RenderPipelines.MATRICES_PROJECTION_SNIPPET, RenderPipelines.GLOBALS_SNIPPET)
-                .withLocation(id("pipeline/" + shader)).withVertexShader(id("core/rift"))
-                .withFragmentShader(id("core/" + shader)).withUniform("RiftParameters", UniformType.UNIFORM_BUFFER)
-                .withVertexFormat(DefaultVertexFormat.POSITION_TEX, VertexFormat.Mode.TRIANGLES)
-                .withColorTargetState(new ColorTargetState(Optional.empty(), ColorTargetState.WRITE_COLOR))
-                .withDepthStencilState(DepthStencilState.DEFAULT).withCull(false).build();
-    }
     public static final RenderPipeline SWORD_FLUID = flameBase("sword_fluid")
             .withSampler("FluidField")
             .withDepthStencilState(Optional.empty())
@@ -64,7 +56,6 @@ public final class MxtRenderPipelines {
             .withDepthStencilState(Optional.empty()).withCull(false)
             .withColorTargetState(new ColorTargetState(Optional.of(new BlendFunction(SourceFactor.ONE, DestFactor.ONE, SourceFactor.ZERO, DestFactor.ONE)), ColorTargetState.WRITE_COLOR))
             .build();
-
     public static final RenderPipeline LIGHT_BEAM = RenderPipeline.builder(RenderPipelines.MATRICES_FOG_SNIPPET)
             .withLocation(id("pipeline/light_beam"))
             .withVertexShader(id("core/light_beam"))
@@ -81,6 +72,15 @@ public final class MxtRenderPipelines {
             .withLocation(id("pipeline/multiblock_outline"))
             .withDepthStencilState(new DepthStencilState(CompareOp.ALWAYS_PASS, false))
             .build();
+
+    private static RenderPipeline riftPipeline(String shader) {
+        return RenderPipeline.builder(RenderPipelines.MATRICES_PROJECTION_SNIPPET, RenderPipelines.GLOBALS_SNIPPET)
+                .withLocation(id("pipeline/" + shader)).withVertexShader(id("core/rift"))
+                .withFragmentShader(id("core/" + shader)).withUniform("RiftParameters", UniformType.UNIFORM_BUFFER)
+                .withVertexFormat(DefaultVertexFormat.POSITION_TEX, VertexFormat.Mode.TRIANGLES)
+                .withColorTargetState(new ColorTargetState(Optional.empty(), ColorTargetState.WRITE_COLOR))
+                .withDepthStencilState(DepthStencilState.DEFAULT).withCull(false).build();
+    }
 
     private static RenderPipeline.Builder flameBase(String name) {
         return RenderPipeline.builder(PROJECTION_ONLY)

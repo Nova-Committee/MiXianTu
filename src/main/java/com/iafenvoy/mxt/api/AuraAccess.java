@@ -39,7 +39,8 @@ public interface AuraAccess {
     double extract(@Nullable LivingEntity entity, @NotNull Provider registries, Holder<Aura> aura, double amount, boolean exact, boolean simulate);
 
     static double requireNonNegative(double amount) {
-        if (!Double.isFinite(amount) || amount < 0.0D) throw new IllegalArgumentException("Aura amount must be finite and non-negative");
+        if (!Double.isFinite(amount) || amount < 0.0D)
+            throw new IllegalArgumentException("Aura amount must be finite and non-negative");
         return amount;
     }
 }

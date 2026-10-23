@@ -21,8 +21,13 @@ public final class RiftRuntime implements AutoCloseable {
         }
     }
 
-    public RiftGeometry.Mesh mesh(UUID id) { return this.meshes.get(id); }
-    public boolean empty() { return this.meshes.isEmpty(); }
+    public RiftGeometry.Mesh mesh(UUID id) {
+        return this.meshes.get(id);
+    }
+
+    public boolean empty() {
+        return this.meshes.isEmpty();
+    }
 
     public boolean fits(UUID replacing, RiftGeometry.Mesh mesh, int sectionLimit) {
         for (long key : sections(mesh.bounds().inflate(0.5))) {
@@ -47,8 +52,13 @@ public final class RiftRuntime implements AutoCloseable {
         }
     }
 
-    public void evict(UUID id) { this.meshes.remove(id); }
-    public Set<UUID> inChunk(long chunk) { return Set.copyOf(this.chunks.getOrDefault(chunk, Set.of())); }
+    public void evict(UUID id) {
+        this.meshes.remove(id);
+    }
+
+    public Set<UUID> inChunk(long chunk) {
+        return Set.copyOf(this.chunks.getOrDefault(chunk, Set.of()));
+    }
 
     public void remove(UUID id) {
         this.meshes.remove(id);
@@ -83,6 +93,10 @@ public final class RiftRuntime implements AutoCloseable {
 
     @Override
     public void close() {
-        this.expiry.clear(); this.meshes.clear(); this.sections.clear(); this.occupied.clear(); this.chunks.clear();
+        this.expiry.clear();
+        this.meshes.clear();
+        this.sections.clear();
+        this.occupied.clear();
+        this.chunks.clear();
     }
 }

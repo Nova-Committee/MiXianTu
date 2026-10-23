@@ -17,8 +17,8 @@ public interface AuraCostSource {
      * Binds the evaluated price, physical target, payer and registry access for both execution passes.
      *
      * @param context the context after any payer or formula overrides
-     * @param aura the aura identity being charged
-     * @param amount the already evaluated, finite positive amount; do not round or evaluate it again
+     * @param aura    the aura identity being charged
+     * @param amount  the already evaluated, finite positive amount; do not round or evaluate it again
      * @return a fixed transaction, or a refusal if the source cannot bind this price
      */
     ResultWithData<Cost.Transaction> bind(CostContext context, Holder<Aura> aura, double amount);

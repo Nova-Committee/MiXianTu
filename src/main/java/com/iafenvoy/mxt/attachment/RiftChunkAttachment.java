@@ -5,7 +5,10 @@ import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.*;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 public final class RiftChunkAttachment {
     public static final MapCodec<RiftChunkAttachment> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
@@ -13,14 +16,26 @@ public final class RiftChunkAttachment {
     ).apply(i, RiftChunkAttachment::new));
     private final Map<UUID, RiftRecord> records = new LinkedHashMap<>();
 
-    public RiftChunkAttachment() { }
+    public RiftChunkAttachment() {
+    }
 
     private RiftChunkAttachment(List<RiftRecord> records) {
         for (RiftRecord record : records) this.records.put(record.id(), record);
     }
 
-    public List<RiftRecord> records() { return List.copyOf(this.records.values()); }
-    public @Nullable RiftRecord get(UUID id) { return this.records.get(id); }
-    public void put(RiftRecord record) { this.records.put(record.id(), record); }
-    public void remove(UUID id) { this.records.remove(id); }
+    public List<RiftRecord> records() {
+        return List.copyOf(this.records.values());
+    }
+
+    public @Nullable RiftRecord get(UUID id) {
+        return this.records.get(id);
+    }
+
+    public void put(RiftRecord record) {
+        this.records.put(record.id(), record);
+    }
+
+    public void remove(UUID id) {
+        this.records.remove(id);
+    }
 }

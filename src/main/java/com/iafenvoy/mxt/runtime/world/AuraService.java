@@ -23,12 +23,8 @@ import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.profiling.ProfilerScope;
 import com.iafenvoy.mxt.util.profiling.ServerProfiling;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap.Entry;
-import net.minecraft.core.BlockPos;
-import net.minecraft.core.Holder;
+import net.minecraft.core.*;
 import net.minecraft.core.Holder.Reference;
-import net.minecraft.core.QuartPos;
-import net.minecraft.core.Registry;
-import net.minecraft.core.SectionPos;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
@@ -170,7 +166,8 @@ public final class AuraService {
         try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.AURA)) {
             if (amounts.values().stream().anyMatch(value -> !Double.isFinite(value))) return;
             LevelChunk chunk = loadedChunk(level, pos);
-            if (chunk != null) chunk.getData(MxtAttachments.AURA_CHUNK).change(SectionPos.blockToSectionCoord(pos.getY()), amounts);
+            if (chunk != null)
+                chunk.getData(MxtAttachments.AURA_CHUNK).change(SectionPos.blockToSectionCoord(pos.getY()), amounts);
         }
     }
 

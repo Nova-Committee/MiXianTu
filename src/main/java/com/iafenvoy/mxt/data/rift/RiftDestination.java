@@ -1,8 +1,8 @@
 package com.iafenvoy.mxt.data.rift;
 
 import com.mojang.serialization.Codec;
-import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.DataResult;
+import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.phys.Vec3;
@@ -28,10 +28,10 @@ public sealed interface RiftDestination {
                 case "return" -> DataResult.success(RETURN);
                 default -> DataResult.error(() -> "Unknown rift destination: " + type);
             }).validate(value -> value instanceof Position p && (!RiftPlacement.finite(p.pos())
-                    || Math.abs(p.pos().x) > 30_000_000 || Math.abs(p.pos().y) > 30_000_000 || Math.abs(p.pos().z) > 30_000_000
-                    || p.yaw().filter(v -> !Float.isFinite(v)).isPresent()
-                    || p.pitch().filter(v -> !Float.isFinite(v) || Math.abs(v) > 90).isPresent())
-                    ? DataResult.error(() -> "Invalid rift destination") : DataResult.success(value));
+            || Math.abs(p.pos().x) > 30_000_000 || Math.abs(p.pos().y) > 30_000_000 || Math.abs(p.pos().z) > 30_000_000
+            || p.yaw().filter(v -> !Float.isFinite(v)).isPresent()
+            || p.pitch().filter(v -> !Float.isFinite(v) || Math.abs(v) > 90).isPresent())
+            ? DataResult.error(() -> "Invalid rift destination") : DataResult.success(value));
 
     String type();
 
@@ -45,16 +45,22 @@ public sealed interface RiftDestination {
     record Position(Optional<Identifier> dimension, Vec3 pos, Optional<Float> yaw, Optional<Float> pitch,
                     boolean nearby) implements RiftDestination {
         @Override
-        public String type() { return "position"; }
+        public String type() {
+            return "position";
+        }
     }
 
     record Realm(Identifier realm) implements RiftDestination {
         @Override
-        public String type() { return "secret_realm"; }
+        public String type() {
+            return "secret_realm";
+        }
     }
 
     record Return() implements RiftDestination {
         @Override
-        public String type() { return "return"; }
+        public String type() {
+            return "return";
+        }
     }
 }

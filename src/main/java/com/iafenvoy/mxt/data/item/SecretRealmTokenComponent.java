@@ -32,7 +32,8 @@ import java.util.function.Consumer;
 @EventBusSubscriber(Dist.CLIENT)
 public record SecretRealmTokenComponent(Optional<Holder<SecretRealm>> realm,
                                         Optional<Holder<RiftPreset>> preset, long durationTicks,
-                                        Optional<UUID> summoned, Optional<Identifier> summonedDimension) implements TooltipProvider {
+                                        Optional<UUID> summoned,
+                                        Optional<Identifier> summonedDimension) implements TooltipProvider {
     public static final SecretRealmTokenComponent EMPTY = new SecretRealmTokenComponent(Optional.empty());
     public static final Codec<SecretRealmTokenComponent> CODEC = RecordCodecBuilder.create(i -> i.group(
             SecretRealm.CODEC.optionalFieldOf("realm").forGetter(SecretRealmTokenComponent::realm),

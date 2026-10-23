@@ -7,8 +7,8 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.event.level.ChunkWatchEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
+import net.neoforged.neoforge.event.level.ChunkWatchEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
 import org.jetbrains.annotations.Nullable;
 
@@ -20,7 +20,8 @@ public final class RiftTracking {
     private static final Map<ServerLevel, UUID> GENERATIONS = new IdentityHashMap<>();
     private static final Map<UUID, Watcher> WATCHERS = new HashMap<>();
 
-    private RiftTracking() { }
+    private RiftTracking() {
+    }
 
     @SubscribeEvent
     public static void watch(ChunkWatchEvent.Sent event) {
@@ -39,7 +40,9 @@ public final class RiftTracking {
     }
 
     @SubscribeEvent
-    public static void logout(PlayerEvent.PlayerLoggedOutEvent event) { WATCHERS.remove(event.getEntity().getUUID()); }
+    public static void logout(PlayerEvent.PlayerLoggedOutEvent event) {
+        WATCHERS.remove(event.getEntity().getUUID());
+    }
 
     private static Watcher watcher(ServerPlayer player, ServerLevel level) {
         Watcher current = WATCHERS.get(player.getUUID());
@@ -51,7 +54,9 @@ public final class RiftTracking {
         return current;
     }
 
-    private static UUID generation(ServerLevel level) { return GENERATIONS.computeIfAbsent(level, _ -> UUID.randomUUID()); }
+    private static UUID generation(ServerLevel level) {
+        return GENERATIONS.computeIfAbsent(level, _ -> UUID.randomUUID());
+    }
 
     public static void changed(ServerLevel level, @Nullable UUID id) {
         for (Watcher watcher : List.copyOf(WATCHERS.values())) if (watcher.level == level) refresh(watcher);
@@ -75,11 +80,12 @@ public final class RiftTracking {
                 watcher.sent.put(record.id(), record.revision());
             }
         }
-        for (UUID id : Set.copyOf(watcher.sent.keySet())) if (!visible.contains(id)) {
-            long revision = watcher.sent.remove(id);
-            PacketDistributor.sendToPlayer(watcher.player, new RiftSyncS2CPayload(watcher.level.dimension().identifier(),
-                    generation(watcher.level), id, revision, false, Optional.empty()));
-        }
+        for (UUID id : Set.copyOf(watcher.sent.keySet()))
+            if (!visible.contains(id)) {
+                long revision = watcher.sent.remove(id);
+                PacketDistributor.sendToPlayer(watcher.player, new RiftSyncS2CPayload(watcher.level.dimension().identifier(),
+                        generation(watcher.level), id, revision, false, Optional.empty()));
+            }
     }
 
     public static void unload(ServerLevel level) {
@@ -87,13 +93,20 @@ public final class RiftTracking {
         WATCHERS.values().removeIf(watcher -> watcher.level == level);
     }
 
-    public static void clear() { GENERATIONS.clear(); WATCHERS.clear(); }
+    public static void clear() {
+        GENERATIONS.clear();
+        WATCHERS.clear();
+    }
 
     private static final class Watcher {
         final ServerPlayer player;
         final ServerLevel level;
         final Set<Long> chunks = new HashSet<>();
         final Map<UUID, Long> sent = new HashMap<>();
-        Watcher(ServerPlayer player, ServerLevel level) { this.player = player; this.level = level; }
+
+        Watcher(ServerPlayer player, ServerLevel level) {
+            this.player = player;
+            this.level = level;
+        }
     }
 }

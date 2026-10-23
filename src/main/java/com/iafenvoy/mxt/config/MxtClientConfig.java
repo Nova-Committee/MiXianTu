@@ -82,6 +82,7 @@ public final class MxtClientConfig extends AutoInitConfigContainer {
                 .key("shaders")
                 .tooltip("config.mxt.client.rifts.shaders.tooltip")
                 .build();
+
         private Rifts() {
             super("rifts", "config.mxt.client.rifts");
         }

@@ -51,8 +51,7 @@ public interface ItemMatcher {
     // The same reading for a caller that holds registry holders and needs them back: the holder is what it has to
     // keep, and only the definition behind it answers the question. ORDER puts the winner first, so the winner is
     // the smallest element and not the largest.
-    static <M extends ItemMatcher, H> Optional<H> find(Stream<? extends H> candidates, Function<? super H, M> unwrap,
-                                                       @NotNull ItemStack stack) {
+    static <M extends ItemMatcher, H> Optional<H> find(Stream<? extends H> candidates, Function<? super H, M> unwrap, @NotNull ItemStack stack) {
         Comparator<H> winner = Comparator.comparing(unwrap, ORDER);
         Optional<? extends H> best = candidates.filter(candidate -> matches(unwrap.apply(candidate), stack)).min(winner);
         return best.map(candidate -> (H) candidate);

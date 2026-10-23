@@ -1,6 +1,8 @@
 package com.iafenvoy.mxt.runtime.rift;
 
-import com.iafenvoy.mxt.data.rift.*;
+import com.iafenvoy.mxt.data.rift.RiftPlacement;
+import com.iafenvoy.mxt.data.rift.RiftShape;
+import com.iafenvoy.mxt.data.rift.RiftVertex;
 import com.mojang.serialization.DataResult;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
@@ -14,7 +16,8 @@ public final class RiftGeometry {
     private static final double EPS = 1e-9;
     private static final Vec3[] BOX_AXES = {new Vec3(1, 0, 0), new Vec3(0, 1, 0), new Vec3(0, 0, 1)};
 
-    private RiftGeometry() { }
+    private RiftGeometry() {
+    }
 
     public static DataResult<List<Triangle>> triangulate(RiftShape shape) {
         List<RiftVertex> points = shape.vertices();
@@ -30,8 +33,10 @@ public final class RiftGeometry {
             if (Math.abs(cross(previous, p, next)) < EPS
                     && (p.u() - previous.u()) * (next.u() - p.u()) + (p.v() - previous.v()) * (next.v() - p.v()) <= 0)
                 return invalid("Rift edges overlap");
-            minU = Math.min(minU, p.u()); maxU = Math.max(maxU, p.u());
-            minV = Math.min(minV, p.v()); maxV = Math.max(maxV, p.v());
+            minU = Math.min(minU, p.u());
+            maxU = Math.max(maxU, p.u());
+            minV = Math.min(minV, p.v());
+            maxV = Math.max(maxV, p.v());
             for (int j = i + 1; j < size; j++) {
                 if (j == i + 1 || i == 0 && j == size - 1) continue;
                 if (intersect(p, next, points.get(j), points.get((j + 1) % size)))
@@ -58,7 +63,8 @@ public final class RiftGeometry {
                 boolean blocked = false;
                 for (int j : remaining)
                     if (j != a && j != b && j != c && inside(points.get(j), points.get(a), points.get(b), points.get(c))) {
-                        blocked = true; break;
+                        blocked = true;
+                        break;
                     }
                 if (blocked) continue;
                 triangles.add(new Triangle(a, b, c));
@@ -77,8 +83,12 @@ public final class RiftGeometry {
         Vec3 first = points.getFirst();
         double minX = first.x, minY = first.y, minZ = first.z, maxX = minX, maxY = minY, maxZ = minZ;
         for (Vec3 point : points) {
-            minX = Math.min(minX, point.x); minY = Math.min(minY, point.y); minZ = Math.min(minZ, point.z);
-            maxX = Math.max(maxX, point.x); maxY = Math.max(maxY, point.y); maxZ = Math.max(maxZ, point.z);
+            minX = Math.min(minX, point.x);
+            minY = Math.min(minY, point.y);
+            minZ = Math.min(minZ, point.z);
+            maxX = Math.max(maxX, point.x);
+            maxY = Math.max(maxY, point.y);
+            maxZ = Math.max(maxZ, point.z);
         }
         List<Face> faces = triangles.stream().map(t -> new Face(points.get(t.a), points.get(t.b), points.get(t.c), placement.normal())).toList();
         return new Mesh(points, triangles, faces, new AABB(minX, minY, minZ, maxX, maxY, maxZ).inflate(THICKNESS));
@@ -133,7 +143,8 @@ public final class RiftGeometry {
         return DataResult.error(() -> message);
     }
 
-    public record Triangle(int a, int b, int c) { }
+    public record Triangle(int a, int b, int c) {
+    }
 
     public record Mesh(List<Vec3> points, List<Triangle> triangles, List<Face> faces, AABB bounds) {
         public double contact(AABB box, Vec3 movement) {
@@ -151,7 +162,8 @@ public final class RiftGeometry {
             List<Vec3> axes = new ArrayList<>(List.of(BOX_AXES));
             axes.add(normal);
             for (Vec3 edge : List.of(b.subtract(a), c.subtract(b), a.subtract(c)))
-                for (Vec3 axis : BOX_AXES) if (edge.cross(axis).lengthSqr() > EPS * EPS) axes.add(edge.cross(axis).normalize());
+                for (Vec3 axis : BOX_AXES)
+                    if (edge.cross(axis).lengthSqr() > EPS * EPS) axes.add(edge.cross(axis).normalize());
             this.projections = axes.stream().map(axis -> new Projection(axis,
                     Math.min(axis.dot(a), Math.min(axis.dot(b), axis.dot(c))) - THICKNESS,
                     Math.max(axis.dot(a), Math.max(axis.dot(b), axis.dot(c))) + THICKNESS)).toList();
@@ -179,5 +191,6 @@ public final class RiftGeometry {
         }
     }
 
-    private record Projection(Vec3 axis, double min, double max) { }
+    private record Projection(Vec3 axis, double min, double max) {
+    }
 }

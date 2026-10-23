@@ -5,7 +5,8 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 
 public record RiftTemplate(String key, RiftPlacement placement, boolean relativeToEntry, RiftShape shape,
-                           RiftDestination destination, RiftAppearance appearance, long durationTicks, boolean enabled) {
+                           RiftDestination destination, RiftAppearance appearance, long durationTicks,
+                           boolean enabled) {
     public static final Codec<RiftTemplate> CODEC = RecordCodecBuilder.create(i -> i.group(
             Codec.string(1, 64).fieldOf("key").forGetter(RiftTemplate::key),
             RiftPlacement.CODEC.fieldOf("placement").forGetter(RiftTemplate::placement),

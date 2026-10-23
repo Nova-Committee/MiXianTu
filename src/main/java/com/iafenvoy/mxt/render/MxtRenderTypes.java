@@ -1,6 +1,9 @@
 package com.iafenvoy.mxt.render;
 
-import net.minecraft.client.renderer.rendertype.*;
+import net.minecraft.client.renderer.rendertype.LayeringTransform;
+import net.minecraft.client.renderer.rendertype.OutputTarget;
+import net.minecraft.client.renderer.rendertype.RenderSetup;
+import net.minecraft.client.renderer.rendertype.RenderType;
 
 public final class MxtRenderTypes {
     private static final RenderType SWORD_BLADE = RenderType.create("mxt_sword_blade", RenderSetup.builder(MxtRenderPipelines.SWORD_BLADE).createRenderSetup());
@@ -17,7 +20,9 @@ public final class MxtRenderTypes {
         return SWORD_BLADE;
     }
 
-    public static RenderType riftFallback() { return RIFT_FALLBACK; }
+    public static RenderType riftFallback() {
+        return RIFT_FALLBACK;
+    }
 
     public static RenderType multiblockOutline() {
         return MULTIBLOCK_OUTLINE;

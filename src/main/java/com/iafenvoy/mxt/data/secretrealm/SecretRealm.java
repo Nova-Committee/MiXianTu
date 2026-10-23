@@ -44,11 +44,13 @@ public record SecretRealm(Optional<Holder<ItemQuality>> quality, SecretRealmGene
     public static final double DEFAULT_BORDER_SIZE = 29999984.0D;
     public static final int MAX_INSTANCES = 256, MAX_MEMBERS = 100_000;
     public static final Codec<Holder<SecretRealm>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.SECRET_REALM);
+
     public SecretRealm {
         structures = List.copyOf(structures);
         entry = List.copyOf(entry);
         portals = List.copyOf(portals);
     }
+
     public static final Codec<SecretRealm> DIRECT_CODEC = RecordCodecBuilder.<SecretRealm>create(i -> i.group(
             ItemQuality.CODEC.optionalFieldOf("quality").forGetter(SecretRealm::quality),
             SecretRealmGeneration.CODEC.fieldOf("generation").forGetter(SecretRealm::generation),
@@ -59,7 +61,7 @@ public record SecretRealm(Optional<Holder<ItemQuality>> quality, SecretRealmGene
             Codec.BOOL.optionalFieldOf("owned", false).forGetter(SecretRealm::owned),
             MiscCodecs.longRange(0L, Long.MAX_VALUE).optionalFieldOf("duration_ticks", 0L).forGetter(SecretRealm::durationTicks),
             MiscCodecs.pair(StructurePlacement.CODEC.listOf().optionalFieldOf("structures", List.of()),
-                    RiftTemplate.CODEC.listOf(0, 128).optionalFieldOf("portals", List.of()))
+                            RiftTemplate.CODEC.listOf(0, 128).optionalFieldOf("portals", List.of()))
                     .forGetter(value -> Pair.of(value.structures(), value.portals())),
             EntryPoint.LIST_CODEC.optionalFieldOf("entry", List.of()).forGetter(SecretRealm::entry),
             EntityCondition.optionalCodec("enter_condition").forGetter(SecretRealm::enterCondition),
@@ -70,8 +72,8 @@ public record SecretRealm(Optional<Holder<ItemQuality>> quality, SecretRealmGene
             EntityAction.optionalCodec("exit_action").forGetter(SecretRealm::exitAction)
     ).apply(i, (quality, generation, seed, border, maxInstances, maxMembers, owned, duration, layout, entry, enterCondition,
                 exitCondition, enterDenied, exitDenied, enterAction, exitAction) -> new SecretRealm(quality, generation, seed, border,
-                maxInstances, maxMembers, owned, duration, layout.getFirst(), entry, enterCondition, exitCondition, enterDenied,
-                exitDenied, enterAction, exitAction, layout.getSecond()))).validate(SecretRealm::validate);
+            maxInstances, maxMembers, owned, duration, layout.getFirst(), entry, enterCondition, exitCondition, enterDenied,
+            exitDenied, enterAction, exitAction, layout.getSecond()))).validate(SecretRealm::validate);
 
     public SecretRealm(Optional<Holder<ItemQuality>> quality, SecretRealmGeneration generation, long seed,
                        Optional<Border> border, int maxInstances, int maxMembers, boolean owned, long durationTicks,

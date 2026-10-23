@@ -34,7 +34,10 @@ public final class MxtServerConfig extends AutoInitConfigContainer {
         public final IntegerEntry maxPerSection = IntegerEntry.builder("config.mxt.server.rifts.max_per_section", 32).key("max_per_section").range(1, 128).build();
         public final IntegerEntry maxVertices = IntegerEntry.builder("config.mxt.server.rifts.max_vertices", 128).key("max_vertices").range(3, 128).build();
         public final IntegerEntry maxPerPlayer = IntegerEntry.builder("config.mxt.server.rifts.max_per_player", 8).key("max_per_player").range(1, 128).build();
-        private Rifts() { super("rifts", "config.mxt.server.rifts"); }
+
+        private Rifts() {
+            super("rifts", "config.mxt.server.rifts");
+        }
     }
 
     private MxtServerConfig() {

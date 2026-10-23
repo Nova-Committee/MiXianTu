@@ -1,16 +1,21 @@
 package com.iafenvoy.mxt.runtime.rift;
 
-import com.iafenvoy.mxt.data.rift.*;
+import com.iafenvoy.mxt.data.rift.RiftPlacement;
+import com.iafenvoy.mxt.data.rift.RiftShape;
+import com.iafenvoy.mxt.data.rift.RiftTemplate;
+import com.iafenvoy.mxt.data.rift.RiftVertex;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.*;
 
 public final class RiftEdits {
-    private RiftEdits() { }
+    private RiftEdits() {
+    }
 
     public static RiftTemplate shape(RiftTemplate data, RiftShape shape) {
         return new RiftTemplate(data.key(), data.placement(), false, shape, data.destination(), data.appearance(), data.durationTicks(), data.enabled());
     }
+
     public static RiftTemplate placement(RiftTemplate data, RiftPlacement placement) {
         return new RiftTemplate(data.key(), placement, false, data.shape(), data.destination(), data.appearance(), data.durationTicks(), data.enabled());
     }
@@ -21,7 +26,10 @@ public final class RiftEdits {
         List<RiftVertex> points = new ArrayList<>();
         for (int i = 0; i < shape.vertices().size(); i++) {
             RiftVertex p = shape.vertices().get(i);
-            if (!selected.isEmpty() && !selected.contains(i)) { points.add(p); continue; }
+            if (!selected.isEmpty() && !selected.contains(i)) {
+                points.add(p);
+                continue;
+            }
             double v = (p.v() - pivot.v()) * scaleV, u = (p.u() - pivot.u()) * scaleU + v * shear;
             points.add(new RiftVertex(pivot.u() + u * cos - v * sin + du, pivot.v() + u * sin + v * cos + dv));
         }
@@ -41,7 +49,8 @@ public final class RiftEdits {
                 }
             }
             case "arch" -> {
-                points.add(new RiftVertex(-width / 2, 0)); points.add(new RiftVertex(width / 2, 0));
+                points.add(new RiftVertex(-width / 2, 0));
+                points.add(new RiftVertex(width / 2, 0));
                 for (int i = 0; i <= count; i++) {
                     double angle = Math.PI * i / count;
                     points.add(new RiftVertex(Math.cos(angle) * width / 2, height * 0.6 + Math.sin(angle) * height * 0.4));
@@ -73,7 +82,9 @@ public final class RiftEdits {
                     points.add(new RiftVertex(-width * Math.sin(t * Math.PI) * (0.25 + random.nextDouble() * 0.25), height * t));
                 }
             }
-            default -> { return shapeDefault(width, height); }
+            default -> {
+                return shapeDefault(width, height);
+            }
         }
         return new RiftShape(points);
     }
@@ -105,7 +116,10 @@ public final class RiftEdits {
         List<RiftVertex> source = shape.vertices();
         for (int i = 0; i < source.size(); i++) {
             RiftVertex p = source.get(i);
-            if (!selected.isEmpty() && !selected.contains(i)) { points.add(p); continue; }
+            if (!selected.isEmpty() && !selected.contains(i)) {
+                points.add(p);
+                continue;
+            }
             points.add(lerp(p, source.get((i + source.size() - 1) % source.size()), fraction));
             points.add(lerp(p, source.get((i + 1) % source.size()), fraction));
         }
@@ -133,24 +147,35 @@ public final class RiftEdits {
         List<RiftVertex> result = new ArrayList<>();
         for (int i = 0; i < points.size(); i++) {
             result.add(points.get(i));
-            if (i == index) sample(points.get(i), control1, control2, points.get((i + 1) % points.size()), Math.max(0.001, tolerance), 0, result);
+            if (i == index)
+                sample(points.get(i), control1, control2, points.get((i + 1) % points.size()), Math.max(0.001, tolerance), 0, result);
         }
         return new RiftShape(result);
     }
 
     private static void sample(RiftVertex a, RiftVertex b, RiftVertex c, RiftVertex d, double tolerance, int depth, List<RiftVertex> result) {
-        if (result.size() > RiftShape.MAX_VERTICES || depth >= 10) { result.add(lerp(a, d, 0.5)); return; }
+        if (result.size() > RiftShape.MAX_VERTICES || depth >= 10) {
+            result.add(lerp(a, d, 0.5));
+            return;
+        }
         double dx = d.u() - a.u(), dy = d.v() - a.v(), length = Math.max(1e-12, Math.hypot(dx, dy));
         double error = Math.max(Math.abs(dx * (b.v() - a.v()) - dy * (b.u() - a.u())),
                 Math.abs(dx * (c.v() - a.v()) - dy * (c.u() - a.u()))) / length;
         if (error <= tolerance) return;
         RiftVertex ab = lerp(a, b, 0.5), bc = lerp(b, c, 0.5), cd = lerp(c, d, 0.5);
         RiftVertex abc = lerp(ab, bc, 0.5), bcd = lerp(bc, cd, 0.5), mid = lerp(abc, bcd, 0.5);
-        sample(a, ab, abc, mid, tolerance, depth + 1, result); result.add(mid); sample(mid, bcd, cd, d, tolerance, depth + 1, result);
+        sample(a, ab, abc, mid, tolerance, depth + 1, result);
+        result.add(mid);
+        sample(mid, bcd, cd, d, tolerance, depth + 1, result);
     }
 
-    public static RiftVertex lerp(RiftVertex a, RiftVertex b, double t) { return new RiftVertex(a.u() + (b.u() - a.u()) * t, a.v() + (b.v() - a.v()) * t); }
-    public static double snap(double value, double spacing) { return spacing > 0 ? Math.rint(value / spacing) * spacing : value; }
+    public static RiftVertex lerp(RiftVertex a, RiftVertex b, double t) {
+        return new RiftVertex(a.u() + (b.u() - a.u()) * t, a.v() + (b.v() - a.v()) * t);
+    }
+
+    public static double snap(double value, double spacing) {
+        return spacing > 0 ? Math.rint(value / spacing) * spacing : value;
+    }
 
     public static RiftPlacement plane(Vec3 first, Vec3 second, Vec3 third) {
         Vec3 tangent = second.subtract(first), normal = tangent.cross(third.subtract(first));

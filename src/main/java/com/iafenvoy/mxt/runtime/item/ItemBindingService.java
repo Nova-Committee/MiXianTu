@@ -8,6 +8,7 @@ import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtItems;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.registry.cache.RegistryCaches;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.matcher.ItemMatcher;
 import com.iafenvoy.mxt.util.matcher.ItemMatcher.Entry;
@@ -108,8 +109,8 @@ public final class ItemBindingService {
     }
 
     public static Optional<WeaponBinding> weapon(Provider access, ItemStack stack) {
-        return ItemMatcher.find(MxtDatapackRegistries.holders(access, MxtResourceKeys.WEAPON_BINDING)
-                .map(Reference::value), stack);
+        if (!RegistryCaches.WEAPON_BINDINGS.mayMatch(stack)) return Optional.empty();
+        return ItemMatcher.find(MxtDatapackRegistries.holders(access, MxtResourceKeys.WEAPON_BINDING).map(Reference::value), stack);
     }
 
     // The stack's own component decides what the dose does and wins over the binding; the binding decides which
@@ -117,14 +118,14 @@ public final class ItemBindingService {
     public static PillResolution resolvePill(Provider access, ItemStack stack) {
         if (stack.isEmpty()) return PillResolution.none();
         PillComponent component = stack.get(MxtDataComponents.PILL.get());
-        Optional<Reference<PillBinding>> matched = ItemMatcher.find(
-                MxtDatapackRegistries.holders(access, MxtResourceKeys.PILL_BINDING), Reference::value, stack);
+        Optional<Reference<PillBinding>> matched = RegistryCaches.PILL_BINDINGS.mayMatch(stack)
+                ? ItemMatcher.find(MxtDatapackRegistries.holders(access, MxtResourceKeys.PILL_BINDING), Reference::value, stack)
+                : Optional.empty();
         Holder<PillBinding> identity = matched.orElse(null);
         Holder<Pill> declared = component == null ? null : component.pill().orElse(null);
         Holder<Pill> source = declared != null ? declared : identity == null ? null : identity.value().pill();
         if (source == null)
-            return component == null ? PillResolution.none()
-                    : PillResolution.componentOnly(component.applyTo(Pill.defaults()));
+            return component == null ? PillResolution.none() : PillResolution.componentOnly(component.applyTo(Pill.defaults()));
         Pill effects = component == null ? source.value() : component.applyTo(source.value());
         return identity == null ? PillResolution.componentOnly(source, effects) : PillResolution.bound(identity, source, effects);
     }
@@ -133,6 +134,10 @@ public final class ItemBindingService {
     // says which stacks are its manuals. A stack carrying no component is read as whatever a declaration claiming
     // it names.
     public static Optional<TechniqueBinding> technique(Provider access, ItemStack stack) {
+        if (stack.isEmpty()) return Optional.empty();
+        // A stack naming its own technique is answered by that technique, not by which table claims the item.
+        if (stack.get(MxtDataComponents.TECHNIQUE.get()) == null && !RegistryCaches.TECHNIQUE_BINDINGS.mayMatch(stack))
+            return Optional.empty();
         return technique(MxtDatapackRegistries.holders(access, MxtResourceKeys.TECHNIQUE_BINDING), stack);
     }
 
@@ -153,8 +158,7 @@ public final class ItemBindingService {
         TechniqueBinding declaration = declaration(access, technique);
         Item claimed = declaration == null ? null : claimedItem(declaration.entries());
         if (claimed != null) return new ItemStack(claimed);
-        Item carrier = declaration == null ? MxtItems.TECHNIQUE_BOOK.get()
-                : declaration.carrierItem().orElse(MxtItems.TECHNIQUE_BOOK.get());
+        Item carrier = declaration == null ? MxtItems.TECHNIQUE_BOOK.get() : declaration.carrierItem().orElse(MxtItems.TECHNIQUE_BOOK.get());
         ItemStack stack = new ItemStack(carrier);
         stack.set(MxtDataComponents.TECHNIQUE.get(), technique);
         return stack;
@@ -174,8 +178,7 @@ public final class ItemBindingService {
         for (Entry entry : entries) {
             if (entry instanceof ItemEntry(Item item)) return item;
             if (entry instanceof TagEntry(TagKey<Item> tag))
-                return BuiltInRegistries.ITEM.get(tag).flatMap(set -> set.stream().findFirst())
-                        .map(Holder::value).orElse(null);
+                return BuiltInRegistries.ITEM.get(tag).flatMap(set -> set.stream().findFirst()).map(Holder::value).orElse(null);
         }
         return null;
     }
@@ -183,9 +186,7 @@ public final class ItemBindingService {
     private static Optional<TechniqueBinding> technique(Stream<Reference<TechniqueBinding>> declarations, ItemStack stack) {
         if (stack.isEmpty()) return Optional.empty();
         Holder<Technique> taught = stack.get(MxtDataComponents.TECHNIQUE.get());
-        return taught == null
-                ? ItemMatcher.find(declarations.map(Reference::value), stack)
-                : declarations.map(Reference::value)
+        return taught == null ? ItemMatcher.find(declarations.map(Reference::value), stack) : declarations.map(Reference::value)
                 .filter(binding -> binding.technique().equals(taught))
                 .findFirst()
                 .or(() -> Optional.of(TechniqueBinding.defaults(taught)));
@@ -194,10 +195,9 @@ public final class ItemBindingService {
     public static ResolvedBindings resolve(Provider access, ItemStack stack) {
         // An empty stack answers nothing: a wildcard matcher would otherwise claim it, and every component read
         // below would be a miss anyway.
-        if (stack.isEmpty()) return new ResolvedBindings(Optional.empty(), Optional.empty(), PillResolution.none(),
-                Optional.empty());
-        return new ResolvedBindings(binding(access, stack), weapon(access, stack), resolvePill(access, stack),
-                technique(access, stack));
+        if (stack.isEmpty())
+            return new ResolvedBindings(Optional.empty(), Optional.empty(), PillResolution.none(), Optional.empty());
+        return new ResolvedBindings(binding(access, stack), weapon(access, stack), resolvePill(access, stack), technique(access, stack));
     }
 
     // Both hands carry a weapon, and the group written has to be the hand the stack is in: vanilla looks the entry
@@ -212,6 +212,7 @@ public final class ItemBindingService {
         try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.ITEM)) {
             if (holder.level().isClientSide()) return;
             ItemStack stack = holder.getMainHandItem();
+            if (!RegistryCaches.WEAPON_BINDINGS.mayMatch(stack)) return;
             ResolvedBindings bindings = resolve(holder.level().registryAccess(), stack);
             if (!QualityService.canUse(holder, stack, bindings)) return;
             FormulaContext context = FormulaContext.of(holder);
@@ -223,6 +224,7 @@ public final class ItemBindingService {
         try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.ITEM)) {
             if (holder.level().isClientSide()) return;
             ItemStack stack = holder.getMainHandItem();
+            if (!RegistryCaches.WEAPON_BINDINGS.mayMatch(stack)) return;
             ResolvedBindings bindings = resolve(holder.level().registryAccess(), stack);
             if (!QualityService.canUse(holder, stack, bindings)) return;
             FormulaContext context = FormulaContext.of(holder, Map.of(
@@ -237,6 +239,7 @@ public final class ItemBindingService {
         try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.ITEM)) {
             if (holder.level().isClientSide()) return;
             ItemStack stack = holder.getMainHandItem();
+            if (!RegistryCaches.WEAPON_BINDINGS.mayMatch(stack)) return;
             ResolvedBindings bindings = resolve(holder.level().registryAccess(), stack);
             if (!QualityService.canUse(holder, stack, bindings)) return;
             FormulaContext context = FormulaContext.of(holder);
@@ -268,21 +271,19 @@ public final class ItemBindingService {
     // Public because it is one of the readings ItemElements takes when it asks what an item is made of; resolve()
     // wraps it for callers that want several binding kinds at once.
     public static Optional<ItemBinding> binding(Provider access, ItemStack stack) {
-        return ItemMatcher.find(MxtDatapackRegistries.holders(access, MxtResourceKeys.ITEM_BINDING)
-                .map(Reference::value), stack);
+        if (!RegistryCaches.ITEM_BINDINGS.mayMatch(stack)) return Optional.empty();
+        return ItemMatcher.find(MxtDatapackRegistries.holders(access, MxtResourceKeys.ITEM_BINDING).map(Reference::value), stack);
     }
 
     private static void refreshWeapon(LivingEntity entity, EquipmentSlot slot) {
         ItemStack stack = entity.getItemBySlot(slot);
+        if (!RegistryCaches.WEAPON_BINDINGS.mayMatch(stack)) return;
         ResolvedBindings bindings = resolve(entity.level().registryAccess(), stack);
         bindings.weapon().ifPresent(weapon -> {
             ItemAttributeModifiers baseline = baselineModifiers(stack, weapon);
-            ItemAttributeModifiers modifiers = QualityService.canUse(entity, stack, bindings)
-                    ? weaponModifiers(baseline, weapon, entity, EquipmentSlotGroup.bySlot(slot))
-                    : baseline;
-            if (!modifiers.equals(stack.get(DataComponents.ATTRIBUTE_MODIFIERS))) {
+            ItemAttributeModifiers modifiers = QualityService.canUse(entity, stack, bindings) ? weaponModifiers(baseline, weapon, entity, EquipmentSlotGroup.bySlot(slot)) : baseline;
+            if (!modifiers.equals(stack.get(DataComponents.ATTRIBUTE_MODIFIERS)))
                 stack.set(DataComponents.ATTRIBUTE_MODIFIERS, modifiers);
-            }
         });
     }
 
@@ -311,38 +312,29 @@ public final class ItemBindingService {
 
     // Only what the declaration writes is added, and what the item type itself ships with is left alone: a pack
     // that wants a different attack number rewrites the item's own modifiers instead of overlaying them.
-    private static ItemAttributeModifiers weaponModifiers(ItemAttributeModifiers baseline, WeaponBinding weapon,
-                                                          LivingEntity entity, EquipmentSlotGroup slot) {
+    private static ItemAttributeModifiers weaponModifiers(ItemAttributeModifiers baseline, WeaponBinding weapon, LivingEntity entity, EquipmentSlotGroup slot) {
         Builder builder = ItemAttributeModifiers.builder();
         baseline.modifiers().forEach(entry -> builder.add(entry.attribute(), entry.modifier(), entry.slot(), entry.display()));
         FormulaContext context = FormulaContext.of(entity);
-        for (AttributeEntry attribute : weapon.attributes()) {
-            add(builder, attribute.attribute(), attribute.modifier().id(),
-                    attribute.amount(context), attribute.modifier().operation(), slot);
-        }
+        for (AttributeEntry attribute : weapon.attributes())
+            add(builder, attribute.attribute(), attribute.modifier().id(), attribute.amount(context), attribute.modifier().operation(), slot);
         return builder.build();
     }
 
-    private static void add(Builder builder, Holder<Attribute> attribute, Identifier id, double value,
-                            Operation operation, EquipmentSlotGroup slot) {
-        if (Double.isFinite(value) && value != 0.0D) {
+    private static void add(Builder builder, Holder<Attribute> attribute, Identifier id, double value, Operation operation, EquipmentSlotGroup slot) {
+        if (Double.isFinite(value) && value != 0.0D)
             builder.add(attribute, new AttributeModifier(id, value, operation), slot);
-        }
     }
 
     // Immutable resolution snapshot, so one operation does not repeat the matcher scans. Which quality ladder a
     // stack reads is not here: it comes from the quality the stack resolves, not from a declaration.
-    public record ResolvedBindings(Optional<ItemBinding> item, Optional<WeaponBinding> weapon,
-                                   PillResolution pill, Optional<TechniqueBinding> technique) {
+    public record ResolvedBindings(Optional<ItemBinding> item, Optional<WeaponBinding> weapon, PillResolution pill,
+                                   Optional<TechniqueBinding> technique) {
         public boolean conditionsMet(LivingEntity entity, FormulaContext context) {
-            return this.weapon.map(value -> value.conditions().stream()
-                    .allMatch(condition -> condition.value().test(entity, context))).orElse(true)
-                    && this.pill.effects().map(value -> value.conditions().stream()
-                    .allMatch(condition -> condition.value().test(entity, context))).orElse(true)
-                    && this.technique.map(value -> value.conditions().stream()
-                    .allMatch(condition -> condition.value().test(entity, context))).orElse(true)
-                    && this.item.map(value -> value.conditions().stream()
-                    .allMatch(condition -> condition.value().test(entity, context))).orElse(true);
+            return this.weapon.map(value -> value.conditions().stream().allMatch(condition -> condition.value().test(entity, context))).orElse(true)
+                    && this.pill.effects().map(value -> value.conditions().stream().allMatch(condition -> condition.value().test(entity, context))).orElse(true)
+                    && this.technique.map(value -> value.conditions().stream().allMatch(condition -> condition.value().test(entity, context))).orElse(true)
+                    && this.item.map(value -> value.conditions().stream().allMatch(condition -> condition.value().test(entity, context))).orElse(true);
         }
     }
 

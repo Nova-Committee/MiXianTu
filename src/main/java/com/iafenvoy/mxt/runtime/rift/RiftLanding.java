@@ -11,18 +11,18 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.ai.control.FlyingMoveControl;
-import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.LinkedHashMap;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -30,7 +30,9 @@ import java.util.function.Predicate;
 
 public final class RiftLanding {
     private static final LoggerDispatcher PLATFORMS = LoggerDispatcher.of(LogUtils.getLogger());
-    private RiftLanding() { }
+
+    private RiftLanding() {
+    }
 
     public static @Nullable Vec3 find(ServerLevel level, Entity entity, Vec3 target, boolean nearby) {
         Inspection result = search(level, entity, target, nearby);
@@ -63,7 +65,8 @@ public final class RiftLanding {
     private static Inspection candidates(Vec3 target, boolean nearby, Function<Vec3, Inspection> attempt) {
         Inspection first = attempt.apply(target);
         if (first.isSuccess()) return first;
-        if (!nearby || first.failure() == Reason.LANDING_NON_FINITE || first.failure() == Reason.LANDING_ENTITY_SIZE) return first;
+        if (!nearby || first.failure() == Reason.LANDING_NON_FINITE || first.failure() == Reason.LANDING_ENTITY_SIZE)
+            return first;
         for (int radius = 1; radius <= 4; radius++)
             for (int y = -radius; y <= radius; y++)
                 for (int x = -radius; x <= radius; x++)
@@ -105,8 +108,9 @@ public final class RiftLanding {
             }
             Inspection result = inspect(level, entity, pos);
             ready = result.isSuccess();
-            if (ready) PLATFORMS.log("Created dirt landing platform: entity={} dimension={} requested={} landing={} floor={} blocks={}",
-                    entity.getUUID(), level.dimension().identifier(), requested, pos, floor, previous.size());
+            if (ready)
+                PLATFORMS.log("Created dirt landing platform: entity={} dimension={} requested={} landing={} floor={} blocks={}",
+                        entity.getUUID(), level.dimension().identifier(), requested, pos, floor, previous.size());
             return result;
         } finally {
             if (!ready) for (BlockPos p : placed)
@@ -136,8 +140,10 @@ public final class RiftLanding {
     public static Inspection inspect(ServerLevel level, Entity entity, Vec3 pos) {
         if (!RiftPlacement.finite(pos)) return new Inspection(Reason.LANDING_NON_FINITE, pos, null);
         AABB box = entity.getBoundingBox().move(pos.subtract(entity.position())).deflate(1e-6);
-        if (box.minY < level.getMinY() || box.maxY > level.getMaxY() || !level.getWorldBorder().isWithinBounds(box)) return new Inspection(Reason.LANDING_OUT_OF_BOUNDS, pos, null);
-        if (box.getXsize() > 16 || box.getYsize() > 32 || box.getZsize() > 16) return new Inspection(Reason.LANDING_ENTITY_SIZE, pos, null);
+        if (box.minY < level.getMinY() || box.maxY > level.getMaxY() || !level.getWorldBorder().isWithinBounds(box))
+            return new Inspection(Reason.LANDING_OUT_OF_BOUNDS, pos, null);
+        if (box.getXsize() > 16 || box.getYsize() > 32 || box.getZsize() > 16)
+            return new Inspection(Reason.LANDING_ENTITY_SIZE, pos, null);
         for (BlockPos p : BlockPos.betweenClosed(BlockPos.containing(box.minX, box.minY - 0.063, box.minZ),
                 BlockPos.containing(box.maxX, box.maxY, box.maxZ))) {
             if (!level.hasChunkAt(p)) return new Inspection(Reason.LANDING_CHUNK_UNLOADED, pos, p.immutable());
@@ -145,21 +151,26 @@ public final class RiftLanding {
             if (!level.getFluidState(p).isEmpty()) return new Inspection(Reason.LANDING_FLUID, pos, p.immutable());
             if (state.is(Blocks.LAVA) || state.is(Blocks.FIRE) || state.is(Blocks.SOUL_FIRE)
                     || state.is(Blocks.CACTUS) || state.is(Blocks.MAGMA_BLOCK) || state.is(Blocks.CAMPFIRE)
-                    || state.is(Blocks.SOUL_CAMPFIRE) || state.is(Blocks.SWEET_BERRY_BUSH) || state.is(Blocks.POWDER_SNOW)) return new Inspection(Reason.LANDING_HAZARD, pos, p.immutable());
+                    || state.is(Blocks.SOUL_CAMPFIRE) || state.is(Blocks.SWEET_BERRY_BUSH) || state.is(Blocks.POWDER_SNOW))
+                return new Inspection(Reason.LANDING_HAZARD, pos, p.immutable());
         }
         if (!level.noCollision(entity, box)) return new Inspection(Reason.LANDING_BLOCKED, pos, null);
         boolean support = entity instanceof LivingEntity living && !living.isFallFlying() && !(entity instanceof Mob mob && mob.getMoveControl() instanceof FlyingMoveControl)
                 && !entity.isNoGravity() && !(entity instanceof ServerPlayer player && player.getAbilities().flying);
         if (support && !level.getBlockCollisions(entity, new AABB(box.minX, box.minY - 0.0625, box.minZ,
-                box.maxX, box.minY, box.maxZ)).iterator().hasNext()) return new Inspection(Reason.LANDING_NO_SUPPORT, pos, null);
+                box.maxX, box.minY, box.maxZ)).iterator().hasNext())
+            return new Inspection(Reason.LANDING_NO_SUPPORT, pos, null);
         return new Inspection(null, pos, null);
     }
+
     public enum Reason implements Failure {
         LANDING_NON_FINITE, LANDING_OUT_OF_BOUNDS, LANDING_ENTITY_SIZE, LANDING_CHUNK_UNLOADED,
         LANDING_FLUID, LANDING_HAZARD, LANDING_BLOCKED, LANDING_NO_SUPPORT, LANDING_PORTAL_CONTACT;
 
         @Override
-        public FailureSource source() { return FailureSources.SECRET_REALM; }
+        public FailureSource source() {
+            return FailureSources.SECRET_REALM;
+        }
     }
 
     public static final class Inspection extends Result {
@@ -172,8 +183,14 @@ public final class RiftLanding {
             this.block = block;
         }
 
-        public Vec3 position() { return this.position; }
-        public @Nullable BlockPos block() { return this.block; }
+        public Vec3 position() {
+            return this.position;
+        }
+
+        public @Nullable BlockPos block() {
+            return this.block;
+        }
+
         @Override
         public String toString() {
             return "Landing[reason=" + (this.failure() == null ? "ok" : this.failure().getSerializedName())

@@ -19,9 +19,12 @@ import java.util.*;
 public final class RiftStorage {
     private static final Map<ServerLevel, State> STATES = new IdentityHashMap<>();
 
-    private RiftStorage() { }
+    private RiftStorage() {
+    }
 
-    private static State state(ServerLevel level) { return STATES.computeIfAbsent(level, _ -> new State()); }
+    private static State state(ServerLevel level) {
+        return STATES.computeIfAbsent(level, _ -> new State());
+    }
 
     static void initialize(ServerLevel level, RiftWorldAttachment world) {
         State state = state(level);
@@ -39,14 +42,20 @@ public final class RiftStorage {
         RiftWorldAttachment world = RiftService.world(level);
         RiftLocation location = world.location(id);
         if (location == null) return null;
-        if (location.expired(RiftService.now(level))) { RiftService.remove(level, id); return null; }
+        if (location.expired(RiftService.now(level))) {
+            RiftService.remove(level, id);
+            return null;
+        }
         RiftRecord cached = world.get(id);
         if (cached != null) return cached;
         ChunkPos pos = ChunkPos.unpack(location.chunk());
         LevelChunk chunk = level.getChunk(pos.x(), pos.z());
         RiftChunkAttachment data = chunk.getExistingData(MxtAttachments.RIFT_CHUNK).orElse(null);
         RiftRecord record = data == null ? null : data.get(id);
-        if (record == null || record.expired(RiftService.now(level))) { RiftService.remove(level, id); return null; }
+        if (record == null || record.expired(RiftService.now(level))) {
+            RiftService.remove(level, id);
+            return null;
+        }
         restore(level, record);
         state(level).dirty.add(id);
         return record;
@@ -78,7 +87,10 @@ public final class RiftStorage {
         LevelChunk chunk = level.getChunkSource().getChunkNow(pos.x(), pos.z());
         if (chunk == null) return;
         RiftChunkAttachment data = chunk.getExistingData(MxtAttachments.RIFT_CHUNK).orElse(null);
-        if (data != null && data.get(id) != null) { data.remove(id); chunk.markUnsaved(); }
+        if (data != null && data.get(id) != null) {
+            data.remove(id);
+            chunk.markUnsaved();
+        }
     }
 
     private static RiftGeometry.Mesh mesh(RiftRecord record) {
@@ -118,7 +130,10 @@ public final class RiftStorage {
     public static void refresh(ServerLevel level) {
         RiftWorldAttachment world = level.getExistingData(MxtAttachments.RIFT_WORLD).orElse(null);
         State state = STATES.get(level);
-        if (world == null) { if (state != null) state.pending.clear(); return; }
+        if (world == null) {
+            if (state != null) state.pending.clear();
+            return;
+        }
         initialize(level, world);
         state = state(level);
         List<LevelChunk> pending = List.copyOf(state.pending.values());
@@ -149,7 +164,10 @@ public final class RiftStorage {
             RiftLocation location = world.location(id);
             if (location == null) continue;
             if (active(state, location)) {
-                if (world.get(id) == null) { read(level, id); changed = true; }
+                if (world.get(id) == null) {
+                    read(level, id);
+                    changed = true;
+                }
             } else if (world.get(id) != null) {
                 world.evict(id);
                 RiftTravelService.cancel(level, id);
@@ -168,8 +186,13 @@ public final class RiftStorage {
         return false;
     }
 
-    static void release(ServerLevel level) { STATES.remove(level); }
-    static void clear() { STATES.clear(); }
+    static void release(ServerLevel level) {
+        STATES.remove(level);
+    }
+
+    static void clear() {
+        STATES.clear();
+    }
 
     private static final class State {
         final Map<Long, LevelChunk> loaded = new HashMap<>();

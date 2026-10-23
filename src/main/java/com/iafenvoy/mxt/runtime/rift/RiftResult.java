@@ -1,6 +1,8 @@
 package com.iafenvoy.mxt.runtime.rift;
 
-import com.iafenvoy.mxt.runtime.resulting.*;
+import com.iafenvoy.mxt.runtime.resulting.Failure;
+import com.iafenvoy.mxt.runtime.resulting.Failures;
+import com.iafenvoy.mxt.runtime.resulting.Result;
 import org.jetbrains.annotations.Nullable;
 
 public final class RiftResult extends Result {
@@ -13,8 +15,19 @@ public final class RiftResult extends Result {
         this.detail = detail;
     }
 
-    public static RiftResult accepted(RiftRecord record) { return new RiftResult(null, record, ""); }
-    public static RiftResult rejected(String detail) { return new RiftResult(Failures.INVALID_VALUE, null, detail); }
-    public @Nullable RiftRecord record() { return this.record; }
-    public String detail() { return this.detail; }
+    public static RiftResult accepted(RiftRecord record) {
+        return new RiftResult(null, record, "");
+    }
+
+    public static RiftResult rejected(String detail) {
+        return new RiftResult(Failures.INVALID_VALUE, null, detail);
+    }
+
+    public @Nullable RiftRecord record() {
+        return this.record;
+    }
+
+    public String detail() {
+        return this.detail;
+    }
 }

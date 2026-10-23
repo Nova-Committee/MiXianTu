@@ -15,9 +15,9 @@ import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import net.minecraft.commands.CommandBuildContext;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.SharedSuggestionProvider;
-import net.minecraft.commands.arguments.coordinates.Vec3Argument;
 import net.minecraft.commands.arguments.IdentifierArgument;
 import net.minecraft.commands.arguments.ResourceArgument;
+import net.minecraft.commands.arguments.coordinates.Vec3Argument;
 import net.minecraft.core.Holder.Reference;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.Registries;
@@ -25,13 +25,13 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.List;
-import java.util.UUID;
 import java.util.Locale;
+import java.util.UUID;
 
 import static net.minecraft.commands.Commands.argument;
 import static net.minecraft.commands.Commands.literal;
@@ -71,7 +71,8 @@ public final class SecretRealmCommand {
 
     private static SecretRealmRecord record(CommandSourceStack source, Identifier dimension) {
         SecretRealmRecord record = SecretRealmRegistry.at(ResourceKey.create(Registries.DIMENSION, dimension)).orElse(null);
-        if (record == null) source.sendFailure(Component.translatable("command.mxt.secret_realm.unknown", dimension.toString()));
+        if (record == null)
+            source.sendFailure(Component.translatable("command.mxt.secret_realm.unknown", dimension.toString()));
         return record;
     }
 
@@ -99,7 +100,8 @@ public final class SecretRealmCommand {
         SecretRealmRecord record = record(source, dimension);
         if (record == null) return null;
         SecretRealmRecord prepared = SecretRealmService.open(source.getServer(), record).orElse(null);
-        if (prepared == null) source.sendFailure(Component.translatable("command.mxt.secret_realm.prepare_failed", dimension.toString()));
+        if (prepared == null)
+            source.sendFailure(Component.translatable("command.mxt.secret_realm.prepare_failed", dimension.toString()));
         return prepared;
     }
 

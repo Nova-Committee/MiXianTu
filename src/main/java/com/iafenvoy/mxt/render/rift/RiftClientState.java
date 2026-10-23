@@ -3,16 +3,18 @@ package com.iafenvoy.mxt.render.rift;
 import com.iafenvoy.mxt.data.rift.RiftPlacement;
 import com.iafenvoy.mxt.data.rift.RiftVertex;
 import com.iafenvoy.mxt.network.payload.RiftSyncS2CPayload;
-import com.iafenvoy.mxt.runtime.rift.*;
+import com.iafenvoy.mxt.runtime.rift.RiftEdits;
+import com.iafenvoy.mxt.runtime.rift.RiftGeometry;
+import com.iafenvoy.mxt.runtime.rift.RiftVisual;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.core.particles.DustParticleOptions;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
-import net.minecraft.core.particles.DustParticleOptions;
 
 import java.util.*;
 
@@ -22,21 +24,32 @@ public final class RiftClientState {
     private static UUID generation;
     private static final Map<UUID, Entry> PORTALS = new LinkedHashMap<>();
     private static final Map<UUID, Long> REVISIONS = new LinkedHashMap<>();
-    private RiftClientState() { }
+
+    private RiftClientState() {
+    }
 
     public static void accept(RiftSyncS2CPayload payload) {
         ClientLevel level = Minecraft.getInstance().level;
         if (level == null || !level.dimension().identifier().equals(payload.dimension())) return;
-        if (world != level) { clear(); world = level; }
+        if (world != level) {
+            clear();
+            world = level;
+        }
         if (payload.reset()) {
-            PORTALS.clear(); REVISIONS.clear(); generation = payload.generation(); return;
+            PORTALS.clear();
+            REVISIONS.clear();
+            generation = payload.generation();
+            return;
         }
         if (!payload.generation().equals(generation)) return;
         long revision = REVISIONS.getOrDefault(payload.id(), -1L);
         if (payload.revision() < revision) return;
         REVISIONS.put(payload.id(), payload.revision());
         if (REVISIONS.size() > 8192) REVISIONS.remove(REVISIONS.keySet().iterator().next());
-        if (payload.visual().isEmpty()) { PORTALS.remove(payload.id()); return; }
+        if (payload.visual().isEmpty()) {
+            PORTALS.remove(payload.id());
+            return;
+        }
         if (PORTALS.size() >= 4096 && !PORTALS.containsKey(payload.id())) return;
         RiftVisual visual = payload.visual().get();
         Optional<List<RiftGeometry.Triangle>> triangles = RiftGeometry.triangulate(visual.shape()).result();
@@ -51,7 +64,9 @@ public final class RiftClientState {
     }
 
     @SubscribeEvent
-    public static void logout(ClientPlayerNetworkEvent.LoggingOut event) { clear(); }
+    public static void logout(ClientPlayerNetworkEvent.LoggingOut event) {
+        clear();
+    }
 
     @SubscribeEvent
     public static void tick(ClientTickEvent.Post event) {
@@ -60,7 +75,8 @@ public final class RiftClientState {
         int budget = 32;
         for (Entry entry : entries()) {
             double density = entry.visual().appearance().particles();
-            if (!entry.visual().enabled() || density <= 0 || entry.mesh().bounds().distanceToSqr(mc.player.position()) > 48 * 48) continue;
+            if (!entry.visual().enabled() || density <= 0 || entry.mesh().bounds().distanceToSqr(mc.player.position()) > 48 * 48)
+                continue;
             int count = (int) (density * 4 + mc.level.getRandom().nextDouble());
             List<RiftVertex> vertices = entry.visual().shape().vertices();
             for (int i = 0; i < count && budget > 0; i++, budget--) {
@@ -73,6 +89,14 @@ public final class RiftClientState {
             if (budget == 0) break;
         }
     }
-    private static void clear() { PORTALS.clear(); REVISIONS.clear(); world = null; generation = null; }
-    public record Entry(UUID id, long revision, RiftVisual visual, RiftGeometry.Mesh mesh) { }
+
+    private static void clear() {
+        PORTALS.clear();
+        REVISIONS.clear();
+        world = null;
+        generation = null;
+    }
+
+    public record Entry(UUID id, long revision, RiftVisual visual, RiftGeometry.Mesh mesh) {
+    }
 }

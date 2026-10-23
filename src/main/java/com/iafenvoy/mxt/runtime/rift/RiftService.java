@@ -3,7 +3,10 @@ package com.iafenvoy.mxt.runtime.rift;
 import com.google.gson.JsonElement;
 import com.iafenvoy.mxt.attachment.RiftWorldAttachment;
 import com.iafenvoy.mxt.config.MxtServerConfig;
-import com.iafenvoy.mxt.data.rift.*;
+import com.iafenvoy.mxt.data.rift.RiftDestination;
+import com.iafenvoy.mxt.data.rift.RiftPlacement;
+import com.iafenvoy.mxt.data.rift.RiftTemplate;
+import com.iafenvoy.mxt.data.rift.RiftVertex;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
@@ -22,16 +25,19 @@ import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 public final class RiftService {
-    private RiftService() { }
+    private RiftService() {
+    }
 
     public static RiftWorldAttachment world(ServerLevel level) {
         RiftWorldAttachment world = level.getData(MxtAttachments.RIFT_WORLD);
         RiftStorage.initialize(level, world);
         return world;
     }
+
     public static @Nullable RiftRecord get(ServerLevel level, UUID id) {
         return level.hasData(MxtAttachments.RIFT_WORLD) ? RiftStorage.read(level, id) : null;
     }
+
     // Explicit administrative enumeration may read unloaded owner chunks; hot paths use the runtime index.
     public static List<RiftRecord> records(ServerLevel level) {
         List<RiftRecord> result = new ArrayList<>();
@@ -41,7 +47,10 @@ public final class RiftService {
         }
         return List.copyOf(result);
     }
-    public static long now(ServerLevel level) { return level.getServer().overworld().getGameTime(); }
+
+    public static long now(ServerLevel level) {
+        return level.getServer().overworld().getGameTime();
+    }
 
     public static RiftResult publish(ServerLevel level, @Nullable UUID id, long revision, RiftTemplate template,
                                      @Nullable UUID owner, boolean resetDuration) {
@@ -75,11 +84,13 @@ public final class RiftService {
         DataResult<RiftTemplate> decoded = RiftTemplate.CODEC.parse(JsonOps.INSTANCE, encoded.result().orElseThrow());
         if (decoded.error().isPresent()) return RiftResult.rejected(decoded.error().get().message());
         if (data.durationTicks() > Long.MAX_VALUE - now(level)) return RiftResult.rejected("duration_overflow");
-        if (data.shape().vertices().size() > MxtServerConfig.INSTANCE.rifts.maxVertices.getValue()) return RiftResult.rejected("budget");
+        if (data.shape().vertices().size() > MxtServerConfig.INSTANCE.rifts.maxVertices.getValue())
+            return RiftResult.rejected("budget");
         if (data.destination() instanceof RiftDestination.Position p) {
             if (!RiftPlacement.finite(p.pos()) || Math.abs(p.pos().x) > 30_000_000 || Math.abs(p.pos().z) > 30_000_000
                     || Math.abs(p.pos().y) > 30_000_000 || p.yaw().filter(v -> !Float.isFinite(v)).isPresent()
-                    || p.pitch().filter(v -> !Float.isFinite(v) || Math.abs(v) > 90).isPresent()) return RiftResult.rejected("invalid_destination");
+                    || p.pitch().filter(v -> !Float.isFinite(v) || Math.abs(v) > 90).isPresent())
+                return RiftResult.rejected("invalid_destination");
             if (p.dimension().isPresent() && level.getServer().getLevel(ResourceKey.create(Registries.DIMENSION, p.dimension().get())) == null
                     && SecretRealmRegistry.at(ResourceKey.create(Registries.DIMENSION, p.dimension().get())).isEmpty())
                 return RiftResult.rejected("missing_dimension");
@@ -90,7 +101,8 @@ public final class RiftService {
         for (RiftVertex point : data.shape().vertices()) {
             Vec3 pos = placement.world(point);
             if (pos.y < level.getMinY() || pos.y >= level.getMaxY()
-                    || !level.getWorldBorder().isWithinBounds(pos.x, pos.z)) return RiftResult.rejected("outside_world");
+                    || !level.getWorldBorder().isWithinBounds(pos.x, pos.z))
+                return RiftResult.rejected("outside_world");
         }
         return RiftResult.accepted(null);
     }
@@ -122,8 +134,9 @@ public final class RiftService {
         TickDispatcher<UUID> dispatcher = world(level).runtime().expiry;
         dispatcher.advanceTo(now(level));
         dispatcher.cancel(location.id());
-        if (location.expiresAt() >= 0) dispatcher.scheduleOnce(location.id(), Math.max(0, location.expiresAt() - now(level)),
-                () -> remove(level, location.id()));
+        if (location.expiresAt() >= 0)
+            dispatcher.scheduleOnce(location.id(), Math.max(0, location.expiresAt() - now(level)),
+                    () -> remove(level, location.id()));
     }
 
     public static boolean layout(ServerLevel level, String identity, Vec3 entry, List<RiftTemplate> templates) {
@@ -148,7 +161,8 @@ public final class RiftService {
                 trial.put(record, mesh);
                 additions.add(record);
             }
-            if (world(level).locations().size() + additions.size() > MxtServerConfig.INSTANCE.rifts.maxPerWorld.getValue()) return false;
+            if (world(level).locations().size() + additions.size() > MxtServerConfig.INSTANCE.rifts.maxPerWorld.getValue())
+                return false;
             for (RiftRecord record : additions) {
                 RiftStorage.write(level, record, trial.mesh(record.id()));
                 schedule(level, record);
@@ -158,5 +172,7 @@ public final class RiftService {
         }
     }
 
-    private static long deadline(long now, long duration) { return duration == 0 ? -1 : now + duration; }
+    private static long deadline(long now, long duration) {
+        return duration == 0 ? -1 : now + duration;
+    }
 }

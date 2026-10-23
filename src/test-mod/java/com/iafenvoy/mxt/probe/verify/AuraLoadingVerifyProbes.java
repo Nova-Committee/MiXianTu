@@ -24,6 +24,7 @@ import net.neoforged.neoforge.event.level.ChunkEvent;
 import net.neoforged.neoforge.event.level.LevelEvent;
 import net.neoforged.neoforge.event.tick.LevelTickEvent;
 
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -133,7 +134,7 @@ public final class AuraLoadingVerifyProbes {
                     .filter(type -> type.getSimpleName().equals("Slot")).findFirst().orElseThrow();
             Object slot;
             try {
-                var constructor = slotType.getDeclaredConstructor(long.class, int.class);
+                Constructor<?> constructor = slotType.getDeclaredConstructor(long.class, int.class);
                 constructor.setAccessible(true);
                 slot = constructor.newInstance(neighbour.pack(), SectionPos.blockToSectionCoord(controller.getY()));
             } catch (ReflectiveOperationException exception) {

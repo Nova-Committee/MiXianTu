@@ -25,7 +25,8 @@ public final class RiftContactCollector {
     private static final Map<UUID, State> STATES = new HashMap<>();
     private static final Map<ServerLevel, Map<UUID, Request>> REQUESTS = new IdentityHashMap<>();
 
-    private RiftContactCollector() { }
+    private RiftContactCollector() {
+    }
 
     @SubscribeEvent
     public static void stages(CollectTickStagesEvent event) {
@@ -46,11 +47,17 @@ public final class RiftContactCollector {
 
     private static void collect(ServerLevel level, Entity entity) {
         RiftWorldAttachment world = level.getExistingData(MxtAttachments.RIFT_WORLD).orElse(null);
-        if (world == null || world.runtime().empty()) { STATES.remove(entity.getUUID()); return; }
+        if (world == null || world.runtime().empty()) {
+            STATES.remove(entity.getUUID());
+            return;
+        }
         long now = RiftService.now(level);
         AABB current = entity.getBoundingBox();
         if (current.getXsize() > 16 || current.getYsize() > 32 || current.getZsize() > 16
-                || !Double.isFinite(current.getSize())) { STATES.remove(entity.getUUID()); return; }
+                || !Double.isFinite(current.getSize())) {
+            STATES.remove(entity.getUUID());
+            return;
+        }
         State old = STATES.get(entity.getUUID());
         boolean continuous = old != null && old.entity == entity && old.level == level && now - old.tick == 1
                 && old.box.getCenter().distanceToSqr(current.getCenter()) <= 64 * 64
@@ -119,11 +126,19 @@ public final class RiftContactCollector {
 
     @SubscribeEvent
     public static void stop(ServerStoppedEvent event) {
-        RiftTravelService.clear(); STATES.clear(); REQUESTS.clear(); RiftStorage.clear(); RiftTracking.clear(); RiftEditorService.clear();
+        RiftTravelService.clear();
+        STATES.clear();
+        REQUESTS.clear();
+        RiftStorage.clear();
+        RiftTracking.clear();
+        RiftEditorService.clear();
     }
 
-    private record State(Entity entity, ServerLevel level, AABB box, long tick, boolean armed) { }
-    private record Request(Entity entity, RiftRecord record, double at, double distance) implements Comparable<Request> {
+    private record State(Entity entity, ServerLevel level, AABB box, long tick, boolean armed) {
+    }
+
+    private record Request(Entity entity, RiftRecord record, double at,
+                           double distance) implements Comparable<Request> {
         @Override
         public int compareTo(Request other) {
             int order = Double.compare(this.at, other.at);

@@ -3,7 +3,10 @@ package com.iafenvoy.mxt.item;
 import com.iafenvoy.mxt.data.item.RiftComponent;
 import com.iafenvoy.mxt.data.rift.*;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
-import com.iafenvoy.mxt.runtime.rift.*;
+import com.iafenvoy.mxt.runtime.rift.RiftEditorService;
+import com.iafenvoy.mxt.runtime.rift.RiftGeometry;
+import com.iafenvoy.mxt.runtime.rift.RiftRecord;
+import com.iafenvoy.mxt.runtime.rift.RiftService;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
@@ -23,7 +26,9 @@ import org.jspecify.annotations.NonNull;
 import java.util.Optional;
 
 public class RiftAnchorItem extends Item {
-    public RiftAnchorItem(Properties properties) { super(properties); }
+    public RiftAnchorItem(Properties properties) {
+        super(properties);
+    }
 
     @Override
     public @NonNull InteractionResult use(@NonNull Level level, @NonNull Player player, @NonNull InteractionHand hand) {
@@ -53,7 +58,8 @@ public class RiftAnchorItem extends Item {
             return InteractionResult.SUCCESS_SERVER;
         }
         RiftComponent component = context.getItemInHand().getOrDefault(MxtDataComponents.RIFT, RiftComponent.EMPTY);
-        Direction face = context.getClickedFace(); Vec3 n = new Vec3(face.getStepX(), face.getStepY(), face.getStepZ());
+        Direction face = context.getClickedFace();
+        Vec3 n = new Vec3(face.getStepX(), face.getStepY(), face.getStepZ());
         Vec3 tangent = face.getAxis().isVertical() ? new Vec3(1, 0, 0) : new Vec3(n.z, 0, -n.x);
         RiftTemplate base = component.blueprint().orElse(null);
         RiftDestination destination = component.recorded().orElse(base == null ? new RiftDestination.Position(Optional.of(player.level().dimension().identifier()),

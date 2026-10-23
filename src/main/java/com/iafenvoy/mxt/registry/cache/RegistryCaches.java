@@ -6,6 +6,10 @@ import com.iafenvoy.mxt.data.cultivation.Element;
 import com.iafenvoy.mxt.data.cultivation.ElementReaction;
 import com.iafenvoy.mxt.data.cultivation.RealmStage;
 import com.iafenvoy.mxt.data.cultivation.Technique;
+import com.iafenvoy.mxt.data.item.ItemBinding;
+import com.iafenvoy.mxt.data.item.PillBinding;
+import com.iafenvoy.mxt.data.item.TechniqueBinding;
+import com.iafenvoy.mxt.data.item.WeaponBinding;
 import com.iafenvoy.mxt.data.progression.Progression;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.data.resource.Resource;
@@ -45,6 +49,11 @@ public final class RegistryCaches {
     public static final DamageElementsCache DAMAGE_ELEMENTS = new DamageElementsCache();
     // Change is made greedily, so the set it is made from is checked when the pack loads.
     public static final CurrencyChangeCache CURRENCY_CHANGE = CurrencyChangeCache.of();
+    // The four binding tables a stack may claim; each answers "could anything in here match" without a scan.
+    public static final ItemMatcherCache<ItemBinding> ITEM_BINDINGS = new ItemMatcherCache<>(MxtResourceKeys.ITEM_BINDING);
+    public static final ItemMatcherCache<WeaponBinding> WEAPON_BINDINGS = new ItemMatcherCache<>(MxtResourceKeys.WEAPON_BINDING);
+    public static final ItemMatcherCache<PillBinding> PILL_BINDINGS = new ItemMatcherCache<>(MxtResourceKeys.PILL_BINDING);
+    public static final ItemMatcherCache<TechniqueBinding> TECHNIQUE_BINDINGS = new ItemMatcherCache<>(MxtResourceKeys.TECHNIQUE_BINDING);
 
     // Constructs every cache above into RegistryCache's rebuild list. That event only rebuilds what is already
     // registered there, and nothing else touches this class before a world loads, so a run without this call leaves

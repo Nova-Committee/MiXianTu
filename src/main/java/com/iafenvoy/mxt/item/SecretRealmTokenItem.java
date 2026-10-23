@@ -5,8 +5,12 @@ import com.iafenvoy.mxt.attachment.SecretRealmTravelAttachment;
 import com.iafenvoy.mxt.config.MxtServerConfig;
 import com.iafenvoy.mxt.data.item.SecretRealmTokenComponent;
 import com.iafenvoy.mxt.data.rift.*;
-import com.iafenvoy.mxt.registry.*;
-import com.iafenvoy.mxt.runtime.rift.*;
+import com.iafenvoy.mxt.registry.MxtAttachments;
+import com.iafenvoy.mxt.registry.MxtDataComponents;
+import com.iafenvoy.mxt.runtime.rift.RiftGeometry;
+import com.iafenvoy.mxt.runtime.rift.RiftRecord;
+import com.iafenvoy.mxt.runtime.rift.RiftResult;
+import com.iafenvoy.mxt.runtime.rift.RiftService;
 import net.minecraft.core.Holder;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
@@ -24,7 +28,9 @@ import org.jspecify.annotations.NonNull;
 import java.util.Optional;
 
 public final class SecretRealmTokenItem extends Item {
-    public SecretRealmTokenItem(Properties properties) { super(properties); }
+    public SecretRealmTokenItem(Properties properties) {
+        super(properties);
+    }
 
     @Override
     public @NonNull InteractionResult use(@NonNull Level level, @NonNull Player player, @NonNull InteractionHand hand) {
@@ -71,7 +77,8 @@ public final class SecretRealmTokenItem extends Item {
                 : new RiftDestination.Realm(token.realm().orElseThrow().unwrapKey().orElseThrow().identifier()), preset.appearance(), token.durationTicks(), true);
         RiftResult result = RiftService.publish(serverPlayer.level(), null, 0, data, player.getUUID(), true);
         if (result.isFailure()) {
-            serverPlayer.sendSystemMessage(Component.translatable("rift.mxt.failure.edit", result.detail()), true); return InteractionResult.FAIL;
+            serverPlayer.sendSystemMessage(Component.translatable("rift.mxt.failure.edit", result.detail()), true);
+            return InteractionResult.FAIL;
         }
         stack.set(MxtDataComponents.SECRET_REALM_TOKEN, new SecretRealmTokenComponent(token.realm(), token.preset(), token.durationTicks(),
                 Optional.of(result.record().id()), Optional.of(level.dimension().identifier())));

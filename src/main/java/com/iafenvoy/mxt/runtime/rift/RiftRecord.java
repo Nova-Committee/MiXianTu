@@ -1,6 +1,6 @@
 package com.iafenvoy.mxt.runtime.rift;
 
-import com.iafenvoy.mxt.data.rift.*;
+import com.iafenvoy.mxt.data.rift.RiftTemplate;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.UUIDUtil;

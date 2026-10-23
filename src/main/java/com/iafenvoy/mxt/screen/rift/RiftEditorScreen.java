@@ -373,7 +373,8 @@ public final class RiftEditorScreen extends AuiScreen {
             if (pitch.isPresent()) this.fields.number("pitch", pitch.get());
             else this.value("pitch", "");
             this.fields.checked("nearby", nearby);
-        } else if (d.destination() instanceof RiftDestination.Realm(Identifier realm1)) this.value("realm", realm1.toString());
+        } else if (d.destination() instanceof RiftDestination.Realm(Identifier realm1))
+            this.value("realm", realm1.toString());
         this.value("style", a.style());
         this.value("color", a.color() == -1 ? "auto" : RiftColors.format(a.color()));
         this.value("edge_color", a.edgeColor() == -1 ? "auto" : RiftColors.format(a.edgeColor()));
@@ -407,7 +408,8 @@ public final class RiftEditorScreen extends AuiScreen {
                 default -> throw new IllegalArgumentException();
             };
             RiftPlacement placement = new RiftPlacement(this.fields.vector("origin"), this.fields.vector("normal"), this.fields.vector("tangent"));
-            if (!placement.equals(this.session.draft().placement())) placement = placement.normalized().result().orElseThrow();
+            if (!placement.equals(this.session.draft().placement()))
+                placement = placement.normalized().result().orElseThrow();
             this.session.apply(new RiftTemplate(this.value("key"), placement, false, this.session.draft().shape(), destination,
                     new RiftAppearance(this.value("style"), this.color("color"), this.color("edge_color"), this.number("speed"), this.number("edge_width"), this.number("glow"), this.number("particles"), this.number("texture_scale"), this.number("texture_rotation"), this.number("texture_u"), this.number("texture_v")),
                     Long.parseLong(this.value("duration")), this.fields.checked("enabled")));

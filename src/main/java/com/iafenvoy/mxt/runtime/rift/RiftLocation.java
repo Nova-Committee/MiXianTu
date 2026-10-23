@@ -12,7 +12,8 @@ import java.util.Optional;
 import java.util.UUID;
 
 // The dimension directory contains no outline, destination, appearance or realm binding.
-public record RiftLocation(UUID id, long chunk, long revision, Vec3 min, Vec3 max, long expiresAt, Optional<UUID> owner) {
+public record RiftLocation(UUID id, long chunk, long revision, Vec3 min, Vec3 max, long expiresAt,
+                           Optional<UUID> owner) {
     public static final Codec<RiftLocation> CODEC = RecordCodecBuilder.create(i -> i.group(
             UUIDUtil.CODEC.fieldOf("id").forGetter(RiftLocation::id),
             Codec.LONG.fieldOf("chunk").forGetter(RiftLocation::chunk),
@@ -29,6 +30,11 @@ public record RiftLocation(UUID id, long chunk, long revision, Vec3 min, Vec3 ma
                 record.revision(), bounds.getMinPosition(), bounds.getMaxPosition(), record.expiresAt(), record.owner());
     }
 
-    public AABB bounds() { return new AABB(this.min, this.max); }
-    public boolean expired(long now) { return this.expiresAt >= 0 && now >= this.expiresAt; }
+    public AABB bounds() {
+        return new AABB(this.min, this.max);
+    }
+
+    public boolean expired(long now) {
+        return this.expiresAt >= 0 && now >= this.expiresAt;
+    }
 }
