@@ -1,6 +1,6 @@
 package com.iafenvoy.mxt.runtime;
 
-import com.iafenvoy.mxt.event.dispatcher.CollectTickStagesEvent;
+import com.iafenvoy.mxt.event.CollectTickStagesEvent;
 import net.minecraft.world.entity.LivingEntity;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;

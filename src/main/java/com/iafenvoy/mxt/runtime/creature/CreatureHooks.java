@@ -2,8 +2,8 @@ package com.iafenvoy.mxt.runtime.creature;
 
 import com.iafenvoy.mxt.attachment.CreatureSpiritAttachment;
 import com.iafenvoy.mxt.data.creature.ContractType;
-import com.iafenvoy.mxt.event.dispatcher.CollectAbilityGrantsEvent;
-import com.iafenvoy.mxt.event.dispatcher.CollectProgressionOwnersEvent;
+import com.iafenvoy.mxt.event.CollectAbilityGrantsEvent;
+import com.iafenvoy.mxt.event.CollectProgressionOwnersEvent;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.Sources;
 import com.iafenvoy.mxt.runtime.progression.ProgressionOwners;

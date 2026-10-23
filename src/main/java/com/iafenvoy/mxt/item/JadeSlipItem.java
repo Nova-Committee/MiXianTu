@@ -2,6 +2,7 @@ package com.iafenvoy.mxt.item;
 
 import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.registry.MxtItems;
+import com.iafenvoy.mxt.runtime.hold.ItemUseCycles;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
@@ -30,9 +31,8 @@ public final class JadeSlipItem extends Item {
     @Override
     public @NotNull InteractionResult use(@NotNull Level level, @NotNull Player player, @NotNull InteractionHand hand) {
         ItemStack stack = player.getItemInHand(hand);
-        // The hold module arms the vanilla use component on the click that starts a read; without it there is no
-        // gesture to run. Sneaking and a zero length ask for the text outright, which is the item's other behaviour.
-        if (player.isShiftKeyDown() || readTime(stack) <= 0 || !stack.has(DataComponents.CONSUMABLE))
+        if (player.isShiftKeyDown() || readTime(stack) <= 0
+                || ItemUseCycles.current(player) == null && !stack.has(DataComponents.CONSUMABLE))
             return read(player, stack);
         return super.use(level, player, hand);
     }

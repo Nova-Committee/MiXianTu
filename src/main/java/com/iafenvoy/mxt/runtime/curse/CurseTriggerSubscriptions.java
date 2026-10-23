@@ -6,7 +6,7 @@ import com.iafenvoy.mxt.data.curse.Curse;
 import com.iafenvoy.mxt.data.curse.builtin.TriggeredCurseType;
 import com.iafenvoy.mxt.data.trigger.Trigger;
 import com.iafenvoy.mxt.data.trigger.TriggerSignal;
-import com.iafenvoy.mxt.event.dispatcher.TriggerRehydrateEvent;
+import com.iafenvoy.mxt.event.TriggerRehydrateEvent;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.trigger.TriggerDispatcher;
 import com.iafenvoy.mxt.runtime.trigger.TriggerSubscription;

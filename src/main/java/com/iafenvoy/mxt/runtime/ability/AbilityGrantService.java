@@ -3,7 +3,7 @@ package com.iafenvoy.mxt.runtime.ability;
 import com.google.common.collect.SetMultimap;
 import com.iafenvoy.mxt.attachment.AbilityAttachment;
 import com.iafenvoy.mxt.data.ability.Ability;
-import com.iafenvoy.mxt.event.dispatcher.CollectAbilityGrantsEvent;
+import com.iafenvoy.mxt.event.CollectAbilityGrantsEvent;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.Sources;
 import com.iafenvoy.mxt.util.profiling.ProfilerScope;

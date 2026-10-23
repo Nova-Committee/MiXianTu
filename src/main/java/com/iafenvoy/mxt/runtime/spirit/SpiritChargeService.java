@@ -8,11 +8,12 @@ import com.iafenvoy.mxt.data.aura.ItemAura;
 import com.iafenvoy.mxt.data.aura.SpiritStorageComponent;
 import com.iafenvoy.mxt.data.item.HoldBinding;
 import com.iafenvoy.mxt.data.resource.Resource;
-import com.iafenvoy.mxt.event.dispatcher.CollectHoldBindingsEvent;
+import com.iafenvoy.mxt.event.CollectHoldBindingsEvent;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.runtime.cultivation.ItemAuraService;
 import com.iafenvoy.mxt.runtime.hold.HoldLookup;
+import com.iafenvoy.mxt.runtime.hold.HoldService;
 import com.iafenvoy.mxt.runtime.resource.ResourceService;
 import com.iafenvoy.mxt.runtime.resource.ResourceService.Result;
 import com.iafenvoy.mxt.runtime.spirit.SpiritPour.Entry;
@@ -87,7 +88,7 @@ public final class SpiritChargeService {
             LivingEntity entity = event.getEntity();
             if (entity.level().isClientSide()) return;
             ItemStack stack = event.getItem();
-            if (!(HoldLookup.hold(stack) instanceof SpiritChargeHold)) return;
+            if (!(HoldService.activeBinding(entity) instanceof SpiritChargeHold)) return;
             if (!(stack.getItem() instanceof UseItemAuraAccess access)) return;
             // A tick is paid for before the item answers it, so an item that would refuse this tick says so first.
             if (!access.canPourInto(entity, stack)) return;

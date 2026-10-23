@@ -5,6 +5,7 @@
   "mixins": [
     "EntityMountRemovalMixin",
     "EntityPerchMixin",
+    "ItemUseCycleMixin",
     "MinecraftServerRuntimeAccessor"
   ],
   "client": [

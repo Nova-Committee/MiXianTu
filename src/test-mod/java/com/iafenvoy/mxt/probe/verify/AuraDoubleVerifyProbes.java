@@ -128,7 +128,11 @@ public final class AuraDoubleVerifyProbes {
         talisman.set(MxtDataComponents.SPIRIT_STORAGE, SpiritStorageComponent.EMPTY.with(spirit, capacity - 0.25D));
         ResourceHolderAttachment account = context.player().getData(MxtAttachments.RESOURCE_HOLDER);
         account.set(spirit.value().resource(), 1.0D, 0.0D, 100_000.0D, -1L, "probe");
+        context.player().setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, talisman);
+        com.iafenvoy.mxt.runtime.hold.ItemUseCycles.prepare(context.player(), talisman);
+        context.player().startUsingItem(net.minecraft.world.InteractionHand.MAIN_HAND);
         SpiritChargeService.onUseTick(new LivingEntityUseItemEvent.Tick(context.player(), talisman, 200));
+        context.player().releaseUsingItem();
         close(context, "held pouring fills the final quarter", talisman.get(MxtDataComponents.SPIRIT_STORAGE).get(spirit), capacity);
         close(context, "held pouring charges only the final quarter", account.get(spirit.value().resource()), 0.75D);
     }

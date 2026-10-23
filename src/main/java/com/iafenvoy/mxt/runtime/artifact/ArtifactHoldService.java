@@ -4,12 +4,13 @@ import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.data.artifact.Artifact;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.resource.Resource;
-import com.iafenvoy.mxt.event.dispatcher.CollectHoldBindingsEvent;
+import com.iafenvoy.mxt.event.CollectHoldBindingsEvent;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactService.RefineResult;
 import com.iafenvoy.mxt.runtime.hold.HoldLookup;
+import com.iafenvoy.mxt.runtime.hold.HoldService;
 import com.iafenvoy.mxt.runtime.resource.ResourceService;
 import com.iafenvoy.mxt.runtime.resource.ResourceService.Result;
 import com.iafenvoy.mxt.runtime.spirit.AuraTransfers;
@@ -112,7 +113,7 @@ public final class ArtifactHoldService {
         LivingEntity holder = event.getEntity();
         if (holder.level().isClientSide()) return;
         ItemStack stack = event.getItem();
-        if (!(HoldLookup.hold(stack) instanceof ArtifactHold(Artifact artifact))) return;
+        if (!(HoldService.activeBinding(holder) instanceof ArtifactHold(Artifact artifact))) return;
         // Claiming and pouring are two different gestures on the same input: the claim is what finishing the
         // hold does, so an unclaimed stack is left exactly as it is until then.
         if (!ArtifactService.hasOwner(stack) || !ArtifactService.isOwner(stack, holder.getUUID())) return;
@@ -146,7 +147,7 @@ public final class ArtifactHoldService {
         // work on - the same reason the technique module reads it the same way.
         ItemStack stack = holder.getItemInHand(holder.getUsedItemHand());
         if (stack.isEmpty()) stack = event.getItem();
-        if (!(HoldLookup.hold(stack) instanceof ArtifactHold)) return;
+        if (!(HoldService.activeBinding(holder) instanceof ArtifactHold)) return;
         Provider access = holder.level().registryAccess();
         if (!ArtifactService.hasOwner(stack)) {
             ClaimResult result = claim(holder, stack, access);

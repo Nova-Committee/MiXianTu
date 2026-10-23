@@ -36,8 +36,7 @@ public interface HoldBinding extends ItemMatcher {
     // outright that it does ask for a hold; its real length is the stack-level holdTicks(Provider, ItemStack).
     int holdTicks();
 
-    // NO_HOLD means "not this stack": nothing is armed for it, and a stack already carrying the component is
-    // left alone. Both sides answer off the registry view the declaration was captured from.
+    // Both sides resolve the gesture from their own synchronized registry view.
     default int holdTicks(Provider registries, ItemStack stack) {
         return this.holdTicks();
     }
@@ -64,8 +63,7 @@ public interface HoldBinding extends ItemMatcher {
         return this.holdAnimation();
     }
 
-    // The reader hears it from their own client's copy of the use component, the players around them from the
-    // server.
+    // The reader hears the local gesture; the server broadcasts to everyone else.
     Holder<SoundEvent> holdSound();
 
     default Holder<SoundEvent> holdSound(Provider registries, ItemStack stack) {

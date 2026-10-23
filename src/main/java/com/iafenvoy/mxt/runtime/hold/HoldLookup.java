@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.runtime.hold;
 
 import com.iafenvoy.mxt.data.item.HoldBinding;
-import com.iafenvoy.mxt.event.dispatcher.CollectHoldBindingsEvent;
+import com.iafenvoy.mxt.event.CollectHoldBindingsEvent;
 import com.iafenvoy.mxt.util.matcher.ItemMatcher;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.world.item.Item;

@@ -1,6 +1,6 @@
 package com.iafenvoy.mxt.runtime.trigger;
 
-import com.iafenvoy.mxt.event.dispatcher.TriggerRehydrateEvent;
+import com.iafenvoy.mxt.event.TriggerRehydrateEvent;
 import com.iafenvoy.mxt.util.profiling.LoggerDispatcher;
 import com.iafenvoy.mxt.util.profiling.LoggingLevel;
 import com.iafenvoy.mxt.util.profiling.ProfilerScope;

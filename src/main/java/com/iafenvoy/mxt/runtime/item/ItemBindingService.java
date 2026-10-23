@@ -9,6 +9,7 @@ import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtItems;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.registry.cache.RegistryCaches;
+import com.iafenvoy.mxt.runtime.hold.ItemUseCycles;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.matcher.ItemMatcher;
 import com.iafenvoy.mxt.util.matcher.ItemMatcher.Entry;
@@ -257,10 +258,11 @@ public final class ItemBindingService {
             try {
                 ResolvedBindings bindings = resolve(entity.level().registryAccess(), stack);
                 PillResolution pill = bindings.pill();
-                pill.identity().ifPresent(identity -> PillService.registerUse(entity, identity));
+                boolean consumed = ItemUseCycles.isConsumption(entity, stack);
+                if (consumed) pill.identity().ifPresent(identity -> PillService.registerUse(entity, identity));
                 FormulaContext context = FormulaContext.of(entity);
                 bindings.item().map(ItemBinding::actions).orElse(List.of()).forEach(action -> action.execute(entity, context));
-                pill.effects().ifPresent(effects -> PillService.apply(entity, effects));
+                if (consumed) pill.effects().ifPresent(effects -> PillService.apply(entity, effects));
             } finally {
                 settling.remove(entity.getUUID());
                 if (settling.isEmpty()) SETTLING.remove();

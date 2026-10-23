@@ -1,4 +1,4 @@
-package com.iafenvoy.mxt.event.dispatcher;
+package com.iafenvoy.mxt.event;
 
 import com.iafenvoy.mxt.data.AttributeEntry;
 import com.iafenvoy.mxt.runtime.Sources;

@@ -1,6 +1,6 @@
 package com.iafenvoy.mxt.runtime.progression;
 
-import com.iafenvoy.mxt.event.dispatcher.CollectTickStagesEvent;
+import com.iafenvoy.mxt.event.CollectTickStagesEvent;
 import com.iafenvoy.mxt.runtime.EntityTickStages;
 import com.iafenvoy.mxt.runtime.ability.AbilityGrantService;
 import com.iafenvoy.mxt.util.profiling.ProfilerScope;

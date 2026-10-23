@@ -289,7 +289,7 @@ public final class PillProbes {
             player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.GOLD_INGOT, 2));
             ItemStack ingot = player.getMainHandItem();
             PillUseService.arm(player, ingot);
-            boolean armed = ingot.has(DataComponents.CONSUMABLE);
+            boolean armed = ingot.getUseDuration(player) == 32 && !ingot.has(DataComponents.CONSUMABLE);
             int ingotsBefore = count(player, Items.GOLD_INGOT);
             boolean swallowed = finish(player, 40);
             leg(context, "plain_item_armed", armed && swallowed && close(PillService.toxicity(player), 25.0D)

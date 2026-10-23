@@ -1,91 +1,71 @@
 package com.iafenvoy.mxt.runtime.item;
 
-import com.iafenvoy.mxt.data.item.HoldBinding;
+import com.iafenvoy.mxt.api.ItemUseCycle;
+import com.iafenvoy.mxt.event.ResolveItemUseCycleEvent;
 import com.iafenvoy.mxt.item.PillItem;
-import com.iafenvoy.mxt.runtime.hold.HoldLookup;
-import com.iafenvoy.mxt.runtime.hold.TemporaryUseComponent;
-import com.iafenvoy.mxt.util.profiling.ProfilerScope;
-import com.iafenvoy.mxt.util.profiling.ServerProfiling;
-import net.minecraft.core.HolderLookup.Provider;
-import net.minecraft.core.component.DataComponents;
+import com.iafenvoy.mxt.runtime.hold.ItemUseCycles;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.component.Consumable;
-import net.minecraft.world.item.equipment.Equippable;
-import net.neoforged.bus.api.EventPriority;
+import net.minecraft.world.item.ItemUseAnimation;
+import net.minecraft.world.level.Level;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.event.entity.living.LivingEntityUseItemEvent.Finish;
-import net.neoforged.neoforge.event.entity.living.LivingEntityUseItemEvent.Stop;
-import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent.RightClickItem;
-import net.neoforged.neoforge.event.tick.EntityTickEvent.Post;
 
-/**
- * Drives the vanilla use cycle for a pill bound to an item that has no use of its own: both the duration and the
- * pose are read off {@code minecraft:consumable}, so one is written on the click and taken off again the moment
- * that gesture ends. Nothing about the item's own definition changes, and no save keeps the component.
- */
 @EventBusSubscriber
 public final class PillUseService {
+    private static final ItemUseCycle CYCLE = new PillCycle();
+
     private PillUseService() {
     }
 
-    // The lowest priority: QualityService refuses an illegal dose at the highest one, and a cancelled event
-    // never reaches a lower priority. A hold outranks a pill, so an item that is both is read instead of eaten.
-    @SubscribeEvent(priority = EventPriority.LOWEST)
-    public static void onItemUse(RightClickItem event) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.ITEM)) {
-            LivingEntity entity = event.getEntity();
-            arm(entity, entity.getItemInHand(event.getHand()));
-        }
+    @SubscribeEvent
+    public static void onResolve(ResolveItemUseCycleEvent event) {
+        if (event.getCycle() == null && ItemBindingService.resolvePill(
+                event.getHolder().level().registryAccess(), event.getStack()).present()) event.claim(CYCLE);
     }
 
-    /**
-     * Arms a stack a pill binding claims but whose own item cannot be used: without this the click would fall
-     * through the whole of {@code Item#use} and nothing would happen at all. Public like {@code HoldService.arm}
-     * and for the same reason - the audit drives a cycle without a client to click.
-     */
     public static void arm(LivingEntity entity, ItemStack stack) {
-        // Shift asks an item for its other behaviour, and an eating cycle would swallow that click.
-        if (stack.isEmpty() || entity.isShiftKeyDown()) return;
-        if (stack.has(DataComponents.CONSUMABLE) || stack.getPrototype().has(DataComponents.CONSUMABLE)) return;
-        // Swapping, blocking and kinetic weapons all answer the click with their own branch of Item#use, which
-        // vanilla reads before the consumable one: arming here would take that use away from the item.
-        Equippable equippable = stack.get(DataComponents.EQUIPPABLE);
-        if (equippable != null && equippable.swappable()) return;
-        if (stack.has(DataComponents.BLOCKS_ATTACKS) || stack.has(DataComponents.KINETIC_WEAPON)) return;
-        Provider registries = entity.level().registryAccess();
-        if (ItemBindingService.resolvePill(registries, stack).effects().isEmpty()) return;
-        HoldBinding hold = HoldLookup.hold(stack);
-        if (hold != null && hold.claims(entity, registries, stack)) return;
-        // A fresh instance per arming: the take-back recognises its own component by identity, so an item that
-        // happens to carry an equal one is never stripped.
-        TemporaryUseComponent.write(entity, stack, new Consumable(PillItem.CONSUMABLE.consumeSeconds(),
-                PillItem.CONSUMABLE.animation(), PillItem.CONSUMABLE.sound(), PillItem.CONSUMABLE.hasConsumeParticles(),
-                PillItem.CONSUMABLE.onConsumeEffects()), TemporaryUseComponent.Owner.PILL);
+        ItemUseCycles.prepare(entity, stack);
     }
 
-    // Vanilla has eaten one by the time these run, so what is left of the stack is the item as its author wrote it.
-    @SubscribeEvent
-    public static void onUseFinish(Finish event) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.ITEM)) {
-            TemporaryUseComponent.takeBack(event.getEntity(), TemporaryUseComponent.Owner.PILL);
+    private record PillCycle() implements ItemUseCycle {
+        private static final Identifier PURPOSE = Identifier.fromNamespaceAndPath("mxt", "pill");
+
+        @Override
+        public Identifier id() {
+            return PURPOSE;
         }
-    }
 
-    @SubscribeEvent
-    public static void onUseStop(Stop event) {
-        TemporaryUseComponent.takeBack(event.getEntity(), TemporaryUseComponent.Owner.PILL);
-    }
+        @Override
+        public int durationTicks() {
+            return PillItem.CONSUMABLE.consumeTicks();
+        }
 
-    // A gesture can also end without either event - dying mid-eat is one - so an entity that is no longer using
-    // an item gives the component back on its next tick.
-    @SubscribeEvent
-    public static void onEntityTick(Post event) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.ITEM)) {
-            if (!(event.getEntity() instanceof LivingEntity entity) || entity.isUsingItem()) return;
-            if (!TemporaryUseComponent.hasFor(entity, TemporaryUseComponent.Owner.PILL)) return;
-            TemporaryUseComponent.takeBack(entity, TemporaryUseComponent.Owner.PILL);
+        @Override
+        public ItemUseAnimation animation() {
+            return PillItem.CONSUMABLE.animation();
+        }
+
+        @Override
+        public boolean canStart(LivingEntity holder, ItemStack stack) {
+            return PillItem.CONSUMABLE.canConsume(holder, stack);
+        }
+
+        @Override
+        public boolean isConsumption() {
+            return true;
+        }
+
+        @Override
+        public void tick(LivingEntity holder, ItemStack stack, int remainingTicks) {
+            if (PillItem.CONSUMABLE.shouldEmitParticlesAndSounds(remainingTicks))
+                PillItem.CONSUMABLE.emitParticlesAndSounds(holder.getRandom(), holder, stack, 5);
+        }
+
+        @Override
+        public ItemStack finish(Level level, LivingEntity holder, ItemStack stack) {
+            return PillItem.CONSUMABLE.onConsume(level, holder, stack);
         }
     }
 }

@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.runtime.rift;
 
 import com.iafenvoy.mxt.attachment.RiftWorldAttachment;
-import com.iafenvoy.mxt.event.dispatcher.CollectTickStagesEvent;
+import com.iafenvoy.mxt.event.CollectTickStagesEvent;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.EntityTickStages;
 import com.iafenvoy.mxt.util.profiling.ProfilerScope;

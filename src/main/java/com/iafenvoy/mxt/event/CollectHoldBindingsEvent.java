@@ -1,4 +1,4 @@
-package com.iafenvoy.mxt.event.dispatcher;
+package com.iafenvoy.mxt.event;
 
 import com.iafenvoy.mxt.data.item.HoldBinding;
 import net.minecraft.core.RegistryAccess;

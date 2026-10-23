@@ -1,4 +1,4 @@
-package com.iafenvoy.mxt.event.dispatcher;
+package com.iafenvoy.mxt.event;
 
 import com.iafenvoy.mxt.runtime.progression.ProgressionOwners.Owner;
 import net.minecraft.world.entity.Entity;

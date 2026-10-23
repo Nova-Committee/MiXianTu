@@ -3,7 +3,7 @@ package com.iafenvoy.mxt.runtime.resource;
 import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.resource.Resource;
-import com.iafenvoy.mxt.event.dispatcher.CollectTickStagesEvent;
+import com.iafenvoy.mxt.event.CollectTickStagesEvent;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;

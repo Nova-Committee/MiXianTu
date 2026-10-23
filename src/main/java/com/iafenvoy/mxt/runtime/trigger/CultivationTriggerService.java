@@ -5,7 +5,7 @@ import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.cultivation.CultivateConditions;
 import com.iafenvoy.mxt.data.trigger.Trigger;
-import com.iafenvoy.mxt.event.dispatcher.TriggerRehydrateEvent;
+import com.iafenvoy.mxt.event.TriggerRehydrateEvent;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;

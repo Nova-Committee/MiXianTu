@@ -1,7 +1,8 @@
 package com.iafenvoy.mxt.item;
 
-import com.iafenvoy.mxt.event.dispatcher.CollectHoldBindingsEvent;
+import com.iafenvoy.mxt.event.CollectHoldBindingsEvent;
 import com.iafenvoy.mxt.registry.MxtItems;
+import com.iafenvoy.mxt.runtime.hold.HoldService;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -25,7 +26,8 @@ public final class JadeSlipReading {
     // A completed read is a read the reader spent the hold on, so the text lands there and not on the click.
     @SubscribeEvent
     public static void onUseFinish(Finish event) {
-        if (event.getEntity().level().isClientSide()) return;
+        if (event.getEntity().level().isClientSide() || !(HoldService.activeBinding(event.getEntity()) instanceof JadeSlipHold))
+            return;
         ItemStack stack = event.getItem();
         if (!stack.is(MxtItems.JADE_SLIP.get())) return;
         if (event.getEntity() instanceof ServerPlayer player) JadeSlipItem.read(player, stack);

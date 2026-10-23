@@ -4,6 +4,7 @@ import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.data.progression.Progression;
 import com.iafenvoy.mxt.data.progression.ProgressionOwner;
 import com.iafenvoy.mxt.data.resource.Resource;
+import com.iafenvoy.mxt.event.CollectProgressionOwnersEvent;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.util.formula.FormulaContext;
 import com.iafenvoy.mxt.util.profiling.ProfilerScope;
@@ -16,7 +17,7 @@ import java.util.List;
 /**
  * Advances every progression a body holds: the level's {@code mastery} says how much of the owner's mastery resource
  * is needed, its {@code condition} says what else it takes, and the signal is published after the record is written.
- * Which owners a body holds comes from {@link com.iafenvoy.mxt.event.dispatcher.CollectProgressionOwnersEvent}, so
+ * Which owners a body holds comes from {@link CollectProgressionOwnersEvent}, so
  * this knows nothing about techniques or creature profiles; what a level means stays in the owner's own definition,
  * and where the record lives stays in the holder the owner came with.
  */

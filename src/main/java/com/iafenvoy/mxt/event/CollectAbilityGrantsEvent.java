@@ -1,4 +1,4 @@
-package com.iafenvoy.mxt.event.dispatcher;
+package com.iafenvoy.mxt.event;
 
 import com.google.common.collect.LinkedHashMultimap;
 import com.google.common.collect.Multimaps;

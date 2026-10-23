@@ -43,7 +43,7 @@ public final class JadeSlipProbes {
                 hold != null && !hold.claims(player, context.registries(), instantSlip));
     }
 
-    // The armed component is what vanilla reads the length from, so the cycle is started the way the click starts it.
+    // Run the runtime gesture through vanilla's actual use lifecycle.
     private static void readCycle(ProbeContext context) {
         ServerPlayer player = context.player();
         ItemStack slip = JadeSlipItem.create(Component.literal("probe slip"));

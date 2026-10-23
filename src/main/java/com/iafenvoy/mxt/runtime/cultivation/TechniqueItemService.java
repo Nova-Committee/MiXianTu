@@ -5,12 +5,11 @@ import com.iafenvoy.mxt.config.MxtServerConfig;
 import com.iafenvoy.mxt.data.cultivation.Technique;
 import com.iafenvoy.mxt.data.item.TechniqueBinding;
 import com.iafenvoy.mxt.data.item.TechniqueReading;
-import com.iafenvoy.mxt.event.dispatcher.CollectHoldBindingsEvent;
+import com.iafenvoy.mxt.event.CollectHoldBindingsEvent;
 import com.iafenvoy.mxt.item.ItemReading;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.runtime.hold.HoldLookup;
 import com.iafenvoy.mxt.runtime.hold.HoldService;
 import com.iafenvoy.mxt.runtime.item.ItemBindingService;
 import com.iafenvoy.mxt.runtime.item.QualityService;
@@ -113,7 +112,7 @@ public final class TechniqueItemService {
         try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.CULTIVATION)) {
             LivingEntity entity = event.getEntity();
             if (entity.level().isClientSide()) return;
-            if (!(HoldLookup.hold(event.getItem()) instanceof TechniqueHold)) return;
+            if (!(HoldService.activeBinding(entity) instanceof TechniqueHold)) return;
             // Recorded for every entity, not just players: the audit drives a hold on a pig.
             int remaining = event.getDuration();
             HOLD_TIMING.merge(entity.getUUID(), HoldTiming.started(remaining),
@@ -138,7 +137,7 @@ public final class TechniqueItemService {
     @SubscribeEvent
     public static void onUseFinish(Finish event) {
         LivingEntity entity = event.getEntity();
-        if (entity.level().isClientSide()) return;
+        if (entity.level().isClientSide() || !(HoldService.activeBinding(entity) instanceof TechniqueHold)) return;
         LAST_PROGRESS.remove(entity.getUUID());
         reportTiming(entity, "finished");
         ItemStack stack = entity.getItemInHand(entity.getUsedItemHand());
@@ -162,15 +161,12 @@ public final class TechniqueItemService {
     @SubscribeEvent
     public static void onUseStop(Stop event) {
         LivingEntity entity = event.getEntity();
-        if (entity.level().isClientSide()) return;
+        if (entity.level().isClientSide() || !(HoldService.activeBinding(entity) instanceof TechniqueHold)) return;
         LAST_PROGRESS.remove(entity.getUUID());
         reportTiming(entity, "released early");
-        if (!(HoldLookup.hold(event.getItem()) instanceof TechniqueHold)) return;
         // The bar is left where it stopped otherwise, and an overlay message lingers for seconds after its
         // last update, so a cancelled read would keep showing a half-filled bar as if it were still going.
         if (entity instanceof ServerPlayer player) player.sendSystemMessage(Component.empty(), true);
-        // The technique's own duration rather than the stack's use state: the component carrying the cycle was
-        // taken off when the read started, so asking the stack here would report a total of zero.
         record(entity, "Released early with " + entity.getUseItemRemainingTicks() + " of "
                 + learnTime(entity, event.getItem()) + " ticks left");
     }

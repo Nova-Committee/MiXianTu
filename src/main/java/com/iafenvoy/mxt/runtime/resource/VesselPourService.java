@@ -1,8 +1,8 @@
 package com.iafenvoy.mxt.runtime.resource;
 
-import com.iafenvoy.mxt.event.dispatcher.CollectHoldBindingsEvent;
+import com.iafenvoy.mxt.event.CollectHoldBindingsEvent;
 import com.iafenvoy.mxt.item.SpiritVesselItem;
-import com.iafenvoy.mxt.runtime.hold.HoldLookup;
+import com.iafenvoy.mxt.runtime.hold.HoldService;
 import com.iafenvoy.mxt.util.profiling.ProfilerScope;
 import com.iafenvoy.mxt.util.profiling.ServerProfiling;
 import net.minecraft.network.chat.Component;
@@ -35,7 +35,7 @@ public final class VesselPourService {
             LivingEntity holder = event.getEntity();
             if (holder.level().isClientSide()) return;
             ItemStack stack = event.getItem();
-            if (!(HoldLookup.hold(stack) instanceof VesselPourHold hold)) return;
+            if (!(HoldService.activeBinding(holder) instanceof VesselPourHold hold)) return;
             if (!SpiritVesselItem.pourTick(holder, stack)) return;
             // Said once, on the first tick that really moved something: a hold that poured nothing stays quiet, and the
             // pour itself is silent apart from the gesture's own sound.

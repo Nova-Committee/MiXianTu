@@ -70,6 +70,7 @@ public final class ProbeTests {
             HerbProbes::probes,
             DrawingProbes::probes,
             JadeSlipProbes::probes,
+            ItemUseCycleVerifyProbes::probes,
             QualityProbes::probes,
             WeaponBindingProbes::probes,
             LifespanProbes::probes,

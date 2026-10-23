@@ -3,7 +3,7 @@ package com.iafenvoy.mxt.runtime.ability;
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.data.AttributeEntry;
 import com.iafenvoy.mxt.data.ability.Ability;
-import com.iafenvoy.mxt.event.dispatcher.CollectPassiveAttributesEvent;
+import com.iafenvoy.mxt.event.CollectPassiveAttributesEvent;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.Sources;
 import com.iafenvoy.mxt.runtime.ability.AbilityModifierService.ResolvedModifier;
