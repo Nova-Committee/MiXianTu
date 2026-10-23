@@ -166,7 +166,7 @@ public final class AlchemyGateProbes {
 
     private static ItemStack core(ServerLevel level) {
         ItemStack stack = MxtBlocks.ALCHEMY_FURNACE.toStack();
-        stack.set(MxtDataComponents.ALCHEMY_FURNACE.get(), spec(level));
+        stack.set(MxtDataComponents.ALCHEMY_FURNACE, spec(level));
         return stack;
     }
 
@@ -178,7 +178,7 @@ public final class AlchemyGateProbes {
 
     private static void grade(ServerLevel level, ItemStack stack, Identifier quality) {
         Holder<ItemQuality> holder = MxtDatapackRegistries.holder(level.registryAccess(), MxtResourceKeys.ITEM_QUALITY, quality).orElseThrow();
-        stack.set(MxtDataComponents.QUALITY.get(), holder);
+        stack.set(MxtDataComponents.QUALITY, holder);
     }
 
     private static Holder<AlchemyFurnaceDefinition> spec(ServerLevel level) {

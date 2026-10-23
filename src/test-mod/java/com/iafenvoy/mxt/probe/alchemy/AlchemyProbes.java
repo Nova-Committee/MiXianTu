@@ -148,7 +148,7 @@ public final class AlchemyProbes {
             context.expect("substitute-balance", single.mixture().balance(), 0.0D);
             context.expect("substitute-resolved", resolvedId(single), PRACTICE);
             ItemStack aged = new ItemStack(Items.ALLIUM);
-            aged.set(MxtDataComponents.HERB_AGE.get(), 100);
+            aged.set(MxtDataComponents.HERB_AGE, 100);
             furnace.container().setItem(0, aged);
             AlchemyPreview century = AlchemyWorkstationService.preview(player, furnace);
             context.expect("century-main", getMain(century, mainProperty, -1.0D), 6.0D);
@@ -421,7 +421,7 @@ public final class AlchemyProbes {
             AlchemyWorkstationService.start(player, furnace);
             AlchemyFurnaceBlockEntity saved = reload(level, furnace);
             context.expect("override-saved-name", saved.furnaceItem().get(DataComponents.CUSTOM_NAME) != null, true);
-            context.expect("override-saved-quality", saved.furnaceItem().get(MxtDataComponents.QUALITY.get()) != null, true);
+            context.expect("override-saved-quality", saved.furnaceItem().get(MxtDataComponents.QUALITY) != null, true);
             BlockPos casing = AlchemyFurnaceStructure.world(at, Direction.NORTH, 0);
             level.setBlockAndUpdate(casing, Blocks.AIR.defaultBlockState());
             context.expect("casing-abort", furnace.state().session().map(AlchemySession::failed).orElse(false), true);
@@ -435,9 +435,9 @@ public final class AlchemyProbes {
             context.expect("controller-one-furnace", count(drops, MxtBlocks.ALCHEMY_FURNACE.get().asItem()), 1);
             context.expect("controller-no-ingredient", count(drops, Items.ALLIUM), 0);
             ItemStack dropped = drops.stream().map(ItemEntity::getItem).filter(stack -> stack.is(MxtBlocks.ALCHEMY_FURNACE.get().asItem())).findFirst().orElse(ItemStack.EMPTY);
-            context.expect("override-quality", dropped.get(MxtDataComponents.QUALITY.get()) != null && HolderHelperEquals(dropped, ProbeDefinitions.id("alchemy/kiln_b")), true);
+            context.expect("override-quality", dropped.get(MxtDataComponents.QUALITY) != null && HolderHelperEquals(dropped, ProbeDefinitions.id("alchemy/kiln_b")), true);
             context.expect("override-name", dropped.get(DataComponents.CUSTOM_NAME) != null, true);
-            context.expect("override-spec", dropped.get(MxtDataComponents.ALCHEMY_FURNACE.get()) != null, true);
+            context.expect("override-spec", dropped.get(MxtDataComponents.ALCHEMY_FURNACE) != null, true);
         });
     }
 
@@ -1090,13 +1090,13 @@ public final class AlchemyProbes {
 
     private static ItemStack item(ServerLevel level, Identifier id) {
         ItemStack stack = MxtBlocks.ALCHEMY_FURNACE.toStack();
-        stack.set(MxtDataComponents.ALCHEMY_FURNACE.get(), holder(level, id));
+        stack.set(MxtDataComponents.ALCHEMY_FURNACE, holder(level, id));
         return stack;
     }
 
     private static ItemStack overrideItem(ServerLevel level) {
         ItemStack stack = item(level, WIDE);
-        stack.set(MxtDataComponents.QUALITY.get(), MxtDatapackRegistries.holder(level.registryAccess(), MxtResourceKeys.ITEM_QUALITY, ProbeDefinitions.id("alchemy/kiln_b")).orElseThrow());
+        stack.set(MxtDataComponents.QUALITY, MxtDatapackRegistries.holder(level.registryAccess(), MxtResourceKeys.ITEM_QUALITY, ProbeDefinitions.id("alchemy/kiln_b")).orElseThrow());
         stack.set(DataComponents.CUSTOM_NAME, Component.literal("Probe Kiln"));
         return stack;
     }
@@ -1104,7 +1104,7 @@ public final class AlchemyProbes {
     // The same specification with a tier written on the core itself, which is how a furnace states one by hand.
     private static ItemStack tieredCore(ServerLevel level, Identifier quality) {
         ItemStack stack = item(level, WIDE);
-        stack.set(MxtDataComponents.QUALITY.get(), MxtDatapackRegistries
+        stack.set(MxtDataComponents.QUALITY, MxtDatapackRegistries
                 .holder(level.registryAccess(), MxtResourceKeys.ITEM_QUALITY, quality).orElseThrow());
         return stack;
     }
@@ -1161,7 +1161,7 @@ public final class AlchemyProbes {
         for (ItemStack stack : stacks) {
             if (!stack.is(MxtItems.PILL.get()) || stack.getCount() != 4 || !stack.has(DataComponents.CONSUMABLE))
                 continue;
-            PillComponent pill = stack.get(MxtDataComponents.PILL.get());
+            PillComponent pill = stack.get(MxtDataComponents.PILL);
             if (pill == null) return false;
             return pill.pill().map(held -> HolderHelper.id(held).equals(ProbeDefinitions.id("toxicity"))).orElse(false);
         }
@@ -1204,7 +1204,7 @@ public final class AlchemyProbes {
 
     private static ItemStack wallItem(ServerLevel level, Identifier id) {
         ItemStack stack = MxtBlocks.ALCHEMY_FURNACE_CASING.toStack();
-        stack.set(MxtDataComponents.ALCHEMY_WALL_MATERIAL.get(),
+        stack.set(MxtDataComponents.ALCHEMY_WALL_MATERIAL,
                 MxtDatapackRegistries.holder(level.registryAccess(), MxtResourceKeys.ALCHEMY_WALL_MATERIAL, id).orElseThrow());
         return stack;
     }
@@ -1255,7 +1255,7 @@ public final class AlchemyProbes {
     }
 
     private static boolean HolderHelperEquals(ItemStack stack, Identifier quality) {
-        Holder<?> holder = stack.get(MxtDataComponents.QUALITY.get());
+        Holder<?> holder = stack.get(MxtDataComponents.QUALITY);
         return holder != null && HolderHelper.id(holder).equals(quality);
     }
 

@@ -6,6 +6,8 @@ import com.iafenvoy.mxt.registry.MxtItems;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 
+import java.util.Optional;
+
 /**
  * A physical claim for a data-driven currency value.
  */
@@ -17,7 +19,7 @@ public final class ChequeItem extends Item {
     public static ItemStack create(long value, String issuer) {
         if (value <= 0L) throw new IllegalArgumentException("Cheque value must be positive");
         ItemStack stack = MxtItems.CHEQUE.toStack();
-        stack.set(MxtDataComponents.CHEQUE.get(), new ChequeComponent(value, issuer));
+        stack.set(MxtDataComponents.CHEQUE, new ChequeComponent(value, Optional.ofNullable(issuer)));
         return stack;
     }
 }

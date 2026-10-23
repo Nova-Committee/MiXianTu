@@ -1,5 +1,6 @@
 package com.iafenvoy.mxt.probe.verify;
 
+import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
 import com.iafenvoy.mxt.api.ItemUseCycle;
 import com.iafenvoy.mxt.config.MxtServerConfig;
@@ -13,14 +14,17 @@ import com.iafenvoy.mxt.runtime.hold.ItemUseCycles;
 import com.iafenvoy.mxt.runtime.item.PillService;
 import com.mojang.serialization.JsonOps;
 import net.minecraft.core.component.DataComponents;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
+import net.minecraft.resources.RegistryOps;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.ItemStackTemplate;
 import net.minecraft.world.item.Items;
@@ -146,7 +150,7 @@ public final class ItemUseCycleVerifyProbes {
     private static void nativeComponents(ProbeContext context) {
         ItemStack slip = JadeSlipItem.create(Component.literal("native consumable"));
         Consumable sameShape = new Consumable(0.25F, ItemUseAnimation.BOW,
-                net.minecraft.core.registries.BuiltInRegistries.SOUND_EVENT.wrapAsHolder(SoundEvents.EMPTY), false, List.of());
+                BuiltInRegistries.SOUND_EVENT.wrapAsHolder(SoundEvents.EMPTY), false, List.of());
         slip.set(DataComponents.CONSUMABLE, sameShape);
         context.player().setItemInHand(InteractionHand.MAIN_HAND, slip);
         expect(context, "same-shaped native use is refused", ItemUseCycles.prepare(context.player(), slip), false);
@@ -206,8 +210,8 @@ public final class ItemUseCycleVerifyProbes {
     private static void copiesSave(ProbeContext context) {
         ItemStack stack = plain(context);
         ItemUseCycles.prepare(context.player(), stack);
-        var ops = context.registries().createSerializationContext(JsonOps.INSTANCE);
-        var before = ItemStack.CODEC.encodeStart(ops, stack).getOrThrow();
+        RegistryOps<JsonElement> ops = context.registries().createSerializationContext(JsonOps.INSTANCE);
+        JsonElement before = ItemStack.CODEC.encodeStart(ops, stack).getOrThrow();
         ItemStack copy = stack.copy();
         ItemStack split = stack.split(1);
         ItemStack decoded = ItemStack.CODEC.parse(ops, before).getOrThrow();
@@ -225,7 +229,7 @@ public final class ItemUseCycleVerifyProbes {
         ItemStack stack = plain(context);
         ItemUseCycles.prepare(player, stack);
         stack.use(player.level(), player, InteractionHand.MAIN_HAND);
-        var drop = player.drop(stack.split(1), false, false);
+        ItemEntity drop = player.drop(stack.split(1), false, false);
         expect(context, "actual drop exists", drop != null, true);
         if (drop != null) {
             expect(context, "drop has no temporary component", drop.getItem().has(DataComponents.CONSUMABLE), false);

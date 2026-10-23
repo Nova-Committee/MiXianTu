@@ -36,7 +36,7 @@ public record ItemSpiritRootCondition(
 
     @Override
     public boolean test(@NonNull ItemConditionContext ctx) {
-        Holder<SpiritRoot> root = ctx.stack().get(MxtDataComponents.SPIRIT_ROOT.get());
+        Holder<SpiritRoot> root = ctx.stack().get(MxtDataComponents.SPIRIT_ROOT);
         return root != null && RegistryCodecs.matches(this.spiritRoots, root);
     }
 

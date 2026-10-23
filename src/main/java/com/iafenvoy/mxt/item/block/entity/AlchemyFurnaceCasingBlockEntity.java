@@ -49,7 +49,7 @@ public final class AlchemyFurnaceCasingBlockEntity extends BlockEntity {
 
     public Optional<Holder<AlchemyWallMaterial>> material() {
         if (this.wallItem.isEmpty()) return Optional.empty();
-        return Optional.ofNullable(this.wallItem.get(MxtDataComponents.ALCHEMY_WALL_MATERIAL.get()));
+        return Optional.ofNullable(this.wallItem.get(MxtDataComponents.ALCHEMY_WALL_MATERIAL));
     }
 
     public void claim(BlockPos controller) {

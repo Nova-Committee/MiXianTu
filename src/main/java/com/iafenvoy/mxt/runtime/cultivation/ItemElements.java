@@ -44,7 +44,7 @@ public final class ItemElements {
     private static Set<Holder<Element>> declared(RegistryAccess access, ItemStack stack) {
         Registry<Element> registry = access.lookupOrThrow(MxtResourceKeys.ELEMENT);
         Set<Holder<Element>> result = new LinkedHashSet<>();
-        List<Either<Holder<Element>, TagKey<Element>>> carried = stack.get(MxtDataComponents.ELEMENT.get());
+        List<Either<Holder<Element>, TagKey<Element>>> carried = stack.get(MxtDataComponents.ELEMENT);
         if (carried != null) collect(registry, carried, result);
         ItemBindingService.weapon(access, stack).ifPresent(binding -> collect(registry, binding.element(), result));
         ItemBindingService.binding(access, stack).ifPresent(binding -> collect(registry, binding.element(), result));

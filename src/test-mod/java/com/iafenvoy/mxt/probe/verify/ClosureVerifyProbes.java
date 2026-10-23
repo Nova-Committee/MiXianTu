@@ -140,7 +140,7 @@ public final class ClosureVerifyProbes {
         AddAbilityAction action = new AddAbilityAction(List.of(ability));
         action.execute(new ItemActionContext(player, stack, FormulaContext.of(player)));
         action.execute(new ItemActionContext(player, stack, FormulaContext.of(player)));
-        ItemAbilitiesComponent component = stack.get(MxtDataComponents.ITEM_ABILITIES.get());
+        ItemAbilitiesComponent component = stack.get(MxtDataComponents.ITEM_ABILITIES);
         if (component == null || component.abilities().size() != 1
                 || !component.abilities().getFirst().is(ability))
             return "the item-ability action wrote " + (component == null ? "nothing" : component.abilities().size() + " entries");

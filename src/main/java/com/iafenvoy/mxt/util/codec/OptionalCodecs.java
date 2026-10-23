@@ -60,14 +60,6 @@ public final class OptionalCodecs {
         return packLong(Codec.LONG.lenientOptionalFieldOf(name));
     }
 
-    public static MapCodec<OptionalLong> longCodec(long minInclusive, long maxInclusive, String name) {
-        return packLong(MiscCodecs.longRange(minInclusive, maxInclusive).optionalFieldOf(name));
-    }
-
-    public static MapCodec<OptionalLong> lenientLongCodec(long minInclusive, long maxInclusive, String name) {
-        return packLong(MiscCodecs.longRange(minInclusive, maxInclusive).lenientOptionalFieldOf(name));
-    }
-
     private static MapCodec<OptionalLong> packLong(MapCodec<Optional<Long>> codec) {
         return codec.xmap(o -> o.map(OptionalLong::of).orElseGet(OptionalLong::empty), o -> o.isPresent() ? Optional.of(o.getAsLong()) : Optional.empty());
     }

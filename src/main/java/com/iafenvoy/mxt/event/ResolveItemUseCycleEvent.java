@@ -6,6 +6,8 @@ import net.minecraft.world.item.ItemStack;
 import net.neoforged.bus.api.Event;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Objects;
+
 /** Resolves one gesture per click; the first claim wins, so event priority decides provider precedence. */
 public final class ResolveItemUseCycleEvent extends Event {
     private final LivingEntity holder;
@@ -33,7 +35,7 @@ public final class ResolveItemUseCycleEvent extends Event {
 
     public boolean claim(ItemUseCycle cycle) {
         if (this.cycle != null) return false;
-        this.cycle = java.util.Objects.requireNonNull(cycle);
+        this.cycle = Objects.requireNonNull(cycle);
         return true;
     }
 }

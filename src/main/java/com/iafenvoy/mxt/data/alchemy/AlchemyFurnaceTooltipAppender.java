@@ -34,7 +34,7 @@ public final class AlchemyFurnaceTooltipAppender {
 
     private static void append(ItemStack stack, TooltipContext context, TooltipDisplay display, Player player, TooltipFlag flag, Consumer<Component> builder) {
         if (stack.is(MxtBlocks.ALCHEMY_FURNACE_CASING.get().asItem())) {
-            Holder<AlchemyWallMaterial> material = stack.get(MxtDataComponents.ALCHEMY_WALL_MATERIAL.get());
+            Holder<AlchemyWallMaterial> material = stack.get(MxtDataComponents.ALCHEMY_WALL_MATERIAL);
             if (material == null)
                 builder.accept(Component.translatable("tooltip.mxt.alchemy.no_wall_material").withStyle(ChatFormatting.RED));
             else {
@@ -62,7 +62,7 @@ public final class AlchemyFurnaceTooltipAppender {
         if (!stack.is(MxtBlocks.ALCHEMY_FURNACE.get().asItem())) return;
         Provider registries = context.registries();
         if (registries == null) return;
-        Holder<AlchemyFurnaceDefinition> holder = stack.get(MxtDataComponents.ALCHEMY_FURNACE.get());
+        Holder<AlchemyFurnaceDefinition> holder = stack.get(MxtDataComponents.ALCHEMY_FURNACE);
         if (holder == null)
             builder.accept(Component.translatable("screen.mxt.alchemy.no_furnace").withStyle(ChatFormatting.RED));
         else {

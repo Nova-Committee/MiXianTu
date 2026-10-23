@@ -32,7 +32,7 @@ public record CurseContainerItemCondition(List<Either<Holder<Curse>, TagKey<Curs
 
     @Override
     public boolean test(@NonNull ItemConditionContext ctx) {
-        CurseContainerComponent container = ctx.stack().get(MxtDataComponents.CURSE_CONTAINER.get());
+        CurseContainerComponent container = ctx.stack().get(MxtDataComponents.CURSE_CONTAINER);
         if (container == null) return false;
         for (ApplyCurseAction action : container.curses()) {
             if (!this.curses.isEmpty() && !RegistryCodecs.matches(this.curses, action.curse())) continue;

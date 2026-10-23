@@ -36,7 +36,7 @@ public record ItemPhysiqueCondition(
 
     @Override
     public boolean test(@NonNull ItemConditionContext ctx) {
-        Holder<Physique> physique = ctx.stack().get(MxtDataComponents.PHYSIQUE.get());
+        Holder<Physique> physique = ctx.stack().get(MxtDataComponents.PHYSIQUE);
         return physique != null && RegistryCodecs.matches(this.physiques, physique);
     }
 

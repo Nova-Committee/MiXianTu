@@ -42,7 +42,7 @@ public final class ForgingBindingService {
     public static List<Holder<ForgingMethod>> methods(Provider access, ItemStack stack) {
         Set<Holder<ForgingMethod>> unlocked = new LinkedHashSet<>();
         tool(access, stack).ifPresent(binding -> unlocked.addAll(binding.methods()));
-        List<Holder<ForgingMethod>> carried = stack.get(MxtDataComponents.FORGING_METHODS.get());
+        List<Holder<ForgingMethod>> carried = stack.get(MxtDataComponents.FORGING_METHODS);
         if (carried != null) unlocked.addAll(carried);
         return List.copyOf(unlocked);
     }
@@ -50,7 +50,7 @@ public final class ForgingBindingService {
     public static List<Holder<ForgingBlueprint>> blueprints(Provider access, ItemStack stack) {
         Set<Holder<ForgingBlueprint>> offered = new LinkedHashSet<>();
         blueprint(access, stack).ifPresent(binding -> offered.addAll(binding.blueprints()));
-        List<Holder<ForgingBlueprint>> carried = stack.get(MxtDataComponents.FORGING_BLUEPRINTS.get());
+        List<Holder<ForgingBlueprint>> carried = stack.get(MxtDataComponents.FORGING_BLUEPRINTS);
         if (carried != null) offered.addAll(carried);
         return List.copyOf(offered);
     }

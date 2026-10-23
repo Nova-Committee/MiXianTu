@@ -430,7 +430,7 @@ public final class CultivationProbes {
     // declaration's claimed item is a manual by matching and would carry no component at all.
     private static ItemStack techniqueBook(Holder<Technique> technique) {
         ItemStack book = MxtItems.TECHNIQUE_BOOK.toStack();
-        book.set(MxtDataComponents.TECHNIQUE.get(), technique);
+        book.set(MxtDataComponents.TECHNIQUE, technique);
         return book;
     }
 

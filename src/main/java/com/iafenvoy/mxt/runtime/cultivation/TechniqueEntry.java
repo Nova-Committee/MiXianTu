@@ -17,7 +17,7 @@ public record TechniqueEntry() implements Entry {
 
     @Override
     public boolean matches(ItemStack stack) {
-        return stack.has(MxtDataComponents.TECHNIQUE.get());
+        return stack.has(MxtDataComponents.TECHNIQUE);
     }
 
     @Override

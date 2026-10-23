@@ -107,7 +107,7 @@ public final class AlchemyFurnaceBlockEntity extends BlockEntity implements Alch
 
     @Override
     public Optional<Holder<AlchemyFurnaceDefinition>> furnaceDefinition() {
-        return Optional.ofNullable(this.furnaceItem.get(MxtDataComponents.ALCHEMY_FURNACE.get()));
+        return Optional.ofNullable(this.furnaceItem.get(MxtDataComponents.ALCHEMY_FURNACE));
     }
 
     // The loot table hands the core back, so its specification travels as a component instead of being popped here.

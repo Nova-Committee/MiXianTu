@@ -166,7 +166,7 @@ public final class QualityService {
 
     public static Optional<Holder<ItemQuality>> find(Provider access, ItemStack stack) {
         if (stack.isEmpty()) return Optional.empty();
-        return Optional.ofNullable(stack.get(MxtDataComponents.QUALITY.get()))
+        return Optional.ofNullable(stack.get(MxtDataComponents.QUALITY))
                 .or(() -> carried(stack))
                 .or(() -> ItemMatcher.find(MxtDatapackRegistries.holders(access, MxtResourceKeys.DEFAULT_QUALITY).map(Reference::value), stack).map(DefaultQuality::quality));
     }
@@ -223,18 +223,18 @@ public final class QualityService {
     }
 
     public static void set(ItemStack stack, Holder<ItemQuality> quality) {
-        stack.set(MxtDataComponents.QUALITY.get(), quality);
+        stack.set(MxtDataComponents.QUALITY, quality);
     }
 
     public static void clear(ItemStack stack) {
-        stack.remove(MxtDataComponents.QUALITY.get());
+        stack.remove(MxtDataComponents.QUALITY);
     }
 
     // Whether the stack carries the component, which is a different question from whether a tier resolves for it:
     // an item may show a definition's default without anything written on it. A forged piece does carry it, since
     // settlement stamps this same component - so clearing takes a forged tier back to the definition's default.
     public static boolean hasOverride(ItemStack stack) {
-        return stack.get(MxtDataComponents.QUALITY.get()) != null;
+        return stack.get(MxtDataComponents.QUALITY) != null;
     }
 
     // The same 1.0 the codec defaults to, so an item whose quality declares no modifier settles exactly as it did

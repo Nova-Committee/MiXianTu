@@ -118,7 +118,7 @@ public final class ItemBindingService {
     // items are that pill and owns their use limit and cooldown, so a component never adds or hides limits.
     public static PillResolution resolvePill(Provider access, ItemStack stack) {
         if (stack.isEmpty()) return PillResolution.none();
-        PillComponent component = stack.get(MxtDataComponents.PILL.get());
+        PillComponent component = stack.get(MxtDataComponents.PILL);
         Optional<Reference<PillBinding>> matched = RegistryCaches.PILL_BINDINGS.mayMatch(stack)
                 ? ItemMatcher.find(MxtDatapackRegistries.holders(access, MxtResourceKeys.PILL_BINDING), Reference::value, stack)
                 : Optional.empty();
@@ -137,7 +137,7 @@ public final class ItemBindingService {
     public static Optional<TechniqueBinding> technique(Provider access, ItemStack stack) {
         if (stack.isEmpty()) return Optional.empty();
         // A stack naming its own technique is answered by that technique, not by which table claims the item.
-        if (stack.get(MxtDataComponents.TECHNIQUE.get()) == null && !RegistryCaches.TECHNIQUE_BINDINGS.mayMatch(stack))
+        if (stack.get(MxtDataComponents.TECHNIQUE) == null && !RegistryCaches.TECHNIQUE_BINDINGS.mayMatch(stack))
             return Optional.empty();
         return technique(MxtDatapackRegistries.holders(access, MxtResourceKeys.TECHNIQUE_BINDING), stack);
     }
@@ -148,7 +148,7 @@ public final class ItemBindingService {
         Optional<TechniqueBinding> binding = technique(access, stack);
         if (binding.isEmpty()) return Optional.empty();
         TechniqueReading base = TechniqueReading.of(binding.orElseThrow().technique());
-        TechniqueReadingComponent component = stack.get(MxtDataComponents.TECHNIQUE_READING.get());
+        TechniqueReadingComponent component = stack.get(MxtDataComponents.TECHNIQUE_READING);
         return Optional.of(component == null ? base : component.applyTo(base));
     }
 
@@ -161,7 +161,7 @@ public final class ItemBindingService {
         if (claimed != null) return new ItemStack(claimed);
         Item carrier = declaration == null ? MxtItems.TECHNIQUE_BOOK.get() : declaration.carrierItem().orElse(MxtItems.TECHNIQUE_BOOK.get());
         ItemStack stack = new ItemStack(carrier);
-        stack.set(MxtDataComponents.TECHNIQUE.get(), technique);
+        stack.set(MxtDataComponents.TECHNIQUE, technique);
         return stack;
     }
 
@@ -186,7 +186,7 @@ public final class ItemBindingService {
 
     private static Optional<TechniqueBinding> technique(Stream<Reference<TechniqueBinding>> declarations, ItemStack stack) {
         if (stack.isEmpty()) return Optional.empty();
-        Holder<Technique> taught = stack.get(MxtDataComponents.TECHNIQUE.get());
+        Holder<Technique> taught = stack.get(MxtDataComponents.TECHNIQUE);
         return taught == null ? ItemMatcher.find(declarations.map(Reference::value), stack) : declarations.map(Reference::value)
                 .filter(binding -> binding.technique().equals(taught))
                 .findFirst()

@@ -173,7 +173,7 @@ public final class ArtifactService {
         if (stack.isEmpty()) return List.of();
         LinkedHashSet<Holder<Ability>> granted = new LinkedHashSet<>();
         definition(access, stack).ifPresent(holder -> granted.addAll(RegistryCodecs.resolve(holder.value().abilities(), access, MxtResourceKeys.ABILITY).toList()));
-        ItemAbilitiesComponent component = stack.getOrDefault(MxtDataComponents.ITEM_ABILITIES.get(), new ItemAbilitiesComponent(List.of()));
+        ItemAbilitiesComponent component = stack.getOrDefault(MxtDataComponents.ITEM_ABILITIES, new ItemAbilitiesComponent(List.of()));
         granted.addAll(component.abilities());
         return List.copyOf(granted);
     }

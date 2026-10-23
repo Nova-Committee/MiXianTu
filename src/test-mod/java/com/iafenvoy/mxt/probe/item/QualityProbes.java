@@ -514,7 +514,7 @@ public final class QualityProbes {
 
     private static ItemStack named(Item item, Holder<ItemQuality> quality) {
         ItemStack stack = new ItemStack(item);
-        stack.set(MxtDataComponents.QUALITY.get(), quality);
+        stack.set(MxtDataComponents.QUALITY, quality);
         return stack;
     }
 
@@ -592,7 +592,7 @@ public final class QualityProbes {
 
     private static ItemStack core(ProbeContext context) {
         ItemStack stack = MxtBlocks.ALCHEMY_FURNACE.toStack();
-        stack.set(MxtDataComponents.ALCHEMY_FURNACE.get(), spec(context));
+        stack.set(MxtDataComponents.ALCHEMY_FURNACE, spec(context));
         return stack;
     }
 
@@ -605,7 +605,7 @@ public final class QualityProbes {
     private static void grade(ProbeContext context, ItemStack stack, Identifier quality) {
         Holder<ItemQuality> holder = MxtDatapackRegistries
                 .holder(context.registries(), MxtResourceKeys.ITEM_QUALITY, quality).orElseThrow();
-        stack.set(MxtDataComponents.QUALITY.get(), holder);
+        stack.set(MxtDataComponents.QUALITY, holder);
     }
 
     private static Holder<AlchemyFurnaceDefinition> spec(ProbeContext context) {

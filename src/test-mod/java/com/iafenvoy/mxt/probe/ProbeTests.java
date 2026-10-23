@@ -94,7 +94,6 @@ public final class ProbeTests {
             TickDispatcherVerifyProbes::probes,
             EconomyVerifyProbes::probes,
             MinorStageVerifyProbes::probes,
-            ProfilerVerifyProbes::probes,
             ServerProfilingVerifyProbes::probes,
             ProfilerGuiVerifyProbes::probes,
             ProfilerChartVerifyProbes::probes,

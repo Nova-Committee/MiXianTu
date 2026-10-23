@@ -30,7 +30,7 @@ public class PillItem extends Item {
 
     @Override
     public @NonNull Component getName(@NonNull ItemStack stack) {
-        PillComponent component = stack.get(MxtDataComponents.PILL.get());
+        PillComponent component = stack.get(MxtDataComponents.PILL);
         if (component != null) {
             Holder<Pill> pill = component.pill().orElse(null);
             if (pill != null) return DefinitionText.nameOrId(pill);

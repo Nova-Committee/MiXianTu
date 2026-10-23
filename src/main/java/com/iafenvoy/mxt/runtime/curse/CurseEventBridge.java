@@ -131,6 +131,6 @@ public final class CurseEventBridge {
 
     private static List<ApplyCurseAction> carried(ItemStack stack) {
         if (stack.isEmpty()) return List.of();
-        return stack.getOrDefault(MxtDataComponents.CURSE_CONTAINER.get(), EMPTY_CONTAINER).curses();
+        return stack.getOrDefault(MxtDataComponents.CURSE_CONTAINER, EMPTY_CONTAINER).curses();
     }
 }

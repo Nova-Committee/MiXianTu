@@ -61,7 +61,7 @@ public final class ChequeTableMenu extends ApricityContainerMenu {
     public boolean checkIn(@NotNull Player player) {
         try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.ECONOMY)) {
             ItemStack blank = this.setup.chequeInput().getItem(0);
-            if (!blank.is(MxtItems.CHEQUE.get()) || blank.getOrDefault(MxtDataComponents.CHEQUE.get(), ChequeComponent.EMPTY).value() != 0L)
+            if (!blank.is(MxtItems.CHEQUE.get()) || blank.getOrDefault(MxtDataComponents.CHEQUE, ChequeComponent.EMPTY).value() != 0L)
                 return false;
             OptionalLong value = CurrencyPaymentService.collectCurrency(this.setup.currency(), player);
             if (value.isEmpty() || value.getAsLong() <= 0L || !this.setup.chequeOutput().getItem(0).isEmpty())
@@ -77,7 +77,7 @@ public final class ChequeTableMenu extends ApricityContainerMenu {
     public boolean checkOut(@NotNull Player player) {
         try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.ECONOMY)) {
             ItemStack cheque = this.setup.chequeInput().getItem(0);
-            ChequeComponent data = cheque.getOrDefault(MxtDataComponents.CHEQUE.get(), ChequeComponent.EMPTY);
+            ChequeComponent data = cheque.getOrDefault(MxtDataComponents.CHEQUE, ChequeComponent.EMPTY);
             if (!cheque.is(MxtItems.CHEQUE.get()) || data.value() <= 0L || !this.setup.currency().isEmpty())
                 return false;
             List<ItemStack> change = CurrencyPaymentService.makeChange(player.level().registryAccess(), data.value(),

@@ -40,16 +40,6 @@ public final class MiscCodecs {
         ).apply(i, Pair::of));
     }
 
-    public static Codec<Long> longRange(final long minInclusive, final long maxInclusive) {
-        final Function<Long, DataResult<Long>> checker = Codec.checkRange(minInclusive, maxInclusive);
-        return Codec.LONG.flatXmap(checker, checker);
-    }
-
-    public static <T> Codec<T> exact(Codec<T> codec, List<T> values) {
-        Function<T, DataResult<T>> checker = value -> values.contains(value) ? DataResult.success(value) : DataResult.error(() -> "Value " + value + " is not in the allowed list: " + values);
-        return codec.flatXmap(checker, checker);
-    }
-
     public static <T> Codec<List<T>> combineCodec(Codec<T> codec) {
         return Codec.either(codec, TolerantListCodec.create(codec)).xmap(x -> x.map(List::of, l -> l), l -> l.size() == 1 ? Either.left(l.getFirst()) : Either.right(l));
     }

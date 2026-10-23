@@ -101,7 +101,7 @@ public final class SpiritHerbGrowthService {
             for (ItemEntity entity : drops) {
                 ItemStack stack = entity.getItem();
                 if (!RegistryCodecs.matches(growth.drops(), BuiltInRegistries.ITEM, stack.getItem())) continue;
-                stack.set(MxtDataComponents.HERB_AGE.get(), years);
+                stack.set(MxtDataComponents.HERB_AGE, years);
                 herb.get().value().qualityFor(years).ifPresent(quality -> QualityService.set(stack, quality));
             }
             forget(level, pos);

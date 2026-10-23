@@ -241,7 +241,7 @@ public final class ForgingWorkstationService {
         }
         ItemStack output = BuiltInRegistries.ITEM.getOptional(blueprint.result()).map(ItemStack::new).orElse(ItemStack.EMPTY);
         if (output.isEmpty()) return Result.failure(Failures.DISABLED);
-        output.set(MxtDataComponents.FORGING_RESULT.get(), result.result());
+        output.set(MxtDataComponents.FORGING_RESULT, result.result());
         // The settled tier goes to the one quality component, so a forged piece is read exactly like one a pack
         // stamped or an administrator set.
         QualityService.set(output, result.quality());

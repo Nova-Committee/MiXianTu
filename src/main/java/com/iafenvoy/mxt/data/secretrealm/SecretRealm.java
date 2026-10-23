@@ -18,6 +18,7 @@ import net.minecraft.core.Holder;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.RegistryFixedCodec;
+import net.minecraft.util.ExtraCodecs;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.phys.Vec2;
 import net.minecraft.world.phys.Vec3;
@@ -59,7 +60,7 @@ public record SecretRealm(Optional<Holder<ItemQuality>> quality, SecretRealmGene
             Codec.intRange(1, MAX_INSTANCES).optionalFieldOf("max_instances", 1).forGetter(SecretRealm::maxInstances),
             Codec.intRange(1, MAX_MEMBERS).optionalFieldOf("max_members", MAX_MEMBERS).forGetter(SecretRealm::maxMembers),
             Codec.BOOL.optionalFieldOf("owned", false).forGetter(SecretRealm::owned),
-            MiscCodecs.longRange(0L, Long.MAX_VALUE).optionalFieldOf("duration_ticks", 0L).forGetter(SecretRealm::durationTicks),
+            ExtraCodecs.NON_NEGATIVE_LONG.optionalFieldOf("duration_ticks", 0L).forGetter(SecretRealm::durationTicks),
             MiscCodecs.pair(StructurePlacement.CODEC.listOf().optionalFieldOf("structures", List.of()),
                             RiftTemplate.CODEC.listOf(0, 128).optionalFieldOf("portals", List.of()))
                     .forGetter(value -> Pair.of(value.structures(), value.portals())),

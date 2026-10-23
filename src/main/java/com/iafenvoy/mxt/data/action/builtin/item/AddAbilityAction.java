@@ -31,11 +31,11 @@ public record AddAbilityAction(List<Holder<Ability>> abilities) implements ItemA
     public void execute(@NonNull ItemActionContext ctx) {
         ItemStack stack = ctx.stack();
         if (stack.isEmpty() || this.abilities.isEmpty()) return;
-        ItemAbilitiesComponent component = stack.getOrDefault(MxtDataComponents.ITEM_ABILITIES.get(),
+        ItemAbilitiesComponent component = stack.getOrDefault(MxtDataComponents.ITEM_ABILITIES,
                 new ItemAbilitiesComponent(List.of()));
         LinkedHashSet<Holder<Ability>> ids = new LinkedHashSet<>(component.abilities());
         ids.addAll(this.abilities);
-        stack.set(MxtDataComponents.ITEM_ABILITIES.get(), new ItemAbilitiesComponent(List.copyOf(ids)));
+        stack.set(MxtDataComponents.ITEM_ABILITIES, new ItemAbilitiesComponent(List.copyOf(ids)));
     }
 
     @Override

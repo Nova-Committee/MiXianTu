@@ -241,9 +241,9 @@ public final class HerbProbes {
         SpiritHerbGrowthService.harvested(level, pos, level.getBlockState(pos), drops);
 
         ok &= check(context, "herb probe: the fruit is stamped with an age",
-                drops.getFirst().getItem().get(MxtDataComponents.HERB_AGE.get()) != null, true);
+                drops.getFirst().getItem().get(MxtDataComponents.HERB_AGE) != null, true);
         ok &= check(context, "herb probe: an unclaimed drop is left alone",
-                drops.get(1).getItem().get(MxtDataComponents.HERB_AGE.get()) != null, false);
+                drops.get(1).getItem().get(MxtDataComponents.HERB_AGE) != null, false);
         // The row is the plant's, and the plant is gone.
         level.setBlockAndUpdate(pos, Blocks.AIR.defaultBlockState());
         SpiritHerbGrowthService.harvested(level, pos, Blocks.AIR.defaultBlockState(), List.of());

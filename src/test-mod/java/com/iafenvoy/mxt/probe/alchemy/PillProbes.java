@@ -473,7 +473,7 @@ public final class PillProbes {
     // Same, with the stack's own component on top: it decides what the dose does, never the counters.
     private static ItemStack dosed(Item item, PillComponent component) {
         ItemStack stack = new ItemStack(item);
-        stack.set(MxtDataComponents.PILL.get(), component);
+        stack.set(MxtDataComponents.PILL, component);
         return arm(stack);
     }
 

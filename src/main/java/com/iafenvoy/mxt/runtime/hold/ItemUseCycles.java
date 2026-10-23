@@ -334,7 +334,7 @@ public final class ItemUseCycles {
         }
 
         void attach(ItemStack next) {
-            detach();
+            this.detach();
             this.stack = new WeakReference<>(next);
             STACKS.put(next, this);
         }
