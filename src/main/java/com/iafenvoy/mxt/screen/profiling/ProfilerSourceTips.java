@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.screen.profiling;
 
-import com.iafenvoy.mxt.util.profiling.ProfilerSource;
-import com.iafenvoy.mxt.util.profiling.ServerProfiling;
+import com.iafenvoy.saturn.profiling.ProfilerSource;
+import com.iafenvoy.saturn.profiling.ServerProfiling;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 
@@ -21,7 +21,7 @@ public final class ProfilerSourceTips {
     }
 
     public static List<Component> lines(ProfilerSource source) {
-        for (ServerProfiling.Source registered : ServerProfiling.Source.values())
+        for (ServerProfiling.Source registered : ServerProfiling.Source.all())
             if (registered.id().equals(source.id())) return lines(registered);
         return List.of();
     }

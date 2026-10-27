@@ -2,8 +2,8 @@ package com.iafenvoy.mxt.data.alchemy;
 
 import com.iafenvoy.mxt.registry.MxtBlocks;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
-import com.iafenvoy.mxt.util.DefinitionText;
-import com.iafenvoy.mxt.util.TooltipText;
+import com.iafenvoy.saturn.util.DefinitionText;
+import com.iafenvoy.saturn.util.TooltipText;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.Holder;

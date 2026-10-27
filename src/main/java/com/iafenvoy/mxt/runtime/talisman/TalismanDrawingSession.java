@@ -1,9 +1,9 @@
 package com.iafenvoy.mxt.runtime.talisman;
 
-import com.iafenvoy.mxt.data.cost.Cost;
-import com.iafenvoy.mxt.data.cost.context.CostContext;
 import com.iafenvoy.mxt.recipe.TalismanDrawingRecipe;
 import com.iafenvoy.mxt.runtime.talisman.TalismanDrawingScorer.Point;
+import com.iafenvoy.saturn.data.cost.Cost;
+import com.iafenvoy.saturn.data.cost.context.CostContext;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.Container;
 import net.minecraft.world.item.ItemStack;

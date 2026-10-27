@@ -6,13 +6,14 @@ import com.iafenvoy.mxt.registry.MxtBlocks;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.registry.MxtItems;
 import com.iafenvoy.mxt.registry.MxtMenus;
+import com.iafenvoy.mxt.runtime.MxtProfilerSources;
 import com.iafenvoy.mxt.runtime.economy.CurrencyPaymentService;
 import com.iafenvoy.mxt.runtime.economy.CurrencyValueService;
 import com.iafenvoy.mxt.screen.EconomySlots.Input;
 import com.iafenvoy.mxt.screen.EconomySlots.Output;
 import com.iafenvoy.mxt.screen.aui.AuiPages;
-import com.iafenvoy.mxt.util.profiling.ProfilerScope;
-import com.iafenvoy.mxt.util.profiling.ServerProfiling;
+import com.iafenvoy.saturn.profiling.ProfilerScope;
+import com.iafenvoy.saturn.profiling.ServerProfiling;
 import com.sighs.apricityui.screen.ApricityContainerMenu;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.player.Inventory;
@@ -59,7 +60,7 @@ public final class ChequeTableMenu extends ApricityContainerMenu {
     }
 
     public boolean checkIn(@NotNull Player player) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.ECONOMY)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.ECONOMY)) {
             ItemStack blank = this.setup.chequeInput().getItem(0);
             if (!blank.is(MxtItems.CHEQUE.get()) || blank.getOrDefault(MxtDataComponents.CHEQUE, ChequeComponent.EMPTY).value() != 0L)
                 return false;
@@ -75,7 +76,7 @@ public final class ChequeTableMenu extends ApricityContainerMenu {
     }
 
     public boolean checkOut(@NotNull Player player) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.ECONOMY)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.ECONOMY)) {
             ItemStack cheque = this.setup.chequeInput().getItem(0);
             ChequeComponent data = cheque.getOrDefault(MxtDataComponents.CHEQUE, ChequeComponent.EMPTY);
             if (!cheque.is(MxtItems.CHEQUE.get()) || data.value() <= 0L || !this.setup.currency().isEmpty())

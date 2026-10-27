@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.api;
 
 import com.iafenvoy.mxt.data.creature.ContractContext;
-import com.iafenvoy.mxt.util.HolderHelper;
+import com.iafenvoy.saturn.util.HolderHelper;
 import net.minecraft.core.HolderSet;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;

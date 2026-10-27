@@ -1,10 +1,10 @@
 package com.iafenvoy.mxt.compat.kubejs.binding;
 
 import com.google.gson.JsonElement;
-import com.iafenvoy.mxt.compat.kubejs.MxtJsWarnings;
 import com.iafenvoy.mxt.compat.kubejs.MxtKubeJsApi;
-import com.iafenvoy.mxt.compat.kubejs.codec.MxtKubeJsDataCodec;
 import com.iafenvoy.mxt.data.quality.QualityRequirement;
+import com.iafenvoy.saturn.compat.kubejs.SaturnJsWarnings;
+import com.iafenvoy.saturn.compat.kubejs.codec.SaturnKubeJsDataCodec;
 import dev.latvian.mods.kubejs.typings.Info;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Entity;
@@ -57,10 +57,10 @@ public final class MxtKubeJsQualityBindings {
     @Info("Whether the stack satisfies a complete MXT tier requirement: the same shape mxt:quality writes, a quality list and/or min_quality. The floor is a ladder comparison, so it answers false across ladders.")
     public boolean satisfies(Entity entity, ItemStack stack, JsonElement requirement) {
         if (entity.level().isClientSide()) {
-            MxtJsWarnings.warnOnce("quality.client", "MxtQuality.satisfies was called from a client script; it answers false there");
+            SaturnJsWarnings.warnOnce("quality.client", "MxtQuality.satisfies was called from a client script; it answers false there");
             return false;
         }
-        QualityRequirement decoded = MxtKubeJsDataCodec.decodeCached(QualityRequirement.CODEC.codec(), requirement,
+        QualityRequirement decoded = SaturnKubeJsDataCodec.decodeCached(QualityRequirement.CODEC.codec(), requirement,
                 entity.level().registryAccess());
         return MxtKubeJsApi.satisfiesQualityRequirement(entity, stack, decoded);
     }

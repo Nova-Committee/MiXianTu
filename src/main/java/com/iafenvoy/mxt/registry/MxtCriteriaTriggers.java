@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.registry;
 
 import com.iafenvoy.mxt.MiXianTu;
-import com.iafenvoy.mxt.advancement.IdentifierCriterionTrigger;
+import com.iafenvoy.saturn.advancement.IdentifierCriterionTrigger;
 import net.minecraft.advancements.CriterionTrigger;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.neoforged.neoforge.registries.DeferredHolder;

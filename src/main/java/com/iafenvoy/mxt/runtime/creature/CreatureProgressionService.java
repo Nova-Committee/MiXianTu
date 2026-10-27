@@ -2,7 +2,7 @@ package com.iafenvoy.mxt.runtime.creature;
 
 import com.iafenvoy.mxt.attachment.CreatureSpiritAttachment;
 import com.iafenvoy.mxt.registry.MxtAttachments;
-import com.iafenvoy.mxt.runtime.ability.AbilityGrantService;
+import com.iafenvoy.saturn.runtime.ability.AbilityGrantService;
 import net.minecraft.world.entity.Mob;
 
 /**

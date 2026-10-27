@@ -1,13 +1,13 @@
 package com.iafenvoy.mxt.data.quality;
 
-import com.iafenvoy.mxt.data.condition.EntityCondition;
-import com.iafenvoy.mxt.data.cost.Cost;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.util.chain.ChainNode;
-import com.iafenvoy.mxt.util.codec.MiscCodecs;
-import com.iafenvoy.mxt.util.codec.OptionalCodecs;
-import com.iafenvoy.mxt.util.formula.NumberProvider;
-import com.iafenvoy.mxt.util.formula.number.Constant;
+import com.iafenvoy.saturn.data.condition.EntityCondition;
+import com.iafenvoy.saturn.data.cost.Cost;
+import com.iafenvoy.saturn.util.chain.ChainNode;
+import com.iafenvoy.saturn.util.codec.MiscCodecs;
+import com.iafenvoy.saturn.util.codec.OptionalCodecs;
+import com.iafenvoy.saturn.util.formula.NumberProvider;
+import com.iafenvoy.saturn.util.formula.number.Constant;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;

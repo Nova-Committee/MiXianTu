@@ -1,18 +1,22 @@
 package com.iafenvoy.mxt.probe.combat;
+import com.iafenvoy.saturn.profiling.ServerProfiling.Source;
+import com.iafenvoy.saturn.registry.SaturnResourceKeys;
+import com.iafenvoy.saturn.registry.SaturnAttachments;
+import com.iafenvoy.saturn.data.context.Context;
 
 import com.iafenvoy.mxt.attachment.TechniqueAttachment;
-import com.iafenvoy.mxt.data.ability.Ability;
+import com.iafenvoy.saturn.data.ability.Ability;
 import com.iafenvoy.mxt.data.cultivation.Element;
 import com.iafenvoy.mxt.data.cultivation.Technique;
 import com.iafenvoy.mxt.data.item.HoldBinding;
-import com.iafenvoy.mxt.event.AbilityUseEvent.Pre;
+import com.iafenvoy.saturn.event.AbilityUseEvent.Pre;
 import com.iafenvoy.mxt.probe.Probe;
 import com.iafenvoy.mxt.probe.ProbeContext;
 import com.iafenvoy.mxt.probe.ProbeDefinitions;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtItems;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.runtime.ability.AbilityService;
+import com.iafenvoy.saturn.runtime.ability.AbilityService;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationIdentityService;
 import com.iafenvoy.mxt.runtime.cultivation.TechniqueHold;
 import com.iafenvoy.mxt.runtime.damage.DamageCalculationService;
@@ -22,8 +26,8 @@ import com.iafenvoy.mxt.runtime.hold.HoldLookup;
 import com.iafenvoy.mxt.runtime.item.ItemBindingService;
 import com.iafenvoy.mxt.runtime.progression.ProgressionDamageMultiplier;
 import com.iafenvoy.mxt.testmod.MxtTestTechniqueItems;
-import com.iafenvoy.mxt.util.HolderHelper;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
+import com.iafenvoy.saturn.util.HolderHelper;
+import com.iafenvoy.saturn.util.formula.FormulaContext;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.Registries;
@@ -117,7 +121,7 @@ public final class DamageProbes {
             }
             TechniqueAttachment spirit = attacker.getData(MxtAttachments.TECHNIQUE);
             Holder<Technique> technique = context.require(MxtResourceKeys.TECHNIQUE, ProbeDefinitions.PROBE_TECHNIQUE);
-            Holder<Ability> ability = context.require(MxtResourceKeys.ABILITY, ProbeDefinitions.PROBE_ABILITY);
+            Holder<Ability> ability = context.require(SaturnResourceKeys.ABILITY, ProbeDefinitions.PROBE_ABILITY);
             spirit.addLearnedTechnique(technique);
             double entry = ProgressionDamageMultiplier.of(attacker, ability);
             spirit.techniqueLevels().set(technique, context.require(MxtResourceKeys.PROGRESSION, ProbeDefinitions.PROBE_PROGRESSION_LEVEL));
@@ -133,7 +137,7 @@ public final class DamageProbes {
             NeoForge.EVENT_BUS.addListener(listener);
             try {
                 AbilityService.useCarried(ability, attacker,
-                        attacker.getData(MxtAttachments.ABILITY_HOLDER), attacker.getData(MxtAttachments.RESOURCE_HOLDER),
+                        attacker.getData(SaturnAttachments.ABILITY_HOLDER), attacker.getData(SaturnAttachments.RESOURCE_HOLDER),
                         level.getGameTime(), formula, null);
             } finally {
                 NeoForge.EVENT_BUS.unregister(listener);
@@ -256,12 +260,12 @@ public final class DamageProbes {
             double affinityLost = affinityBefore - affinityDefender.getHealth();
             double[] castAffinity = {Double.NaN};
             Consumer<Pre> affinityListener = event ->
-                    castAffinity[0] = event.getContext().explicit(DamageCalculationService.ELEMENT_MODIFIER);
+                    castAffinity[0] = event.getContext().explicit(DamageCalculationService.DAMAGE_MULTIPLIER);
             NeoForge.EVENT_BUS.addListener(affinityListener);
             try {
-                Holder<Ability> affinityAbility = context.require(MxtResourceKeys.ABILITY, ProbeDefinitions.PROBE_AFFINITY_ABILITY);
+                Holder<Ability> affinityAbility = context.require(SaturnResourceKeys.ABILITY, ProbeDefinitions.PROBE_AFFINITY_ABILITY);
                 AbilityService.useCarried(affinityAbility, affinityAttacker,
-                        affinityAttacker.getData(MxtAttachments.ABILITY_HOLDER), affinityAttacker.getData(MxtAttachments.RESOURCE_HOLDER),
+                        affinityAttacker.getData(SaturnAttachments.ABILITY_HOLDER), affinityAttacker.getData(SaturnAttachments.RESOURCE_HOLDER),
                         level.getGameTime(), FormulaContext.of(affinityAttacker), null);
             } finally {
                 NeoForge.EVENT_BUS.unregister(affinityListener);

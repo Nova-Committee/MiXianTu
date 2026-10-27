@@ -6,8 +6,9 @@ import com.iafenvoy.mxt.item.block.AlchemyFurnaceInventoryBlock;
 import com.iafenvoy.mxt.item.block.entity.AlchemyFurnaceCasingBlockEntity;
 import com.iafenvoy.mxt.item.block.entity.AlchemyFurnaceInventoryBlockEntity;
 import com.iafenvoy.mxt.registry.MxtBlocks;
-import com.iafenvoy.mxt.util.profiling.ProfilerScope;
-import com.iafenvoy.mxt.util.profiling.ServerProfiling;
+import com.iafenvoy.mxt.runtime.MxtProfilerSources;
+import com.iafenvoy.saturn.profiling.ProfilerScope;
+import com.iafenvoy.saturn.profiling.ServerProfiling;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
@@ -86,7 +87,7 @@ public final class AlchemyFurnaceStructure {
     }
 
     public static Status inspect(Level level, BlockPos controller, Direction facing) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.ALCHEMY)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.ALCHEMY)) {
             List<BlockPos> missing = new ArrayList<>();
             List<BlockPos> unloaded = new ArrayList<>();
             List<BlockPos> conflicts = new ArrayList<>();
@@ -138,7 +139,7 @@ public final class AlchemyFurnaceStructure {
     }
 
     public static void form(ServerLevel level, BlockPos controller, Direction facing, boolean lit) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.ALCHEMY)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.ALCHEMY)) {
             for (int index = 0; index < 27; index++) {
                 if (!required(index) || index == CONTROLLER_INDEX) continue;
                 BlockPos pos = world(controller, facing, index);
@@ -170,7 +171,7 @@ public final class AlchemyFurnaceStructure {
      * Reverts parts this controller claimed. Does not drop them or clear their inventories.
      */
     public static void release(ServerLevel level, BlockPos controller, Direction facing) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.ALCHEMY)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.ALCHEMY)) {
             for (int index = 0; index < 27; index++) {
                 if (!required(index) || index == CONTROLLER_INDEX) continue;
                 BlockPos pos = world(controller, facing, index);

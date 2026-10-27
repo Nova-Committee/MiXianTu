@@ -1,9 +1,9 @@
 package com.iafenvoy.mxt.data.forging;
 
-import com.iafenvoy.mxt.data.IconReference;
-import com.iafenvoy.mxt.data.condition.EntityCondition;
-import com.iafenvoy.mxt.data.cost.Cost;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.saturn.data.IconReference;
+import com.iafenvoy.saturn.data.condition.EntityCondition;
+import com.iafenvoy.saturn.data.cost.Cost;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;

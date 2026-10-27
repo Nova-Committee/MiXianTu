@@ -1,8 +1,8 @@
 package com.iafenvoy.mxt.data.aura;
 
-import com.iafenvoy.mxt.util.HolderHelper;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
-import com.iafenvoy.mxt.util.formula.NumberProvider;
+import com.iafenvoy.saturn.util.HolderHelper;
+import com.iafenvoy.saturn.util.formula.FormulaContext;
+import com.iafenvoy.saturn.util.formula.NumberProvider;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;

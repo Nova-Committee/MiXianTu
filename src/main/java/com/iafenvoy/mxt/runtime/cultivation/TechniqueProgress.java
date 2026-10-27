@@ -1,13 +1,13 @@
 package com.iafenvoy.mxt.runtime.cultivation;
 
-import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.attachment.TechniqueAttachment;
 import com.iafenvoy.mxt.data.cultivation.Technique;
 import com.iafenvoy.mxt.data.progression.Progression;
 import com.iafenvoy.mxt.data.progression.ProgressionHolder;
-import com.iafenvoy.mxt.data.resource.Resource;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
-import com.iafenvoy.mxt.util.formula.NumberProvider;
+import com.iafenvoy.saturn.attachment.ResourceHolderAttachment;
+import com.iafenvoy.saturn.data.resource.Resource;
+import com.iafenvoy.saturn.util.formula.FormulaContext;
+import com.iafenvoy.saturn.util.formula.NumberProvider;
 import net.minecraft.core.Holder;
 import org.jetbrains.annotations.Nullable;
 

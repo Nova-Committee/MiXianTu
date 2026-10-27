@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.data.formation;
 
 import com.iafenvoy.mxt.registry.MxtRegistries;
-import com.iafenvoy.mxt.util.codec.MiscCodecs;
+import com.iafenvoy.saturn.util.codec.MiscCodecs;
 import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;

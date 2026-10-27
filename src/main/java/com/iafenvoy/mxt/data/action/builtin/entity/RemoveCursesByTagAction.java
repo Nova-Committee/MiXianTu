@@ -1,12 +1,12 @@
 package com.iafenvoy.mxt.data.action.builtin.entity;
 
-import com.iafenvoy.mxt.data.action.EntityAction;
-import com.iafenvoy.mxt.data.context.action.EntityActionContext;
 import com.iafenvoy.mxt.data.curse.Curse;
 import com.iafenvoy.mxt.event.CurseRemoveEvent.Reason;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.curse.CurseService;
+import com.iafenvoy.saturn.data.action.EntityAction;
+import com.iafenvoy.saturn.data.context.action.EntityActionContext;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;

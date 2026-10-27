@@ -1,16 +1,16 @@
 package com.iafenvoy.mxt.recipe;
 
-import com.iafenvoy.mxt.data.action.BlockAction;
-import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.alchemy.MedicinalProperty;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.quality.QualityRequirement;
 import com.iafenvoy.mxt.registry.MxtRecipeSerializers;
 import com.iafenvoy.mxt.registry.MxtRecipeTypes;
 import com.iafenvoy.mxt.runtime.alchemy.AlchemyResolver;
-import com.iafenvoy.mxt.util.codec.MiscCodecs;
-import com.iafenvoy.mxt.util.formula.NumberProvider;
-import com.iafenvoy.mxt.util.formula.number.Constant;
+import com.iafenvoy.saturn.data.action.BlockAction;
+import com.iafenvoy.saturn.data.action.EntityAction;
+import com.iafenvoy.saturn.util.codec.MiscCodecs;
+import com.iafenvoy.saturn.util.formula.NumberProvider;
+import com.iafenvoy.saturn.util.formula.number.Constant;
 import com.mojang.datafixers.util.Pair;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;

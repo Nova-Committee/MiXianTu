@@ -7,7 +7,7 @@ import com.iafenvoy.mxt.data.forging.ToolBinding;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.util.matcher.ItemMatcher;
+import com.iafenvoy.saturn.util.matcher.ItemMatcher;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
 import net.minecraft.core.HolderLookup.Provider;

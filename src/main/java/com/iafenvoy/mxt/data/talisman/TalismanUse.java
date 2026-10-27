@@ -1,6 +1,6 @@
 package com.iafenvoy.mxt.data.talisman;
 
-import com.iafenvoy.mxt.util.formula.FormulaContext;
+import com.iafenvoy.saturn.util.formula.FormulaContext;
 import net.minecraft.core.Holder;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.Vec3;

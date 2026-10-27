@@ -1,20 +1,21 @@
 package com.iafenvoy.mxt.data.cultivation;
 
-import com.iafenvoy.mxt.data.AttributeEntry;
-import com.iafenvoy.mxt.data.ParticleEffect;
 import com.iafenvoy.mxt.data.Tribulation;
-import com.iafenvoy.mxt.data.ability.Ability;
-import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.aura.Aura;
-import com.iafenvoy.mxt.data.condition.EntityCondition;
-import com.iafenvoy.mxt.data.cost.Cost;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.util.HolderHelper;
-import com.iafenvoy.mxt.util.chain.ChainNode;
-import com.iafenvoy.mxt.util.codec.MiscCodecs;
-import com.iafenvoy.mxt.util.codec.RegistryCodecs;
-import com.iafenvoy.mxt.util.formula.NumberProvider;
-import com.iafenvoy.mxt.util.formula.number.Constant;
+import com.iafenvoy.saturn.data.AttributeEntry;
+import com.iafenvoy.saturn.data.ParticleEffect;
+import com.iafenvoy.saturn.data.ability.Ability;
+import com.iafenvoy.saturn.data.action.EntityAction;
+import com.iafenvoy.saturn.data.condition.EntityCondition;
+import com.iafenvoy.saturn.data.cost.Cost;
+import com.iafenvoy.saturn.registry.SaturnResourceKeys;
+import com.iafenvoy.saturn.util.HolderHelper;
+import com.iafenvoy.saturn.util.chain.ChainNode;
+import com.iafenvoy.saturn.util.codec.MiscCodecs;
+import com.iafenvoy.saturn.util.codec.RegistryCodecs;
+import com.iafenvoy.saturn.util.formula.NumberProvider;
+import com.iafenvoy.saturn.util.formula.number.Constant;
 import com.mojang.datafixers.util.Either;
 import com.mojang.datafixers.util.Pair;
 import com.mojang.serialization.Codec;
@@ -64,7 +65,7 @@ public record RealmStage(Holder<Aura> aura, NumberProvider auraShareWeight,
                     .forGetter(stage -> Pair.of(stage.passiveModifiers(), stage.lifespan())),
             Cost.LIST_CODEC.optionalFieldOf("costs", List.of()).forGetter(RealmStage::breakthroughCosts),
             MiscCodecs.pair(
-                            RegistryCodecs.holderOrTagList(MxtResourceKeys.ABILITY).optionalFieldOf("ability_requirements", List.of()),
+                            RegistryCodecs.holderOrTagList(SaturnResourceKeys.ABILITY).optionalFieldOf("ability_requirements", List.of()),
                             MinorStageAbilities.CODEC.listOf().optionalFieldOf("minor_stage_abilities", List.of()))
                     .forGetter(stage -> Pair.of(stage.abilityRequirements(), stage.minorStageAbilities())),
             MiscCodecs.pair(
@@ -90,7 +91,7 @@ public record RealmStage(Holder<Aura> aura, NumberProvider auraShareWeight,
     public record MinorStageAbilities(int stage, List<Either<Holder<Ability>, TagKey<Ability>>> abilities) {
         public static final Codec<MinorStageAbilities> CODEC = RecordCodecBuilder.create(i -> i.group(
                 Codec.INT.fieldOf("stage").forGetter(MinorStageAbilities::stage),
-                RegistryCodecs.holderOrTagList(MxtResourceKeys.ABILITY).optionalFieldOf("ability", List.of()).forGetter(MinorStageAbilities::abilities)
+                RegistryCodecs.holderOrTagList(SaturnResourceKeys.ABILITY).optionalFieldOf("ability", List.of()).forGetter(MinorStageAbilities::abilities)
         ).apply(i, MinorStageAbilities::new));
     }
 

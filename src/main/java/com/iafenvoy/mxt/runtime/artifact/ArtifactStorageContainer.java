@@ -1,6 +1,6 @@
 package com.iafenvoy.mxt.runtime.artifact;
 
-import com.iafenvoy.mxt.data.ability.Ability;
+import com.iafenvoy.saturn.data.ability.Ability;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.server.level.ServerPlayer;

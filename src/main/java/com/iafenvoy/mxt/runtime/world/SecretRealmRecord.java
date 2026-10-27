@@ -2,7 +2,7 @@ package com.iafenvoy.mxt.runtime.world;
 
 import com.iafenvoy.mxt.data.secretrealm.SecretRealm;
 import com.iafenvoy.mxt.data.secretrealm.builtin.ExistingGeneration;
-import com.iafenvoy.mxt.util.codec.OptionalCodecs;
+import com.iafenvoy.saturn.util.codec.OptionalCodecs;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;

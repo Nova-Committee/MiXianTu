@@ -3,7 +3,7 @@ package com.iafenvoy.mxt.event;
 import com.iafenvoy.mxt.attachment.CurseHolderAttachment;
 import com.iafenvoy.mxt.data.curse.Curse;
 import com.iafenvoy.mxt.runtime.curse.CurseInstance;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
+import com.iafenvoy.saturn.util.formula.FormulaContext;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
 import net.neoforged.bus.api.Event;

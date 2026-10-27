@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.registry;
 
 import com.iafenvoy.mxt.data.Tribulation;
-import com.iafenvoy.mxt.data.ability.Ability;
+import com.iafenvoy.mxt.data.ability.AbilityAffinity;
 import com.iafenvoy.mxt.data.alchemy.*;
 import com.iafenvoy.mxt.data.artifact.Artifact;
 import com.iafenvoy.mxt.data.aura.Aura;
@@ -23,11 +23,9 @@ import com.iafenvoy.mxt.data.item.*;
 import com.iafenvoy.mxt.data.progression.Progression;
 import com.iafenvoy.mxt.data.quality.DefaultQuality;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
-import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.data.rift.RiftPreset;
 import com.iafenvoy.mxt.data.secretrealm.SecretRealm;
 import com.iafenvoy.mxt.data.talisman.Talisman;
-import com.iafenvoy.mxt.data.trigger.TriggerRule;
 import com.mojang.serialization.Codec;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
@@ -56,14 +54,12 @@ public final class MxtDatapackRegistries {
 
     @SubscribeEvent
     public static void newDatapackRegistries(NewRegistry event) {
-        register(event, MxtResourceKeys.RESOURCE, Resource.DIRECT_CODEC);
         register(event, MxtResourceKeys.AURA, Aura.DIRECT_CODEC);
         register(event, MxtResourceKeys.REALM_STAGE, RealmStage.DIRECT_CODEC);
         register(event, MxtResourceKeys.ELEMENT, Element.DIRECT_CODEC);
         register(event, MxtResourceKeys.ELEMENT_REACTION, ElementReaction.DIRECT_CODEC);
         register(event, MxtResourceKeys.SPIRIT_ROOT, SpiritRoot.DIRECT_CODEC);
         register(event, MxtResourceKeys.PHYSIQUE, Physique.DIRECT_CODEC);
-        register(event, MxtResourceKeys.ABILITY, Ability.DIRECT_CODEC);
         register(event, MxtResourceKeys.CURSE, Curse.DIRECT_CODEC);
         register(event, MxtResourceKeys.FORGING_METHOD, ForgingMethod.DIRECT_CODEC);
         register(event, MxtResourceKeys.FORGING_BLUEPRINT, ForgingBlueprint.DIRECT_CODEC);
@@ -87,19 +83,18 @@ public final class MxtDatapackRegistries {
         register(event, MxtResourceKeys.ITEM_AURA, ItemAura.DIRECT_CODEC);
         register(event, MxtResourceKeys.ITEM_QUALITY, ItemQuality.DIRECT_CODEC);
         register(event, MxtResourceKeys.DEFAULT_QUALITY, DefaultQuality.DIRECT_CODEC);
-        register(event, MxtResourceKeys.TRIGGER, TriggerRule.DIRECT_CODEC);
         register(event, MxtResourceKeys.TALISMAN, Talisman.DIRECT_CODEC);
         register(event, MxtResourceKeys.CREATURE_PROFILE, CreatureProfile.DIRECT_CODEC);
         register(event, MxtResourceKeys.CONTRACT_TYPE, ContractType.DIRECT_CODEC);
         register(event, MxtResourceKeys.SECRET_REALM, SecretRealm.DIRECT_CODEC);
         register(event, MxtResourceKeys.RIFT, RiftPreset.DIRECT_CODEC);
+        register(event, MxtResourceKeys.ABILITY_AFFINITY, AbilityAffinity.DIRECT_CODEC);
 
         register(event, MxtResourceKeys.BLOCK_AURA, BlockAura.CODEC);
         register(event, MxtResourceKeys.CURRENCY, CurrencyValue.CODEC);
         register(event, MxtResourceKeys.ITEM_BINDING, ItemBinding.CODEC);
         register(event, MxtResourceKeys.WEAPON_BINDING, WeaponBinding.CODEC);
         register(event, MxtResourceKeys.TECHNIQUE_BINDING, TechniqueBinding.CODEC);
-        register(event, MxtResourceKeys.INCOMPLETE, IncompleteMarker.CODEC);
     }
 
     private static <T> void register(NewRegistry event, ResourceKey<Registry<T>> key, Codec<T> codec) {

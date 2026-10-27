@@ -1,10 +1,10 @@
 package com.iafenvoy.mxt.data.progression;
 
-import com.iafenvoy.mxt.data.ability.Ability;
-import com.iafenvoy.mxt.data.action.EntityAction;
-import com.iafenvoy.mxt.data.condition.EntityCondition;
-import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.util.codec.RegistryCodecs;
+import com.iafenvoy.saturn.data.ability.Ability;
+import com.iafenvoy.saturn.data.action.EntityAction;
+import com.iafenvoy.saturn.data.condition.EntityCondition;
+import com.iafenvoy.saturn.registry.SaturnResourceKeys;
+import com.iafenvoy.saturn.util.codec.RegistryCodecs;
 import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -22,7 +22,7 @@ public record ProgressionConfig(EntityCondition condition, List<Either<Holder<Ab
                                 EntityAction action) {
     public static final Codec<ProgressionConfig> CODEC = RecordCodecBuilder.create(i -> i.group(
             EntityCondition.CODEC.fieldOf("condition").forGetter(ProgressionConfig::condition),
-            RegistryCodecs.holderOrTagList(MxtResourceKeys.ABILITY).optionalFieldOf("ability", List.of()).forGetter(ProgressionConfig::abilities),
+            RegistryCodecs.holderOrTagList(SaturnResourceKeys.ABILITY).optionalFieldOf("ability", List.of()).forGetter(ProgressionConfig::abilities),
             EntityAction.optionalCodec("action").forGetter(ProgressionConfig::action)
     ).apply(i, ProgressionConfig::new));
 }

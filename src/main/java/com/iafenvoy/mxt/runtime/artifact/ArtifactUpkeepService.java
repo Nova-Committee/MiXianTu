@@ -1,14 +1,15 @@
 package com.iafenvoy.mxt.runtime.artifact;
 
 import com.iafenvoy.mxt.compat.CuriosIntegration;
-import com.iafenvoy.mxt.data.ability.type.UpkeepAbilityType;
-import com.iafenvoy.mxt.data.cost.Cost;
-import com.iafenvoy.mxt.data.cost.CostPayment;
-import com.iafenvoy.mxt.data.cost.context.CostContext;
-import com.iafenvoy.mxt.data.cost.context.CostOrigins;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
-import com.iafenvoy.mxt.util.profiling.ProfilerScope;
-import com.iafenvoy.mxt.util.profiling.ServerProfiling;
+import com.iafenvoy.mxt.runtime.MxtProfilerSources;
+import com.iafenvoy.saturn.data.ability.type.UpkeepAbilityType;
+import com.iafenvoy.saturn.data.cost.Cost;
+import com.iafenvoy.saturn.data.cost.CostPayment;
+import com.iafenvoy.saturn.data.cost.context.CostContext;
+import com.iafenvoy.saturn.data.cost.context.CostOrigins;
+import com.iafenvoy.saturn.profiling.ProfilerScope;
+import com.iafenvoy.saturn.profiling.ServerProfiling;
+import com.iafenvoy.saturn.util.formula.FormulaContext;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
@@ -39,7 +40,7 @@ public final class ArtifactUpkeepService {
 
     @SubscribeEvent
     public static void onServerTick(ServerTickEvent.Post event) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.ARTIFACT)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.ARTIFACT)) {
             for (ServerPlayer player : event.getServer().getPlayerList().getPlayers()) {
                 long gameTime = player.level().getGameTime();
                 for (ItemStack stack : carried(player)) upkeep(player, stack, gameTime);

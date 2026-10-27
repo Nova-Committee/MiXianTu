@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.data.alchemy;
 
-import com.iafenvoy.mxt.util.MiscUtil;
-import com.iafenvoy.mxt.util.codec.RegistryCodecs;
+import com.iafenvoy.saturn.util.MiscUtil;
+import com.iafenvoy.saturn.util.codec.RegistryCodecs;
 import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;

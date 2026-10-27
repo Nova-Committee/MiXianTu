@@ -3,7 +3,7 @@ package com.iafenvoy.mxt.command.server;
 import com.iafenvoy.mxt.command.ServerCommandManager;
 import com.iafenvoy.mxt.config.MxtServerConfig;
 import com.iafenvoy.mxt.runtime.cultivation.LifeSpanService;
-import com.iafenvoy.mxt.runtime.resulting.Result;
+import com.iafenvoy.saturn.runtime.resulting.Result;
 import com.mojang.brigadier.arguments.LongArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;

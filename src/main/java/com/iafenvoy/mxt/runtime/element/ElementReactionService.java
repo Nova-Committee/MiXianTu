@@ -5,11 +5,12 @@ import com.iafenvoy.mxt.data.cultivation.Element;
 import com.iafenvoy.mxt.data.cultivation.ElementReaction;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.cache.RegistryCaches;
-import com.iafenvoy.mxt.util.MiscUtil;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
-import com.iafenvoy.mxt.util.formula.NumberProvider;
-import com.iafenvoy.mxt.util.profiling.ProfilerScope;
-import com.iafenvoy.mxt.util.profiling.ServerProfiling;
+import com.iafenvoy.mxt.runtime.MxtProfilerSources;
+import com.iafenvoy.saturn.profiling.ProfilerScope;
+import com.iafenvoy.saturn.profiling.ServerProfiling;
+import com.iafenvoy.saturn.util.MiscUtil;
+import com.iafenvoy.saturn.util.formula.FormulaContext;
+import com.iafenvoy.saturn.util.formula.NumberProvider;
 import net.minecraft.core.Holder;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
@@ -43,7 +44,7 @@ public final class ElementReactionService {
     // A negative amount takes away. Zero and non-finite are silent no-ops: applying an element is not a
     // transaction that can fail.
     public static double apply(Entity entity, Holder<Element> element, double amount, FormulaContext context) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.COMBAT)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.COMBAT)) {
             if (!(entity.level() instanceof ServerLevel)) return 0.0D;
             if (!Double.isFinite(amount) || amount == 0.0D) return 0.0D;
             ElementAttachment attachment = entity.getData(MxtAttachments.ELEMENT_ATTACHMENT);
@@ -56,7 +57,7 @@ public final class ElementReactionService {
     // An element that writes nothing builds up nothing, which keeps a pack's elements pure relations until it
     // asks for more. This attaches whatever it is handed; which strikes reach it is the pipeline's decision.
     public static void applyFromStrike(LivingEntity target, Set<Holder<Element>> strike, FormulaContext context) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.COMBAT)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.COMBAT)) {
             applyFromStrike(target, strike, context, 1.0D);
         }
     }
@@ -64,7 +65,7 @@ public final class ElementReactionService {
     // Scaled first: a carrier whose gear resists buildup simply receives less and needs more strikes before a
     // reaction answers. 1.0 is "nothing resists"; a non-finite or negative multiplier contributes nothing.
     public static void applyFromStrike(LivingEntity target, Set<Holder<Element>> strike, FormulaContext context, double multiplier) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.COMBAT)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.COMBAT)) {
             Map<Holder<Element>, Double> amounts = new LinkedHashMap<>();
             for (Holder<Element> element : strike) amounts.put(element, element.value().damageAttachment());
             applyFromStrike(target, amounts, context, multiplier);
@@ -74,7 +75,7 @@ public final class ElementReactionService {
     // For a caller that already knows what each element leaves: a damage type's claim may carry a number of its
     // own, so a lava bath and a fireball can be the same element and still build up at different rates.
     public static void applyFromStrike(LivingEntity target, Map<Holder<Element>, Double> amounts, FormulaContext context, double multiplier) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.COMBAT)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.COMBAT)) {
             if (MiscUtil.positive(multiplier) <= 0.0D) return;
             amounts.forEach((element, amount) -> {
                 double scaled = amount * multiplier;
@@ -104,7 +105,7 @@ public final class ElementReactionService {
     // An application made while this body is already part way through a chain does not start a chain of its own:
     // the amount lands and the running chain answers it, which is what makes MAX_CHAIN bound the whole rule.
     public static int trigger(Entity entity, FormulaContext context) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.COMBAT)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.COMBAT)) {
             if (!(entity.level() instanceof ServerLevel)) return 0;
             if (!IN_CHAIN.get().add(entity)) return 0;
             try {
@@ -134,7 +135,7 @@ public final class ElementReactionService {
     // demand that was unmet stays unmet.
     @SubscribeEvent
     public static void onEntityTick(Post event) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.COMBAT)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.COMBAT)) {
             Entity entity = event.getEntity();
             if (entity.level().isClientSide()) return;
             ElementAttachment attachment = entity.getExistingData(MxtAttachments.ELEMENT_ATTACHMENT).orElse(null);

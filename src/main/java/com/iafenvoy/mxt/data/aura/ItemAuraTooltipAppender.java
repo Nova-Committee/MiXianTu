@@ -1,8 +1,8 @@
 package com.iafenvoy.mxt.data.aura;
 
 import com.iafenvoy.mxt.runtime.cultivation.ItemAuraService;
-import com.iafenvoy.mxt.util.TooltipText;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
+import com.iafenvoy.saturn.util.TooltipText;
+import com.iafenvoy.saturn.util.formula.FormulaContext;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.network.chat.Component;

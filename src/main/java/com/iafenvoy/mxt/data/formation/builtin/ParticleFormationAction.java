@@ -7,7 +7,7 @@ import com.iafenvoy.mxt.data.formation.FormationShape;
 import com.iafenvoy.mxt.particle.FormationParticleOptions;
 import com.iafenvoy.mxt.runtime.formation.FormationActionContext;
 import com.iafenvoy.mxt.runtime.formation.FormationShapeDisplay;
-import com.iafenvoy.mxt.util.codec.OptionalCodecs;
+import com.iafenvoy.saturn.util.codec.OptionalCodecs;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;

@@ -1,6 +1,6 @@
 package com.iafenvoy.mxt.data.progression;
 
-import com.iafenvoy.mxt.data.resource.Resource;
+import com.iafenvoy.saturn.data.resource.Resource;
 import net.minecraft.core.Holder;
 
 import java.util.Map;

@@ -4,13 +4,14 @@ import com.iafenvoy.mxt.data.creature.CreatureProfile;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.runtime.ability.AbilityGrantService;
+import com.iafenvoy.mxt.runtime.MxtProfilerSources;
 import com.iafenvoy.mxt.runtime.world.AuraResult;
 import com.iafenvoy.mxt.runtime.world.AuraService;
-import com.iafenvoy.mxt.util.codec.RegistryCodecs;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
-import com.iafenvoy.mxt.util.profiling.ProfilerScope;
-import com.iafenvoy.mxt.util.profiling.ServerProfiling;
+import com.iafenvoy.saturn.profiling.ProfilerScope;
+import com.iafenvoy.saturn.profiling.ServerProfiling;
+import com.iafenvoy.saturn.runtime.ability.AbilityGrantService;
+import com.iafenvoy.saturn.util.codec.RegistryCodecs;
+import com.iafenvoy.saturn.util.formula.FormulaContext;
 import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
@@ -37,7 +38,7 @@ public final class CreatureProfileService {
     }
 
     public static boolean apply(Mob creature, Identifier id, CreatureProfile definition, FormulaContext context) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.CREATURE)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.CREATURE)) {
             if (!definition.condition().test(creature, context))
                 return false;
             AuraResult aura = AuraService.getPositionAura(creature.level(), creature.blockPosition());
@@ -76,7 +77,7 @@ public final class CreatureProfileService {
     }
 
     public static boolean applySelected(Mob creature) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.CREATURE)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.CREATURE)) {
             if (creature.getData(MxtAttachments.CREATURE_SPIRIT).profile().isPresent()) return false;
             Identifier id = select(creature).orElse(null);
             return id != null && MxtDatapackRegistries.get(creature.level().registryAccess(), MxtResourceKeys.CREATURE_PROFILE, id).map(definition -> apply(creature, id, definition, FormulaContext.of(creature))).orElse(false);

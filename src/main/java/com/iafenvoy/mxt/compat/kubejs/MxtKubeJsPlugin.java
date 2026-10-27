@@ -13,14 +13,17 @@ import com.iafenvoy.mxt.event.FormationEvent.Deactivate;
 import com.iafenvoy.mxt.event.FormationEvent.TickEffects;
 import com.iafenvoy.mxt.event.FormationEvent.UpkeepFailed;
 import com.iafenvoy.mxt.event.FriendEvent.Relation;
-import com.iafenvoy.mxt.event.ResourceConsumeEvent.Post;
-import com.iafenvoy.mxt.event.ResourceConsumeEvent.Pre;
 import com.iafenvoy.mxt.event.SecretRealmEvent.*;
 import com.iafenvoy.mxt.event.SoulEvent.ReclaimPost;
 import com.iafenvoy.mxt.event.SoulEvent.ReclaimPre;
 import com.iafenvoy.mxt.event.SoulEvent.TransferPost;
 import com.iafenvoy.mxt.event.SoulEvent.TransferPre;
 import com.iafenvoy.mxt.event.TribulationEvent.*;
+import com.iafenvoy.saturn.compat.kubejs.binding.*;
+import com.iafenvoy.saturn.event.AbilityTriggeredEvent;
+import com.iafenvoy.saturn.event.AbilityUseEvent;
+import com.iafenvoy.saturn.event.ResourceConsumeEvent.Post;
+import com.iafenvoy.saturn.event.ResourceConsumeEvent.Pre;
 import dev.latvian.mods.kubejs.event.EventGroupRegistry;
 import dev.latvian.mods.kubejs.plugin.KubeJSPlugin;
 import dev.latvian.mods.kubejs.script.BindingRegistry;
@@ -110,14 +113,14 @@ public final class MxtKubeJsPlugin implements KubeJSPlugin {
 
     @Override
     public void registerBindings(BindingRegistry registry) {
-        registry.add("MxtActions", new MxtKubeJsActionBindings());
-        registry.add("MxtConditions", new MxtKubeJsConditionBindings());
-        registry.add("MxtValues", new MxtKubeJsValueBindings());
-        registry.add("MxtCosts", new MxtKubeJsCostBindings());
+        registry.add("MxtActions", new SaturnKubeJsActionBindings());
+        registry.add("MxtConditions", new SaturnKubeJsConditionBindings());
+        registry.add("MxtValues", new SaturnKubeJsValueBindings());
+        registry.add("MxtCosts", new SaturnKubeJsCostBindings());
         registry.add("MxtAbilities", new MxtKubeJsAbilityBindings());
         registry.add("MxtCultivation", new MxtKubeJsCultivationBindings());
         registry.add("MxtCurses", new MxtKubeJsCurseBindings());
-        registry.add("MxtResources", new MxtKubeJsResourceBindings());
+        registry.add("MxtResources", new SaturnKubeJsResourceBindings());
         registry.add("MxtAura", new MxtKubeJsAuraBindings());
         registry.add("MxtElements", new MxtKubeJsElementBindings());
         registry.add("MxtSpiritRoots", new MxtKubeJsSpiritRootBindings());

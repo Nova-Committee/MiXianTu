@@ -1,12 +1,9 @@
 package com.iafenvoy.mxt.screen.information;
 
 import com.iafenvoy.mxt.MiXianTu;
-import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.attachment.TechniqueAttachment;
 import com.iafenvoy.mxt.config.MxtClientConfig;
-import com.iafenvoy.mxt.data.IconReference;
 import com.iafenvoy.mxt.data.progression.Progression;
-import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.cultivation.TechniqueProgress;
 import com.iafenvoy.mxt.runtime.cultivation.TechniqueProgress.Entry;
@@ -17,9 +14,13 @@ import com.iafenvoy.mxt.screen.aui.AuiScrollList.Cell;
 import com.iafenvoy.mxt.screen.information.InformationCollector.InformationEntry;
 import com.iafenvoy.mxt.screen.information.InformationHelper.Columns;
 import com.iafenvoy.mxt.screen.information.InformationManager.Side;
-import com.iafenvoy.mxt.util.DefinitionText;
-import com.iafenvoy.mxt.util.HolderHelper;
-import com.iafenvoy.mxt.util.formula.FormulaContexts;
+import com.iafenvoy.saturn.attachment.ResourceHolderAttachment;
+import com.iafenvoy.saturn.data.IconReference;
+import com.iafenvoy.saturn.data.resource.Resource;
+import com.iafenvoy.saturn.registry.SaturnAttachments;
+import com.iafenvoy.saturn.util.DefinitionText;
+import com.iafenvoy.saturn.util.HolderHelper;
+import com.iafenvoy.saturn.util.formula.FormulaContexts;
 import com.sighs.apricityui.element.Item;
 import com.sighs.apricityui.init.Document;
 import com.sighs.apricityui.init.Element;
@@ -247,7 +248,7 @@ public final class InformationPanelScreen extends AuiScreen {
         AuiScrollList<TechniqueRow> list = this.techniques;
         if (list == null || this.minecraft.player == null) return;
         TechniqueAttachment spirit = this.minecraft.player.getData(MxtAttachments.TECHNIQUE);
-        ResourceHolderAttachment resources = this.minecraft.player.getData(MxtAttachments.RESOURCE_HOLDER);
+        ResourceHolderAttachment resources = this.minecraft.player.getData(SaturnAttachments.RESOURCE_HOLDER);
         Mode mode = MxtClientConfig.INSTANCE.techniques.progressMode.getValue();
         List<Entry> rows = TechniqueProgress.rows(spirit, resources,
                 FormulaContexts.forEntity(this.minecraft.player));

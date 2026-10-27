@@ -1,4 +1,6 @@
 package com.iafenvoy.mxt.probe;
+import com.iafenvoy.saturn.data.ability.Ability;
+import com.iafenvoy.saturn.util.chain.Chain;
 
 import com.iafenvoy.mxt.testmod.MxtTestMod;
 import net.minecraft.resources.Identifier;

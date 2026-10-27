@@ -1,9 +1,10 @@
 package com.iafenvoy.mxt.runtime.economy;
 
 import com.iafenvoy.mxt.MiXianTu;
+import com.iafenvoy.mxt.runtime.MxtProfilerSources;
 import com.iafenvoy.mxt.screen.menu.PlayerTradeMenu;
-import com.iafenvoy.mxt.util.profiling.ProfilerScope;
-import com.iafenvoy.mxt.util.profiling.ServerProfiling;
+import com.iafenvoy.saturn.profiling.ProfilerScope;
+import com.iafenvoy.saturn.profiling.ServerProfiling;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.ComponentSerialization;
@@ -64,7 +65,7 @@ public final class PlayerTradeService {
     }
 
     public static RequestResult request(ServerPlayer requester, ServerPlayer target) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.ECONOMY)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.ECONOMY)) {
             if (requester.distanceToSqr(target) > 25.0D) return RequestResult.TOO_FAR;
             if (requester == target) {
                 if (!allowsSelfTrade()) return RequestResult.SELF;
@@ -90,7 +91,7 @@ public final class PlayerTradeService {
     }
 
     public static void handleAction(ServerPlayer player, PlayerTradeAction action) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.ECONOMY)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.ECONOMY)) {
             Session session = SESSIONS.get(player.getUUID());
             if (session == null) return;
             Side side = session.side(player);
@@ -108,7 +109,7 @@ public final class PlayerTradeService {
     // connected, which lazy expiry cannot observe.
     @SubscribeEvent
     public static void onLevelTick(Post event) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.ECONOMY)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.ECONOMY)) {
             if (!(event.getLevel() instanceof ServerLevel level)) return;
             if (level.getGameTime() % STALE_CHECK_INTERVAL_TICKS != 0L) return;
             for (Session session : new LinkedHashSet<>(SESSIONS.values())) {
@@ -145,7 +146,7 @@ public final class PlayerTradeService {
     // A menu that goes away on its own - the vanilla close packet, a replaced menu, a dimension change - ends the
     // session too: the custom CLOSE is a UI intent, never the only way out.
     public static void onMenuClosed(ServerPlayer player, PlayerTradeMenu menu) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.ECONOMY)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.ECONOMY)) {
             Session session = SESSIONS.get(player.getUUID());
             if (session == null) return;
             Side side = session.side(player);
@@ -166,7 +167,7 @@ public final class PlayerTradeService {
     // Either offer container changed. Both sides' confirmations cover both offers, so a change on one side has to be
     // able to clear the other side's too - which is why this is a session call and not a side one.
     public static void offerChanged(ServerPlayer player, PlayerTradeMenu menu) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.ECONOMY)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.ECONOMY)) {
             Session session = SESSIONS.get(player.getUUID());
             if (session == null) return;
             Side side = session.side(player);

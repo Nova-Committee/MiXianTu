@@ -1,8 +1,9 @@
 package com.iafenvoy.mxt.runtime.hold;
 
-import com.iafenvoy.mxt.api.ItemUseCycle;
 import com.iafenvoy.mxt.data.item.HoldBinding;
-import com.iafenvoy.mxt.event.ResolveItemUseCycleEvent;
+import com.iafenvoy.saturn.api.ItemUseCycle;
+import com.iafenvoy.saturn.event.ResolveItemUseCycleEvent;
+import com.iafenvoy.saturn.runtime.hold.ItemUseCycles;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.resources.Identifier;

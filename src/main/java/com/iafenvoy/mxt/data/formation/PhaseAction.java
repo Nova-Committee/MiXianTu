@@ -1,8 +1,8 @@
 package com.iafenvoy.mxt.data.formation;
 
-import com.iafenvoy.mxt.data.action.BlockAction;
-import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.runtime.formation.FormationActionContext;
+import com.iafenvoy.saturn.data.action.BlockAction;
+import com.iafenvoy.saturn.data.action.EntityAction;
 
 /**
  * The three beat modules differ only in which beat they answer, so the two-armed dispatch is written once: the block

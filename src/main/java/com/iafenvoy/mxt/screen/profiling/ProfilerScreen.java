@@ -4,7 +4,8 @@ import com.iafenvoy.mxt.network.payload.ProfilerGuiS2CPayload;
 import com.iafenvoy.mxt.network.payload.ProfilerSnapshotS2CPayload;
 import com.iafenvoy.mxt.network.payload.ProfilerSubscriptionC2SPayload;
 import com.iafenvoy.mxt.screen.aui.*;
-import com.iafenvoy.mxt.util.profiling.*;
+import com.iafenvoy.mxt.util.ProfilerSubscriptions;
+import com.iafenvoy.saturn.profiling.*;
 import com.sighs.apricityui.element.Canvas;
 import com.sighs.apricityui.init.Document;
 import com.sighs.apricityui.init.Element;
@@ -127,7 +128,7 @@ public final class ProfilerScreen extends AuiScreen {
     }
 
     private static String sourceName(ProfilerSource source) {
-        for (ServerProfiling.Source registered : ServerProfiling.Source.values())
+        for (ServerProfiling.Source registered : ServerProfiling.Source.all())
             if (registered.id().equals(source.id()))
                 return Component.translatableWithFallback(registered.translationKey(), source.id()).getString();
         return source.id();

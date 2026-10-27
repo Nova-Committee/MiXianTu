@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.data.quality;
 
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.util.codec.RegistryCodecs;
+import com.iafenvoy.saturn.util.codec.RegistryCodecs;
 import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;

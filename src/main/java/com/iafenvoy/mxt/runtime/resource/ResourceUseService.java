@@ -1,7 +1,8 @@
 package com.iafenvoy.mxt.runtime.resource;
 
 import com.iafenvoy.mxt.data.aura.Aura;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
+import com.iafenvoy.saturn.runtime.resource.ResourceService;
+import com.iafenvoy.saturn.util.formula.FormulaContext;
 import net.minecraft.core.Holder;
 import net.minecraft.world.entity.LivingEntity;
 import org.jetbrains.annotations.NotNull;

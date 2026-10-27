@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.runtime.resulting.failures;
 
-import com.iafenvoy.mxt.runtime.resulting.Failure;
-import com.iafenvoy.mxt.runtime.resulting.SimpleFailure;
+import com.iafenvoy.saturn.runtime.resulting.Failure;
+import com.iafenvoy.saturn.runtime.resulting.SimpleFailure;
 
 public final class CultivationIdentityFailure {
     public static final Failure ALREADY_HELD = SimpleFailure.of("already_held");

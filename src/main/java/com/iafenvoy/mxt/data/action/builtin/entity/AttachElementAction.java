@@ -1,11 +1,11 @@
 package com.iafenvoy.mxt.data.action.builtin.entity;
 
-import com.iafenvoy.mxt.data.action.EntityAction;
-import com.iafenvoy.mxt.data.context.action.EntityActionContext;
 import com.iafenvoy.mxt.data.cultivation.Element;
 import com.iafenvoy.mxt.runtime.element.ElementReactionService;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
-import com.iafenvoy.mxt.util.formula.NumberProvider;
+import com.iafenvoy.saturn.data.action.EntityAction;
+import com.iafenvoy.saturn.data.context.action.EntityActionContext;
+import com.iafenvoy.saturn.util.formula.FormulaContext;
+import com.iafenvoy.saturn.util.formula.NumberProvider;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;

@@ -11,10 +11,11 @@ import com.iafenvoy.mxt.runtime.formation.FormationCenters.Match;
 import com.iafenvoy.mxt.runtime.formation.FormationInstance;
 import com.iafenvoy.mxt.runtime.formation.FormationRelations;
 import com.iafenvoy.mxt.runtime.formation.FormationWorldService;
-import com.iafenvoy.mxt.runtime.resulting.ResultWithData;
-import com.iafenvoy.mxt.util.DefinitionText;
-import com.iafenvoy.mxt.util.HolderHelper;
-import com.iafenvoy.mxt.util.formula.FormulaContexts;
+import com.iafenvoy.saturn.registry.SaturnAttachments;
+import com.iafenvoy.saturn.runtime.resulting.ResultWithData;
+import com.iafenvoy.saturn.util.DefinitionText;
+import com.iafenvoy.saturn.util.HolderHelper;
+import com.iafenvoy.saturn.util.formula.FormulaContexts;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.RegistryAccess;
@@ -102,7 +103,7 @@ public final class FormationPlateItem extends Item {
         if (level.getData(MxtAttachments.FORMATION_WORLD).get(center).isPresent())
             return dismantle(level, center, player);
         ResultWithData<FormationInstance> result = FormationWorldService.activate(level, center, HolderHelper.id(formation),
-                formation.value(), player.getData(MxtAttachments.RESOURCE_HOLDER), FormulaContexts.forEntity(player), player.getUUID());
+                formation.value(), player.getData(SaturnAttachments.RESOURCE_HOLDER), FormulaContexts.forEntity(player), player.getUUID());
         if (!result.isSuccess()) {
             Component message = Component.translatable("item.mxt.formation_plate.failed", result.failure().message());
             if ((Player) player instanceof ServerPlayer serverPlayer) serverPlayer.sendSystemMessage(message, true);

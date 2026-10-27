@@ -1,6 +1,6 @@
 package com.iafenvoy.mxt.runtime.formation;
 
-import com.iafenvoy.mxt.util.codec.CollectionCodecs;
+import com.iafenvoy.saturn.util.codec.CollectionCodecs;
 import com.mojang.logging.LogUtils;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;

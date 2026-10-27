@@ -2,7 +2,7 @@ package com.iafenvoy.mxt.compat.jade;
 
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.item.block.entity.SpiritCraftingTableBlockEntity;
-import com.iafenvoy.mxt.util.HolderHelper;
+import com.iafenvoy.saturn.util.HolderHelper;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.Identifier;
 import org.jspecify.annotations.NonNull;

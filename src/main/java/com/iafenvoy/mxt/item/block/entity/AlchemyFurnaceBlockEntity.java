@@ -6,11 +6,12 @@ import com.iafenvoy.mxt.data.alchemy.AlchemyWallMaterial;
 import com.iafenvoy.mxt.item.block.AlchemyFurnaceBlock;
 import com.iafenvoy.mxt.registry.MxtBlockEntities;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
+import com.iafenvoy.mxt.runtime.MxtProfilerSources;
 import com.iafenvoy.mxt.runtime.alchemy.*;
 import com.iafenvoy.mxt.runtime.alchemy.AlchemyFurnaceStructure.Status;
 import com.iafenvoy.mxt.runtime.resulting.failures.AlchemyFailure;
-import com.iafenvoy.mxt.util.profiling.ProfilerScope;
-import com.iafenvoy.mxt.util.profiling.ServerProfiling;
+import com.iafenvoy.saturn.profiling.ProfilerScope;
+import com.iafenvoy.saturn.profiling.ServerProfiling;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Holder;
@@ -46,7 +47,7 @@ public final class AlchemyFurnaceBlockEntity extends BlockEntity implements Alch
     }
 
     public static void serverTick(Level level, BlockPos pos, BlockState blockState, AlchemyFurnaceBlockEntity furnace) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.ALCHEMY)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.ALCHEMY)) {
             if (!(level instanceof ServerLevel serverLevel)) return;
             if (++furnace.structureTicker >= 20) {
                 furnace.structureTicker = 0;

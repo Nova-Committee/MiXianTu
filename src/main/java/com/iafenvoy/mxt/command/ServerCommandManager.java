@@ -28,7 +28,6 @@ public final class ServerCommandManager {
     private static final Map<Function<CommandBuildContext, LiteralArgumentBuilder<CommandSourceStack>>, BooleanEntry> NODES = Util.make(() -> {
         Commands config = MxtServerConfig.INSTANCE.commands;
         Builder<Function<CommandBuildContext, LiteralArgumentBuilder<CommandSourceStack>>, BooleanEntry> builder = ImmutableMap.builder();
-        builder.put(AbilityCommand::build, config.ability);
         builder.put(AuraCommand::build, config.aura);
         builder.put(BreakthroughCommand::build, config.breakthrough);
         builder.put(ContractCommand::build, config.contract);
@@ -51,7 +50,6 @@ public final class ServerCommandManager {
         builder.put(TechniqueCommand::build, config.technique);
         builder.put(_ -> TradeCommand.build(), config.trade);
         builder.put(TribulationCommand::build, config.tribulation);
-        builder.put(TriggersCommand::build, config.triggers);
         return builder.build();
     });
 
@@ -71,7 +69,14 @@ public final class ServerCommandManager {
         for (Entry<Function<CommandBuildContext, LiteralArgumentBuilder<CommandSourceStack>>, BooleanEntry> entry : NODES.entrySet()) {
             LiteralArgumentBuilder<CommandSourceStack> node = entry.getKey().apply(context);
             root.then(node);
-            if (entry.getValue().getValue()) dispatcher.register(node);
+            if (!entry.getValue().getValue()) continue;
+            // Saturn registers its own nodes at the top level first (it loads before this mod), so a literal it
+            // already claimed is left alone instead of merging two command trees into one name.
+            if (dispatcher.getRoot().getChild(node.getLiteral()) != null) {
+                MiXianTu.LOGGER.info("Not registering /{}: the literal is already taken", node.getLiteral());
+                continue;
+            }
+            dispatcher.register(node);
         }
         MxtCommand.attach(context, root);
         dispatcher.register(root);

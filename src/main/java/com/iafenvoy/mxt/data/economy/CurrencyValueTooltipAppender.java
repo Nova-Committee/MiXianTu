@@ -1,8 +1,8 @@
 package com.iafenvoy.mxt.data.economy;
 
-import com.iafenvoy.mxt.data.DescribedEntry;
 import com.iafenvoy.mxt.runtime.economy.CurrencyValueService;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
+import com.iafenvoy.saturn.data.DescribedEntry;
+import com.iafenvoy.saturn.util.formula.FormulaContext;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.network.chat.Component;

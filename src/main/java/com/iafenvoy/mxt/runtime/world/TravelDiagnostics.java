@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.runtime.world;
 
-import com.iafenvoy.mxt.util.profiling.LoggerDispatcher;
-import com.iafenvoy.mxt.util.profiling.LoggingLevel;
+import com.iafenvoy.saturn.profiling.LoggerDispatcher;
+import com.iafenvoy.saturn.profiling.LoggingLevel;
 import com.mojang.logging.LogUtils;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;

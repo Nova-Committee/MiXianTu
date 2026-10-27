@@ -1,8 +1,8 @@
 package com.iafenvoy.mxt.data.quality;
 
-import com.iafenvoy.mxt.registry.cache.ChainCache;
 import com.iafenvoy.mxt.registry.cache.RegistryCaches;
-import com.iafenvoy.mxt.util.chain.Chain;
+import com.iafenvoy.saturn.registry.cache.ChainCache;
+import com.iafenvoy.saturn.util.chain.Chain;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
 import org.jspecify.annotations.Nullable;

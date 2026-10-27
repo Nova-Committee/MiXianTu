@@ -1,18 +1,19 @@
 package com.iafenvoy.mxt.data.artifact;
 
-import com.iafenvoy.mxt.data.ability.Ability;
-import com.iafenvoy.mxt.data.action.ItemAction;
-import com.iafenvoy.mxt.data.action.builtin.item.ConsumeHealthItemAction;
 import com.iafenvoy.mxt.data.aura.Aura;
-import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.data.cultivation.Element;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.util.codec.CollectionCodecs;
-import com.iafenvoy.mxt.util.codec.MiscCodecs;
-import com.iafenvoy.mxt.util.codec.RegistryCodecs;
-import com.iafenvoy.mxt.util.formula.NumberProvider;
-import com.iafenvoy.mxt.util.formula.number.Constant;
-import com.iafenvoy.mxt.util.matcher.ItemMatcher;
+import com.iafenvoy.saturn.data.ability.Ability;
+import com.iafenvoy.saturn.data.action.ItemAction;
+import com.iafenvoy.saturn.data.action.builtin.item.ConsumeHealthItemAction;
+import com.iafenvoy.saturn.data.condition.EntityCondition;
+import com.iafenvoy.saturn.registry.SaturnResourceKeys;
+import com.iafenvoy.saturn.util.codec.CollectionCodecs;
+import com.iafenvoy.saturn.util.codec.MiscCodecs;
+import com.iafenvoy.saturn.util.codec.RegistryCodecs;
+import com.iafenvoy.saturn.util.formula.NumberProvider;
+import com.iafenvoy.saturn.util.formula.number.Constant;
+import com.iafenvoy.saturn.util.matcher.ItemMatcher;
 import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -45,7 +46,7 @@ public record Artifact(List<Entry> items, Map<Holder<Aura>, NumberProvider> spir
     public static final Codec<Artifact> DIRECT_CODEC = RecordCodecBuilder.create(i -> i.group(
             ENTRIES_CODEC.fieldOf("items").forGetter(Artifact::items),
             CollectionCodecs.map(Aura.CODEC, NumberProvider.CODEC).optionalFieldOf("spirit_capacity", Map.of()).forGetter(Artifact::spiritCapacity),
-            RegistryCodecs.holderOrTagList(MxtResourceKeys.ABILITY).optionalFieldOf("abilities", List.of()).forGetter(Artifact::abilities),
+            RegistryCodecs.holderOrTagList(SaturnResourceKeys.ABILITY).optionalFieldOf("abilities", List.of()).forGetter(Artifact::abilities),
             Codec.BOOL.optionalFieldOf("curios_equipable", false).forGetter(Artifact::curiosEquipable),
             Codec.BOOL.optionalFieldOf("require_owner", false).forGetter(Artifact::requireOwner),
             ItemAction.CODEC.optionalFieldOf("claim_action", DEFAULT_CLAIM_ACTION).forGetter(Artifact::claimAction),

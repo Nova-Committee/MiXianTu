@@ -2,36 +2,37 @@ package com.iafenvoy.mxt.runtime.talisman;
 
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.api.ItemAuraAccess;
-import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.config.MxtServerConfig;
 import com.iafenvoy.mxt.data.aura.Aura;
-import com.iafenvoy.mxt.data.cost.Cost;
-import com.iafenvoy.mxt.data.cost.CostPayment;
-import com.iafenvoy.mxt.data.cost.builtin.ItemCost;
-import com.iafenvoy.mxt.data.cost.context.CostContext;
-import com.iafenvoy.mxt.data.cost.context.CostOrigins;
 import com.iafenvoy.mxt.data.item.TalismanComponent;
 import com.iafenvoy.mxt.data.item.TalismanComponent.TriggerMode;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.data.quality.QualityLadders;
-import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.recipe.TalismanDrawingRecipe;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.registry.MxtItems;
+import com.iafenvoy.mxt.runtime.MxtProfilerSources;
 import com.iafenvoy.mxt.runtime.item.QualityService;
-import com.iafenvoy.mxt.runtime.resource.ResourceService;
 import com.iafenvoy.mxt.runtime.talisman.TalismanDrawingScorer.Point;
 import com.iafenvoy.mxt.runtime.talisman.TalismanDrawingScorer.Score;
-import com.iafenvoy.mxt.util.DefinitionText;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
-import com.iafenvoy.mxt.util.formula.FormulaVariables;
-import com.iafenvoy.mxt.util.formula.NumberProvider;
-import com.iafenvoy.mxt.util.formula.number.Constant;
-import com.iafenvoy.mxt.util.matcher.ItemMatcher;
-import com.iafenvoy.mxt.util.matcher.builtin.IngredientEntry;
-import com.iafenvoy.mxt.util.matcher.builtin.TagEntry;
-import com.iafenvoy.mxt.util.profiling.ProfilerScope;
-import com.iafenvoy.mxt.util.profiling.ServerProfiling;
+import com.iafenvoy.saturn.attachment.ResourceHolderAttachment;
+import com.iafenvoy.saturn.data.cost.Cost;
+import com.iafenvoy.saturn.data.cost.CostPayment;
+import com.iafenvoy.saturn.data.cost.builtin.ItemCost;
+import com.iafenvoy.saturn.data.cost.context.CostContext;
+import com.iafenvoy.saturn.data.cost.context.CostOrigins;
+import com.iafenvoy.saturn.data.resource.Resource;
+import com.iafenvoy.saturn.profiling.ProfilerScope;
+import com.iafenvoy.saturn.profiling.ServerProfiling;
+import com.iafenvoy.saturn.runtime.resource.ResourceService;
+import com.iafenvoy.saturn.util.DefinitionText;
+import com.iafenvoy.saturn.util.formula.FormulaContext;
+import com.iafenvoy.saturn.util.formula.FormulaVariables;
+import com.iafenvoy.saturn.util.formula.NumberProvider;
+import com.iafenvoy.saturn.util.formula.number.Constant;
+import com.iafenvoy.saturn.util.matcher.ItemMatcher;
+import com.iafenvoy.saturn.util.matcher.builtin.IngredientEntry;
+import com.iafenvoy.saturn.util.matcher.builtin.TagEntry;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.core.NonNullList;
@@ -93,7 +94,7 @@ public final class TalismanWorkstationService {
      * checked when a stroke arrives rather than when a formula is picked.
      */
     public static List<Entry> entries(ServerPlayer player, Container paperSlot) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.TALISMAN)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.TALISMAN)) {
             return entries(player, paperSlot, ItemStack.EMPTY);
         }
     }
@@ -104,7 +105,7 @@ public final class TalismanWorkstationService {
      *                  picked and the formula could never be changed.
      */
     public static List<Entry> entries(ServerPlayer player, Container paperSlot, ItemStack heldPaper) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.TALISMAN)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.TALISMAN)) {
             List<Entry> entries = new ArrayList<>();
             Container station = paperSlot.getItem(0).isEmpty() && !heldPaper.isEmpty() ? slotOf(heldPaper) : paperSlot;
             for (RecipeHolder<TalismanDrawingRecipe> holder : all(player.level().getServer().getRecipeManager())) {
@@ -135,7 +136,7 @@ public final class TalismanWorkstationService {
      * is measured, not assumed: an empty session hands back exactly that much, whatever else the store holds.
      */
     public static Optional<TalismanDrawingSession> start(ServerPlayer player, Container paperSlot, Identifier id) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.TALISMAN)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.TALISMAN)) {
             TalismanDrawingRecipe recipe = find(player.level().getServer().getRecipeManager(), id).orElse(null);
             if (recipe == null) return Optional.empty();
             if (!recipe.unlockCondition().test(player, FormulaContext.of(player))) return Optional.empty();
@@ -162,7 +163,7 @@ public final class TalismanWorkstationService {
      * judged at once, which is what makes a stream of refusals end the session instead of extending it.
      */
     public static StrokeResult stroke(ServerPlayer player, TalismanDrawingSession session, List<Point> points) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.TALISMAN)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.TALISMAN)) {
             if (session.settled() || session.failed()) return new StrokeResult(false, StrokeRefusal.SESSION_OVER, 0);
             if (points.size() > MxtServerConfig.INSTANCE.talisman.maxStrokePoints.getValue())
                 return refuse(session, StrokeRefusal.TOO_MANY_POINTS);
@@ -201,7 +202,7 @@ public final class TalismanWorkstationService {
      * failed session or a count over the limits consumes the materials and produces nothing.
      */
     public static Outcome submit(ServerPlayer player, TalismanDrawingSession session, List<List<Point>> strokes) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.TALISMAN)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.TALISMAN)) {
             if (!session.markSettled())
                 return new Outcome(false, 0.0D, ItemStack.EMPTY, Component.empty(), session.pigmentSpent());
             TalismanDrawingRecipe recipe = session.recipe();
@@ -228,7 +229,7 @@ public final class TalismanWorkstationService {
      * that reached the settlement, not to an abandoned attempt.
      */
     public static void abandon(ServerPlayer player, TalismanDrawingSession session) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.TALISMAN)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.TALISMAN)) {
             if (session.drewAnything()) {
                 fail(player, session);
                 return;
@@ -242,7 +243,7 @@ public final class TalismanWorkstationService {
      * A session that failed its own checks (too many refusals) settles as a failure: the materials are gone.
      */
     public static void fail(ServerPlayer player, TalismanDrawingSession session) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.TALISMAN)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.TALISMAN)) {
             if (!session.markSettled()) return;
             session.recipe().result().failureAction()
                     .execute(player, FormulaContext.of(player, Map.of(TalismanDrawingRecipe.PERCENTAGE, 0.0D)));

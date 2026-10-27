@@ -3,8 +3,9 @@ package com.iafenvoy.mxt.runtime.world;
 import com.iafenvoy.mxt.data.secretrealm.SecretRealm;
 import com.iafenvoy.mxt.data.secretrealm.SecretRealmGeneration;
 import com.iafenvoy.mxt.data.secretrealm.builtin.*;
-import com.iafenvoy.mxt.util.profiling.ProfilerScope;
-import com.iafenvoy.mxt.util.profiling.ServerProfiling;
+import com.iafenvoy.mxt.runtime.MxtProfilerSources;
+import com.iafenvoy.saturn.profiling.ProfilerScope;
+import com.iafenvoy.saturn.profiling.ServerProfiling;
 import com.mojang.logging.LogUtils;
 import net.minecraft.core.*;
 import net.minecraft.core.Holder.Reference;
@@ -64,7 +65,7 @@ public final class SecretRealmGenerationService {
     }
 
     public static Optional<ServerLevel> open(MinecraftServer server, SecretRealmRecord record) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.SECRET_REALM)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.SECRET_REALM)) {
             SecretRealm definition = record.instance();
             if (definition.generation() instanceof ExistingGeneration(ResourceKey<Level> dimension)) {
                 ServerLevel level = server.getLevel(dimension);
@@ -123,7 +124,7 @@ public final class SecretRealmGenerationService {
     // A dimension a data pack declared through the level stem registry is never touched: the secret_realm/ folder
     // convention must not be able to delete a real dimension that happens to sit under it.
     public static void clearData(MinecraftServer server, ResourceKey<Level> dimension) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.SECRET_REALM)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.SECRET_REALM)) {
             if (declared(server, dimension)) return;
             discard(server, dimension.identifier());
         }
@@ -149,7 +150,7 @@ public final class SecretRealmGenerationService {
 
     // What a secret realm destroyed by a crash, or by a definition that has since been deleted, leaves behind.
     public static void clearOrphans(MinecraftServer server, Set<ResourceKey<Level>> claimed) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.SECRET_REALM)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.SECRET_REALM)) {
             Path root = server.getWorldPath(dimensionsRoot());
             if (!Files.isDirectory(root)) return;
             List<Path> candidates = new ArrayList<>();

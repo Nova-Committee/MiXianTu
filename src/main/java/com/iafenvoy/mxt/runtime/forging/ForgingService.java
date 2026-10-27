@@ -1,24 +1,25 @@
 package com.iafenvoy.mxt.runtime.forging;
 
-import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.data.artifact.ForgingResultComponent;
-import com.iafenvoy.mxt.data.cost.CostPayment;
-import com.iafenvoy.mxt.data.cost.context.CostContext;
-import com.iafenvoy.mxt.data.cost.context.CostOrigins;
 import com.iafenvoy.mxt.data.forging.ForgingBlueprint;
 import com.iafenvoy.mxt.data.forging.ForgingMethod;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.event.ForgingEvent;
 import com.iafenvoy.mxt.event.ForgingEvent.*;
+import com.iafenvoy.mxt.runtime.MxtProfilerSources;
 import com.iafenvoy.mxt.runtime.item.QualityService;
-import com.iafenvoy.mxt.runtime.resulting.Failure;
-import com.iafenvoy.mxt.runtime.resulting.Failures;
-import com.iafenvoy.mxt.runtime.resulting.Result;
-import com.iafenvoy.mxt.runtime.resulting.ResultWithData;
 import com.iafenvoy.mxt.runtime.resulting.failures.ForgingFailure;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
-import com.iafenvoy.mxt.util.profiling.ProfilerScope;
-import com.iafenvoy.mxt.util.profiling.ServerProfiling;
+import com.iafenvoy.saturn.attachment.ResourceHolderAttachment;
+import com.iafenvoy.saturn.data.cost.CostPayment;
+import com.iafenvoy.saturn.data.cost.context.CostContext;
+import com.iafenvoy.saturn.data.cost.context.CostOrigins;
+import com.iafenvoy.saturn.profiling.ProfilerScope;
+import com.iafenvoy.saturn.profiling.ServerProfiling;
+import com.iafenvoy.saturn.runtime.resulting.Failure;
+import com.iafenvoy.saturn.runtime.resulting.Failures;
+import com.iafenvoy.saturn.runtime.resulting.Result;
+import com.iafenvoy.saturn.runtime.resulting.ResultWithData;
+import com.iafenvoy.saturn.util.formula.FormulaContext;
 import com.mojang.logging.LogUtils;
 import net.minecraft.core.Holder;
 import net.minecraft.core.RegistryAccess;
@@ -46,7 +47,7 @@ public final class ForgingService {
     }
 
     public static StartResult start(ServerPlayer player, ForgingSurface surface, ForgingBlueprint blueprint, RegistryAccess registries) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.FORGING)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.FORGING)) {
             Failure refusal = postEvent(new Start(player, surface.pos(), blueprint));
             if (refusal != null) return StartResult.rejected(refusal);
             ForgingPlan plan;
@@ -65,7 +66,7 @@ public final class ForgingService {
 
     public static StrikeResult strike(ServerPlayer player, ForgingSurface surface, ForgingSession session, Holder<ForgingMethod> method,
                                       ResourceHolderAttachment resources, FormulaContext context, BooleanSupplier conditions) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.FORGING)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.FORGING)) {
             if (!conditions.getAsBoolean()) return StrikeResult.rejected(Failures.CONDITIONS, null);
             if (!session.canStrike(method)) return StrikeResult.rejected(ForgingFailure.INVALID_STRIKE, null);
             StrikePre event = new StrikePre(player, surface.pos(), new ForgingSessionView(session), method, resources, context);
@@ -86,14 +87,14 @@ public final class ForgingService {
     }
 
     public static FinishResult finish(ServerPlayer player, ForgingSurface surface, Holder<ForgingBlueprint> blueprint, ForgingSession session) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.FORGING)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.FORGING)) {
             return finish(player, surface, blueprint, session, blueprint.value()::qualityFor);
         }
     }
 
     public static FinishResult finish(ServerPlayer player, ForgingSurface surface, Holder<ForgingBlueprint> blueprint, ForgingSession session,
                                       IntFunction<Holder<ItemQuality>> qualityForExtraSteps) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.FORGING)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.FORGING)) {
             return finish(player, surface, blueprint, session, qualityForExtraSteps, QualityService.DEFAULT_MODIFIER);
         }
     }
@@ -143,7 +144,7 @@ public final class ForgingService {
     // Cancels a session before its input is returned by the owning inventory adapter. Returns the refusal to
     // report, or null when the cancellation stands.
     public static @Nullable Failure cancel(ServerPlayer player, ForgingSurface surface, ForgingSession session) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.FORGING)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.FORGING)) {
             return postEvent(new Cancel(player, surface.pos(), new ForgingSessionView(session)));
         }
     }

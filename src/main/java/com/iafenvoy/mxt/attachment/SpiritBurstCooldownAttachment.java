@@ -1,8 +1,8 @@
 package com.iafenvoy.mxt.attachment;
 
 import com.iafenvoy.mxt.data.aura.Aura;
-import com.iafenvoy.mxt.util.AbstractChangeTrackable;
-import com.iafenvoy.mxt.util.codec.CollectionCodecs;
+import com.iafenvoy.saturn.util.AbstractChangeTrackable;
+import com.iafenvoy.saturn.util.codec.CollectionCodecs;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import it.unimi.dsi.fastutil.objects.Object2LongMap;

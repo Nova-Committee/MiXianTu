@@ -1,8 +1,8 @@
 package com.iafenvoy.mxt.data.condition.builtin.entity;
 
-import com.iafenvoy.mxt.data.condition.EntityCondition;
-import com.iafenvoy.mxt.data.context.condition.EntityConditionContext;
 import com.iafenvoy.mxt.data.curse.CurseFilter;
+import com.iafenvoy.saturn.data.condition.EntityCondition;
+import com.iafenvoy.saturn.data.context.condition.EntityConditionContext;
 import com.mojang.serialization.MapCodec;
 import org.jspecify.annotations.NonNull;
 

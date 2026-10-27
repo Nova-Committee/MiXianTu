@@ -12,7 +12,6 @@ import net.neoforged.neoforge.registries.DeferredRegister;
 public final class MxtLootConditions {
     public static final DeferredRegister<MapCodec<? extends LootItemCondition>> REGISTRY = DeferredRegister.create(Registries.LOOT_CONDITION_TYPE, MiXianTu.MOD_ID);
 
-    public static final DeferredHolder<MapCodec<? extends LootItemCondition>, MapCodec<HasAbilityLootCondition>> HAS_ABILITY = REGISTRY.register("has_ability", () -> HasAbilityLootCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends LootItemCondition>, MapCodec<HasCurseLootCondition>> HAS_CURSE = REGISTRY.register("has_curse", () -> HasCurseLootCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends LootItemCondition>, MapCodec<RealmLootCondition>> REALM = REGISTRY.register("realm", () -> RealmLootCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends LootItemCondition>, MapCodec<HasSpiritRootLootCondition>> HAS_SPIRIT_ROOT = REGISTRY.register("has_spirit_root", () -> HasSpiritRootLootCondition.CODEC);

@@ -3,16 +3,17 @@ package com.iafenvoy.mxt.screen.wheel.content;
 import com.iafenvoy.mxt.api.WheelEntryKind;
 import com.iafenvoy.mxt.api.WheelMenuEntry;
 import com.iafenvoy.mxt.attachment.SpiritBurstCooldownAttachment;
-import com.iafenvoy.mxt.data.IconReference;
 import com.iafenvoy.mxt.data.aura.Aura;
-import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.registry.MxtAttachments;
-import com.iafenvoy.mxt.runtime.resource.ResourceService;
 import com.iafenvoy.mxt.runtime.spirit.SpiritBurstService;
 import com.iafenvoy.mxt.runtime.wheel.WheelEntryKinds;
 import com.iafenvoy.mxt.screen.wheel.WheelSelection;
-import com.iafenvoy.mxt.util.DefinitionText;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
+import com.iafenvoy.saturn.data.IconReference;
+import com.iafenvoy.saturn.data.resource.Resource;
+import com.iafenvoy.saturn.registry.SaturnAttachments;
+import com.iafenvoy.saturn.runtime.resource.ResourceService;
+import com.iafenvoy.saturn.util.DefinitionText;
+import com.iafenvoy.saturn.util.formula.FormulaContext;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.Holder;
 import net.minecraft.network.chat.Component;
@@ -76,7 +77,7 @@ public record AuraWheelEntry(Identifier id, Holder<Aura> aura) implements WheelM
         FormulaContext context = ResourceService.formulaContext(player, resource, FormulaContext.of(player));
         lines.add(Component.translatable("wheel.mxt.tooltip.burst",
                 WheelTooltips.number(definition.burstAmount().evaluate(context))));
-        player.getExistingData(MxtAttachments.RESOURCE_HOLDER).ifPresent(holder ->
+        player.getExistingData(SaturnAttachments.RESOURCE_HOLDER).ifPresent(holder ->
                 ResourceService.resolveBounds(resource.value(), context).ifPresent(bounds ->
                         lines.add(Component.translatable("wheel.mxt.tooltip.amount",
                                 WheelTooltips.number(holder.get(resource)), WheelTooltips.number(bounds.max())))));

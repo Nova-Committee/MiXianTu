@@ -11,7 +11,7 @@ import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.world.SecretRealmRegistry;
-import com.iafenvoy.mxt.util.dispatcher.TickDispatcher;
+import com.iafenvoy.saturn.util.dispatcher.TickDispatcher;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.JsonOps;
 import net.minecraft.core.registries.Registries;

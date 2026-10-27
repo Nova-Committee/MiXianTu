@@ -1,14 +1,15 @@
 package com.iafenvoy.mxt.data.cultivation;
 
 import com.iafenvoy.mxt.api.QualityProvider;
-import com.iafenvoy.mxt.data.AttributeEntry;
-import com.iafenvoy.mxt.data.ability.Ability;
-import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.util.codec.RegistryCodecs;
-import com.iafenvoy.mxt.util.formula.NumberProvider;
-import com.iafenvoy.mxt.util.formula.number.Constant;
+import com.iafenvoy.saturn.data.AttributeEntry;
+import com.iafenvoy.saturn.data.ability.Ability;
+import com.iafenvoy.saturn.data.condition.EntityCondition;
+import com.iafenvoy.saturn.registry.SaturnResourceKeys;
+import com.iafenvoy.saturn.util.codec.RegistryCodecs;
+import com.iafenvoy.saturn.util.formula.NumberProvider;
+import com.iafenvoy.saturn.util.formula.number.Constant;
 import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
@@ -37,7 +38,7 @@ public record Physique(List<AttributeEntry> attributeModifiers,
     public static final Codec<Holder<Physique>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.PHYSIQUE);
     public static final Codec<Physique> DIRECT_CODEC = RecordCodecBuilder.<Physique>create(i -> i.group(
             AttributeEntry.CODEC.listOf().optionalFieldOf("attribute_modifiers", List.of()).forGetter(Physique::attributeModifiers),
-            RegistryCodecs.holderOrTagList(MxtResourceKeys.ABILITY).optionalFieldOf("granted_abilities", List.of()).forGetter(Physique::grantedAbilities),
+            RegistryCodecs.holderOrTagList(SaturnResourceKeys.ABILITY).optionalFieldOf("granted_abilities", List.of()).forGetter(Physique::grantedAbilities),
             EntityCondition.optionalCodec("holder_condition").forGetter(Physique::holderCondition),
             Identifier.CODEC.listOf().optionalFieldOf("exclusive_tags", List.of()).forGetter(Physique::exclusiveTags),
             ItemQuality.CODEC.optionalFieldOf("quality").forGetter(Physique::quality),

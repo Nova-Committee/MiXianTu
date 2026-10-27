@@ -1,9 +1,9 @@
 package com.iafenvoy.mxt.data.condition.builtin.entity;
 
-import com.iafenvoy.mxt.data.condition.EntityCondition;
-import com.iafenvoy.mxt.data.context.condition.EntityConditionContext;
 import com.iafenvoy.mxt.data.cultivation.Physique;
 import com.iafenvoy.mxt.registry.MxtAttachments;
+import com.iafenvoy.saturn.data.condition.EntityCondition;
+import com.iafenvoy.saturn.data.context.condition.EntityConditionContext;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.Holder;
 import org.jspecify.annotations.NonNull;

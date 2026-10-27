@@ -1,9 +1,9 @@
 package com.iafenvoy.mxt.runtime.item;
 
-import com.iafenvoy.mxt.api.ItemUseCycle;
-import com.iafenvoy.mxt.event.ResolveItemUseCycleEvent;
 import com.iafenvoy.mxt.item.PillItem;
-import com.iafenvoy.mxt.runtime.hold.ItemUseCycles;
+import com.iafenvoy.saturn.api.ItemUseCycle;
+import com.iafenvoy.saturn.event.ResolveItemUseCycleEvent;
+import com.iafenvoy.saturn.runtime.hold.ItemUseCycles;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;

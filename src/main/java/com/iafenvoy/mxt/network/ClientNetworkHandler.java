@@ -8,7 +8,7 @@ import com.iafenvoy.mxt.screen.menu.TalismanWorkstationMenu;
 import com.iafenvoy.mxt.screen.multiblock.MultiblockStructure;
 import com.iafenvoy.mxt.screen.multiblock.MultiblockStructureScreen;
 import com.iafenvoy.mxt.screen.profiling.ProfilerScreen;
-import com.iafenvoy.mxt.util.ClientPlayerNames;
+import com.iafenvoy.saturn.util.ClientPlayerNames;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 import org.jetbrains.annotations.Nullable;
 

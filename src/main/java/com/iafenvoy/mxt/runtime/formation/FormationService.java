@@ -1,24 +1,26 @@
 package com.iafenvoy.mxt.runtime.formation;
 
-import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.data.aura.Aura;
-import com.iafenvoy.mxt.data.cost.CostPayment;
+import com.iafenvoy.mxt.data.cost.context.AuraCostContexts;
 import com.iafenvoy.mxt.data.cost.context.AuraCostSources;
-import com.iafenvoy.mxt.data.cost.context.CostContext;
-import com.iafenvoy.mxt.data.cost.context.CostOrigins;
 import com.iafenvoy.mxt.data.formation.Formation;
 import com.iafenvoy.mxt.data.formation.Formation.Storage;
+import com.iafenvoy.mxt.runtime.MxtProfilerSources;
 import com.iafenvoy.mxt.runtime.formation.FormationService.MaintainRule.PaymentPlan;
-import com.iafenvoy.mxt.runtime.resource.ResourceTransactions;
-import com.iafenvoy.mxt.runtime.resource.ResourceTransactions.Evaluation;
-import com.iafenvoy.mxt.runtime.resulting.Failures;
-import com.iafenvoy.mxt.runtime.resulting.Result;
-import com.iafenvoy.mxt.runtime.resulting.ResultWithData;
-import com.iafenvoy.mxt.util.HolderHelper;
-import com.iafenvoy.mxt.util.MiscUtil;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
-import com.iafenvoy.mxt.util.profiling.ProfilerScope;
-import com.iafenvoy.mxt.util.profiling.ServerProfiling;
+import com.iafenvoy.saturn.attachment.ResourceHolderAttachment;
+import com.iafenvoy.saturn.data.cost.CostPayment;
+import com.iafenvoy.saturn.data.cost.context.CostContext;
+import com.iafenvoy.saturn.data.cost.context.CostOrigins;
+import com.iafenvoy.saturn.profiling.ProfilerScope;
+import com.iafenvoy.saturn.profiling.ServerProfiling;
+import com.iafenvoy.saturn.runtime.resource.ResourceTransactions;
+import com.iafenvoy.saturn.runtime.resource.ResourceTransactions.Evaluation;
+import com.iafenvoy.saturn.runtime.resulting.Failures;
+import com.iafenvoy.saturn.runtime.resulting.Result;
+import com.iafenvoy.saturn.runtime.resulting.ResultWithData;
+import com.iafenvoy.saturn.util.HolderHelper;
+import com.iafenvoy.saturn.util.MiscUtil;
+import com.iafenvoy.saturn.util.formula.FormulaContext;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
 import org.jetbrains.annotations.Nullable;
@@ -35,13 +37,13 @@ public final class FormationService {
     }
 
     public static ResultWithData<FormationInstance> activate(Identifier id, Formation definition, ResourceHolderAttachment resources, FormulaContext context) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.FORMATION)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.FORMATION)) {
             return activate(id, definition, resources, context, null);
         }
     }
 
     public static ResultWithData<FormationInstance> activate(Identifier id, Formation definition, ResourceHolderAttachment resources, FormulaContext context, UUID owner) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.FORMATION)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.FORMATION)) {
             double radius = MiscUtil.positive(definition.radius().evaluate(context));
             if (radius <= 0.0D) return ResultWithData.failure(null, Failures.INVALID_FORMULA);
             // The activating player's own account is named directly: activation is driven from a controller block, so
@@ -55,7 +57,7 @@ public final class FormationService {
     }
 
     public static Result maintain(FormationInstance instance, Formation definition, ResourceHolderAttachment resources, FormulaContext context) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.FORMATION)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.FORMATION)) {
             return maintain(instance, definition, resources, context, Map.of());
         }
     }
@@ -64,7 +66,7 @@ public final class FormationService {
     // marking it inactive, because tearing a formation down belongs to FormationWorldService#deactivate.
     public static Result maintain(FormationInstance instance, Formation definition, ResourceHolderAttachment resources,
                                   FormulaContext context, Map<Holder<Aura>, Double> supplied) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.FORMATION)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.FORMATION)) {
             Map<Holder<Aura>, Double> capacity = definition.storage()
                     .map(storage -> MaintainRule.capacities(storage, context))
                     .orElse(Map.of());
@@ -118,7 +120,7 @@ public final class FormationService {
                                                  Map<Holder<Aura>, Double> stored, Map<Holder<Aura>, Double> capacity) {
             // Whatever the bill names is charged in the value it is measured in, and only loaded: the caller asks
             // what the owner can afford of the remainder. An item charge has no channel here, so it refuses.
-            CostPayment bill = CostPayment.of(context.withAuraSource(AuraCostSources.ACCOUNT));
+            CostPayment bill = CostPayment.of(AuraCostContexts.withAuraSource(context, AuraCostSources.ACCOUNT));
             if (bill.price(definition.maintenanceCosts()).isPresent() || bill.beyondResources()) return null;
             Map<Identifier, Double> cost = bill.resources();
             Map<Identifier, Holder<Aura>> byValue = new LinkedHashMap<>();

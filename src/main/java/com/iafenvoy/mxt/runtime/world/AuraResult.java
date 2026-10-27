@@ -4,7 +4,7 @@ import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.aura.AuraZone;
 import com.iafenvoy.mxt.data.aura.AuraZone.Distribution;
 import com.iafenvoy.mxt.data.aura.AuraZone.Rules;
-import com.iafenvoy.mxt.data.condition.EntityCondition;
+import com.iafenvoy.saturn.data.condition.EntityCondition;
 import net.minecraft.core.Holder;
 
 import java.util.Map;

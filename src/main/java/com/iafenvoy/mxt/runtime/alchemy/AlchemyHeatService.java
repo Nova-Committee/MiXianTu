@@ -3,7 +3,7 @@ package com.iafenvoy.mxt.runtime.alchemy;
 import com.iafenvoy.mxt.api.AlchemyHeatSource;
 import com.iafenvoy.mxt.data.alchemy.HeatSource;
 import com.iafenvoy.mxt.registry.cache.RegistryCaches;
-import com.iafenvoy.mxt.util.MiscUtil;
+import com.iafenvoy.saturn.util.MiscUtil;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.block.Block;

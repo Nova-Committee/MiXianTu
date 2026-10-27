@@ -1,25 +1,31 @@
 package com.iafenvoy.mxt.probe;
+import com.iafenvoy.saturn.registry.SaturnResourceKeys;
+import com.iafenvoy.saturn.registry.SaturnAttachments;
+import com.iafenvoy.saturn.data.ability.Ability;
+import com.iafenvoy.saturn.data.context.Context;
+import com.iafenvoy.saturn.runtime.Sources;
+import com.iafenvoy.saturn.util.chain.Chain;
 
 import com.iafenvoy.mxt.attachment.CultivationAttachment;
-import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
+import com.iafenvoy.saturn.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.attachment.TechniqueAttachment;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.cultivation.Technique;
 import com.iafenvoy.mxt.data.item.ContractScrollComponent;
 import com.iafenvoy.mxt.data.item.FormationPlateComponent;
 import com.iafenvoy.mxt.data.item.SecretRealmTokenComponent;
-import com.iafenvoy.mxt.data.resource.Resource;
+import com.iafenvoy.saturn.data.resource.Resource;
 import com.iafenvoy.mxt.registry.*;
-import com.iafenvoy.mxt.runtime.ability.AbilityEventBridge;
-import com.iafenvoy.mxt.runtime.ability.AbilityGrantService;
+import com.iafenvoy.saturn.runtime.ability.AbilityEventBridge;
+import com.iafenvoy.saturn.runtime.ability.AbilityGrantService;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactService;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationIdentityService;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService;
 import com.iafenvoy.mxt.runtime.cultivation.TechniqueService;
 import com.iafenvoy.mxt.runtime.item.ItemBindingService;
-import com.iafenvoy.mxt.runtime.resource.ResourceService;
+import com.iafenvoy.saturn.runtime.resource.ResourceService;
 import com.iafenvoy.mxt.testmod.MxtTestItems;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
+import com.iafenvoy.saturn.util.formula.FormulaContext;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
@@ -46,7 +52,7 @@ public final class ProbeKit {
         ServerPlayer player = context.player();
         CultivationAttachment spirit = player.getData(MxtAttachments.CULTIVATION);
         TechniqueAttachment techniques = player.getData(MxtAttachments.TECHNIQUE);
-        ResourceHolderAttachment resources = player.getData(MxtAttachments.RESOURCE_HOLDER);
+        ResourceHolderAttachment resources = player.getData(SaturnAttachments.RESOURCE_HOLDER);
         FormulaContext formula = FormulaContext.of(player);
 
         grantIdentity(context, player, techniques, formula);
@@ -54,14 +60,14 @@ public final class ProbeKit {
                 && CultivationService.setRealm(spirit, context.require(MxtResourceKeys.REALM_STAGE, ProbeDefinitions.SPIRIT_POWER_REFINING));
         context.check("kit sets the realm chain", realm);
         spirit.setCultivationProgress(requireProfile(context, ProbeDefinitions.QI), 80.0D);
-        ensureResource(player, resources, context.require(MxtResourceKeys.RESOURCE, ProbeDefinitions.QI), 200.0D);
-        ensureResource(player, resources, context.require(MxtResourceKeys.RESOURCE, ProbeDefinitions.SPIRIT_POWER), 80.0D);
-        ensureResource(player, resources, context.require(MxtResourceKeys.RESOURCE, ProbeDefinitions.WATER_POWER), 80.0D);
-        ensureResource(player, resources, context.require(MxtResourceKeys.RESOURCE, ProbeDefinitions.SOUL_POWER), 20.0D);
+        ensureResource(player, resources, context.require(SaturnResourceKeys.RESOURCE, ProbeDefinitions.QI), 200.0D);
+        ensureResource(player, resources, context.require(SaturnResourceKeys.RESOURCE, ProbeDefinitions.SPIRIT_POWER), 80.0D);
+        ensureResource(player, resources, context.require(SaturnResourceKeys.RESOURCE, ProbeDefinitions.WATER_POWER), 80.0D);
+        ensureResource(player, resources, context.require(SaturnResourceKeys.RESOURCE, ProbeDefinitions.SOUL_POWER), 20.0D);
 
         // These attachments are mutable; explicit sync is handled by the attachment dispatcher.
-        player.setData(MxtAttachments.RESOURCE_HOLDER, resources);
-        player.setData(MxtAttachments.ABILITY_HOLDER, player.getData(MxtAttachments.ABILITY_HOLDER));
+        player.setData(SaturnAttachments.RESOURCE_HOLDER, resources);
+        player.setData(SaturnAttachments.ABILITY_HOLDER, player.getData(SaturnAttachments.ABILITY_HOLDER));
 
         give(player, MxtTestItems.QINGXIAO_SPIRIT_CRYSTAL.toStack(8));
         give(player, MxtItems.SPIRIT_STONE.toStack(3));
@@ -110,7 +116,7 @@ public final class ProbeKit {
         techniques.addLearnedTechnique(technique);
         AbilityGrantService.recalculate(player);
         ProbeDefinitions.TEST_ACTIVE_ABILITIES.forEach(abilityId ->
-                player.getData(MxtAttachments.ABILITY_HOLDER).grant(context.require(MxtResourceKeys.ABILITY, abilityId),
+                player.getData(SaturnAttachments.ABILITY_HOLDER).grant(context.require(SaturnResourceKeys.ABILITY, abilityId),
                         ProbeDefinitions.TEST_ABILITY_SOURCE));
         // Granting an ability does not register its triggers by itself; the runtime index is only rebuilt where
         // the ability sources actually change.

@@ -1,8 +1,9 @@
 package com.iafenvoy.mxt.runtime.talisman;
 
-import com.iafenvoy.mxt.util.MiscUtil;
-import com.iafenvoy.mxt.util.profiling.ProfilerScope;
-import com.iafenvoy.mxt.util.profiling.ServerProfiling;
+import com.iafenvoy.mxt.runtime.MxtProfilerSources;
+import com.iafenvoy.saturn.profiling.ProfilerScope;
+import com.iafenvoy.saturn.profiling.ServerProfiling;
+import com.iafenvoy.saturn.util.MiscUtil;
 
 import java.util.*;
 
@@ -64,7 +65,7 @@ public final class TalismanDrawingScorer {
      * tolerance: pattern.tolerance (fraction of canvas height). Never throws.
      */
     public static Score score(List<Stroke> reference, List<Stroke> player, double tolerance, Judgement judgement) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.TALISMAN)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.TALISMAN)) {
             Judgement params = judgement == null ? Judgement.DEFAULT : judgement;
             double tolPx = MiscUtil.positive(tolerance) > 0.0D
                     ? tolerance * CANVAS_HEIGHT : DEFAULT_TOLERANCE * CANVAS_HEIGHT;

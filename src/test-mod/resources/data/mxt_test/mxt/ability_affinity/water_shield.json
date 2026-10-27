@@ -1,0 +1,4 @@
+{
+  "abilities": ["mxt_test:water_shield"],
+  "elements": ["mxt_test:water"]
+}

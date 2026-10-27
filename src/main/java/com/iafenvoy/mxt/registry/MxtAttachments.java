@@ -6,7 +6,7 @@ import com.iafenvoy.mxt.runtime.creature.BoundBeastsAttachment;
 import com.iafenvoy.mxt.runtime.formation.FormationWorldAttachment;
 import com.iafenvoy.mxt.runtime.world.AuraWorldAttachment;
 import com.iafenvoy.mxt.runtime.world.SecretRealmWorldAttachment;
-import com.iafenvoy.mxt.util.ChangeTrackable;
+import com.iafenvoy.saturn.util.ChangeTrackable;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
@@ -37,10 +37,8 @@ public final class MxtAttachments {
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<TechniqueAttachment>> TECHNIQUE = entity("technique", TechniqueAttachment::new, TechniqueAttachment.CODEC);
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<SoulStatsAttachment>> SOUL_STATS = entity("soul_stats", SoulStatsAttachment::new, SoulStatsAttachment.CODEC);
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<FloatHoldingItemAttachment>> FLOAT_HOLDING_ITEM = entityWithoutDeathCopy("float_holding_item", FloatHoldingItemAttachment::new, FloatHoldingItemAttachment.CODEC);
-    public static final DeferredHolder<AttachmentType<?>, AttachmentType<ResourceHolderAttachment>> RESOURCE_HOLDER = entity("resource_holder", ResourceHolderAttachment::new, ResourceHolderAttachment.CODEC);
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<ElementAttachment>> ELEMENT_ATTACHMENT = entity("element_attachment", ElementAttachment::new, ElementAttachment.CODEC);
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<SpiritBurstCooldownAttachment>> SPIRIT_BURST_COOLDOWNS = entity("spirit_burst_cooldowns", SpiritBurstCooldownAttachment::new, SpiritBurstCooldownAttachment.CODEC);
-    public static final DeferredHolder<AttachmentType<?>, AttachmentType<AbilityAttachment>> ABILITY_HOLDER = entity("ability_holder", AbilityAttachment::new, AbilityAttachment.CODEC);
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<WheelLayoutAttachment>> WHEEL_LAYOUT = entity("wheel_layout", WheelLayoutAttachment::new, WheelLayoutAttachment.CODEC);
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<CurseHolderAttachment>> CURSE_HOLDER = entity("curse_holder", CurseHolderAttachment::new, CurseHolderAttachment.CODEC);
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<TribulationAttachment>> TRIBULATION = entity("tribulation", TribulationAttachment::new, TribulationAttachment.CODEC);
@@ -53,7 +51,6 @@ public final class MxtAttachments {
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<FlightAttachment>> FLIGHT = entityWithoutDeathCopy("flight", FlightAttachment::new, FlightAttachment.CODEC);
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<PerchAttachment>> PERCH = entityWithoutDeathCopy("perch", PerchAttachment::new, PerchAttachment.CODEC);
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<FriendAttachment>> FRIEND = entityServerOnly("friend", FriendAttachment::new, FriendAttachment.CODEC);
-    public static final DeferredHolder<AttachmentType<?>, AttachmentType<TriggerCooldownAttachment>> TRIGGER_COOLDOWNS = entityServerOnly("trigger_cooldowns", TriggerCooldownAttachment::new, TriggerCooldownAttachment.CODEC);
     // Level
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<RiftWorldAttachment>> RIFT_WORLD = REGISTRY.register("rift_world", () -> AttachmentType.builder(RiftWorldAttachment::new).serialize(RiftWorldAttachment.CODEC).build());
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<RiftChunkAttachment>> RIFT_CHUNK = REGISTRY.register("rift_chunk", () -> AttachmentType.builder(RiftChunkAttachment::new).serialize(RiftChunkAttachment.CODEC).build());

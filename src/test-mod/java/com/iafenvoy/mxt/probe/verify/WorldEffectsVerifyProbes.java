@@ -1,4 +1,8 @@
 package com.iafenvoy.mxt.probe.verify;
+import com.iafenvoy.saturn.data.context.Context;
+import com.iafenvoy.saturn.runtime.resulting.Failure;
+import com.iafenvoy.saturn.runtime.resulting.Failures;
+import com.iafenvoy.saturn.runtime.resulting.Result;
 
 import com.iafenvoy.mxt.particle.LightBeamParticleOptions;
 import com.iafenvoy.mxt.probe.Probe;
@@ -13,7 +17,6 @@ import net.minecraft.world.phys.Vec3;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public final class WorldEffectsVerifyProbes {
@@ -55,15 +58,17 @@ public final class WorldEffectsVerifyProbes {
         }) == depth, true);
         context.expect("multiple requests perform one copy", copies.get(), 1);
         String a = "equal";
+        // A second instance with the same value: the frame dedupes by identity, not by equals.
+        String b = new String(a);
         context.expect("first submission is accepted", frame.submit(a), true);
         context.expect("same task identity is rejected", frame.submit(a), false);
-        context.expect("distinct equal tasks are retained", frame.submit(a), true);
+        context.expect("distinct equal tasks are retained", frame.submit(b), true);
         List<String> delivered = new ArrayList<>();
         frame.drain(delivered::add);
         frame.drain(_ -> {
             throw new AssertionError("duplicate drain");
         });
-        context.expect("draw order preserves both identities", delivered.size() == 2 && Objects.equals(delivered.get(0), a) && Objects.equals(delivered.get(1), a), true);
+        context.expect("draw order preserves both identities", delivered.size() == 2 && delivered.get(0).equals(a) && delivered.get(1).equals(b), true);
         context.expect("a drained frame refuses new work", frame.submit("late"), false);
         frame.close();
         frame.close();

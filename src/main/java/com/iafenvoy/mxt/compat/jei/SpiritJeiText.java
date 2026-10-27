@@ -1,12 +1,12 @@
 package com.iafenvoy.mxt.compat.jei;
 
 import com.iafenvoy.mxt.data.aura.Aura;
-import com.iafenvoy.mxt.data.cost.Cost;
 import com.iafenvoy.mxt.data.cost.builtin.AuraCost;
-import com.iafenvoy.mxt.util.DefinitionText;
-import com.iafenvoy.mxt.util.formula.NumberProvider;
-import com.iafenvoy.mxt.util.formula.number.Constant;
-import com.iafenvoy.mxt.util.formula.number.Expression;
+import com.iafenvoy.saturn.data.cost.Cost;
+import com.iafenvoy.saturn.util.DefinitionText;
+import com.iafenvoy.saturn.util.formula.NumberProvider;
+import com.iafenvoy.saturn.util.formula.number.Constant;
+import com.iafenvoy.saturn.util.formula.number.Expression;
 import net.minecraft.client.gui.Font;
 import net.minecraft.core.Holder;
 import net.minecraft.network.chat.Component;

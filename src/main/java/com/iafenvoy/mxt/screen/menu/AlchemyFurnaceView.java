@@ -1,6 +1,6 @@
 package com.iafenvoy.mxt.screen.menu;
 
-import com.iafenvoy.mxt.util.codec.MiscCodecs;
+import com.iafenvoy.saturn.util.codec.MiscCodecs;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.network.chat.Component;

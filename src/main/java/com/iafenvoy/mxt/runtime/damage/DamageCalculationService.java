@@ -6,17 +6,18 @@ import com.iafenvoy.mxt.data.cultivation.Element;
 import com.iafenvoy.mxt.data.cultivation.Physique;
 import com.iafenvoy.mxt.data.cultivation.SpiritRoot;
 import com.iafenvoy.mxt.registry.MxtAttachments;
+import com.iafenvoy.mxt.runtime.MxtProfilerSources;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactService;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactUpkeepService;
 import com.iafenvoy.mxt.runtime.cultivation.Elements;
 import com.iafenvoy.mxt.runtime.cultivation.ItemElements;
-import com.iafenvoy.mxt.util.MiscUtil;
-import com.iafenvoy.mxt.util.codec.RegistryCodecs;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
-import com.iafenvoy.mxt.util.formula.NumberProvider;
-import com.iafenvoy.mxt.util.formula.number.Constant;
-import com.iafenvoy.mxt.util.profiling.ProfilerScope;
-import com.iafenvoy.mxt.util.profiling.ServerProfiling;
+import com.iafenvoy.saturn.profiling.ProfilerScope;
+import com.iafenvoy.saturn.profiling.ServerProfiling;
+import com.iafenvoy.saturn.util.MiscUtil;
+import com.iafenvoy.saturn.util.codec.RegistryCodecs;
+import com.iafenvoy.saturn.util.formula.FormulaContext;
+import com.iafenvoy.saturn.util.formula.NumberProvider;
+import com.iafenvoy.saturn.util.formula.number.Constant;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
@@ -63,7 +64,7 @@ public final class DamageCalculationService {
     // The source is built here, not by the caller, so attribution is not each call site's own decision: a kill
     // counts as the attacker's. Reduction is not applied here - it runs in the event this call raises.
     public static double deal(@Nullable Entity attacker, Entity target, double amount, Optional<Holder<DamageType>> damageType, @Nullable FormulaContext context) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.COMBAT)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.COMBAT)) {
             if (!(target.level() instanceof ServerLevel level)) return 0.0D;
             amount = MiscUtil.positive(amount);
             if (amount <= 0.0D) return 0.0D;

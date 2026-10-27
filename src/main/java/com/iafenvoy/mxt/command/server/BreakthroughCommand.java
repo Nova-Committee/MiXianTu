@@ -6,8 +6,9 @@ import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService;
 import com.iafenvoy.mxt.runtime.curse.CurseService;
-import com.iafenvoy.mxt.util.DefinitionText;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
+import com.iafenvoy.saturn.registry.SaturnAttachments;
+import com.iafenvoy.saturn.util.DefinitionText;
+import com.iafenvoy.saturn.util.formula.FormulaContext;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import net.minecraft.commands.CommandBuildContext;
 import net.minecraft.commands.CommandSourceStack;
@@ -36,7 +37,7 @@ public final class BreakthroughCommand {
     private static int attemptBreakthrough(CommandSourceStack source, Reference<Aura> aura) {
         ServerPlayer player = source.getPlayer();
         if (player == null) return 0;
-        CultivationService.BreakthroughResult result = CultivationService.attempt(player, player.getData(MxtAttachments.CULTIVATION), player.getData(MxtAttachments.RESOURCE_HOLDER), aura, FormulaContext.of(player), () -> true);
+        CultivationService.BreakthroughResult result = CultivationService.attempt(player, player.getData(MxtAttachments.CULTIVATION), player.getData(SaturnAttachments.RESOURCE_HOLDER), aura, FormulaContext.of(player), () -> true);
         if (result == null || !result.isSuccess()) {
             Component reason = result == null || result.failure() == null
                     ? Component.translatable("failure.mxt.common.unknown")

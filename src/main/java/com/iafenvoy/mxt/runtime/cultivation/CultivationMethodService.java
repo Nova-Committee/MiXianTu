@@ -1,36 +1,39 @@
 package com.iafenvoy.mxt.runtime.cultivation;
 
 import com.iafenvoy.mxt.attachment.CultivationAttachment;
-import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.config.MxtServerConfig;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.aura.AuraGain;
 import com.iafenvoy.mxt.data.aura.AuraRequirement;
 import com.iafenvoy.mxt.data.condition.builtin.entity.AuraRangeEntityCondition;
-import com.iafenvoy.mxt.data.cost.Cost;
-import com.iafenvoy.mxt.data.cost.CostPayment;
-import com.iafenvoy.mxt.data.cost.CostTarget;
+import com.iafenvoy.mxt.data.cost.AuraCostTarget;
+import com.iafenvoy.mxt.data.cost.Costs;
 import com.iafenvoy.mxt.data.cost.builtin.AuraCost;
-import com.iafenvoy.mxt.data.cost.context.CostContext;
-import com.iafenvoy.mxt.data.cost.context.CostOrigins;
+import com.iafenvoy.mxt.data.cost.context.AuraCostContexts;
 import com.iafenvoy.mxt.data.cultivation.Cultivation;
 import com.iafenvoy.mxt.data.cultivation.RealmStage;
-import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.runtime.resource.ResourceService;
-import com.iafenvoy.mxt.runtime.resource.ResourceService.Bounds;
-import com.iafenvoy.mxt.runtime.resulting.Failure;
-import com.iafenvoy.mxt.runtime.resulting.Failures;
-import com.iafenvoy.mxt.runtime.resulting.Result;
+import com.iafenvoy.mxt.runtime.MxtProfilerSources;
 import com.iafenvoy.mxt.runtime.resulting.failures.CultivationFailure;
 import com.iafenvoy.mxt.runtime.trigger.CultivationTriggerService;
 import com.iafenvoy.mxt.runtime.world.AuraResult;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
-import com.iafenvoy.mxt.util.formula.FormulaContexts;
-import com.iafenvoy.mxt.util.profiling.ProfilerScope;
-import com.iafenvoy.mxt.util.profiling.ServerProfiling;
+import com.iafenvoy.saturn.attachment.ResourceHolderAttachment;
+import com.iafenvoy.saturn.data.cost.Cost;
+import com.iafenvoy.saturn.data.cost.CostPayment;
+import com.iafenvoy.saturn.data.cost.context.CostContext;
+import com.iafenvoy.saturn.data.cost.context.CostOrigins;
+import com.iafenvoy.saturn.data.resource.Resource;
+import com.iafenvoy.saturn.profiling.ProfilerScope;
+import com.iafenvoy.saturn.profiling.ServerProfiling;
+import com.iafenvoy.saturn.runtime.resource.ResourceService;
+import com.iafenvoy.saturn.runtime.resource.ResourceService.Bounds;
+import com.iafenvoy.saturn.runtime.resulting.Failure;
+import com.iafenvoy.saturn.runtime.resulting.Failures;
+import com.iafenvoy.saturn.runtime.resulting.Result;
+import com.iafenvoy.saturn.util.formula.FormulaContext;
+import com.iafenvoy.saturn.util.formula.FormulaContexts;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
 import net.minecraft.network.chat.Component;
@@ -56,7 +59,7 @@ public final class CultivationMethodService {
 
     public static CultivationResult start(CultivationAttachment spirit, @NotNull Holder<Cultivation> action, Cultivation definition,
                                           long gameTime, BooleanSupplier conditionsMet) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.CULTIVATION)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.CULTIVATION)) {
             if (spirit.cultivating()) return CultivationResult.rejected(Failures.ALREADY_ACTIVE, null);
             if (spirit.isCultivationOnCooldown(action, gameTime))
                 return CultivationResult.rejected(Failures.COOLDOWN, null);
@@ -67,7 +70,7 @@ public final class CultivationMethodService {
     }
 
     public static CultivationResult start(LivingEntity entity, CultivationAttachment spirit, Identifier actionId, Cultivation definition, long gameTime, FormulaContext context) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.CULTIVATION)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.CULTIVATION)) {
             Holder<Cultivation> action = MxtDatapackRegistries.holder(entity.level().registryAccess(), MxtResourceKeys.CULTIVATION, actionId).orElse(null);
             if (action == null) return CultivationResult.rejected(Failures.DISABLED, null);
             boolean conditions = definition.startCondition().test(entity, context) && canStartCultivation(entity, context);
@@ -82,7 +85,7 @@ public final class CultivationMethodService {
     }
 
     public static CultivationResult tick(LivingEntity entity, CultivationAttachment spirit, ResourceHolderAttachment resources, AuraResult aura, Holder<Cultivation> action, Cultivation definition, long gameTime, FormulaContext context, BooleanSupplier conditionsMet) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.CULTIVATION)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.CULTIVATION)) {
             if (!canCultivateInEnvironment(spirit, entity, aura, context))
                 return stop(entity, spirit, action, definition, gameTime, CultivationFailure.ENVIRONMENT);
             double affinity = CultivationAffinity.multiplier(entity.getData(MxtAttachments.SPIRIT_IDENTITY),
@@ -92,7 +95,7 @@ public final class CultivationMethodService {
     }
 
     private static CultivationResult tick(LivingEntity entity, CultivationAttachment spirit, ResourceHolderAttachment resources, AuraResult aura, Holder<Cultivation> action, Cultivation definition, long gameTime, FormulaContext context, BooleanSupplier conditionsMet, double affinity) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.CULTIVATION)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.CULTIVATION)) {
             if (!spirit.cultivating() || spirit.cultivation().filter(action::equals).isEmpty())
                 return CultivationResult.rejected(CultivationFailure.NOT_ACTIVE, null);
             if (!conditionsMet.getAsBoolean())
@@ -116,14 +119,15 @@ public final class CultivationMethodService {
             // without a settlement.
             List<Cost> groundCosts = definition.costs().stream().filter(cost -> cost instanceof AuraCost).toList();
             List<Cost> bodyCosts = definition.costs().stream().filter(cost -> !(cost instanceof AuraCost)).toList();
-            CostContext auraContext = CostContext.pool(entity, entity.level(), entity.blockPosition(), context, CostOrigins.CULTIVATION);
+            CostContext auraContext = AuraCostContexts.pool(entity, entity.level(), entity.blockPosition(), context, CostOrigins.CULTIVATION);
             CostContext costContext = CostContext.of(entity, context, CostOrigins.CULTIVATION);
             CostPayment bill = CostPayment.of(costContext);
             // Whatever size is available is not asked here: this tick's share is decided below, and the payment is what
             // checks the pool against the amount actually spent, so both halves are only priced.
             if (bill.price(groundCosts, auraContext).isPresent() || bill.price(bodyCosts).isPresent())
                 return stop(entity, spirit, action, definition, gameTime, Failures.INVALID_FORMULA);
-            Map<Holder<Aura>, Double> auraCosts = bill.auras();
+            Map<Holder<Aura>, Double> auraCosts = Costs.auras(groundCosts, auraContext);
+            if (auraCosts == null) return stop(entity, spirit, action, definition, gameTime, Failures.INVALID_FORMULA);
             double auraCost = auraCosts.values().stream().mapToDouble(Double::doubleValue).sum();
             if (!Double.isFinite(affinity) || affinity < 0.0D)
                 return stop(entity, spirit, action, definition, gameTime, Failures.INVALID_FORMULA);
@@ -150,8 +154,8 @@ public final class CultivationMethodService {
             // instead of each taking it whole, and a grant larger than the price does not raise it.
             if (shares != null) {
                 Map<Holder<Aura>, Double> granted = shares;
-                if (bill.scale(transaction -> transaction.target() instanceof CostTarget.AuraStore,
-                        transaction -> transaction.target() instanceof CostTarget.AuraStore store
+                if (bill.scale(transaction -> transaction.target() instanceof AuraCostTarget,
+                        transaction -> transaction.target() instanceof AuraCostTarget store
                                 ? shareRatio(granted, auraCosts, store.aura()) : 1.0D).isPresent())
                     return stop(entity, spirit, action, definition, gameTime, Failures.INVALID_FORMULA);
             }
@@ -172,7 +176,7 @@ public final class CultivationMethodService {
     }
 
     public static CultivationResult stop(LivingEntity entity, CultivationAttachment spirit, Holder<Cultivation> action, Cultivation definition, long gameTime) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.CULTIVATION)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.CULTIVATION)) {
             return stop(entity, spirit, action, definition, gameTime, null);
         }
     }
@@ -181,7 +185,7 @@ public final class CultivationMethodService {
     // generic "conditions are not met"; every other stop names nothing and keeps the enum's message.
     private static CultivationResult stop(CultivationAttachment spirit, Holder<Cultivation> action, Cultivation definition, long gameTime,
                                           Failure reason, @Nullable Component abortReason) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.CULTIVATION)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.CULTIVATION)) {
             spirit.stopCultivation(action, Math.addExact(gameTime, definition.cooldownTicks()));
             return reason == null ? CultivationResult.stoppedResult() : CultivationResult.rejected(reason, null, abortReason);
         }
@@ -189,14 +193,14 @@ public final class CultivationMethodService {
 
     private static CultivationResult stop(LivingEntity entity, CultivationAttachment spirit, Holder<Cultivation> action, Cultivation definition,
                                           long gameTime, Failure reason) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.CULTIVATION)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.CULTIVATION)) {
             return stop(entity, spirit, action, definition, gameTime, reason, null);
         }
     }
 
     private static CultivationResult stop(LivingEntity entity, CultivationAttachment spirit, Holder<Cultivation> action, Cultivation definition,
                                           long gameTime, Failure reason, @Nullable Component abortReason) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.CULTIVATION)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.CULTIVATION)) {
             ItemAuraService.returnFloatingItem(entity);
             // Breakthrough listeners are derived runtime state and must disappear as soon as cultivation
             // stops, including on failure paths inside the tick.

@@ -3,13 +3,15 @@ package com.iafenvoy.mxt.data.cost.context;
 import com.iafenvoy.mxt.api.AuraAccess;
 import com.iafenvoy.mxt.api.AuraCostSource;
 import com.iafenvoy.mxt.data.aura.Aura;
-import com.iafenvoy.mxt.data.cost.CostTarget;
-import com.iafenvoy.mxt.data.cost.CostTransaction;
-import com.iafenvoy.mxt.data.cost.Debit;
-import com.iafenvoy.mxt.data.cost.builtin.ResourceChannel;
-import com.iafenvoy.mxt.runtime.resulting.ResultWithData;
-import com.iafenvoy.mxt.runtime.resulting.failures.CostFailure;
+import com.iafenvoy.mxt.data.cost.AuraCostTarget;
+import com.iafenvoy.mxt.runtime.resulting.failures.AuraFailure;
 import com.iafenvoy.mxt.runtime.world.WorldAuraAccess;
+import com.iafenvoy.saturn.data.cost.CostTarget;
+import com.iafenvoy.saturn.data.cost.CostTransaction;
+import com.iafenvoy.saturn.data.cost.Debit;
+import com.iafenvoy.saturn.data.cost.builtin.ResourceChannel;
+import com.iafenvoy.saturn.runtime.resulting.ResultWithData;
+import com.iafenvoy.saturn.runtime.resulting.failures.CostFailure;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup.Provider;
@@ -50,7 +52,7 @@ public final class AuraCostSources {
         private final Holder<Aura> aura;
 
         private StoreTransaction(@Nullable AuraAccess access, @Nullable Object identity, @Nullable LivingEntity payer, Provider registries, Holder<Aura> aura, double amount) {
-            super(new CostTarget.AuraStore(identity, aura), amount);
+            super(new AuraCostTarget(identity, aura), amount);
             this.access = access;
             this.payer = payer;
             this.registries = registries;
@@ -65,7 +67,7 @@ public final class AuraCostSources {
             if (amount == 0.0D) return took(List.of());
             // Recheck even on the real pass: earlier fees may have spent the same stock since simulation.
             double remainder = this.access.extract(this.payer, this.registries, this.aura, amount, true, true);
-            if (remainder != 0.0D) return refused(CostFailure.INSUFFICIENT_AURA);
+            if (remainder != 0.0D) return refused(AuraFailure.INSUFFICIENT_AURA);
             if (simulate) return took(List.of());
             remainder = this.access.extract(this.payer, this.registries, this.aura, amount, true, false);
             if (!Double.isFinite(remainder) || remainder < 0.0D || remainder > amount)
@@ -73,12 +75,12 @@ public final class AuraCostSources {
             // A faulty external store may violate exact; preserve its known partial debit for the payment's WARN.
             double taken = amount - remainder;
             List<Debit> debits = taken > 0.0D ? List.of(Debit.of(this.target(), taken)) : List.of();
-            return remainder == 0.0D ? took(debits) : ResultWithData.failure(debits, CostFailure.INSUFFICIENT_AURA);
+            return remainder == 0.0D ? took(debits) : ResultWithData.failure(debits, AuraFailure.INSUFFICIENT_AURA);
         }
 
         @Override
         protected CostTransaction replacing(double amount) {
-            return new StoreTransaction(this.access, ((CostTarget.AuraStore) this.target()).store(), this.payer, this.registries, this.aura, amount);
+            return new StoreTransaction(this.access, ((AuraCostTarget) this.target()).store(), this.payer, this.registries, this.aura, amount);
         }
     }
 }

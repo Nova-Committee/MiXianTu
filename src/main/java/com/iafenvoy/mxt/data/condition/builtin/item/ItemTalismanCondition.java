@@ -1,11 +1,11 @@
 package com.iafenvoy.mxt.data.condition.builtin.item;
 
-import com.iafenvoy.mxt.data.condition.ItemCondition;
-import com.iafenvoy.mxt.data.context.condition.ItemConditionContext;
 import com.iafenvoy.mxt.data.talisman.Talisman;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.talisman.TalismanService;
-import com.iafenvoy.mxt.util.codec.RegistryCodecs;
+import com.iafenvoy.saturn.data.condition.ItemCondition;
+import com.iafenvoy.saturn.data.context.condition.ItemConditionContext;
+import com.iafenvoy.saturn.util.codec.RegistryCodecs;
 import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.MapCodec;

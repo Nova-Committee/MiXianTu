@@ -4,9 +4,9 @@ import com.iafenvoy.mxt.network.payload.ProfilerGuiS2CPayload;
 import com.iafenvoy.mxt.network.payload.ProfilerSnapshotS2CPayload;
 import com.iafenvoy.mxt.probe.Probe;
 import com.iafenvoy.mxt.probe.ProbeContext;
-import com.iafenvoy.mxt.util.profiling.ProfilerFrame;
-import com.iafenvoy.mxt.util.profiling.ProfilerSubscriptions;
-import com.iafenvoy.mxt.util.profiling.ServerProfiling;
+import com.iafenvoy.saturn.profiling.ProfilerFrame;
+import com.iafenvoy.mxt.util.ProfilerSubscriptions;
+import com.iafenvoy.saturn.profiling.ServerProfiling;
 import com.mojang.brigadier.tree.CommandNode;
 import io.netty.channel.embedded.EmbeddedChannel;
 import net.minecraft.commands.CommandSourceStack;
@@ -94,7 +94,7 @@ public final class ProfilerGuiVerifyProbes {
             expect(context, "level 2 cannot obtain a GUI grant", ProfilerSubscriptions.open(player), false);
             ops.add(new ServerOpListEntry(identity, LevelBasedPermissionSet.ADMIN, false));
             expect(context, "level 3 obtains a GUI grant", ProfilerSubscriptions.open(player), true);
-            UUID first = ((ProfilerGuiS2CPayload) sent.getLast()).token();
+            UUID first = lastGrant(context, sent);
             token[0] = first;
             context.after(6L, () -> {
                 expect(context, "a command grant alone sends no samples", snapshots(sent), 0L);
@@ -123,7 +123,7 @@ public final class ProfilerGuiVerifyProbes {
             context.after(18L, () -> {
                 expect(context, "closing GUI stops delivery", snapshots(sent), 0L);
                 ProfilerSubscriptions.open(player);
-                UUID second = ((ProfilerGuiS2CPayload) sent.getLast()).token();
+                UUID second = lastGrant(context, sent);
                 token[0] = second;
                 ProfilerSubscriptions.update(player, second, true);
                 ProfilerSubscriptions.update(player, first, false);
@@ -140,7 +140,7 @@ public final class ProfilerGuiVerifyProbes {
                 expect(context, "revoked permission closes the GUI", sent.stream().anyMatch(value -> value instanceof ProfilerGuiS2CPayload gui && !gui.open()), true);
                 ops.add(new ServerOpListEntry(identity, LevelBasedPermissionSet.ADMIN, false));
                 ProfilerSubscriptions.open(player);
-                UUID third = ((ProfilerGuiS2CPayload) sent.getLast()).token();
+                UUID third = lastGrant(context, sent);
                 token[0] = third;
                 ProfilerSubscriptions.update(player, third, true);
             });
@@ -163,6 +163,16 @@ public final class ProfilerGuiVerifyProbes {
 
     private static long snapshots(List<CustomPacketPayload> sent) {
         return sent.stream().filter(ProfilerSnapshotS2CPayload.class::isInstance).count();
+    }
+
+    // The grant is the only payload open() sends. An empty list means an earlier leg already failed, and the legs
+    // that follow have to report that rather than throw out of the whole probe.
+    private static UUID lastGrant(ProbeContext context, List<CustomPacketPayload> sent) {
+        if (sent.isEmpty() || !(sent.getLast() instanceof ProfilerGuiS2CPayload grant)) {
+            context.fail("the GUI grant sent no ProfilerGuiS2CPayload");
+            return null;
+        }
+        return grant.token();
     }
 
     private static void expect(ProbeContext context, String message, Object actual, Object expected) {

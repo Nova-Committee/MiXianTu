@@ -1,8 +1,8 @@
 package com.iafenvoy.mxt.screen.profiling;
 
-import com.iafenvoy.mxt.util.profiling.Profiler;
-import com.iafenvoy.mxt.util.profiling.ProfilerSource;
-import com.iafenvoy.mxt.util.profiling.ProfilerWindowSnapshot;
+import com.iafenvoy.saturn.profiling.Profiler;
+import com.iafenvoy.saturn.profiling.ProfilerSource;
+import com.iafenvoy.saturn.profiling.ProfilerWindowSnapshot;
 
 import java.awt.*;
 

@@ -1,11 +1,12 @@
 package com.iafenvoy.mxt.runtime.rift;
 
 import com.iafenvoy.mxt.attachment.RiftWorldAttachment;
-import com.iafenvoy.mxt.event.CollectTickStagesEvent;
 import com.iafenvoy.mxt.registry.MxtAttachments;
-import com.iafenvoy.mxt.runtime.EntityTickStages;
-import com.iafenvoy.mxt.util.profiling.ProfilerScope;
-import com.iafenvoy.mxt.util.profiling.ServerProfiling;
+import com.iafenvoy.mxt.runtime.MxtProfilerSources;
+import com.iafenvoy.saturn.event.CollectTickStagesEvent;
+import com.iafenvoy.saturn.profiling.ProfilerScope;
+import com.iafenvoy.saturn.profiling.ServerProfiling;
+import com.iafenvoy.saturn.runtime.EntityTickStages;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
@@ -40,7 +41,7 @@ public final class RiftContactCollector {
 
     public static void collect(Entity entity) {
         if (!(entity.level() instanceof ServerLevel level)) return;
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.RIFT)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.RIFT)) {
             collect(level, entity);
         }
     }

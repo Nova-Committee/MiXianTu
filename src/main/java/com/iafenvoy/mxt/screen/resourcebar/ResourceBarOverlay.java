@@ -1,28 +1,31 @@
 package com.iafenvoy.mxt.screen.resourcebar;
 
 import com.iafenvoy.mxt.MiXianTu;
-import com.iafenvoy.mxt.data.SpriteIcon;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.aura.AuraZone;
 import com.iafenvoy.mxt.data.aura.AuraZone.Bar;
 import com.iafenvoy.mxt.data.aura.AuraZone.ClientHud;
-import com.iafenvoy.mxt.data.resource.Resource;
-import com.iafenvoy.mxt.data.resource.ResourceBar;
-import com.iafenvoy.mxt.data.resource.ResourceBar.Anchor;
-import com.iafenvoy.mxt.data.resource.ResourceBar.ValueDisplay;
-import com.iafenvoy.mxt.data.resourcebar.ResourceBarContext.Layout;
-import com.iafenvoy.mxt.data.resourcebar.ResourceBarContext.Values;
-import com.iafenvoy.mxt.data.resourcebar.ResourceBarView;
-import com.iafenvoy.mxt.data.resourcebar.builtin.context.SelfHudContext;
-import com.iafenvoy.mxt.data.resourcebar.builtin.renderdata.OriginsRenderData;
-import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.registry.cache.RegistryCaches;
 import com.iafenvoy.mxt.runtime.resource.ResourceUseService;
 import com.iafenvoy.mxt.runtime.world.AuraClientState;
 import com.iafenvoy.mxt.runtime.world.AuraClientState.Snapshot;
-import com.iafenvoy.mxt.screen.hud.HudManager;
-import com.iafenvoy.mxt.util.HolderHelper;
-import com.iafenvoy.mxt.util.MiscUtil;
+import com.iafenvoy.saturn.data.SpriteIcon;
+import com.iafenvoy.saturn.data.resource.Resource;
+import com.iafenvoy.saturn.data.resource.ResourceBar;
+import com.iafenvoy.saturn.data.resource.ResourceBar.Anchor;
+import com.iafenvoy.saturn.data.resource.ResourceBar.ValueDisplay;
+import com.iafenvoy.saturn.data.resourcebar.ResourceBarContext.Layout;
+import com.iafenvoy.saturn.data.resourcebar.ResourceBarContext.Values;
+import com.iafenvoy.saturn.data.resourcebar.ResourceBarView;
+import com.iafenvoy.saturn.data.resourcebar.builtin.context.SelfHudContext;
+import com.iafenvoy.saturn.data.resourcebar.builtin.renderdata.OriginsRenderData;
+import com.iafenvoy.saturn.registry.SaturnResourceKeys;
+import com.iafenvoy.saturn.screen.hud.HudManager;
+import com.iafenvoy.saturn.screen.resourcebar.ResourceBarEntry;
+import com.iafenvoy.saturn.screen.resourcebar.ResourceBarFixedEntry;
+import com.iafenvoy.saturn.screen.resourcebar.ResourceBarRenderState;
+import com.iafenvoy.saturn.util.HolderHelper;
+import com.iafenvoy.saturn.util.MiscUtil;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
@@ -52,7 +55,7 @@ public final class ResourceBarOverlay {
         Player player = minecraft.player;
         if (player == null || minecraft.level == null) return List.of();
 
-        Registry<Resource> resources = player.level().registryAccess().lookupOrThrow(MxtResourceKeys.RESOURCE);
+        Registry<Resource> resources = player.level().registryAccess().lookupOrThrow(SaturnResourceKeys.RESOURCE);
         List<ResourceBarRenderState> collected = new ArrayList<>();
         collectResources(collected, resources, player, Layout.SELF_HUD, anchor);
         collectAuraHud(collected, anchor);
@@ -62,7 +65,7 @@ public final class ResourceBarOverlay {
     public static List<ResourceBarRenderState> row(LivingEntity target, Layout layout) {
         Minecraft minecraft = Minecraft.getInstance();
         if (minecraft.level == null) return List.of();
-        Registry<Resource> resources = target.level().registryAccess().lookupOrThrow(MxtResourceKeys.RESOURCE);
+        Registry<Resource> resources = target.level().registryAccess().lookupOrThrow(SaturnResourceKeys.RESOURCE);
         List<ResourceBarRenderState> collected = new ArrayList<>();
         for (Anchor anchor : Anchor.values()) {
             collectResources(collected, resources, target, layout, anchor);
@@ -129,8 +132,7 @@ public final class ResourceBarOverlay {
                 snapshot.environmentConcentration(), bar.maximum(), anchor));
     }
 
-    private static void addAuraEntry(List<ResourceBarRenderState> result, String id, int index, Bar definition,
-                                     double current, double maximum, Anchor anchor) {
+    private static void addAuraEntry(List<ResourceBarRenderState> result, String id, int index, Bar definition, double current, double maximum, Anchor anchor) {
         if (definition.anchor() != anchor) return;
         if (!Double.isFinite(current) || !Double.isFinite(maximum) || maximum <= 0.0D) return;
         Identifier identifier = Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, id);

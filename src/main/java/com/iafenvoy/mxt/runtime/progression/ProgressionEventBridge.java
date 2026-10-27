@@ -1,6 +1,6 @@
 package com.iafenvoy.mxt.runtime.progression;
 
-import com.iafenvoy.mxt.runtime.ability.AbilityGrantService;
+import com.iafenvoy.saturn.runtime.ability.AbilityGrantService;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;

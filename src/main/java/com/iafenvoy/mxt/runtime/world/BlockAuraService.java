@@ -7,8 +7,9 @@ import com.iafenvoy.mxt.data.aura.BlockAura;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.registry.cache.RegistryCaches;
-import com.iafenvoy.mxt.util.profiling.ProfilerScope;
-import com.iafenvoy.mxt.util.profiling.ServerProfiling;
+import com.iafenvoy.mxt.runtime.MxtProfilerSources;
+import com.iafenvoy.saturn.profiling.ProfilerScope;
+import com.iafenvoy.saturn.profiling.ServerProfiling;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
@@ -33,13 +34,13 @@ public final class BlockAuraService {
      * One section only, for a sub-chunk that went stale.
      */
     public static void rebuild(LevelChunk chunk, int sectionY) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.AURA_BLOCK_CACHE)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.AURA_BLOCK_CACHE)) {
             rebuild(chunk, chunk.getData(MxtAttachments.AURA_CHUNK), sectionY);
         }
     }
 
     public static void rebuild(LevelChunk chunk) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.AURA_BLOCK_CACHE)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.AURA_BLOCK_CACHE)) {
             AuraChunkAttachment attachment = chunk.getData(MxtAttachments.AURA_CHUNK);
             int minSectionY = chunk.getMinSectionY();
             // The cached sections join the filled range, so a section that went back to air - now above the filled
@@ -52,7 +53,7 @@ public final class BlockAuraService {
     }
 
     private static void rebuild(LevelChunk chunk, AuraChunkAttachment attachment, int sectionY) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.AURA_BLOCK_CACHE)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.AURA_BLOCK_CACHE)) {
             int sectionIndex = sectionY - chunk.getMinSectionY();
             Map<Holder<Aura>, AuraValue> aura = registry(chunk.getLevel().registryAccess()).size() == 0 || sectionIndex < 0
                     || sectionIndex >= chunk.getSectionsCount()
@@ -65,7 +66,7 @@ public final class BlockAuraService {
      * One block changed: only that block's own contribution is re-evaluated, so nothing walks the section.
      */
     public static void updateBlock(ServerLevel level, LevelChunk chunk, BlockPos pos, BlockState previous, BlockState current) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.AURA_BLOCK_CACHE)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.AURA_BLOCK_CACHE)) {
             if (previous.equals(current)) return;
             if (registry(level.registryAccess()).size() == 0) return;
             Map<Holder<Aura>, AuraValue> departed = blockAura(previous), arrived = blockAura(current);

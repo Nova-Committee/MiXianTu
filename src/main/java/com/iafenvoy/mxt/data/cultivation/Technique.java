@@ -1,20 +1,21 @@
 package com.iafenvoy.mxt.data.cultivation;
 
 import com.iafenvoy.mxt.api.QualityProvider;
-import com.iafenvoy.mxt.data.AttributeEntry;
-import com.iafenvoy.mxt.data.IconReference;
-import com.iafenvoy.mxt.data.ability.Ability;
-import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.data.item.HoldBinding;
 import com.iafenvoy.mxt.data.progression.Progression;
 import com.iafenvoy.mxt.data.progression.ProgressionConfig;
 import com.iafenvoy.mxt.data.progression.ProgressionOwner;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
-import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.util.codec.RegistryCodecs;
-import com.iafenvoy.mxt.util.formula.NumberProvider;
-import com.iafenvoy.mxt.util.formula.number.Constant;
+import com.iafenvoy.saturn.data.AttributeEntry;
+import com.iafenvoy.saturn.data.IconReference;
+import com.iafenvoy.saturn.data.ability.Ability;
+import com.iafenvoy.saturn.data.condition.EntityCondition;
+import com.iafenvoy.saturn.data.resource.Resource;
+import com.iafenvoy.saturn.registry.SaturnResourceKeys;
+import com.iafenvoy.saturn.util.codec.RegistryCodecs;
+import com.iafenvoy.saturn.util.formula.NumberProvider;
+import com.iafenvoy.saturn.util.formula.number.Constant;
 import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
@@ -65,7 +66,7 @@ public record Technique(Optional<Holder<ItemQuality>> quality, Optional<IconRefe
             Identifier.CODEC.listOf().optionalFieldOf("exclusive_tags", List.of()).forGetter(Technique::exclusiveTags),
             NumberProvider.CODEC.optionalFieldOf("cultivation_modifier", new Constant(1.0D)).forGetter(Technique::cultivationModifier),
             AttributeEntry.CODEC.listOf().optionalFieldOf("passive_modifiers", List.of()).forGetter(Technique::passiveModifiers),
-            RegistryCodecs.holderOrTagList(MxtResourceKeys.ABILITY).optionalFieldOf("granted_abilities", List.of()).forGetter(Technique::grantedAbilities),
+            RegistryCodecs.holderOrTagList(SaturnResourceKeys.ABILITY).optionalFieldOf("granted_abilities", List.of()).forGetter(Technique::grantedAbilities),
             Progression.CODEC.optionalFieldOf("default_level").forGetter(Technique::defaultLevel),
             Resource.CODEC.optionalFieldOf("mastery_resource").forGetter(Technique::masteryResource),
             Codec.unboundedMap(Progression.CODEC, ProgressionConfig.CODEC).optionalFieldOf("configuration", Map.of()).forGetter(Technique::configuration)

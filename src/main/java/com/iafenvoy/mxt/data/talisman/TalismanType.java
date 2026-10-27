@@ -1,14 +1,14 @@
 package com.iafenvoy.mxt.data.talisman;
 
-import com.iafenvoy.mxt.data.ability.ActionCarrier;
-import com.iafenvoy.mxt.data.action.BiEntityAction;
-import com.iafenvoy.mxt.data.action.EntityAction;
-import com.iafenvoy.mxt.data.context.action.BiEntityActionContext;
-import com.iafenvoy.mxt.data.context.action.EntityActionContext;
 import com.iafenvoy.mxt.registry.MxtRegistries;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
-import com.iafenvoy.mxt.util.profiling.LoggerDispatcher;
-import com.iafenvoy.mxt.util.profiling.LoggingLevel;
+import com.iafenvoy.saturn.data.ability.ActionCarrier;
+import com.iafenvoy.saturn.data.action.BiEntityAction;
+import com.iafenvoy.saturn.data.action.EntityAction;
+import com.iafenvoy.saturn.data.context.action.BiEntityActionContext;
+import com.iafenvoy.saturn.data.context.action.EntityActionContext;
+import com.iafenvoy.saturn.profiling.LoggerDispatcher;
+import com.iafenvoy.saturn.profiling.LoggingLevel;
+import com.iafenvoy.saturn.util.formula.FormulaContext;
 import com.mojang.logging.LogUtils;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;

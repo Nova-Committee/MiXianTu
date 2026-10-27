@@ -3,7 +3,7 @@ package com.iafenvoy.mxt.item;
 import com.iafenvoy.mxt.data.item.Pill;
 import com.iafenvoy.mxt.data.item.PillComponent;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
-import com.iafenvoy.mxt.util.DefinitionText;
+import com.iafenvoy.saturn.util.DefinitionText;
 import net.minecraft.core.Holder;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;

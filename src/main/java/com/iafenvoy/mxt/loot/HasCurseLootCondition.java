@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.loot;
 
 import com.iafenvoy.mxt.data.curse.CurseFilter;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
+import com.iafenvoy.saturn.util.formula.FormulaContext;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.world.entity.Entity;

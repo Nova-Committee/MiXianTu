@@ -4,7 +4,7 @@ import com.iafenvoy.mxt.config.MxtServerConfig;
 import com.iafenvoy.mxt.data.formation.Formation;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.util.DefinitionText;
+import com.iafenvoy.saturn.util.DefinitionText;
 import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;

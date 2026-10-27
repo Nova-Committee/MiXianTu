@@ -1,6 +1,7 @@
 package com.iafenvoy.mxt.registry.cache;
 
 import com.iafenvoy.mxt.runtime.economy.CurrencyPaymentService;
+import com.iafenvoy.saturn.registry.cache.RegistryCache;
 import net.minecraft.core.RegistryAccess;
 
 import java.util.List;

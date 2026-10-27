@@ -2,28 +2,30 @@ package com.iafenvoy.mxt.screen.wheel.content;
 
 import com.iafenvoy.mxt.api.WheelEntryKind;
 import com.iafenvoy.mxt.api.WheelMenuEntry;
-import com.iafenvoy.mxt.attachment.AbilityAttachment;
-import com.iafenvoy.mxt.data.IconReference;
-import com.iafenvoy.mxt.data.ability.Ability;
-import com.iafenvoy.mxt.data.ability.CooldownSource;
-import com.iafenvoy.mxt.data.ability.Togglable;
+import com.iafenvoy.mxt.data.ability.AbilityAffinity;
 import com.iafenvoy.mxt.data.artifact.Artifact;
-import com.iafenvoy.mxt.data.cost.Cost;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
-import com.iafenvoy.mxt.data.storage.builtin.CooldownDataStorage;
-import com.iafenvoy.mxt.registry.MxtAttachments;
-import com.iafenvoy.mxt.runtime.Sources;
-import com.iafenvoy.mxt.runtime.ability.AbilityStorage;
+import com.iafenvoy.mxt.registry.cache.RegistryCaches;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactService;
 import com.iafenvoy.mxt.runtime.item.QualityService;
 import com.iafenvoy.mxt.runtime.wheel.WheelEntryKinds;
 import com.iafenvoy.mxt.runtime.wheel.WheelSources;
 import com.iafenvoy.mxt.screen.wheel.WheelDuration;
 import com.iafenvoy.mxt.screen.wheel.WheelSelection;
-import com.iafenvoy.mxt.util.DefinitionText;
-import com.iafenvoy.mxt.util.HolderHelper;
-import com.iafenvoy.mxt.util.OptionalBoolean;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
+import com.iafenvoy.saturn.attachment.AbilityAttachment;
+import com.iafenvoy.saturn.data.IconReference;
+import com.iafenvoy.saturn.data.ability.Ability;
+import com.iafenvoy.saturn.data.ability.CooldownSource;
+import com.iafenvoy.saturn.data.ability.Togglable;
+import com.iafenvoy.saturn.data.cost.Cost;
+import com.iafenvoy.saturn.data.storage.builtin.CooldownDataStorage;
+import com.iafenvoy.saturn.registry.SaturnAttachments;
+import com.iafenvoy.saturn.runtime.Sources;
+import com.iafenvoy.saturn.runtime.ability.AbilityStorage;
+import com.iafenvoy.saturn.util.DefinitionText;
+import com.iafenvoy.saturn.util.HolderHelper;
+import com.iafenvoy.saturn.util.OptionalBoolean;
+import com.iafenvoy.saturn.util.formula.FormulaContext;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.Holder;
 import net.minecraft.core.RegistryAccess;
@@ -76,7 +78,7 @@ public record AbilityWheelEntry(Holder<Ability> ability, @Nullable ItemStack car
     @Override
     public long cooldownTicks(@Nullable Player player) {
         if (player == null) return 0L;
-        AbilityAttachment holder = player.getExistingData(MxtAttachments.ABILITY_HOLDER).orElse(null);
+        AbilityAttachment holder = player.getExistingData(SaturnAttachments.ABILITY_HOLDER).orElse(null);
         if (holder == null) return 0L;
         return AbilityStorage.cooldownRemaining(holder, this.ability, player.level().getGameTime());
     }
@@ -86,7 +88,7 @@ public record AbilityWheelEntry(Holder<Ability> ability, @Nullable ItemStack car
     @Override
     public long cooldownLength(@Nullable Player player) {
         if (player == null) return 0L;
-        AbilityAttachment holder = player.getExistingData(MxtAttachments.ABILITY_HOLDER).orElse(null);
+        AbilityAttachment holder = player.getExistingData(SaturnAttachments.ABILITY_HOLDER).orElse(null);
         if (holder == null) return 0L;
         OptionalDouble duration = AbilityStorage.get(holder, this.ability, CooldownDataStorage.class)
                 .map(CooldownDataStorage::duration).orElseGet(OptionalDouble::empty);
@@ -111,9 +113,10 @@ public record AbilityWheelEntry(Holder<Ability> ability, @Nullable ItemStack car
         double castTime = this.ability.value().castTime().evaluate(context);
         if (castTime > 0.0D)
             lines.add(Component.translatable("wheel.mxt.tooltip.cast_time", WheelDuration.seconds(castTime)));
-        if (!this.ability.value().elementAffinity().isEmpty())
+        AbilityAffinity affinity = RegistryCaches.ABILITY_AFFINITY.of(this.ability);
+        if (affinity != null && !affinity.isEmpty())
             lines.add(Component.translatable("wheel.mxt.tooltip.element",
-                    WheelTooltips.elements(this.ability.value().elementAffinity())));
+                    WheelTooltips.elements(affinity.elements())));
         // Last, because it answers "where did this come from": the thing that keeps it, not the thing that happens
         // to declare it as well.
         Component origin = this.origin(player);

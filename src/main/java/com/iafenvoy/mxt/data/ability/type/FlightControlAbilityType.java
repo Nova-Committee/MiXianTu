@@ -1,17 +1,17 @@
 package com.iafenvoy.mxt.data.ability.type;
 
 import com.iafenvoy.mxt.attachment.FlightAttachment;
-import com.iafenvoy.mxt.data.ability.*;
-import com.iafenvoy.mxt.data.storage.DataStorageCollector;
-import com.iafenvoy.mxt.data.storage.builtin.CooldownDataStorage;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.artifact.FlightService;
-import com.iafenvoy.mxt.runtime.resulting.Failure;
-import com.iafenvoy.mxt.runtime.resulting.ResultWithData;
 import com.iafenvoy.mxt.runtime.resulting.failures.FlightFailure;
-import com.iafenvoy.mxt.util.OptionalBoolean;
-import com.iafenvoy.mxt.util.formula.NumberProvider;
-import com.iafenvoy.mxt.util.formula.number.Constant;
+import com.iafenvoy.saturn.data.ability.*;
+import com.iafenvoy.saturn.data.storage.DataStorageCollector;
+import com.iafenvoy.saturn.data.storage.builtin.CooldownDataStorage;
+import com.iafenvoy.saturn.runtime.resulting.Failure;
+import com.iafenvoy.saturn.runtime.resulting.ResultWithData;
+import com.iafenvoy.saturn.util.OptionalBoolean;
+import com.iafenvoy.saturn.util.formula.NumberProvider;
+import com.iafenvoy.saturn.util.formula.number.Constant;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;

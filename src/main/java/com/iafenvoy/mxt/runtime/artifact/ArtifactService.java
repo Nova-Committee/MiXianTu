@@ -1,33 +1,35 @@
 package com.iafenvoy.mxt.runtime.artifact;
 
-import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.ability.type.MountAbilityType;
 import com.iafenvoy.mxt.data.ability.type.StorageAbilityType;
-import com.iafenvoy.mxt.data.ability.type.UpkeepAbilityType;
-import com.iafenvoy.mxt.data.action.ItemAction;
-import com.iafenvoy.mxt.data.action.builtin.item.ConsumeHealthItemAction;
-import com.iafenvoy.mxt.data.action.builtin.item.meta.SequenceItemAction;
 import com.iafenvoy.mxt.data.artifact.Artifact;
 import com.iafenvoy.mxt.data.artifact.ArtifactStateComponent;
 import com.iafenvoy.mxt.data.artifact.ItemAbilitiesComponent;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.aura.SpiritStorageComponent;
-import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.event.ArtifactRefineEvent.Post;
 import com.iafenvoy.mxt.event.ArtifactRefineEvent.Pre;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.runtime.MxtProfilerSources;
 import com.iafenvoy.mxt.runtime.spirit.AuraTransfers;
-import com.iafenvoy.mxt.util.HolderHelper;
-import com.iafenvoy.mxt.util.MiscUtil;
-import com.iafenvoy.mxt.util.PlayerNames;
-import com.iafenvoy.mxt.util.codec.RegistryCodecs;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
-import com.iafenvoy.mxt.util.formula.NumberProvider;
-import com.iafenvoy.mxt.util.matcher.ItemMatcher;
-import com.iafenvoy.mxt.util.profiling.ProfilerScope;
-import com.iafenvoy.mxt.util.profiling.ServerProfiling;
+import com.iafenvoy.saturn.data.ability.Ability;
+import com.iafenvoy.saturn.data.ability.type.UpkeepAbilityType;
+import com.iafenvoy.saturn.data.action.ItemAction;
+import com.iafenvoy.saturn.data.action.builtin.item.ConsumeHealthItemAction;
+import com.iafenvoy.saturn.data.action.builtin.item.meta.SequenceItemAction;
+import com.iafenvoy.saturn.data.resource.Resource;
+import com.iafenvoy.saturn.profiling.ProfilerScope;
+import com.iafenvoy.saturn.profiling.ServerProfiling;
+import com.iafenvoy.saturn.registry.SaturnResourceKeys;
+import com.iafenvoy.saturn.util.HolderHelper;
+import com.iafenvoy.saturn.util.MiscUtil;
+import com.iafenvoy.saturn.util.PlayerNames;
+import com.iafenvoy.saturn.util.codec.RegistryCodecs;
+import com.iafenvoy.saturn.util.formula.FormulaContext;
+import com.iafenvoy.saturn.util.formula.NumberProvider;
+import com.iafenvoy.saturn.util.matcher.ItemMatcher;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
 import net.minecraft.core.HolderLookup.Provider;
@@ -72,7 +74,7 @@ public final class ArtifactService {
     // on a client that may have no way to turn a UUID back into a name (offline player, a server that never told
     // it). Display-only - every ownership question is asked of the UUID.
     public static RefineResult refine(ItemStack stack, Entity owner) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.ARTIFACT)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.ARTIFACT)) {
             UUID ownerUuid = owner.getUUID();
             if (NeoForge.EVENT_BUS.post(new Pre(owner, stack)).isCanceled())
                 return RefineResult.CANCELLED;
@@ -172,7 +174,7 @@ public final class ArtifactService {
     public static List<Holder<Ability>> abilities(Provider access, ItemStack stack) {
         if (stack.isEmpty()) return List.of();
         LinkedHashSet<Holder<Ability>> granted = new LinkedHashSet<>();
-        definition(access, stack).ifPresent(holder -> granted.addAll(RegistryCodecs.resolve(holder.value().abilities(), access, MxtResourceKeys.ABILITY).toList()));
+        definition(access, stack).ifPresent(holder -> granted.addAll(RegistryCodecs.resolve(holder.value().abilities(), access, SaturnResourceKeys.ABILITY).toList()));
         ItemAbilitiesComponent component = stack.getOrDefault(MxtDataComponents.ITEM_ABILITIES, new ItemAbilitiesComponent(List.of()));
         granted.addAll(component.abilities());
         return List.copyOf(granted);
@@ -313,7 +315,7 @@ public final class ArtifactService {
 
     // Never lowered: an artifact keeps what it was fed after the aura it took in is spent again.
     private static void feed(ItemStack stack, double share) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.ARTIFACT)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.ARTIFACT)) {
             share = MiscUtil.positive(share);
             if (share <= 0.0D) return;
             ArtifactStateComponent current = state(stack);

@@ -2,7 +2,7 @@ package com.iafenvoy.mxt.event;
 
 import com.iafenvoy.mxt.recipe.AlchemyRecipe;
 import com.iafenvoy.mxt.recipe.AlchemyRole;
-import com.iafenvoy.mxt.runtime.resulting.Failure;
+import com.iafenvoy.saturn.runtime.resulting.Failure;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;

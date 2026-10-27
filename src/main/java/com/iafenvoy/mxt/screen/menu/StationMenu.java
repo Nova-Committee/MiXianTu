@@ -2,12 +2,13 @@ package com.iafenvoy.mxt.screen.menu;
 
 import com.iafenvoy.mxt.registry.MxtBlocks;
 import com.iafenvoy.mxt.registry.MxtMenus;
+import com.iafenvoy.mxt.runtime.MxtProfilerSources;
 import com.iafenvoy.mxt.screen.EconomySlots.Display;
 import com.iafenvoy.mxt.screen.EconomySlots.Ghost;
 import com.iafenvoy.mxt.screen.aui.AuiPages;
-import com.iafenvoy.mxt.util.InventoryUtil;
-import com.iafenvoy.mxt.util.profiling.ProfilerScope;
-import com.iafenvoy.mxt.util.profiling.ServerProfiling;
+import com.iafenvoy.saturn.profiling.ProfilerScope;
+import com.iafenvoy.saturn.profiling.ServerProfiling;
+import com.iafenvoy.saturn.util.InventoryUtil;
 import com.sighs.apricityui.screen.ApricityContainerMenu;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.Container;
@@ -102,7 +103,7 @@ public final class StationMenu extends ApricityContainerMenu {
      * Performs one offer after proving each inventory mutation can complete.
      */
     public boolean trade(Player player) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.ECONOMY)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.ECONOMY)) {
             if (!this.isCustomer()) return false;
             Inventory playerInventory = player.getInventory();
             Container playerPreview = InventoryUtil.copy(playerInventory);

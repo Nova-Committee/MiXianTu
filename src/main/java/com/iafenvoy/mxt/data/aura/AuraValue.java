@@ -2,7 +2,7 @@ package com.iafenvoy.mxt.data.aura;
 
 import com.iafenvoy.mxt.data.aura.builtin.FixedAuraMaximum;
 import com.iafenvoy.mxt.data.aura.builtin.InitialMultiplierAuraMaximum;
-import com.iafenvoy.mxt.util.codec.CollectionCodecs;
+import com.iafenvoy.saturn.util.codec.CollectionCodecs;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;

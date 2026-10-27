@@ -1,14 +1,15 @@
 package com.iafenvoy.mxt.data.creature;
 
 import com.iafenvoy.mxt.api.QualityProvider;
-import com.iafenvoy.mxt.data.ability.Ability;
-import com.iafenvoy.mxt.data.action.BiEntityAction;
-import com.iafenvoy.mxt.data.action.EntityAction;
-import com.iafenvoy.mxt.data.condition.EntityCondition;
-import com.iafenvoy.mxt.data.cost.Cost;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.util.codec.RegistryCodecs;
+import com.iafenvoy.saturn.data.ability.Ability;
+import com.iafenvoy.saturn.data.action.BiEntityAction;
+import com.iafenvoy.saturn.data.action.EntityAction;
+import com.iafenvoy.saturn.data.condition.EntityCondition;
+import com.iafenvoy.saturn.data.cost.Cost;
+import com.iafenvoy.saturn.registry.SaturnResourceKeys;
+import com.iafenvoy.saturn.util.codec.RegistryCodecs;
 import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -48,7 +49,7 @@ public record ContractType(Optional<Holder<ItemQuality>> quality, EntityConditio
             EntityAction.optionalCodec("owner_bind_action").forGetter(ContractType::ownerBindAction),
             EntityAction.optionalCodec("owner_release_action").forGetter(ContractType::ownerReleaseAction),
             EntityAction.optionalCodec("owner_death_action").forGetter(ContractType::ownerDeathAction),
-            RegistryCodecs.holderOrTagList(MxtResourceKeys.ABILITY).optionalFieldOf("owner_abilities", List.of()).forGetter(ContractType::ownerAbilities),
+            RegistryCodecs.holderOrTagList(SaturnResourceKeys.ABILITY).optionalFieldOf("owner_abilities", List.of()).forGetter(ContractType::ownerAbilities),
             Cost.LIST_CODEC.optionalFieldOf("costs", List.of()).forGetter(ContractType::costs),
             Codec.intRange(0, Integer.MAX_VALUE).optionalFieldOf("max_owned", 0).forGetter(ContractType::maxOwned),
             Codec.intRange(0, Integer.MAX_VALUE).optionalFieldOf("recall_cooldown", 0).forGetter(ContractType::recallCooldown)

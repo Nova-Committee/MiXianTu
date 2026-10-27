@@ -1,22 +1,31 @@
 package com.iafenvoy.mxt.probe.verify;
+import com.iafenvoy.mxt.runtime.resulting.failures.AuraFailure;
+import com.iafenvoy.mxt.data.cost.Costs;
+import com.iafenvoy.saturn.registry.SaturnResourceKeys;
+import com.iafenvoy.saturn.data.context.Context;
+import com.iafenvoy.saturn.data.cost.Cost;
+import com.iafenvoy.saturn.data.cost.CostPayment;
+import com.iafenvoy.saturn.data.cost.CostTarget;
+import com.iafenvoy.saturn.data.cost.CostTransaction;
+import com.iafenvoy.saturn.data.cost.Debit;
+import com.iafenvoy.saturn.runtime.resulting.Result;
 
 import com.google.gson.JsonObject;
-import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
-import com.iafenvoy.mxt.compat.kubejs.callback.MxtJsCostCallbacks;
+import com.iafenvoy.saturn.attachment.ResourceHolderAttachment;
+import com.iafenvoy.saturn.compat.kubejs.callback.SaturnJsCostCallbacks;
 import com.iafenvoy.mxt.data.cost.*;
-import com.iafenvoy.mxt.data.cost.builtin.JsCost;
-import com.iafenvoy.mxt.data.cost.builtin.ResourceCost;
-import com.iafenvoy.mxt.data.cost.context.CostContext;
-import com.iafenvoy.mxt.data.cost.context.CostOrigins;
-import com.iafenvoy.mxt.data.resource.Resource;
+import com.iafenvoy.saturn.data.cost.builtin.JsCost;
+import com.iafenvoy.saturn.data.cost.builtin.ResourceCost;
+import com.iafenvoy.saturn.data.cost.context.CostContext;
+import com.iafenvoy.saturn.data.cost.context.CostOrigins;
+import com.iafenvoy.saturn.data.resource.Resource;
 import com.iafenvoy.mxt.probe.Probe;
 import com.iafenvoy.mxt.probe.ProbeContext;
 import com.iafenvoy.mxt.probe.ProbeDefinitions;
-import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.runtime.resulting.ResultWithData;
-import com.iafenvoy.mxt.runtime.resulting.failures.CostFailure;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
-import com.iafenvoy.mxt.util.formula.number.Constant;
+import com.iafenvoy.saturn.runtime.resulting.ResultWithData;
+import com.iafenvoy.saturn.runtime.resulting.failures.CostFailure;
+import com.iafenvoy.saturn.util.formula.FormulaContext;
+import com.iafenvoy.saturn.util.formula.number.Constant;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.Holder;
 
@@ -60,7 +69,7 @@ public final class CostSettlementVerifyProbes {
         context.check("the outer pass itself still runs", executed.isSuccess());
         // A different store is independent: that one runs inside the same pass.
         boolean[] otherRan = {false};
-        Holder<Resource> second = context.require(MxtResourceKeys.RESOURCE, ProbeDefinitions.id("true_essence"));
+        Holder<Resource> second = context.require(SaturnResourceKeys.RESOURCE, ProbeDefinitions.id("true_essence"));
         FixtureCost independent = new FixtureCost(new CostTarget.Account(new ResourceHolderAttachment(), second), 1.0D, simulate -> {
             otherRan[0] = child(new CostTarget.Account(new ResourceHolderAttachment(), second), 1.0D).execute(simulate).isSuccess();
             return ResultWithData.success(List.of());
@@ -148,7 +157,7 @@ public final class CostSettlementVerifyProbes {
         FixtureCost shortFee = new FixtureCost(target, 5.0D, simulate -> {
             if (simulate) return ResultWithData.success(List.of());
             account.set(resource, account.get(resource) - 3.0D);
-            return ResultWithData.failure(List.of(Debit.of(target, 3.0D)), CostFailure.INSUFFICIENT_AURA);
+            return ResultWithData.failure(List.of(Debit.of(target, 3.0D)), AuraFailure.INSUFFICIENT_AURA);
         });
         CostPayment bill = CostPayment.of(costs(context, account));
         bill.price(List.of(shortFee, new ResourceCost(resource, new Constant(1.0D))));
@@ -167,7 +176,7 @@ public final class CostSettlementVerifyProbes {
         account.set(resource, 10.0D);
         int[] attempts = {0};
         String script = "mxt_test:cost_exception_probe";
-        MxtJsCostCallbacks.register(script, (player, params, formula) -> true, (player, params, formula) -> {
+        SaturnJsCostCallbacks.register(script, (player, params, formula) -> true, (player, params, formula) -> {
             attempts[0]++;
             throw new IllegalStateException("intentional cost probe exception");
         });
@@ -191,7 +200,7 @@ public final class CostSettlementVerifyProbes {
     }
 
     private static Holder<Resource> resource(ProbeContext context) {
-        return context.require(MxtResourceKeys.RESOURCE, ProbeDefinitions.id("trigger_probe"));
+        return context.require(SaturnResourceKeys.RESOURCE, ProbeDefinitions.id("trigger_probe"));
     }
 
     private static CostContext costs(ProbeContext context, ResourceHolderAttachment account) {

@@ -1,16 +1,9 @@
 package com.iafenvoy.mxt.compat.kubejs;
 
-import com.iafenvoy.mxt.attachment.AbilityAttachment;
 import com.iafenvoy.mxt.attachment.CurseHolderAttachment.State;
 import com.iafenvoy.mxt.attachment.SpiritIdentityAttachment;
 import com.iafenvoy.mxt.attachment.TechniqueAttachment;
-import com.iafenvoy.mxt.data.ability.Ability;
-import com.iafenvoy.mxt.data.ability.Togglable;
 import com.iafenvoy.mxt.data.aura.Aura;
-import com.iafenvoy.mxt.data.cost.Cost;
-import com.iafenvoy.mxt.data.cost.CostPayment;
-import com.iafenvoy.mxt.data.cost.context.CostContext;
-import com.iafenvoy.mxt.data.cost.context.CostOrigins;
 import com.iafenvoy.mxt.data.cultivation.Element;
 import com.iafenvoy.mxt.data.cultivation.Physique;
 import com.iafenvoy.mxt.data.cultivation.SpiritRoot;
@@ -20,15 +13,10 @@ import com.iafenvoy.mxt.data.progression.Progression;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.data.quality.QualityLadders;
 import com.iafenvoy.mxt.data.quality.QualityRequirement;
-import com.iafenvoy.mxt.data.trigger.TriggerContext;
 import com.iafenvoy.mxt.event.CurseRemoveEvent.Reason;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.runtime.ability.AbilityActivationService;
-import com.iafenvoy.mxt.runtime.ability.AbilityEventBridge;
-import com.iafenvoy.mxt.runtime.ability.AbilityService;
-import com.iafenvoy.mxt.runtime.ability.AbilityService.UseResult;
 import com.iafenvoy.mxt.runtime.cultivation.*;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService.BreakthroughResult;
 import com.iafenvoy.mxt.runtime.curse.CurseInstance;
@@ -41,21 +29,35 @@ import com.iafenvoy.mxt.runtime.progression.ProgressionAdminService;
 import com.iafenvoy.mxt.runtime.progression.ProgressionMastery;
 import com.iafenvoy.mxt.runtime.progression.ProgressionOwners;
 import com.iafenvoy.mxt.runtime.progression.ProgressionService;
-import com.iafenvoy.mxt.runtime.resulting.Failures;
-import com.iafenvoy.mxt.runtime.resulting.Result;
-import com.iafenvoy.mxt.runtime.resulting.ResultWithData;
-import com.iafenvoy.mxt.runtime.resulting.failures.AbilityFailure;
 import com.iafenvoy.mxt.runtime.resulting.failures.CultivationFailure;
 import com.iafenvoy.mxt.runtime.resulting.failures.CurseFailure;
 import com.iafenvoy.mxt.runtime.resulting.failures.ProgressionFailure;
-import com.iafenvoy.mxt.runtime.trigger.TriggerDispatcher;
 import com.iafenvoy.mxt.runtime.world.AuraResult;
 import com.iafenvoy.mxt.runtime.world.AuraService;
 import com.iafenvoy.mxt.runtime.world.AuraWorldAttachment.Area;
 import com.iafenvoy.mxt.runtime.world.AuraWorldAttachment.Shape;
 import com.iafenvoy.mxt.runtime.world.SoulService;
-import com.iafenvoy.mxt.util.HolderHelper;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
+import com.iafenvoy.saturn.attachment.AbilityAttachment;
+import com.iafenvoy.saturn.data.ability.Ability;
+import com.iafenvoy.saturn.data.ability.Togglable;
+import com.iafenvoy.saturn.data.cost.Cost;
+import com.iafenvoy.saturn.data.cost.CostPayment;
+import com.iafenvoy.saturn.data.cost.context.CostContext;
+import com.iafenvoy.saturn.data.cost.context.CostOrigins;
+import com.iafenvoy.saturn.data.trigger.TriggerContext;
+import com.iafenvoy.saturn.registry.SaturnAttachments;
+import com.iafenvoy.saturn.registry.SaturnResourceKeys;
+import com.iafenvoy.saturn.runtime.ability.AbilityActivationService;
+import com.iafenvoy.saturn.runtime.ability.AbilityEventBridge;
+import com.iafenvoy.saturn.runtime.ability.AbilityService;
+import com.iafenvoy.saturn.runtime.ability.AbilityService.UseResult;
+import com.iafenvoy.saturn.runtime.resulting.Failures;
+import com.iafenvoy.saturn.runtime.resulting.Result;
+import com.iafenvoy.saturn.runtime.resulting.ResultWithData;
+import com.iafenvoy.saturn.runtime.resulting.failures.AbilityFailure;
+import com.iafenvoy.saturn.runtime.trigger.TriggerDispatcher;
+import com.iafenvoy.saturn.util.HolderHelper;
+import com.iafenvoy.saturn.util.formula.FormulaContext;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup.Provider;
@@ -83,11 +85,11 @@ public final class MxtKubeJsApi {
         if (actor.level().isClientSide())
             return UseResult.rejected(Failures.SERVER_ONLY, null);
         Provider access = actor.level().registryAccess();
-        Holder<Ability> ability = MxtDatapackRegistries.holder(access, MxtResourceKeys.ABILITY, id).orElse(null);
+        Holder<Ability> ability = MxtDatapackRegistries.holder(access, SaturnResourceKeys.ABILITY, id).orElse(null);
         if (ability == null)
             return UseResult.rejected(AbilityFailure.NOT_GRANTED, null);
-        return AbilityService.use(ability, actor, actor.getData(MxtAttachments.ABILITY_HOLDER),
-                actor.getData(MxtAttachments.RESOURCE_HOLDER), actor.level().getGameTime(), context);
+        return AbilityService.use(ability, actor, actor.getData(SaturnAttachments.ABILITY_HOLDER),
+                actor.getData(SaturnAttachments.RESOURCE_HOLDER), actor.level().getGameTime(), context);
     }
 
     /**
@@ -96,7 +98,7 @@ public final class MxtKubeJsApi {
      */
     public static Togglable.PressResult activateAbility(@NotNull LivingEntity holder, Identifier id, @Nullable ItemStack carrier) {
         Provider access = holder.level().registryAccess();
-        Holder<Ability> ability = MxtDatapackRegistries.holder(access, MxtResourceKeys.ABILITY, id).orElse(null);
+        Holder<Ability> ability = MxtDatapackRegistries.holder(access, SaturnResourceKeys.ABILITY, id).orElse(null);
         if (ability == null || holder.level().isClientSide())
             return Togglable.PressResult.refused(AbilityFailure.UNAVAILABLE);
         return AbilityActivationService.activate(holder, ability, carrier);
@@ -109,9 +111,9 @@ public final class MxtKubeJsApi {
     public static boolean grantAbility(@NotNull Entity entity, Identifier id, Identifier source) {
         if (entity.level().isClientSide()) return false;
         Provider access = entity.level().registryAccess();
-        Holder<Ability> ability = MxtDatapackRegistries.holder(access, MxtResourceKeys.ABILITY, id).orElse(null);
+        Holder<Ability> ability = MxtDatapackRegistries.holder(access, SaturnResourceKeys.ABILITY, id).orElse(null);
         if (ability == null) return false;
-        AbilityAttachment attachment = entity.getData(MxtAttachments.ABILITY_HOLDER);
+        AbilityAttachment attachment = entity.getData(SaturnAttachments.ABILITY_HOLDER);
         return changed(entity, attachment.grant(ability, source));
     }
 
@@ -124,7 +126,7 @@ public final class MxtKubeJsApi {
         if (entity.level().isClientSide()) return false;
         Holder<Ability> ability = findAbility(entity, id).orElse(null);
         if (ability == null) return false;
-        AbilityAttachment attachment = entity.getData(MxtAttachments.ABILITY_HOLDER);
+        AbilityAttachment attachment = entity.getData(SaturnAttachments.ABILITY_HOLDER);
         return changed(entity, attachment.revoke(ability, source));
     }
 
@@ -148,7 +150,7 @@ public final class MxtKubeJsApi {
      */
     public static List<String> abilitySources(@NotNull Entity entity, Identifier id) {
         return findAbility(entity, id)
-                .map(held -> entity.getData(MxtAttachments.ABILITY_HOLDER).sources().of(held).stream()
+                .map(held -> entity.getData(SaturnAttachments.ABILITY_HOLDER).sources().of(held).stream()
                         .map(Identifier::toString).sorted().toList())
                 .orElseGet(List::of);
     }
@@ -163,7 +165,7 @@ public final class MxtKubeJsApi {
     // The ledger is the only source of truth a lookup uses; a client script reads nothing.
     private static Stream<Holder<Ability>> abilityKeys(Entity entity) {
         if (entity.level().isClientSide()) return Stream.empty();
-        return entity.getData(MxtAttachments.ABILITY_HOLDER).sources().keys().stream();
+        return entity.getData(SaturnAttachments.ABILITY_HOLDER).sources().keys().stream();
     }
 
     private static Optional<Holder<Ability>> findAbility(Entity entity, Identifier id) {
@@ -532,7 +534,7 @@ public final class MxtKubeJsApi {
         Holder<Aura> aura = MxtDatapackRegistries.holder(entity.level().registryAccess(), MxtResourceKeys.AURA, auraId).orElse(null);
         if (aura == null) return CultivationService.BreakthroughResult.rejected(Failures.DISABLED, null);
         return CultivationService.attempt(entity, entity.getData(MxtAttachments.CULTIVATION),
-                entity.getData(MxtAttachments.RESOURCE_HOLDER), aura, context, () -> true);
+                entity.getData(SaturnAttachments.RESOURCE_HOLDER), aura, context, () -> true);
     }
 
     /**

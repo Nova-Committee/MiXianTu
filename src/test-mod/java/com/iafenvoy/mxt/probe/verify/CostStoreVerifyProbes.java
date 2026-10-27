@@ -1,25 +1,31 @@
 package com.iafenvoy.mxt.probe.verify;
+import com.iafenvoy.saturn.profiling.ServerProfiling.Source;
+import com.iafenvoy.mxt.data.cost.context.AuraCostContexts;
+import com.iafenvoy.mxt.data.cost.AuraCostTarget;
+import com.iafenvoy.mxt.data.cost.Costs;
+import com.iafenvoy.saturn.registry.SaturnResourceKeys;
+import com.iafenvoy.saturn.data.context.Context;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
 import com.iafenvoy.mxt.api.AuraAccess;
-import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
+import com.iafenvoy.saturn.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.data.aura.Aura;
-import com.iafenvoy.mxt.data.cost.Cost;
-import com.iafenvoy.mxt.data.cost.CostPayment;
-import com.iafenvoy.mxt.data.cost.CostTarget;
-import com.iafenvoy.mxt.data.cost.Debit;
-import com.iafenvoy.mxt.data.cost.context.CostContext;
-import com.iafenvoy.mxt.data.cost.context.CostOrigins;
-import com.iafenvoy.mxt.data.resource.Resource;
+import com.iafenvoy.saturn.data.cost.Cost;
+import com.iafenvoy.saturn.data.cost.CostPayment;
+import com.iafenvoy.saturn.data.cost.CostTarget;
+import com.iafenvoy.saturn.data.cost.Debit;
+import com.iafenvoy.saturn.data.cost.context.CostContext;
+import com.iafenvoy.saturn.data.cost.context.CostOrigins;
+import com.iafenvoy.saturn.data.resource.Resource;
 import com.iafenvoy.mxt.probe.Probe;
 import com.iafenvoy.mxt.probe.ProbeContext;
 import com.iafenvoy.mxt.probe.ProbeDefinitions;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.runtime.resulting.Failure;
-import com.iafenvoy.mxt.runtime.resulting.ResultWithData;
-import com.iafenvoy.mxt.runtime.resulting.failures.CostFailure;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
+import com.iafenvoy.saturn.runtime.resulting.Failure;
+import com.iafenvoy.saturn.runtime.resulting.ResultWithData;
+import com.iafenvoy.saturn.runtime.resulting.failures.CostFailure;
+import com.iafenvoy.saturn.util.formula.FormulaContext;
 import com.mojang.serialization.JsonOps;
 import it.unimi.dsi.fastutil.objects.Object2DoubleMap;
 import it.unimi.dsi.fastutil.objects.Object2DoubleMaps;
@@ -34,6 +40,7 @@ import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -78,20 +85,22 @@ public final class CostStoreVerifyProbes {
         if (near.equals(CostTarget.Section.of(dimension, above)))
             context.fail("two sections of one chunk read as one store");
 
-        // The price projection sums the amounts without merging the actual transactions.
+        // The price projection sums two fees of one section without merging the transactions themselves.
         Holder<Aura> qi = context.require(MxtResourceKeys.AURA, ProbeDefinitions.QI);
-        CostContext here = CostContext.pool(context.player(), context.level(), base,
+        CostContext here = AuraCostContexts.pool(context.player(), context.level(), base,
                 FormulaContext.of(context.player()), CostOrigins.SCRIPT);
-        CostContext there = CostContext.pool(context.player(), context.level(), sibling,
+        CostContext there = AuraCostContexts.pool(context.player(), context.level(), sibling,
                 FormulaContext.of(context.player()), CostOrigins.SCRIPT);
-        CostPayment bill = CostPayment.of(here);
         String entry = "[{\"type\": \"mxt:aura\", \"aura\": \"mxt_test:qi\", \"amount\": 1}]";
-        if (bill.price(decodeCosts(registries, entry), here).isPresent()
-                || bill.price(decodeCosts(registries, entry), there).isPresent()) {
+        List<Cost> oneFee = decodeCosts(registries, entry);
+        List<Cost> twoFees = new ArrayList<>(oneFee);
+        twoFees.addAll(decodeCosts(registries, entry));
+        CostPayment bill = CostPayment.of(here);
+        if (bill.price(oneFee, here).isPresent() || bill.price(decodeCosts(registries, entry), there).isPresent()) {
             context.fail("two pool fees in one section could not be priced: " + bill.failure());
             return;
         }
-        Map<Holder<Aura>, Double> auraPrice = bill.auras();
+        Map<Holder<Aura>, Double> auraPrice = Costs.auras(twoFees, here);
         context.expect("the projection totals two fees of one section", auraPrice.getOrDefault(qi, 0.0D), 2.0D);
     }
 
@@ -130,7 +139,7 @@ public final class CostStoreVerifyProbes {
         Holder<Aura> qi = context.require(MxtResourceKeys.AURA, ProbeDefinitions.QI);
         // Answers "all of it" when asked, then hands over 3 of the 5 it was asked for.
         ShortBank bank = new ShortBank(3);
-        CostContext costs = CostContext.bank(bank, context.player(), FormulaContext.of(context.player()),
+        CostContext costs = AuraCostContexts.bank(bank, context.player(), FormulaContext.of(context.player()),
                 CostOrigins.SCRIPT);
         CostPayment.PaymentResult paid = CostPayment.pay(decodeCosts(registries,
                 "[{\"type\": \"mxt:aura\", \"aura\": \"mxt_test:qi\", \"amount\": 5}]"), costs);
@@ -138,11 +147,11 @@ public final class CostStoreVerifyProbes {
             context.fail("a short real bank transfer cancelled the bill: " + paid.failure());
             return;
         }
-        context.expect("the part the bank did hand over is reported", paid.auras().getOrDefault(qi, 0.0D), 3.0D);
+        context.expect("the part the bank did hand over is reported", Costs.auras(paid).getOrDefault(qi, 0.0D), 3.0D);
         context.expect("the bank really lost the part it reported", bank.removed, 3.0D);
 
         ShortBank whole = new ShortBank(3_000_000_000.25D);
-        CostContext huge = CostContext.bank(whole, context.player(), FormulaContext.of(context.player()),
+        CostContext huge = AuraCostContexts.bank(whole, context.player(), FormulaContext.of(context.player()),
                 CostOrigins.SCRIPT);
         CostPayment.PaymentResult large = CostPayment.pay(decodeCosts(registries,
                 "[{\"type\": \"mxt:aura\", \"aura\": \"mxt_test:qi\", \"amount\": 3000000000.25}]"), huge);
@@ -163,7 +172,7 @@ public final class CostStoreVerifyProbes {
     // A check takes nothing and reports nothing: the simulated pass of a resource fee answers with no receipt.
     private static void amountBound(ProbeContext context) {
         RegistryAccess registries = context.registries();
-        Holder<Resource> probe = context.require(MxtResourceKeys.RESOURCE, ProbeDefinitions.id("trigger_probe"));
+        Holder<Resource> probe = context.require(SaturnResourceKeys.RESOURCE, ProbeDefinitions.id("trigger_probe"));
         ResourceHolderAttachment account = new ResourceHolderAttachment();
         account.set(probe, 10.0D, 0.0D, 10_000.0D, -1L, "probe");
         CostContext costs = CostContext.account(account, null, FormulaContext.of(context.player()), CostOrigins.SCRIPT);
@@ -186,7 +195,7 @@ public final class CostStoreVerifyProbes {
     // edit is refused instead of picking one payer for all of it.
     private static void editScope(ProbeContext context) {
         RegistryAccess registries = context.registries();
-        Holder<Resource> probe = context.require(MxtResourceKeys.RESOURCE, ProbeDefinitions.id("trigger_probe"));
+        Holder<Resource> probe = context.require(SaturnResourceKeys.RESOURCE, ProbeDefinitions.id("trigger_probe"));
         ResourceHolderAttachment first = new ResourceHolderAttachment();
         first.set(probe, 10.0D, 0.0D, 10_000.0D, -1L, "probe");
         ResourceHolderAttachment second = new ResourceHolderAttachment();
@@ -222,8 +231,10 @@ public final class CostStoreVerifyProbes {
         RegistryAccess registries = context.registries();
         Holder<Aura> qi = context.require(MxtResourceKeys.AURA, ProbeDefinitions.QI);
         Holder<Aura> spirit = context.require(MxtResourceKeys.AURA, ProbeDefinitions.SPIRIT_POWER);
-        CostContext here = CostContext.pool(context.player(), context.level(), context.at(1, 1, 1),
-                FormulaContext.of(context.player()), CostOrigins.SCRIPT);
+        // The bank hands over whatever is asked, so the receipts are the scaled charges themselves.
+        ShortBank bank = new ShortBank(Double.MAX_VALUE);
+        CostContext here = AuraCostContexts.bank(bank, context.player(), FormulaContext.of(context.player()),
+                CostOrigins.SCRIPT);
         CostPayment bill = CostPayment.of(here);
         String entries = "[{\"type\": \"mxt:aura\", \"aura\": \"mxt_test:qi\", \"amount\": 10},"
                 + "{\"type\": \"mxt:aura\", \"aura\": \"mxt_test:spirit_power\", \"amount\": 10}]";
@@ -233,14 +244,19 @@ public final class CostStoreVerifyProbes {
         }
         // Grant: all of the first, none of the second. The averaged ratio would charge 5 and 5.
         Map<Holder<Aura>, Double> granted = Map.of(qi, 10.0D, spirit, 0.0D);
-        Optional<Failure> scaled = bill.scale(transaction -> transaction.target() instanceof CostTarget.AuraStore,
-                transaction -> transaction.target() instanceof CostTarget.AuraStore store
+        Optional<Failure> scaled = bill.scale(transaction -> transaction.target() instanceof AuraCostTarget,
+                transaction -> transaction.target() instanceof AuraCostTarget store
                         ? granted.getOrDefault(store.aura(), 0.0D) / transaction.amount() : 1.0D);
         if (scaled.isPresent()) {
             context.fail("scaling a bill per source failed: " + scaled.get());
             return;
         }
-        Map<Holder<Aura>, Double> price = bill.auras();
+        CostPayment.PaymentResult paid = bill.pay();
+        if (paid.isFailure()) {
+            context.fail("a bill scaled per source was refused: " + paid.failure());
+            return;
+        }
+        Map<Holder<Aura>, Double> price = Costs.auras(paid);
         context.expect("a granted source keeps its whole charge", price.getOrDefault(qi, 0.0D), 10.0D);
         if (price.containsKey(spirit))
             context.fail("a source nobody was granted is still charged " + price.get(spirit));

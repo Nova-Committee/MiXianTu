@@ -2,8 +2,8 @@ package com.iafenvoy.mxt.compat.jade;
 
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.util.DefinitionText;
-import com.iafenvoy.mxt.util.TooltipText;
+import com.iafenvoy.saturn.util.DefinitionText;
+import com.iafenvoy.saturn.util.TooltipText;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;

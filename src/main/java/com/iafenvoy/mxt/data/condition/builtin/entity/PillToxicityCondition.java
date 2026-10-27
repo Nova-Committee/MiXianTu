@@ -1,9 +1,9 @@
 package com.iafenvoy.mxt.data.condition.builtin.entity;
 
-import com.iafenvoy.mxt.data.condition.EntityCondition;
-import com.iafenvoy.mxt.data.context.condition.EntityConditionContext;
 import com.iafenvoy.mxt.runtime.item.PillService;
-import com.iafenvoy.mxt.util.math.Comparison;
+import com.iafenvoy.saturn.data.condition.EntityCondition;
+import com.iafenvoy.saturn.data.context.condition.EntityConditionContext;
+import com.iafenvoy.saturn.util.math.Comparison;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.world.entity.LivingEntity;
 import org.jspecify.annotations.NonNull;

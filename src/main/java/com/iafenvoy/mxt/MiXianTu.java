@@ -7,6 +7,9 @@ import com.iafenvoy.mxt.config.MxtServerConfig;
 import com.iafenvoy.mxt.data.PickerCategories;
 import com.iafenvoy.mxt.registry.*;
 import com.iafenvoy.mxt.registry.cache.RegistryCaches;
+import com.iafenvoy.mxt.runtime.MxtProfilerSources;
+import com.iafenvoy.mxt.runtime.ability.MxtAbilityHooks;
+import com.iafenvoy.saturn.registry.SaturnAliases;
 import com.mojang.logging.LogUtils;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -25,7 +28,6 @@ public final class MiXianTu {
     public MiXianTu(IEventBus bus) {
         ConfigManager.getInstance().registerServerConfigHandler(MxtServerConfig.INSTANCE, PermissionChecker.IS_OPERATOR);
 
-        MxtAbilityTargetSelectors.REGISTRY.register(bus);
         MxtAbilityTypes.REGISTRY.register(bus);
         MxtAttachments.REGISTRY.register(bus);
         MxtAuraMaximums.REGISTRY.register(bus);
@@ -48,7 +50,6 @@ public final class MiXianTu {
         MxtEntityTypes.REGISTRY.register(bus);
         MxtFormationActionTypes.REGISTRY.register(bus);
         MxtFormationStrokeTypes.REGISTRY.register(bus);
-        MxtFormulaFunctions.REGISTRY.register(bus);
         MxtFormulaVariables.REGISTRY.register(bus);
         MxtIngredientTypes.REGISTRY.register(bus);
         MxtItemActions.REGISTRY.register(bus);
@@ -59,19 +60,20 @@ public final class MiXianTu {
         MxtLootFunctions.REGISTRY.register(bus);
         MxtMenus.REGISTRY.register(bus);
         MxtMountRenders.REGISTRY.register(bus);
-        MxtNumberProviders.REGISTRY.register(bus);
         MxtParticleTypes.REGISTRY.register(bus);
         MxtRecipeSerializers.REGISTRY.register(bus);
         MxtRecipeTypes.REGISTRY.register(bus);
         MxtResourceBarContexts.REGISTRY.register(bus);
-        MxtResourceBarRenderers.REGISTRY.register(bus);
-        MxtResourceBarVisibilities.REGISTRY.register(bus);
         MxtResourceValueProviders.REGISTRY.register(bus);
         MxtSecretRealmGenerations.REGISTRY.register(bus);
         MxtTalismanTypes.REGISTRY.register(bus);
         MxtTicketTypes.REGISTRY.register(bus);
-        MxtTimelineEntries.REGISTRY.register(bus);
         MxtTriggers.REGISTRY.register(bus);
+
+        // Old packs and scripts name the built-ins as mxt:<path>; Saturn answers to saturn:<path> and keeps the alias.
+        SaturnAliases.add(MOD_ID);
+        MxtAbilityHooks.install();
+        MxtProfilerSources.init();
     }
 
     @SubscribeEvent
@@ -84,7 +86,7 @@ public final class MiXianTu {
     /**
      * Whether this process may use the doors kept for reproducing something - a self-trade, the verbose formula
      * report, the overflow report of an information panel - and print the diagnostics that only a developer reads,
-     * which is what {@link com.iafenvoy.mxt.util.profiling.LoggerDispatcher} asks. Always on in a development build;
+     * which is what {@link com.iafenvoy.saturn.profiling.LoggerDispatcher} asks. Always on in a development build;
      * on a release server the debug switch opens it, so a player reporting a bug reaches the same doors without a
      * second install.
      */

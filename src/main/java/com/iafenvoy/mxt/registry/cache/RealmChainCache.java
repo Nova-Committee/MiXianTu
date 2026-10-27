@@ -3,7 +3,8 @@ package com.iafenvoy.mxt.registry.cache;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.cultivation.RealmStage;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.util.chain.Chain;
+import com.iafenvoy.saturn.registry.cache.ChainCache;
+import com.iafenvoy.saturn.util.chain.Chain;
 import net.minecraft.core.Holder;
 import net.minecraft.core.RegistryAccess;
 

@@ -1,8 +1,8 @@
 package com.iafenvoy.mxt.runtime.resulting.failures;
 
-import com.iafenvoy.mxt.runtime.resulting.Failure;
 import com.iafenvoy.mxt.runtime.resulting.FailureSources;
-import com.iafenvoy.mxt.runtime.resulting.SimpleFailure;
+import com.iafenvoy.saturn.runtime.resulting.Failure;
+import com.iafenvoy.saturn.runtime.resulting.SimpleFailure;
 
 // Everything here is reachable: a stage may not require less progress than its own cap (see threshold()), so
 // "the cap is holding the progress back" can never be the reason a breakthrough was refused.

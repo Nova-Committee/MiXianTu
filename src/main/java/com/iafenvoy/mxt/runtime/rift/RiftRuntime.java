@@ -1,6 +1,6 @@
 package com.iafenvoy.mxt.runtime.rift;
 
-import com.iafenvoy.mxt.util.dispatcher.TickDispatcher;
+import com.iafenvoy.saturn.util.dispatcher.TickDispatcher;
 import net.minecraft.core.SectionPos;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.phys.AABB;

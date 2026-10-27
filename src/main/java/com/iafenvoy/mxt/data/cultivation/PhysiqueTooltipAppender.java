@@ -1,8 +1,8 @@
 package com.iafenvoy.mxt.data.cultivation;
 
 import com.iafenvoy.mxt.registry.MxtDataComponents;
-import com.iafenvoy.mxt.util.DefinitionText;
-import com.iafenvoy.mxt.util.HolderHelper;
+import com.iafenvoy.saturn.util.DefinitionText;
+import com.iafenvoy.saturn.util.HolderHelper;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.Holder;
 import net.minecraft.network.chat.Component;

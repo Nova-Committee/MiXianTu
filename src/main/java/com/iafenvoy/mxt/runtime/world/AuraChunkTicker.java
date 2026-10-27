@@ -3,11 +3,12 @@ package com.iafenvoy.mxt.runtime.world;
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.config.MxtServerConfig;
 import com.iafenvoy.mxt.registry.MxtAttachments;
-import com.iafenvoy.mxt.util.dispatcher.TickDispatcher;
-import com.iafenvoy.mxt.util.dispatcher.TickExecutionLimit;
-import com.iafenvoy.mxt.util.dispatcher.TickInterval;
-import com.iafenvoy.mxt.util.profiling.ProfilerScope;
-import com.iafenvoy.mxt.util.profiling.ServerProfiling;
+import com.iafenvoy.mxt.runtime.MxtProfilerSources;
+import com.iafenvoy.saturn.profiling.ProfilerScope;
+import com.iafenvoy.saturn.profiling.ServerProfiling;
+import com.iafenvoy.saturn.util.dispatcher.TickDispatcher;
+import com.iafenvoy.saturn.util.dispatcher.TickExecutionLimit;
+import com.iafenvoy.saturn.util.dispatcher.TickInterval;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.SectionPos;
 import net.minecraft.server.level.ServerLevel;
@@ -44,7 +45,7 @@ public final class AuraChunkTicker {
 
     @SubscribeEvent
     public static void onChunkLoad(ChunkEvent.Load event) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.AURA)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.AURA)) {
             if (!(event.getChunk().getLevel() instanceof ServerLevel level)) return;
             LevelChunk chunk = event.getChunk();
             LOADED.computeIfAbsent(level, ignored -> Collections.newSetFromMap(new IdentityHashMap<>())).add(chunk);
@@ -59,7 +60,7 @@ public final class AuraChunkTicker {
 
     @SubscribeEvent
     public static void onChunkUnload(ChunkEvent.Unload event) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.AURA)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.AURA)) {
             if (!(event.getChunk().getLevel() instanceof ServerLevel level)) return;
             forget(level, event.getChunk());
         }
@@ -99,7 +100,7 @@ public final class AuraChunkTicker {
     // Clears then immediately rebuilds the persisted block-aura subsection caches of the loaded chunks around
     // a position; returns how many chunks were invalidated.
     public static int clearBlockAuraCachesAround(ServerLevel level, BlockPos center, int radius) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.AURA)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.AURA)) {
             if (radius < 0) throw new IllegalArgumentException("Cache clear radius cannot be negative");
             Set<LevelChunk> chunks = LOADED.get(level);
             if (chunks == null) return 0;
@@ -119,7 +120,7 @@ public final class AuraChunkTicker {
 
     @SubscribeEvent(priority = EventPriority.HIGH)
     public static void onLevelTick(LevelTickEvent.Post event) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.AURA)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.AURA)) {
             if (!(event.getLevel() instanceof ServerLevel level)) return;
             seedPending(level);
             RefreshState refresh = REFRESH.get(level);
@@ -176,7 +177,7 @@ public final class AuraChunkTicker {
     // Both handlers run last so a cancelled edit never reaches the cache, and touch only the block that changed.
     @SubscribeEvent(priority = EventPriority.LOW)
     public static void onBlockBreak(BreakBlockEvent event) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.AURA)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.AURA)) {
             if (event.isCanceled() || !(event.getLevel() instanceof ServerLevel level)) return;
             LevelChunk chunk = AuraService.loadedChunk(level, event.getPos());
             if (chunk == null) return;
@@ -188,7 +189,7 @@ public final class AuraChunkTicker {
 
     @SubscribeEvent(priority = EventPriority.LOW)
     public static void onBlockPlace(EntityPlaceEvent event) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.AURA)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.AURA)) {
             if (event.isCanceled() || !(event.getLevel() instanceof ServerLevel level)) return;
             LevelChunk chunk = AuraService.loadedChunk(level, event.getPos());
             if (chunk == null) return;

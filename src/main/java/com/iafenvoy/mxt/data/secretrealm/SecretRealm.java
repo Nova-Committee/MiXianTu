@@ -1,14 +1,14 @@
 package com.iafenvoy.mxt.data.secretrealm;
 
 import com.iafenvoy.mxt.api.QualityProvider;
-import com.iafenvoy.mxt.data.action.EntityAction;
-import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.data.rift.RiftTemplate;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.util.OptionalFloat;
-import com.iafenvoy.mxt.util.codec.MiscCodecs;
-import com.iafenvoy.mxt.util.codec.OptionalCodecs;
+import com.iafenvoy.saturn.data.action.EntityAction;
+import com.iafenvoy.saturn.data.condition.EntityCondition;
+import com.iafenvoy.saturn.util.OptionalFloat;
+import com.iafenvoy.saturn.util.codec.MiscCodecs;
+import com.iafenvoy.saturn.util.codec.OptionalCodecs;
 import com.mojang.datafixers.util.Pair;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;

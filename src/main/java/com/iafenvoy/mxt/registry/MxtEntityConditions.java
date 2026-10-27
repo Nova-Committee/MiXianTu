@@ -1,32 +1,18 @@
 package com.iafenvoy.mxt.registry;
 
 import com.iafenvoy.mxt.MiXianTu;
-import com.iafenvoy.mxt.compat.kubejs.type.condition.JsEntityCondition;
-import com.iafenvoy.mxt.data.condition.AlwaysCondition;
-import com.iafenvoy.mxt.data.condition.EntityCondition;
-import com.iafenvoy.mxt.data.condition.NeverCondition;
 import com.iafenvoy.mxt.data.condition.builtin.entity.*;
-import com.iafenvoy.mxt.data.condition.builtin.entity.meta.AndEntityCondition;
-import com.iafenvoy.mxt.data.condition.builtin.entity.meta.ChanceCondition;
-import com.iafenvoy.mxt.data.condition.builtin.entity.meta.NotEntityCondition;
-import com.iafenvoy.mxt.data.condition.builtin.entity.meta.OrEntityCondition;
+import com.iafenvoy.saturn.data.condition.EntityCondition;
+import com.iafenvoy.saturn.registry.SaturnRegistries;
 import com.mojang.serialization.MapCodec;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
 @SuppressWarnings("unused")
 public final class MxtEntityConditions {
-    public static final DeferredRegister<MapCodec<? extends EntityCondition>> REGISTRY = DeferredRegister.create(MxtRegistries.ENTITY_CONDITION_TYPE, MiXianTu.MOD_ID);
+    public static final DeferredRegister<MapCodec<? extends EntityCondition>> REGISTRY = DeferredRegister.create(SaturnRegistries.ENTITY_CONDITION_TYPE, MiXianTu.MOD_ID);
 
-    public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<AlwaysCondition>> ALWAYS = REGISTRY.register("always", () -> AlwaysCondition.CODEC);
-    public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<NeverCondition>> NEVER = REGISTRY.register("never", () -> NeverCondition.CODEC);
-    public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<JsEntityCondition>> JS = REGISTRY.register("js", () -> JsEntityCondition.CODEC);
 
-    public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<AndEntityCondition>> AND = REGISTRY.register("and", () -> AndEntityCondition.CODEC);
-    public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<NotEntityCondition>> NOT = REGISTRY.register("not", () -> NotEntityCondition.CODEC);
-    public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<OrEntityCondition>> OR = REGISTRY.register("or", () -> OrEntityCondition.CODEC);
-    public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<SneakingEntityCondition>> SNEAKING = REGISTRY.register("sneaking", () -> SneakingEntityCondition.CODEC);
-    public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<HasAbilityEntityCondition>> HAS_ABILITY = REGISTRY.register("has_ability", () -> HasAbilityEntityCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<HasCurseEntityCondition>> HAS_CURSE = REGISTRY.register("has_curse", () -> HasCurseEntityCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<HasSpiritRootEntityCondition>> HAS_SPIRIT_ROOT = REGISTRY.register("has_spirit_root", () -> HasSpiritRootEntityCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<HasElementEntityCondition>> HAS_ELEMENT = REGISTRY.register("has_element", () -> HasElementEntityCondition.CODEC);
@@ -37,57 +23,13 @@ public final class MxtEntityConditions {
     public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<HasTechniqueEntityCondition>> TECHNIQUE = REGISTRY.register("technique", () -> HasTechniqueEntityCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<CultivatingEntityCondition>> CULTIVATING = REGISTRY.register("cultivating", () -> CultivatingEntityCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<ContractEntityCondition>> CONTRACT = REGISTRY.register("contract", () -> ContractEntityCondition.CODEC);
-    public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<PartnerEntityCondition>> PARTNER = REGISTRY.register("partner", () -> PartnerEntityCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<ProgressionEntityCondition>> PROGRESSION = REGISTRY.register("progression", () -> ProgressionEntityCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<AuraRangeEntityCondition>> AURA_RANGE = REGISTRY.register("aura_range", () -> AuraRangeEntityCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<AuraElementEntityCondition>> AURA_ELEMENT = REGISTRY.register("aura_element", () -> AuraElementEntityCondition.CODEC);
-    public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<ResourceCompareEntityCondition>> RESOURCE_COMPARE = REGISTRY.register("resource_compare", () -> ResourceCompareEntityCondition.CODEC);
-    public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<EntityTypeTagCondition>> ENTITY_TAG = REGISTRY.register("entity_tag", () -> EntityTypeTagCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<FormationMemberEntityCondition>> FORMATION_MEMBER = REGISTRY.register("formation_member", () -> FormationMemberEntityCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<FormationOwnerEntityCondition>> FORMATION_OWNER = REGISTRY.register("formation_owner", () -> FormationOwnerEntityCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<FormationAllyEntityCondition>> FORMATION_ALLY = REGISTRY.register("formation_ally", () -> FormationAllyEntityCondition.CODEC);
-    public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<AirCondition>> AIR = REGISTRY.register("air", () -> AirCondition.CODEC);
-    public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<DimensionCondition>> DIMENSION = REGISTRY.register("dimension", () -> DimensionCondition.CODEC);
-    public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<EntityTypeCondition>> ENTITY_TYPE = REGISTRY.register("entity_type", () -> EntityTypeCondition.CODEC);
-    public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<FallDistanceCondition>> FALL_DISTANCE = REGISTRY.register("fall_distance", () -> FallDistanceCondition.CODEC);
-    public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<GlowingCondition>> GLOWING = REGISTRY.register("glowing", () -> GlowingCondition.CODEC);
-    public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<HealthCondition>> HEALTH = REGISTRY.register("health", () -> HealthCondition.CODEC);
-    public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<ExposedToSkyCondition>> EXPOSED_TO_SKY = REGISTRY.register("exposed_to_sky", () -> ExposedToSkyCondition.CODEC);
-    public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<FoodLevelCondition>> FOOD_LEVEL = REGISTRY.register("food_level", () -> FoodLevelCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<PillToxicityCondition>> PILL_TOXICITY = REGISTRY.register("pill_toxicity", () -> PillToxicityCondition.CODEC);
-    public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<MobEffectCondition>> MOB_EFFECT = REGISTRY.register("mob_effect", () -> MobEffectCondition.CODEC);
-    public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<OnBlockCondition>> ON_BLOCK = REGISTRY.register("on_block", () -> OnBlockCondition.CODEC);
-    public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<TimeOfDayCondition>> TIME_OF_DAY = REGISTRY.register("time_of_day", () -> TimeOfDayCondition.CODEC);
-    public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<UsingItemCondition>> USING_ITEM = REGISTRY.register("using_item", () -> UsingItemCondition.CODEC);
-    public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<BrightnessCondition>> BRIGHTNESS = REGISTRY.register("brightness", () -> BrightnessCondition.CODEC);
-    public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<ExposedToSunCondition>> EXPOSED_TO_SUN = REGISTRY.register("exposed_to_sun", () -> ExposedToSunCondition.CODEC);
-    public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<ExperienceLevelCondition>> EXPERIENCE_LEVEL = REGISTRY.register("experience_level", () -> ExperienceLevelCondition.CODEC);
-    public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<ExperiencePointsCondition>> EXPERIENCE_POINTS = REGISTRY.register("experience_points", () -> ExperiencePointsCondition.CODEC);
-    public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<RelativeHealthCondition>> RELATIVE_HEALTH = REGISTRY.register("relative_health", () -> RelativeHealthCondition.CODEC);
-    public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<SaturationLevelCondition>> SATURATION_LEVEL = REGISTRY.register("saturation_level", () -> SaturationLevelCondition.CODEC);
-    public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<TeamCondition>> TEAM = REGISTRY.register("team", () -> TeamCondition.CODEC);
-    public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<ChanceCondition>> CHANCE = REGISTRY.register("chance", () -> ChanceCondition.CODEC);
-    public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<AttributeCondition>> ATTRIBUTE = REGISTRY.register("attribute", () -> AttributeCondition.CODEC);
-    public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<BlockCollisionCondition>> BLOCK_COLLISION = REGISTRY.register("block_collision", () -> BlockCollisionCondition.CODEC);
-    public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<CanHaveEffectCondition>> CAN_HAVE_EFFECT = REGISTRY.register("can_have_effect", () -> CanHaveEffectCondition.CODEC);
-    public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<GamemodeCondition>> GAMEMODE = REGISTRY.register("gamemode", () -> GamemodeCondition.CODEC);
-    public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<PassengerCondition>> PASSENGER = REGISTRY.register("passenger", () -> PassengerCondition.CODEC);
-    public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<AttackCooldownCondition>> ATTACK_COOLDOWN = REGISTRY.register("attack_cooldown", () -> AttackCooldownCondition.CODEC);
-    public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<EquippedItemCondition>> EQUIPPED_ITEM = REGISTRY.register("equipped_item", () -> EquippedItemCondition.CODEC);
-    public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<MainHandItemCondition>> MAIN_HAND_ITEM = REGISTRY.register("main_hand_item", () -> MainHandItemCondition.CODEC);
-    public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<InBlockCondition>> IN_BLOCK = REGISTRY.register("in_block", () -> InBlockCondition.CODEC);
-    public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<InBlockAnywhereCondition>> IN_BLOCK_ANYWHERE = REGISTRY.register("in_block_anywhere", () -> InBlockAnywhereCondition.CODEC);
-    public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<ScoreboardCondition>> SCOREBOARD = REGISTRY.register("scoreboard", () -> ScoreboardCondition.CODEC);
-    public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<RidingCondition>> RIDING = REGISTRY.register("riding", () -> RidingCondition.CODEC);
-    public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<RidingRecursiveCondition>> RIDING_RECURSIVE = REGISTRY.register("riding_recursive", () -> RidingRecursiveCondition.CODEC);
-    public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<PassengerRecursiveCondition>> PASSENGER_RECURSIVE = REGISTRY.register("passenger_recursive", () -> PassengerRecursiveCondition.CODEC);
-    public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<RidingRootCondition>> RIDING_ROOT = REGISTRY.register("riding_root", () -> RidingRootCondition.CODEC);
-    public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<AbilityStorageToggleCondition>> ABILITY_STORAGE_TOGGLE = REGISTRY.register("ability_storage_toggle", () -> AbilityStorageToggleCondition.CODEC);
-    public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<AbilityStorageTimerCondition>> ABILITY_STORAGE_TIMER = REGISTRY.register("ability_storage_timer", () -> AbilityStorageTimerCondition.CODEC);
-    public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<AbilityStorageResourceCondition>> ABILITY_STORAGE_RESOURCE = REGISTRY.register("ability_storage_resource", () -> AbilityStorageResourceCondition.CODEC);
-    public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<AbilityStorageTargetCondition>> ABILITY_STORAGE_TARGET = REGISTRY.register("ability_storage_target", () -> AbilityStorageTargetCondition.CODEC);
-    public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<AbilityStorageChargesCondition>> ABILITY_STORAGE_CHARGES = REGISTRY.register("ability_storage_charges", () -> AbilityStorageChargesCondition.CODEC);
-    public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<AbilityStorageCooldownCondition>> ABILITY_STORAGE_COOLDOWN = REGISTRY.register("ability_storage_cooldown", () -> AbilityStorageCooldownCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<HasEquippedItemCondition>> HAS_EQUIPPED_ITEM = REGISTRY.register("has_equipped_item", () -> HasEquippedItemCondition.CODEC);
     public static final DeferredHolder<MapCodec<? extends EntityCondition>, MapCodec<InSecretRealmEntityCondition>> IN_SECRET_REALM = REGISTRY.register("in_secret_realm", () -> InSecretRealmEntityCondition.CODEC);
 }

@@ -1,7 +1,11 @@
 package com.iafenvoy.mxt.command.server;
 
-import com.iafenvoy.mxt.util.profiling.*;
-import com.iafenvoy.mxt.util.profiling.ServerProfiling.Source;
+import com.iafenvoy.mxt.util.ProfilerSubscriptions;
+import com.iafenvoy.saturn.profiling.Profiler;
+import com.iafenvoy.saturn.profiling.ProfilerSource;
+import com.iafenvoy.saturn.profiling.ProfilerWindowSnapshot;
+import com.iafenvoy.saturn.profiling.ServerProfiling;
+import com.iafenvoy.saturn.profiling.ServerProfiling.Source;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import net.minecraft.ChatFormatting;
@@ -10,7 +14,6 @@ import net.minecraft.commands.SharedSuggestionProvider;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 
-import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
@@ -32,7 +35,7 @@ public final class DebugCommand {
                                 .suggests((_, builder) -> {
                                     String remaining = builder.getRemaining();
                                     int offset = remaining.lastIndexOf(' ') + 1;
-                                    return SharedSuggestionProvider.suggest(Arrays.stream(Source.values()).map(Source::id),
+                                    return SharedSuggestionProvider.suggest(Source.all().stream().map(Source::id),
                                             builder.createOffset(builder.getStart() + offset));
                                 })
                                 .executes(ctx -> status(ctx.getSource(), StringArgumentType.getString(ctx, "sources")))));
@@ -49,9 +52,9 @@ public final class DebugCommand {
 
     private static int status(CommandSourceStack source, String arguments) {
         LinkedHashSet<Source> selected = new LinkedHashSet<>();
-        if (arguments.isBlank()) selected.addAll(List.of(Source.values()));
+        if (arguments.isBlank()) selected.addAll(Source.all());
         else for (String id : arguments.strip().split("\\s+")) {
-            Source match = Arrays.stream(Source.values()).filter(value -> value.id().equals(id)).findFirst().orElse(null);
+            Source match = Source.all().stream().filter(value -> value.id().equals(id)).findFirst().orElse(null);
             if (match == null) {
                 source.sendFailure(Component.translatable("command.mxt.debug.unknown_source", id));
                 return 0;

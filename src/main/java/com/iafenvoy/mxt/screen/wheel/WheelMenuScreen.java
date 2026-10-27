@@ -1,12 +1,12 @@
 package com.iafenvoy.mxt.screen.wheel;
 
 import com.iafenvoy.mxt.api.WheelMenuEntry;
-import com.iafenvoy.mxt.data.IconReference;
 import com.iafenvoy.mxt.registry.MxtKeyMappings;
-import com.iafenvoy.mxt.render.IconRenderer;
 import com.iafenvoy.mxt.screen.aui.AuiElements;
 import com.iafenvoy.mxt.screen.aui.AuiPages;
 import com.iafenvoy.mxt.screen.aui.AuiScreen;
+import com.iafenvoy.saturn.data.IconReference;
+import com.iafenvoy.saturn.render.IconRenderer;
 import com.sighs.apricityui.element.Item;
 import com.sighs.apricityui.init.Element;
 import net.minecraft.client.Minecraft;

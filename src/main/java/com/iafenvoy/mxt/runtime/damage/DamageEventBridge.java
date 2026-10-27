@@ -1,9 +1,10 @@
 package com.iafenvoy.mxt.runtime.damage;
 
+import com.iafenvoy.mxt.runtime.MxtProfilerSources;
 import com.iafenvoy.mxt.runtime.element.ElementReactionService;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
-import com.iafenvoy.mxt.util.profiling.ProfilerScope;
-import com.iafenvoy.mxt.util.profiling.ServerProfiling;
+import com.iafenvoy.saturn.profiling.ProfilerScope;
+import com.iafenvoy.saturn.profiling.ServerProfiling;
+import com.iafenvoy.saturn.util.formula.FormulaContext;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.LivingEntity;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -26,7 +27,7 @@ public final class DamageEventBridge {
 
     @SubscribeEvent
     public static void onIncomingDamage(LivingIncomingDamageEvent event) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.COMBAT)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.COMBAT)) {
             // A cancelled sequence applies nothing, so changing its amount would only rewrite a number nobody reads.
             if (event.isCanceled()) return;
             LivingEntity target = event.getEntity();

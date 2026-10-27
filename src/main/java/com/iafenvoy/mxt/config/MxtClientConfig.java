@@ -18,7 +18,6 @@ import net.minecraft.resources.Identifier;
 public final class MxtClientConfig extends AutoInitConfigContainer {
     public static final MxtClientConfig INSTANCE = new MxtClientConfig();
 
-    public final ResourceBars resourceBars = new ResourceBars();
     public final Information information = new Information();
     public final Techniques techniques = new Techniques();
     public final Rifts rifts = new Rifts();
@@ -30,26 +29,6 @@ public final class MxtClientConfig extends AutoInitConfigContainer {
     private MxtClientConfig() {
         super(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "client"), "config.mxt.client", "./config/mxt/mxt-client.json");
         this.dataFixer.registerKeyRule("^config\\.mxt\\.client\\.[a-z_]+\\.([a-z_]+)$", key -> key.substring(key.lastIndexOf('.') + 1));
-    }
-
-    public static final class ResourceBars extends AutoInitConfigCategoryBase {
-        public final BooleanEntry showNames = BooleanEntry.builder("config.mxt.client.resource_bars.show_names", false)
-                .key("show_names")
-                .tooltip("config.mxt.client.resource_bars.show_names.tooltip")
-                .build();
-        public final EnumEntry<ResourceBarIconLayout> iconLayout = EnumEntry.builder("config.mxt.client.resource_bars.icon_layout", ResourceBarIconLayout.SIDES)
-                .key("icon_layout")
-                .tooltip("config.mxt.client.resource_bars.icon_layout.tooltip")
-                .nameProvider(value -> Component.translatable("config.mxt.client.resource_bars.icon_layout." + value.name().toLowerCase()))
-                .build();
-
-        private ResourceBars() {
-            super("resource_bars", "config.mxt.client.resource_bars");
-        }
-    }
-
-    public enum ResourceBarIconLayout {
-        SIDES, CENTER
     }
 
     public static final class Information extends AutoInitConfigCategoryBase {

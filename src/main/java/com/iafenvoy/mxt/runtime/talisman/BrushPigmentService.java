@@ -5,7 +5,7 @@ import com.iafenvoy.mxt.config.MxtServerConfig;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.registry.MxtItems;
 import com.iafenvoy.mxt.runtime.talisman.TalismanDrawingScorer.Point;
-import com.iafenvoy.mxt.util.MiscUtil;
+import com.iafenvoy.saturn.util.MiscUtil;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.tags.TagKey;

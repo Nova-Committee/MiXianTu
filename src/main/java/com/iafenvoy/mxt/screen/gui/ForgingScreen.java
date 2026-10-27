@@ -1,6 +1,5 @@
 package com.iafenvoy.mxt.screen.gui;
 
-import com.iafenvoy.mxt.data.IconReference;
 import com.iafenvoy.mxt.data.forging.ForgingBlueprint;
 import com.iafenvoy.mxt.data.forging.ForgingMethod;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
@@ -13,7 +12,8 @@ import com.iafenvoy.mxt.runtime.item.QualityService;
 import com.iafenvoy.mxt.screen.aui.AuiContainerScreen;
 import com.iafenvoy.mxt.screen.aui.AuiElements;
 import com.iafenvoy.mxt.screen.menu.ForgingMenu;
-import com.iafenvoy.mxt.util.TooltipText;
+import com.iafenvoy.saturn.data.IconReference;
+import com.iafenvoy.saturn.util.TooltipText;
 import com.sighs.apricityui.element.Item;
 import com.sighs.apricityui.init.Element;
 import net.minecraft.ChatFormatting;

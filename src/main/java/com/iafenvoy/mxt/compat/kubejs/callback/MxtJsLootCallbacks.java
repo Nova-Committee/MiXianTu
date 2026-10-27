@@ -1,8 +1,8 @@
 package com.iafenvoy.mxt.compat.kubejs.callback;
 
 import com.google.gson.JsonObject;
-import com.iafenvoy.mxt.compat.kubejs.MxtJsWarnings;
-import com.iafenvoy.mxt.util.function.TriFunction;
+import com.iafenvoy.saturn.compat.kubejs.SaturnJsWarnings;
+import com.iafenvoy.saturn.util.function.TriFunction;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.storage.loot.LootContext;
 
@@ -60,20 +60,20 @@ public final class MxtJsLootCallbacks {
     }
 
     private static boolean unknownCondition(String id) {
-        MxtJsWarnings.WARNING.log("Unknown KubeJS loot condition '{}'; the condition is false", id);
+        SaturnJsWarnings.WARNING.log("Unknown KubeJS loot condition '{}'; the condition is false", id);
         return false;
     }
 
     private static boolean failedCondition(String id, Exception exception) {
-        MxtJsWarnings.FAILURE.log("KubeJS loot condition '" + id + "' failed; the condition is false", exception);
+        SaturnJsWarnings.FAILURE.log("KubeJS loot condition '" + id + "' failed; the condition is false", exception);
         return false;
     }
 
     private static void unknownFunction(String id) {
-        MxtJsWarnings.WARNING.log("Unknown KubeJS loot function '{}'; the stack is left unchanged", id);
+        SaturnJsWarnings.WARNING.log("Unknown KubeJS loot function '{}'; the stack is left unchanged", id);
     }
 
     private static void failedFunction(String id, Exception exception) {
-        MxtJsWarnings.FAILURE.log("KubeJS loot function '" + id + "' failed; the stack is left unchanged", exception);
+        SaturnJsWarnings.FAILURE.log("KubeJS loot function '" + id + "' failed; the stack is left unchanged", exception);
     }
 }

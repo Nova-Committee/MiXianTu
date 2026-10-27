@@ -6,9 +6,10 @@ import com.iafenvoy.mxt.event.AuraZoneEvent.Leave;
 import com.iafenvoy.mxt.event.AuraZoneEvent.Tick;
 import com.iafenvoy.mxt.network.payload.AuraStateS2CPayload;
 import com.iafenvoy.mxt.registry.MxtAttachments;
+import com.iafenvoy.mxt.runtime.MxtProfilerSources;
 import com.iafenvoy.mxt.runtime.world.AuraQueryCache.AuraLocation;
-import com.iafenvoy.mxt.util.profiling.ProfilerScope;
-import com.iafenvoy.mxt.util.profiling.ServerProfiling;
+import com.iafenvoy.saturn.profiling.ProfilerScope;
+import com.iafenvoy.saturn.profiling.ServerProfiling;
 import com.mojang.logging.LogUtils;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
@@ -41,7 +42,7 @@ public final class AuraZoneEventBridge {
 
     @SubscribeEvent
     public static void onEntityTick(EntityTickEvent.Post event) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.AURA)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.AURA)) {
             Entity entity = event.getEntity();
             if (!(entity.level() instanceof ServerLevel level)) return;
             AuraLocation position = AuraQueryCache.location(level, entity.blockPosition());
@@ -61,7 +62,7 @@ public final class AuraZoneEventBridge {
     // Forgets the tracked aura, so the map cannot grow with entities that are unloaded, despawned or dead.
     @SubscribeEvent
     public static void onEntityLeaveLevel(EntityLeaveLevelEvent event) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.AURA)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.AURA)) {
             if (!(event.getLevel() instanceof ServerLevel level)) return;
             LAST.remove(new Key(level.dimension().identifier(), event.getEntity().getUUID()));
             AuraQueryCache.forget(level, event.getEntity().getUUID());
@@ -72,7 +73,7 @@ public final class AuraZoneEventBridge {
     // every query made during the next tick sees one consistent snapshot.
     @SubscribeEvent(priority = EventPriority.LOWEST)
     public static void onLevelTick(Post event) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.AURA)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.AURA)) {
             if (!(event.getLevel() instanceof ServerLevel level)) return;
             long gameTime = level.getGameTime();
             AuraQueryCache.advance(level, gameTime);

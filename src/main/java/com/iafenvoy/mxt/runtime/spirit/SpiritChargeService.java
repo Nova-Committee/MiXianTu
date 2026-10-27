@@ -2,26 +2,27 @@ package com.iafenvoy.mxt.runtime.spirit;
 
 import com.iafenvoy.mxt.api.ItemAuraAccess;
 import com.iafenvoy.mxt.api.UseItemAuraAccess;
-import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.aura.ItemAura;
 import com.iafenvoy.mxt.data.aura.SpiritStorageComponent;
 import com.iafenvoy.mxt.data.item.HoldBinding;
-import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.event.CollectHoldBindingsEvent;
-import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
+import com.iafenvoy.mxt.runtime.MxtProfilerSources;
 import com.iafenvoy.mxt.runtime.cultivation.ItemAuraService;
 import com.iafenvoy.mxt.runtime.hold.HoldLookup;
 import com.iafenvoy.mxt.runtime.hold.HoldService;
-import com.iafenvoy.mxt.runtime.resource.ResourceService;
-import com.iafenvoy.mxt.runtime.resource.ResourceService.Result;
 import com.iafenvoy.mxt.runtime.spirit.SpiritPour.Entry;
-import com.iafenvoy.mxt.util.MiscUtil;
-import com.iafenvoy.mxt.util.TooltipText;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
-import com.iafenvoy.mxt.util.profiling.ProfilerScope;
-import com.iafenvoy.mxt.util.profiling.ServerProfiling;
+import com.iafenvoy.saturn.attachment.ResourceHolderAttachment;
+import com.iafenvoy.saturn.data.resource.Resource;
+import com.iafenvoy.saturn.profiling.ProfilerScope;
+import com.iafenvoy.saturn.profiling.ServerProfiling;
+import com.iafenvoy.saturn.registry.SaturnAttachments;
+import com.iafenvoy.saturn.runtime.resource.ResourceService;
+import com.iafenvoy.saturn.runtime.resource.ResourceService.Result;
+import com.iafenvoy.saturn.util.MiscUtil;
+import com.iafenvoy.saturn.util.TooltipText;
+import com.iafenvoy.saturn.util.formula.FormulaContext;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup.Provider;
@@ -84,7 +85,7 @@ public final class SpiritChargeService {
     // Server only: the charge is item state, and the client's copy arrives through the component sync.
     @SubscribeEvent
     public static void onUseTick(Tick event) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.SPIRIT)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.SPIRIT)) {
             LivingEntity entity = event.getEntity();
             if (entity.level().isClientSide()) return;
             ItemStack stack = event.getItem();
@@ -116,7 +117,7 @@ public final class SpiritChargeService {
 
             double unitCost = charge.costPerUnit();
             if (unitCost > 0.0D) {
-                ResourceHolderAttachment resources = entity.getData(MxtAttachments.RESOURCE_HOLDER);
+                ResourceHolderAttachment resources = entity.getData(SaturnAttachments.RESOURCE_HOLDER);
                 // Decided before anything moves: a payment that bought no transfer would be aura taken
                 // for nothing.
                 units = Math.min(units, resources.get(resource) / unitCost);

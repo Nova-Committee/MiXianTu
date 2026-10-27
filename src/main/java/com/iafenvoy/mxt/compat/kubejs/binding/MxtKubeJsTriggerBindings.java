@@ -3,10 +3,10 @@ package com.iafenvoy.mxt.compat.kubejs.binding;
 import com.google.gson.JsonObject;
 import com.iafenvoy.mxt.compat.kubejs.MxtKubeJsApi;
 import com.iafenvoy.mxt.compat.kubejs.callback.MxtJsTriggerCallbacks;
-import com.iafenvoy.mxt.compat.kubejs.callback.MxtJsTriggerMatchers;
-import com.iafenvoy.mxt.data.trigger.TriggerSignal;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
-import com.iafenvoy.mxt.util.function.TriPredicate;
+import com.iafenvoy.saturn.compat.kubejs.callback.SaturnJsTriggerMatchers;
+import com.iafenvoy.saturn.data.trigger.TriggerSignal;
+import com.iafenvoy.saturn.util.formula.FormulaContext;
+import com.iafenvoy.saturn.util.function.TriPredicate;
 import dev.latvian.mods.kubejs.typings.Info;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Entity;
@@ -21,7 +21,7 @@ import java.util.function.Consumer;
 public final class MxtKubeJsTriggerBindings {
     @Info("Registers a script trigger matcher. Datapack type: mxt:js")
     public void matcher(String id, TriPredicate<TriggerSignal, JsonObject, FormulaContext> callback) {
-        MxtJsTriggerMatchers.register(id, callback);
+        SaturnJsTriggerMatchers.register(id, callback);
     }
 
     @Info("Publishes a custom trigger signal for one entity. Numeric values are also exposed to trigger formulas.")

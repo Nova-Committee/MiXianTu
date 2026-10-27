@@ -7,7 +7,7 @@ import com.iafenvoy.mxt.item.TalismanBrushItem;
 import com.iafenvoy.mxt.item.TalismanItem;
 import com.iafenvoy.mxt.registry.MxtRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.util.DefinitionText;
+import com.iafenvoy.saturn.util.DefinitionText;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.Holder;
 import net.minecraft.network.chat.Component;

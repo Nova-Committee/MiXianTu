@@ -5,13 +5,14 @@ import com.iafenvoy.mxt.data.cultivation.Cultivation;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.runtime.MxtProfilerSources;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationMethodService.CultivationResult;
-import com.iafenvoy.mxt.runtime.resulting.Failures;
 import com.iafenvoy.mxt.runtime.trigger.CultivationTriggerService;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
-import com.iafenvoy.mxt.util.formula.FormulaContexts;
-import com.iafenvoy.mxt.util.profiling.ProfilerScope;
-import com.iafenvoy.mxt.util.profiling.ServerProfiling;
+import com.iafenvoy.saturn.profiling.ProfilerScope;
+import com.iafenvoy.saturn.profiling.ServerProfiling;
+import com.iafenvoy.saturn.runtime.resulting.Failures;
+import com.iafenvoy.saturn.util.formula.FormulaContext;
+import com.iafenvoy.saturn.util.formula.FormulaContexts;
 import net.minecraft.core.Holder;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
@@ -31,7 +32,7 @@ public final class CultivationModeService {
     }
 
     public static CultivationResult toggle(ServerPlayer player) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.CULTIVATION)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.CULTIVATION)) {
             CultivationAttachment spirit = player.getData(MxtAttachments.CULTIVATION);
             // Stopping goes by the stored method: once the running one no longer applies the selector picks another
             // (or none at all), and stopping by that pick would leave the body cultivating.
@@ -63,7 +64,7 @@ public final class CultivationModeService {
 
     public static CultivationResult start(LivingEntity entity, CultivationAttachment spirit, Holder<Cultivation> action,
                                           FormulaContext context) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.CULTIVATION)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.CULTIVATION)) {
             Cultivation definition = action.value();
             CultivationResult result = CultivationMethodService.start(spirit, action, definition, entity.level().getGameTime(),
                     () -> applicable(entity, action, context));
@@ -76,7 +77,7 @@ public final class CultivationModeService {
     }
 
     public static CultivationResult stop(LivingEntity entity, CultivationAttachment spirit, Holder<Cultivation> action) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.CULTIVATION)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.CULTIVATION)) {
             CultivationResult result = CultivationMethodService.stop(entity, spirit, action, action.value(),
                     entity.level().getGameTime());
             if (result.stopped()) {

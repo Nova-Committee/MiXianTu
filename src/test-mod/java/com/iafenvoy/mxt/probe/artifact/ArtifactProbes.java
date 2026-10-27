@@ -1,4 +1,6 @@
 package com.iafenvoy.mxt.probe.artifact;
+import com.iafenvoy.saturn.data.ability.Ability;
+import com.iafenvoy.saturn.data.context.Context;
 
 import com.iafenvoy.mxt.data.ability.type.StorageAbilityType;
 import com.iafenvoy.mxt.data.artifact.Artifact;
@@ -9,8 +11,8 @@ import com.iafenvoy.mxt.probe.ProbeDefinitions;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactService;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactService.RefineResult;
-import com.iafenvoy.mxt.util.HolderHelper;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
+import com.iafenvoy.saturn.util.HolderHelper;
+import com.iafenvoy.saturn.util.formula.FormulaContext;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
 import net.minecraft.core.HolderLookup.Provider;

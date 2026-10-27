@@ -2,9 +2,9 @@ package com.iafenvoy.mxt.compat.kubejs.binding;
 
 import com.google.gson.JsonObject;
 import com.iafenvoy.mxt.compat.kubejs.MxtKubeJsApi;
-import com.iafenvoy.mxt.compat.kubejs.callback.MxtJsSelectorCallbacks;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
-import com.iafenvoy.mxt.util.function.TriFunction;
+import com.iafenvoy.saturn.compat.kubejs.callback.SaturnJsSelectorCallbacks;
+import com.iafenvoy.saturn.util.formula.FormulaContext;
+import com.iafenvoy.saturn.util.function.TriFunction;
 import dev.latvian.mods.kubejs.typings.Info;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Entity;
@@ -23,7 +23,7 @@ public final class MxtKubeJsAbilityBindings {
 
     @Info("Registers a script ability target selector. Datapack type: mxt:js; the callback returns an array of entities.")
     public void selector(String id, TriFunction<Entity, FormulaContext, JsonObject, List<Entity>> callback) {
-        MxtJsSelectorCallbacks.register(id, callback);
+        SaturnJsSelectorCallbacks.register(id, callback);
     }
 
     @Info("Grants an ability under the given source; true when that source was not holding it yet.")

@@ -8,7 +8,7 @@ import com.iafenvoy.mxt.runtime.alchemy.AlchemyFurnaceStructure;
 import com.iafenvoy.mxt.runtime.alchemy.AlchemyInventoryKind;
 import com.iafenvoy.mxt.runtime.alchemy.AlchemySlots;
 import com.iafenvoy.mxt.runtime.alchemy.SpiritHerbService;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
+import com.iafenvoy.saturn.util.formula.FormulaContext;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Holder;

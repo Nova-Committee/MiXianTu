@@ -1,9 +1,9 @@
 package com.iafenvoy.mxt.data.condition.builtin.item;
 
-import com.iafenvoy.mxt.data.condition.ItemCondition;
-import com.iafenvoy.mxt.data.context.condition.ItemConditionContext;
 import com.iafenvoy.mxt.data.quality.QualityRequirement;
 import com.iafenvoy.mxt.runtime.item.QualityRequirements;
+import com.iafenvoy.saturn.data.condition.ItemCondition;
+import com.iafenvoy.saturn.data.context.condition.ItemConditionContext;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;

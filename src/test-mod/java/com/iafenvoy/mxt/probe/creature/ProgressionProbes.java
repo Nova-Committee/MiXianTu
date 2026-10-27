@@ -1,34 +1,38 @@
 package com.iafenvoy.mxt.probe.creature;
+import com.iafenvoy.saturn.registry.SaturnResourceKeys;
+import com.iafenvoy.saturn.registry.SaturnAttachments;
+import com.iafenvoy.saturn.runtime.Sources;
+import com.iafenvoy.saturn.data.context.Context;
+import com.iafenvoy.saturn.util.chain.Chain;
 
-import com.iafenvoy.mxt.MiXianTu;
-import com.iafenvoy.mxt.attachment.AbilityAttachment;
-import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
-import com.iafenvoy.mxt.data.ability.Ability;
+import com.iafenvoy.saturn.attachment.AbilityAttachment;
+import com.iafenvoy.saturn.attachment.ResourceHolderAttachment;
+import com.iafenvoy.saturn.data.ability.Ability;
 import com.iafenvoy.mxt.data.condition.builtin.entity.ContractEntityCondition;
 import com.iafenvoy.mxt.data.condition.builtin.entity.ProgressionEntityCondition;
 import com.iafenvoy.mxt.data.creature.ContractBehaviors;
 import com.iafenvoy.mxt.data.creature.ContractType;
 import com.iafenvoy.mxt.data.progression.Progression;
-import com.iafenvoy.mxt.data.resource.Resource;
-import com.iafenvoy.mxt.data.trigger.TriggerSignals;
-import com.iafenvoy.mxt.data.trigger.builtin.BuiltinTrigger;
+import com.iafenvoy.saturn.data.resource.Resource;
+import com.iafenvoy.saturn.data.trigger.TriggerSignals;
+import com.iafenvoy.saturn.data.trigger.builtin.BuiltinTrigger;
 import com.iafenvoy.mxt.probe.Probe;
 import com.iafenvoy.mxt.probe.ProbeContext;
 import com.iafenvoy.mxt.probe.ProbeDefinitions;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.runtime.ability.AbilityGrantService;
-import com.iafenvoy.mxt.runtime.ability.PassiveAttributeService;
+import com.iafenvoy.saturn.runtime.ability.AbilityGrantService;
+import com.iafenvoy.saturn.runtime.ability.PassiveAttributeService;
 import com.iafenvoy.mxt.runtime.creature.ContractService;
 import com.iafenvoy.mxt.runtime.progression.*;
 import com.iafenvoy.mxt.runtime.resulting.failures.ProgressionFailure;
-import com.iafenvoy.mxt.runtime.trigger.TriggerDispatcher;
-import com.iafenvoy.mxt.runtime.trigger.TriggerSubscription;
+import com.iafenvoy.saturn.runtime.trigger.TriggerDispatcher;
+import com.iafenvoy.saturn.runtime.trigger.TriggerSubscription;
 import com.iafenvoy.mxt.testmod.MxtTestEntities;
 import com.iafenvoy.mxt.testmod.ProbeBeast;
-import com.iafenvoy.mxt.util.HolderHelper;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
-import com.iafenvoy.mxt.util.math.CompareOperation;
+import com.iafenvoy.saturn.util.HolderHelper;
+import com.iafenvoy.saturn.util.formula.FormulaContext;
+import com.iafenvoy.saturn.util.math.CompareOperation;
 import com.mojang.datafixers.util.Either;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
@@ -73,13 +77,13 @@ public final class ProgressionProbes {
         try {
             ProbeBeast beast = spawnProbeBeast(level, context.player().blockPosition().offset(4, 0, 0));
             spawned.add(beast);
-            AbilityAttachment abilities = beast.getData(MxtAttachments.ABILITY_HOLDER);
+            AbilityAttachment abilities = beast.getData(SaturnAttachments.ABILITY_HOLDER);
             boolean entry = stoodOn(beast, ProbeDefinitions.BEAST_1)
                     && ProgressionOwners.held(beast, ProbeDefinitions.PROBE_BEAST_PROFILE)
                     .flatMap(ProgressionService::next)
                     .map(held -> HolderHelper.id(held).equals(ProbeDefinitions.BEAST_2)).orElse(false)
                     && beast.getData(MxtAttachments.CREATURE_SPIRIT).profileLevels().levels().isEmpty()
-                    && !abilities.has(context.require(MxtResourceKeys.ABILITY, ProbeDefinitions.PROGRESSION_GROWTH));
+                    && !abilities.has(context.require(SaturnResourceKeys.ABILITY, ProbeDefinitions.PROGRESSION_GROWTH));
             context.note("progression probe: entry=" + entry);
             context.check("progression entry", entry);
         } finally {
@@ -110,11 +114,10 @@ public final class ProgressionProbes {
         ServerLevel level = context.level();
         ProbeBeast.reset();
         List<ProbeBeast> spawned = new ArrayList<>();
-        Holder<Ability> growthAbility = context.require(MxtResourceKeys.ABILITY, ProbeDefinitions.PROGRESSION_GROWTH);
-        Holder<Resource> growth = context.require(MxtResourceKeys.RESOURCE, ProbeDefinitions.BEAST_GROWTH);
+        Holder<Ability> growthAbility = context.require(SaturnResourceKeys.ABILITY, ProbeDefinitions.PROGRESSION_GROWTH);
+        Holder<Resource> growth = context.require(SaturnResourceKeys.RESOURCE, ProbeDefinitions.BEAST_GROWTH);
         // The id a creature's grants are written under: one category, so ending the bond can revoke exactly them.
-        Identifier grantSource = Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "grant/creature/"
-                + ProbeDefinitions.PROBE_BEAST_PROFILE.getNamespace() + "/" + ProbeDefinitions.PROBE_BEAST_PROFILE.getPath());
+        Identifier grantSource = Sources.granted(Sources.Grant.CREATURE, ProbeDefinitions.PROBE_BEAST_PROFILE);
         String identity = "progression_probe";
         List<Long> signals = new ArrayList<>();
         ProbeBeast beast = null;
@@ -124,8 +127,8 @@ public final class ProgressionProbes {
             TriggerDispatcher.register(new TriggerSubscription(beast.getUUID(), "probe", identity,
                     new BuiltinTrigger(TriggerSignals.PROGRESSION_LEVEL), signal -> true,
                     signal -> signals.add(signal.gameTime()), false));
-            ResourceHolderAttachment resources = beast.getData(MxtAttachments.RESOURCE_HOLDER);
-            AbilityAttachment abilities = beast.getData(MxtAttachments.ABILITY_HOLDER);
+            ResourceHolderAttachment resources = beast.getData(SaturnAttachments.RESOURCE_HOLDER);
+            AbilityAttachment abilities = beast.getData(SaturnAttachments.ABILITY_HOLDER);
             double baseHealth = beast.getAttributeValue(Attributes.MAX_HEALTH);
 
             resources.set(growth, 9.0D, 0.0D, 1000.0D, -1L, "probe");
@@ -162,8 +165,8 @@ public final class ProgressionProbes {
         List<ProbeBeast> spawned = new ArrayList<>();
         Holder<Progression> second = context.require(MxtResourceKeys.PROGRESSION, ProbeDefinitions.BEAST_2);
         Holder<Progression> third = context.require(MxtResourceKeys.PROGRESSION, ProbeDefinitions.BEAST_3);
-        Holder<Ability> growthAbility = context.require(MxtResourceKeys.ABILITY, ProbeDefinitions.PROGRESSION_GROWTH);
-        Holder<Resource> growth = context.require(MxtResourceKeys.RESOURCE, ProbeDefinitions.BEAST_GROWTH);
+        Holder<Ability> growthAbility = context.require(SaturnResourceKeys.ABILITY, ProbeDefinitions.PROGRESSION_GROWTH);
+        Holder<Resource> growth = context.require(SaturnResourceKeys.RESOURCE, ProbeDefinitions.BEAST_GROWTH);
         String identity = "progression_probe";
         List<Long> signals = new ArrayList<>();
         ProbeBeast beast = null;
@@ -173,7 +176,7 @@ public final class ProgressionProbes {
             TriggerDispatcher.register(new TriggerSubscription(beast.getUUID(), "probe", identity,
                     new BuiltinTrigger(TriggerSignals.PROGRESSION_LEVEL), signal -> true,
                     signal -> signals.add(signal.gameTime()), false));
-            ResourceHolderAttachment resources = beast.getData(MxtAttachments.RESOURCE_HOLDER);
+            ResourceHolderAttachment resources = beast.getData(SaturnAttachments.RESOURCE_HOLDER);
             // The reading leg reads a creature that already climbed once, so the promotion is the setup here.
             resources.set(growth, 10.0D, 0.0D, 1000.0D, -1L, "probe");
             ProgressionDriver.tick(beast);
@@ -208,8 +211,8 @@ public final class ProgressionProbes {
         List<ProbeBeast> spawned = new ArrayList<>();
         Holder<Progression> third = context.require(MxtResourceKeys.PROGRESSION, ProbeDefinitions.BEAST_3);
         Holder<Progression> foreign = context.require(MxtResourceKeys.PROGRESSION, ProbeDefinitions.SWORD_ART_1);
-        Holder<Ability> growthAbility = context.require(MxtResourceKeys.ABILITY, ProbeDefinitions.PROGRESSION_GROWTH);
-        Holder<Resource> growth = context.require(MxtResourceKeys.RESOURCE, ProbeDefinitions.BEAST_GROWTH);
+        Holder<Ability> growthAbility = context.require(SaturnResourceKeys.ABILITY, ProbeDefinitions.PROGRESSION_GROWTH);
+        Holder<Resource> growth = context.require(SaturnResourceKeys.RESOURCE, ProbeDefinitions.BEAST_GROWTH);
         String identity = "progression_probe";
         List<Long> signals = new ArrayList<>();
         ProbeBeast beast = null;
@@ -219,7 +222,7 @@ public final class ProgressionProbes {
             TriggerDispatcher.register(new TriggerSubscription(beast.getUUID(), "probe", identity,
                     new BuiltinTrigger(TriggerSignals.PROGRESSION_LEVEL), signal -> true,
                     signal -> signals.add(signal.gameTime()), false));
-            ResourceHolderAttachment resources = beast.getData(MxtAttachments.RESOURCE_HOLDER);
+            ResourceHolderAttachment resources = beast.getData(SaturnAttachments.RESOURCE_HOLDER);
             // The write is observed from the level a natural promotion reached, so that promotion is the setup.
             resources.set(growth, 10.0D, 0.0D, 1000.0D, -1L, "probe");
             ProgressionDriver.tick(beast);
@@ -256,8 +259,8 @@ public final class ProgressionProbes {
         ProbeBeast.reset();
         List<ProbeBeast> spawned = new ArrayList<>();
         Holder<Progression> third = context.require(MxtResourceKeys.PROGRESSION, ProbeDefinitions.BEAST_3);
-        Holder<Ability> growthAbility = context.require(MxtResourceKeys.ABILITY, ProbeDefinitions.PROGRESSION_GROWTH);
-        ProbeBeast beast = null;
+        Holder<Ability> growthAbility = context.require(SaturnResourceKeys.ABILITY, ProbeDefinitions.PROGRESSION_GROWTH);
+        ProbeBeast beast;
         try {
             beast = spawnProbeBeast(level, context.player().blockPosition().offset(4, 0, 0));
             spawned.add(beast);
@@ -287,12 +290,12 @@ public final class ProgressionProbes {
         ServerLevel level = context.level();
         ProbeBeast.reset();
         List<ProbeBeast> spawned = new ArrayList<>();
-        Holder<Ability> growthAbility = context.require(MxtResourceKeys.ABILITY, ProbeDefinitions.PROGRESSION_GROWTH);
-        ProbeBeast beast = null;
+        Holder<Ability> growthAbility = context.require(SaturnResourceKeys.ABILITY, ProbeDefinitions.PROGRESSION_GROWTH);
+        ProbeBeast beast;
         try {
             beast = spawnProbeBeast(level, context.player().blockPosition().offset(4, 0, 0));
             spawned.add(beast);
-            AbilityAttachment abilities = beast.getData(MxtAttachments.ABILITY_HOLDER);
+            AbilityAttachment abilities = beast.getData(SaturnAttachments.ABILITY_HOLDER);
             double baseHealth = beast.getAttributeValue(Attributes.MAX_HEALTH);
             beast.getData(MxtAttachments.CREATURE_SPIRIT).profileLevels()
                     .set(context.require(MxtResourceKeys.CREATURE_PROFILE, ProbeDefinitions.PROBE_BEAST_PROFILE),
@@ -319,14 +322,14 @@ public final class ProgressionProbes {
         ServerPlayer player = context.player();
         ProbeBeast.reset();
         List<ProbeBeast> spawned = new ArrayList<>();
-        Holder<Ability> growthAbility = context.require(MxtResourceKeys.ABILITY, ProbeDefinitions.PROGRESSION_GROWTH);
-        Holder<Resource> growth = context.require(MxtResourceKeys.RESOURCE, ProbeDefinitions.BEAST_GROWTH);
-        ProbeBeast beast = null;
+        Holder<Ability> growthAbility = context.require(SaturnResourceKeys.ABILITY, ProbeDefinitions.PROGRESSION_GROWTH);
+        Holder<Resource> growth = context.require(SaturnResourceKeys.RESOURCE, ProbeDefinitions.BEAST_GROWTH);
+        ProbeBeast beast;
         try {
             beast = spawnProbeBeast(level, player.blockPosition().offset(4, 0, 0));
             spawned.add(beast);
-            ResourceHolderAttachment resources = beast.getData(MxtAttachments.RESOURCE_HOLDER);
-            AbilityAttachment abilities = beast.getData(MxtAttachments.ABILITY_HOLDER);
+            ResourceHolderAttachment resources = beast.getData(SaturnAttachments.RESOURCE_HOLDER);
+            AbilityAttachment abilities = beast.getData(SaturnAttachments.ABILITY_HOLDER);
             double baseHealth = beast.getAttributeValue(Attributes.MAX_HEALTH);
             Holder<ContractType> open = context.require(MxtResourceKeys.CONTRACT_TYPE, ProbeDefinitions.OPEN_CONTRACT);
             boolean bound = ContractService.bind(open, player, beast, true).failure() == null;
@@ -367,12 +370,12 @@ public final class ProgressionProbes {
         ServerPlayer player = context.player();
         ProbeBeast.reset();
         List<ProbeBeast> spawned = new ArrayList<>();
-        Holder<Resource> growth = context.require(MxtResourceKeys.RESOURCE, ProbeDefinitions.BEAST_GROWTH);
-        ProbeBeast beast = null;
+        Holder<Resource> growth = context.require(SaturnResourceKeys.RESOURCE, ProbeDefinitions.BEAST_GROWTH);
+        ProbeBeast beast;
         try {
             beast = spawnProbeBeast(level, player.blockPosition().offset(4, 0, 0));
             spawned.add(beast);
-            ResourceHolderAttachment resources = beast.getData(MxtAttachments.RESOURCE_HOLDER);
+            ResourceHolderAttachment resources = beast.getData(SaturnAttachments.RESOURCE_HOLDER);
             Holder<ContractType> open = context.require(MxtResourceKeys.CONTRACT_TYPE, ProbeDefinitions.OPEN_CONTRACT);
             boolean rebound = ContractService.bind(open, player, beast, true).failure() == null;
             resources.set(growth, 10.0D, 0.0D, 1000.0D, -1L, "probe");

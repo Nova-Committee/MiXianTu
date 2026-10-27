@@ -1,6 +1,6 @@
 package com.iafenvoy.mxt.data.aura;
 
-import com.iafenvoy.mxt.util.codec.CollectionCodecs;
+import com.iafenvoy.saturn.util.codec.CollectionCodecs;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import it.unimi.dsi.fastutil.objects.Object2DoubleMap;

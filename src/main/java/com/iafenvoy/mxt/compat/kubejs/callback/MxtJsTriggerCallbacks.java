@@ -1,10 +1,10 @@
 package com.iafenvoy.mxt.compat.kubejs.callback;
 
-import com.iafenvoy.mxt.compat.kubejs.MxtJsWarnings;
-import com.iafenvoy.mxt.data.trigger.TriggerSignal;
-import com.iafenvoy.mxt.data.trigger.builtin.BuiltinTrigger;
-import com.iafenvoy.mxt.runtime.trigger.TriggerDispatcher;
-import com.iafenvoy.mxt.runtime.trigger.TriggerSubscription;
+import com.iafenvoy.saturn.compat.kubejs.SaturnJsWarnings;
+import com.iafenvoy.saturn.data.trigger.TriggerSignal;
+import com.iafenvoy.saturn.data.trigger.builtin.BuiltinTrigger;
+import com.iafenvoy.saturn.runtime.trigger.TriggerDispatcher;
+import com.iafenvoy.saturn.runtime.trigger.TriggerSubscription;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Entity;
 
@@ -29,12 +29,12 @@ public final class MxtJsTriggerCallbacks {
 
     public static boolean subscribe(Entity entity, Identifier signal, String key, Consumer<TriggerSignal> callback, boolean oneShot) {
         if (entity.level().isClientSide()) {
-            MxtJsWarnings.warnOnce("trigger.client." + signal + '.' + key,
+            SaturnJsWarnings.warnOnce("trigger.client." + signal + '.' + key,
                     "MxtTriggers.subscribe was called for a client entity; script trigger subscriptions are server-only");
             return false;
         }
         if (key == null || key.isBlank()) {
-            MxtJsWarnings.warnOnce("trigger.key." + signal,
+            SaturnJsWarnings.warnOnce("trigger.key." + signal,
                     "MxtTriggers.subscribe needs a non-empty key so the subscription can be replaced or removed");
             return false;
         }

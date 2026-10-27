@@ -1,12 +1,12 @@
 package com.iafenvoy.mxt.data.talisman.type;
 
-import com.iafenvoy.mxt.data.ability.ActionCarrier;
-import com.iafenvoy.mxt.data.ability.TargetSelector;
-import com.iafenvoy.mxt.data.action.BiEntityAction;
-import com.iafenvoy.mxt.data.action.EntityAction;
-import com.iafenvoy.mxt.data.condition.BiEntityCondition;
 import com.iafenvoy.mxt.data.talisman.TalismanType;
 import com.iafenvoy.mxt.data.talisman.TalismanUse;
+import com.iafenvoy.saturn.data.ability.ActionCarrier;
+import com.iafenvoy.saturn.data.ability.TargetSelector;
+import com.iafenvoy.saturn.data.action.BiEntityAction;
+import com.iafenvoy.saturn.data.action.EntityAction;
+import com.iafenvoy.saturn.data.condition.BiEntityCondition;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;

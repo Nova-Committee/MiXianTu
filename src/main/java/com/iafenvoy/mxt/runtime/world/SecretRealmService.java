@@ -5,18 +5,19 @@ import com.iafenvoy.mxt.data.secretrealm.SecretRealm;
 import com.iafenvoy.mxt.data.secretrealm.builtin.ExistingGeneration;
 import com.iafenvoy.mxt.event.SecretRealmEvent.*;
 import com.iafenvoy.mxt.registry.MxtAttachments;
-import com.iafenvoy.mxt.runtime.resulting.Failure;
-import com.iafenvoy.mxt.runtime.resulting.Failures;
-import com.iafenvoy.mxt.runtime.resulting.Result;
+import com.iafenvoy.mxt.runtime.MxtProfilerSources;
 import com.iafenvoy.mxt.runtime.resulting.failures.SecretRealmFailure;
 import com.iafenvoy.mxt.runtime.rift.RiftLanding;
 import com.iafenvoy.mxt.runtime.rift.RiftService;
 import com.iafenvoy.mxt.runtime.world.SecretRealmEntryLocator.Arrival;
 import com.iafenvoy.mxt.runtime.world.SecretRealmEntryLocator.Landing;
-import com.iafenvoy.mxt.util.HolderHelper;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
-import com.iafenvoy.mxt.util.profiling.ProfilerScope;
-import com.iafenvoy.mxt.util.profiling.ServerProfiling;
+import com.iafenvoy.saturn.profiling.ProfilerScope;
+import com.iafenvoy.saturn.profiling.ServerProfiling;
+import com.iafenvoy.saturn.runtime.resulting.Failure;
+import com.iafenvoy.saturn.runtime.resulting.Failures;
+import com.iafenvoy.saturn.runtime.resulting.Result;
+import com.iafenvoy.saturn.util.HolderHelper;
+import com.iafenvoy.saturn.util.formula.FormulaContext;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
@@ -100,7 +101,7 @@ public final class SecretRealmService {
 
     private static TravelResult enter(LivingEntity traveller, MinecraftServer server, Holder<SecretRealm> definition,
                                       @Nullable SecretRealmRecord selected, @Nullable Arrival fixedArrival, @Nullable Vec3 fixedOrigin, boolean nearby) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.SECRET_REALM)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.SECRET_REALM)) {
             // A token can outlive the definition it names, so the current registry is the last word on whether this realm
             // still exists. Kept here rather than at the token, because every caller has to be held to it.
             if (definition.unwrapKey().flatMap(server.overworld().registryAccess()::get).isEmpty())
@@ -200,7 +201,7 @@ public final class SecretRealmService {
     }
 
     public static TravelResult exit(LivingEntity traveller) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.SECRET_REALM)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.SECRET_REALM)) {
             SecretRealmTravelAttachment travel = travel(traveller);
             Holder<SecretRealm> definition = travel == null ? null : travel.realm().orElse(null);
             if (definition == null || !travel.active()) return TravelResult.rejected(SecretRealmFailure.NOT_TRAVELLING);
@@ -318,7 +319,7 @@ public final class SecretRealmService {
     }
 
     public static boolean expire(MinecraftServer server, SecretRealmRecord record, long gameTime) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.SECRET_REALM)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.SECRET_REALM)) {
             if (!record.expired(gameTime)) return false;
             boolean expelled = true;
             for (UUID id : List.copyOf(record.members())) {
@@ -345,7 +346,7 @@ public final class SecretRealmService {
     // record, so nothing is retired while somebody is still inside; the answer says whether the dimension really
     // went away, since the platform refuses to delete a level that still holds a player.
     public static boolean destroy(MinecraftServer server, SecretRealmRecord record) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.SECRET_REALM)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.SECRET_REALM)) {
             for (UUID id : List.copyOf(record.members())) {
                 LivingEntity member = findMember(server, id);
                 if (member != null && leave(member, false).failure() != null) return false;
@@ -365,7 +366,7 @@ public final class SecretRealmService {
     // For a traveller whose instance no longer holds them: what a destroyed or expired secret realm leaves behind
     // for one that was not loaded at the time (an offline player, or any other kind of traveller).
     public static boolean returnIfOrphaned(LivingEntity traveller) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.SECRET_REALM)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.SECRET_REALM)) {
             SecretRealmTravelAttachment travel = travel(traveller);
             if (travel == null || !travel.active()) return false;
             if (SecretRealmRegistry.ofMember(traveller.getUUID()).isPresent()) return false;
@@ -392,7 +393,7 @@ public final class SecretRealmService {
     // The half of an entry that does not need a player, so scripts and diagnostics can open a secret realm without
     // sending anybody into it.
     public static Optional<SecretRealmRecord> open(MinecraftServer server, SecretRealmRecord record) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.SECRET_REALM)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.SECRET_REALM)) {
             // The table is written before the level is built: the prepared copy replaces this entry at the end of the
             // method, and replace() only accepts a dimension the table already holds.
             SecretRealmRegistry.put(record);

@@ -1,14 +1,14 @@
 package com.iafenvoy.mxt.data.condition.builtin.item;
 
 import com.iafenvoy.mxt.data.action.builtin.entity.ApplyCurseAction;
-import com.iafenvoy.mxt.data.condition.ItemCondition;
-import com.iafenvoy.mxt.data.context.condition.ItemConditionContext;
 import com.iafenvoy.mxt.data.curse.Curse;
 import com.iafenvoy.mxt.data.curse.CurseContainerComponent;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.util.codec.RegistryCodecs;
-import com.iafenvoy.mxt.util.formula.NumberRange;
+import com.iafenvoy.saturn.data.condition.ItemCondition;
+import com.iafenvoy.saturn.data.context.condition.ItemConditionContext;
+import com.iafenvoy.saturn.util.codec.RegistryCodecs;
+import com.iafenvoy.saturn.util.formula.NumberRange;
 import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;

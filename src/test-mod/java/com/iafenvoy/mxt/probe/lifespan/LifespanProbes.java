@@ -1,4 +1,13 @@
 package com.iafenvoy.mxt.probe.lifespan;
+import com.iafenvoy.saturn.registry.SaturnResourceKeys;
+import com.iafenvoy.saturn.registry.SaturnAttachments;
+import com.iafenvoy.saturn.attachment.AbilityAttachment;
+import com.iafenvoy.saturn.attachment.ResourceHolderAttachment;
+import com.iafenvoy.saturn.data.ability.Ability;
+import com.iafenvoy.saturn.data.context.Context;
+import com.iafenvoy.saturn.data.cost.Cost;
+import com.iafenvoy.saturn.runtime.resulting.Failure;
+import com.iafenvoy.saturn.util.chain.Chain;
 
 import com.google.gson.JsonParser;
 import com.iafenvoy.jupiter.config.entry.BooleanEntry;
@@ -6,10 +15,10 @@ import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.attachment.*;
 import com.iafenvoy.mxt.config.MxtServerConfig;
 import com.iafenvoy.mxt.config.MxtServerConfig.LifespanOutcome;
-import com.iafenvoy.mxt.data.action.EntityAction;
+import com.iafenvoy.saturn.data.action.EntityAction;
 import com.iafenvoy.mxt.data.action.builtin.entity.ModifyLifespanAction;
 import com.iafenvoy.mxt.data.cultivation.RealmStage;
-import com.iafenvoy.mxt.data.resource.Resource;
+import com.iafenvoy.saturn.data.resource.Resource;
 import com.iafenvoy.mxt.event.LifeSpanEndEvent;
 import com.iafenvoy.mxt.event.LifeSpanRebirthEvent;
 import com.iafenvoy.mxt.probe.Probe;
@@ -18,16 +27,16 @@ import com.iafenvoy.mxt.probe.ProbeDefinitions;
 import com.iafenvoy.mxt.probe.ProbeKit;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.runtime.ability.AbilityGrantService;
+import com.iafenvoy.saturn.runtime.ability.AbilityGrantService;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationIdentityService;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService;
 import com.iafenvoy.mxt.runtime.cultivation.LifeSpanService;
 import com.iafenvoy.mxt.runtime.damage.DamageCalculationService;
-import com.iafenvoy.mxt.runtime.resulting.Failures;
-import com.iafenvoy.mxt.runtime.resulting.Result;
-import com.iafenvoy.mxt.util.HolderHelper;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
-import com.iafenvoy.mxt.util.formula.number.Constant;
+import com.iafenvoy.saturn.runtime.resulting.Failures;
+import com.iafenvoy.saturn.runtime.resulting.Result;
+import com.iafenvoy.saturn.util.HolderHelper;
+import com.iafenvoy.saturn.util.formula.FormulaContext;
+import com.iafenvoy.saturn.util.formula.number.Constant;
 import com.mojang.serialization.JsonOps;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
@@ -318,21 +327,21 @@ public final class LifespanProbes {
             CultivationAttachment rebornSpirit = reborn.getData(MxtAttachments.CULTIVATION);
             MinorStageAttachment rebornStages = reborn.getData(MxtAttachments.MINOR_STAGES);
             TechniqueAttachment rebornTechniques = reborn.getData(MxtAttachments.TECHNIQUE);
-            AbilityAttachment rebornAbilities = reborn.getData(MxtAttachments.ABILITY_HOLDER);
+            AbilityAttachment rebornAbilities = reborn.getData(SaturnAttachments.ABILITY_HOLDER);
             rebornSpirit.setRealmStage(qiRefining);
             rebornSpirit.setCultivationProgress(ProbeKit.requireProfile(context, ProbeDefinitions.QI), 80.0D);
             rebornStages.raiseMinorStageRecord(qiRefining, 2);
             rebornTechniques.addLearnedTechnique(context.require(MxtResourceKeys.TECHNIQUE, ProbeDefinitions.TECHNIQUE));
             AbilityGrantService.recalculate(reborn);
-            boolean realmAbility = rebornAbilities.has(context.require(MxtResourceKeys.ABILITY, context.id("awaken_divine_sense")));
+            boolean realmAbility = rebornAbilities.has(context.require(SaturnResourceKeys.ABILITY, context.id("awaken_divine_sense")));
             LifeSpanService.set(reborn, 5L);
             boolean rebornSettled = LifeSpanService.settle(reborn);
             boolean reset = rebornSpirit.realmStages().isEmpty() && rebornStages.minorStageRecord(qiRefining) == -1
-                    && !rebornAbilities.has(context.require(MxtResourceKeys.ABILITY, context.id("awaken_divine_sense")));
+                    && !rebornAbilities.has(context.require(SaturnResourceKeys.ABILITY, context.id("awaken_divine_sense")));
             // What the body still is keeps its grants, so the root's own ability survives the realm's.
             boolean kept = rebornTechniques.learnedTechniques().contains(context.require(MxtResourceKeys.TECHNIQUE, ProbeDefinitions.TECHNIQUE))
                     && !reborn.getData(MxtAttachments.SPIRIT_IDENTITY).spiritRoots().isEmpty()
-                    && rebornAbilities.has(context.require(MxtResourceKeys.ABILITY, ProbeDefinitions.PROBE_AFFINITY_ABILITY));
+                    && rebornAbilities.has(context.require(SaturnResourceKeys.ABILITY, ProbeDefinitions.PROBE_AFFINITY_ABILITY));
             boolean rebornLedger = LifeSpanService.remaining(reborn) == 24_000L && LifeSpanService.total(reborn) == 24_000L;
             ok &= context.check("lifespan probe: reincarnate realm_ability=" + realmAbility
                             + " realms=" + rebornSpirit.realmStages().size()
@@ -365,9 +374,9 @@ public final class LifespanProbes {
             settings.onExpire.setValue(LifespanOutcome.NONE);
             settings.baseLifespan.setValue(0L);
             CultivationAttachment climbSpirit = climber.getData(MxtAttachments.CULTIVATION);
-            ResourceHolderAttachment climbResources = climber.getData(MxtAttachments.RESOURCE_HOLDER);
+            ResourceHolderAttachment climbResources = climber.getData(SaturnAttachments.RESOURCE_HOLDER);
             climbSpirit.setRealmStage(context.require(MxtResourceKeys.REALM_STAGE, ProbeDefinitions.SPIRIT_POWER_REFINING));
-            Holder<Resource> climbPayment = context.require(MxtResourceKeys.RESOURCE, ProbeDefinitions.SPIRIT_POWER);
+            Holder<Resource> climbPayment = context.require(SaturnResourceKeys.RESOURCE, ProbeDefinitions.SPIRIT_POWER);
             ProbeKit.ensureResource(climber, climbResources, climbPayment, 100.0D);
             climbSpirit.setCultivationProgress(ProbeKit.requireProfile(context, ProbeDefinitions.QI), 100.0D);
             CultivationService.BreakthroughResult breakthrough = CultivationService.attempt(climber, climbSpirit,
@@ -464,11 +473,11 @@ public final class LifespanProbes {
             Holder<RealmStage> qiRefining = context.require(MxtResourceKeys.REALM_STAGE, ProbeDefinitions.QI_REFINING);
             CultivationAttachment restartSpirit = restart.getData(MxtAttachments.CULTIVATION);
             MinorStageAttachment restartIdentity = restart.getData(MxtAttachments.MINOR_STAGES);
-            AbilityAttachment restartAbilities = restart.getData(MxtAttachments.ABILITY_HOLDER);
+            AbilityAttachment restartAbilities = restart.getData(SaturnAttachments.ABILITY_HOLDER);
             restartSpirit.setRealmStage(qiRefining);
             restartIdentity.raiseMinorStageRecord(qiRefining, 2);
             AbilityGrantService.recalculate(restart);
-            boolean restartAbility = restartAbilities.has(context.require(MxtResourceKeys.ABILITY, context.id("awaken_divine_sense")));
+            boolean restartAbility = restartAbilities.has(context.require(SaturnResourceKeys.ABILITY, context.id("awaken_divine_sense")));
             LifeSpanService.set(restart, 5L);
             boolean[] ended = {false};
             int[] rebirths = {0};
@@ -496,13 +505,13 @@ public final class LifespanProbes {
             }
             boolean restartReset = restartSpirit.realmStages().isEmpty()
                     && restartIdentity.minorStageRecord(qiRefining) == -1
-                    && !restartAbilities.has(context.require(MxtResourceKeys.ABILITY, context.id("awaken_divine_sense")))
-                    && restartAbilities.has(context.require(MxtResourceKeys.ABILITY, ProbeDefinitions.PROBE_AFFINITY_ABILITY));
+                    && !restartAbilities.has(context.require(SaturnResourceKeys.ABILITY, context.id("awaken_divine_sense")))
+                    && restartAbilities.has(context.require(SaturnResourceKeys.ABILITY, ProbeDefinitions.PROBE_AFFINITY_ABILITY));
             boolean restartLedger = LifeSpanService.remaining(restart) == 24_000L && LifeSpanService.total(restart) == 24_000L;
             ok &= context.check("lifespan probe: explicit_reincarnate ran=" + (restarted.failure() == null)
                             + " refused=" + restartRefused + " ability=" + restartAbility
                             + " realms=" + restartSpirit.realmStages().size()
-                            + " kept_root=" + restartAbilities.has(context.require(MxtResourceKeys.ABILITY, ProbeDefinitions.PROBE_AFFINITY_ABILITY))
+                            + " kept_root=" + restartAbilities.has(context.require(SaturnResourceKeys.ABILITY, ProbeDefinitions.PROBE_AFFINITY_ABILITY))
                             + " ledger=" + LifeSpanService.remaining(restart)
                             + " rebirth_post=" + rebirths[0] + " end_event=" + ended[0],
                     restartAbility && restarted.failure() == null && restartRefused && restartReset && restartLedger

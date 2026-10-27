@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.compat.kubejs.binding;
 
 import com.iafenvoy.mxt.compat.kubejs.MxtKubeJsApi;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
+import com.iafenvoy.saturn.util.formula.FormulaContext;
 import dev.latvian.mods.kubejs.typings.Info;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Entity;

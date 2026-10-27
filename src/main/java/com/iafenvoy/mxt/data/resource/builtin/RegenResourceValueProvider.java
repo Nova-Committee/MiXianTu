@@ -1,10 +1,10 @@
 package com.iafenvoy.mxt.data.resource.builtin;
 
-import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
-import com.iafenvoy.mxt.data.resource.Resource;
-import com.iafenvoy.mxt.data.resource.ResourceValueProvider;
 import com.iafenvoy.mxt.registry.cache.RegistryCaches;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
+import com.iafenvoy.saturn.attachment.ResourceHolderAttachment;
+import com.iafenvoy.saturn.data.resource.Resource;
+import com.iafenvoy.saturn.data.resource.ResourceValueProvider;
+import com.iafenvoy.saturn.util.formula.FormulaContext;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.Holder;
 

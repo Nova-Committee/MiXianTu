@@ -1,17 +1,24 @@
 package com.iafenvoy.mxt.probe.verify;
+import com.iafenvoy.saturn.profiling.ServerProfiling.Source;
+import com.iafenvoy.mxt.data.cost.context.AuraCostContexts;
+import com.iafenvoy.mxt.data.cost.Costs;
+import com.iafenvoy.saturn.registry.SaturnAttachments;
+import com.iafenvoy.saturn.data.context.Context;
+import com.iafenvoy.saturn.data.resource.Resource;
+import com.iafenvoy.saturn.runtime.Sources;
 
 import com.iafenvoy.mxt.api.ItemAuraAccess;
-import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
+import com.iafenvoy.saturn.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.aura.SpiritStorageComponent;
-import com.iafenvoy.mxt.data.cost.Cost;
-import com.iafenvoy.mxt.data.cost.CostPayment;
-import com.iafenvoy.mxt.data.cost.CostTarget;
+import com.iafenvoy.saturn.data.cost.Cost;
+import com.iafenvoy.saturn.data.cost.CostPayment;
+import com.iafenvoy.saturn.data.cost.CostTarget;
 import com.iafenvoy.mxt.data.cost.builtin.AuraCost;
-import com.iafenvoy.mxt.data.cost.builtin.ResourceCost;
+import com.iafenvoy.saturn.data.cost.builtin.ResourceCost;
 import com.iafenvoy.mxt.data.cost.context.AuraCostSources;
-import com.iafenvoy.mxt.data.cost.context.CostContext;
-import com.iafenvoy.mxt.data.cost.context.CostOrigins;
+import com.iafenvoy.saturn.data.cost.context.CostContext;
+import com.iafenvoy.saturn.data.cost.context.CostOrigins;
 import com.iafenvoy.mxt.data.item.TalismanComponent;
 import com.iafenvoy.mxt.data.talisman.Talisman;
 import com.iafenvoy.mxt.item.block.entity.SpiritCraftingTableBlockEntity;
@@ -20,16 +27,17 @@ import com.iafenvoy.mxt.probe.ProbeContext;
 import com.iafenvoy.mxt.probe.ProbeDefinitions;
 import com.iafenvoy.mxt.registry.*;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactService;
-import com.iafenvoy.mxt.runtime.hold.ItemUseCycles;
-import com.iafenvoy.mxt.runtime.resulting.failures.CostFailure;
+import com.iafenvoy.saturn.runtime.hold.ItemUseCycles;
+import com.iafenvoy.saturn.runtime.resulting.failures.CostFailure;
 import com.iafenvoy.mxt.runtime.spirit.AuraTransfers;
 import com.iafenvoy.mxt.runtime.spirit.SpiritChargeService;
 import com.iafenvoy.mxt.runtime.talisman.TalismanService;
-import com.iafenvoy.mxt.util.TooltipText;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
-import com.iafenvoy.mxt.util.formula.number.Constant;
+import com.iafenvoy.saturn.util.TooltipText;
+import com.iafenvoy.saturn.util.formula.FormulaContext;
+import com.iafenvoy.saturn.util.formula.number.Constant;
 import net.minecraft.core.Holder;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.neoforged.neoforge.event.entity.living.LivingEntityUseItemEvent;
@@ -46,6 +54,7 @@ public final class AuraDoubleVerifyProbes {
                 Probe.of("verify/aura_double_arithmetic", AuraDoubleVerifyProbes::arithmetic),
                 Probe.of("verify/aura_double_items", AuraDoubleVerifyProbes::items),
                 Probe.of("verify/aura_double_payment", AuraDoubleVerifyProbes::payment),
+                Probe.of("verify/aura_double_click_pour", AuraDoubleVerifyProbes::clickPour),
                 Probe.of("verify/aura_double_sources", AuraDoubleVerifyProbes::sources),
                 Probe.of("verify/aura_double_capacity", AuraDoubleVerifyProbes::capacity));
     }
@@ -112,10 +121,10 @@ public final class AuraDoubleVerifyProbes {
         SpiritCraftingTableBlockEntity bank = bank(context, aura);
         close(context, "a fractional recipe grants a fractional buffer", bank.getCapacity(null, context.registries(), aura), 24.75D);
         bank.insert(null, context.registries(), aura, 1.75D, true, false);
-        CostContext costs = CostContext.bank(bank, context.player(), FormulaContext.of(context.player()), CostOrigins.SCRIPT);
+        CostContext costs = AuraCostContexts.bank(bank, context.player(), FormulaContext.of(context.player()), CostOrigins.SCRIPT);
         CostPayment.PaymentResult paid = CostPayment.pay(List.of(new AuraCost(aura, new Constant(0.25D))), costs);
         context.check("fractional bank payment succeeds", paid.isSuccess());
-        close(context, "receipt retains the original fractional price", paid.auras().getOrDefault(aura, 0.0D), 0.25D);
+        close(context, "receipt retains the original fractional price", Costs.auras(paid).getOrDefault(aura, 0.0D), 0.25D);
         close(context, "bank loses precisely the quoted amount", bank.aura(aura), 1.5D);
         bank.extract(null, context.registries(), aura, 1.5D, true, false);
         bank.insert(null, context.registries(), aura, 24.5D, true, false);
@@ -128,7 +137,7 @@ public final class AuraDoubleVerifyProbes {
                 context.require(MxtResourceKeys.TALISMAN, ProbeDefinitions.id("buffer_sigil")), TalismanComponent.TriggerMode.STORE));
         double capacity = TalismanService.capacity(talisman).get(spirit);
         talisman.set(MxtDataComponents.SPIRIT_STORAGE, SpiritStorageComponent.EMPTY.with(spirit, capacity - 0.25D));
-        ResourceHolderAttachment account = context.player().getData(MxtAttachments.RESOURCE_HOLDER);
+        ResourceHolderAttachment account = context.player().getData(SaturnAttachments.RESOURCE_HOLDER);
         account.set(spirit.value().resource(), 1.0D, 0.0D, 100_000.0D, -1L, "probe");
         context.player().setItemInHand(InteractionHand.MAIN_HAND, talisman);
         ItemUseCycles.prepare(context.player(), talisman);
@@ -139,13 +148,36 @@ public final class AuraDoubleVerifyProbes {
         close(context, "held pouring charges only the final quarter", account.get(spirit.value().resource()), 0.75D);
     }
 
+    // The gesture a player performs: the hold module arms a short carrier on the click, the item hands the click
+    // over, and the cycle that starts is the pour. Everything here goes through the real stack entry point.
+    private static void clickPour(ProbeContext context) {
+        Holder<Aura> spirit = context.require(MxtResourceKeys.AURA, ProbeDefinitions.SPIRIT_POWER);
+        ItemStack talisman = MxtItems.TALISMAN.toStack();
+        talisman.set(MxtDataComponents.TALISMAN, TalismanComponent.of(
+                context.require(MxtResourceKeys.TALISMAN, ProbeDefinitions.id("buffer_sigil")), TalismanComponent.TriggerMode.STORE));
+        Holder<Resource> resource = spirit.value().resource();
+        ResourceHolderAttachment account = context.player().getData(SaturnAttachments.RESOURCE_HOLDER);
+        account.set(resource, 10.0D, 0.0D, 100_000.0D, -1L, "probe");
+        context.player().setItemInHand(InteractionHand.MAIN_HAND, talisman);
+        ItemUseCycles.prepare(context.player(), talisman);
+        context.expect("a short carrier hands the click to the pour",
+                talisman.use(context.level(), context.player(), InteractionHand.MAIN_HAND), InteractionResult.CONSUME);
+        context.check("the click starts the pour", context.player().isUsingItem());
+        SpiritChargeService.onUseTick(new LivingEntityUseItemEvent.Tick(context.player(), talisman,
+                context.player().getUseItemRemainingTicks()));
+        close(context, "one click tick stores the intake", talisman.get(MxtDataComponents.SPIRIT_STORAGE).get(spirit), 1.0D);
+        close(context, "one click tick charges one unit", account.get(resource), 9.0D);
+        context.player().releaseUsingItem();
+        context.expect("releasing ends the pour", ItemUseCycles.current(context.player()), null);
+    }
+
     private static void sources(ProbeContext context) {
         Holder<Aura> aura = context.require(MxtResourceKeys.AURA, ProbeDefinitions.QI);
         AuraCost fee = new AuraCost(aura, new Constant(0.25D));
         FormulaContext formula = FormulaContext.of(context.player());
         SpiritCraftingTableBlockEntity bank = bank(context, aura);
-        CostContext first = CostContext.bank(bank, null, formula, CostOrigins.SCRIPT);
-        CostContext second = CostContext.bank(bank, context.player(), formula, CostOrigins.SCRIPT);
+        CostContext first = AuraCostContexts.bank(bank, null, formula, CostOrigins.SCRIPT);
+        CostContext second = AuraCostContexts.bank(bank, context.player(), formula, CostOrigins.SCRIPT);
         context.expect("wrapping one bank retains its physical identity", fee.prepare(first).getData().target(), fee.prepare(second).getData().target());
         ResourceHolderAttachment account = new ResourceHolderAttachment();
         CostContext accountContext = CostContext.account(account, null, formula, CostOrigins.SCRIPT);
@@ -154,12 +186,12 @@ public final class AuraDoubleVerifyProbes {
         CostContext changed = CostContext.of(null, formula, CostOrigins.SCRIPT).withPayer(context.player());
         CostTarget.Account target = (CostTarget.Account) fee.prepare(changed).getData().target();
         context.check("account source follows the current payer", target.account() == changed.resourceTarget());
-        CostContext quote = first.withAuraSource(AuraCostSources.QUOTE);
+        CostContext quote = AuraCostContexts.withAuraSource(first, AuraCostSources.QUOTE);
         Cost.Transaction transaction = fee.prepare(quote).getData();
         close(context, "quote has no inventory dependency", transaction.amount(), 0.25D);
         context.expect("quote cannot execute a payment", transaction.execute(true).failure(), CostFailure.NO_CHANNEL);
-        context.expect("same-section positions retain identity", fee.prepare(CostContext.pool(null, context.level(), context.at(2, 1, 2), formula, CostOrigins.SCRIPT)).getData().target(),
-                fee.prepare(CostContext.pool(null, context.level(), context.at(2, 1, 2).offset(0, (context.at(2, 1, 2).getY() & 15) == 15 ? -1 : 1, 0), formula, CostOrigins.SCRIPT)).getData().target());
+        context.expect("same-section positions retain identity", fee.prepare(AuraCostContexts.pool(null, context.level(), context.at(2, 1, 2), formula, CostOrigins.SCRIPT)).getData().target(),
+                fee.prepare(AuraCostContexts.pool(null, context.level(), context.at(2, 1, 2).offset(0, (context.at(2, 1, 2).getY() & 15) == 15 ? -1 : 1, 0), formula, CostOrigins.SCRIPT)).getData().target());
     }
 
     private static void capacity(ProbeContext context) {

@@ -1,9 +1,9 @@
 package com.iafenvoy.mxt.runtime.alchemy;
 
 import com.iafenvoy.mxt.data.alchemy.MedicinalProperty;
-import com.iafenvoy.mxt.runtime.resulting.Failure;
 import com.iafenvoy.mxt.runtime.resulting.failures.AlchemyFailure;
-import com.iafenvoy.mxt.util.codec.CollectionCodecs;
+import com.iafenvoy.saturn.runtime.resulting.Failure;
+import com.iafenvoy.saturn.util.codec.CollectionCodecs;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;

@@ -2,7 +2,7 @@ package com.iafenvoy.mxt.runtime.curse;
 
 import com.iafenvoy.mxt.data.curse.Curse;
 import com.iafenvoy.mxt.data.curse.Curse.StackingMode;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
+import com.iafenvoy.saturn.util.formula.FormulaContext;
 import net.minecraft.core.Holder;
 
 import java.util.LinkedHashMap;

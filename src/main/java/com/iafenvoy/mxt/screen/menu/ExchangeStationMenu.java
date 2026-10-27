@@ -3,10 +3,11 @@ package com.iafenvoy.mxt.screen.menu;
 import com.iafenvoy.mxt.data.economy.CurrencyValue.Exchange;
 import com.iafenvoy.mxt.registry.MxtBlocks;
 import com.iafenvoy.mxt.registry.MxtMenus;
+import com.iafenvoy.mxt.runtime.MxtProfilerSources;
 import com.iafenvoy.mxt.runtime.economy.CurrencyValueService;
 import com.iafenvoy.mxt.screen.aui.AuiPages;
-import com.iafenvoy.mxt.util.profiling.ProfilerScope;
-import com.iafenvoy.mxt.util.profiling.ServerProfiling;
+import com.iafenvoy.saturn.profiling.ProfilerScope;
+import com.iafenvoy.saturn.profiling.ServerProfiling;
 import com.sighs.apricityui.screen.ApricityContainerMenu;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.sounds.SoundEvents;
@@ -100,7 +101,7 @@ public final class ExchangeStationMenu extends ApricityContainerMenu {
 
     @Override
     public boolean clickMenuButton(@NonNull Player player, int buttonId) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.ECONOMY)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.ECONOMY)) {
             if (this.selectedExchange.get() == buttonId) return false;
             if (!this.isValidExchange(buttonId)) return false;
             this.selectedExchange.set(buttonId);
@@ -111,7 +112,7 @@ public final class ExchangeStationMenu extends ApricityContainerMenu {
 
     @Override
     public void slotsChanged(@NonNull Container changed) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.ECONOMY)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.ECONOMY)) {
             ItemStack current = this.inputSlot.getItem();
             if (!ItemStack.isSameItemSameComponents(current, this.previousInput)) {
                 this.previousInput = current.copy();
@@ -200,7 +201,7 @@ public final class ExchangeStationMenu extends ApricityContainerMenu {
      * is built before this menu's own body and cannot read its state directly.
      */
     private void takeResult(Player player, ItemStack stack) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.ECONOMY)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.ECONOMY)) {
             Exchange offer = this.selectedOffer();
             if (offer == null || this.inputSlot.getItem().getCount() < offer.cost()) return;
             stack.onCraftedBy(player, stack.getCount());

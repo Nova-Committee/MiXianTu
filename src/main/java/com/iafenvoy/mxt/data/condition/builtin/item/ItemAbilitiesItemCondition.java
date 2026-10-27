@@ -1,11 +1,11 @@
 package com.iafenvoy.mxt.data.condition.builtin.item;
 
-import com.iafenvoy.mxt.data.ability.Ability;
-import com.iafenvoy.mxt.data.condition.ItemCondition;
-import com.iafenvoy.mxt.data.context.condition.ItemConditionContext;
-import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactService;
-import com.iafenvoy.mxt.util.codec.RegistryCodecs;
+import com.iafenvoy.saturn.data.ability.Ability;
+import com.iafenvoy.saturn.data.condition.ItemCondition;
+import com.iafenvoy.saturn.data.context.condition.ItemConditionContext;
+import com.iafenvoy.saturn.registry.SaturnResourceKeys;
+import com.iafenvoy.saturn.util.codec.RegistryCodecs;
 import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.MapCodec;
@@ -23,7 +23,7 @@ import java.util.List;
 public record ItemAbilitiesItemCondition(
         List<Either<Holder<Ability>, TagKey<Ability>>> abilities) implements ItemCondition {
     public static final MapCodec<ItemAbilitiesItemCondition> CODEC = RecordCodecBuilder.<ItemAbilitiesItemCondition>mapCodec(i -> i.group(
-            RegistryCodecs.holderOrTagList(MxtResourceKeys.ABILITY).fieldOf("abilities").forGetter(ItemAbilitiesItemCondition::abilities)
+            RegistryCodecs.holderOrTagList(SaturnResourceKeys.ABILITY).fieldOf("abilities").forGetter(ItemAbilitiesItemCondition::abilities)
     ).apply(i, ItemAbilitiesItemCondition::new)).validate(ItemAbilitiesItemCondition::validate);
 
     // An empty list can never match, so it is a condition that silently never passes: refused at load.

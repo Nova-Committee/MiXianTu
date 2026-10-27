@@ -2,7 +2,7 @@ package com.iafenvoy.mxt.data.curse.builtin;
 
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.data.curse.CurseType;
-import com.iafenvoy.mxt.data.trigger.Trigger;
+import com.iafenvoy.saturn.data.trigger.Trigger;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.resources.Identifier;

@@ -1,13 +1,15 @@
 package com.iafenvoy.mxt.probe.artifact;
+import com.iafenvoy.saturn.registry.SaturnAttachments;
+import com.iafenvoy.saturn.data.ability.Ability;
+import com.iafenvoy.saturn.data.context.Context;
 
-import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
+import com.iafenvoy.saturn.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.data.artifact.Artifact;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.probe.Probe;
 import com.iafenvoy.mxt.probe.ProbeContext;
 import com.iafenvoy.mxt.probe.ProbeDefinitions;
 import com.iafenvoy.mxt.probe.ProbeKit;
-import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactHold;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactHoldService;
@@ -17,8 +19,8 @@ import com.iafenvoy.mxt.runtime.artifact.ArtifactService.RefineResult;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactUpkeepService;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationIdentityService;
 import com.iafenvoy.mxt.runtime.hold.HoldLookup;
-import com.iafenvoy.mxt.runtime.resource.ResourceService;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
+import com.iafenvoy.saturn.runtime.resource.ResourceService;
+import com.iafenvoy.saturn.util.formula.FormulaContext;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
@@ -184,7 +186,7 @@ public final class ArtifactHoldProbes {
         Holder<Aura> soulPower = context.require(MxtResourceKeys.AURA, ProbeDefinitions.SOUL_POWER);
         ItemStack pourStack = new ItemStack(Items.AMETHYST_SHARD);
         ArtifactService.refine(pourStack, player);
-        ResourceHolderAttachment pools = player.getData(MxtAttachments.RESOURCE_HOLDER);
+        ResourceHolderAttachment pools = player.getData(SaturnAttachments.RESOURCE_HOLDER);
         ProbeKit.ensureResource(player, pools, qi.value().resource(), 10.0D);
         ProbeKit.ensureResource(player, pools, waterPower.value().resource(), 10.0D);
         ProbeKit.ensureResource(player, pools, soulPower.value().resource(), 10.0D);
@@ -232,7 +234,7 @@ public final class ArtifactHoldProbes {
         ArtifactService.addEnergy(access, fullWard, qi, 1000.0D, 0.0D, formula);
         Artifact fullWardDefinition = ArtifactService.definition(access, fullWard).map(Reference::value).orElseThrow();
         boolean fullSilent = ArtifactHoldService.blockedAura(player, fullWard, fullWardDefinition) == null;
-        ResourceHolderAttachment blockPools = player.getData(MxtAttachments.RESOURCE_HOLDER);
+        ResourceHolderAttachment blockPools = player.getData(SaturnAttachments.RESOURCE_HOLDER);
         ResourceService.change(blockPools, qi.value().resource(), -blockPools.get(qi.value().resource()),
                 ResourceService.formulaContext(player, qi.value().resource(), formula));
         ItemStack emptyWard = new ItemStack(Items.PRISMARINE_SHARD);
@@ -250,7 +252,7 @@ public final class ArtifactHoldProbes {
         Holder<Aura> waterPower = context.require(MxtResourceKeys.AURA, ProbeDefinitions.WATER_POWER);
         ItemStack upkeepStack = new ItemStack(Items.IRON_SHOVEL);
         ArtifactService.refine(upkeepStack, player);
-        ResourceHolderAttachment upkeepPools = player.getData(MxtAttachments.RESOURCE_HOLDER);
+        ResourceHolderAttachment upkeepPools = player.getData(SaturnAttachments.RESOURCE_HOLDER);
         ProbeKit.ensureResource(player, upkeepPools, waterPower.value().resource(), 10.0D);
         double upkeepPool = upkeepPools.get(waterPower.value().resource());
         boolean upkeepPaid = ArtifactUpkeepService.upkeep(player, upkeepStack, 10L)

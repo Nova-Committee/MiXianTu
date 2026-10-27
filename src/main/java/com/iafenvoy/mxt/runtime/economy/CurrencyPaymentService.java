@@ -2,8 +2,9 @@ package com.iafenvoy.mxt.runtime.economy;
 
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.util.profiling.ProfilerScope;
-import com.iafenvoy.mxt.util.profiling.ServerProfiling;
+import com.iafenvoy.mxt.runtime.MxtProfilerSources;
+import com.iafenvoy.saturn.profiling.ProfilerScope;
+import com.iafenvoy.saturn.profiling.ServerProfiling;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.Container;
@@ -24,7 +25,7 @@ public final class CurrencyPaymentService {
 
     // Counts and capacity are resolved before allocating any output stacks.
     public static Optional<List<ItemStack>> makeChange(@NotNull HolderLookup.Provider provider, long value, int capacity) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.ECONOMY_CHANGE)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.ECONOMY_CHANGE)) {
             List<Denomination> denominations = denominations(provider);
             return planCounts(denominations, value, capacity).map(counts -> stacks(denominations, counts));
         }
@@ -32,7 +33,7 @@ public final class CurrencyPaymentService {
 
     // Counts follow the supplied denomination order; any exact plan within capacity is sufficient.
     public static Optional<long[]> planCounts(List<Denomination> denominations, long value, int capacity) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.ECONOMY_CHANGE)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.ECONOMY_CHANGE)) {
             if (value < 0L || capacity < 0) return Optional.empty();
             if (value == 0L) return Optional.of(new long[denominations.size()]);
             for (Denomination denomination : denominations)
@@ -145,7 +146,7 @@ public final class CurrencyPaymentService {
     }
 
     public static OptionalLong collectCurrency(Container container, @NotNull Entity holder) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.ECONOMY)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.ECONOMY)) {
             long total = 0L;
             for (int slot = 0; slot < container.getContainerSize(); slot++) {
                 ItemStack stack = container.getItem(slot);

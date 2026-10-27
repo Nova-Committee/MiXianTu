@@ -1,23 +1,25 @@
 package com.iafenvoy.mxt.probe.verify;
+import com.iafenvoy.saturn.profiling.ServerProfiling.Source;
+import com.iafenvoy.saturn.registry.SaturnAttachments;
+import com.iafenvoy.saturn.registry.SaturnRegistries;
+import com.iafenvoy.saturn.data.context.Context;
 
-import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
+import com.iafenvoy.saturn.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.data.formation.Formation;
-import com.iafenvoy.mxt.data.trigger.Trigger;
-import com.iafenvoy.mxt.data.trigger.TriggerContext;
-import com.iafenvoy.mxt.data.trigger.TriggerSignal;
-import com.iafenvoy.mxt.data.trigger.TriggerSignals;
+import com.iafenvoy.saturn.data.trigger.Trigger;
+import com.iafenvoy.saturn.data.trigger.TriggerContext;
+import com.iafenvoy.saturn.data.trigger.TriggerSignal;
+import com.iafenvoy.saturn.data.trigger.TriggerSignals;
 import com.iafenvoy.mxt.probe.Probe;
 import com.iafenvoy.mxt.probe.ProbeContext;
 import com.iafenvoy.mxt.probe.ProbeDefinitions;
-import com.iafenvoy.mxt.registry.MxtAttachments;
-import com.iafenvoy.mxt.registry.MxtRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.runtime.Sources;
+import com.iafenvoy.saturn.runtime.Sources;
 import com.iafenvoy.mxt.runtime.formation.FormationWorldService;
 import com.iafenvoy.mxt.runtime.formation.FormationWorldTicker;
-import com.iafenvoy.mxt.runtime.trigger.TriggerDispatcher;
-import com.iafenvoy.mxt.runtime.trigger.TriggerSubscription;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
+import com.iafenvoy.saturn.runtime.trigger.TriggerDispatcher;
+import com.iafenvoy.saturn.runtime.trigger.TriggerSubscription;
+import com.iafenvoy.saturn.util.formula.FormulaContext;
 import com.mojang.serialization.JsonOps;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
@@ -53,7 +55,7 @@ public final class ScopeVerifyProbes {
     // owes. The two arrays of one definition overlap, the player stands in both, then steps into one of them only.
     private static void sharedSourceHolds(ProbeContext context) {
         ServerLevel level = context.level();
-        ResourceHolderAttachment resources = context.player().getData(MxtAttachments.RESOURCE_HOLDER);
+        ResourceHolderAttachment resources = context.player().getData(SaturnAttachments.RESOURCE_HOLDER);
         FormulaContext formula = FormulaContext.of(context.player());
         UUID owner = context.player().getUUID();
         // The fixture declares no structure, so both arrays can be raised on the arena floor.
@@ -85,19 +87,19 @@ public final class ScopeVerifyProbes {
             player.setPos(left.getX() + 5.5D, left.getY(), left.getZ() + 0.5D);
             FormationWorldTicker.dispatch(level, 20L);
             context.check("both arrays together granted the shared source",
-                    player.getData(MxtAttachments.ABILITY_HOLDER).sources().heldBy(source));
+                    player.getData(SaturnAttachments.ABILITY_HOLDER).sources().heldBy(source));
             // Now inside the right one only: the left array sees the player leave while the right still covers the spot.
             // This is the leg - the source is keyed by definition, so the release must ask whether anything of that
             // definition still reaches the player before taking the grant away.
             player.setPos(right.getX() + 0.5D, right.getY(), right.getZ() + 0.5D);
             FormationWorldTicker.dispatch(level, 30L);
             context.check("walking out of one instance keeps the grant the sibling of the same definition still owes",
-                    player.getData(MxtAttachments.ABILITY_HOLDER).sources().heldBy(source));
+                    player.getData(SaturnAttachments.ABILITY_HOLDER).sources().heldBy(source));
             // Out of both: nothing covers the player any more, so the shared source goes.
             player.setPos(right.getX() + 40.5D, right.getY(), right.getZ() + 0.5D);
             FormationWorldTicker.dispatch(level, 40L);
             context.check("leaving every instance of the definition releases the grant",
-                    !player.getData(MxtAttachments.ABILITY_HOLDER).sources().heldBy(source));
+                    !player.getData(SaturnAttachments.ABILITY_HOLDER).sources().heldBy(source));
         } finally {
             FormationWorldService.deactivate(level, left);
             FormationWorldService.deactivate(level, right);
@@ -155,7 +157,7 @@ public final class ScopeVerifyProbes {
     }
 
     private static Trigger trigger(ProbeContext context) {
-        MapCodec<? extends Trigger> codec = MxtRegistries.TRIGGER_TYPE.getValue(TriggerSignals.TICK);
+        MapCodec<? extends Trigger> codec = SaturnRegistries.TRIGGER_TYPE.getValue(TriggerSignals.TICK);
         if (codec == null) return null;
         return codec.decoder().parse(RegistryOps.create(JsonOps.INSTANCE, context.registries()),
                 JsonOps.INSTANCE.createMap(new LinkedHashMap<>())).result().orElse(null);

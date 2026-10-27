@@ -4,7 +4,7 @@ import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.data.alchemy.SpiritHerb;
 import com.iafenvoy.mxt.runtime.alchemy.SpiritHerbGrowthService;
 import com.iafenvoy.mxt.runtime.alchemy.SpiritHerbService;
-import com.iafenvoy.mxt.util.HolderHelper;
+import com.iafenvoy.saturn.util.HolderHelper;
 import net.minecraft.core.Holder;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.Identifier;

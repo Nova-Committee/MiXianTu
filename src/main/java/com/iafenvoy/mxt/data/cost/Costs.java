@@ -2,12 +2,18 @@ package com.iafenvoy.mxt.data.cost;
 
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.cost.builtin.AuraCost;
+import com.iafenvoy.mxt.data.cost.context.AuraCostContexts;
 import com.iafenvoy.mxt.data.cost.context.AuraCostSources;
-import com.iafenvoy.mxt.data.cost.context.CostContext;
+import com.iafenvoy.saturn.data.cost.Cost;
+import com.iafenvoy.saturn.data.cost.CostPayment.PaymentResult;
+import com.iafenvoy.saturn.data.cost.Debit;
+import com.iafenvoy.saturn.data.cost.context.CostContext;
+import com.iafenvoy.saturn.runtime.resulting.ResultWithData;
 import com.mojang.serialization.DataResult;
 import net.minecraft.core.Holder;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -31,18 +37,35 @@ public final class Costs {
     }
 
     /**
-     * The aura amounts the {@code mxt:aura} entries of a costs array would take, priced only - no store is asked. For
-     * the callers that pay a pool or a store by hand (a per-tick cultivation settlement that holds the chunk store
-     * rather than a level), and for the shared-pool allocation, which needs the amounts before it can scale them.
+     * The aura amounts the {@code mxt:aura} entries of a costs array would take, priced only - no store is asked.
      * Entries of another type are not this question and are left out, so one array can answer both.
-     * <p>
-     * Null means an aura entry could not be priced.
+     *
+     * <p>Pricing is what answers the question, so a caller that also pays this array pays it twice: the cultivation
+     * split needs the amounts before it can scale the bill. Null means an aura entry could not be priced.
      */
     public static @Nullable Map<Holder<Aura>, Double> auras(List<Cost> costs, CostContext context) {
-        List<Cost> auras = costs.stream().filter(cost -> cost instanceof AuraCost).toList();
-        if (auras.isEmpty()) return Map.of();
-        CostPayment payment = CostPayment.of(context.withAuraSource(AuraCostSources.QUOTE));
-        if (payment.price(auras).isPresent()) return null;
-        return payment.auras();
+        CostContext quote = AuraCostContexts.withAuraSource(context, AuraCostSources.QUOTE);
+        Map<Holder<Aura>, Double> amounts = new LinkedHashMap<>();
+        for (Cost cost : costs) {
+            if (!(cost instanceof AuraCost)) continue;
+            ResultWithData<Cost.Transaction> prepared = cost.prepare(quote);
+            if (prepared.isFailure()) return null;
+            Cost.Transaction transaction = prepared.getData();
+            if (transaction.target() instanceof AuraCostTarget target)
+                amounts.merge(target.aura(), transaction.amount(), Double::sum);
+        }
+        return amounts;
+    }
+
+    /**
+     * What a finished payment really took in aura, keyed by the aura itself. Only the known debits are reported, so a
+     * store that handed over part of a fee shows that part and nothing more.
+     */
+    public static Map<Holder<Aura>, Double> auras(PaymentResult result) {
+        Map<Holder<Aura>, Double> amounts = new LinkedHashMap<>();
+        for (Debit debit : result.debits())
+            if (debit.target() instanceof AuraCostTarget target)
+                amounts.merge(target.aura(), debit.amount(), Double::sum);
+        return amounts;
     }
 }

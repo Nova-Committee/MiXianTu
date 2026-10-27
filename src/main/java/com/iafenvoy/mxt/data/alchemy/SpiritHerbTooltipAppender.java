@@ -2,8 +2,8 @@ package com.iafenvoy.mxt.data.alchemy;
 
 import com.iafenvoy.mxt.recipe.AlchemyRole;
 import com.iafenvoy.mxt.runtime.alchemy.SpiritHerbService;
-import com.iafenvoy.mxt.util.DefinitionText;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
+import com.iafenvoy.saturn.util.DefinitionText;
+import com.iafenvoy.saturn.util.formula.FormulaContext;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup.Provider;

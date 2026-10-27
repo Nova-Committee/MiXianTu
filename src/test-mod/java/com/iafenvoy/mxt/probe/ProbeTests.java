@@ -85,7 +85,6 @@ public final class ProbeTests {
             BlockAuraRefreshVerifyProbes::probes,
             LightBeamParticleVerifyProbes::probes,
             WorldEffectsVerifyProbes::probes,
-            CloseableResourcesVerifyProbes::probes,
             ClosureVerifyProbes::probes,
             CostVerifyProbes::probes,
             CostStoreVerifyProbes::probes,

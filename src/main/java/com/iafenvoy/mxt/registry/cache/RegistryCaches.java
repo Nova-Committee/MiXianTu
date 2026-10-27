@@ -12,12 +12,14 @@ import com.iafenvoy.mxt.data.item.TechniqueBinding;
 import com.iafenvoy.mxt.data.item.WeaponBinding;
 import com.iafenvoy.mxt.data.progression.Progression;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
-import com.iafenvoy.mxt.data.resource.Resource;
-import com.iafenvoy.mxt.data.trigger.TriggerRule;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.util.HolderHelper;
-import com.iafenvoy.mxt.util.chain.Chain;
-import com.iafenvoy.mxt.util.codec.RegistryCodecs;
+import com.iafenvoy.saturn.data.resource.Resource;
+import com.iafenvoy.saturn.data.trigger.TriggerRule;
+import com.iafenvoy.saturn.registry.SaturnResourceKeys;
+import com.iafenvoy.saturn.registry.cache.*;
+import com.iafenvoy.saturn.util.HolderHelper;
+import com.iafenvoy.saturn.util.chain.Chain;
+import com.iafenvoy.saturn.util.codec.RegistryCodecs;
 import net.minecraft.core.Holder;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -39,14 +41,15 @@ public final class RegistryCaches {
             .validateOrder(ItemQuality::quality, RegistryCaches::inheritsName)
             .validateChain(RegistryCaches::oneLadderName);
     public static final HeatSourceCache HEAT_SOURCE = new HeatSourceCache();
-    public static final ReverseMappingListCache<Identifier, TriggerRule> TRIGGER_RULES_BY_SIGNAL = new ReverseMappingListCache<>(MxtResourceKeys.TRIGGER, rule -> List.of(rule.value().trigger().signalType()));
+    public static final ReverseMappingListCache<Identifier, TriggerRule> TRIGGER_RULES_BY_SIGNAL = new ReverseMappingListCache<>(SaturnResourceKeys.TRIGGER, rule -> List.of(rule.value().trigger().signalType()));
     public static final ReverseMappingListCache<Block, BlockAura> BLOCK_AURA = new ReverseMappingListCache<>(MxtResourceKeys.BLOCK_AURA, (aura) -> RegistryCodecs.resolve(aura.value().blocks(), BuiltInRegistries.BLOCK).map(Holder::value).toList());
     public static final ReverseMappingCache<Holder<Resource>, Aura> RESOURCE_AURA = new ReverseMappingCache<>(MxtResourceKeys.AURA, aura -> aura.value().resource());
-    public static final FormulaNameCache<Resource> RESOURCE_NAMES = new FormulaNameCache<>(MxtResourceKeys.RESOURCE, "resource");
+    public static final FormulaNameCache<Resource> RESOURCE_NAMES = new FormulaNameCache<>(SaturnResourceKeys.RESOURCE, "resource");
     public static final FormulaNameCache<Element> ELEMENT_NAMES = new FormulaNameCache<>(MxtResourceKeys.ELEMENT, "element");
     public static final FormulaNameCache<Attribute> ATTRIBUTE_NAMES = new FormulaNameCache<>(Registries.ATTRIBUTE, "attribute");
     public static final OrderCache<ElementReaction> ELEMENT_REACTION_ORDER = new OrderCache<>(MxtResourceKeys.ELEMENT_REACTION, Comparator.<Holder.Reference<ElementReaction>>comparingInt(h -> h.value().priority()).reversed().thenComparing(h -> h.key().identifier()));
     public static final DamageElementsCache DAMAGE_ELEMENTS = new DamageElementsCache();
+    public static final AbilityAffinityCache ABILITY_AFFINITY = AbilityAffinityCache.of();
     // Change is made greedily, so the set it is made from is checked when the pack loads.
     public static final CurrencyChangeCache CURRENCY_CHANGE = CurrencyChangeCache.of();
     // The four binding tables a stack may claim; each answers "could anything in here match" without a scan.

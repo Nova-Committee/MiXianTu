@@ -1,6 +1,6 @@
 package com.iafenvoy.mxt.runtime.economy;
 
-import com.iafenvoy.mxt.util.codec.MiscStreamCodecs;
+import com.iafenvoy.saturn.util.codec.MiscStreamCodecs;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 

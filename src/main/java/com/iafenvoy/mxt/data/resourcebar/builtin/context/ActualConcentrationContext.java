@@ -1,12 +1,12 @@
 package com.iafenvoy.mxt.data.resourcebar.builtin.context;
 
 import com.iafenvoy.mxt.data.aura.Aura;
-import com.iafenvoy.mxt.data.resource.Resource;
-import com.iafenvoy.mxt.data.resourcebar.ResourceBarContext;
 import com.iafenvoy.mxt.registry.cache.RegistryCaches;
 import com.iafenvoy.mxt.runtime.world.AuraClientState;
 import com.iafenvoy.mxt.runtime.world.AuraPool;
-import com.iafenvoy.mxt.util.DefinitionText;
+import com.iafenvoy.saturn.data.resource.Resource;
+import com.iafenvoy.saturn.data.resourcebar.ResourceBarContext;
+import com.iafenvoy.saturn.util.DefinitionText;
 import net.minecraft.core.Holder;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.LivingEntity;

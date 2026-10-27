@@ -1,6 +1,6 @@
 package com.iafenvoy.mxt.attachment;
 
-import com.iafenvoy.mxt.util.codec.CollectionCodecs;
+import com.iafenvoy.saturn.util.codec.CollectionCodecs;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.server.players.NameAndId;

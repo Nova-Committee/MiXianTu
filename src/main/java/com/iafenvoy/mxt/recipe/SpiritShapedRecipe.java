@@ -1,8 +1,8 @@
 package com.iafenvoy.mxt.recipe;
 
-import com.iafenvoy.mxt.data.cost.Cost;
 import com.iafenvoy.mxt.registry.MxtRecipeSerializers;
 import com.iafenvoy.mxt.registry.MxtRecipeTypes;
+import com.iafenvoy.saturn.data.cost.Cost;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.network.RegistryFriendlyByteBuf;

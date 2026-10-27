@@ -1,30 +1,35 @@
 package com.iafenvoy.mxt.probe.creature;
+import com.iafenvoy.saturn.registry.SaturnResourceKeys;
+import com.iafenvoy.saturn.registry.SaturnAttachments;
+import com.iafenvoy.saturn.data.ability.Ability;
+import com.iafenvoy.saturn.data.context.Context;
+import com.iafenvoy.saturn.runtime.resulting.Failure;
 
 import com.iafenvoy.mxt.api.Contractable;
-import com.iafenvoy.mxt.attachment.AbilityAttachment;
+import com.iafenvoy.saturn.attachment.AbilityAttachment;
 import com.iafenvoy.mxt.attachment.CreatureSpiritAttachment;
-import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
-import com.iafenvoy.mxt.data.action.NoOpAction;
-import com.iafenvoy.mxt.data.action.builtin.entity.SetNoGravityAction;
+import com.iafenvoy.saturn.attachment.ResourceHolderAttachment;
+import com.iafenvoy.saturn.data.action.NoOpAction;
+import com.iafenvoy.saturn.data.action.builtin.entity.SetNoGravityAction;
 import com.iafenvoy.mxt.data.creature.*;
 import com.iafenvoy.mxt.data.item.ContractBellComponent;
 import com.iafenvoy.mxt.data.item.SpiritBeastComponent;
-import com.iafenvoy.mxt.data.resource.Resource;
+import com.iafenvoy.saturn.data.resource.Resource;
 import com.iafenvoy.mxt.probe.Probe;
 import com.iafenvoy.mxt.probe.ProbeContext;
 import com.iafenvoy.mxt.probe.ProbeDefinitions;
 import com.iafenvoy.mxt.registry.*;
-import com.iafenvoy.mxt.runtime.ability.AbilityGrantService;
+import com.iafenvoy.saturn.runtime.ability.AbilityGrantService;
 import com.iafenvoy.mxt.runtime.creature.*;
-import com.iafenvoy.mxt.runtime.resulting.Failures;
-import com.iafenvoy.mxt.runtime.resulting.Result;
+import com.iafenvoy.saturn.runtime.resulting.Failures;
+import com.iafenvoy.saturn.runtime.resulting.Result;
 import com.iafenvoy.mxt.runtime.resulting.failures.ContractFailure;
 import com.iafenvoy.mxt.runtime.wheel.WheelEntryKinds;
 import com.iafenvoy.mxt.runtime.wheel.WheelService;
 import com.iafenvoy.mxt.runtime.wheel.WheelSourceTypes;
 import com.iafenvoy.mxt.testmod.MxtTestEntities;
 import com.iafenvoy.mxt.testmod.ProbeBeast;
-import com.iafenvoy.mxt.util.HolderHelper;
+import com.iafenvoy.saturn.util.HolderHelper;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Holder;
@@ -115,9 +120,9 @@ public final class ContractProbes {
         ProbeBeast.reset();
         BoundBeastService.clear(server, player.getUUID());
         List<Mob> spawned = new ArrayList<>();
-        ResourceHolderAttachment resources = player.getData(MxtAttachments.RESOURCE_HOLDER);
-        AbilityAttachment abilities = player.getData(MxtAttachments.ABILITY_HOLDER);
-        Holder<Resource> qi = context.require(MxtResourceKeys.RESOURCE, ProbeDefinitions.QI);
+        ResourceHolderAttachment resources = player.getData(SaturnAttachments.RESOURCE_HOLDER);
+        AbilityAttachment abilities = player.getData(SaturnAttachments.ABILITY_HOLDER);
+        Holder<Resource> qi = context.require(SaturnResourceKeys.RESOURCE, ProbeDefinitions.QI);
         double previousQi = resources.get(qi);
         try {
             Holder<ContractType> tagged = context.require(MxtResourceKeys.CONTRACT_TYPE, ProbeDefinitions.CONTRACT);
@@ -167,7 +172,7 @@ public final class ContractProbes {
                     == ContractFailure.ALREADY_BOUND;
             // The owner side of the same bind: what the type declares is held by the owner, and the bind action
             // runs on the owner rather than on the beast that signed.
-            boolean ownerBound = abilities.has(context.require(MxtResourceKeys.ABILITY, ProbeDefinitions.OWNER_BOND))
+            boolean ownerBound = abilities.has(context.require(SaturnResourceKeys.ABILITY, ProbeDefinitions.OWNER_BOND))
                     && player.hasEffect(MobEffects.ABSORPTION);
             boolean record = priceRefused && bound && profiled && synced && twice && ownerBound;
             context.note("contract probe: price_refused=" + priceRefused
@@ -200,9 +205,9 @@ public final class ContractProbes {
         ProbeBeast.reset();
         BoundBeastService.clear(server, player.getUUID());
         List<Mob> spawned = new ArrayList<>();
-        ResourceHolderAttachment resources = player.getData(MxtAttachments.RESOURCE_HOLDER);
-        AbilityAttachment abilities = player.getData(MxtAttachments.ABILITY_HOLDER);
-        Holder<Resource> qi = context.require(MxtResourceKeys.RESOURCE, ProbeDefinitions.QI);
+        ResourceHolderAttachment resources = player.getData(SaturnAttachments.RESOURCE_HOLDER);
+        AbilityAttachment abilities = player.getData(SaturnAttachments.ABILITY_HOLDER);
+        Holder<Resource> qi = context.require(SaturnResourceKeys.RESOURCE, ProbeDefinitions.QI);
         double previousQi = resources.get(qi);
         try {
             Holder<ContractType> tagged = context.require(MxtResourceKeys.CONTRACT_TYPE, ProbeDefinitions.CONTRACT);
@@ -220,8 +225,8 @@ public final class ContractProbes {
             boolean limitHit = ContractService.bind(open, player, second, false).failure()
                     == ContractFailure.LIMIT_REACHED;
             // Two contracts, two grants: the second type adds its own ability without disturbing the first.
-            boolean bothHeld = abilities.has(context.require(MxtResourceKeys.ABILITY, ProbeDefinitions.OPEN_BOND))
-                    && abilities.has(context.require(MxtResourceKeys.ABILITY, ProbeDefinitions.OWNER_BOND));
+            boolean bothHeld = abilities.has(context.require(SaturnResourceKeys.ABILITY, ProbeDefinitions.OPEN_BOND))
+                    && abilities.has(context.require(SaturnResourceKeys.ABILITY, ProbeDefinitions.OWNER_BOND));
             // Ending a contract is not the same act as forgetting who owns the creature, and the owner lives on
             // the creature, so a released probe still answers the player it was signed with.
             boolean releasedFirst = ContractService.release(first, player.getUUID(), false).failure() == null
@@ -229,8 +234,8 @@ public final class ContractProbes {
                     && Contracts.ownerOf(first).filter(player.getUUID()::equals).isPresent();
             // The release action runs on the owner, and the grant of the type they no longer hold goes with it
             // while the one another contract still declares stays.
-            boolean ownerReleased = !abilities.has(context.require(MxtResourceKeys.ABILITY, ProbeDefinitions.OPEN_BOND))
-                    && abilities.has(context.require(MxtResourceKeys.ABILITY, ProbeDefinitions.OWNER_BOND))
+            boolean ownerReleased = !abilities.has(context.require(SaturnResourceKeys.ABILITY, ProbeDefinitions.OPEN_BOND))
+                    && abilities.has(context.require(SaturnResourceKeys.ABILITY, ProbeDefinitions.OWNER_BOND))
                     && player.hasEffect(MobEffects.WEAKNESS);
             boolean freed = releasedFirst && ContractService.bind(open, player, second, false).failure() == null;
             boolean limit = firstBound && limitHit && freed && bothHeld && ownerReleased;
@@ -260,8 +265,8 @@ public final class ContractProbes {
         ProbeBeast.reset();
         BoundBeastService.clear(server, player.getUUID());
         List<Mob> spawned = new ArrayList<>();
-        ResourceHolderAttachment resources = player.getData(MxtAttachments.RESOURCE_HOLDER);
-        Holder<Resource> qi = context.require(MxtResourceKeys.RESOURCE, ProbeDefinitions.QI);
+        ResourceHolderAttachment resources = player.getData(SaturnAttachments.RESOURCE_HOLDER);
+        Holder<Resource> qi = context.require(SaturnResourceKeys.RESOURCE, ProbeDefinitions.QI);
         double previousQi = resources.get(qi);
         try {
             Holder<ContractType> tagged = context.require(MxtResourceKeys.CONTRACT_TYPE, ProbeDefinitions.CONTRACT);
@@ -314,8 +319,8 @@ public final class ContractProbes {
         ProbeBeast.reset();
         BoundBeastService.clear(server, player.getUUID());
         List<Mob> spawned = new ArrayList<>();
-        ResourceHolderAttachment resources = player.getData(MxtAttachments.RESOURCE_HOLDER);
-        Holder<Resource> qi = context.require(MxtResourceKeys.RESOURCE, ProbeDefinitions.QI);
+        ResourceHolderAttachment resources = player.getData(SaturnAttachments.RESOURCE_HOLDER);
+        Holder<Resource> qi = context.require(SaturnResourceKeys.RESOURCE, ProbeDefinitions.QI);
         double previousQi = resources.get(qi);
         try {
             Holder<ContractType> tagged = context.require(MxtResourceKeys.CONTRACT_TYPE, ProbeDefinitions.CONTRACT);
@@ -360,8 +365,8 @@ public final class ContractProbes {
         ProbeBeast.reset();
         BoundBeastService.clear(server, player.getUUID());
         List<Mob> spawned = new ArrayList<>();
-        ResourceHolderAttachment resources = player.getData(MxtAttachments.RESOURCE_HOLDER);
-        Holder<Resource> qi = context.require(MxtResourceKeys.RESOURCE, ProbeDefinitions.QI);
+        ResourceHolderAttachment resources = player.getData(SaturnAttachments.RESOURCE_HOLDER);
+        Holder<Resource> qi = context.require(SaturnResourceKeys.RESOURCE, ProbeDefinitions.QI);
         double previousQi = resources.get(qi);
         try {
             Holder<ContractType> tagged = context.require(MxtResourceKeys.CONTRACT_TYPE, ProbeDefinitions.CONTRACT);
@@ -413,8 +418,8 @@ public final class ContractProbes {
         ProbeBeast.reset();
         BoundBeastService.clear(server, player.getUUID());
         List<Mob> spawned = new ArrayList<>();
-        ResourceHolderAttachment resources = player.getData(MxtAttachments.RESOURCE_HOLDER);
-        Holder<Resource> qi = context.require(MxtResourceKeys.RESOURCE, ProbeDefinitions.QI);
+        ResourceHolderAttachment resources = player.getData(SaturnAttachments.RESOURCE_HOLDER);
+        Holder<Resource> qi = context.require(SaturnResourceKeys.RESOURCE, ProbeDefinitions.QI);
         double previousQi = resources.get(qi);
         try {
             Holder<ContractType> tagged = context.require(MxtResourceKeys.CONTRACT_TYPE, ProbeDefinitions.CONTRACT);
@@ -456,8 +461,8 @@ public final class ContractProbes {
         ProbeBeast.reset();
         BoundBeastService.clear(server, player.getUUID());
         List<Mob> spawned = new ArrayList<>();
-        ResourceHolderAttachment resources = player.getData(MxtAttachments.RESOURCE_HOLDER);
-        Holder<Resource> qi = context.require(MxtResourceKeys.RESOURCE, ProbeDefinitions.QI);
+        ResourceHolderAttachment resources = player.getData(SaturnAttachments.RESOURCE_HOLDER);
+        Holder<Resource> qi = context.require(SaturnResourceKeys.RESOURCE, ProbeDefinitions.QI);
         double previousQi = resources.get(qi);
         try {
             Holder<ContractType> tagged = context.require(MxtResourceKeys.CONTRACT_TYPE, ProbeDefinitions.CONTRACT);
@@ -523,9 +528,9 @@ public final class ContractProbes {
         ProbeBeast.reset();
         BoundBeastService.clear(server, player.getUUID());
         List<Mob> spawned = new ArrayList<>();
-        ResourceHolderAttachment resources = player.getData(MxtAttachments.RESOURCE_HOLDER);
-        AbilityAttachment abilities = player.getData(MxtAttachments.ABILITY_HOLDER);
-        Holder<Resource> qi = context.require(MxtResourceKeys.RESOURCE, ProbeDefinitions.QI);
+        ResourceHolderAttachment resources = player.getData(SaturnAttachments.RESOURCE_HOLDER);
+        AbilityAttachment abilities = player.getData(SaturnAttachments.ABILITY_HOLDER);
+        Holder<Resource> qi = context.require(SaturnResourceKeys.RESOURCE, ProbeDefinitions.QI);
         double previousQi = resources.get(qi);
         try {
             Holder<ContractType> tagged = context.require(MxtResourceKeys.CONTRACT_TYPE, ProbeDefinitions.CONTRACT);
@@ -580,8 +585,8 @@ public final class ContractProbes {
                     "order:wander", "order:stay", "tick:wander", "captured", "freed", "death"));
             // A death takes the dead beast's contract off the owner the same way a release does, and only that
             // one: the open contract the probe is still holding keeps its own ability.
-            boolean ownerEnded = !abilities.has(context.require(MxtResourceKeys.ABILITY, ProbeDefinitions.OWNER_BOND))
-                    && abilities.has(context.require(MxtResourceKeys.ABILITY, ProbeDefinitions.OPEN_BOND))
+            boolean ownerEnded = !abilities.has(context.require(SaturnResourceKeys.ABILITY, ProbeDefinitions.OWNER_BOND))
+                    && abilities.has(context.require(SaturnResourceKeys.ABILITY, ProbeDefinitions.OPEN_BOND))
                     && player.hasEffect(MobEffects.GLOWING);
             boolean ending = death && order && ownerEnded;
             context.note("contract probe: death=" + death + " owner_ended=" + ownerEnded

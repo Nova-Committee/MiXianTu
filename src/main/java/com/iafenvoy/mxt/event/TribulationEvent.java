@@ -2,7 +2,7 @@ package com.iafenvoy.mxt.event;
 
 import com.iafenvoy.mxt.attachment.TribulationAttachment;
 import com.iafenvoy.mxt.data.Tribulation;
-import com.iafenvoy.mxt.data.timeline.TimelineEntry;
+import com.iafenvoy.saturn.data.timeline.TimelineEntry;
 import net.minecraft.core.Holder;
 import net.neoforged.bus.api.Event;
 import net.neoforged.bus.api.ICancellableEvent;

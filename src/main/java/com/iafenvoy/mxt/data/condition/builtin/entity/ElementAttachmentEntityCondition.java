@@ -1,11 +1,11 @@
 package com.iafenvoy.mxt.data.condition.builtin.entity;
 
 import com.iafenvoy.mxt.data.aura.AuraRequirement;
-import com.iafenvoy.mxt.data.condition.EntityCondition;
-import com.iafenvoy.mxt.data.context.condition.EntityConditionContext;
 import com.iafenvoy.mxt.data.cultivation.Element;
 import com.iafenvoy.mxt.runtime.element.ElementReactionService;
-import com.iafenvoy.mxt.util.codec.CollectionCodecs;
+import com.iafenvoy.saturn.data.condition.EntityCondition;
+import com.iafenvoy.saturn.data.context.condition.EntityConditionContext;
+import com.iafenvoy.saturn.util.codec.CollectionCodecs;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.Holder;

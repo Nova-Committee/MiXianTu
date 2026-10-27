@@ -2,7 +2,8 @@ package com.iafenvoy.mxt.registry.cache;
 
 import com.iafenvoy.mxt.data.alchemy.HeatSource;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.util.codec.RegistryCodecs;
+import com.iafenvoy.saturn.registry.cache.RegistryCache;
+import com.iafenvoy.saturn.util.codec.RegistryCodecs;
 import net.minecraft.core.Holder;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.core.registries.BuiltInRegistries;

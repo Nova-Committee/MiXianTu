@@ -347,7 +347,6 @@ public final class MxtServerConfig extends AutoInitConfigContainer {
      * {@code /mxt}. One entry per subtree, all the same rule.
      */
     public static final class Commands extends AutoInitConfigCategoryBase {
-        public final BooleanEntry ability = BooleanEntry.builder("config.mxt.server.commands.ability", true).key("ability").tooltip("config.mxt.server.commands.ability.tooltip").build();
         public final BooleanEntry aura = BooleanEntry.builder("config.mxt.server.commands.aura", true).key("aura").tooltip("config.mxt.server.commands.aura.tooltip").build();
         public final BooleanEntry breakthrough = BooleanEntry.builder("config.mxt.server.commands.breakthrough", true).key("breakthrough").tooltip("config.mxt.server.commands.breakthrough.tooltip").build();
         public final BooleanEntry contract = BooleanEntry.builder("config.mxt.server.commands.contract", true).key("contract").tooltip("config.mxt.server.commands.contract.tooltip").build();
@@ -370,7 +369,6 @@ public final class MxtServerConfig extends AutoInitConfigContainer {
         public final BooleanEntry technique = BooleanEntry.builder("config.mxt.server.commands.technique", true).key("technique").tooltip("config.mxt.server.commands.technique.tooltip").build();
         public final BooleanEntry trade = BooleanEntry.builder("config.mxt.server.commands.trade", true).key("trade").tooltip("config.mxt.server.commands.trade.tooltip").build();
         public final BooleanEntry tribulation = BooleanEntry.builder("config.mxt.server.commands.tribulation", true).key("tribulation").tooltip("config.mxt.server.commands.tribulation.tooltip").build();
-        public final BooleanEntry triggers = BooleanEntry.builder("config.mxt.server.commands.triggers", false).key("triggers").tooltip("config.mxt.server.commands.triggers.tooltip").build();
 
         private Commands() {
             super("commands", "config.mxt.server.commands");

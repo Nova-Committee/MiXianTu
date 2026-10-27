@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.data.forging;
 
 import com.iafenvoy.mxt.runtime.forging.ForgingBindingService;
-import com.iafenvoy.mxt.util.HolderHelper;
+import com.iafenvoy.saturn.util.HolderHelper;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup.Provider;

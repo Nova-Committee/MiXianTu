@@ -7,7 +7,7 @@
       "entity_action": {
         "type": "mxt:grant_ability",
         "ability": "mxt_test:water_shield",
-        "source": "mxt:formation/mxt_test/scope_grant_probe"
+        "source": "saturn:formation/mxt_test/scope_grant_probe"
       }
     }
   ]

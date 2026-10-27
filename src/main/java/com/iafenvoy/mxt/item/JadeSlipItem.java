@@ -2,7 +2,7 @@ package com.iafenvoy.mxt.item;
 
 import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.registry.MxtItems;
-import com.iafenvoy.mxt.runtime.hold.ItemUseCycles;
+import com.iafenvoy.saturn.runtime.hold.ItemUseCycles;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;

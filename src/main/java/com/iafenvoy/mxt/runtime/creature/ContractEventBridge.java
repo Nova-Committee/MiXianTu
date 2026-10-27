@@ -7,10 +7,11 @@ import com.iafenvoy.mxt.data.creature.ContractBehaviors;
 import com.iafenvoy.mxt.data.creature.ContractContext;
 import com.iafenvoy.mxt.data.creature.ContractType;
 import com.iafenvoy.mxt.registry.MxtAttachments;
-import com.iafenvoy.mxt.runtime.ability.AbilityGrantService;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
-import com.iafenvoy.mxt.util.profiling.ProfilerScope;
-import com.iafenvoy.mxt.util.profiling.ServerProfiling;
+import com.iafenvoy.mxt.runtime.MxtProfilerSources;
+import com.iafenvoy.saturn.profiling.ProfilerScope;
+import com.iafenvoy.saturn.profiling.ServerProfiling;
+import com.iafenvoy.saturn.runtime.ability.AbilityGrantService;
+import com.iafenvoy.saturn.util.formula.FormulaContext;
 import net.minecraft.core.Holder;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Mob;
@@ -35,7 +36,7 @@ public final class ContractEventBridge {
 
     @SubscribeEvent
     public static void onEntityTick(EntityTickEvent.Post event) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.CREATURE)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.CREATURE)) {
             if (!(event.getEntity() instanceof Mob pet) || pet.level().isClientSide()) return;
             ContractAttachment contract = pet.getData(MxtAttachments.CONTRACT);
             if (!contract.bound()) return;
@@ -64,7 +65,7 @@ public final class ContractEventBridge {
     // through the same single entry every other rebuild uses.
     @SubscribeEvent
     public static void onPlayerLogin(PlayerLoggedInEvent event) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.CREATURE)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.CREATURE)) {
             if (event.getEntity() instanceof ServerPlayer player) AbilityGrantService.recalculate(player);
         }
     }
@@ -72,7 +73,7 @@ public final class ContractEventBridge {
     // Contract combat callbacks run after vanilla damage is resolved and never mutate the original hit.
     @SubscribeEvent
     public static void onLivingDamage(Post event) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.CREATURE)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.CREATURE)) {
             if (event.getEntity().level().isClientSide() || !(event.getSource().getEntity() instanceof Mob pet)) return;
             ContractAttachment contract = pet.getData(MxtAttachments.CONTRACT);
             if (!contract.bound()) return;
@@ -90,7 +91,7 @@ public final class ContractEventBridge {
     // A pet death closes its record, exposes the death action and drops its row from the owner's index.
     @SubscribeEvent
     public static void onLivingDeath(LivingDeathEvent event) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.CREATURE)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.CREATURE)) {
             if (event.getEntity().level().isClientSide() || !(event.getEntity() instanceof Mob pet)) return;
             ContractService.onDeath(pet);
         }

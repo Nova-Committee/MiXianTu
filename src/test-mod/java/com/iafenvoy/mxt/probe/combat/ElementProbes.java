@@ -1,11 +1,18 @@
 package com.iafenvoy.mxt.probe.combat;
+import com.iafenvoy.saturn.profiling.ServerProfiling.Source;
+import com.iafenvoy.mxt.data.ability.AffinityMode;
+import com.iafenvoy.saturn.registry.SaturnResourceKeys;
+import com.iafenvoy.saturn.data.context.Context;
+import com.iafenvoy.saturn.data.Weighted;
+import com.iafenvoy.saturn.runtime.resulting.Result;
+import com.iafenvoy.saturn.util.chain.Chain;
 
 import com.iafenvoy.mxt.attachment.SpiritIdentityAttachment;
-import com.iafenvoy.mxt.data.ability.Ability;
-import com.iafenvoy.mxt.data.ability.AbilityEffect;
+import com.iafenvoy.saturn.data.ability.Ability;
+import com.iafenvoy.saturn.data.ability.AbilityEffect;
 import com.iafenvoy.mxt.data.aura.AuraRequirement;
 import com.iafenvoy.mxt.data.aura.AuraZone;
-import com.iafenvoy.mxt.data.condition.AlwaysCondition;
+import com.iafenvoy.saturn.data.condition.AlwaysCondition;
 import com.iafenvoy.mxt.data.condition.builtin.entity.AuraElementEntityCondition;
 import com.iafenvoy.mxt.data.condition.builtin.entity.ElementAttachmentEntityCondition;
 import com.iafenvoy.mxt.data.condition.builtin.entity.HasElementEntityCondition;
@@ -28,9 +35,9 @@ import com.iafenvoy.mxt.runtime.world.AuraPool;
 import com.iafenvoy.mxt.runtime.world.AuraResult;
 import com.iafenvoy.mxt.runtime.world.AuraService;
 import com.iafenvoy.mxt.testmod.MxtTestItems;
-import com.iafenvoy.mxt.util.HolderHelper;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
-import com.iafenvoy.mxt.util.formula.number.Constant;
+import com.iafenvoy.saturn.util.HolderHelper;
+import com.iafenvoy.saturn.util.formula.FormulaContext;
+import com.iafenvoy.saturn.util.formula.number.Constant;
 import com.mojang.datafixers.util.Either;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
@@ -121,7 +128,7 @@ public final class ElementProbes {
                 context.fail("element probe: could not create the probe entities");
                 return;
             }
-            Ability declaration = context.require(MxtResourceKeys.ABILITY, ProbeDefinitions.PROBE_ELEMENTAL).value();
+            Ability declaration = context.require(SaturnResourceKeys.ABILITY, ProbeDefinitions.PROBE_ELEMENTAL).value();
             FormulaContext casterFormula = FormulaContext.of(waterCaster);
             double beforeDeclared = declaredVictim.getHealth();
             AbilityEffect.runOn(declaration.type(), waterCaster, declaredVictim, casterFormula, null);
@@ -270,8 +277,8 @@ public final class ElementProbes {
             boolean dualGranted = CultivationIdentityService.grantSpiritRoot(toggleProbe, dualRoot).failure() == null;
             SpiritIdentityAttachment dualIdentity = toggleProbe.getData(MxtAttachments.SPIRIT_IDENTITY);
             FormulaContext affinityFormula = FormulaContext.EMPTY;
-            double onWater = CultivationAffinity.abilityMultiplier(dualIdentity, List.of(Either.left(water)), affinityFormula, Ability.AffinityMode.AVERAGE);
-            double onEarth = CultivationAffinity.abilityMultiplier(dualIdentity, List.of(Either.left(earth)), affinityFormula, Ability.AffinityMode.AVERAGE);
+            double onWater = CultivationAffinity.abilityMultiplier(dualIdentity, List.of(Either.left(water)), affinityFormula, AffinityMode.AVERAGE);
+            double onEarth = CultivationAffinity.abilityMultiplier(dualIdentity, List.of(Either.left(earth)), affinityFormula, AffinityMode.AVERAGE);
             boolean dualConflicts = dualRoot.value().conflictsWith(dualAntiWater.value()) && dualRoot.value().conflictsWith(dualInert.value());
             boolean multiElement = dualGranted && Elements.of(toggleProbe).equals(Set.of(fire, water))
                     && close(onWater, 1.1D) && close(onEarth, 0.0D)

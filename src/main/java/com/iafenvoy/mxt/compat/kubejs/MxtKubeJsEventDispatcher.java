@@ -1,11 +1,15 @@
 package com.iafenvoy.mxt.compat.kubejs;
 
 import com.iafenvoy.mxt.compat.kubejs.MxtKubeJsEvents.Dispatcher;
-import com.iafenvoy.mxt.event.*;
-import com.iafenvoy.mxt.event.AbilityUseEvent.Post;
+import com.iafenvoy.mxt.event.AuraZoneEvent;
+import com.iafenvoy.mxt.event.CurseApplyEvent;
 import com.iafenvoy.mxt.event.FriendEvent.Relation;
-import com.iafenvoy.mxt.event.ResourceConsumeEvent.Pre;
-import com.iafenvoy.mxt.util.HolderHelper;
+import com.iafenvoy.saturn.event.AbilityTriggeredEvent;
+import com.iafenvoy.saturn.event.AbilityUseEvent;
+import com.iafenvoy.saturn.event.AbilityUseEvent.Post;
+import com.iafenvoy.saturn.event.ResourceConsumeEvent;
+import com.iafenvoy.saturn.event.ResourceConsumeEvent.Pre;
+import com.iafenvoy.saturn.util.HolderHelper;
 import dev.latvian.mods.kubejs.event.EventGroup;
 import dev.latvian.mods.kubejs.event.EventHandler;
 import dev.latvian.mods.kubejs.event.EventResult;

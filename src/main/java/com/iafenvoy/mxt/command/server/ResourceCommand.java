@@ -2,21 +2,21 @@ package com.iafenvoy.mxt.command.server;
 
 import com.iafenvoy.mxt.command.ServerCommandManager;
 import com.iafenvoy.mxt.data.aura.Aura;
-import com.iafenvoy.mxt.data.resource.Resource;
-import com.iafenvoy.mxt.data.resource.ResourceBar;
-import com.iafenvoy.mxt.data.resourcebar.ResourceBarContext;
-import com.iafenvoy.mxt.data.resourcebar.ResourceBarContext.Values;
 import com.iafenvoy.mxt.data.resourcebar.builtin.context.ActualConcentrationContext;
 import com.iafenvoy.mxt.data.resourcebar.builtin.context.EnvironmentConcentrationContext;
-import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
-import com.iafenvoy.mxt.registry.MxtRegistries;
-import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.registry.cache.RegistryCaches;
 import com.iafenvoy.mxt.runtime.world.AuraPool;
 import com.iafenvoy.mxt.runtime.world.AuraService;
-import com.iafenvoy.mxt.util.DefinitionText;
-import com.iafenvoy.mxt.util.HolderHelper;
+import com.iafenvoy.saturn.data.resource.Resource;
+import com.iafenvoy.saturn.data.resource.ResourceBar;
+import com.iafenvoy.saturn.data.resourcebar.ResourceBarContext;
+import com.iafenvoy.saturn.data.resourcebar.ResourceBarContext.Values;
+import com.iafenvoy.saturn.registry.SaturnAttachments;
+import com.iafenvoy.saturn.registry.SaturnRegistries;
+import com.iafenvoy.saturn.registry.SaturnResourceKeys;
+import com.iafenvoy.saturn.util.DefinitionText;
+import com.iafenvoy.saturn.util.HolderHelper;
 import com.mojang.brigadier.arguments.DoubleArgumentType;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
@@ -47,7 +47,7 @@ public final class ResourceCommand {
     public static LiteralArgumentBuilder<CommandSourceStack> build(CommandBuildContext context) {
         return literal("resource")
                 .executes(ctx -> listBars(ctx.getSource(), null, null))
-                .then(argument("id", ResourceArgument.resource(context, MxtResourceKeys.RESOURCE))
+                .then(argument("id", ResourceArgument.resource(context, SaturnResourceKeys.RESOURCE))
                         .executes(ctx -> query(ctx.getSource(), resource(ctx, "id")))
                         .then(literal("set").requires(ServerCommandManager::mayChange)
                                 .then(argument("value", DoubleArgumentType.doubleArg())
@@ -61,13 +61,13 @@ public final class ResourceCommand {
     }
 
     private static Reference<Resource> resource(CommandContext<CommandSourceStack> ctx, String name) throws CommandSyntaxException {
-        return ResourceArgument.getResource(ctx, name, MxtResourceKeys.RESOURCE);
+        return ResourceArgument.getResource(ctx, name, SaturnResourceKeys.RESOURCE);
     }
 
     private static int query(CommandSourceStack source, Reference<Resource> resource) {
         ServerPlayer player = source.getPlayer();
         if (player == null) return 0;
-        double value = player.getData(MxtAttachments.RESOURCE_HOLDER).get(resource);
+        double value = player.getData(SaturnAttachments.RESOURCE_HOLDER).get(resource);
         source.sendSuccess(() -> Component.translatable("command.mxt.resource.query", DefinitionText.nameOrId(resource), value), false);
         return 1;
     }
@@ -75,7 +75,7 @@ public final class ResourceCommand {
     private static int set(CommandSourceStack source, Reference<Resource> resource, double value) {
         ServerPlayer player = source.getPlayer();
         if (player == null) return 0;
-        player.getData(MxtAttachments.RESOURCE_HOLDER).set(resource, value);
+        player.getData(SaturnAttachments.RESOURCE_HOLDER).set(resource, value);
         source.sendSuccess(() -> Component.translatable("command.mxt.resource.set", DefinitionText.nameOrId(resource), value), true);
         return 1;
     }
@@ -83,7 +83,7 @@ public final class ResourceCommand {
     private static int listBars(CommandSourceStack source, @Nullable Reference<Resource> selection, Integer index) throws CommandSyntaxException {
         ServerPlayer player = source.getPlayerOrException();
         List<Reference<Resource>> resources = selection != null ? List.of(selection)
-                : MxtDatapackRegistries.holders(player.level().registryAccess(), MxtResourceKeys.RESOURCE).toList();
+                : MxtDatapackRegistries.holders(player.level().registryAccess(), SaturnResourceKeys.RESOURCE).toList();
         if (resources.isEmpty()) {
             source.sendFailure(Component.translatable("command.mxt.resourcebar.unknown_resource", "null"));
             return 0;
@@ -112,7 +112,7 @@ public final class ResourceCommand {
 
     private static void sendBar(CommandSourceStack source, ServerPlayer player, Reference<Resource> resource,
                                 int index, ResourceBar bar) {
-        String contextId = String.valueOf(MxtRegistries.RESOURCE_BAR_CONTEXT.getKey(bar.context()));
+        String contextId = String.valueOf(SaturnRegistries.RESOURCE_BAR_CONTEXT.getKey(bar.context()));
         Component displayName = bar.context().name(resource);
         Optional<Values> extracted = extractValues(player, resource, bar.context());
         if (extracted.isEmpty()) {

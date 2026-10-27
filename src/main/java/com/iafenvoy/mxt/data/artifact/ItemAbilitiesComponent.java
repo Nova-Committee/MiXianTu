@@ -1,6 +1,6 @@
 package com.iafenvoy.mxt.data.artifact;
 
-import com.iafenvoy.mxt.data.ability.Ability;
+import com.iafenvoy.saturn.data.ability.Ability;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;

@@ -5,7 +5,6 @@ import com.iafenvoy.mxt.api.MountVehicle;
 import com.iafenvoy.mxt.network.payload.BackSlotSwapC2SPayload;
 import com.iafenvoy.mxt.network.payload.CultivationToggleC2SPayload;
 import com.iafenvoy.mxt.network.payload.FlightDescendC2SPayload;
-import com.iafenvoy.mxt.screen.hud.HudManager;
 import com.iafenvoy.mxt.screen.information.InformationPanelScreen;
 import com.iafenvoy.mxt.screen.wheel.WheelGeometry;
 import com.iafenvoy.mxt.screen.wheel.content.WheelConfigurationScreen;
@@ -37,7 +36,6 @@ public final class MxtKeyMappings {
     public static final KeyMappingHolder SWAP_BACK = new KeyMappingHolder("key.mxt.swap_back", Type.KEYSYM, InputConstants.UNKNOWN.getValue(), CATEGORY);
     public static final KeyMappingHolder CULTIVATE = new KeyMappingHolder("key.mxt.cultivate", Type.KEYSYM, InputConstants.KEY_C, CATEGORY);
     public static final KeyMappingHolder INFORMATION_PANEL = new KeyMappingHolder("key.mxt.information_panel", Type.KEYSYM, InputConstants.KEY_Z, CATEGORY);
-    public static final KeyMappingHolder HUD_LAYOUT = new KeyMappingHolder("key.mxt.hud_layout", Type.KEYSYM, InputConstants.KEY_RSHIFT, CATEGORY);
     public static final KeyMappingHolder WHEEL = new KeyMappingHolder("key.mxt.wheel", Type.KEYSYM, InputConstants.KEY_R, CATEGORY);
     public static final KeyMappingHolder WHEEL_USE = new KeyMappingHolder("key.mxt.wheel_use", Type.KEYSYM, InputConstants.KEY_V, CATEGORY);
     public static final KeyMappingHolder WHEEL_CONFIGURATION = new KeyMappingHolder("key.mxt.wheel_configuration", Type.KEYSYM, InputConstants.UNKNOWN.getValue(), CATEGORY);
@@ -56,9 +54,6 @@ public final class MxtKeyMappings {
         });
         CULTIVATE.onStateChange(pressed -> {
             if (pressed) ClientPacketDistributor.sendToServer(CultivationToggleC2SPayload.INSTANCE);
-        });
-        HUD_LAYOUT.onStateChange(pressed -> {
-            if (pressed && Minecraft.getInstance().screen == null) HudManager.openEditor();
         });
         WHEEL_CONFIGURATION.onStateChange(pressed -> {
             if (pressed && Minecraft.getInstance().screen == null) WheelConfigurationScreen.open();

@@ -1,9 +1,10 @@
 package com.iafenvoy.mxt.registry;
 
 import com.iafenvoy.mxt.MiXianTu;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
-import com.iafenvoy.mxt.util.formula.FormulaVariable;
-import com.iafenvoy.mxt.util.formula.variable.*;
+import com.iafenvoy.mxt.util.formula.*;
+import com.iafenvoy.saturn.registry.SaturnRegistries;
+import com.iafenvoy.saturn.util.formula.FormulaContext;
+import com.iafenvoy.saturn.util.formula.FormulaVariable;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
@@ -14,12 +15,9 @@ import net.neoforged.neoforge.registries.DeferredRegister;
  */
 @SuppressWarnings("unused")
 public final class MxtFormulaVariables {
-    public static final DeferredRegister<FormulaVariable> REGISTRY = DeferredRegister.create(MxtRegistries.FORMULA_VARIABLE, MiXianTu.MOD_ID);
+    public static final DeferredRegister<FormulaVariable> REGISTRY = DeferredRegister.create(SaturnRegistries.FORMULA_VARIABLE, MiXianTu.MOD_ID);
 
-    public static final DeferredHolder<FormulaVariable, FormulaVariable> ZERO = REGISTRY.register("zero", ZeroVariable::new);
-    public static final DeferredHolder<FormulaVariable, FormulaVariable> RANDOM = REGISTRY.register("random", RandomVariable::new);
-    public static final DeferredHolder<FormulaVariable, FormulaVariable> CASTER = REGISTRY.register("caster", () -> new EntityVariable("caster_"));
-    public static final DeferredHolder<FormulaVariable, FormulaVariable> TARGET = REGISTRY.register("target", () -> new EntityVariable("target_"));
+    public static final DeferredHolder<FormulaVariable, FormulaVariable> ELEMENT = REGISTRY.register("element", ElementVariable::new);
     public static final DeferredHolder<FormulaVariable, FormulaVariable> REALM = REGISTRY.register("realm", RealmVariable::new);
     public static final DeferredHolder<FormulaVariable, FormulaVariable> SECRET_REALM = REGISTRY.register("secret_realm", SecretRealmVariable::new);
     public static final DeferredHolder<FormulaVariable, FormulaVariable> LIFESPAN = REGISTRY.register("lifespan", LifespanVariable::new);

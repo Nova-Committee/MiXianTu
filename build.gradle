@@ -146,9 +146,11 @@ configurations {
 
 dependencies {
     implementation "curse.maven:jupiter-1072905:8569832"
+    implementation "curse.maven:saturn-lib-1767455:9342297"
     implementation "com.sighs:ApricityUI-neoforge-26.1:${apricityui_version}"
 
-    implementation jarJar("net.objecthunter:exp4j:0.4.8")
+    // exp4j is jarJar'd inside Saturn; only its types are needed here.
+    compileOnly "net.objecthunter:exp4j:0.4.8"
     implementation jarJar("top.theillusivec4.curios:curios-neoforge:$curios_version")
 
     implementation jarJar("curse.maven:player-animation-library-1283899:8674772")

@@ -1,11 +1,11 @@
 package com.iafenvoy.mxt.recipe;
 
 import com.iafenvoy.mxt.data.aura.Aura;
-import com.iafenvoy.mxt.data.cost.Cost;
 import com.iafenvoy.mxt.data.cost.Costs;
 import com.iafenvoy.mxt.data.cost.builtin.AuraCost;
-import com.iafenvoy.mxt.util.codec.CollectionCodecs;
-import com.iafenvoy.mxt.util.formula.NumberProvider;
+import com.iafenvoy.saturn.data.cost.Cost;
+import com.iafenvoy.saturn.util.codec.CollectionCodecs;
+import com.iafenvoy.saturn.util.formula.NumberProvider;
 import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
 import net.minecraft.world.item.ItemStack;

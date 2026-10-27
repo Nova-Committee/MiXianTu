@@ -1,8 +1,8 @@
 package com.iafenvoy.mxt.command.client;
 
-import com.iafenvoy.mxt.screen.hud.HudEntry;
-import com.iafenvoy.mxt.screen.hud.HudManager;
-import com.iafenvoy.mxt.screen.hud.ScreenBounds;
+import com.iafenvoy.saturn.screen.hud.HudEntry;
+import com.iafenvoy.saturn.screen.hud.HudManager;
+import com.iafenvoy.saturn.screen.hud.ScreenBounds;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;

@@ -2,20 +2,22 @@ package com.iafenvoy.mxt.item.block.entity;
 
 import com.iafenvoy.mxt.api.AuraAccess;
 import com.iafenvoy.mxt.data.aura.Aura;
-import com.iafenvoy.mxt.data.cost.Cost;
-import com.iafenvoy.mxt.data.cost.CostPayment;
 import com.iafenvoy.mxt.data.cost.Costs;
-import com.iafenvoy.mxt.data.cost.context.CostContext;
-import com.iafenvoy.mxt.data.cost.context.CostOrigins;
+import com.iafenvoy.mxt.data.cost.context.AuraCostContexts;
 import com.iafenvoy.mxt.recipe.SpiritCraftingInput;
 import com.iafenvoy.mxt.recipe.SpiritRecipe;
 import com.iafenvoy.mxt.registry.MxtBlockEntities;
 import com.iafenvoy.mxt.registry.MxtRecipeTypes;
+import com.iafenvoy.mxt.runtime.MxtProfilerSources;
 import com.iafenvoy.mxt.runtime.spirit.AuraTransfers;
 import com.iafenvoy.mxt.screen.menu.SpiritCraftingMenu;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
-import com.iafenvoy.mxt.util.profiling.ProfilerScope;
-import com.iafenvoy.mxt.util.profiling.ServerProfiling;
+import com.iafenvoy.saturn.data.cost.Cost;
+import com.iafenvoy.saturn.data.cost.CostPayment;
+import com.iafenvoy.saturn.data.cost.context.CostContext;
+import com.iafenvoy.saturn.data.cost.context.CostOrigins;
+import com.iafenvoy.saturn.profiling.ProfilerScope;
+import com.iafenvoy.saturn.profiling.ServerProfiling;
+import com.iafenvoy.saturn.util.formula.FormulaContext;
 import it.unimi.dsi.fastutil.objects.Object2DoubleMap;
 import it.unimi.dsi.fastutil.objects.Object2DoubleOpenHashMap;
 import net.minecraft.core.BlockPos;
@@ -83,7 +85,7 @@ public final class SpiritCraftingTableBlockEntity extends BlockEntity implements
     }
 
     public static void serverTick(Level level, BlockPos pos, BlockState state, SpiritCraftingTableBlockEntity table) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.CRAFTING)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.CRAFTING)) {
             if (level.getServer() != null) table.craftAvailable(level, level.getServer().getRecipeManager());
         }
     }
@@ -105,7 +107,7 @@ public final class SpiritCraftingTableBlockEntity extends BlockEntity implements
         if (!this.hasAura(costs) || (!stored.isEmpty() && (!ItemStack.isSameItemSameComponents(stored, produced)
                 || stored.getCount() + produced.getCount() > max))) return;
         // Paid through the shared transaction, so a recipe's aura price behaves like every other cost.
-        CostContext bankContext = CostContext.bank(this, null, FormulaContext.of(this.level), CostOrigins.RECIPE);
+        CostContext bankContext = AuraCostContexts.bank(this, null, FormulaContext.of(this.level), CostOrigins.RECIPE);
         if (!CostPayment.pay(recipe.aura(), bankContext).isSuccess()) return;
         for (int index = 0; index < this.grid.getContainerSize(); index++) this.grid.getItem(index).shrink(1);
         if (stored.isEmpty()) this.result.setItem(0, produced);

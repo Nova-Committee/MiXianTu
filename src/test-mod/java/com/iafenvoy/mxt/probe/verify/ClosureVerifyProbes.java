@@ -1,22 +1,28 @@
 package com.iafenvoy.mxt.probe.verify;
+import com.iafenvoy.saturn.registry.SaturnResourceKeys;
+import com.iafenvoy.saturn.registry.SaturnAttachments;
+import com.iafenvoy.saturn.data.context.Context;
+import com.iafenvoy.saturn.data.cost.Cost;
+import com.iafenvoy.saturn.data.trigger.Trigger;
+import com.iafenvoy.saturn.runtime.resulting.Failure;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
+import com.iafenvoy.saturn.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.attachment.TribulationAttachment;
-import com.iafenvoy.mxt.attachment.TriggerCooldownAttachment;
+import com.iafenvoy.saturn.attachment.TriggerCooldownAttachment;
 import com.iafenvoy.mxt.data.Tribulation;
-import com.iafenvoy.mxt.data.ability.Ability;
+import com.iafenvoy.saturn.data.ability.Ability;
 import com.iafenvoy.mxt.data.action.builtin.item.AddAbilityAction;
 import com.iafenvoy.mxt.data.artifact.ItemAbilitiesComponent;
 import com.iafenvoy.mxt.data.aura.Aura;
-import com.iafenvoy.mxt.data.context.action.ItemActionContext;
-import com.iafenvoy.mxt.data.cost.context.CostContext;
-import com.iafenvoy.mxt.data.cost.context.CostOrigins;
+import com.iafenvoy.saturn.data.context.action.ItemActionContext;
+import com.iafenvoy.saturn.data.cost.context.CostContext;
+import com.iafenvoy.saturn.data.cost.context.CostOrigins;
 import com.iafenvoy.mxt.data.formation.Formation;
-import com.iafenvoy.mxt.data.resource.Resource;
-import com.iafenvoy.mxt.data.trigger.TriggerContext;
-import com.iafenvoy.mxt.data.trigger.TriggerSignals;
+import com.iafenvoy.saturn.data.resource.Resource;
+import com.iafenvoy.saturn.data.trigger.TriggerContext;
+import com.iafenvoy.saturn.data.trigger.TriggerSignals;
 import com.iafenvoy.mxt.probe.Probe;
 import com.iafenvoy.mxt.probe.ProbeContext;
 import com.iafenvoy.mxt.probe.ProbeDefinitions;
@@ -26,10 +32,10 @@ import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactService;
 import com.iafenvoy.mxt.runtime.formation.FormationInstance;
 import com.iafenvoy.mxt.runtime.formation.FormationService;
-import com.iafenvoy.mxt.runtime.resulting.ResultWithData;
+import com.iafenvoy.saturn.runtime.resulting.ResultWithData;
 import com.iafenvoy.mxt.runtime.tribulation.TribulationService;
-import com.iafenvoy.mxt.runtime.trigger.TriggerDispatcher;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
+import com.iafenvoy.saturn.runtime.trigger.TriggerDispatcher;
+import com.iafenvoy.saturn.util.formula.FormulaContext;
 import com.mojang.serialization.JsonOps;
 import net.minecraft.core.Holder;
 import net.minecraft.core.UUIDUtil;
@@ -93,8 +99,8 @@ public final class ClosureVerifyProbes {
     private static String verifyTriggerGates(ProbeContext context) {
         ServerPlayer player = context.player();
         ServerLevel level = context.level();
-        Holder<Resource> probe = context.require(MxtResourceKeys.RESOURCE, ProbeDefinitions.id("trigger_probe"));
-        ResourceHolderAttachment resources = player.getData(MxtAttachments.RESOURCE_HOLDER);
+        Holder<Resource> probe = context.require(SaturnResourceKeys.RESOURCE, ProbeDefinitions.id("trigger_probe"));
+        ResourceHolderAttachment resources = player.getData(SaturnAttachments.RESOURCE_HOLDER);
         double previous = resources.get(probe);
         resources.set(probe, 0.0D, 0.0D, 100_000.0D, -1L, "closure");
         TriggerContext trigger = new TriggerContext().actor(player).level(level).formula(FormulaContext.of(player));
@@ -119,10 +125,10 @@ public final class ClosureVerifyProbes {
             clock.setGameTime(savedTime);
             if (!close(third, 1.0D))
                 return "a publish past the cooldown added " + third + " instead of the 1 the cooldowned rule owes";
-            TriggerCooldownAttachment cooldowns = player.getExistingData(MxtAttachments.TRIGGER_COOLDOWNS).orElse(null);
-            if (cooldowns == null || !cooldowns.isOnCooldown(context.require(MxtResourceKeys.TRIGGER, ProbeDefinitions.id("cooldown_probe")), now + 200L))
+            TriggerCooldownAttachment cooldowns = player.getExistingData(SaturnAttachments.TRIGGER_COOLDOWNS).orElse(null);
+            if (cooldowns == null || !cooldowns.isOnCooldown(context.require(SaturnResourceKeys.TRIGGER, ProbeDefinitions.id("cooldown_probe")), now + 200L))
                 return "the cooldown the last publish armed was not recorded against its own rule";
-            if (cooldowns.isOnCooldown(context.require(MxtResourceKeys.TRIGGER, ProbeDefinitions.id("chance_probe")), now + 200L))
+            if (cooldowns.isOnCooldown(context.require(SaturnResourceKeys.TRIGGER, ProbeDefinitions.id("chance_probe")), now + 200L))
                 return "a rule that never fired was charged a cooldown anyway";
         } finally {
             resources.set(probe, previous, 0.0D, 100_000.0D, -1L, "probe");
@@ -135,7 +141,7 @@ public final class ClosureVerifyProbes {
     private static String verifyItemAbilityProducer(ProbeContext context) {
         ServerPlayer player = context.player();
         ServerLevel level = context.level();
-        Holder<Ability> ability = context.require(MxtResourceKeys.ABILITY, ProbeDefinitions.id("firebolt"));
+        Holder<Ability> ability = context.require(SaturnResourceKeys.ABILITY, ProbeDefinitions.id("firebolt"));
         ItemStack stack = new ItemStack(Items.DIAMOND_SWORD);
         AddAbilityAction action = new AddAbilityAction(List.of(ability));
         action.execute(new ItemActionContext(player, stack, FormulaContext.of(player)));
@@ -178,8 +184,8 @@ public final class ClosureVerifyProbes {
     private static String verifyTimelineControl(ProbeContext context) {
         ServerPlayer player = context.player();
         ServerLevel level = context.level();
-        Holder<Resource> probe = context.require(MxtResourceKeys.RESOURCE, ProbeDefinitions.id("trigger_probe"));
-        ResourceHolderAttachment resources = player.getData(MxtAttachments.RESOURCE_HOLDER);
+        Holder<Resource> probe = context.require(SaturnResourceKeys.RESOURCE, ProbeDefinitions.id("trigger_probe"));
+        ResourceHolderAttachment resources = player.getData(SaturnAttachments.RESOURCE_HOLDER);
         TribulationAttachment data = player.getData(MxtAttachments.TRIBULATION);
         double previous = resources.get(probe);
         data.clear();

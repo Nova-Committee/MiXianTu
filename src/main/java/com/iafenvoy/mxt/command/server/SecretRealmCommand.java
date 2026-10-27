@@ -8,7 +8,7 @@ import com.iafenvoy.mxt.runtime.world.SecretRealmEntryLocator;
 import com.iafenvoy.mxt.runtime.world.SecretRealmRecord;
 import com.iafenvoy.mxt.runtime.world.SecretRealmRegistry;
 import com.iafenvoy.mxt.runtime.world.SecretRealmService;
-import com.iafenvoy.mxt.util.DefinitionText;
+import com.iafenvoy.saturn.util.DefinitionText;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;

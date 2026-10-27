@@ -2,19 +2,11 @@ package com.iafenvoy.mxt.registry;
 
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.data.Tribulation;
-import com.iafenvoy.mxt.data.ability.Ability;
-import com.iafenvoy.mxt.data.ability.AbilityType;
-import com.iafenvoy.mxt.data.ability.TargetSelector;
+import com.iafenvoy.mxt.data.ability.AbilityAffinity;
 import com.iafenvoy.mxt.data.ability.render.MountRender;
-import com.iafenvoy.mxt.data.action.BiEntityAction;
-import com.iafenvoy.mxt.data.action.BlockAction;
-import com.iafenvoy.mxt.data.action.EntityAction;
-import com.iafenvoy.mxt.data.action.ItemAction;
 import com.iafenvoy.mxt.data.alchemy.*;
 import com.iafenvoy.mxt.data.artifact.Artifact;
 import com.iafenvoy.mxt.data.aura.*;
-import com.iafenvoy.mxt.data.condition.*;
-import com.iafenvoy.mxt.data.cost.Cost;
 import com.iafenvoy.mxt.data.creature.ContractType;
 import com.iafenvoy.mxt.data.creature.CreatureProfile;
 import com.iafenvoy.mxt.data.cultivation.*;
@@ -33,28 +25,15 @@ import com.iafenvoy.mxt.data.item.*;
 import com.iafenvoy.mxt.data.progression.Progression;
 import com.iafenvoy.mxt.data.quality.DefaultQuality;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
-import com.iafenvoy.mxt.data.resource.Resource;
-import com.iafenvoy.mxt.data.resource.ResourceValueProvider;
-import com.iafenvoy.mxt.data.resourcebar.ResourceBarContext;
-import com.iafenvoy.mxt.data.resourcebar.ResourceBarRenderData;
-import com.iafenvoy.mxt.data.resourcebar.ResourceBarVisibility;
 import com.iafenvoy.mxt.data.rift.RiftPreset;
 import com.iafenvoy.mxt.data.secretrealm.SecretRealm;
 import com.iafenvoy.mxt.data.secretrealm.SecretRealmGeneration;
-import com.iafenvoy.mxt.data.storage.DataStorage;
 import com.iafenvoy.mxt.data.talisman.Talisman;
 import com.iafenvoy.mxt.data.talisman.TalismanType;
-import com.iafenvoy.mxt.data.timeline.TimelineEntry;
-import com.iafenvoy.mxt.data.trigger.Trigger;
-import com.iafenvoy.mxt.data.trigger.TriggerRule;
-import com.iafenvoy.mxt.util.formula.FormulaVariable;
-import com.iafenvoy.mxt.util.formula.NumberProvider;
-import com.iafenvoy.mxt.util.matcher.ItemMatcher.Entry;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.Registry;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
-import net.objecthunter.exp4j.function.Function;
 
 /**
  * Every registry key MiXianTu owns, kept separate from the registry instances and the registration events so
@@ -63,46 +42,21 @@ import net.objecthunter.exp4j.function.Function;
 public final class MxtResourceKeys {
     public static final ResourceKey<Registry<RiftPreset>> RIFT = create("rift");
     // Builtin registries
-    public static final ResourceKey<Registry<MapCodec<? extends AbilityType>>> ABILITY_TYPE = create("ability_type");
-    public static final ResourceKey<Registry<MapCodec<? extends TargetSelector>>> ABILITY_TARGET_SELECTOR_TYPE = create("ability_target_selector_type");
     public static final ResourceKey<Registry<MapCodec<? extends TalismanType>>> TALISMAN_TYPE = create("talisman_type");
-    public static final ResourceKey<Registry<MapCodec<? extends Cost>>> COST_TYPE = create("cost_type");
     public static final ResourceKey<Registry<MapCodec<? extends CurseType>>> CURSE_TYPE = create("curse_type");
-    public static final ResourceKey<Registry<MapCodec<? extends DataStorage>>> DATA_STORAGE_TYPE = create("data_storage_type");
-    public static final ResourceKey<Registry<MapCodec<? extends Trigger>>> TRIGGER_TYPE = create("trigger_type");
-    public static final ResourceKey<Registry<MapCodec<? extends NumberProvider>>> NUMBER_PROVIDER_TYPE = create("number_provider_type");
     public static final ResourceKey<Registry<MapCodec<? extends AuraMaximum>>> AURA_MAXIMUM_TYPE = create("aura_maximum_type");
-    public static final ResourceKey<Registry<Function>> FORMULA_FUNCTION = create("formula_function");
-    public static final ResourceKey<Registry<FormulaVariable>> FORMULA_VARIABLE = create("formula_variable");
-    public static final ResourceKey<Registry<MapCodec<? extends ResourceValueProvider>>> RESOURCE_VALUE_PROVIDER_TYPE = create("resource_value_provider_type");
-    public static final ResourceKey<Registry<MapCodec<? extends EntityAction>>> ENTITY_ACTION_TYPE = create("entity_action_type");
-    public static final ResourceKey<Registry<MapCodec<? extends BiEntityAction>>> BI_ENTITY_ACTION_TYPE = create("bi_entity_action_type");
-    public static final ResourceKey<Registry<MapCodec<? extends BlockAction>>> BLOCK_ACTION_TYPE = create("block_action_type");
-    public static final ResourceKey<Registry<MapCodec<? extends ItemAction>>> ITEM_ACTION_TYPE = create("item_action_type");
-    public static final ResourceKey<Registry<MapCodec<? extends EntityCondition>>> ENTITY_CONDITION_TYPE = create("entity_condition_type");
-    public static final ResourceKey<Registry<MapCodec<? extends BiEntityCondition>>> BI_ENTITY_CONDITION_TYPE = create("bi_entity_condition_type");
-    public static final ResourceKey<Registry<MapCodec<? extends BlockCondition>>> BLOCK_CONDITION_TYPE = create("block_condition_type");
-    public static final ResourceKey<Registry<MapCodec<? extends ItemCondition>>> ITEM_CONDITION_TYPE = create("item_condition_type");
-    public static final ResourceKey<Registry<MapCodec<? extends DamageCondition>>> DAMAGE_CONDITION_TYPE = create("damage_condition_type");
-    public static final ResourceKey<Registry<MapCodec<? extends ResourceBarRenderData>>> RESOURCE_BAR_RENDER_DATA_TYPE = create("resource_bar_render_data_type");
     public static final ResourceKey<Registry<MapCodec<? extends MountRender>>> MOUNT_RENDER_TYPE = create("mount_render_type");
-    public static final ResourceKey<Registry<ResourceBarContext>> RESOURCE_BAR_CONTEXT = create("resource_bar_context");
-    public static final ResourceKey<Registry<MapCodec<? extends ResourceBarVisibility>>> RESOURCE_BAR_VISIBILITY_TYPE = create("resource_bar_visibility_type");
-    public static final ResourceKey<Registry<MapCodec<? extends Entry>>> ITEM_MATCHER_ENTRY_TYPE = create("item_matcher_entry_type");
     public static final ResourceKey<Registry<MapCodec<? extends FormationActionType>>> FORMATION_ACTION_TYPE = create("formation_action_type");
     public static final ResourceKey<Registry<MapCodec<? extends FormationStroke>>> FORMATION_STROKE_TYPE = create("formation_stroke_type");
-    public static final ResourceKey<Registry<MapCodec<? extends TimelineEntry>>> TIMELINE_ENTRY_TYPE = create("timeline_entry_type");
     public static final ResourceKey<Registry<MapCodec<? extends SecretRealmGeneration>>> SECRET_REALM_GENERATION_TYPE = create("secret_realm_generation_type");
 
     // Datapack registries
-    public static final ResourceKey<Registry<Resource>> RESOURCE = create("resource");
     public static final ResourceKey<Registry<Aura>> AURA = create("aura");
     public static final ResourceKey<Registry<RealmStage>> REALM_STAGE = create("realm_stage");
     public static final ResourceKey<Registry<Element>> ELEMENT = create("element");
     public static final ResourceKey<Registry<ElementReaction>> ELEMENT_REACTION = create("element_reaction");
     public static final ResourceKey<Registry<SpiritRoot>> SPIRIT_ROOT = create("spirit_root");
     public static final ResourceKey<Registry<Physique>> PHYSIQUE = create("physique");
-    public static final ResourceKey<Registry<Ability>> ABILITY = create("ability");
     public static final ResourceKey<Registry<Curse>> CURSE = create("curse");
     public static final ResourceKey<Registry<ForgingMethod>> FORGING_METHOD = create("forging_method");
     public static final ResourceKey<Registry<ForgingBlueprint>> FORGING_BLUEPRINT = create("forging_blueprint");
@@ -134,9 +88,8 @@ public final class MxtResourceKeys {
     public static final ResourceKey<Registry<ItemAura>> ITEM_AURA = create("item_aura");
     public static final ResourceKey<Registry<ItemQuality>> ITEM_QUALITY = create("quality");
     public static final ResourceKey<Registry<DefaultQuality>> DEFAULT_QUALITY = create("default_quality");
-    public static final ResourceKey<Registry<TriggerRule>> TRIGGER = create("trigger");
     public static final ResourceKey<Registry<Talisman>> TALISMAN = create("talisman");
-    public static final ResourceKey<Registry<IncompleteMarker>> INCOMPLETE = create("incomplete");
+    public static final ResourceKey<Registry<AbilityAffinity>> ABILITY_AFFINITY = create("ability_affinity");
 
     private static <T> ResourceKey<Registry<T>> create(String path) {
         return ResourceKey.createRegistryKey(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, path));

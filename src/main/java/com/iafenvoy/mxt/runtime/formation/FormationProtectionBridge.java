@@ -1,8 +1,9 @@
 package com.iafenvoy.mxt.runtime.formation;
 
+import com.iafenvoy.mxt.runtime.MxtProfilerSources;
 import com.iafenvoy.mxt.runtime.formation.FormationProtection.Action;
-import com.iafenvoy.mxt.util.profiling.ProfilerScope;
-import com.iafenvoy.mxt.util.profiling.ServerProfiling;
+import com.iafenvoy.saturn.profiling.ProfilerScope;
+import com.iafenvoy.saturn.profiling.ServerProfiling;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -35,7 +36,7 @@ public final class FormationProtectionBridge {
 
     @SubscribeEvent(priority = EventPriority.HIGH)
     public static void onBreak(BreakBlockEvent event) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.FORMATION)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.FORMATION)) {
             if (event.getPlayer() instanceof ServerPlayer player && event.getLevel() instanceof ServerLevel level
                     && FormationProtection.prevented(level, Action.BREAK, event.getPos(), player.getUUID()))
                 event.setCanceled(true);
@@ -44,7 +45,7 @@ public final class FormationProtectionBridge {
 
     @SubscribeEvent(priority = EventPriority.HIGH)
     public static void onPlace(EntityPlaceEvent event) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.FORMATION)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.FORMATION)) {
             if (event.getEntity() instanceof ServerPlayer player && event.getLevel() instanceof ServerLevel level
                     && FormationProtection.prevented(level, Action.PLACE, event.getPos(), player.getUUID()))
                 event.setCanceled(true);
@@ -55,7 +56,7 @@ public final class FormationProtectionBridge {
     // otherwise swing at a block that refuses to open.
     @SubscribeEvent(priority = EventPriority.HIGH)
     public static void onUse(RightClickBlock event) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.FORMATION)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.FORMATION)) {
             if (event.getEntity() instanceof ServerPlayer player && event.getLevel() instanceof ServerLevel level
                     && FormationProtection.prevented(level, Action.INTERACT, event.getPos(), player.getUUID())) {
                 event.setCanceled(true);
@@ -66,7 +67,7 @@ public final class FormationProtectionBridge {
 
     @SubscribeEvent(priority = EventPriority.HIGH)
     public static void onEntityInteract(EntityInteract event) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.FORMATION)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.FORMATION)) {
             if (event.getEntity() instanceof ServerPlayer player && event.getLevel() instanceof ServerLevel level
                     && FormationProtection.prevented(level, Action.ENTITY_INTERACT,
                     event.getTarget().blockPosition(), player.getUUID())) {
@@ -81,7 +82,7 @@ public final class FormationProtectionBridge {
      */
     @SubscribeEvent(priority = EventPriority.HIGH)
     public static void onEntityInteractSpecific(EntityInteractSpecific event) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.FORMATION)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.FORMATION)) {
             if (event.getEntity() instanceof ServerPlayer player && event.getLevel() instanceof ServerLevel level
                     && FormationProtection.prevented(level, Action.ENTITY_INTERACT,
                     event.getTarget().blockPosition(), player.getUUID())) {
@@ -96,7 +97,7 @@ public final class FormationProtectionBridge {
      */
     @SubscribeEvent(priority = EventPriority.HIGH)
     public static void onItemUse(RightClickItem event) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.FORMATION)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.FORMATION)) {
             if (event.getEntity() instanceof ServerPlayer player && event.getLevel() instanceof ServerLevel level
                     && FormationProtection.prevented(level, Action.ITEM_USE, null, player.getUUID())) {
                 event.setCanceled(true);
@@ -110,7 +111,7 @@ public final class FormationProtectionBridge {
      */
     @SubscribeEvent(priority = EventPriority.HIGH)
     public static void onAttack(AttackEntityEvent event) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.FORMATION)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.FORMATION)) {
             if (event.getEntity() instanceof ServerPlayer player && event.getEntity().level() instanceof ServerLevel level
                     && FormationProtection.prevented(level, Action.ATTACK_ENTITY,
                     event.getTarget().blockPosition(), player.getUUID()))
@@ -123,7 +124,7 @@ public final class FormationProtectionBridge {
     // explosion is about to iterate.
     @SubscribeEvent
     public static void onDetonate(Detonate event) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.FORMATION)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.FORMATION)) {
             List<BlockPos> affected = event.getAffectedBlocks();
             if (affected.isEmpty()) return;
             List<BlockPos> kept = new ArrayList<>(affected.size());
@@ -141,7 +142,7 @@ public final class FormationProtectionBridge {
 
     @SubscribeEvent
     public static void onMobGriefing(EntityMobGriefingEvent event) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.FORMATION)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.FORMATION)) {
             if (!(event.getEntity().level() instanceof ServerLevel level)) return;
             if (FormationProtection.prevented(level, Action.MOB_GRIEFING,
                     event.getEntity().blockPosition(), null))

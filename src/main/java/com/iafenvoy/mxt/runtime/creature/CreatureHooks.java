@@ -2,13 +2,13 @@ package com.iafenvoy.mxt.runtime.creature;
 
 import com.iafenvoy.mxt.attachment.CreatureSpiritAttachment;
 import com.iafenvoy.mxt.data.creature.ContractType;
-import com.iafenvoy.mxt.event.CollectAbilityGrantsEvent;
 import com.iafenvoy.mxt.event.CollectProgressionOwnersEvent;
 import com.iafenvoy.mxt.registry.MxtAttachments;
-import com.iafenvoy.mxt.runtime.Sources;
 import com.iafenvoy.mxt.runtime.progression.ProgressionOwners;
 import com.iafenvoy.mxt.runtime.progression.ProgressionService;
-import com.iafenvoy.mxt.util.HolderHelper;
+import com.iafenvoy.saturn.event.CollectAbilityGrantsEvent;
+import com.iafenvoy.saturn.runtime.Sources;
+import com.iafenvoy.saturn.util.HolderHelper;
 import net.minecraft.core.Holder;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.world.entity.LivingEntity;

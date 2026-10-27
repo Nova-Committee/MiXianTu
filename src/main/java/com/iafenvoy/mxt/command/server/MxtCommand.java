@@ -1,12 +1,13 @@
 package com.iafenvoy.mxt.command.server;
 
-import com.iafenvoy.mxt.attachment.AbilityAttachment;
 import com.iafenvoy.mxt.attachment.CurseHolderAttachment;
-import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.attachment.SpiritIdentityAttachment;
-import com.iafenvoy.mxt.data.storage.builtin.CooldownDataStorage;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
+import com.iafenvoy.saturn.attachment.AbilityAttachment;
+import com.iafenvoy.saturn.attachment.ResourceHolderAttachment;
+import com.iafenvoy.saturn.data.storage.builtin.CooldownDataStorage;
+import com.iafenvoy.saturn.registry.SaturnAttachments;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import net.minecraft.commands.CommandBuildContext;
@@ -40,9 +41,9 @@ public final class MxtCommand {
 
     private static int attachmentStatus(CommandSourceStack source) throws CommandSyntaxException {
         ServerPlayer player = source.getPlayerOrException();
-        AbilityAttachment abilities = player.getData(MxtAttachments.ABILITY_HOLDER);
+        AbilityAttachment abilities = player.getData(SaturnAttachments.ABILITY_HOLDER);
         CurseHolderAttachment curses = player.getData(MxtAttachments.CURSE_HOLDER);
-        ResourceHolderAttachment resources = player.getData(MxtAttachments.RESOURCE_HOLDER);
+        ResourceHolderAttachment resources = player.getData(SaturnAttachments.RESOURCE_HOLDER);
         SpiritIdentityAttachment identity = player.getData(MxtAttachments.SPIRIT_IDENTITY);
         source.sendSuccess(() -> Component.translatable("command.mxt.attachment.status", resources.values().size(), abilities.sources().size(),
                 abilities.storage().count(CooldownDataStorage.class), curses.instances().size(), identity.spiritRoots().size(), identity.physiques().size()), false);

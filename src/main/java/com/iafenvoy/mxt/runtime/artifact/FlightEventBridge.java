@@ -1,14 +1,15 @@
 package com.iafenvoy.mxt.runtime.artifact;
 
 import com.iafenvoy.mxt.attachment.FlightAttachment;
-import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.ability.type.FlightControlAbilityType;
 import com.iafenvoy.mxt.data.ability.type.MountAbilityType;
 import com.iafenvoy.mxt.registry.MxtAttachments;
+import com.iafenvoy.mxt.runtime.MxtProfilerSources;
 import com.iafenvoy.mxt.runtime.resulting.failures.FlightFailure;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
-import com.iafenvoy.mxt.util.profiling.ProfilerScope;
-import com.iafenvoy.mxt.util.profiling.ServerProfiling;
+import com.iafenvoy.saturn.data.ability.Ability;
+import com.iafenvoy.saturn.profiling.ProfilerScope;
+import com.iafenvoy.saturn.profiling.ServerProfiling;
+import com.iafenvoy.saturn.util.formula.FormulaContext;
 import net.minecraft.core.Holder;
 import net.minecraft.world.entity.LivingEntity;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -26,7 +27,7 @@ public final class FlightEventBridge {
 
     @SubscribeEvent
     public static void onEntityTick(Post event) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.ARTIFACT)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.ARTIFACT)) {
             // getExistingData: every living entity ticks here, and getData would put an empty flight record on each of
             // them the moment they spawn.
             if (!(event.getEntity() instanceof LivingEntity holder) || holder.level().isClientSide()) return;

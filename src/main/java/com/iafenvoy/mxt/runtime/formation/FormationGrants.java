@@ -1,8 +1,8 @@
 package com.iafenvoy.mxt.runtime.formation;
 
-import com.iafenvoy.mxt.attachment.AbilityAttachment;
-import com.iafenvoy.mxt.registry.MxtAttachments;
-import com.iafenvoy.mxt.runtime.ability.AbilityEventBridge;
+import com.iafenvoy.saturn.attachment.AbilityAttachment;
+import com.iafenvoy.saturn.registry.SaturnAttachments;
+import com.iafenvoy.saturn.runtime.ability.AbilityEventBridge;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
@@ -21,7 +21,7 @@ public final class FormationGrants {
     // Asked without creating the attachment: most entities that walk through a formation never held a grant.
     public static void release(Entity entity, Identifier source) {
         if (!(entity instanceof LivingEntity living)) return;
-        AbilityAttachment abilities = living.getExistingData(MxtAttachments.ABILITY_HOLDER).orElse(null);
+        AbilityAttachment abilities = living.getExistingData(SaturnAttachments.ABILITY_HOLDER).orElse(null);
         if (abilities == null || !abilities.sources().heldBy(source)) return;
         if (abilities.reconcileSource(source, Set.of()))
             AbilityEventBridge.rebuildTriggerSubscriptions(living);

@@ -1,9 +1,9 @@
 package com.iafenvoy.mxt.api;
 
 import com.iafenvoy.mxt.data.aura.Aura;
-import com.iafenvoy.mxt.data.cost.Cost;
-import com.iafenvoy.mxt.data.cost.context.CostContext;
-import com.iafenvoy.mxt.runtime.resulting.ResultWithData;
+import com.iafenvoy.saturn.data.cost.Cost;
+import com.iafenvoy.saturn.data.cost.context.CostContext;
+import com.iafenvoy.saturn.runtime.resulting.ResultWithData;
 import net.minecraft.core.Holder;
 
 /**

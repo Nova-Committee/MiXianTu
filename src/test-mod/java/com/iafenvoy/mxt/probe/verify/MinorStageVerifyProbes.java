@@ -1,10 +1,13 @@
 package com.iafenvoy.mxt.probe.verify;
+import com.iafenvoy.saturn.registry.SaturnResourceKeys;
+import com.iafenvoy.saturn.data.context.Context;
+import com.iafenvoy.saturn.runtime.resulting.Failure;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.iafenvoy.mxt.attachment.CultivationAttachment;
 import com.iafenvoy.mxt.attachment.MinorStageAttachment;
-import com.iafenvoy.mxt.data.condition.EntityCondition;
+import com.iafenvoy.saturn.data.condition.EntityCondition;
 import com.iafenvoy.mxt.data.cultivation.RealmStage;
 import com.iafenvoy.mxt.probe.Probe;
 import com.iafenvoy.mxt.probe.ProbeContext;
@@ -13,10 +16,10 @@ import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService;
 import com.iafenvoy.mxt.runtime.cultivation.MinorStageService;
-import com.iafenvoy.mxt.runtime.resource.ResourceService;
-import com.iafenvoy.mxt.util.HolderHelper;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
-import com.iafenvoy.mxt.util.formula.FormulaVariables;
+import com.iafenvoy.saturn.runtime.resource.ResourceService;
+import com.iafenvoy.saturn.util.HolderHelper;
+import com.iafenvoy.saturn.util.formula.FormulaContext;
+import com.iafenvoy.saturn.util.formula.FormulaVariables;
 import com.mojang.serialization.JsonOps;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup.Provider;
@@ -67,7 +70,7 @@ public final class MinorStageVerifyProbes {
             return "the realm cache could not resolve " + ProbeDefinitions.QI_REFINING;
         spirit.setCultivationProgress(context.require(MxtResourceKeys.AURA, ProbeDefinitions.QI), 80.0D);
         FormulaContext formula = ResourceService.formulaContext(player,
-                context.require(MxtResourceKeys.RESOURCE, ProbeDefinitions.QI), FormulaContext.of(player));
+                context.require(SaturnResourceKeys.RESOURCE, ProbeDefinitions.QI), FormulaContext.of(player));
         double read = formula.value("minor_stage");
         if (!close(read, 7.0D)) return "the minor_stage variable reads " + read + " at 80/100 instead of 7";
         spirit.setRealmStages(Map.of());

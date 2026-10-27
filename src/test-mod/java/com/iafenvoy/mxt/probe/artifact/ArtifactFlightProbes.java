@@ -1,13 +1,19 @@
 package com.iafenvoy.mxt.probe.artifact;
+import com.iafenvoy.saturn.registry.SaturnResourceKeys;
+import com.iafenvoy.saturn.registry.SaturnAttachments;
+import com.iafenvoy.saturn.data.context.Context;
+import com.iafenvoy.saturn.data.trigger.Trigger;
+import com.iafenvoy.saturn.runtime.resulting.Failure;
+import com.iafenvoy.saturn.util.formula.number.Constant;
 
 import com.iafenvoy.mxt.attachment.CultivationAttachment;
-import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
+import com.iafenvoy.saturn.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.attachment.TechniqueAttachment;
-import com.iafenvoy.mxt.data.ability.Ability;
-import com.iafenvoy.mxt.data.ability.Togglable;
+import com.iafenvoy.saturn.data.ability.Ability;
+import com.iafenvoy.saturn.data.ability.Togglable;
 import com.iafenvoy.mxt.data.ability.type.MountAbilityType;
 import com.iafenvoy.mxt.data.aura.Aura;
-import com.iafenvoy.mxt.data.resource.Resource;
+import com.iafenvoy.saturn.data.resource.Resource;
 import com.iafenvoy.mxt.entity.FlyingSwordEntity;
 import com.iafenvoy.mxt.probe.Probe;
 import com.iafenvoy.mxt.probe.ProbeContext;
@@ -15,20 +21,20 @@ import com.iafenvoy.mxt.probe.ProbeDefinitions;
 import com.iafenvoy.mxt.probe.ProbeKit;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.runtime.ability.AbilityActivationService;
-import com.iafenvoy.mxt.runtime.ability.AbilityGrantService;
+import com.iafenvoy.saturn.runtime.ability.AbilityActivationService;
+import com.iafenvoy.saturn.runtime.ability.AbilityGrantService;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactService;
 import com.iafenvoy.mxt.runtime.artifact.FlightService;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationIdentityService;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService;
-import com.iafenvoy.mxt.runtime.resulting.ResultWithData;
-import com.iafenvoy.mxt.runtime.resulting.failures.AbilityFailure;
+import com.iafenvoy.saturn.runtime.resulting.ResultWithData;
+import com.iafenvoy.saturn.runtime.resulting.failures.AbilityFailure;
 import com.iafenvoy.mxt.runtime.resulting.failures.FlightFailure;
 import com.iafenvoy.mxt.runtime.wheel.WheelEntryKinds;
 import com.iafenvoy.mxt.runtime.wheel.WheelService;
 import com.iafenvoy.mxt.runtime.wheel.WheelSourceTypes;
-import com.iafenvoy.mxt.util.HolderHelper;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
+import com.iafenvoy.saturn.util.HolderHelper;
+import com.iafenvoy.saturn.util.formula.FormulaContext;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Holder;
@@ -67,17 +73,17 @@ public final class ArtifactFlightProbes {
     // leaves the hand the moment it becomes an entity - which is why the press cannot live on the artifact.
     private static void flight(ProbeContext context) {
         Provider access = context.registries();
-        Holder<Resource> qiResource = context.require(MxtResourceKeys.RESOURCE, ProbeDefinitions.QI);
+        Holder<Resource> qiResource = context.require(SaturnResourceKeys.RESOURCE, ProbeDefinitions.QI);
         Holder<Aura> qi = context.require(MxtResourceKeys.AURA, ProbeDefinitions.QI);
         ItemStack flightStack = new ItemStack(Items.IRON_SWORD);
-        Holder<Ability> controlAbility = context.require(MxtResourceKeys.ABILITY, "sword_control");
-        Holder<Ability> mountAbility = context.require(MxtResourceKeys.ABILITY, "azure_sword_mount");
+        Holder<Ability> controlAbility = context.require(SaturnResourceKeys.ABILITY, "sword_control");
+        Holder<Ability> mountAbility = context.require(SaturnResourceKeys.ABILITY, "azure_sword_mount");
         MountAbilityType mountEntry = ArtifactService.mount(access, flightStack).orElse(null);
 
         LivingEntity pilot = spawnProbe(context, context.playerSpot().above(5), null);
         boolean flight = false;
         if (pilot != null) {
-            ResourceHolderAttachment pilotResources = pilot.getData(MxtAttachments.RESOURCE_HOLDER);
+            ResourceHolderAttachment pilotResources = pilot.getData(SaturnAttachments.RESOURCE_HOLDER);
             // The pilot has to be able to pay, and a qi ceiling is a formula over the body's own realm: a body that
             // never entered one reads a ceiling of nothing however much is written into the account.
             CultivationAttachment pilotSpirit = pilot.getData(MxtAttachments.CULTIVATION);
@@ -94,7 +100,7 @@ public final class ArtifactFlightProbes {
             TechniqueAttachment spirit = pilot.getData(MxtAttachments.TECHNIQUE);
             spirit.addLearnedTechnique(context.require(MxtResourceKeys.TECHNIQUE, "sword_control_manual"));
             AbilityGrantService.recalculate(pilot);
-            boolean granted = pilot.getData(MxtAttachments.ABILITY_HOLDER).has(controlAbility);
+            boolean granted = pilot.getData(SaturnAttachments.ABILITY_HOLDER).has(controlAbility);
             double qiBeforePress = pilotResources.get(qiResource);
             context.check("artifact roster flight: the pilot holds qi before the press (" + qiBeforePress + ")", qiBeforePress >= 5.0D);
             Togglable.PressResult pressed = AbilityActivationService.activate(pilot, controlAbility, null);
@@ -171,12 +177,12 @@ public final class ArtifactFlightProbes {
     // request for the state it is already in changes nothing.
     private static void directed(ProbeContext context) {
         ServerPlayer player = context.player();
-        Holder<Resource> qiResource = context.require(MxtResourceKeys.RESOURCE, ProbeDefinitions.QI);
-        Holder<Ability> controlAbility = context.require(MxtResourceKeys.ABILITY, "sword_control");
+        Holder<Resource> qiResource = context.require(SaturnResourceKeys.RESOURCE, ProbeDefinitions.QI);
+        Holder<Ability> controlAbility = context.require(SaturnResourceKeys.ABILITY, "sword_control");
         // The hand is put back afterwards, since the rest of this leg reads stacks of its own rather than what the
         // player holds.
         ItemStack heldBefore = player.getMainHandItem().copy();
-        ProbeKit.ensureResource(player, player.getData(MxtAttachments.RESOURCE_HOLDER), qiResource, 40.0D);
+        ProbeKit.ensureResource(player, player.getData(SaturnAttachments.RESOURCE_HOLDER), qiResource, 40.0D);
         // Qi cannot be spent by a body that never entered a realm: the aura's own use gate is the realm condition,
         // and it is asked of whoever pays before the first entry is charged.
         CultivationAttachment playerCultivation = player.getData(MxtAttachments.CULTIVATION);
@@ -210,9 +216,9 @@ public final class ArtifactFlightProbes {
     // Hitting something ends the flight. The probe cannot press a movement key, so the mount is moved into a
     // wall by hand: what the leg is really about is that a real move leaves the flag the landing reads.
     private static void crash(ProbeContext context) {
-        Holder<Resource> qiResource = context.require(MxtResourceKeys.RESOURCE, ProbeDefinitions.QI);
-        Holder<Ability> controlAbility = context.require(MxtResourceKeys.ABILITY, "sword_control");
-        Holder<Ability> mountAbility = context.require(MxtResourceKeys.ABILITY, "azure_sword_mount");
+        Holder<Resource> qiResource = context.require(SaturnResourceKeys.RESOURCE, ProbeDefinitions.QI);
+        Holder<Ability> controlAbility = context.require(SaturnResourceKeys.ABILITY, "sword_control");
+        Holder<Ability> mountAbility = context.require(SaturnResourceKeys.ABILITY, "azure_sword_mount");
         LivingEntity crasher = spawnProbe(context, context.playerSpot().above(9), null);
         boolean collision = false;
         if (crasher != null) {
@@ -221,7 +227,7 @@ public final class ArtifactFlightProbes {
             CultivationAttachment crasherIdentity = crasher.getData(MxtAttachments.CULTIVATION);
             CultivationService.setRealm(crasherIdentity, context.require(MxtResourceKeys.REALM_STAGE, ProbeDefinitions.QI_REFINING));
             crasherIdentity.setCultivationProgress(context.require(MxtResourceKeys.AURA, ProbeDefinitions.QI), 80.0D);
-            ProbeKit.ensureResource(crasher, crasher.getData(MxtAttachments.RESOURCE_HOLDER), qiResource, 20.0D);
+            ProbeKit.ensureResource(crasher, crasher.getData(SaturnAttachments.RESOURCE_HOLDER), qiResource, 20.0D);
             ItemStack crashMount = new ItemStack(Items.IRON_SWORD);
             ArtifactService.refine(crashMount, crasher);
             crasher.setItemInHand(InteractionHand.MAIN_HAND, crashMount);

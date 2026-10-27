@@ -1,9 +1,9 @@
 package com.iafenvoy.mxt.data.aura;
 
-import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.util.formula.NumberProvider;
-import com.iafenvoy.mxt.util.matcher.ItemMatcher;
+import com.iafenvoy.saturn.data.action.EntityAction;
+import com.iafenvoy.saturn.util.formula.NumberProvider;
+import com.iafenvoy.saturn.util.matcher.ItemMatcher;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;

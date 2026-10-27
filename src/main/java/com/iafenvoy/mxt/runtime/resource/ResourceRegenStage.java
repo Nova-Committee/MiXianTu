@@ -1,17 +1,18 @@
 package com.iafenvoy.mxt.runtime.resource;
 
-import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.data.aura.Aura;
-import com.iafenvoy.mxt.data.resource.Resource;
-import com.iafenvoy.mxt.event.CollectTickStagesEvent;
-import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.runtime.EntityTickStages;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationMethodService;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
-import com.iafenvoy.mxt.util.profiling.ProfilerScope;
-import com.iafenvoy.mxt.util.profiling.ServerProfiling;
+import com.iafenvoy.saturn.attachment.ResourceHolderAttachment;
+import com.iafenvoy.saturn.data.resource.Resource;
+import com.iafenvoy.saturn.event.CollectTickStagesEvent;
+import com.iafenvoy.saturn.profiling.ProfilerScope;
+import com.iafenvoy.saturn.profiling.ServerProfiling;
+import com.iafenvoy.saturn.registry.SaturnAttachments;
+import com.iafenvoy.saturn.runtime.EntityTickStages;
+import com.iafenvoy.saturn.runtime.resource.ResourceService;
+import com.iafenvoy.saturn.util.formula.FormulaContext;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
 import net.minecraft.world.entity.LivingEntity;
@@ -34,7 +35,7 @@ public final class ResourceRegenStage {
 
     private static void tick(LivingEntity entity) {
         try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.RESOURCE)) {
-            ResourceHolderAttachment holder = entity.getExistingData(MxtAttachments.RESOURCE_HOLDER).orElse(null);
+            ResourceHolderAttachment holder = entity.getExistingData(SaturnAttachments.RESOURCE_HOLDER).orElse(null);
             if (holder == null) return;
             // Only profiled values are visited at all: a plain counter is never looked at, and a profiled value
             // with no stored entry yet is created by its first change instead of by this loop.

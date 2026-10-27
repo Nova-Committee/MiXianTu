@@ -3,8 +3,9 @@ package com.iafenvoy.mxt.runtime.perch;
 import com.iafenvoy.mxt.attachment.PerchAttachment;
 import com.iafenvoy.mxt.config.MxtServerConfig;
 import com.iafenvoy.mxt.registry.MxtAttachments;
-import com.iafenvoy.mxt.util.profiling.ProfilerScope;
-import com.iafenvoy.mxt.util.profiling.ServerProfiling;
+import com.iafenvoy.mxt.runtime.MxtProfilerSources;
+import com.iafenvoy.saturn.profiling.ProfilerScope;
+import com.iafenvoy.saturn.profiling.ServerProfiling;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
@@ -27,7 +28,7 @@ public final class PerchEventBridge {
 
     @SubscribeEvent
     public static void onEntityTick(EntityTickEvent.Post event) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.CREATURE)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.CREATURE)) {
             Entity passenger = event.getEntity();
             if (passenger.level().isClientSide()) return;
             PerchAttachment perch = passenger.getExistingData(MxtAttachments.PERCH).orElse(null);

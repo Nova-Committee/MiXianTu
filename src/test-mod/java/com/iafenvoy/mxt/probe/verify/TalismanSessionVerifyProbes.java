@@ -1,15 +1,16 @@
 package com.iafenvoy.mxt.probe.verify;
+import com.iafenvoy.saturn.registry.SaturnResourceKeys;
+import com.iafenvoy.saturn.registry.SaturnAttachments;
+import com.iafenvoy.saturn.data.context.Context;
 
-import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
+import com.iafenvoy.saturn.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.config.MxtServerConfig;
-import com.iafenvoy.mxt.data.resource.Resource;
+import com.iafenvoy.saturn.data.resource.Resource;
 import com.iafenvoy.mxt.probe.Probe;
 import com.iafenvoy.mxt.probe.ProbeContext;
 import com.iafenvoy.mxt.probe.ProbeDefinitions;
-import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.registry.MxtItems;
-import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.talisman.TalismanDrawingScorer.Point;
 import com.iafenvoy.mxt.runtime.talisman.TalismanDrawingSession;
 import com.iafenvoy.mxt.runtime.talisman.TalismanWorkstationService;
@@ -46,8 +47,8 @@ public final class TalismanSessionVerifyProbes {
     // A cancelled session returns what it charged, not the balance it saw: the account may have been credited or spent
     // by something else while the drawing was open, and neither of those belongs to the session.
     private static void refundOnlyWhatItTook(ProbeContext context) {
-        ResourceHolderAttachment resources = context.player().getData(MxtAttachments.RESOURCE_HOLDER);
-        Holder<Resource> probe = context.require(MxtResourceKeys.RESOURCE, ProbeDefinitions.id("trigger_probe"));
+        ResourceHolderAttachment resources = context.player().getData(SaturnAttachments.RESOURCE_HOLDER);
+        Holder<Resource> probe = context.require(SaturnResourceKeys.RESOURCE, ProbeDefinitions.id("trigger_probe"));
         double before = resources.get(probe);
         try {
             resources.set(probe, 100.0D, 0.0D, 10_000.0D, -1L, "probe");

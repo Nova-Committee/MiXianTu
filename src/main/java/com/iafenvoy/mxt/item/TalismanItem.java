@@ -11,6 +11,7 @@ import com.iafenvoy.mxt.runtime.spirit.SpiritPour;
 import com.iafenvoy.mxt.runtime.spirit.SpiritPour.Entry;
 import com.iafenvoy.mxt.runtime.spirit.SpiritSource;
 import com.iafenvoy.mxt.runtime.talisman.TalismanService;
+import com.iafenvoy.saturn.runtime.hold.ItemUseCycles;
 import it.unimi.dsi.fastutil.objects.Object2DoubleMap;
 import it.unimi.dsi.fastutil.objects.Object2DoubleOpenHashMap;
 import net.minecraft.core.Holder;
@@ -38,6 +39,9 @@ import java.util.Optional;
  * written is a component, and the pour is declared here rather than by a shared {@code item_aura} definition
  * because only the stack knows what is written on it. A plain use fires what is written on a full carrier, a
  * sneaking use changes the mode that decides whether it fires the moment it is filled.
+ * <p>
+ * It declares no use duration of its own: the hold module arms only a stack that declares none, and how long a pour
+ * lasts is the store's answer read off the stack, not the item's.
  */
 public class TalismanItem extends Item implements UseItemAuraAccess {
     public TalismanItem(Properties properties) {
@@ -50,6 +54,9 @@ public class TalismanItem extends Item implements UseItemAuraAccess {
     public @NonNull InteractionResult use(@NonNull Level level, @NonNull Player player, @NonNull InteractionHand hand) {
         ItemStack stack = player.getItemInHand(hand);
         if (stack.has(DataComponents.CONSUMABLE)) return super.use(level, player, hand);
+        // The armed pour owns this click: PASS is what lets the cycle start, and both sides have to answer the same
+        // way or the client would close its own copy of it.
+        if (ItemUseCycles.current(player) != null) return InteractionResult.PASS;
         if (!(player instanceof ServerPlayer)) return InteractionResult.SUCCESS;
         SpiritSource source = SpiritSource.of(player);
         if (player.isShiftKeyDown()) {
@@ -58,13 +65,6 @@ public class TalismanItem extends Item implements UseItemAuraAccess {
             return InteractionResult.SUCCESS_SERVER;
         }
         return TalismanService.invokeOnUse(source, stack) ? InteractionResult.SUCCESS_SERVER : InteractionResult.FAIL;
-    }
-
-    // Open-ended like a crossbow's: the default Consumable duration would end the cycle the moment the carrier
-    // filled, and the client would restart it while the button is still down. canPourInto ends the pour, not the clock.
-    @Override
-    public int getUseDuration(@NonNull ItemStack stack, @NonNull LivingEntity entity) {
-        return APPROXIMATELY_INFINITE_USE_DURATION;
     }
 
     @Override

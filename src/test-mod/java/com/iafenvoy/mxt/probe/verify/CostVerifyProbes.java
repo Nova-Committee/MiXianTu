@@ -1,24 +1,27 @@
 package com.iafenvoy.mxt.probe.verify;
+import com.iafenvoy.saturn.registry.SaturnResourceKeys;
+import com.iafenvoy.saturn.registry.SaturnAttachments;
+import com.iafenvoy.saturn.data.context.Context;
+import com.iafenvoy.saturn.runtime.resulting.Failure;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
-import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
+import com.iafenvoy.saturn.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.data.aura.Aura;
-import com.iafenvoy.mxt.data.cost.Cost;
-import com.iafenvoy.mxt.data.cost.CostPayment;
+import com.iafenvoy.saturn.data.cost.Cost;
+import com.iafenvoy.saturn.data.cost.CostPayment;
 import com.iafenvoy.mxt.data.cost.Costs;
 import com.iafenvoy.mxt.data.cost.builtin.AuraCost;
-import com.iafenvoy.mxt.data.cost.context.CostContext;
-import com.iafenvoy.mxt.data.cost.context.CostOrigins;
-import com.iafenvoy.mxt.data.resource.Resource;
+import com.iafenvoy.saturn.data.cost.context.CostContext;
+import com.iafenvoy.saturn.data.cost.context.CostOrigins;
+import com.iafenvoy.saturn.data.resource.Resource;
 import com.iafenvoy.mxt.probe.Probe;
 import com.iafenvoy.mxt.probe.ProbeContext;
 import com.iafenvoy.mxt.probe.ProbeDefinitions;
-import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.runtime.resulting.failures.CostFailure;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
-import com.iafenvoy.mxt.util.formula.number.Constant;
+import com.iafenvoy.saturn.runtime.resulting.failures.CostFailure;
+import com.iafenvoy.saturn.util.formula.FormulaContext;
+import com.iafenvoy.saturn.util.formula.number.Constant;
 import com.mojang.serialization.JsonOps;
 import net.minecraft.core.Holder;
 import net.minecraft.core.RegistryAccess;
@@ -51,8 +54,8 @@ public final class CostVerifyProbes {
     // attachment, which is the ordinary entity path.
     private static String verifyCostPayment(ProbeContext context) {
         RegistryAccess registries = context.registries();
-        Holder<Resource> probe = context.require(MxtResourceKeys.RESOURCE, ProbeDefinitions.id("trigger_probe"));
-        Holder<Resource> qi = context.require(MxtResourceKeys.RESOURCE, ProbeDefinitions.QI);
+        Holder<Resource> probe = context.require(SaturnResourceKeys.RESOURCE, ProbeDefinitions.id("trigger_probe"));
+        Holder<Resource> qi = context.require(SaturnResourceKeys.RESOURCE, ProbeDefinitions.QI);
         ResourceHolderAttachment account = new ResourceHolderAttachment();
         account.set(probe, 100.0D, 0.0D, 10_000.0D, -1L, "probe");
         CostContext costs = CostContext.account(account, null, FormulaContext.of(context.player()), CostOrigins.SCRIPT);
@@ -90,7 +93,7 @@ public final class CostVerifyProbes {
         if (invalid.isSuccess() || invalid.failure() != CostFailure.INVALID_AMOUNT)
             return "a zero amount read as " + invalid.failure();
 
-        ResourceHolderAttachment personal = context.player().getData(MxtAttachments.RESOURCE_HOLDER);
+        ResourceHolderAttachment personal = context.player().getData(SaturnAttachments.RESOURCE_HOLDER);
         double previous = personal.get(probe);
         personal.set(probe, 10.0D, 0.0D, 10_000.0D, -1L, "probe");
         CostPayment.PaymentResult onPlayer = CostPayment.pay(decodeCosts(registries,

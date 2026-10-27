@@ -2,20 +2,20 @@ package com.iafenvoy.mxt.item;
 
 import com.iafenvoy.mxt.api.AuraAccess;
 import com.iafenvoy.mxt.api.ItemAuraAccess;
-import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.item.ResourceCapacityComponent;
 import com.iafenvoy.mxt.data.item.ResourceContainerComponent;
-import com.iafenvoy.mxt.data.resource.Resource;
-import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.runtime.resource.ResourceService;
-import com.iafenvoy.mxt.runtime.resource.ResourceService.Result;
 import com.iafenvoy.mxt.runtime.spirit.AuraTransfers;
 import com.iafenvoy.mxt.runtime.spirit.SpiritChargeService;
-import com.iafenvoy.mxt.util.TooltipText;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
+import com.iafenvoy.saturn.attachment.ResourceHolderAttachment;
+import com.iafenvoy.saturn.data.resource.Resource;
+import com.iafenvoy.saturn.registry.SaturnAttachments;
+import com.iafenvoy.saturn.runtime.resource.ResourceService;
+import com.iafenvoy.saturn.runtime.resource.ResourceService.Result;
+import com.iafenvoy.saturn.util.TooltipText;
+import com.iafenvoy.saturn.util.formula.FormulaContext;
 import it.unimi.dsi.fastutil.objects.Object2DoubleMap;
 import it.unimi.dsi.fastutil.objects.Object2DoubleOpenHashMap;
 import net.minecraft.ChatFormatting;
@@ -78,7 +78,7 @@ public final class SpiritVesselItem extends Item implements ItemAuraAccess {
         ResourceContainerComponent container = stack.getOrDefault(MxtDataComponents.RESOURCE_CONTAINER, ResourceContainerComponent.EMPTY);
         if (container.values().isEmpty()) return false;
         Object2DoubleMap<Holder<Resource>> values = new Object2DoubleOpenHashMap<>(container.values());
-        ResourceHolderAttachment account = holder.getData(MxtAttachments.RESOURCE_HOLDER);
+        ResourceHolderAttachment account = holder.getData(SaturnAttachments.RESOURCE_HOLDER);
         boolean changed = false;
         for (Object2DoubleMap.Entry<Holder<Resource>> entry : values.object2DoubleEntrySet()) {
             double wanted = Math.min(entry.getDoubleValue(), POUR_PER_TICK);

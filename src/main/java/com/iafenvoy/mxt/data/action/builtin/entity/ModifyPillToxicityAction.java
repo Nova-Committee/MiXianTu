@@ -1,11 +1,11 @@
 package com.iafenvoy.mxt.data.action.builtin.entity;
 
-import com.iafenvoy.mxt.data.action.EntityAction;
-import com.iafenvoy.mxt.data.context.action.EntityActionContext;
 import com.iafenvoy.mxt.runtime.item.PillService;
 import com.iafenvoy.mxt.runtime.item.PillService.ModifyMode;
-import com.iafenvoy.mxt.util.formula.NumberProvider;
-import com.iafenvoy.mxt.util.formula.number.Constant;
+import com.iafenvoy.saturn.data.action.EntityAction;
+import com.iafenvoy.saturn.data.context.action.EntityActionContext;
+import com.iafenvoy.saturn.util.formula.NumberProvider;
+import com.iafenvoy.saturn.util.formula.number.Constant;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;

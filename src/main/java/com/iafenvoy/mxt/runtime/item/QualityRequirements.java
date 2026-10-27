@@ -3,7 +3,7 @@ package com.iafenvoy.mxt.runtime.item;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.data.quality.QualityLadders;
 import com.iafenvoy.mxt.data.quality.QualityRequirement;
-import com.iafenvoy.mxt.util.ClientLevelAccess;
+import com.iafenvoy.saturn.util.ClientLevelAccess;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.server.MinecraftServer;

@@ -1,25 +1,26 @@
 package com.iafenvoy.mxt.runtime.progression;
 
 import com.iafenvoy.mxt.MiXianTu;
-import com.iafenvoy.mxt.data.ability.Ability;
-import com.iafenvoy.mxt.data.condition.AlwaysCondition;
-import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.data.progression.Progression;
 import com.iafenvoy.mxt.data.progression.ProgressionConfig;
 import com.iafenvoy.mxt.data.progression.ProgressionOwner;
-import com.iafenvoy.mxt.data.resource.Resource;
-import com.iafenvoy.mxt.data.trigger.TriggerContext;
-import com.iafenvoy.mxt.data.trigger.TriggerSignals;
-import com.iafenvoy.mxt.registry.MxtAttachments;
-import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.registry.cache.RegistryCaches;
-import com.iafenvoy.mxt.runtime.trigger.TriggerDispatcher;
-import com.iafenvoy.mxt.util.HolderHelper;
-import com.iafenvoy.mxt.util.codec.RegistryCodecs;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
-import com.iafenvoy.mxt.util.math.CompareOperation;
-import com.iafenvoy.mxt.util.profiling.ProfilerScope;
-import com.iafenvoy.mxt.util.profiling.ServerProfiling;
+import com.iafenvoy.mxt.runtime.MxtProfilerSources;
+import com.iafenvoy.saturn.data.ability.Ability;
+import com.iafenvoy.saturn.data.condition.AlwaysCondition;
+import com.iafenvoy.saturn.data.condition.EntityCondition;
+import com.iafenvoy.saturn.data.resource.Resource;
+import com.iafenvoy.saturn.data.trigger.TriggerContext;
+import com.iafenvoy.saturn.data.trigger.TriggerSignals;
+import com.iafenvoy.saturn.profiling.ProfilerScope;
+import com.iafenvoy.saturn.profiling.ServerProfiling;
+import com.iafenvoy.saturn.registry.SaturnAttachments;
+import com.iafenvoy.saturn.registry.SaturnResourceKeys;
+import com.iafenvoy.saturn.runtime.trigger.TriggerDispatcher;
+import com.iafenvoy.saturn.util.HolderHelper;
+import com.iafenvoy.saturn.util.codec.RegistryCodecs;
+import com.iafenvoy.saturn.util.formula.FormulaContext;
+import com.iafenvoy.saturn.util.math.CompareOperation;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.resources.Identifier;
@@ -54,7 +55,7 @@ public final class ProgressionService {
     }
 
     public static <T extends ProgressionOwner> boolean set(ProgressionOwners.Owner<T> owner, Holder<Progression> level) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.PROGRESSION)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.PROGRESSION)) {
             return owner.levels().set(owner.holder(), level);
         }
     }
@@ -62,13 +63,13 @@ public final class ProgressionService {
     // One step along the owner's own chain; both bounds and the record itself are the holder's business, so a
     // caller only says which direction.
     public static <T extends ProgressionOwner> boolean promote(ProgressionOwners.Owner<T> owner) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.PROGRESSION)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.PROGRESSION)) {
             return owner.levels().promote(owner.holder());
         }
     }
 
     public static <T extends ProgressionOwner> boolean demote(ProgressionOwners.Owner<T> owner) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.PROGRESSION)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.PROGRESSION)) {
             return owner.levels().demote(owner.holder());
         }
     }
@@ -91,7 +92,7 @@ public final class ProgressionService {
         } catch (RuntimeException exception) {
             return Optional.empty();
         }
-        double have = entity.getExistingData(MxtAttachments.RESOURCE_HOLDER)
+        double have = entity.getExistingData(SaturnAttachments.RESOURCE_HOLDER)
                 .map(holder -> holder.get(mastery)).orElse(0.0D);
         return Optional.of(new ProgressionMastery(have, required, HolderHelper.id(mastery)));
     }
@@ -108,7 +109,7 @@ public final class ProgressionService {
         if (current == null) return List.of();
         return owner.levels().entrySet().stream()
                 .filter(entry -> RegistryCaches.PROGRESSION_CHAIN.compare(CompareOperation.GREATER_THAN_OR_EQUAL, current, entry.getKey()))
-                .flatMap(entry -> RegistryCodecs.resolve(entry.getValue().abilities(), access, MxtResourceKeys.ABILITY))
+                .flatMap(entry -> RegistryCodecs.resolve(entry.getValue().abilities(), access, SaturnResourceKeys.ABILITY))
                 .distinct()
                 .toList();
     }

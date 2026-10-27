@@ -2,7 +2,7 @@ package com.iafenvoy.mxt.data.curse;
 
 import com.iafenvoy.mxt.data.action.builtin.entity.ApplyCurseAction;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
-import com.iafenvoy.mxt.util.DefinitionText;
+import com.iafenvoy.saturn.util.DefinitionText;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.ChatFormatting;

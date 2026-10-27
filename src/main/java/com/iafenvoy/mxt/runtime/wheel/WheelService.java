@@ -2,27 +2,27 @@ package com.iafenvoy.mxt.runtime.wheel;
 
 import com.iafenvoy.mxt.api.WheelEntryKind;
 import com.iafenvoy.mxt.api.WheelSource;
-import com.iafenvoy.mxt.attachment.AbilityAttachment;
-import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
-import com.iafenvoy.mxt.data.ability.Ability;
-import com.iafenvoy.mxt.data.ability.Togglable;
 import com.iafenvoy.mxt.data.creature.ContractBehavior;
 import com.iafenvoy.mxt.data.creature.ContractBehaviors;
-import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
-import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.runtime.ability.AbilityActivationService;
-import com.iafenvoy.mxt.runtime.ability.AbilityService;
 import com.iafenvoy.mxt.runtime.creature.ContractBehaviorService;
 import com.iafenvoy.mxt.runtime.creature.ContractBells;
-import com.iafenvoy.mxt.runtime.resulting.Failure;
-import com.iafenvoy.mxt.runtime.resulting.Result;
-import com.iafenvoy.mxt.runtime.resulting.failures.AbilityFailure;
 import com.iafenvoy.mxt.runtime.resulting.failures.ContractFailure;
 import com.iafenvoy.mxt.runtime.spirit.SpiritBurstService;
-import com.iafenvoy.mxt.util.HolderHelper;
-import com.iafenvoy.mxt.util.OptionalBoolean;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
+import com.iafenvoy.saturn.attachment.AbilityAttachment;
+import com.iafenvoy.saturn.attachment.ResourceHolderAttachment;
+import com.iafenvoy.saturn.data.ability.Ability;
+import com.iafenvoy.saturn.data.ability.Togglable;
+import com.iafenvoy.saturn.registry.SaturnAttachments;
+import com.iafenvoy.saturn.registry.SaturnResourceKeys;
+import com.iafenvoy.saturn.runtime.ability.AbilityActivationService;
+import com.iafenvoy.saturn.runtime.ability.AbilityService;
+import com.iafenvoy.saturn.runtime.resulting.Failure;
+import com.iafenvoy.saturn.runtime.resulting.Result;
+import com.iafenvoy.saturn.runtime.resulting.failures.AbilityFailure;
+import com.iafenvoy.saturn.util.HolderHelper;
+import com.iafenvoy.saturn.util.OptionalBoolean;
+import com.iafenvoy.saturn.util.formula.FormulaContext;
 import com.mojang.logging.LogUtils;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup;
@@ -92,7 +92,7 @@ public final class WheelService {
     // what lets a screen re-send its intent without watching the state.
     public static boolean directed(ServerPlayer player, WheelSource source, Identifier id, boolean wanted) {
         HolderLookup.Provider access = player.level().registryAccess();
-        Holder<Ability> ability = MxtDatapackRegistries.holder(access, MxtResourceKeys.ABILITY, id).orElse(null);
+        Holder<Ability> ability = MxtDatapackRegistries.holder(access, SaturnResourceKeys.ABILITY, id).orElse(null);
         if (ability == null) {
             LOGGER.info("Dropping the directed wheel request {} from {}: the ability is no longer registered",
                     id, player.getGameProfile().name());
@@ -124,7 +124,7 @@ public final class WheelService {
     // switch, a container and a cast are told apart; anything else keeps the plain cast path.
     public static boolean press(ServerPlayer player, WheelSource source, Identifier id) {
         HolderLookup.Provider access = player.level().registryAccess();
-        Holder<Ability> ability = MxtDatapackRegistries.holder(access, MxtResourceKeys.ABILITY, id).orElse(null);
+        Holder<Ability> ability = MxtDatapackRegistries.holder(access, SaturnResourceKeys.ABILITY, id).orElse(null);
         if (ability == null) {
             // The same race WheelSources#offers exists for, one step later: registered when the source was read
             // and gone by the time the press arrived, which is rare enough to be worth saying rather than dropping.
@@ -147,8 +147,8 @@ public final class WheelService {
     // The fallback for an entry whose ability is not pressable at all, which a saved layout can name even though
     // the pool it was picked from only offers pressable ones.
     private static boolean use(ServerPlayer player, Holder<Ability> ability) {
-        AbilityAttachment abilities = player.getData(MxtAttachments.ABILITY_HOLDER);
-        ResourceHolderAttachment resources = player.getData(MxtAttachments.RESOURCE_HOLDER);
+        AbilityAttachment abilities = player.getData(SaturnAttachments.ABILITY_HOLDER);
+        ResourceHolderAttachment resources = player.getData(SaturnAttachments.RESOURCE_HOLDER);
         AbilityService.UseResult result = AbilityService.use(ability, player, abilities, resources,
                 player.level().getGameTime(), FormulaContext.of(player));
         if (result.failure() == null) return true;

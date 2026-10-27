@@ -2,8 +2,8 @@ package com.iafenvoy.mxt.attachment;
 
 import com.iafenvoy.mxt.data.cultivation.Technique;
 import com.iafenvoy.mxt.data.progression.ProgressionHolder;
-import com.iafenvoy.mxt.util.AbstractChangeTrackable;
-import com.iafenvoy.mxt.util.codec.CollectionCodecs;
+import com.iafenvoy.saturn.util.AbstractChangeTrackable;
+import com.iafenvoy.saturn.util.codec.CollectionCodecs;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;

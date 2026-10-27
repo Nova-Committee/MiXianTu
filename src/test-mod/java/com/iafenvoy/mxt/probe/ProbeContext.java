@@ -1,4 +1,7 @@
 package com.iafenvoy.mxt.probe;
+import com.iafenvoy.saturn.data.context.Context;
+import com.iafenvoy.saturn.runtime.resulting.Failure;
+import com.iafenvoy.saturn.runtime.resulting.Failures;
 
 import com.iafenvoy.mxt.testmod.MxtTestMod;
 import com.mojang.authlib.GameProfile;
@@ -71,7 +74,11 @@ public final class ProbeContext {
             probe.body().accept(context);
         } catch (RuntimeException failure) {
             LOGGER.error("probe {} threw unexpectedly", probe.id(), failure);
-            throw failure;
+            // An assertion failure already carries a description. Any other exception reaches the runner as an
+            // unknown error, which this version cannot even format, so it is reported as a failed check instead.
+            if ("GameTestAssertException".equals(failure.getClass().getSimpleName())) throw failure;
+            helper.fail(Component.literal("probe " + probe.id() + " threw "
+                    + failure.getClass().getSimpleName() + ": " + failure.getMessage()));
         }
         if (!context.deferred) context.done();
     }

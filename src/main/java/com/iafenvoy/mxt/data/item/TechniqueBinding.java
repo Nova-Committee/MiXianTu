@@ -1,9 +1,9 @@
 package com.iafenvoy.mxt.data.item;
 
-import com.iafenvoy.mxt.data.DescribedEntry;
-import com.iafenvoy.mxt.data.condition.EntityCondition;
 import com.iafenvoy.mxt.data.cultivation.Technique;
-import com.iafenvoy.mxt.util.matcher.ItemMatcher;
+import com.iafenvoy.saturn.data.DescribedEntry;
+import com.iafenvoy.saturn.data.condition.EntityCondition;
+import com.iafenvoy.saturn.util.matcher.ItemMatcher;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;

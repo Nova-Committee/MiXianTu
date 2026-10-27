@@ -2,11 +2,11 @@ package com.iafenvoy.mxt.data.condition.builtin.block;
 
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.aura.AuraRequirement;
-import com.iafenvoy.mxt.data.condition.BlockCondition;
-import com.iafenvoy.mxt.data.context.condition.BlockConditionContext;
 import com.iafenvoy.mxt.runtime.world.AuraResult;
 import com.iafenvoy.mxt.runtime.world.AuraService;
-import com.iafenvoy.mxt.util.codec.CollectionCodecs;
+import com.iafenvoy.saturn.data.condition.BlockCondition;
+import com.iafenvoy.saturn.data.context.condition.BlockConditionContext;
+import com.iafenvoy.saturn.util.codec.CollectionCodecs;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.Holder;
 import org.jspecify.annotations.NonNull;

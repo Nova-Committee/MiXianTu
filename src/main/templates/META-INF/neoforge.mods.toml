@@ -51,6 +51,13 @@ ordering = "NONE"
 side = "BOTH"
 
 [[dependencies.${mod_id}]]
+modId = "saturn"
+type = "required"
+versionRange = "[1.0-beta.2,)"
+ordering = "AFTER"
+side = "BOTH"
+
+[[dependencies.${mod_id}]]
 modId = "curios"
 type = "required"
 versionRange = "[${curios_version},)"

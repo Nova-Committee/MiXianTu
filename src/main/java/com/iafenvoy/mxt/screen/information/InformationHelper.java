@@ -1,6 +1,6 @@
 package com.iafenvoy.mxt.screen.information;
 
-import com.iafenvoy.mxt.util.DefinitionText;
+import com.iafenvoy.saturn.util.DefinitionText;
 import net.minecraft.core.Holder;
 
 import java.util.Collection;

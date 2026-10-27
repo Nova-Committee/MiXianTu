@@ -1,10 +1,10 @@
 package com.iafenvoy.mxt.data.item;
 
-import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
-import com.iafenvoy.mxt.util.DefinitionText;
-import com.iafenvoy.mxt.util.TooltipText;
-import com.iafenvoy.mxt.util.codec.CollectionCodecs;
+import com.iafenvoy.saturn.data.resource.Resource;
+import com.iafenvoy.saturn.util.DefinitionText;
+import com.iafenvoy.saturn.util.TooltipText;
+import com.iafenvoy.saturn.util.codec.CollectionCodecs;
 import com.mojang.serialization.Codec;
 import it.unimi.dsi.fastutil.objects.Object2DoubleMap;
 import it.unimi.dsi.fastutil.objects.Object2DoubleMaps;

@@ -2,8 +2,8 @@ package com.iafenvoy.mxt.render.effect;
 
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.config.MxtClientConfig;
-import com.iafenvoy.mxt.util.ClientRenderResources;
-import com.iafenvoy.mxt.util.CloseableResources;
+import com.iafenvoy.saturn.util.ClientRenderResources;
+import com.iafenvoy.saturn.util.CloseableResources;
 import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.systems.RenderPass;
 import com.mojang.blaze3d.systems.RenderSystem;

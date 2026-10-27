@@ -1,23 +1,23 @@
 package com.iafenvoy.mxt.runtime.artifact;
 
-import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.data.artifact.Artifact;
 import com.iafenvoy.mxt.data.aura.Aura;
-import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.event.CollectHoldBindingsEvent;
-import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactService.RefineResult;
 import com.iafenvoy.mxt.runtime.hold.HoldLookup;
 import com.iafenvoy.mxt.runtime.hold.HoldService;
-import com.iafenvoy.mxt.runtime.resource.ResourceService;
-import com.iafenvoy.mxt.runtime.resource.ResourceService.Result;
 import com.iafenvoy.mxt.runtime.spirit.AuraTransfers;
-import com.iafenvoy.mxt.util.DefinitionText;
-import com.iafenvoy.mxt.util.HolderHelper;
-import com.iafenvoy.mxt.util.TooltipText;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
+import com.iafenvoy.saturn.attachment.ResourceHolderAttachment;
+import com.iafenvoy.saturn.data.resource.Resource;
+import com.iafenvoy.saturn.registry.SaturnAttachments;
+import com.iafenvoy.saturn.runtime.resource.ResourceService;
+import com.iafenvoy.saturn.runtime.resource.ResourceService.Result;
+import com.iafenvoy.saturn.util.DefinitionText;
+import com.iafenvoy.saturn.util.HolderHelper;
+import com.iafenvoy.saturn.util.TooltipText;
+import com.iafenvoy.saturn.util.formula.FormulaContext;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
@@ -174,7 +174,7 @@ public final class ArtifactHoldService {
         FormulaContext formula = FormulaContext.of(holder);
         // Read-only: a holder with no resource attachment has nothing to pay with, which is the same answer as an
         // empty pool, and asking must not create one on a player who never touched a resource.
-        ResourceHolderAttachment resources = holder.getExistingData(MxtAttachments.RESOURCE_HOLDER).orElse(null);
+        ResourceHolderAttachment resources = holder.getExistingData(SaturnAttachments.RESOURCE_HOLDER).orElse(null);
         for (Holder<Aura> aura : artifact.spiritCapacity().keySet()) {
             double room = ArtifactService.capacity(access, stack, aura, 0.0D, formula) - ArtifactService.stored(stack, aura);
             if (room <= 0.0D) continue;
@@ -222,7 +222,7 @@ public final class ArtifactHoldService {
     // what was really paid.
     public static double pour(LivingEntity holder, ItemStack stack, Provider access, Artifact artifact) {
         FormulaContext formula = FormulaContext.of(holder);
-        ResourceHolderAttachment resources = holder.getData(MxtAttachments.RESOURCE_HOLDER);
+        ResourceHolderAttachment resources = holder.getData(SaturnAttachments.RESOURCE_HOLDER);
         double moved = 0.0D;
         for (Holder<Aura> aura : artifact.spiritCapacity().keySet()) {
             double room = ArtifactService.capacity(access, stack, aura, 0.0D, formula) - ArtifactService.stored(stack, aura);

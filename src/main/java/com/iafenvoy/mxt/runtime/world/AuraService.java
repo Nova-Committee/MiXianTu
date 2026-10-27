@@ -7,21 +7,22 @@ import com.iafenvoy.mxt.data.aura.AuraValue;
 import com.iafenvoy.mxt.data.aura.AuraZone;
 import com.iafenvoy.mxt.data.aura.AuraZone.*;
 import com.iafenvoy.mxt.data.aura.BlockAura;
-import com.iafenvoy.mxt.data.condition.AlwaysCondition;
 import com.iafenvoy.mxt.data.formation.Formation;
 import com.iafenvoy.mxt.data.formation.builtin.AuraFormationAction;
 import com.iafenvoy.mxt.event.AuraZoneEvent;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.runtime.MxtProfilerSources;
 import com.iafenvoy.mxt.runtime.world.AuraQueryCache.AuraLocation;
 import com.iafenvoy.mxt.runtime.world.AuraQueryCache.AvailabilityKey;
 import com.iafenvoy.mxt.runtime.world.AuraResult.SourceKind;
-import com.iafenvoy.mxt.util.MiscUtil;
-import com.iafenvoy.mxt.util.codec.RegistryCodecs;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
-import com.iafenvoy.mxt.util.profiling.ProfilerScope;
-import com.iafenvoy.mxt.util.profiling.ServerProfiling;
+import com.iafenvoy.saturn.data.condition.AlwaysCondition;
+import com.iafenvoy.saturn.profiling.ProfilerScope;
+import com.iafenvoy.saturn.profiling.ServerProfiling;
+import com.iafenvoy.saturn.util.MiscUtil;
+import com.iafenvoy.saturn.util.codec.RegistryCodecs;
+import com.iafenvoy.saturn.util.formula.FormulaContext;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap.Entry;
 import net.minecraft.core.*;
 import net.minecraft.core.Holder.Reference;
@@ -48,7 +49,7 @@ public final class AuraService {
     }
 
     public static AuraResult getPositionAura(Level level, BlockPos pos) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.AURA_QUERY)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.AURA_QUERY)) {
             // The two nanoTime calls are only paid when the diagnostic timer is on; the query counter itself
             // is unconditional because it costs a single increment.
             boolean timing = MxtServerConfig.INSTANCE.aura.queryStats.getValue();
@@ -132,7 +133,7 @@ public final class AuraService {
     // Environmental concentration only: the mutable chunk stock is deliberately excluded, so stored aura
     // cannot appear to fluctuate with the environment.
     public static AuraResult getSensedAura(Level level, BlockPos pos) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.AURA_QUERY)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.AURA_QUERY)) {
             AuraResult resolved = getPositionAura(level, pos);
             Holder<AuraZone> zone = resolved.source();
             if (zone == null) return resolved.copy(Map.of());
@@ -154,7 +155,7 @@ public final class AuraService {
 
     // All-or-nothing: nothing is consumed unless every requested amount is available.
     public static boolean consume(Level level, BlockPos pos, Map<Holder<Aura>, Double> costs) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.AURA)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.AURA)) {
             if (costs.values().stream().anyMatch(value -> !Double.isFinite(value) || value < 0.0D)) return false;
             LevelChunk chunk = loadedChunk(level, pos);
             return chunk != null && chunk.getData(MxtAttachments.AURA_CHUNK).consume(SectionPos.blockToSectionCoord(pos.getY()), costs);
@@ -163,7 +164,7 @@ public final class AuraService {
 
     // Missing auras are never implicitly created.
     public static void change(Level level, BlockPos pos, Map<Holder<Aura>, Double> amounts) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.AURA)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.AURA)) {
             if (amounts.values().stream().anyMatch(value -> !Double.isFinite(value))) return;
             LevelChunk chunk = loadedChunk(level, pos);
             if (chunk != null)
@@ -172,7 +173,7 @@ public final class AuraService {
     }
 
     public static void initialize(Level level, AuraChunkAttachment chunk, @Nullable Resolved resolved, BlockPos pos) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.AURA)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.AURA)) {
             // A position no zone covers keeps no template, so its chunk holds only what its own block emitters
             // contribute; initializeAuras applies those and marks the chunk initialized either way.
             int minSectionY = level.getMinSectionY();

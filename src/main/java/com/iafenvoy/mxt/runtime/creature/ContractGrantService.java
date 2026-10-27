@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.runtime.creature;
 
 import com.iafenvoy.mxt.data.creature.ContractType;
-import com.iafenvoy.mxt.util.HolderHelper;
+import com.iafenvoy.saturn.util.HolderHelper;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;

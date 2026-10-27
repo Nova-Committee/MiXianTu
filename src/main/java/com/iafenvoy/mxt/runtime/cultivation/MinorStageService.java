@@ -2,14 +2,14 @@ package com.iafenvoy.mxt.runtime.cultivation;
 
 import com.iafenvoy.mxt.attachment.CultivationAttachment;
 import com.iafenvoy.mxt.attachment.MinorStageAttachment;
-import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.cultivation.RealmStage;
 import com.iafenvoy.mxt.registry.MxtAttachments;
-import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.runtime.ability.AbilityGrantService;
-import com.iafenvoy.mxt.util.codec.RegistryCodecs;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
+import com.iafenvoy.saturn.data.ability.Ability;
+import com.iafenvoy.saturn.registry.SaturnResourceKeys;
+import com.iafenvoy.saturn.runtime.ability.AbilityGrantService;
+import com.iafenvoy.saturn.util.codec.RegistryCodecs;
+import com.iafenvoy.saturn.util.formula.FormulaContext;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.world.entity.LivingEntity;
@@ -50,7 +50,7 @@ public final class MinorStageService {
         if (reached < 0) return List.of();
         return stage.value().minorStageAbilities().stream()
                 .filter(entry -> entry.stage() <= reached)
-                .flatMap(entry -> RegistryCodecs.resolve(entry.abilities(), access, MxtResourceKeys.ABILITY))
+                .flatMap(entry -> RegistryCodecs.resolve(entry.abilities(), access, SaturnResourceKeys.ABILITY))
                 .distinct()
                 .toList();
     }

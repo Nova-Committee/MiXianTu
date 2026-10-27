@@ -1,18 +1,23 @@
 package com.iafenvoy.mxt.probe.verify;
+import com.iafenvoy.saturn.registry.SaturnResourceKeys;
+import com.iafenvoy.saturn.registry.SaturnAttachments;
+import com.iafenvoy.saturn.data.ability.Ability;
+import com.iafenvoy.saturn.data.context.Context;
+import com.iafenvoy.saturn.data.cost.Cost;
+import com.iafenvoy.saturn.runtime.resulting.Failure;
 
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.api.ItemAuraAccess;
-import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
+import com.iafenvoy.saturn.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.aura.SpiritStorageComponent;
 import com.iafenvoy.mxt.data.item.TalismanComponent;
 import com.iafenvoy.mxt.data.item.TalismanComponent.TriggerMode;
-import com.iafenvoy.mxt.data.resource.Resource;
+import com.iafenvoy.saturn.data.resource.Resource;
 import com.iafenvoy.mxt.data.talisman.Talisman;
 import com.iafenvoy.mxt.probe.Probe;
 import com.iafenvoy.mxt.probe.ProbeContext;
 import com.iafenvoy.mxt.probe.ProbeDefinitions;
-import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.registry.MxtItems;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
@@ -87,8 +92,8 @@ public final class TalismanVerifyProbes {
         if (TalismanService.durability(patched) != 3)
             return "a stack carrying its own max_damage was read off its inscriptions instead";
 
-        ResourceHolderAttachment resources = context.player().getData(MxtAttachments.RESOURCE_HOLDER);
-        Holder<Resource> common = context.require(MxtResourceKeys.RESOURCE, mxt("common"));
+        ResourceHolderAttachment resources = context.player().getData(SaturnAttachments.RESOURCE_HOLDER);
+        Holder<Resource> common = context.require(SaturnResourceKeys.RESOURCE, mxt("common"));
         double before = resources.get(common);
         try {
             SpiritSource placed = SpiritSource.placed(context.level(), context.player().position(), context.player());
@@ -127,9 +132,9 @@ public final class TalismanVerifyProbes {
     private static String verifyTalismanLedger(ProbeContext context) {
         ItemStack stack = carrier(context.require(MxtResourceKeys.TALISMAN, ProbeDefinitions.id("graded_sigil")));
 
-        ResourceHolderAttachment resources = context.player().getData(MxtAttachments.RESOURCE_HOLDER);
-        Holder<Resource> probe = context.require(MxtResourceKeys.RESOURCE, ProbeDefinitions.id("trigger_probe"));
-        Holder<Resource> common = context.require(MxtResourceKeys.RESOURCE, mxt("common"));
+        ResourceHolderAttachment resources = context.player().getData(SaturnAttachments.RESOURCE_HOLDER);
+        Holder<Resource> probe = context.require(SaturnResourceKeys.RESOURCE, ProbeDefinitions.id("trigger_probe"));
+        Holder<Resource> common = context.require(SaturnResourceKeys.RESOURCE, mxt("common"));
         double probeBefore = resources.get(probe);
         double commonBefore = resources.get(common);
         try {
@@ -163,9 +168,9 @@ public final class TalismanVerifyProbes {
     // one written next to a blocked one does not run either.
     private static String verifyTalismanGate(ProbeContext context) {
         ItemStack stack = carrier(context.require(MxtResourceKeys.TALISMAN, ProbeDefinitions.id("gated_sigil")));
-        ResourceHolderAttachment resources = context.player().getData(MxtAttachments.RESOURCE_HOLDER);
-        Holder<Resource> probe = context.require(MxtResourceKeys.RESOURCE, ProbeDefinitions.id("trigger_probe"));
-        Holder<Resource> common = context.require(MxtResourceKeys.RESOURCE, mxt("common"));
+        ResourceHolderAttachment resources = context.player().getData(SaturnAttachments.RESOURCE_HOLDER);
+        Holder<Resource> probe = context.require(SaturnResourceKeys.RESOURCE, ProbeDefinitions.id("trigger_probe"));
+        Holder<Resource> common = context.require(SaturnResourceKeys.RESOURCE, mxt("common"));
         double probeBefore = resources.get(probe);
         double commonBefore = resources.get(common);
         try {
@@ -218,8 +223,8 @@ public final class TalismanVerifyProbes {
         ItemStack stack = carrier(context.require(MxtResourceKeys.TALISMAN, ProbeDefinitions.id("buffer_sigil")));
         if (!(stack.getItem() instanceof ItemAuraAccess access)) return "a talisman carrier no longer stores aura";
         Holder<Aura> aura = context.require(MxtResourceKeys.AURA, ProbeDefinitions.SPIRIT_POWER);
-        Holder<Resource> resource = context.require(MxtResourceKeys.RESOURCE, ProbeDefinitions.SPIRIT_POWER);
-        ResourceHolderAttachment resources = context.player().getData(MxtAttachments.RESOURCE_HOLDER);
+        Holder<Resource> resource = context.require(SaturnResourceKeys.RESOURCE, ProbeDefinitions.SPIRIT_POWER);
+        ResourceHolderAttachment resources = context.player().getData(SaturnAttachments.RESOURCE_HOLDER);
         double before = resources.get(resource);
         try {
             resources.set(resource, 0.0D, 0.0D, 100_000.0D, -1L, "closure");
@@ -254,8 +259,8 @@ public final class TalismanVerifyProbes {
         ItemStack stack = carrier(context.require(MxtResourceKeys.TALISMAN, ProbeDefinitions.id("refund_sigil")));
         if (!(stack.getItem() instanceof ItemAuraAccess access)) return "a talisman carrier no longer stores aura";
         Holder<Aura> aura = context.require(MxtResourceKeys.AURA, ProbeDefinitions.SOUL_POWER);
-        Holder<Resource> resource = context.require(MxtResourceKeys.RESOURCE, ProbeDefinitions.SOUL_POWER);
-        ResourceHolderAttachment resources = context.player().getData(MxtAttachments.RESOURCE_HOLDER);
+        Holder<Resource> resource = context.require(SaturnResourceKeys.RESOURCE, ProbeDefinitions.SOUL_POWER);
+        ResourceHolderAttachment resources = context.player().getData(SaturnAttachments.RESOURCE_HOLDER);
         double before = resources.get(resource);
         try {
             resources.set(resource, 0.0D, 0.0D, 100_000.0D, -1L, "closure");

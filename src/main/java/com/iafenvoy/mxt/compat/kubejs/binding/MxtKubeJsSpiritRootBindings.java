@@ -2,7 +2,7 @@ package com.iafenvoy.mxt.compat.kubejs.binding;
 
 import com.iafenvoy.mxt.compat.kubejs.MxtKubeJsApi;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationToggleService;
-import com.iafenvoy.mxt.runtime.resulting.Result;
+import com.iafenvoy.saturn.runtime.resulting.Result;
 import dev.latvian.mods.kubejs.typings.Info;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Entity;

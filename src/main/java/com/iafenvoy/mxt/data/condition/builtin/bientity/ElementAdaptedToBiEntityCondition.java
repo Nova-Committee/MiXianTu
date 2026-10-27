@@ -1,9 +1,9 @@
 package com.iafenvoy.mxt.data.condition.builtin.bientity;
 
-import com.iafenvoy.mxt.data.condition.BiEntityCondition;
-import com.iafenvoy.mxt.data.context.condition.BiEntityConditionContext;
 import com.iafenvoy.mxt.data.cultivation.Element;
 import com.iafenvoy.mxt.runtime.cultivation.Elements;
+import com.iafenvoy.saturn.data.condition.BiEntityCondition;
+import com.iafenvoy.saturn.data.context.condition.BiEntityConditionContext;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.Holder;
 import org.jspecify.annotations.NonNull;

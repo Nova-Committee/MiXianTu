@@ -3,7 +3,7 @@ package com.iafenvoy.mxt.attachment;
 import com.iafenvoy.mxt.data.creature.ContractBehavior;
 import com.iafenvoy.mxt.data.creature.ContractBehaviors;
 import com.iafenvoy.mxt.data.creature.ContractType;
-import com.iafenvoy.mxt.util.AbstractChangeTrackable;
+import com.iafenvoy.saturn.util.AbstractChangeTrackable;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;

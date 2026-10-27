@@ -1,8 +1,8 @@
 package com.iafenvoy.mxt.testmod;
+import com.iafenvoy.saturn.registry.SaturnRegistries;
 
-import com.iafenvoy.mxt.data.action.EntityAction;
-import com.iafenvoy.mxt.data.context.action.EntityActionContext;
-import com.iafenvoy.mxt.registry.MxtRegistries;
+import com.iafenvoy.saturn.data.action.EntityAction;
+import com.iafenvoy.saturn.data.context.action.EntityActionContext;
 import com.iafenvoy.mxt.runtime.item.ItemBindingService;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.world.entity.LivingEntity;
@@ -17,7 +17,7 @@ import org.jspecify.annotations.NonNull;
  */
 public final class PillProbeActions {
     public static final DeferredRegister<MapCodec<? extends EntityAction>> REGISTRY =
-            DeferredRegister.create(MxtRegistries.ENTITY_ACTION_TYPE, MxtTestMod.MOD_ID);
+            DeferredRegister.create(SaturnRegistries.ENTITY_ACTION_TYPE, MxtTestMod.MOD_ID);
     public static final DeferredHolder<MapCodec<? extends EntityAction>, MapCodec<ReenterPillAction>> REENTER =
             REGISTRY.register("reenter_pill", () -> ReenterPillAction.CODEC);
     public static int calls;

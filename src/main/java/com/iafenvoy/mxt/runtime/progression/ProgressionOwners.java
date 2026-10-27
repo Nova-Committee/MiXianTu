@@ -3,7 +3,7 @@ package com.iafenvoy.mxt.runtime.progression;
 import com.iafenvoy.mxt.data.progression.ProgressionHolder;
 import com.iafenvoy.mxt.data.progression.ProgressionOwner;
 import com.iafenvoy.mxt.event.CollectProgressionOwnersEvent;
-import com.iafenvoy.mxt.util.HolderHelper;
+import com.iafenvoy.saturn.util.HolderHelper;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Entity;

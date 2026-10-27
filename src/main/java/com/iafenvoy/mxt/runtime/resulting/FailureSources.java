@@ -2,16 +2,20 @@ package com.iafenvoy.mxt.runtime.resulting;
 
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.saturn.registry.SaturnResourceKeys;
+import com.iafenvoy.saturn.runtime.resulting.FailureSource;
 import net.minecraft.resources.Identifier;
 
 /**
  * Every source a refusal can name, in one place: the datapack registry whose definitions can refuse, so a module enum
  * points at the same constant the key {@code failure.<namespace>.<path>.<name>} is built from. {@link #COMMON} is the
  * one for a refusal any module can answer with, and it is what the interface defaults to.
+ *
+ * <p>The three Saturn names its own refusals with are repeated here so a content module only ever imports one table.
  */
 public final class FailureSources {
     public static final FailureSource COMMON = new FailureSource(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "common"));
-    public static final FailureSource ABILITY = FailureSource.of(MxtResourceKeys.ABILITY);
+    public static final FailureSource ABILITY = FailureSource.of(SaturnResourceKeys.ABILITY);
     public static final FailureSource ALCHEMY_FURNACE = FailureSource.of(MxtResourceKeys.ALCHEMY_FURNACE);
     public static final FailureSource ARTIFACT = FailureSource.of(MxtResourceKeys.ARTIFACT);
     public static final FailureSource CONTRACT_TYPE = FailureSource.of(MxtResourceKeys.CONTRACT_TYPE);

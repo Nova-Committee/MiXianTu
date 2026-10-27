@@ -1,14 +1,15 @@
 package com.iafenvoy.mxt.probe.artifact;
+import com.iafenvoy.saturn.registry.SaturnResourceKeys;
+import com.iafenvoy.saturn.data.context.Context;
 
-import com.iafenvoy.mxt.data.ability.Ability;
+import com.iafenvoy.saturn.data.ability.Ability;
 import com.iafenvoy.mxt.data.ability.type.StorageAbilityType;
-import com.iafenvoy.mxt.data.storage.DataStorageHolder;
-import com.iafenvoy.mxt.data.storage.builtin.ContainerDataStorage;
+import com.iafenvoy.saturn.data.storage.DataStorageHolder;
+import com.iafenvoy.saturn.data.storage.builtin.ContainerDataStorage;
 import com.iafenvoy.mxt.probe.Probe;
 import com.iafenvoy.mxt.probe.ProbeContext;
 import com.iafenvoy.mxt.probe.ProbeDefinitions;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
-import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactService;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactStorageService;
 import com.iafenvoy.mxt.runtime.item.ItemStorageService;
@@ -41,7 +42,7 @@ public final class ArtifactStorageProbes {
         ArtifactService.refine(jadeStack, player);
         Holder<Ability> storageAbility = ArtifactService.abilities(access, jadeStack).stream()
                 .filter(ref -> ref.value().type() instanceof StorageAbilityType).findFirst().orElse(null);
-        Holder<Ability> foreignStorage = context.require(MxtResourceKeys.ABILITY, ProbeDefinitions.PROBE_BOUND_STORAGE);
+        Holder<Ability> foreignStorage = context.require(SaturnResourceKeys.ABILITY, ProbeDefinitions.PROBE_BOUND_STORAGE);
         boolean stored = storageAbility != null
                 && ArtifactStorageService.INSTANCE.set(access, jadeStack, storageAbility, 1, new ItemStack(Items.STONE, 3), player)
                 // A second write of the same kind replaces that ability's one entry instead of adding a second.

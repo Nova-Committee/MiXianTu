@@ -2,7 +2,7 @@ package com.iafenvoy.mxt.item;
 
 import com.iafenvoy.mxt.data.item.HoldBinding;
 import com.iafenvoy.mxt.registry.MxtItems;
-import com.iafenvoy.mxt.util.matcher.builtin.ItemEntry;
+import com.iafenvoy.saturn.util.matcher.builtin.ItemEntry;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.sounds.SoundEvent;

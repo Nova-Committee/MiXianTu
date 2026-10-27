@@ -7,10 +7,11 @@ import com.iafenvoy.mxt.data.creature.ContractBehaviors;
 import com.iafenvoy.mxt.data.creature.ContractContext;
 import com.iafenvoy.mxt.data.creature.ContractType;
 import com.iafenvoy.mxt.registry.MxtAttachments;
-import com.iafenvoy.mxt.runtime.resulting.Result;
+import com.iafenvoy.mxt.runtime.MxtProfilerSources;
 import com.iafenvoy.mxt.runtime.resulting.failures.ContractFailure;
-import com.iafenvoy.mxt.util.profiling.ProfilerScope;
-import com.iafenvoy.mxt.util.profiling.ServerProfiling;
+import com.iafenvoy.saturn.profiling.ProfilerScope;
+import com.iafenvoy.saturn.profiling.ServerProfiling;
+import com.iafenvoy.saturn.runtime.resulting.Result;
 import net.minecraft.core.Holder;
 import net.minecraft.world.entity.Mob;
 
@@ -26,7 +27,7 @@ public final class ContractBehaviorService {
     }
 
     public static Result request(Mob creature, UUID requester, ContractBehavior behavior, boolean force) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.CREATURE)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.CREATURE)) {
             ContractAttachment data = creature.getData(MxtAttachments.CONTRACT);
             if (!data.bound()) return Result.failure(ContractFailure.NOT_BOUND);
             Holder<ContractType> type = data.contractType().orElseThrow();

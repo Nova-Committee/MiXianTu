@@ -2,7 +2,6 @@ package com.iafenvoy.mxt.runtime.curse;
 
 import com.iafenvoy.mxt.attachment.CurseHolderAttachment;
 import com.iafenvoy.mxt.attachment.CurseHolderAttachment.State;
-import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.curse.Curse;
 import com.iafenvoy.mxt.data.curse.Curse.StackingMode;
 import com.iafenvoy.mxt.data.curse.builtin.TriggeredCurseType;
@@ -11,14 +10,16 @@ import com.iafenvoy.mxt.event.CurseRemoveEvent.Post;
 import com.iafenvoy.mxt.event.CurseRemoveEvent.Pre;
 import com.iafenvoy.mxt.event.CurseRemoveEvent.Reason;
 import com.iafenvoy.mxt.registry.MxtAttachments;
-import com.iafenvoy.mxt.runtime.resulting.Failures;
-import com.iafenvoy.mxt.runtime.resulting.ResultWithData;
+import com.iafenvoy.mxt.runtime.MxtProfilerSources;
 import com.iafenvoy.mxt.runtime.resulting.failures.CurseFailure;
-import com.iafenvoy.mxt.util.HolderHelper;
-import com.iafenvoy.mxt.util.MiscUtil;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
-import com.iafenvoy.mxt.util.profiling.ProfilerScope;
-import com.iafenvoy.mxt.util.profiling.ServerProfiling;
+import com.iafenvoy.saturn.data.action.EntityAction;
+import com.iafenvoy.saturn.profiling.ProfilerScope;
+import com.iafenvoy.saturn.profiling.ServerProfiling;
+import com.iafenvoy.saturn.runtime.resulting.Failures;
+import com.iafenvoy.saturn.runtime.resulting.ResultWithData;
+import com.iafenvoy.saturn.util.HolderHelper;
+import com.iafenvoy.saturn.util.MiscUtil;
+import com.iafenvoy.saturn.util.formula.FormulaContext;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Entity;
@@ -45,7 +46,7 @@ public final class CurseService {
     }
 
     public static ResultWithData<CurseInstance> apply(CurseHolderAttachment data, Holder<Curse> curse, int stacks, long gameTime, FormulaContext context, Identifier source) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.CURSE)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.CURSE)) {
             return apply(data, curse, stacks, gameTime, context, source, NeoForge.EVENT_BUS);
         }
     }
@@ -54,13 +55,13 @@ public final class CurseService {
      * Variant for integrations that own a dedicated event bus.
      */
     public static ResultWithData<CurseInstance> apply(CurseHolderAttachment data, Holder<Curse> curse, int stacks, long gameTime, FormulaContext context, Identifier source, @NotNull IEventBus eventBus) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.CURSE)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.CURSE)) {
             return apply(data, curse, stacks, gameTime, context, source, eventBus, OptionalLong.empty());
         }
     }
 
     public static ResultWithData<CurseInstance> apply(CurseHolderAttachment data, Holder<Curse> curse, int stacks, long gameTime, FormulaContext context, Identifier source, IEventBus eventBus, OptionalLong durationOverride) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.CURSE)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.CURSE)) {
             CurseApplyEvent.Pre event = new CurseApplyEvent.Pre(data, curse, stacks, gameTime, context, source);
             if (eventBus.post(event).isCanceled()) return ResultWithData.failure(null, Failures.CANCELLED);
             // A replacement discards an existing instance and reports the displaced one as a removal, so listeners
@@ -84,14 +85,14 @@ public final class CurseService {
 
     public static ResultWithData<CurseInstance> apply(Entity target, Holder<Curse> curse, int stacks,
                                                       long gameTime, FormulaContext context, Identifier source) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.CURSE)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.CURSE)) {
             return apply(target, curse, stacks, gameTime, context, source, NeoForge.EVENT_BUS, OptionalLong.empty());
         }
     }
 
     public static ResultWithData<CurseInstance> apply(@NotNull Entity target, Holder<Curse> curse, int stacks,
                                                       long gameTime, FormulaContext context, Identifier source, IEventBus eventBus) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.CURSE)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.CURSE)) {
             return apply(target, curse, stacks, gameTime, context, source, eventBus, OptionalLong.empty());
         }
     }
@@ -99,7 +100,7 @@ public final class CurseService {
     public static ResultWithData<CurseInstance> applyWithDuration(Entity target, Holder<Curse> curse, int stacks,
                                                                   long gameTime, FormulaContext context, Identifier source,
                                                                   OptionalLong durationOverride) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.CURSE)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.CURSE)) {
             return apply(target, curse, stacks, gameTime, context, source, NeoForge.EVENT_BUS, durationOverride);
         }
     }
@@ -108,7 +109,7 @@ public final class CurseService {
     // runtime subscriptions that follow it.
     private static ResultWithData<CurseInstance> apply(Entity target, Holder<Curse> curse, int stacks, long gameTime,
                                                        FormulaContext context, Identifier source, IEventBus eventBus, OptionalLong durationOverride) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.CURSE)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.CURSE)) {
             Curse definition = curse.value();
             if (!definition.applicationCondition().test(target, context))
                 return ResultWithData.failure(null, CurseFailure.CONDITION);
@@ -134,7 +135,7 @@ public final class CurseService {
     }
 
     public static Optional<CurseInstance> remove(CurseHolderAttachment data, Holder<Curse> curse, Reason reason, long gameTime) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.CURSE)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.CURSE)) {
             return remove(data, curse, reason, gameTime, NeoForge.EVENT_BUS);
         }
     }
@@ -143,7 +144,7 @@ public final class CurseService {
      * Variant for integrations that own a dedicated event bus.
      */
     public static Optional<CurseInstance> remove(CurseHolderAttachment data, Holder<Curse> curse, Reason reason, long gameTime, @NotNull IEventBus eventBus) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.CURSE)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.CURSE)) {
             // Captured before the transaction erases them, so listeners hear who was keeping the curse alive.
             return remove(data, curse, data.sources().of(curse), reason, gameTime, eventBus);
         }
@@ -151,7 +152,7 @@ public final class CurseService {
 
     private static Optional<CurseInstance> remove(CurseHolderAttachment data, Holder<Curse> curse, Set<Identifier> sources,
                                                   Reason reason, long gameTime, @NotNull IEventBus eventBus) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.CURSE)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.CURSE)) {
             State state = data.instances().get(curse);
             if (state == null) return Optional.empty();
             // A frozen instance - its definition is gone from the pack - runs nothing and only ever leaves by an
@@ -168,7 +169,7 @@ public final class CurseService {
 
     // For callers that have nothing richer than the target's own formula context.
     public static Optional<CurseInstance> remove(Entity target, Holder<Curse> curse, Reason reason, long gameTime) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.CURSE)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.CURSE)) {
             return remove(target, curse, reason, gameTime, FormulaContext.of(target));
         }
     }
@@ -177,7 +178,7 @@ public final class CurseService {
     // after the transaction commits.
     public static Optional<CurseInstance> remove(Entity target, Holder<Curse> curse, Reason reason, long gameTime,
                                                  FormulaContext context) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.CURSE)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.CURSE)) {
             String key = transactionKey(target, curse);
             if (!IN_TRANSACTION.get().add(key)) return Optional.empty();
             try {
@@ -198,7 +199,7 @@ public final class CurseService {
     // the loss of one. Returns the instance when this release removed it, empty when the curse stays.
     public static Optional<CurseInstance> release(Entity target, Holder<Curse> curse, Identifier source,
                                                   Reason reason, long gameTime, FormulaContext context) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.CURSE)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.CURSE)) {
             String key = transactionKey(target, curse);
             if (!IN_TRANSACTION.get().add(key)) return Optional.empty();
             try {
@@ -226,7 +227,7 @@ public final class CurseService {
     // payloads of newly declared curses is the caller's job, because only it knows the stacks and duration.
     public static boolean reconcileSource(Entity target, Identifier source, Collection<Holder<Curse>> desired,
                                           long gameTime, FormulaContext context) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.CURSE)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.CURSE)) {
             CurseHolderAttachment data = target.getData(MxtAttachments.CURSE_HOLDER);
             Set<Holder<Curse>> previous = data.sources().keysHeldBy(source);
             // Read before the reconcile, so an instance losing its last source here still reports the sources that
@@ -260,7 +261,7 @@ public final class CurseService {
 
     public static int tick(Entity target, long gameTime,
                            FormulaContext context) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.CURSE)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.CURSE)) {
             CurseHolderAttachment data = target.getData(MxtAttachments.CURSE_HOLDER);
             int executed = 0;
             boolean changed = false;

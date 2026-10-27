@@ -1,10 +1,14 @@
 package com.iafenvoy.mxt.probe.cultivation;
+import com.iafenvoy.saturn.profiling.ServerProfiling.Source;
+import com.iafenvoy.saturn.registry.SaturnResourceKeys;
+import com.iafenvoy.saturn.registry.SaturnAttachments;
+import com.iafenvoy.saturn.data.context.Context;
 
-import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
+import com.iafenvoy.saturn.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.compat.kubejs.MxtKubeJsApi;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.cultivation.RealmStage;
-import com.iafenvoy.mxt.data.resource.Resource;
+import com.iafenvoy.saturn.data.resource.Resource;
 import com.iafenvoy.mxt.probe.Probe;
 import com.iafenvoy.mxt.probe.ProbeContext;
 import com.iafenvoy.mxt.probe.ProbeDefinitions;
@@ -89,9 +93,9 @@ public final class IdentityProbes {
                 context.fail("identity probe: could not create the probe entity");
                 return;
             }
-            ResourceHolderAttachment burstResources = probe.getData(MxtAttachments.RESOURCE_HOLDER);
+            ResourceHolderAttachment burstResources = probe.getData(SaturnAttachments.RESOURCE_HOLDER);
             Holder<Aura> burstAura = context.require(MxtResourceKeys.AURA, ProbeDefinitions.SPIRIT_POWER);
-            Holder<Resource> burstResource = context.require(MxtResourceKeys.RESOURCE, ProbeDefinitions.SPIRIT_POWER);
+            Holder<Resource> burstResource = context.require(SaturnResourceKeys.RESOURCE, ProbeDefinitions.SPIRIT_POWER);
             long burstAt = context.level().getGameTime();
             Holder<RealmStage> burstRealm = context.require(MxtResourceKeys.REALM_STAGE, ProbeDefinitions.SPIRIT_POWER_REFINING);
             // The realm comes first: a resource ceiling is a formula over the body's own realm, so a body that never

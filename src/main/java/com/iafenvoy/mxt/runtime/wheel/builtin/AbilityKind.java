@@ -4,8 +4,8 @@ import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.api.WheelEntryKind;
 import com.iafenvoy.mxt.api.WheelSource;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
-import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.wheel.WheelService;
+import com.iafenvoy.saturn.registry.SaturnResourceKeys;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
@@ -32,7 +32,7 @@ public final class AbilityKind implements WheelEntryKind {
 
     @Override
     public boolean exists(RegistryAccess access, Identifier id) {
-        return MxtDatapackRegistries.holder(access, MxtResourceKeys.ABILITY, id).isPresent();
+        return MxtDatapackRegistries.holder(access, SaturnResourceKeys.ABILITY, id).isPresent();
     }
 
     @Override

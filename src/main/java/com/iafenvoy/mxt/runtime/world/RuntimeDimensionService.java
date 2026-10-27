@@ -2,8 +2,9 @@ package com.iafenvoy.mxt.runtime.world;
 
 import com.google.common.collect.ImmutableList;
 import com.iafenvoy.mxt.mixin.MinecraftServerRuntimeAccessor;
-import com.iafenvoy.mxt.util.profiling.ProfilerScope;
-import com.iafenvoy.mxt.util.profiling.ServerProfiling;
+import com.iafenvoy.mxt.runtime.MxtProfilerSources;
+import com.iafenvoy.saturn.profiling.ProfilerScope;
+import com.iafenvoy.saturn.profiling.ServerProfiling;
 import com.mojang.logging.LogUtils;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
@@ -34,7 +35,7 @@ public final class RuntimeDimensionService {
 
     @SuppressWarnings("deprecation")
     public static Optional<ServerLevel> load(MinecraftServer server, ResourceKey<Level> key, LevelStem stem) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.SECRET_REALM)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.SECRET_REALM)) {
             Map<ResourceKey<Level>, ServerLevel> worlds = server.forgeGetWorldMap();
             synchronized (worlds) {
                 ServerLevel existing = worlds.get(key);
@@ -63,7 +64,7 @@ public final class RuntimeDimensionService {
     // The overworld and dimensions with players are deliberately never removed.
     @SuppressWarnings("deprecation")
     public static boolean unload(MinecraftServer server, ResourceKey<Level> key) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.SECRET_REALM)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.SECRET_REALM)) {
             if (Level.OVERWORLD.equals(key)) return false;
             Map<ResourceKey<Level>, ServerLevel> worlds = server.forgeGetWorldMap();
             synchronized (worlds) {
@@ -87,7 +88,7 @@ public final class RuntimeDimensionService {
     // The level is silenced before it closes, otherwise closing it would write the very region files that are
     // about to be removed.
     public static boolean delete(MinecraftServer server, ResourceKey<Level> key) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.SECRET_REALM)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.SECRET_REALM)) {
             if (Level.OVERWORLD.equals(key)) return false;
             ServerLevel level = server.getLevel(key);
             if (level != null) {

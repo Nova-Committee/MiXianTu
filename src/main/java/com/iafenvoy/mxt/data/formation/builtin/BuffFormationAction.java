@@ -1,15 +1,15 @@
 package com.iafenvoy.mxt.data.formation.builtin;
 
-import com.iafenvoy.mxt.attachment.AbilityAttachment;
-import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.data.formation.FormationActionType;
 import com.iafenvoy.mxt.data.formation.FormationIntervals;
-import com.iafenvoy.mxt.registry.MxtAttachments;
-import com.iafenvoy.mxt.runtime.Sources;
-import com.iafenvoy.mxt.runtime.ability.AbilityEventBridge;
 import com.iafenvoy.mxt.runtime.formation.FormationActionContext;
 import com.iafenvoy.mxt.runtime.formation.FormationGrants;
 import com.iafenvoy.mxt.runtime.formation.FormationOwners;
+import com.iafenvoy.saturn.attachment.AbilityAttachment;
+import com.iafenvoy.saturn.data.ability.Ability;
+import com.iafenvoy.saturn.registry.SaturnAttachments;
+import com.iafenvoy.saturn.runtime.Sources;
+import com.iafenvoy.saturn.runtime.ability.AbilityEventBridge;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -56,7 +56,7 @@ public record BuffFormationAction(List<Holder<Ability>> abilities, TargetMode ta
             return;
         }
         for (Holder<Ability> ability : this.abilities) {
-            AbilityAttachment granted = entity.getData(MxtAttachments.ABILITY_HOLDER);
+            AbilityAttachment granted = entity.getData(SaturnAttachments.ABILITY_HOLDER);
             if (granted.grant(ability, source) && entity instanceof LivingEntity living)
                 AbilityEventBridge.rebuildTriggerSubscriptions(living);
         }

@@ -1,6 +1,5 @@
 package com.iafenvoy.mxt.runtime.formation;
 
-import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.data.formation.Formation;
 import com.iafenvoy.mxt.data.formation.FormationIntervals;
 import com.iafenvoy.mxt.event.FormationEvent.Tick;
@@ -9,12 +8,15 @@ import com.iafenvoy.mxt.event.FormationEvent.UpkeepFailed;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.runtime.Sources;
+import com.iafenvoy.mxt.runtime.MxtProfilerSources;
 import com.iafenvoy.mxt.runtime.cultivation.AuraDistributionService;
-import com.iafenvoy.mxt.runtime.resulting.Result;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
-import com.iafenvoy.mxt.util.profiling.ProfilerScope;
-import com.iafenvoy.mxt.util.profiling.ServerProfiling;
+import com.iafenvoy.saturn.attachment.ResourceHolderAttachment;
+import com.iafenvoy.saturn.profiling.ProfilerScope;
+import com.iafenvoy.saturn.profiling.ServerProfiling;
+import com.iafenvoy.saturn.registry.SaturnAttachments;
+import com.iafenvoy.saturn.runtime.Sources;
+import com.iafenvoy.saturn.runtime.resulting.Result;
+import com.iafenvoy.saturn.util.formula.FormulaContext;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
@@ -50,7 +52,7 @@ public final class FormationWorldTicker {
     // One dispatch pass over every active formation: validate, charge upkeep, run the modules, then the sweep that
     // releases grants from formations a player has left. Only the first two are per period.
     public static void dispatch(ServerLevel level, long gameTime) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.FORMATION)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.FORMATION)) {
             boolean period = FormationIntervals.periodDue(gameTime);
             FormationWorldAttachment world = level.getData(MxtAttachments.FORMATION_WORLD);
             for (Entry<BlockPos, FormationInstance> entry : world.formations().entrySet()) {
@@ -95,7 +97,7 @@ public final class FormationWorldTicker {
         FormulaContext context = payer == null ? FormulaContext.of(level) : FormulaContext.of(payer);
         ResourceHolderAttachment resources = payer == null
                 ? new ResourceHolderAttachment()
-                : payer.getData(MxtAttachments.RESOURCE_HOLDER);
+                : payer.getData(SaturnAttachments.RESOURCE_HOLDER);
         // The formation draws its share of the chunk stock through the same prepass cultivators use, so what it
         // was granted over this period pays the upkeep before the store and then the owner are asked for the rest.
         Result result = FormationService.maintain(instance, definition, resources, context,
@@ -155,7 +157,7 @@ public final class FormationWorldTicker {
     private static void releaseOutside(ServerLevel level, ServerPlayer player) {
         // A player who never held a granted ability cannot owe a release, and without this guard the sweep
         // would build a source identifier for every formation in the level, every period.
-        if (player.getExistingData(MxtAttachments.ABILITY_HOLDER).isEmpty()) return;
+        if (player.getExistingData(SaturnAttachments.ABILITY_HOLDER).isEmpty()) return;
         // One source per definition, so the sweep asks the same question the exit path does - once per definition the
         // player has actually walked out of.
         Set<Identifier> present = new LinkedHashSet<>();

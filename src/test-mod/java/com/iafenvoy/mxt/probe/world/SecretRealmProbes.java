@@ -1,4 +1,7 @@
 package com.iafenvoy.mxt.probe.world;
+import com.iafenvoy.saturn.data.context.Context;
+import com.iafenvoy.saturn.data.Weighted;
+import com.iafenvoy.saturn.util.math.Space;
 
 import com.iafenvoy.mxt.data.condition.builtin.entity.InSecretRealmEntityCondition;
 import com.iafenvoy.mxt.data.condition.builtin.entity.InSecretRealmEntityCondition.Role;
@@ -14,7 +17,7 @@ import com.iafenvoy.mxt.runtime.world.SecretRealmRecord;
 import com.iafenvoy.mxt.runtime.world.SecretRealmRegistry;
 import com.iafenvoy.mxt.runtime.world.SecretRealmService;
 import com.iafenvoy.mxt.runtime.world.SecretRealmStructurePlacer;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
+import com.iafenvoy.saturn.util.formula.FormulaContext;
 import com.mojang.datafixers.util.Either;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;

@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.runtime.creature;
 
 import com.iafenvoy.mxt.data.creature.ContractType;
-import com.iafenvoy.mxt.util.codec.CollectionCodecs;
+import com.iafenvoy.saturn.util.codec.CollectionCodecs;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;

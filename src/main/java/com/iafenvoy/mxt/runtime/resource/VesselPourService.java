@@ -2,9 +2,10 @@ package com.iafenvoy.mxt.runtime.resource;
 
 import com.iafenvoy.mxt.event.CollectHoldBindingsEvent;
 import com.iafenvoy.mxt.item.SpiritVesselItem;
+import com.iafenvoy.mxt.runtime.MxtProfilerSources;
 import com.iafenvoy.mxt.runtime.hold.HoldService;
-import com.iafenvoy.mxt.util.profiling.ProfilerScope;
-import com.iafenvoy.mxt.util.profiling.ServerProfiling;
+import com.iafenvoy.saturn.profiling.ProfilerScope;
+import com.iafenvoy.saturn.profiling.ServerProfiling;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
@@ -31,7 +32,7 @@ public final class VesselPourService {
 
     @SubscribeEvent
     public static void onUseTick(Tick event) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.SPIRIT)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.SPIRIT)) {
             LivingEntity holder = event.getEntity();
             if (holder.level().isClientSide()) return;
             ItemStack stack = event.getItem();

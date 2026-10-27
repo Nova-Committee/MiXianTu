@@ -10,15 +10,16 @@ import com.iafenvoy.mxt.item.ItemReading;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.runtime.MxtProfilerSources;
 import com.iafenvoy.mxt.runtime.hold.HoldService;
 import com.iafenvoy.mxt.runtime.item.ItemBindingService;
 import com.iafenvoy.mxt.runtime.item.QualityService;
-import com.iafenvoy.mxt.runtime.resulting.Failure;
-import com.iafenvoy.mxt.runtime.resulting.Result;
-import com.iafenvoy.mxt.util.DefinitionText;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
-import com.iafenvoy.mxt.util.profiling.ProfilerScope;
-import com.iafenvoy.mxt.util.profiling.ServerProfiling;
+import com.iafenvoy.saturn.profiling.ProfilerScope;
+import com.iafenvoy.saturn.profiling.ServerProfiling;
+import com.iafenvoy.saturn.runtime.resulting.Failure;
+import com.iafenvoy.saturn.runtime.resulting.Result;
+import com.iafenvoy.saturn.util.DefinitionText;
+import com.iafenvoy.saturn.util.formula.FormulaContext;
 import com.mojang.logging.LogUtils;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.Holder;
@@ -109,7 +110,7 @@ public final class TechniqueItemService {
     // percentage would be a lie here.
     @SubscribeEvent
     public static void onUseTick(Tick event) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.CULTIVATION)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.CULTIVATION)) {
             LivingEntity entity = event.getEntity();
             if (entity.level().isClientSide()) return;
             if (!(HoldService.activeBinding(entity) instanceof TechniqueHold)) return;
@@ -208,7 +209,7 @@ public final class TechniqueItemService {
     // A matching binding claims the interaction even when learning is rejected by its conditions; a binding
     // that asks for a hold answers false so the click falls through to the hold module.
     public static boolean use(LivingEntity entity, ItemStack stack) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.CULTIVATION)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.CULTIVATION)) {
             if (entity.level().isClientSide()) return false;
             Optional<TechniqueBinding> binding = ItemBindingService.technique(entity.level().registryAccess(), stack);
             if (binding.isEmpty()) return false;

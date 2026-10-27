@@ -2,14 +2,15 @@ package com.iafenvoy.mxt.runtime.wheel;
 
 import com.iafenvoy.mxt.api.WheelEntryKind;
 import com.iafenvoy.mxt.api.WheelSource;
-import com.iafenvoy.mxt.attachment.AbilityAttachment;
 import com.iafenvoy.mxt.attachment.WheelLayoutAttachment;
-import com.iafenvoy.mxt.data.ability.Ability;
 import com.iafenvoy.mxt.registry.MxtAttachments;
-import com.iafenvoy.mxt.runtime.Sources;
-import com.iafenvoy.mxt.runtime.ability.AbilityActivationService;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactService;
-import com.iafenvoy.mxt.util.HolderHelper;
+import com.iafenvoy.saturn.attachment.AbilityAttachment;
+import com.iafenvoy.saturn.data.ability.Ability;
+import com.iafenvoy.saturn.registry.SaturnAttachments;
+import com.iafenvoy.saturn.runtime.Sources;
+import com.iafenvoy.saturn.runtime.ability.AbilityActivationService;
+import com.iafenvoy.saturn.util.HolderHelper;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.LivingEntity;
@@ -36,7 +37,7 @@ public final class WheelSources {
     public static List<Holder<Ability>> abilities(LivingEntity entity, WheelSource source) {
         List<Identifier> sources = source.grantSources(entity);
         if (sources.isEmpty()) return List.of();
-        AbilityAttachment holder = entity.getExistingData(MxtAttachments.ABILITY_HOLDER).orElse(null);
+        AbilityAttachment holder = entity.getExistingData(SaturnAttachments.ABILITY_HOLDER).orElse(null);
         if (holder == null) return List.of();
         return abilities(entity).stream()
                 .filter(ability -> holder.sources().of(ability).stream().anyMatch(sources::contains))
@@ -47,7 +48,7 @@ public final class WheelSources {
     // cells' resolution list are both built from, read here rather than from the equipment so neither depends on
     // where the thing that grants it happens to be.
     public static List<Holder<Ability>> abilities(LivingEntity entity) {
-        AbilityAttachment holder = entity.getExistingData(MxtAttachments.ABILITY_HOLDER).orElse(null);
+        AbilityAttachment holder = entity.getExistingData(SaturnAttachments.ABILITY_HOLDER).orElse(null);
         if (holder == null) return List.of();
         LinkedHashSet<Holder<Ability>> found = new LinkedHashSet<>();
         holder.sources().keys().stream()
@@ -60,7 +61,7 @@ public final class WheelSources {
     // Where one ability's grant comes from right now; empty once nothing holds it, which is a different answer
     // from "held by something the tooltip cannot name".
     public static Set<Identifier> sources(LivingEntity entity, Holder<Ability> ability) {
-        AbilityAttachment holder = entity.getExistingData(MxtAttachments.ABILITY_HOLDER).orElse(null);
+        AbilityAttachment holder = entity.getExistingData(SaturnAttachments.ABILITY_HOLDER).orElse(null);
         return holder == null ? Set.of() : holder.sources().of(ability);
     }
 

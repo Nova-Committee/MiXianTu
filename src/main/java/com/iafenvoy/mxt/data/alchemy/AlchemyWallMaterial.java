@@ -3,7 +3,7 @@ package com.iafenvoy.mxt.data.alchemy;
 import com.iafenvoy.mxt.api.QualityProvider;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.util.MiscUtil;
+import com.iafenvoy.saturn.util.MiscUtil;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;

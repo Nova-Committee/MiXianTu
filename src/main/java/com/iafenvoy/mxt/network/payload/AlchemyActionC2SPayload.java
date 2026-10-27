@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.network.payload;
 
 import com.iafenvoy.mxt.MiXianTu;
-import com.iafenvoy.mxt.util.codec.MiscStreamCodecs;
+import com.iafenvoy.saturn.util.codec.MiscStreamCodecs;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;

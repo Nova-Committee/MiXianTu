@@ -1,19 +1,21 @@
 package com.iafenvoy.mxt.runtime.spirit;
 
-import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.attachment.SpiritBurstCooldownAttachment;
 import com.iafenvoy.mxt.data.aura.Aura;
-import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.entity.SpiritBurstEntity;
 import com.iafenvoy.mxt.item.SpiritVesselItem;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.runtime.resource.ResourceService;
+import com.iafenvoy.mxt.runtime.MxtProfilerSources;
 import com.iafenvoy.mxt.runtime.resource.ResourceUseService;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
-import com.iafenvoy.mxt.util.profiling.ProfilerScope;
-import com.iafenvoy.mxt.util.profiling.ServerProfiling;
+import com.iafenvoy.saturn.attachment.ResourceHolderAttachment;
+import com.iafenvoy.saturn.data.resource.Resource;
+import com.iafenvoy.saturn.profiling.ProfilerScope;
+import com.iafenvoy.saturn.profiling.ServerProfiling;
+import com.iafenvoy.saturn.registry.SaturnAttachments;
+import com.iafenvoy.saturn.runtime.resource.ResourceService;
+import com.iafenvoy.saturn.util.formula.FormulaContext;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.LivingEntity;
@@ -40,7 +42,7 @@ public final class SpiritBurstService {
     }
 
     public static void setFiring(LivingEntity holder, Optional<Identifier> auraId, boolean firing) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.SPIRIT)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.SPIRIT)) {
             UUID holderId = holder.getUUID();
             if (auraId.isEmpty()) {
                 if (!firing) ACTIVE_AURAS.remove(holderId);
@@ -64,7 +66,7 @@ public final class SpiritBurstService {
     // would otherwise hand an empty cooldown table to every mob in the level.
     @SubscribeEvent
     public static void onEntityTick(Post event) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.SPIRIT)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.SPIRIT)) {
             if (!(event.getEntity() instanceof LivingEntity holder) || holder.level().isClientSide()) return;
             Set<Holder<Aura>> active = ACTIVE_AURAS.get(holder.getUUID());
             if ((active == null || active.isEmpty()) && !holder.hasData(MxtAttachments.SPIRIT_BURST_COOLDOWNS.get()))
@@ -84,7 +86,7 @@ public final class SpiritBurstService {
     // Same gate, cooldown and payment as the held path, so the wheel cannot fire a burst in a situation where
     // a held key would have refused it. Returns whether a burst was actually fired.
     public static boolean fireOnce(LivingEntity holder, Identifier auraId) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.SPIRIT)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.SPIRIT)) {
             if (auraId == null) return false;
             Holder<Aura> aura = MxtDatapackRegistries.holder(holder.level().registryAccess(), MxtResourceKeys.AURA, auraId)
                     .filter(value -> value.value().auraType().isPresent() && ResourceUseService.canUse(holder, value))
@@ -102,7 +104,7 @@ public final class SpiritBurstService {
 
     // The checks and the payment every firing shares, whether it was asked for once or held down.
     private static boolean attempt(LivingEntity holder, Holder<Aura> aura) {
-        ResourceHolderAttachment resources = holder.getData(MxtAttachments.RESOURCE_HOLDER);
+        ResourceHolderAttachment resources = holder.getData(SaturnAttachments.RESOURCE_HOLDER);
         SpiritBurstCooldownAttachment cooldowns = holder.getData(MxtAttachments.SPIRIT_BURST_COOLDOWNS);
         if (cooldowns.isOnCooldown(aura, holder.level().getGameTime())) return false;
         if (!tryFire(holder, resources, aura)) return false;

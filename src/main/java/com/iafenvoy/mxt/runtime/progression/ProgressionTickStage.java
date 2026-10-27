@@ -1,10 +1,11 @@
 package com.iafenvoy.mxt.runtime.progression;
 
-import com.iafenvoy.mxt.event.CollectTickStagesEvent;
-import com.iafenvoy.mxt.runtime.EntityTickStages;
-import com.iafenvoy.mxt.runtime.ability.AbilityGrantService;
-import com.iafenvoy.mxt.util.profiling.ProfilerScope;
-import com.iafenvoy.mxt.util.profiling.ServerProfiling;
+import com.iafenvoy.mxt.runtime.MxtProfilerSources;
+import com.iafenvoy.saturn.event.CollectTickStagesEvent;
+import com.iafenvoy.saturn.profiling.ProfilerScope;
+import com.iafenvoy.saturn.profiling.ServerProfiling;
+import com.iafenvoy.saturn.runtime.EntityTickStages;
+import com.iafenvoy.saturn.runtime.ability.AbilityGrantService;
 import net.minecraft.world.entity.LivingEntity;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -26,7 +27,7 @@ public final class ProgressionTickStage {
     }
 
     private static void tick(LivingEntity entity) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.PROGRESSION)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.PROGRESSION)) {
             if (entity.level().getGameTime() % INTERVAL_TICKS != 0L) return;
             if (ProgressionDriver.tick(entity)) AbilityGrantService.recalculate(entity);
         }

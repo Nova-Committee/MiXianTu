@@ -1,10 +1,7 @@
 package com.iafenvoy.mxt.screen.menu;
 
 import com.iafenvoy.mxt.data.aura.Aura;
-import com.iafenvoy.mxt.data.cost.Cost;
 import com.iafenvoy.mxt.data.cost.Costs;
-import com.iafenvoy.mxt.data.cost.context.CostContext;
-import com.iafenvoy.mxt.data.cost.context.CostOrigins;
 import com.iafenvoy.mxt.item.block.entity.SpiritCraftingTableBlockEntity;
 import com.iafenvoy.mxt.network.payload.SpiritCraftingStateS2CPayload;
 import com.iafenvoy.mxt.network.payload.SpiritCraftingStateS2CPayload.Row;
@@ -13,10 +10,14 @@ import com.iafenvoy.mxt.recipe.SpiritRecipe;
 import com.iafenvoy.mxt.registry.MxtBlocks;
 import com.iafenvoy.mxt.registry.MxtMenus;
 import com.iafenvoy.mxt.registry.MxtRecipeTypes;
+import com.iafenvoy.mxt.runtime.MxtProfilerSources;
 import com.iafenvoy.mxt.screen.aui.AuiPages;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
-import com.iafenvoy.mxt.util.profiling.ProfilerScope;
-import com.iafenvoy.mxt.util.profiling.ServerProfiling;
+import com.iafenvoy.saturn.data.cost.Cost;
+import com.iafenvoy.saturn.data.cost.context.CostContext;
+import com.iafenvoy.saturn.data.cost.context.CostOrigins;
+import com.iafenvoy.saturn.profiling.ProfilerScope;
+import com.iafenvoy.saturn.profiling.ServerProfiling;
+import com.iafenvoy.saturn.util.formula.FormulaContext;
 import com.sighs.apricityui.screen.ApricityContainerMenu;
 import net.minecraft.core.Holder;
 import net.minecraft.server.level.ServerLevel;
@@ -120,7 +121,7 @@ public final class SpiritCraftingMenu extends ApricityContainerMenu {
     }
 
     private void updateResult() {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.CRAFTING)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.CRAFTING)) {
             this.current = this.findRecipe();
             Map<Holder<Aura>, Double> costs = this.current == null ? Map.of() : this.current.costs();
             this.withTable(table -> table.configureAuraCosts(costs));

@@ -1,8 +1,8 @@
 package com.iafenvoy.mxt.runtime.rift;
 
-import com.iafenvoy.mxt.runtime.resulting.Failure;
-import com.iafenvoy.mxt.runtime.resulting.Failures;
-import com.iafenvoy.mxt.runtime.resulting.Result;
+import com.iafenvoy.saturn.runtime.resulting.Failure;
+import com.iafenvoy.saturn.runtime.resulting.Failures;
+import com.iafenvoy.saturn.runtime.resulting.Result;
 import org.jetbrains.annotations.Nullable;
 
 public final class RiftResult extends Result {

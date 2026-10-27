@@ -1,19 +1,22 @@
 package com.iafenvoy.mxt.runtime.trigger;
 
 import com.iafenvoy.mxt.attachment.CultivationAttachment;
-import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.cultivation.CultivateConditions;
-import com.iafenvoy.mxt.data.trigger.Trigger;
-import com.iafenvoy.mxt.event.TriggerRehydrateEvent;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService.BreakthroughResult;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService.BreakthroughStatus;
-import com.iafenvoy.mxt.util.HolderHelper;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
+import com.iafenvoy.saturn.attachment.ResourceHolderAttachment;
+import com.iafenvoy.saturn.data.trigger.Trigger;
+import com.iafenvoy.saturn.event.TriggerRehydrateEvent;
+import com.iafenvoy.saturn.registry.SaturnAttachments;
+import com.iafenvoy.saturn.runtime.trigger.TriggerDispatcher;
+import com.iafenvoy.saturn.runtime.trigger.TriggerSubscription;
+import com.iafenvoy.saturn.util.HolderHelper;
+import com.iafenvoy.saturn.util.formula.FormulaContext;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
 import net.minecraft.world.entity.LivingEntity;
@@ -43,7 +46,7 @@ public final class CultivationTriggerService {
         CultivationAttachment cultivation = entity.getData(MxtAttachments.CULTIVATION);
         TriggerDispatcher.clearModule(entity.getUUID(), MODULE);
         if (!cultivation.cultivating()) return;
-        ResourceHolderAttachment resources = entity.getData(MxtAttachments.RESOURCE_HOLDER);
+        ResourceHolderAttachment resources = entity.getData(SaturnAttachments.RESOURCE_HOLDER);
         // Only chains that exist are candidates; a value without a profile has no breakthrough.
         for (Reference<Aura> chain : MxtDatapackRegistries.holders(entity.level().registryAccess(), MxtResourceKeys.AURA).toList()) {
             FormulaContext formula = FormulaContext.of(entity);

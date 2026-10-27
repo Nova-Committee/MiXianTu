@@ -1,8 +1,8 @@
 package com.iafenvoy.mxt.runtime.resulting.failures;
 
-import com.iafenvoy.mxt.runtime.resulting.Failure;
 import com.iafenvoy.mxt.runtime.resulting.FailureSources;
-import com.iafenvoy.mxt.runtime.resulting.SimpleFailure;
+import com.iafenvoy.saturn.runtime.resulting.Failure;
+import com.iafenvoy.saturn.runtime.resulting.SimpleFailure;
 import com.mojang.serialization.Codec;
 
 import java.util.List;

@@ -36,7 +36,7 @@ public final class CultivationAnimationController extends PlayerAnimationControl
     private boolean cultivating;
 
     public CultivationAnimationController(Avatar avatar) {
-        super(avatar, (controller, state, setter) -> PlayState.STOP);
+        super(avatar, (_, _, _) -> PlayState.STOP);
     }
 
     public static void register() {

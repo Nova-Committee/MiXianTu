@@ -1,36 +1,37 @@
 package com.iafenvoy.mxt.runtime.talisman;
 
 import com.iafenvoy.mxt.api.UseItemAuraAccess;
-import com.iafenvoy.mxt.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.config.MxtServerConfig;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.aura.SpiritStorageComponent;
-import com.iafenvoy.mxt.data.cost.Cost;
-import com.iafenvoy.mxt.data.cost.CostPayment;
 import com.iafenvoy.mxt.data.cost.builtin.AuraCost;
-import com.iafenvoy.mxt.data.cost.context.CostContext;
-import com.iafenvoy.mxt.data.cost.context.CostOrigins;
 import com.iafenvoy.mxt.data.item.TalismanComponent;
 import com.iafenvoy.mxt.data.item.TalismanComponent.TriggerMode;
-import com.iafenvoy.mxt.data.resource.Resource;
 import com.iafenvoy.mxt.data.talisman.Talisman;
 import com.iafenvoy.mxt.data.talisman.TalismanType;
 import com.iafenvoy.mxt.data.talisman.TalismanUse;
 import com.iafenvoy.mxt.item.TalismanItem;
-import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
-import com.iafenvoy.mxt.runtime.resource.ResourceService;
-import com.iafenvoy.mxt.runtime.resulting.Failure;
-import com.iafenvoy.mxt.runtime.resulting.Failures;
+import com.iafenvoy.mxt.runtime.MxtProfilerSources;
 import com.iafenvoy.mxt.runtime.spirit.AuraTransfers;
 import com.iafenvoy.mxt.runtime.spirit.SpiritChargeService;
 import com.iafenvoy.mxt.runtime.spirit.SpiritPour.Entry;
 import com.iafenvoy.mxt.runtime.spirit.SpiritSource;
-import com.iafenvoy.mxt.util.MiscUtil;
-import com.iafenvoy.mxt.util.formula.FormulaContext;
-import com.iafenvoy.mxt.util.formula.NumberProvider;
-import com.iafenvoy.mxt.util.profiling.ProfilerScope;
-import com.iafenvoy.mxt.util.profiling.ServerProfiling;
+import com.iafenvoy.saturn.attachment.ResourceHolderAttachment;
+import com.iafenvoy.saturn.data.cost.Cost;
+import com.iafenvoy.saturn.data.cost.CostPayment;
+import com.iafenvoy.saturn.data.cost.context.CostContext;
+import com.iafenvoy.saturn.data.cost.context.CostOrigins;
+import com.iafenvoy.saturn.data.resource.Resource;
+import com.iafenvoy.saturn.profiling.ProfilerScope;
+import com.iafenvoy.saturn.profiling.ServerProfiling;
+import com.iafenvoy.saturn.registry.SaturnAttachments;
+import com.iafenvoy.saturn.runtime.resource.ResourceService;
+import com.iafenvoy.saturn.runtime.resulting.Failure;
+import com.iafenvoy.saturn.runtime.resulting.Failures;
+import com.iafenvoy.saturn.util.MiscUtil;
+import com.iafenvoy.saturn.util.formula.FormulaContext;
+import com.iafenvoy.saturn.util.formula.NumberProvider;
 import net.minecraft.core.Holder;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
@@ -172,7 +173,7 @@ public final class TalismanService {
     // A hand charges the window for the attempt rather than the firing. The window is filed against a copy
     // taken before the invocation, because firing burns the stack and vanilla reads the cooldown group off it.
     public static boolean invokeOnUse(SpiritSource source, ItemStack stack) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.TALISMAN)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.TALISMAN)) {
             ItemStack beforeUse = stack.copy();
             Attempt attempt = attempt(source, stack);
             if (source.consumedByHand() && attempt.attempted()) applyCooldown(source.actor(), beforeUse);
@@ -191,7 +192,7 @@ public final class TalismanService {
     // is whether anything was asked of the carrier, which tells a click that fired from one that only changed
     // a mode.
     public static boolean toggleMode(SpiritSource source, ItemStack stack) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.TALISMAN)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.TALISMAN)) {
             if (inscribed(stack) == null) return false;
             TalismanComponent component = component(stack);
             boolean full = SpiritChargeService.full(source.level().registryAccess(), stack);
@@ -218,7 +219,7 @@ public final class TalismanService {
     // condition refusing the holder, still means the carrier was used, while a carrier that is blank, uncharged or
     // cooling down was never attempted.
     private static Attempt attempt(SpiritSource source, ItemStack stack) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.TALISMAN)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.TALISMAN)) {
             LivingEntity holder = source.actor();
             // Nothing living is answerable for it: somebody has to pay, to be credited and to answer for it. The carrier
             // stays charged, which is what a click by a person can use.
@@ -302,7 +303,7 @@ public final class TalismanService {
     // failing the invocation that has already happened.
     private static void refund(SpiritStorageComponent charge, LivingEntity holder) {
         if (charge.isEmpty()) return;
-        ResourceHolderAttachment resources = holder.getData(MxtAttachments.RESOURCE_HOLDER);
+        ResourceHolderAttachment resources = holder.getData(SaturnAttachments.RESOURCE_HOLDER);
         charge.amounts().forEach((aura, units) -> {
             double amount = MiscUtil.positive(units * SpiritChargeService.POUR_COST_PER_UNIT);
             if (amount <= 0.0D) return;

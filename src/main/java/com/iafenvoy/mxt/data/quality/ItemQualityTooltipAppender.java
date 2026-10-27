@@ -3,7 +3,7 @@ package com.iafenvoy.mxt.data.quality;
 import com.iafenvoy.mxt.config.MxtClientConfig;
 import com.iafenvoy.mxt.data.quality.ItemQuality.Modifier;
 import com.iafenvoy.mxt.runtime.item.QualityService;
-import com.iafenvoy.mxt.util.DefinitionText;
+import com.iafenvoy.saturn.util.DefinitionText;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup.Provider;

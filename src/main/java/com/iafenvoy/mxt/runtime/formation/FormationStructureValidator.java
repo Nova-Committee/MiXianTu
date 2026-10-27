@@ -2,8 +2,9 @@ package com.iafenvoy.mxt.runtime.formation;
 
 import com.iafenvoy.mxt.data.formation.Formation;
 import com.iafenvoy.mxt.data.formation.Formation.RequiredBlock;
-import com.iafenvoy.mxt.util.profiling.ProfilerScope;
-import com.iafenvoy.mxt.util.profiling.ServerProfiling;
+import com.iafenvoy.mxt.runtime.MxtProfilerSources;
+import com.iafenvoy.saturn.profiling.ProfilerScope;
+import com.iafenvoy.saturn.profiling.ServerProfiling;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
@@ -41,7 +42,7 @@ public interface FormationStructureValidator {
 
     // The controller is the origin, so offsets are read exactly as written.
     private static boolean matchesInline(ServerLevel level, BlockPos controller, List<RequiredBlock> structure) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.FORMATION_STRUCTURE)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.FORMATION_STRUCTURE)) {
             for (RequiredBlock required : structure) {
                 if (!level.getBlockState(controller.offset(required.offset())).equals(required.state())) return false;
             }
@@ -52,7 +53,7 @@ public interface FormationStructureValidator {
     // Validates the first matching palette; the controller is the template origin, so data packs retain full
     // control over the required layout.
     private static boolean matchesTemplate(ServerLevel level, BlockPos controller, Identifier template) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.FORMATION_STRUCTURE)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.FORMATION_STRUCTURE)) {
             return level.getStructureManager().get(template)
                     .map(loaded -> matchesSavedTemplate(level, controller, loaded.save(new CompoundTag())))
                     .orElse(false);

@@ -1,10 +1,10 @@
 package com.iafenvoy.mxt.data.forging;
 
-import com.iafenvoy.mxt.data.action.EntityAction;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.util.codec.TolerantListCodec;
+import com.iafenvoy.saturn.data.action.EntityAction;
+import com.iafenvoy.saturn.util.codec.TolerantListCodec;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.MapCodec;

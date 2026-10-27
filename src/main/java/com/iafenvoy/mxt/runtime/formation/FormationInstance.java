@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.runtime.formation;
 
 import com.iafenvoy.mxt.data.aura.Aura;
-import com.iafenvoy.mxt.util.MiscUtil;
+import com.iafenvoy.saturn.util.MiscUtil;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;

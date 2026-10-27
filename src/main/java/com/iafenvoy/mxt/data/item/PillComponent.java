@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.data.item;
 
-import com.iafenvoy.mxt.data.action.EntityAction;
-import com.iafenvoy.mxt.util.formula.NumberProvider;
+import com.iafenvoy.saturn.data.action.EntityAction;
+import com.iafenvoy.saturn.util.formula.NumberProvider;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;

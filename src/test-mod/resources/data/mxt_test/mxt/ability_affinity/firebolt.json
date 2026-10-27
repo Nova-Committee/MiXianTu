@@ -1,0 +1,4 @@
+{
+  "abilities": ["mxt_test:firebolt"],
+  "elements": ["mxt_test:fire", "#mxt_test:basic"]
+}

@@ -3,8 +3,9 @@ package com.iafenvoy.mxt.runtime.world;
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.data.secretrealm.SecretRealm;
 import com.iafenvoy.mxt.data.secretrealm.SecretRealm.StructurePlacement;
-import com.iafenvoy.mxt.util.profiling.ProfilerScope;
-import com.iafenvoy.mxt.util.profiling.ServerProfiling;
+import com.iafenvoy.mxt.runtime.MxtProfilerSources;
+import com.iafenvoy.saturn.profiling.ProfilerScope;
+import com.iafenvoy.saturn.profiling.ServerProfiling;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.Mth;
@@ -33,7 +34,7 @@ public final class SecretRealmStructurePlacer {
     }
 
     public static void place(ServerLevel level, SecretRealmRecord record, Vec3 anchor) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.SECRET_REALM)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.SECRET_REALM)) {
             StructureTemplateManager manager = level.getStructureManager();
             RandomSource random = RandomSource.create(record.seed().orElse(level.getSeed()) ^ 0x9E3779B97F4A7C15L);
             for (StructurePlacement placement : record.instance().structures()) {

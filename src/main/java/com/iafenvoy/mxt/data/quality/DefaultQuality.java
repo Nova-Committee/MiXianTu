@@ -1,6 +1,6 @@
 package com.iafenvoy.mxt.data.quality;
 
-import com.iafenvoy.mxt.util.matcher.ItemMatcher;
+import com.iafenvoy.saturn.util.matcher.ItemMatcher;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
