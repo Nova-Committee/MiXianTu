@@ -9,7 +9,7 @@
     "conditions": [
       {
         "type": "mxt:realm",
-        "realm": "mxt_test:foundation",
+        "realm": "mxt_test:qi_refining",
         "comparison": ">="
       }
     ]

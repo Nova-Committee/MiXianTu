@@ -1,9 +1,4 @@
 package com.iafenvoy.mxt.probe.world;
-import com.iafenvoy.saturn.data.resource.Resource;
-import com.iafenvoy.saturn.data.trigger.Trigger;
-import com.iafenvoy.saturn.runtime.resulting.Failure;
-import com.iafenvoy.saturn.runtime.resulting.Result;
-import com.iafenvoy.saturn.util.formula.number.Sum;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;

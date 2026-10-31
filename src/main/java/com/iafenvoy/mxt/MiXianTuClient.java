@@ -5,9 +5,10 @@ import com.iafenvoy.jupiter.render.screen.ConfigSelectScreen;
 import com.iafenvoy.mxt.config.MxtClientConfig;
 import com.iafenvoy.mxt.config.MxtServerConfig;
 import com.iafenvoy.mxt.render.animation.CultivationAnimationController;
-import com.iafenvoy.mxt.screen.resourcebar.ResourceBarOverlay;
+import com.iafenvoy.mxt.screen.resourcebar.AuraZoneBarContributor;
 import com.iafenvoy.mxt.screen.wheel.WheelSelectionEntry;
 import com.iafenvoy.mxt.screen.wheel.content.WheelContent;
+import com.iafenvoy.saturn.screen.resourcebar.ResourceBarContributors;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -22,7 +23,8 @@ public final class MiXianTuClient {
         event.getContainer().registerExtensionPoint(IConfigScreenFactory.class, (_, parent) -> ConfigSelectScreen.builder("config.mxt.title", parent).client(MxtClientConfig.INSTANCE).server(MxtServerConfig.INSTANCE).build());
 
         CultivationAnimationController.register();
-        ResourceBarOverlay.registerEntries();
+        // The resource-bar HUD entries are the library's; the aura bars hang off the zone, so they are contributed.
+        ResourceBarContributors.register(AuraZoneBarContributor.INSTANCE);
         WheelContent.register();
         WheelSelectionEntry.register();
     }

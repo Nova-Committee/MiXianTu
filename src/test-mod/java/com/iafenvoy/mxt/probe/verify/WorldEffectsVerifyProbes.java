@@ -1,8 +1,4 @@
 package com.iafenvoy.mxt.probe.verify;
-import com.iafenvoy.saturn.data.context.Context;
-import com.iafenvoy.saturn.runtime.resulting.Failure;
-import com.iafenvoy.saturn.runtime.resulting.Failures;
-import com.iafenvoy.saturn.runtime.resulting.Result;
 
 import com.iafenvoy.mxt.particle.LightBeamParticleOptions;
 import com.iafenvoy.mxt.probe.Probe;

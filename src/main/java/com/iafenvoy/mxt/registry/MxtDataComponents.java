@@ -18,6 +18,7 @@ import com.iafenvoy.mxt.data.forging.ForgingBlueprint;
 import com.iafenvoy.mxt.data.forging.ForgingMethod;
 import com.iafenvoy.mxt.data.item.*;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
+import com.iafenvoy.saturn.data.ability.Ability;
 import com.iafenvoy.saturn.data.storage.DataStorageHolder;
 import com.iafenvoy.saturn.util.codec.MiscCodecs;
 import com.iafenvoy.saturn.util.codec.RegistryCodecs;
@@ -51,7 +52,7 @@ public final class MxtDataComponents {
     public static final DeferredHolder<DataComponentType<?>, DataComponentType<ItemAuraComponent>> ITEM_AURA = register("item_aura", ItemAuraComponent.CODEC);
     public static final DeferredHolder<DataComponentType<?>, DataComponentType<SpiritStorageComponent>> SPIRIT_STORAGE = register("spirit_storage", SpiritStorageComponent.CODEC);
     public static final DeferredHolder<DataComponentType<?>, DataComponentType<ArtifactStateComponent>> ARTIFACT_STATE = register("artifact_state", ArtifactStateComponent.CODEC);
-    public static final DeferredHolder<DataComponentType<?>, DataComponentType<DataStorageHolder>> STORAGE = register("storage", DataStorageHolder.CODEC);
+    public static final DeferredHolder<DataComponentType<?>, DataComponentType<DataStorageHolder<Holder<Ability>>>> STORAGE = register("storage", DataStorageHolder.codec(Ability.CODEC));
     public static final DeferredHolder<DataComponentType<?>, DataComponentType<ItemAbilitiesComponent>> ITEM_ABILITIES = register("item_abilities", ItemAbilitiesComponent.CODEC);
     public static final DeferredHolder<DataComponentType<?>, DataComponentType<CurseContainerComponent>> CURSE_CONTAINER = register("curse_container", CurseContainerComponent.CODEC);
     public static final DeferredHolder<DataComponentType<?>, DataComponentType<ChequeComponent>> CHEQUE = register("cheque", ChequeComponent.CODEC);

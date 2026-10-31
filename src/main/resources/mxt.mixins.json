@@ -8,7 +8,6 @@
     "MinecraftServerRuntimeAccessor"
   ],
   "client": [
-    "ApricityCanvasMixin",
     "BossHealthOverlayMixin",
     "ClientInputAccessor"
   ],

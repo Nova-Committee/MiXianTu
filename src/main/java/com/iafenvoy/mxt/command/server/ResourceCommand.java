@@ -15,8 +15,10 @@ import com.iafenvoy.saturn.data.resourcebar.ResourceBarContext.Values;
 import com.iafenvoy.saturn.registry.SaturnAttachments;
 import com.iafenvoy.saturn.registry.SaturnRegistries;
 import com.iafenvoy.saturn.registry.SaturnResourceKeys;
+import com.iafenvoy.saturn.runtime.resource.ResourceService;
 import com.iafenvoy.saturn.util.DefinitionText;
 import com.iafenvoy.saturn.util.HolderHelper;
+import com.iafenvoy.saturn.util.formula.FormulaContext;
 import com.mojang.brigadier.arguments.DoubleArgumentType;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
@@ -68,8 +70,19 @@ public final class ResourceCommand {
         ServerPlayer player = source.getPlayer();
         if (player == null) return 0;
         double value = player.getData(SaturnAttachments.RESOURCE_HOLDER).get(resource);
-        source.sendSuccess(() -> Component.translatable("command.mxt.resource.query", DefinitionText.nameOrId(resource), value), false);
+        Component bounds = bounds(player, resource);
+        source.sendSuccess(() -> Component.translatable("command.mxt.resource.query",
+                DefinitionText.nameOrId(resource), value, bounds), false);
         return 1;
+    }
+
+    // The cap every write is clamped against is read out of the definition each time, so a report that carries only
+    // the stored number cannot answer "why is this pinned at zero".
+    private static Component bounds(ServerPlayer player, Reference<Resource> resource) {
+        return ResourceService.resolveBounds(resource.value(),
+                        ResourceService.formulaContext(player, resource, FormulaContext.of(player)))
+                .map(value -> (Component) Component.literal(formatRaw(value.min()) + ".." + formatRaw(value.max())))
+                .orElseGet(() -> Component.translatable("command.mxt.resource.bounds.invalid"));
     }
 
     private static int set(CommandSourceStack source, Reference<Resource> resource, double value) {
@@ -122,7 +135,7 @@ public final class ResourceCommand {
         }
         Values values = extracted.get();
         double maximum = bar.maximum().orElse(values.maximum());
-        double percentage = maximum == values.minimum() ? 100.0D
+        double percentage = maximum == values.minimum() ? 0.0D
                 : (values.current() - values.minimum()) / (maximum - values.minimum()) * 100.0D;
         source.sendSuccess(() -> Component.translatable("command.mxt.resourcebar.entry",
                 DefinitionText.nameOrId(resource), index, displayName, contextId,

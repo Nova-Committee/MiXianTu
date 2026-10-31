@@ -1,7 +1,5 @@
 package com.iafenvoy.mxt.probe.formation;
 import com.iafenvoy.saturn.registry.SaturnAttachments;
-import com.iafenvoy.saturn.data.ability.Ability;
-import com.iafenvoy.saturn.data.context.Context;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;

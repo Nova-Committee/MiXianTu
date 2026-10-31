@@ -1,8 +1,4 @@
 package com.iafenvoy.mxt.probe.herb;
-import com.iafenvoy.saturn.data.context.Context;
-import com.iafenvoy.saturn.util.formula.number.Constant;
-import com.iafenvoy.saturn.util.formula.number.Uniform;
-import com.iafenvoy.saturn.util.math.Comparison;
 
 import com.iafenvoy.mxt.attachment.HerbChunkAttachment;
 import com.iafenvoy.mxt.data.alchemy.SpiritHerb;

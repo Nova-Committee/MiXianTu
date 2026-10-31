@@ -1,6 +1,4 @@
 package com.iafenvoy.mxt.probe.artifact;
-import com.iafenvoy.saturn.data.ability.Ability;
-import com.iafenvoy.saturn.data.context.Context;
 
 import com.iafenvoy.mxt.data.ability.type.StorageAbilityType;
 import com.iafenvoy.mxt.data.artifact.Artifact;

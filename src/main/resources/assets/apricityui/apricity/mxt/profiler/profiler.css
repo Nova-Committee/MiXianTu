@@ -16,7 +16,7 @@
 .name { left: 2px; top: 5px; }
 .values { left: 2px; top: 21px; }
 .axis { left: 184px; top: 3px; width: 44px; justify-content: flex-end; }
-canvas { position: absolute; left: 232px; top: 3px; width: 240px; height: 32px; }
+canvas { position: absolute; left: 232px; top: 3px; width: 240px; height: 32px; image-rendering: pixelated; }
 .row.compact .name { top: 1px; }
 .row.compact .values { top: 14px; }
 .row.compact .axis { left: 0px; top: 28px; }

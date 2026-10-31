@@ -1,5 +1,4 @@
 package com.iafenvoy.mxt.testmod;
-import com.iafenvoy.saturn.runtime.Sources;
 
 import com.iafenvoy.mxt.event.CurseRemoveEvent.Post;
 import com.iafenvoy.mxt.probe.ProbeTests;

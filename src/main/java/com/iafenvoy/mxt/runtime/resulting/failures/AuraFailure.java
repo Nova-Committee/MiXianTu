@@ -1,5 +1,6 @@
 package com.iafenvoy.mxt.runtime.resulting.failures;
 
+import com.iafenvoy.mxt.runtime.resulting.FailureSources;
 import com.iafenvoy.saturn.runtime.resulting.Failure;
 import com.iafenvoy.saturn.runtime.resulting.SimpleFailure;
 
@@ -11,7 +12,7 @@ public final class AuraFailure {
     /**
      * The pool or bank does not hold enough of one aura.
      */
-    public static final Failure INSUFFICIENT_AURA = SimpleFailure.of("insufficient_aura");
+    public static final Failure INSUFFICIENT_AURA = SimpleFailure.of("insufficient_aura", FailureSources.COMMON);
 
     private AuraFailure() {
     }

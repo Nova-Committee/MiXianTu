@@ -7,6 +7,7 @@ import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.saturn.data.action.EntityAction;
 import com.iafenvoy.saturn.data.condition.EntityCondition;
 import com.iafenvoy.saturn.util.OptionalFloat;
+import com.iafenvoy.mxt.util.codec.MxtCodecs;
 import com.iafenvoy.saturn.util.codec.MiscCodecs;
 import com.iafenvoy.saturn.util.codec.OptionalCodecs;
 import com.mojang.datafixers.util.Pair;
@@ -145,7 +146,7 @@ public record SecretRealm(Optional<Holder<ItemQuality>> quality, SecretRealmGene
                          double safeZone) {
         public static final Border VANILLA_DEFAULT = new Border(new Vec2(0.0F, 0.0F), DEFAULT_BORDER_SIZE, 5, 15, 0.2D, 5.0D);
         public static final Codec<Border> CODEC = RecordCodecBuilder.create(i -> i.group(
-                MiscCodecs.HORIZONTAL_PAIR.optionalFieldOf("center", new Vec2(0.0F, 0.0F)).forGetter(Border::center),
+                MxtCodecs.HORIZONTAL_PAIR.optionalFieldOf("center", new Vec2(0.0F, 0.0F)).forGetter(Border::center),
                 Codec.DOUBLE.optionalFieldOf("size", DEFAULT_BORDER_SIZE).forGetter(Border::size),
                 Codec.INT.optionalFieldOf("warning_blocks", 5).forGetter(Border::warningBlocks),
                 Codec.INT.optionalFieldOf("warning_time", 15).forGetter(Border::warningTime),
@@ -192,7 +193,7 @@ public record SecretRealm(Optional<Holder<ItemQuality>> quality, SecretRealmGene
                 Vec3.CODEC.optionalFieldOf("pos").forGetter(EntryPoint::pos),
                 OptionalCodecs.floatCodec("yaw").forGetter(EntryPoint::yaw),
                 OptionalCodecs.floatCodec("pitch").forGetter(EntryPoint::pitch),
-                MiscCodecs.HORIZONTAL_PAIR.optionalFieldOf("random_center").forGetter(EntryPoint::randomCenter),
+                MxtCodecs.HORIZONTAL_PAIR.optionalFieldOf("random_center").forGetter(EntryPoint::randomCenter),
                 OptionalCodecs.doubleCodec("random_radius").forGetter(EntryPoint::randomRadius),
                 Codec.DOUBLE.optionalFieldOf("spread", 3.0D).forGetter(EntryPoint::spread),
                 Codec.INT.optionalFieldOf("weight", 1).forGetter(EntryPoint::weight)

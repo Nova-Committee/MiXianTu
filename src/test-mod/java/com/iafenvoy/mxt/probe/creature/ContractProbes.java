@@ -1,9 +1,6 @@
 package com.iafenvoy.mxt.probe.creature;
 import com.iafenvoy.saturn.registry.SaturnResourceKeys;
 import com.iafenvoy.saturn.registry.SaturnAttachments;
-import com.iafenvoy.saturn.data.ability.Ability;
-import com.iafenvoy.saturn.data.context.Context;
-import com.iafenvoy.saturn.runtime.resulting.Failure;
 
 import com.iafenvoy.mxt.api.Contractable;
 import com.iafenvoy.saturn.attachment.AbilityAttachment;

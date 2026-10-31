@@ -9,7 +9,8 @@ import net.minecraft.resources.Identifier;
 /**
  * Every source a refusal can name, in one place: the datapack registry whose definitions can refuse, so a module enum
  * points at the same constant the key {@code failure.<namespace>.<path>.<name>} is built from. {@link #COMMON} is the
- * one for a refusal any module can answer with, and it is what the interface defaults to.
+ * one for a refusal only this mod can answer with; a bare {@code SimpleFailure.of(name)} falls back to Saturn's
+ * {@code failure.saturn.common.*} instead, so a MiXianTu-only refusal has to name it.
  *
  * <p>The three Saturn names its own refusals with are repeated here so a content module only ever imports one table.
  */

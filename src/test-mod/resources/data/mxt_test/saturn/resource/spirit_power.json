@@ -9,7 +9,7 @@
         "value": "100 + level * 10"
       }
     ],
-    "fallback": 0
+    "fallback": 100
   },
   "icon": "mxt_test:textures/item/qingxiao_spirit_crystal.png",
   "particle_color": "#66CCFF",

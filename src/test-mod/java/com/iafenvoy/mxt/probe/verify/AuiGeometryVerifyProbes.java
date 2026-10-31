@@ -1,7 +1,4 @@
 package com.iafenvoy.mxt.probe.verify;
-import com.iafenvoy.saturn.data.context.Context;
-import com.iafenvoy.saturn.data.resource.Resource;
-import com.iafenvoy.saturn.runtime.resulting.Failure;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -111,9 +108,12 @@ public final class AuiGeometryVerifyProbes {
     }
 
     private static void paired(ProbeContext context, Document document, String left, String right) {
+        // AUI commits geometry on its tick and a headless document never ticks, so an uncommitted layout still
+        // answers with the last committed rect. Commit the pending layout first, the way Document#hitTest does.
+        document.commitRenderState();
         Element.DOMRect a = document.getElementById(left).getBoundingClientRect(), b = document.getElementById(right).getBoundingClientRect();
         context.check(left + " / " + right + " share a row", Math.abs(a.top - b.top) < 1e-7 && a.width > 0 && b.width > 0);
-        context.check(left + " / " + right + " do not overlap", a.right <= b.left);
+        context.check(left + " / " + right + " do not overlap (" + a.x + ".." + a.right + " vs " + b.x + ".." + b.right + ")", a.right <= b.left);
     }
 
     private static void inputs(ProbeContext context, Document document) {

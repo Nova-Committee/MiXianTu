@@ -1,6 +1,4 @@
 package com.iafenvoy.mxt.probe.ability;
-import com.iafenvoy.saturn.data.ability.Ability;
-import com.iafenvoy.saturn.data.context.Context;
 
 import com.iafenvoy.saturn.data.action.builtin.SendMessageAction;
 import com.iafenvoy.mxt.data.formation.FormationIntervals;

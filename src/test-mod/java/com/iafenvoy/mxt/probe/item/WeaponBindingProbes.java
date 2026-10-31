@@ -1,6 +1,4 @@
 package com.iafenvoy.mxt.probe.item;
-import com.iafenvoy.saturn.data.context.Context;
-import com.iafenvoy.saturn.runtime.resulting.Failure;
 
 import com.iafenvoy.mxt.probe.Probe;
 import com.iafenvoy.mxt.probe.ProbeContext;

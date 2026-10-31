@@ -1,13 +1,15 @@
 package com.iafenvoy.mxt.probe.verify;
-import com.iafenvoy.saturn.profiling.ServerProfiling.Source;
 import com.iafenvoy.saturn.registry.SaturnResourceKeys;
 import com.iafenvoy.saturn.registry.SaturnAttachments;
-import com.iafenvoy.saturn.data.context.Context;
-import com.iafenvoy.saturn.runtime.resulting.Failure;
 
 import com.iafenvoy.saturn.attachment.AbilityAttachment;
 import com.iafenvoy.saturn.data.ability.Ability;
 import com.iafenvoy.saturn.data.storage.builtin.ChargesDataStorage;
+import com.google.gson.JsonElement;
+import com.iafenvoy.saturn.data.storage.DataStorageHolder;
+import com.iafenvoy.saturn.data.storage.builtin.CooldownDataStorage;
+import com.mojang.serialization.Codec;
+import com.mojang.serialization.JsonOps;
 import com.iafenvoy.mxt.probe.Probe;
 import com.iafenvoy.mxt.probe.ProbeContext;
 import com.iafenvoy.mxt.probe.ProbeDefinitions;
@@ -17,6 +19,7 @@ import com.iafenvoy.mxt.runtime.cultivation.CultivationIdentityService;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
+import net.minecraft.resources.RegistryOps;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
@@ -68,6 +71,18 @@ public final class AbilityCooldownVerifyProbes {
             if (kept <= 0L) return "the cooldown was dropped together with the item that granted the ability";
             if (AbilityStorage.get(abilities, ability, ChargesDataStorage.class).isPresent())
                 return "the charges outlived the source they belonged to";
+            // The saved form is what carries state across a restart: one entry per definition id, decoded back through
+            // the codec the host gave it, not through anything the ability itself declares.
+            CooldownDataStorage cooldown = (CooldownDataStorage) CooldownDataStorage.INSTANCE.copy();
+            cooldown.start(200.0D, gameTime);
+            DataStorageHolder<Holder<Ability>> saved = new DataStorageHolder<>();
+            saved.set(ability, cooldown, gameTime);
+            Codec<DataStorageHolder<Holder<Ability>>> codec = DataStorageHolder.codec(Ability.CODEC);
+            RegistryOps<JsonElement> ops = RegistryOps.create(JsonOps.INSTANCE, context.registries());
+            JsonElement encoded = codec.encodeStart(ops, saved).getOrThrow(error -> new IllegalStateException("a stored value did not encode: " + error));
+            DataStorageHolder<Holder<Ability>> read = codec.parse(ops, encoded).getOrThrow(error -> new IllegalStateException("a stored value did not decode: " + error));
+            long roundTrip = read.get(ability, CooldownDataStorage.class).map(value -> value.remaining(gameTime)).orElse(-1L);
+            if (roundTrip != 200L) return "a stored cooldown came back as " + roundTrip + " instead of 200 from " + encoded;
             abilities.grant(ability, source);
             boolean cooling = AbilityStorage.onCooldown(abilities, ability, gameTime);
             abilities.revoke(ability, source);

@@ -1,7 +1,5 @@
 package com.iafenvoy.mxt.probe.verify;
 import com.iafenvoy.saturn.registry.SaturnResourceKeys;
-import com.iafenvoy.saturn.data.context.Context;
-import com.iafenvoy.saturn.runtime.resulting.Failure;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;

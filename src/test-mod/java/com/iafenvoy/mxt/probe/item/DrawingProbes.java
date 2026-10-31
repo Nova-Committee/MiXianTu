@@ -1,8 +1,4 @@
 package com.iafenvoy.mxt.probe.item;
-import com.iafenvoy.saturn.data.context.Context;
-import com.iafenvoy.saturn.runtime.resulting.Failure;
-import com.iafenvoy.saturn.runtime.resulting.Result;
-import com.iafenvoy.saturn.util.math.Comparison;
 
 import com.iafenvoy.mxt.data.aura.SpiritStorageComponent;
 import com.iafenvoy.mxt.data.item.TalismanComponent;

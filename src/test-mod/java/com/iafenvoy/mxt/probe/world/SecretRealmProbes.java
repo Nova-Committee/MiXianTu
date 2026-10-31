@@ -1,7 +1,4 @@
 package com.iafenvoy.mxt.probe.world;
-import com.iafenvoy.saturn.data.context.Context;
-import com.iafenvoy.saturn.data.Weighted;
-import com.iafenvoy.saturn.util.math.Space;
 
 import com.iafenvoy.mxt.data.condition.builtin.entity.InSecretRealmEntityCondition;
 import com.iafenvoy.mxt.data.condition.builtin.entity.InSecretRealmEntityCondition.Role;

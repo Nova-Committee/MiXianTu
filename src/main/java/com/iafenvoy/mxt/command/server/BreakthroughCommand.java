@@ -7,6 +7,7 @@ import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService;
 import com.iafenvoy.mxt.runtime.curse.CurseService;
 import com.iafenvoy.saturn.registry.SaturnAttachments;
+import com.iafenvoy.saturn.runtime.resulting.Failures;
 import com.iafenvoy.saturn.util.DefinitionText;
 import com.iafenvoy.saturn.util.formula.FormulaContext;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
@@ -40,7 +41,7 @@ public final class BreakthroughCommand {
         CultivationService.BreakthroughResult result = CultivationService.attempt(player, player.getData(MxtAttachments.CULTIVATION), player.getData(SaturnAttachments.RESOURCE_HOLDER), aura, FormulaContext.of(player), () -> true);
         if (result == null || !result.isSuccess()) {
             Component reason = result == null || result.failure() == null
-                    ? Component.translatable("failure.mxt.common.unknown")
+                    ? Failures.UNKNOWN.message()
                     : result.failure().message(result.failedResource());
             source.sendFailure(Component.translatable("command.mxt.breakthrough.failed", reason));
             return 0;

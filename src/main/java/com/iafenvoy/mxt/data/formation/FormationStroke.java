@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.data.formation;
 
 import com.iafenvoy.mxt.registry.MxtRegistries;
-import com.iafenvoy.saturn.util.codec.MiscCodecs;
+import com.iafenvoy.mxt.util.codec.MxtCodecs;
 import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
@@ -23,7 +23,7 @@ import java.util.function.Function;
  * <p>Whatever its geometry, a stroke carries a {@link Common}: the paint it is drawn in, how big and how far apart its
  * dusts sit, and the window of the figure's progress it is drawn over. Those fields are read off the stroke itself, next
  * to the geometry's own, so one file writes them the same way for both kinds. Every {@code [x, z]} pair is in the plane
- * of the figure, the second number being the z axis, so a point is written the way {@link MiscCodecs#HORIZONTAL_PAIR}
+ * of the figure, the second number being the z axis, so a point is written the way {@link MxtCodecs#HORIZONTAL_PAIR}
  * reads it.
  */
 public sealed interface FormationStroke permits FormationStroke.Circle, FormationStroke.Polyline {
@@ -128,7 +128,7 @@ public sealed interface FormationStroke permits FormationStroke.Circle, Formatio
     record Circle(Common common, Vec2 center, double radius, double startAngle) implements FormationStroke {
         public static final MapCodec<Circle> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
                 Common.CODEC.forGetter(Circle::common),
-                MiscCodecs.HORIZONTAL_PAIR.optionalFieldOf("center", Vec2.ZERO).forGetter(Circle::center),
+                MxtCodecs.HORIZONTAL_PAIR.optionalFieldOf("center", Vec2.ZERO).forGetter(Circle::center),
                 // A circle with no radius is a figure that cannot be drawn at all.
                 Codec.doubleRange(1.0E-6D, MAX_RADIUS).fieldOf("radius").forGetter(Circle::radius),
                 // One turn either way already covers every distinct place a circle can begin at.
@@ -153,7 +153,7 @@ public sealed interface FormationStroke permits FormationStroke.Circle, Formatio
     record Polyline(Common common, List<Vec2> points) implements FormationStroke {
         public static final MapCodec<Polyline> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
                 Common.CODEC.forGetter(Polyline::common),
-                MiscCodecs.HORIZONTAL_PAIR.listOf(2, MAX_POINTS).fieldOf("points").forGetter(Polyline::points)
+                MxtCodecs.HORIZONTAL_PAIR.listOf(2, MAX_POINTS).fieldOf("points").forGetter(Polyline::points)
         ).apply(i, Polyline::new));
 
         public Polyline {

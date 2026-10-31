@@ -27,7 +27,7 @@ public final class ItemStorageService {
         stack.set(MxtDataComponents.STORAGE, holder(stack).orElseGet(DataStorageHolder::new).with(ability, value));
     }
 
-    private static Optional<DataStorageHolder> holder(ItemStack stack) {
+    private static Optional<DataStorageHolder<Holder<Ability>>> holder(ItemStack stack) {
         return Optional.ofNullable(stack.get(MxtDataComponents.STORAGE));
     }
 }

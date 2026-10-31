@@ -1,7 +1,4 @@
 package com.iafenvoy.mxt.probe;
-import com.iafenvoy.saturn.data.context.Context;
-import com.iafenvoy.saturn.runtime.resulting.Failure;
-import com.iafenvoy.saturn.runtime.resulting.Failures;
 
 import com.iafenvoy.mxt.testmod.MxtTestMod;
 import com.mojang.authlib.GameProfile;

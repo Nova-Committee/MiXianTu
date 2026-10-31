@@ -1,6 +1,5 @@
 package com.iafenvoy.mxt.probe.artifact;
 import com.iafenvoy.saturn.registry.SaturnResourceKeys;
-import com.iafenvoy.saturn.data.context.Context;
 
 import com.iafenvoy.saturn.data.ability.Ability;
 import com.iafenvoy.mxt.data.ability.type.StorageAbilityType;
@@ -47,7 +46,7 @@ public final class ArtifactStorageProbes {
                 && ArtifactStorageService.INSTANCE.set(access, jadeStack, storageAbility, 1, new ItemStack(Items.STONE, 3), player)
                 // A second write of the same kind replaces that ability's one entry instead of adding a second.
                 && ArtifactStorageService.INSTANCE.set(access, jadeStack, storageAbility, 2, new ItemStack(Items.DIRT), player);
-        DataStorageHolder jadeStorage = jadeStack.get(MxtDataComponents.STORAGE);
+        DataStorageHolder<Holder<Ability>> jadeStorage = jadeStack.get(MxtDataComponents.STORAGE);
         boolean container = stored
                 && jadeStorage != null && jadeStorage.count(ContainerDataStorage.class) == 1
                 && ArtifactStorageService.INSTANCE.get(access, jadeStack, storageAbility, 1, player).is(Items.STONE)

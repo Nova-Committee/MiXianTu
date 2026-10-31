@@ -6,7 +6,7 @@ import com.iafenvoy.saturn.data.ability.AbilityType;
 import com.iafenvoy.saturn.data.action.EntityAction;
 import com.iafenvoy.saturn.data.action.NoOpAction;
 import com.iafenvoy.saturn.util.MiscUtil;
-import com.iafenvoy.saturn.util.codec.MiscCodecs;
+import com.iafenvoy.mxt.util.codec.MxtCodecs;
 import com.iafenvoy.saturn.util.formula.NumberProvider;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
@@ -58,7 +58,7 @@ public record MountAbilityType(NumberProvider speed, int seats, boolean sit, Opt
             BuiltInRegistries.ENTITY_TYPE.byNameCodec().optionalFieldOf("entity_type").forGetter(MountAbilityType::entityType),
             POSITIVE.optionalFieldOf("width", DEFAULT_WIDTH).forGetter(MountAbilityType::width),
             POSITIVE.optionalFieldOf("height", DEFAULT_HEIGHT).forGetter(MountAbilityType::height),
-            MiscCodecs.NON_NEGATIVE.optionalFieldOf("step_height", 0.0D).forGetter(MountAbilityType::stepHeight),
+            MxtCodecs.NON_NEGATIVE.optionalFieldOf("step_height", 0.0D).forGetter(MountAbilityType::stepHeight),
             Vec3.CODEC.listOf().optionalFieldOf("seat_offsets", List.of()).forGetter(MountAbilityType::seatOffsets),
             MountActions.CODEC.optionalFieldOf("mount_action", MountActions.NONE).forGetter(MountAbilityType::actions),
             MountTrail.CODEC.optionalFieldOf("trail").forGetter(MountAbilityType::trail)

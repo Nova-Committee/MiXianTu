@@ -1,7 +1,4 @@
 package com.iafenvoy.mxt.probe.verify;
-import com.iafenvoy.saturn.data.context.Context;
-import com.iafenvoy.saturn.runtime.resulting.Failure;
-import com.iafenvoy.saturn.util.chain.Chain;
 
 import com.iafenvoy.mxt.data.aura.AuraZone;
 import com.iafenvoy.mxt.probe.Probe;
