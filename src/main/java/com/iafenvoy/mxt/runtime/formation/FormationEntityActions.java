@@ -1,5 +1,7 @@
 package com.iafenvoy.mxt.runtime.formation;
 
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.SetMultimap;
 import com.iafenvoy.mxt.data.formation.Formation;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
@@ -22,7 +24,7 @@ import java.util.Map.Entry;
  * would otherwise leave the grants of the entities it was tracking. The presence set is in memory only.
  */
 final class FormationEntityActions {
-    private static final Map<ResourceKey<Level>, Map<BlockPos, Set<UUID>>> PRESENCE = new HashMap<>();
+    private static final Map<ResourceKey<Level>, SetMultimap<BlockPos, UUID>> PRESENCE = new HashMap<>();
 
     private FormationEntityActions() {
     }
@@ -57,8 +59,7 @@ final class FormationEntityActions {
     // Releases everything the formation handed to the entities it was tracking, runs their leaving beat, then
     // forgets them. The array's own closing beat is not here, because a block action cannot see entities - which is
     // exactly why this runs before it.
-    static void releaseTracked(ServerLevel level, BlockPos controller, FormationInstance instance,
-                               @Nullable Formation definition) {
+    static void releaseTracked(ServerLevel level, BlockPos controller, FormationInstance instance, @Nullable Formation definition) {
         Set<UUID> tracked = forget(level, controller);
         if (tracked.isEmpty()) return;
         FormationCarrier carrier = FormationActionContext.carrier(instance, controller);
@@ -74,20 +75,20 @@ final class FormationEntityActions {
     }
 
     static Set<UUID> tracked(ServerLevel level, BlockPos controller) {
-        Map<BlockPos, Set<UUID>> tracked = PRESENCE.get(level.dimension());
+        SetMultimap<BlockPos, UUID> tracked = PRESENCE.get(level.dimension());
         Set<UUID> previous = tracked == null ? null : tracked.get(controller);
         return previous == null ? Set.of() : previous;
     }
 
     static void remember(ServerLevel level, BlockPos controller, Set<UUID> present) {
-        PRESENCE.computeIfAbsent(level.dimension(), key -> new HashMap<>()).put(controller, Set.copyOf(present));
+        PRESENCE.computeIfAbsent(level.dimension(), _ -> HashMultimap.create()).putAll(controller, present);
     }
 
     static Set<UUID> forget(ServerLevel level, BlockPos controller) {
-        Map<BlockPos, Set<UUID>> tracked = PRESENCE.get(level.dimension());
+        SetMultimap<BlockPos, UUID> tracked = PRESENCE.get(level.dimension());
         if (tracked == null) return Set.of();
-        Set<UUID> previous = tracked.remove(controller);
+        Set<UUID> previous = tracked.removeAll(controller);
         if (tracked.isEmpty()) PRESENCE.remove(level.dimension());
-        return previous == null ? Set.of() : previous;
+        return previous;
     }
 }

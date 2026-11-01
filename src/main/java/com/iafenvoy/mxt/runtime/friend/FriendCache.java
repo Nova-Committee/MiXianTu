@@ -1,14 +1,15 @@
 package com.iafenvoy.mxt.runtime.friend;
 
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.Multimaps;
+import com.google.common.collect.SetMultimap;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.players.NameAndId;
 import net.minecraft.util.TriState;
 
-import java.util.HashSet;
-import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Every player's friend lists, mirrored in memory so an owner who is offline can still be answered for; the lists
@@ -20,7 +21,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * has logged in to the world being played.
  */
 public final class FriendCache {
-    private static final Map<UUID, Set<UUID>> FRIENDS = new ConcurrentHashMap<>();
+    private static final SetMultimap<UUID, UUID> FRIENDS = Multimaps.synchronizedSetMultimap(HashMultimap.create());
 
     private FriendCache() {
     }
@@ -28,18 +29,16 @@ public final class FriendCache {
     // A player with no friend attachment is recorded as having an empty list rather than skipped: "this player has
     // no friends" and "this player is unknown" are different answers.
     public static void refresh(ServerPlayer player) {
-        Set<UUID> ids = new HashSet<>();
         player.getExistingData(MxtAttachments.FRIEND).ifPresent(friends -> {
-            friends.permanent().forEach(friend -> ids.add(friend.id()));
-            friends.temporary().forEach(friend -> ids.add(friend.id()));
+            FRIENDS.putAll(player.getUUID(), friends.permanent().stream().map(NameAndId::id).toList());
+            FRIENDS.putAll(player.getUUID(), friends.temporary().stream().map(NameAndId::id).toList());
         });
-        FRIENDS.put(player.getUUID(), Set.copyOf(ids));
     }
 
     // The mirrored answer for a named owner, or DEFAULT when that player has never been seen.
     public static TriState lookup(UUID owner, UUID candidate) {
         Set<UUID> friends = FRIENDS.get(owner);
-        return friends == null ? TriState.DEFAULT : TriState.from(friends.contains(candidate));
+        return TriState.from(friends.contains(candidate));
     }
 
     public static void clear() {

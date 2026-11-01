@@ -119,14 +119,14 @@ public final class CurseEventBridge {
                         ? OptionalLong.of(Math.round(durationValue)) : OptionalLong.empty();
                 CurseService.applyWithDuration(entity, curse, (int) Math.round(stacks), gameTime, context, source, duration);
             }
-            CurseService.reconcileSource(entity, source, wanted, gameTime, context);
+            CurseService.reconcileSource(entity, source, wanted, gameTime);
         }
         // A source whose gear is gone entirely is not in that map at all, so it is released on its own. The Curios
         // source counts as carried gear here even though the ability side treats it as part of the body: what this
         // asks is whether the source belongs to what is equipped right now.
         for (Identifier known : holder.sources().allSources()) {
             if ((!Sources.isEquipment(known) && !known.equals(Sources.CURIOS)) || declared.containsKey(known)) continue;
-            CurseService.reconcileSource(entity, known, List.of(), gameTime, context);
+            CurseService.reconcileSource(entity, known, List.of(), gameTime);
         }
     }
 

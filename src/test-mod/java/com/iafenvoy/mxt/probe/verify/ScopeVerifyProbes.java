@@ -156,7 +156,6 @@ public final class ScopeVerifyProbes {
 
     private static Trigger trigger(ProbeContext context) {
         MapCodec<? extends Trigger> codec = SaturnRegistries.TRIGGER_TYPE.getValue(TriggerSignals.TICK);
-        if (codec == null) return null;
         return codec.decoder().parse(RegistryOps.create(JsonOps.INSTANCE, context.registries()),
                 JsonOps.INSTANCE.createMap(new LinkedHashMap<>())).result().orElse(null);
     }

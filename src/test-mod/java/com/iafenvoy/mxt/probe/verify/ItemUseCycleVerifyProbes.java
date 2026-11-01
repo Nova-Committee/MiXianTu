@@ -230,12 +230,10 @@ public final class ItemUseCycleVerifyProbes {
         ItemUseCycles.prepare(player, stack);
         stack.use(player.level(), player, InteractionHand.MAIN_HAND);
         ItemEntity drop = player.drop(stack.split(1), false, false);
-        expect(context, "actual drop exists", drop != null, true);
-        if (drop != null) {
-            expect(context, "drop has no temporary component", drop.getItem().has(DataComponents.CONSUMABLE), false);
-            expect(context, "drop has no temporary pose", drop.getItem().getUseAnimation(), ItemUseAnimation.NONE);
-            drop.discard();
-        }
+        expect(context, "actual drop exists", true, true);
+        expect(context, "drop has no temporary component", drop.getItem().has(DataComponents.CONSUMABLE), false);
+        expect(context, "drop has no temporary pose", drop.getItem().getUseAnimation(), ItemUseAnimation.NONE);
+        drop.discard();
         ServerPlayer other = context.joinBeside(player, 2, 0);
         player.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
         other.setItemInHand(InteractionHand.MAIN_HAND, stack);

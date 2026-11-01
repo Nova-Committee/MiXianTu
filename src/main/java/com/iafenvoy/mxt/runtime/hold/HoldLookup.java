@@ -30,6 +30,7 @@ import java.util.concurrent.ConcurrentHashMap;
 @EventBusSubscriber
 public final class HoldLookup {
     // Keyed by item, and only ever holding the declarations that match on the item's identity.
+    // FIXME::Multimap
     private static final Map<Item, List<HoldBinding>> ITEM_MATCHED = new ConcurrentHashMap<>();
     // Sorted by the priority each declaration carries, then by the order the listeners ran in, which is who
     // drives a stack two of them claim.

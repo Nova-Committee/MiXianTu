@@ -92,7 +92,7 @@ public final class LifespanProbes {
             boolean dormantSettled = LifeSpanService.settle(dormant);
             boolean dormantLedger = dormant.getExistingData(MxtAttachments.LIFESPAN).isPresent();
             boolean dormantWrite = LifeSpanService.set(dormant, 100L).getFailure().isEmpty();
-            ok &= context.check("lifespan probe: switch_off settled=" + dormantSettled + " ledger=" + dormantLedger
+            ok = context.check("lifespan probe: switch_off settled=" + dormantSettled + " ledger=" + dormantLedger
                             + " written=" + LifeSpanService.remaining(dormant),
                     !dormantSettled && !dormantLedger && dormantWrite && LifeSpanService.remaining(dormant) == 100L);
             verdict(context, ok);
@@ -119,7 +119,7 @@ public final class LifespanProbes {
             settings.enabled.setValue(true);
             settings.agePerSettle.setValue(20);
             boolean resumed = LifeSpanService.settle(dormant) && LifeSpanService.remaining(dormant) == 80L;
-            ok &= context.check("lifespan probe: switch_on remaining=" + LifeSpanService.remaining(dormant)
+            ok = context.check("lifespan probe: switch_on remaining=" + LifeSpanService.remaining(dormant)
                     + "/" + LifeSpanService.total(dormant), resumed);
             verdict(context, ok);
         } finally {
@@ -153,7 +153,7 @@ public final class LifespanProbes {
             settings.agePerSettle.setValue(0);
             boolean ageless = LifeSpanService.settle(ledger) && LifeSpanService.remaining(ledger) == 120L;
             settings.agePerSettle.setValue(20);
-            ok &= context.check("lifespan probe: ledger set=" + setLedger + " added=" + added + " spent=" + spent
+            ok = context.check("lifespan probe: ledger set=" + setLedger + " added=" + added + " spent=" + spent
                             + " refused=" + refusedSet + " ageless=" + ageless,
                     setLedger && added && spent && refusedSet && ageless);
             verdict(context, ok);
@@ -184,7 +184,7 @@ public final class LifespanProbes {
             settings.baseLifespan.setValue(0L);
             LifeSpanService.add(plain, 40L);
             boolean fromZero = LifeSpanService.remaining(plain) == 40L && LifeSpanService.total(plain) == 40L;
-            ok &= context.check("lifespan probe: seed base=" + LifeSpanService.remaining(seeded)
+            ok = context.check("lifespan probe: seed base=" + LifeSpanService.remaining(seeded)
                     + " zero=" + LifeSpanService.remaining(plain), fromBase && fromZero);
             verdict(context, ok);
         } finally {
@@ -220,7 +220,7 @@ public final class LifespanProbes {
                 NeoForge.EVENT_BUS.unregister(recorder);
             }
             boolean closed = LifeSpanService.remaining(settled) == -1L && LifeSpanService.total(settled) == 0L;
-            ok &= context.check("lifespan probe: settle decremented=" + decremented + " closed=" + closed
+            ok = context.check("lifespan probe: settle decremented=" + decremented + " closed=" + closed
                             + " outcomes=" + outcomes,
                     decremented && expired && closed && outcomes.equals(List.of(LifespanOutcome.NONE)));
             verdict(context, ok);
@@ -264,7 +264,7 @@ public final class LifespanProbes {
                 NeoForge.EVENT_BUS.unregister(extend);
             }
             boolean extended = LifeSpanService.remaining(cancelled) == 50L;
-            ok &= context.check("lifespan probe: pre_cancel closed=" + refusedEnd
+            ok = context.check("lifespan probe: pre_cancel closed=" + refusedEnd
                     + " extended=" + LifeSpanService.remaining(cancelled), refusedEnd && extended);
             verdict(context, ok);
         } finally {
@@ -292,7 +292,7 @@ public final class LifespanProbes {
             DamageSource cause = doomed.getLastDamageSource();
             boolean died = !doomed.isAlive() && cause != null && DamageCalculationService.bypasses(cause)
                     && HolderHelper.id(cause.typeHolder()).equals(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "lifespan"));
-            ok &= context.check("lifespan probe: death alive=" + doomed.isAlive() + " cause="
+            ok = context.check("lifespan probe: death alive=" + doomed.isAlive() + " cause="
                             + (cause == null ? "none" : HolderHelper.id(cause.typeHolder())),
                     died);
             verdict(context, ok);
@@ -338,7 +338,7 @@ public final class LifespanProbes {
                     && !reborn.getData(MxtAttachments.SPIRIT_IDENTITY).spiritRoots().isEmpty()
                     && rebornAbilities.has(context.require(SaturnResourceKeys.ABILITY, ProbeDefinitions.PROBE_AFFINITY_ABILITY));
             boolean rebornLedger = LifeSpanService.remaining(reborn) == 24_000L && LifeSpanService.total(reborn) == 24_000L;
-            ok &= context.check("lifespan probe: reincarnate realm_ability=" + realmAbility
+            ok = context.check("lifespan probe: reincarnate realm_ability=" + realmAbility
                             + " realms=" + rebornSpirit.realmStages().size()
                             + " minor_stage=" + rebornStages.minorStageRecord(qiRefining)
                             + " kept=" + kept + " ledger=" + LifeSpanService.remaining(reborn),
@@ -382,7 +382,7 @@ public final class LifespanProbes {
             boolean affordable = climbResources.get(climbPayment) >= 25.0D;
             boolean granted = (breakthrough instanceof Result.SuccessResult<?>) && LifeSpanService.remaining(climber) == 2_400L
                     && LifeSpanService.total(climber) == 2_400L;
-            ok &= context.check("lifespan probe: breakthrough advanced=" + (breakthrough instanceof Result.SuccessResult<?>)
+            ok = context.check("lifespan probe: breakthrough advanced=" + (breakthrough instanceof Result.SuccessResult<?>)
                             + " failure=" + breakthrough.getFailure().orElse(null) + " declared=" + declared
                             + " affordable=" + affordable + " granted=" + LifeSpanService.remaining(climber),
                     affordable && granted);
@@ -412,7 +412,7 @@ public final class LifespanProbes {
             new ModifyLifespanAction(ModifyLifespanAction.Mode.SET, new Constant(-5.0D))
                     .execute(acted, FormulaContext.of(acted));
             boolean actionTook = LifeSpanService.remaining(acted) == 20L && LifeSpanService.total(acted) == 30L;
-            ok &= context.check("lifespan probe: action added=" + actionAdded + " took=" + actionTook
+            ok = context.check("lifespan probe: action added=" + actionAdded + " took=" + actionTook
                             + " remaining=" + LifeSpanService.remaining(acted),
                     actionAdded && actionTook);
             verdict(context, ok);
@@ -441,7 +441,7 @@ public final class LifespanProbes {
             boolean clean = !LifeSpanService.settle(untouched)
                     && untouched.getExistingData(MxtAttachments.LIFESPAN).isEmpty()
                     && LifeSpanService.remaining(untouched) == -1L;
-            ok &= context.check("lifespan probe: no_ledger zero_add=" + zeroAdd + " settle_created="
+            ok = context.check("lifespan probe: no_ledger zero_add=" + zeroAdd + " settle_created="
                     + untouched.getExistingData(MxtAttachments.LIFESPAN).isPresent(), zeroAdd && clean);
             verdict(context, ok);
         } finally {
@@ -503,7 +503,7 @@ public final class LifespanProbes {
                     && !restartAbilities.has(context.require(SaturnResourceKeys.ABILITY, context.id("awaken_divine_sense")))
                     && restartAbilities.has(context.require(SaturnResourceKeys.ABILITY, ProbeDefinitions.PROBE_AFFINITY_ABILITY));
             boolean restartLedger = LifeSpanService.remaining(restart) == 24_000L && LifeSpanService.total(restart) == 24_000L;
-            ok &= context.check("lifespan probe: explicit_reincarnate ran=" + (restarted.getFailure().isEmpty())
+            ok = context.check("lifespan probe: explicit_reincarnate ran=" + (restarted.getFailure().isEmpty())
                             + " refused=" + restartRefused + " ability=" + restartAbility
                             + " realms=" + restartSpirit.realmStages().size()
                             + " kept_root=" + restartAbilities.has(context.require(SaturnResourceKeys.ABILITY, ProbeDefinitions.PROBE_AFFINITY_ABILITY))
@@ -541,7 +541,7 @@ public final class LifespanProbes {
             action.execute(restart, FormulaContext.of(restart));
             boolean actionRebirth = restartSpirit.realmStages().isEmpty()
                     && LifeSpanService.remaining(restart) == 24_000L;
-            ok &= context.check("lifespan probe: reincarnate_action realms=" + restartSpirit.realmStages().size()
+            ok = context.check("lifespan probe: reincarnate_action realms=" + restartSpirit.realmStages().size()
                     + " ledger=" + LifeSpanService.remaining(restart), actionRebirth);
             verdict(context, ok);
         } finally {

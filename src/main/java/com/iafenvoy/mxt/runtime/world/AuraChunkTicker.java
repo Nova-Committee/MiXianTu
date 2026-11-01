@@ -1,5 +1,6 @@
 package com.iafenvoy.mxt.runtime.world;
 
+import com.google.common.collect.*;
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.config.MxtServerConfig;
 import com.iafenvoy.mxt.registry.MxtAttachments;
@@ -34,9 +35,9 @@ public final class AuraChunkTicker {
     private static final TickInterval REFRESH_INTERVAL = TickInterval.random(600, 1199);
     // These maps cannot use weak keys: their values hold chunks or levels, so the key would
     // be reachable from the map itself and never collected. Unload events are the only way they are dropped.
-    private static final Map<ServerLevel, Set<LevelChunk>> LOADED = Collections.synchronizedMap(new IdentityHashMap<>());
+    private static final SetMultimap<ServerLevel, LevelChunk> LOADED = Multimaps.synchronizedSetMultimap(LinkedHashMultimap.create());
     // Loaded chunks whose pools are not built yet, so the next tick seeds them instead of waiting for a query.
-    private static final Map<ServerLevel, Set<LevelChunk>> PENDING = Collections.synchronizedMap(new IdentityHashMap<>());
+    private static final SetMultimap<ServerLevel, LevelChunk> PENDING = Multimaps.synchronizedSetMultimap(LinkedHashMultimap.create());
     private static final Map<ServerLevel, RefreshState> REFRESH = Collections.synchronizedMap(new IdentityHashMap<>());
     private static final Map<ServerLevel, AuraMaintenanceState> MAINTENANCE = Collections.synchronizedMap(new IdentityHashMap<>());
 
@@ -48,8 +49,8 @@ public final class AuraChunkTicker {
         try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.AURA)) {
             if (!(event.getChunk().getLevel() instanceof ServerLevel level)) return;
             LevelChunk chunk = event.getChunk();
-            LOADED.computeIfAbsent(level, ignored -> Collections.newSetFromMap(new IdentityHashMap<>())).add(chunk);
-            PENDING.computeIfAbsent(level, ignored -> Collections.newSetFromMap(new IdentityHashMap<>())).add(chunk);
+            LOADED.put(level, chunk);
+            PENDING.put(level, chunk);
             // The save can be older than the world, so the whole column is rebuilt before anything may read it.
             BlockAuraService.rebuild(chunk);
             refreshDeadlines(level, chunk);
@@ -72,8 +73,8 @@ public final class AuraChunkTicker {
     }
 
     private static void release(ServerLevel level) {
-        LOADED.remove(level);
-        PENDING.remove(level);
+        LOADED.removeAll(level);
+        PENDING.removeAll(level);
         RefreshState refresh = REFRESH.remove(level);
         if (refresh != null) refresh.dispatcher.clear();
         AuraMaintenanceState maintenance = MAINTENANCE.remove(level);
@@ -93,8 +94,7 @@ public final class AuraChunkTicker {
     // A snapshot of the chunks this level currently has loaded, for other per-chunk work that must not scan a
     // whole level every tick. Copied, because the caller iterates while chunks may still load or unload.
     public static Set<LevelChunk> loadedChunks(ServerLevel level) {
-        Set<LevelChunk> chunks = LOADED.get(level);
-        return chunks == null ? Set.of() : new LinkedHashSet<>(chunks);
+        return LOADED.get(level);
     }
 
     // Clears then immediately rebuilds the persisted block-aura subsection caches of the loaded chunks around
@@ -103,7 +103,6 @@ public final class AuraChunkTicker {
         try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.AURA)) {
             if (radius < 0) throw new IllegalArgumentException("Cache clear radius cannot be negative");
             Set<LevelChunk> chunks = LOADED.get(level);
-            if (chunks == null) return 0;
             int centerX = SectionPos.blockToSectionCoord(center.getX());
             int centerZ = SectionPos.blockToSectionCoord(center.getZ());
             int cleared = 0;
@@ -140,14 +139,14 @@ public final class AuraChunkTicker {
     // pools as well: seeding a chunk inside the load callback would resolve zones against a half-built chunk.
     private static void seedPending(ServerLevel level) {
         Set<LevelChunk> pending = PENDING.get(level);
-        if (pending == null || pending.isEmpty()) return;
+        if (pending.isEmpty()) return;
         for (LevelChunk chunk : new LinkedHashSet<>(pending)) {
             if (chunk.getLevel() != level) continue;
             if (chunk.getData(MxtAttachments.AURA_CHUNK).seeded()) continue;
             AuraService.ensureInitialized(chunk, chunk.getPos().getMiddleBlockPosition(level.getMinY()));
         }
         pending.clear();
-        PENDING.remove(level);
+        PENDING.removeAll(level);
     }
 
     private static void refreshDeadlines(ServerLevel level, LevelChunk chunk) {
@@ -155,16 +154,8 @@ public final class AuraChunkTicker {
     }
 
     private static void forget(ServerLevel level, LevelChunk chunk) {
-        Set<LevelChunk> chunks = LOADED.get(level);
-        if (chunks != null) {
-            chunks.remove(chunk);
-            if (chunks.isEmpty()) LOADED.remove(level);
-        }
-        Set<LevelChunk> pending = PENDING.get(level);
-        if (pending != null) {
-            pending.remove(chunk);
-            if (pending.isEmpty()) PENDING.remove(level);
-        }
+        LOADED.remove(level, chunk);
+        PENDING.remove(level, chunk);
         RefreshState refresh = REFRESH.get(level);
         if (refresh != null) {
             refresh.forget(chunk);
@@ -201,7 +192,7 @@ public final class AuraChunkTicker {
 
     private static final class RefreshState {
         private final TickDispatcher<RefreshTask> dispatcher;
-        private final Map<LevelChunk, List<RefreshTask>> chunks = new IdentityHashMap<>();
+        private final ListMultimap<LevelChunk, RefreshTask> chunks = LinkedListMultimap.create();
 
         private RefreshState(ServerLevel level) {
             this.dispatcher = new TickDispatcher<>(level.getGameTime(), level.getSeed() ^ level.dimension().identifier().hashCode(), TickExecutionLimit.adaptive(8, 600));
@@ -210,24 +201,21 @@ public final class AuraChunkTicker {
         private void schedule(LevelChunk chunk, long now) {
             this.dispatcher.advanceTo(now);
             this.forget(chunk);
-            List<RefreshTask> tasks = new ArrayList<>();
             int minSectionY = chunk.getMinSectionY();
-            for (int i = 0; i < chunk.getSectionsCount(); i++) this.schedule(chunk, minSectionY + i, tasks);
+            for (int i = 0; i < chunk.getSectionsCount(); i++) this.schedule(chunk, minSectionY + i);
             for (int sectionY : chunk.getData(MxtAttachments.AURA_CHUNK).blockAuraSections().keySet())
                 if (sectionY < minSectionY || sectionY >= minSectionY + chunk.getSectionsCount())
-                    this.schedule(chunk, sectionY, tasks);
-            this.chunks.put(chunk, tasks);
+                    this.schedule(chunk, sectionY);
         }
 
-        private void schedule(LevelChunk chunk, int sectionY, List<RefreshTask> tasks) {
+        private void schedule(LevelChunk chunk, int sectionY) {
             RefreshTask task = new RefreshTask(chunk, sectionY);
             this.dispatcher.schedule(task, REFRESH_INTERVAL, () -> BlockAuraService.rebuild(chunk, sectionY));
-            tasks.add(task);
+            this.chunks.put(chunk, task);
         }
 
         private void forget(LevelChunk chunk) {
-            List<RefreshTask> tasks = this.chunks.remove(chunk);
-            if (tasks != null) tasks.forEach(this.dispatcher::cancel);
+            this.chunks.removeAll(chunk).forEach(this.dispatcher::cancel);
         }
     }
 

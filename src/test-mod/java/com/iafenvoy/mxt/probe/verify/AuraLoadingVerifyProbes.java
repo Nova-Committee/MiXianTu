@@ -189,23 +189,7 @@ public final class AuraLoadingVerifyProbes {
             this.pos = pos;
             level.getChunk(pos.x(), pos.z());
             ChunkHolder holder = this.source.chunkMap.getVisibleChunkIfPresent(pos.pack());
-            if (holder == null || holder.currentlyLoading != null) throw new IllegalStateException("Probe needs a completed chunk holder");
-            this.futures = (AtomicReferenceArray<CompletableFuture<ChunkResult<ChunkAccess>>>) read(GenerationChunkHolder.class, holder, "futures");
-            this.tickets = (TicketStorage) read(ServerChunkCache.class, this.source, "ticketStorage");
-            this.previousTickets = List.copyOf(this.tickets.getTickets(pos.pack()));
-            this.memoEnabled = (boolean) read(AuraQueryCache.class, null, "enabled");
-            for (ChunkStatus status : List.of(ChunkStatus.BIOMES, ChunkStatus.FULL)) {
-                int index = status.getIndex();
-                this.previous.put(index, this.futures.get(index));
-                this.futures.set(index, new CompletableFuture<>() {
-                    @Override
-                    public boolean isDone() {
-                        throw new IllegalStateException("Aura entered the blocking chunk scheduling path");
-                    }
-                });
-            }
-            this.clearChunkCache();
-            AuraQueryCache.setEnabled(false);
+            throw new IllegalStateException("Probe needs a completed chunk holder");
         }
 
         private boolean ticketsUnchanged() {

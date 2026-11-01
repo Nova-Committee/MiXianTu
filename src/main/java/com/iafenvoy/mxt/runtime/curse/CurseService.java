@@ -1,5 +1,7 @@
 package com.iafenvoy.mxt.runtime.curse;
 
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.SetMultimap;
 import com.iafenvoy.mxt.attachment.CurseHolderAttachment;
 import com.iafenvoy.mxt.attachment.CurseHolderAttachment.State;
 import com.iafenvoy.mxt.data.curse.Curse;
@@ -225,20 +227,19 @@ public final class CurseService {
 
     // The same call the ability model makes: what that source no longer declares is released. Applying the
     // payloads of newly declared curses is the caller's job, because only it knows the stacks and duration.
-    public static boolean reconcileSource(Entity target, Identifier source, Collection<Holder<Curse>> desired,
-                                          long gameTime, FormulaContext context) {
+    public static boolean reconcileSource(Entity target, Identifier source, Collection<Holder<Curse>> desired, long gameTime) {
         try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.CURSE)) {
             CurseHolderAttachment data = target.getData(MxtAttachments.CURSE_HOLDER);
             Set<Holder<Curse>> previous = data.sources().keysHeldBy(source);
             // Read before the reconcile, so an instance losing its last source here still reports the sources that
             // were keeping it alive rather than the empty set the reconcile leaves behind.
-            Map<Holder<Curse>, Set<Identifier>> before = new LinkedHashMap<>();
-            previous.forEach(curse -> before.put(curse, data.sources().of(curse)));
+            SetMultimap<Holder<Curse>, Identifier> before = HashMultimap.create();
+            previous.forEach(curse -> before.putAll(curse, data.sources().of(curse)));
             if (!data.sources().reconcile(source, desired)) return false;
             boolean removedAny = false;
             for (Holder<Curse> curse : previous) {
                 if (desired.contains(curse) || data.sources().holds(curse)) continue;
-                if (remove(data, curse, before.getOrDefault(curse, Set.of()), Reason.EXPLICIT, gameTime, NeoForge.EVENT_BUS).isPresent())
+                if (remove(data, curse, before.get(curse), Reason.EXPLICIT, gameTime, NeoForge.EVENT_BUS).isPresent())
                     removedAny = true;
             }
             CurseScheduler.reschedule(target);
