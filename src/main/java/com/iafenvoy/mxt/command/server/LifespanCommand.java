@@ -3,12 +3,12 @@ package com.iafenvoy.mxt.command.server;
 import com.iafenvoy.mxt.command.ServerCommandManager;
 import com.iafenvoy.mxt.config.MxtServerConfig;
 import com.iafenvoy.mxt.runtime.cultivation.LifeSpanService;
+import com.iafenvoy.saturn.runtime.resulting.Failure;
 import com.iafenvoy.saturn.runtime.resulting.Result;
 import com.mojang.brigadier.arguments.LongArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
-import net.minecraft.commands.CommandBuildContext;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.network.chat.Component;
@@ -26,7 +26,7 @@ import static net.minecraft.commands.Commands.literal;
  * the information panel shows.
  */
 public final class LifespanCommand {
-    public static LiteralArgumentBuilder<CommandSourceStack> build(CommandBuildContext context) {
+    public static LiteralArgumentBuilder<CommandSourceStack> build() {
         return literal("lifespan")
                 .executes(ctx -> get(ctx.getSource(), ctx.getSource().getPlayerOrException()))
                 .then(literal("get")
@@ -78,10 +78,9 @@ public final class LifespanCommand {
                 source.sendFailure(Component.translatable("command.mxt.lifespan.not_living", target.getDisplayName()));
                 continue;
             }
-            Result result = LifeSpanService.reincarnate(living);
-            if (result.failure() != null) {
-                source.sendFailure(Component.translatable("command.mxt.lifespan.reincarnate_failed",
-                        target.getDisplayName(), result.failure().message()));
+            Result<?> result = LifeSpanService.reincarnate(living);
+            if (result instanceof Result.FailureResult<?>(Failure failure1)) {
+                source.sendFailure(Component.translatable("command.mxt.lifespan.reincarnate_failed", target.getDisplayName(), failure1.message()));
                 continue;
             }
             done++;
@@ -100,10 +99,9 @@ public final class LifespanCommand {
                 source.sendFailure(Component.translatable("command.mxt.lifespan.not_living", target.getDisplayName()));
                 continue;
             }
-            Result result = rewrite ? LifeSpanService.set(living, ticks) : LifeSpanService.add(living, ticks);
-            if (result.failure() != null) {
-                source.sendFailure(Component.translatable("command.mxt.lifespan.failed", target.getDisplayName(),
-                        result.failure().message()));
+            Result<?> result = rewrite ? LifeSpanService.set(living, ticks) : LifeSpanService.add(living, ticks);
+            if (result instanceof Result.FailureResult<?>(Failure failure1)) {
+                source.sendFailure(Component.translatable("command.mxt.lifespan.failed", target.getDisplayName(), failure1.message()));
                 continue;
             }
             changed++;

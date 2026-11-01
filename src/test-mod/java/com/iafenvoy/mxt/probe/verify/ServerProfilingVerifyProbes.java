@@ -73,7 +73,7 @@ public final class ServerProfilingVerifyProbes {
             }
             expect(context, "a second change keeps its result", change(), 3L);
             expect(context, "profiled empty payment still succeeds",
-                    CostPayment.pay(List.of(), CostContext.of(context.player(), CostOrigins.ABILITY)).isSuccess(), true);
+                    CostPayment.pay(List.of(), CostContext.of(context.player(), CostOrigins.ABILITY)).getFailure().isEmpty(), true);
             AtomicLong workerResult = new AtomicLong(-1L);
             Thread worker = Thread.ofPlatform().start(() -> workerResult.set(change()));
             try {

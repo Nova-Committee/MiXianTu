@@ -127,7 +127,7 @@ public final class AuiGeometryVerifyProbes {
                             close(context, "popup leaves canvas height unchanged", canvas.getBoundingClientRect().height, before.height);
                             if (menu.equals("blueprint")) {
                                 Element file = document.getElementById("file_scroll");
-                                try (var _ = GeometryQueryScope.open()) {
+                                try (GeometryQueryScope _ = GeometryQueryScope.open()) {
                                     boolean scrollable = file.hasVerticalScrollRange();
                                     if (size[1] <= 360) context.check("short file menu can scroll to export and save", scrollable);
                                     if (scrollable) {
@@ -145,7 +145,7 @@ public final class AuiGeometryVerifyProbes {
                         Element scroll = document.getElementById("scroll");
                         Element.DOMRect footer = document.getElementById("footer").getBoundingClientRect();
                         Element.DOMRect header = document.getElementById("header").getBoundingClientRect();
-                        try (var _ = GeometryQueryScope.open()) {
+                        try (GeometryQueryScope _ = GeometryQueryScope.open()) {
                             boolean scrollable = scroll.hasVerticalScrollRange();
                             if (size[1] <= 454) context.check("long properties in short windows have a scroll range", scrollable);
                             if (scrollable) {

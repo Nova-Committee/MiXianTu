@@ -71,11 +71,7 @@ public final class RiftStorage {
     }
 
     private static void restore(ServerLevel level, RiftRecord record) {
-        RiftWorldAttachment world = RiftService.world(level);
-        RiftGeometry.Mesh mesh = mesh(record);
-        // Older directories may still point to the placement origin; move the record before changing its locator.
-        if (world.location(record.id()).chunk() != RiftLocation.of(record, mesh).chunk()) write(level, record, mesh);
-        else world.put(record, mesh);
+        RiftService.world(level).put(record, mesh(record));
     }
 
     static void eraseLoaded(ServerLevel level, long position, UUID id) {

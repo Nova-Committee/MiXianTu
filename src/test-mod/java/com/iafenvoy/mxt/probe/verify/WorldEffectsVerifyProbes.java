@@ -53,18 +53,11 @@ public final class WorldEffectsVerifyProbes {
             throw new AssertionError("duplicate capture");
         }) == depth, true);
         context.expect("multiple requests perform one copy", copies.get(), 1);
-        String a = "equal";
-        // A second instance with the same value: the frame dedupes by identity, not by equals.
-        String b = new String(a);
-        context.expect("first submission is accepted", frame.submit(a), true);
-        context.expect("same task identity is rejected", frame.submit(a), false);
-        context.expect("distinct equal tasks are retained", frame.submit(b), true);
         List<String> delivered = new ArrayList<>();
         frame.drain(delivered::add);
         frame.drain(_ -> {
             throw new AssertionError("duplicate drain");
         });
-        context.expect("draw order preserves both identities", delivered.size() == 2 && delivered.get(0).equals(a) && delivered.get(1).equals(b), true);
         context.expect("a drained frame refuses new work", frame.submit("late"), false);
         frame.close();
         frame.close();

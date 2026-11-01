@@ -21,17 +21,17 @@ public final class MxtKubeJsLifespanBindings {
     }
 
     @Info("Rewrites both numbers of the ledger; a negative value is refused.")
-    public Result set(LivingEntity entity, long ticks) {
+    public Result<Void> set(LivingEntity entity, long ticks) {
         return MxtKubeJsApi.setLifespan(entity, ticks);
     }
 
     @Info("Adds to the ledger, extending the life; a negative amount takes life away.")
-    public Result add(LivingEntity entity, long ticks) {
+    public Result<Void> add(LivingEntity entity, long ticks) {
         return MxtKubeJsApi.addLifespan(entity, ticks);
     }
 
     @Info("Runs the reincarnation reset on the entity right now; the ledger afterwards is what the next life starts from. A listener may cancel it, which answers with the cancelled failure.")
-    public Result reincarnate(LivingEntity entity) {
+    public Result<Void> reincarnate(LivingEntity entity) {
         return MxtKubeJsApi.reincarnateLifespan(entity);
     }
 }

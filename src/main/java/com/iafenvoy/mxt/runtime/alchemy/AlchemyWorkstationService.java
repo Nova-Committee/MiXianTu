@@ -25,7 +25,7 @@ import com.iafenvoy.saturn.profiling.ProfilerScope;
 import com.iafenvoy.saturn.profiling.ServerProfiling;
 import com.iafenvoy.saturn.runtime.resulting.Failure;
 import com.iafenvoy.saturn.runtime.resulting.Failures;
-import com.iafenvoy.saturn.runtime.resulting.ResultWithData;
+import com.iafenvoy.saturn.runtime.resulting.Result;
 import com.iafenvoy.saturn.util.MiscUtil;
 import com.iafenvoy.saturn.util.codec.CollectionCodecs;
 import com.iafenvoy.saturn.util.formula.FormulaContext;
@@ -136,10 +136,10 @@ public final class AlchemyWorkstationService {
         }
     }
 
-    public static StartResult start(ServerPlayer player, AlchemyWorkstation station) {
+    public static Result<Void> start(ServerPlayer player, AlchemyWorkstation station) {
         try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.ALCHEMY)) {
             Set<AlchemyWorkstationState> starting = IN_TRANSACTION.get();
-            if (!starting.add(station.state())) return StartResult.rejected(AlchemyFailure.ACTIVE);
+            if (!starting.add(station.state())) return Result.failure(AlchemyFailure.ACTIVE);
             try {
                 return startGuarded(player, station);
             } finally {
@@ -148,32 +148,30 @@ public final class AlchemyWorkstationService {
         }
     }
 
-    private static StartResult startGuarded(ServerPlayer player, AlchemyWorkstation station) {
+    private static Result<Void> startGuarded(ServerPlayer player, AlchemyWorkstation station) {
         BlockPos pos = station.getBlockPos();
-        if (station.state().busy()) return StartResult.rejected(AlchemyFailure.ACTIVE);
+        if (station.state().busy()) return Result.failure(AlchemyFailure.ACTIVE);
         AlchemyPreview preview = preview(player, station);
-        if (preview.blocker().isPresent())
-            return preview.qualityFailure().map(quality -> StartResult.rejected(preview.blocker().get(), quality))
-                    .orElseGet(() -> StartResult.rejected(preview.blocker().get()));
+        if (preview.blocker().isPresent()) return Result.failure(preview.blocker().get());
         if (preview.parameters().isEmpty() || preview.resolvedRecipe().isEmpty())
-            return StartResult.rejected(Failures.INVALID_FORMULA);
+            return Result.failure(Failures.INVALID_FORMULA);
         Optional<RecipeHolder<AlchemyRecipe>> holder = recipe(player.level().getServer().getRecipeManager(), preview.resolvedRecipe().get());
-        if (holder.isEmpty()) return StartResult.rejected(AlchemyFailure.DISABLED);
+        if (holder.isEmpty()) return Result.failure(AlchemyFailure.DISABLED);
         Parameters numbers = preview.parameters().get();
         List<ItemStack> success = preview.successOutputs(), failure = preview.failureOutputs();
         ItemStack[] before = copyInputs(station.container());
         if (NeoForge.EVENT_BUS.post(new AlchemyCraftEvent.Pre(holder.get(), pos, player, inputCopies(station.container()))).isCanceled())
-            return StartResult.rejected(AlchemyFailure.CANCELLED);
+            return Result.failure(AlchemyFailure.CANCELLED);
         // A listener may move an item elsewhere. Restoring that external mutation would duplicate it.
-        if (!sameInputs(before, station.container())) return StartResult.rejected(AlchemyFailure.CANCELLED);
-        if (!station.structureStatus().complete()) return StartResult.rejected(AlchemyFailure.STRUCTURE);
-        if (!reachable(station, numbers)) return StartResult.rejected(AlchemyFailure.TEMPERATURE);
-        if (!canAccept(station.container(), success)) return StartResult.rejected(AlchemyFailure.OUTPUT_CAPACITY);
+        if (!sameInputs(before, station.container())) return Result.failure(AlchemyFailure.CANCELLED);
+        if (!station.structureStatus().complete()) return Result.failure(AlchemyFailure.STRUCTURE);
+        if (!reachable(station, numbers)) return Result.failure(AlchemyFailure.TEMPERATURE);
+        if (!canAccept(station.container(), success)) return Result.failure(AlchemyFailure.OUTPUT_CAPACITY);
         clearInputs(station.container());
         station.state().begin(AlchemySession.start(holder.get().id().identifier(), holder.get().value(), numbers,
                 success, failure, player.getUUID(), preview.mixture()));
         station.setChanged();
-        return StartResult.success();
+        return Result.success();
     }
 
     public static void abort(ServerLevel level, BlockPos pos, AlchemyWorkstation station) {
@@ -502,23 +500,5 @@ public final class AlchemyWorkstationService {
                                  Optional<Failure> blocker, Optional<Parameters> parameters,
                                  Optional<Failure> qualityFailure, List<ItemStack> successOutputs,
                                  List<ItemStack> failureOutputs) {
-    }
-
-    public static final class StartResult extends ResultWithData<Optional<Failure>> {
-        private StartResult(Optional<Failure> qualityFailure, Failure failure) {
-            super(qualityFailure, failure, null);
-        }
-
-        public static StartResult success() {
-            return new StartResult(Optional.empty(), null);
-        }
-
-        public static StartResult rejected(Failure failure) {
-            return new StartResult(Optional.empty(), failure);
-        }
-
-        public static StartResult rejected(Failure failure, Failure quality) {
-            return new StartResult(Optional.of(quality), failure);
-        }
     }
 }

@@ -176,7 +176,8 @@ public final class RiftEditorScreen extends AuiScreen {
                 "heading_plane", "heading_lifecycle", "heading_remove", "heading_destination", "heading_material", "heading_effects",
                 "heading_texture", "heading_blueprint", "heading_export", "heading_file"))
             this.text(this.getOrThrow(name), Component.translatable("screen.mxt.rift." + name));
-        if (this.itemEditor) this.text(this.getOrThrow("hint_plane"), Component.translatable("screen.mxt.rift.hint_item_placement"));
+        if (this.itemEditor)
+            this.text(this.getOrThrow("hint_plane"), Component.translatable("screen.mxt.rift.hint_item_placement"));
         for (String name : SHAPE_TABS)
             this.button("shape_tab_" + name, () -> {
                 this.shapeTab = name;
@@ -847,8 +848,8 @@ public final class RiftEditorScreen extends AuiScreen {
         if (event.button() != 0 || this.minecraft.player == null || !this.readProperties()) return true;
         Vec3 from = this.minecraft.player.getEyePosition(), ray = this.minecraft.player.getLookAngle();
         RiftTemplate data = this.session.draft();
-        BlockHitResult hit = this.minecraft.level.clip(new ClipContext(from, from.add(ray.scale(64)), ClipContext.Block.COLLIDER,
-                ClipContext.Fluid.NONE, this.minecraft.player));
+        assert this.minecraft.level != null;
+        BlockHitResult hit = this.minecraft.level.clip(new ClipContext(from, from.add(ray.scale(64)), ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, this.minecraft.player));
         if (this.tool.equals("plane") || this.tool.equals("fit")) {
             if (hit.getType() != HitResult.Type.BLOCK) return true;
             if (this.tool.equals("plane")) {

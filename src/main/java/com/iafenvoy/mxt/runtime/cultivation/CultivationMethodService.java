@@ -15,13 +15,15 @@ import com.iafenvoy.mxt.data.cultivation.RealmStage;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.runtime.MxtProfilerSources;
-import com.iafenvoy.mxt.runtime.resulting.failures.CultivationFailure;
 import com.iafenvoy.mxt.runtime.CultivationTriggerService;
+import com.iafenvoy.mxt.runtime.MxtProfilerSources;
+import com.iafenvoy.mxt.runtime.resulting.MessageFailure;
+import com.iafenvoy.mxt.runtime.resulting.failures.CultivationFailure;
 import com.iafenvoy.mxt.runtime.world.AuraResult;
 import com.iafenvoy.saturn.attachment.ResourceHolderAttachment;
 import com.iafenvoy.saturn.data.cost.Cost;
 import com.iafenvoy.saturn.data.cost.CostPayment;
+import com.iafenvoy.saturn.data.cost.Debit;
 import com.iafenvoy.saturn.data.cost.context.CostContext;
 import com.iafenvoy.saturn.data.cost.context.CostOrigins;
 import com.iafenvoy.saturn.data.resource.Resource;
@@ -57,22 +59,22 @@ public final class CultivationMethodService {
     private CultivationMethodService() {
     }
 
-    public static CultivationResult start(CultivationAttachment spirit, @NotNull Holder<Cultivation> action, Cultivation definition,
-                                          long gameTime, BooleanSupplier conditionsMet) {
+    public static Result<CultivationStep> start(CultivationAttachment spirit, @NotNull Holder<Cultivation> action, Cultivation definition,
+                                                long gameTime, BooleanSupplier conditionsMet) {
         try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.CULTIVATION)) {
-            if (spirit.cultivating()) return CultivationResult.rejected(Failures.ALREADY_ACTIVE, null);
+            if (spirit.cultivating()) return rejected(Failures.ALREADY_ACTIVE, null);
             if (spirit.isCultivationOnCooldown(action, gameTime))
-                return CultivationResult.rejected(Failures.COOLDOWN, null);
-            if (!conditionsMet.getAsBoolean()) return CultivationResult.rejected(Failures.CONDITIONS, null);
+                return rejected(Failures.COOLDOWN, null);
+            if (!conditionsMet.getAsBoolean()) return rejected(Failures.CONDITIONS, null);
             spirit.startCultivation(action, gameTime, gameTime);
-            return CultivationResult.startedResult();
+            return started();
         }
     }
 
-    public static CultivationResult start(LivingEntity entity, CultivationAttachment spirit, Identifier actionId, Cultivation definition, long gameTime, FormulaContext context) {
+    public static Result<CultivationStep> start(LivingEntity entity, CultivationAttachment spirit, Identifier actionId, Cultivation definition, long gameTime, FormulaContext context) {
         try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.CULTIVATION)) {
             Holder<Cultivation> action = MxtDatapackRegistries.holder(entity.level().registryAccess(), MxtResourceKeys.CULTIVATION, actionId).orElse(null);
-            if (action == null) return CultivationResult.rejected(Failures.DISABLED, null);
+            if (action == null) return rejected(Failures.DISABLED, null);
             boolean conditions = definition.startCondition().test(entity, context) && canStartCultivation(entity, context);
             return start(spirit, action, definition, gameTime, () -> conditions);
         }
@@ -84,7 +86,7 @@ public final class CultivationMethodService {
                 .allMatch(aura -> aura.startCultivateConditions().test(entity, context));
     }
 
-    public static CultivationResult tick(LivingEntity entity, CultivationAttachment spirit, ResourceHolderAttachment resources, AuraResult aura, Holder<Cultivation> action, Cultivation definition, long gameTime, FormulaContext context, BooleanSupplier conditionsMet) {
+    public static Result<CultivationStep> tick(LivingEntity entity, CultivationAttachment spirit, ResourceHolderAttachment resources, AuraResult aura, Holder<Cultivation> action, Cultivation definition, long gameTime, FormulaContext context, BooleanSupplier conditionsMet) {
         try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.CULTIVATION)) {
             if (!canCultivateInEnvironment(spirit, entity, aura, context))
                 return stop(entity, spirit, action, definition, gameTime, CultivationFailure.ENVIRONMENT);
@@ -94,10 +96,10 @@ public final class CultivationMethodService {
         }
     }
 
-    private static CultivationResult tick(LivingEntity entity, CultivationAttachment spirit, ResourceHolderAttachment resources, AuraResult aura, Holder<Cultivation> action, Cultivation definition, long gameTime, FormulaContext context, BooleanSupplier conditionsMet, double affinity) {
+    private static Result<CultivationStep> tick(LivingEntity entity, CultivationAttachment spirit, ResourceHolderAttachment resources, AuraResult aura, Holder<Cultivation> action, Cultivation definition, long gameTime, FormulaContext context, BooleanSupplier conditionsMet, double affinity) {
         try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.CULTIVATION)) {
             if (!spirit.cultivating() || spirit.cultivation().filter(action::equals).isEmpty())
-                return CultivationResult.rejected(CultivationFailure.NOT_ACTIVE, null);
+                return rejected(CultivationFailure.NOT_ACTIVE, null);
             if (!conditionsMet.getAsBoolean())
                 return stop(entity, spirit, action, definition, gameTime, Failures.CONDITIONS,
                         definition.abortReason().orElse(null));
@@ -105,13 +107,13 @@ public final class CultivationMethodService {
             definition.tickAction().execute(entity, context);
             // A tick with no yield: the session carries on, but nothing is paid, gained or scheduled, so the moment the
             // condition holds again the body settles straight away.
-            if (!definition.cultivateCondition().test(entity, context)) return CultivationResult.waitingResult();
+            if (!definition.cultivateCondition().test(entity, context)) return waiting();
             ItemAuraService.tick(entity, resources, context);
             Recovery recovery = recover(entity, spirit, resources, aura, definition, affinity, context);
             if (!recovery.valid()) return stop(entity, spirit, action, definition, gameTime, Failures.INVALID_FORMULA);
             convertAll(entity, spirit, resources, context);
             if (gameTime < spirit.nextCultivateTick()) {
-                return CultivationResult.waitingResult();
+                return waiting();
             }
             // One array, two channels: an mxt:aura entry is the ground's, taken out of the shared pool at the cultivator,
             // and everything else is the body's, taken out of its own account. The split is by entry type, but both halves
@@ -166,16 +168,19 @@ public final class CultivationMethodService {
             if (!canApplyGains(entity, copyOf(resources), gains, context))
                 return stop(entity, spirit, action, definition, gameTime, Failures.INVALID_FORMULA);
             // The whole bill is one boundary: every fee is asked before any of them is taken.
-            CostPayment.PaymentResult payment = bill.pay();
-            if (!payment.isSuccess()) return CultivationResult.rejected(payment.failure(), payment.failedResource());
+            Result<List<Debit>> payment = bill.pay();
+            if (payment instanceof Result.FailureResult<List<Debit>>(Failure failure)) {
+                return rejected(MessageFailure.reason(failure), failure.resource().orElse(null));
+            }
             applyGains(entity, resources, gains, context);
             spirit.scheduleCultivateTick(Math.addExact(gameTime, definition.tickInterval()));
             definition.cultivateAction().execute(entity, context);
-            return CultivationResult.progressed(recovery.cultivation(), payment.resources());
+            return progressed(recovery.cultivation(),
+                    CostPayment.resources(payment.getData().orElse(List.of())));
         }
     }
 
-    public static CultivationResult stop(LivingEntity entity, CultivationAttachment spirit, Holder<Cultivation> action, Cultivation definition, long gameTime) {
+    public static Result<CultivationStep> stop(LivingEntity entity, CultivationAttachment spirit, Holder<Cultivation> action, Cultivation definition, long gameTime) {
         try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.CULTIVATION)) {
             return stop(entity, spirit, action, definition, gameTime, null);
         }
@@ -183,23 +188,23 @@ public final class CultivationMethodService {
 
     // The abort reason travels with the result so the actionbar can name this pack's own abort instead of the
     // generic "conditions are not met"; every other stop names nothing and keeps the enum's message.
-    private static CultivationResult stop(CultivationAttachment spirit, Holder<Cultivation> action, Cultivation definition, long gameTime,
-                                          Failure reason, @Nullable Component abortReason) {
+    private static Result<CultivationStep> stop(CultivationAttachment spirit, Holder<Cultivation> action, Cultivation definition, long gameTime,
+                                                Failure reason, @Nullable Component abortReason) {
         try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.CULTIVATION)) {
             spirit.stopCultivation(action, Math.addExact(gameTime, definition.cooldownTicks()));
-            return reason == null ? CultivationResult.stoppedResult() : CultivationResult.rejected(reason, null, abortReason);
+            return reason == null ? stopped() : rejected(reason, null, abortReason);
         }
     }
 
-    private static CultivationResult stop(LivingEntity entity, CultivationAttachment spirit, Holder<Cultivation> action, Cultivation definition,
-                                          long gameTime, Failure reason) {
+    private static Result<CultivationStep> stop(LivingEntity entity, CultivationAttachment spirit, Holder<Cultivation> action, Cultivation definition,
+                                                long gameTime, Failure reason) {
         try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.CULTIVATION)) {
             return stop(entity, spirit, action, definition, gameTime, reason, null);
         }
     }
 
-    private static CultivationResult stop(LivingEntity entity, CultivationAttachment spirit, Holder<Cultivation> action, Cultivation definition,
-                                          long gameTime, Failure reason, @Nullable Component abortReason) {
+    private static Result<CultivationStep> stop(LivingEntity entity, CultivationAttachment spirit, Holder<Cultivation> action, Cultivation definition,
+                                                long gameTime, Failure reason, @Nullable Component abortReason) {
         try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.CULTIVATION)) {
             ItemAuraService.returnFloatingItem(entity);
             // Breakthrough listeners are derived runtime state and must disappear as soon as cultivation
@@ -451,78 +456,34 @@ public final class CultivationMethodService {
         }
     }
 
-    public static final class CultivationResult extends Result {
-        private final boolean started;
-        private final boolean progressed;
-        private final boolean waiting;
-        private final boolean stopped;
-        private final double absorbedAmount;
-        private final Map<Identifier, Double> paidCosts;
-        private final @Nullable Component abortReason;
+    // What one cultivation step changes: which phase it is in, what it absorbed and which costs it paid.
+    public record CultivationStep(boolean started, boolean progressed, boolean waiting, boolean stopped,
+                                  double absorbedAmount, Map<Identifier, Double> paidCosts) {
+    }
 
-        private CultivationResult(boolean started, boolean progressed, boolean waiting, boolean stopped,
-                                  @Nullable Failure failure, @Nullable Identifier failedResource, double absorbedAmount,
-                                  Map<Identifier, Double> paidCosts, @Nullable Component abortReason) {
-            super(failure, failedResource);
-            this.started = started;
-            this.progressed = progressed;
-            this.waiting = waiting;
-            this.stopped = stopped;
-            this.absorbedAmount = absorbedAmount;
-            this.paidCosts = paidCosts;
-            this.abortReason = abortReason;
-        }
+    private static Result<CultivationStep> started() {
+        return Result.success(new CultivationStep(true, false, false, false, 0.0D, Map.of()));
+    }
 
-        private static CultivationResult startedResult() {
-            return new CultivationResult(true, false, false, false, null, null, 0.0D, Map.of(), null);
-        }
+    private static Result<CultivationStep> progressed(double gained, Map<Identifier, Double> costs) {
+        return Result.success(new CultivationStep(false, true, false, false, gained, costs));
+    }
 
-        private static CultivationResult progressed(double gained, Map<Identifier, Double> costs) {
-            return new CultivationResult(false, true, false, false, null, null, gained, costs, null);
-        }
+    private static Result<CultivationStep> waiting() {
+        return Result.success(new CultivationStep(false, false, true, false, 0.0D, Map.of()));
+    }
 
-        private static CultivationResult waitingResult() {
-            return new CultivationResult(false, false, true, false, null, null, 0.0D, Map.of(), null);
-        }
+    private static Result<CultivationStep> stopped() {
+        return Result.success(new CultivationStep(false, false, false, true, 0.0D, Map.of()));
+    }
 
-        private static CultivationResult stoppedResult() {
-            return new CultivationResult(false, false, false, true, null, null, 0.0D, Map.of(), null);
-        }
+    private static Result<CultivationStep> rejected(Failure failure, @Nullable Identifier resource) {
+        return rejected(failure, resource, null);
+    }
 
-        static CultivationResult rejected(Failure failure, Identifier resource) {
-            return rejected(failure, resource, null);
-        }
-
-        static CultivationResult rejected(Failure failure, Identifier resource, @Nullable Component abortReason) {
-            return new CultivationResult(false, false, false, false, failure, resource, 0.0D, Map.of(), abortReason);
-        }
-
-        public boolean started() {
-            return this.started;
-        }
-
-        public boolean progressed() {
-            return this.progressed;
-        }
-
-        public boolean waiting() {
-            return this.waiting;
-        }
-
-        public boolean stopped() {
-            return this.stopped;
-        }
-
-        public double absorbedAmount() {
-            return this.absorbedAmount;
-        }
-
-        public Map<Identifier, Double> paidCosts() {
-            return this.paidCosts;
-        }
-
-        public @Nullable Component abortReason() {
-            return this.abortReason;
-        }
+    // A definition's abort_reason becomes the failure's own message, so the actionbar names it without a second channel.
+    private static Result<CultivationStep> rejected(Failure failure, @Nullable Identifier resource, @Nullable Component abortReason) {
+        Failure reason = abortReason == null ? failure : new MessageFailure(failure, abortReason);
+        return Result.failure(reason, resource);
     }
 }

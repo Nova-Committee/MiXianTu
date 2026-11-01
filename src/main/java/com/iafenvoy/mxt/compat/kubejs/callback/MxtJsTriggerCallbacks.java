@@ -38,8 +38,7 @@ public final class MxtJsTriggerCallbacks {
                     "MxtTriggers.subscribe needs a non-empty key so the subscription can be replaced or removed");
             return false;
         }
-        TriggerDispatcher.register(new TriggerSubscription(entity.getUUID(), MODULE, key,
-                new BuiltinTrigger(signal), ignored -> true, callback, oneShot));
+        TriggerDispatcher.register(new TriggerSubscription(entity.getUUID(), MODULE, key, new BuiltinTrigger(signal), _ -> true, callback, oneShot));
         OWNERS.add(entity.getUUID());
         return true;
     }

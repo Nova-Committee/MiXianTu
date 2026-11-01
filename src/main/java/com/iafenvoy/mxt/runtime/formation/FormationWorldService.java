@@ -11,8 +11,9 @@ import com.iafenvoy.mxt.runtime.resulting.failures.FormationWorldFailure;
 import com.iafenvoy.saturn.attachment.ResourceHolderAttachment;
 import com.iafenvoy.saturn.profiling.ProfilerScope;
 import com.iafenvoy.saturn.profiling.ServerProfiling;
+import com.iafenvoy.saturn.runtime.resulting.Failure;
 import com.iafenvoy.saturn.runtime.resulting.Failures;
-import com.iafenvoy.saturn.runtime.resulting.ResultWithData;
+import com.iafenvoy.saturn.runtime.resulting.Result;
 import com.iafenvoy.saturn.util.MiscUtil;
 import com.iafenvoy.saturn.util.formula.FormulaContext;
 import net.minecraft.core.BlockPos;
@@ -31,46 +32,49 @@ public final class FormationWorldService {
     private FormationWorldService() {
     }
 
-    public static ResultWithData<FormationInstance> activate(ServerLevel level, BlockPos controller, Identifier id, Formation definition,
-                                                             ResourceHolderAttachment resources, FormulaContext context) {
+    public static Result<FormationInstance> activate(ServerLevel level, BlockPos controller, Identifier id, Formation definition,
+                                                     ResourceHolderAttachment resources, FormulaContext context) {
         try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.FORMATION)) {
             return activate(level, controller, id, definition, resources, context, null);
         }
     }
 
-    public static ResultWithData<FormationInstance> activate(ServerLevel level, BlockPos controller, Identifier id, Formation definition,
-                                                             ResourceHolderAttachment resources, FormulaContext context, UUID owner) {
+    public static Result<FormationInstance> activate(ServerLevel level, BlockPos controller, Identifier id, Formation definition,
+                                                     ResourceHolderAttachment resources, FormulaContext context, UUID owner) {
         try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.FORMATION)) {
             FormationWorldAttachment world = level.getData(MxtAttachments.FORMATION_WORLD);
-            if (world.get(controller).isPresent()) return ResultWithData.failure(null, FormationWorldFailure.OCCUPIED);
+            if (world.get(controller).isPresent()) return Result.failure(FormationWorldFailure.OCCUPIED);
             if (!FormationStructureValidator.of(definition).matches(level, controller, definition))
-                return ResultWithData.failure(null, FormationWorldFailure.INVALID_STRUCTURE);
+                return Result.failure(FormationWorldFailure.INVALID_STRUCTURE);
             // Jurisdiction before payment: a ward this server will not allow here must not charge for the
             // attempt. Both rules apply only to formations that carry a ward at all.
             if (FormationProtection.hasProtection(definition)) {
                 if (FormationProtection.claimsOnlyRefuses(level, controller))
-                    return ResultWithData.failure(null, FormationWorldFailure.NOT_CLAIMED);
+                    return Result.failure(FormationWorldFailure.NOT_CLAIMED);
                 if (FormationProtection.foreignClaimRefuses(level, controller, owner))
-                    return ResultWithData.failure(null, FormationWorldFailure.FOREIGN_CLAIM);
+                    return Result.failure(FormationWorldFailure.FOREIGN_CLAIM);
             }
             double radius = MiscUtil.positive(definition.radius().evaluate(context));
-            if (radius <= 0.0D) return ResultWithData.failure(null, FormationWorldFailure.ACTIVATION_FAILED);
+            if (radius <= 0.0D) return Result.failure(FormationWorldFailure.ACTIVATION_FAILED);
             FormationInstance preview = owner == null ? new FormationInstance(id, radius) : new FormationInstance(id, radius, owner);
             if (NeoForge.EVENT_BUS.post(new Activate(level, controller, preview)).isCanceled())
-                return ResultWithData.failure(null, Failures.CANCELLED);
-            ResultWithData<FormationInstance> activated = FormationService.activate(id, definition, resources, context, owner);
-            if (!activated.isSuccess())
-                return ResultWithData.failure(null, FormationWorldFailure.ACTIVATION_FAILED, activated.failedResource());
-            if (!world.put(controller, activated.getData()))
+                return Result.failure(Failures.CANCELLED);
+            Result<FormationInstance> activated = FormationService.activate(id, definition, resources, context, owner);
+            if (activated instanceof Result.FailureResult<FormationInstance>(
+                    Failure failure
+            ))
+                return Result.failure(FormationWorldFailure.ACTIVATION_FAILED, failure.resource().orElse(null));
+            FormationInstance instance = activated.getData().orElseThrow();
+            if (!world.put(controller, instance))
                 throw new IllegalStateException("Formation controller became occupied during activation");
             // Stamped before the opening beat, so a display module that animates from the moment of raising measures from
             // this one rather than from whenever its own first beat happens to land.
-            activated.getData().activated(level.getGameTime());
+            instance.activated(level.getGameTime());
             // A ward whose delegation cannot be honoured falls back to its own flags; the report belongs here,
             // where the definition was just chosen.
             FormationProtection.warnIfDelegationFallsBack(id, definition);
-            FormationActionRunner.activate(definition, FormationActionContext.array(level, controller, activated.getData()));
-            return ResultWithData.success(activated.getData());
+            FormationActionRunner.activate(definition, FormationActionContext.array(level, controller, instance));
+            return Result.success(instance);
         }
     }
 

@@ -25,6 +25,7 @@ import com.iafenvoy.saturn.data.resource.Resource;
 import com.iafenvoy.saturn.profiling.ProfilerScope;
 import com.iafenvoy.saturn.profiling.ServerProfiling;
 import com.iafenvoy.saturn.runtime.resource.ResourceService;
+import com.iafenvoy.saturn.runtime.resulting.Result;
 import com.iafenvoy.saturn.util.DefinitionText;
 import com.iafenvoy.saturn.util.formula.FormulaContext;
 import com.iafenvoy.saturn.util.formula.FormulaVariables;
@@ -43,6 +44,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.util.Mth;
 import net.minecraft.world.Container;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.item.ItemStack;
@@ -149,7 +151,7 @@ public final class TalismanWorkstationService {
             if (paper.isEmpty()) return Optional.empty();
             List<Runnable> refunds = snapshotResources(context, planning);
             List<ItemStack> before = contents(paperSlot);
-            if (!planning.pay().isSuccess()) return Optional.empty();
+            if (planning.pay() instanceof Result.FailureResult<?>) return Optional.empty();
             return Optional.of(new TalismanDrawingSession(id, recipe, costs, context, paperSlot, paper,
                     charged(before, paperSlot), refunds, player.level().getGameTime()));
         }
@@ -453,7 +455,7 @@ public final class TalismanWorkstationService {
                 player.getInventory().placeItemBackInInventory(back);
                 continue;
             }
-            int placed = Math.min(back.getCount(), Math.max(0, back.getMaxStackSize() - present.getCount()));
+            int placed = Mth.clamp(back.getMaxStackSize() - present.getCount(), 0, back.getCount());
             if (placed > 0) {
                 if (present.isEmpty()) slot.setItem(index, back.copyWithCount(placed));
                 else present.grow(placed);

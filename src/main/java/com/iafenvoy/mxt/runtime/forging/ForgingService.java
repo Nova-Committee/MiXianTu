@@ -11,6 +11,7 @@ import com.iafenvoy.mxt.runtime.item.QualityService;
 import com.iafenvoy.mxt.runtime.resulting.failures.ForgingFailure;
 import com.iafenvoy.saturn.attachment.ResourceHolderAttachment;
 import com.iafenvoy.saturn.data.cost.CostPayment;
+import com.iafenvoy.saturn.data.cost.Debit;
 import com.iafenvoy.saturn.data.cost.context.CostContext;
 import com.iafenvoy.saturn.data.cost.context.CostOrigins;
 import com.iafenvoy.saturn.profiling.ProfilerScope;
@@ -18,7 +19,6 @@ import com.iafenvoy.saturn.profiling.ServerProfiling;
 import com.iafenvoy.saturn.runtime.resulting.Failure;
 import com.iafenvoy.saturn.runtime.resulting.Failures;
 import com.iafenvoy.saturn.runtime.resulting.Result;
-import com.iafenvoy.saturn.runtime.resulting.ResultWithData;
 import com.iafenvoy.saturn.util.formula.FormulaContext;
 import com.mojang.logging.LogUtils;
 import net.minecraft.core.Holder;
@@ -46,54 +46,55 @@ public final class ForgingService {
     private ForgingService() {
     }
 
-    public static StartResult start(ServerPlayer player, ForgingSurface surface, ForgingBlueprint blueprint, RegistryAccess registries) {
+    public static Result<ForgingSession> start(ServerPlayer player, ForgingSurface surface, ForgingBlueprint blueprint, RegistryAccess registries) {
         try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.FORGING)) {
             Failure refusal = postEvent(new Start(player, surface.pos(), blueprint));
-            if (refusal != null) return StartResult.rejected(refusal);
+            if (refusal != null) return Result.failure(refusal);
             ForgingPlan plan;
             try {
                 plan = ForgingPlan.of(blueprint, registries);
             } catch (IllegalArgumentException exception) {
-                return StartResult.rejected(ForgingFailure.INVALID_BLUEPRINT);
+                return Result.failure(ForgingFailure.INVALID_BLUEPRINT);
             }
             // After the try, and deliberately so: a `Started` listener throwing an IllegalArgumentException
             // would land in that catch and be reported as a broken blueprint.
             ForgingSession session = new ForgingSession(plan);
             notifyListeners(new Started(player, surface.pos(), new ForgingSessionView(session)));
-            return StartResult.started(session);
+            return Result.success(session);
         }
     }
 
-    public static StrikeResult strike(ServerPlayer player, ForgingSurface surface, ForgingSession session, Holder<ForgingMethod> method,
-                                      ResourceHolderAttachment resources, FormulaContext context, BooleanSupplier conditions) {
+    public static Result<StrikeOutcome> strike(ServerPlayer player, ForgingSurface surface, ForgingSession session, Holder<ForgingMethod> method,
+                                               ResourceHolderAttachment resources, FormulaContext context, BooleanSupplier conditions) {
         try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.FORGING)) {
-            if (!conditions.getAsBoolean()) return StrikeResult.rejected(Failures.CONDITIONS, null);
-            if (!session.canStrike(method)) return StrikeResult.rejected(ForgingFailure.INVALID_STRIKE, null);
+            if (!conditions.getAsBoolean()) return Result.failure(Failures.CONDITIONS);
+            if (!session.canStrike(method)) return Result.failure(ForgingFailure.INVALID_STRIKE);
             StrikePre event = new StrikePre(player, surface.pos(), new ForgingSessionView(session), method, resources, context);
             Failure refusal = postEvent(event);
-            if (refusal != null) return StrikeResult.rejected(refusal, null);
+            if (refusal != null) return Result.failure(refusal);
             CostContext costContext = CostContext.of(player, context, CostOrigins.FORGING);
             CostPayment plan = CostPayment.of(costContext);
             if (plan.price(event.getCosts()).isPresent())
-                return StrikeResult.rejected(Failures.INVALID_FORMULA, null);
-            CostPayment.PaymentResult payment = plan.pay();
-            if (!payment.isSuccess())
-                return StrikeResult.rejected(Failures.INSUFFICIENT_RESOURCE, payment.failedResource());
+                return Result.failure(Failures.INVALID_FORMULA);
+            Result<List<Debit>> payment = plan.pay();
+            if (payment instanceof Result.FailureResult<List<Debit>>(Failure failure))
+                return Result.failure(Failures.INSUFFICIENT_RESOURCE, failure.resource().orElse(null));
             if (!session.strike(method))
                 throw new IllegalStateException("Forging session changed after its strike precheck");
             notifyListeners(new StrikePost(player, surface.pos(), new ForgingSessionView(session)));
-            return StrikeResult.struck(session.value(), session.steps(), payment.resources());
+            return Result.success(new StrikeOutcome(session.value(), session.steps(),
+                    CostPayment.resources(payment.getData().orElse(List.of()))));
         }
     }
 
-    public static FinishResult finish(ServerPlayer player, ForgingSurface surface, Holder<ForgingBlueprint> blueprint, ForgingSession session) {
+    public static Result<FinishedForging> finish(ServerPlayer player, ForgingSurface surface, Holder<ForgingBlueprint> blueprint, ForgingSession session) {
         try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.FORGING)) {
             return finish(player, surface, blueprint, session, blueprint.value()::qualityFor);
         }
     }
 
-    public static FinishResult finish(ServerPlayer player, ForgingSurface surface, Holder<ForgingBlueprint> blueprint, ForgingSession session,
-                                      IntFunction<Holder<ItemQuality>> qualityForExtraSteps) {
+    public static Result<FinishedForging> finish(ServerPlayer player, ForgingSurface surface, Holder<ForgingBlueprint> blueprint, ForgingSession session,
+                                                 IntFunction<Holder<ItemQuality>> qualityForExtraSteps) {
         try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.FORGING)) {
             return finish(player, surface, blueprint, session, qualityForExtraSteps, QualityService.DEFAULT_MODIFIER);
         }
@@ -102,17 +103,17 @@ public final class ForgingService {
     // The modifier divides the extra count because extra steps are the penalty for not finishing optimally: a
     // higher-grade material makes each spare strike count for less, reaching the better tier of the curve. The
     // count stored in ForgingResultComponent stays the session's own, because it reports what the smith did.
-    static FinishResult finish(ServerPlayer player, ForgingSurface surface, Holder<ForgingBlueprint> blueprint, ForgingSession session,
-                               IntFunction<Holder<ItemQuality>> qualityForExtraSteps, double forgingModifier) {
+    static Result<FinishedForging> finish(ServerPlayer player, ForgingSurface surface, Holder<ForgingBlueprint> blueprint, ForgingSession session,
+                                          IntFunction<Holder<ItemQuality>> qualityForExtraSteps, double forgingModifier) {
         Failure refusal = postEvent(new CompletePre(player, surface.pos(), blueprint, new ForgingSessionView(session)));
-        if (refusal != null) return FinishResult.rejected(refusal);
-        if (!session.canComplete()) return FinishResult.rejected(ForgingFailure.NOT_COMPLETE);
+        if (refusal != null) return Result.failure(refusal);
+        if (!session.canComplete()) return Result.failure(ForgingFailure.NOT_COMPLETE);
         int extra = session.extraSteps();
         Holder<ItemQuality> quality = qualityForExtraSteps.apply(effectiveExtraSteps(extra, forgingModifier));
-        if (quality == null) return FinishResult.rejected(ForgingFailure.INVALID_BLUEPRINT);
+        if (quality == null) return Result.failure(ForgingFailure.INVALID_BLUEPRINT);
         ForgingResultComponent result = new ForgingResultComponent(blueprint, session.value(), session.steps(), session.optimalSteps(), extra);
         notifyListeners(new CompletePost(player, surface.pos(), blueprint, new ForgingSessionView(session), result, quality));
-        return FinishResult.finished(result, quality);
+        return Result.success(new FinishedForging(result, quality));
     }
 
     // The lowest modifier among the materials the session locked, because a piece is only as good as its
@@ -176,81 +177,13 @@ public final class ForgingService {
         }
     }
 
-    public static final class StartResult extends ResultWithData<ForgingSession> {
-        private StartResult(@Nullable ForgingSession session, Failure failure) {
-            super(session, failure, null);
-        }
 
-        private static StartResult started(ForgingSession session) {
-            return new StartResult(session, null);
-        }
-
-        private static StartResult rejected(Failure failure) {
-            return new StartResult(null, failure);
-        }
-    }
-
-    public static final class StrikeResult extends Result {
-        private final int value;
-        private final int steps;
-        private final Map<Identifier, Double> paidCosts;
-
-        private StrikeResult(@Nullable Failure failure, @Nullable Identifier failedResource, int value, int steps,
-                             Map<Identifier, Double> paidCosts) {
-            super(failure, failedResource);
-            this.value = value;
-            this.steps = steps;
-            this.paidCosts = paidCosts;
-        }
-
-        private static StrikeResult struck(int value, int steps, Map<Identifier, Double> paidCosts) {
-            return new StrikeResult(null, null, value, steps, paidCosts);
-        }
-
-        private static StrikeResult rejected(Failure failure, Identifier resource) {
-            return new StrikeResult(failure, resource, 0, 0, Map.of());
-        }
-
-        public int value() {
-            return this.value;
-        }
-
-        public int steps() {
-            return this.steps;
-        }
-
-        public Map<Identifier, Double> paidCosts() {
-            return this.paidCosts;
-        }
+    // What one completed strike reports: the piece's own value, its step count and the resources that were taken.
+    public record StrikeOutcome(int value, int steps, Map<Identifier, Double> paidCosts) {
     }
 
     // The tier is carried beside the record rather than inside it: the workstation writes it to the one quality
     // component, and the record keeps only what the smith did.
-    public static final class FinishResult extends Result {
-        private final @Nullable ForgingResultComponent result;
-        private final @Nullable Holder<ItemQuality> quality;
-
-        private FinishResult(@Nullable ForgingResultComponent result, @Nullable Holder<ItemQuality> quality,
-                             Failure failure) {
-            super(failure, null);
-            this.result = result;
-            this.quality = quality;
-        }
-
-        private static FinishResult finished(ForgingResultComponent result, Holder<ItemQuality> quality) {
-            return new FinishResult(result, quality, null);
-        }
-
-        private static FinishResult rejected(Failure failure) {
-            return new FinishResult(null, null, failure);
-        }
-
-        public @Nullable ForgingResultComponent result() {
-            return this.result;
-        }
-
-        public @Nullable Holder<ItemQuality> quality() {
-            return this.quality;
-        }
+    public record FinishedForging(ForgingResultComponent result, Holder<ItemQuality> quality) {
     }
 }

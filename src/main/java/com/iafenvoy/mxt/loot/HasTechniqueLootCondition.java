@@ -24,7 +24,7 @@ import java.util.List;
 public record HasTechniqueLootCondition(EntityTarget target,
                                         List<Either<Holder<Technique>, TagKey<Technique>>> techniques,
                                         Match match) implements LootItemCondition {
-    public static final MapCodec<HasTechniqueLootCondition> CODEC = RecordCodecBuilder.<HasTechniqueLootCondition>mapCodec(i -> i.group(
+    public static final MapCodec<HasTechniqueLootCondition> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             EntityTarget.CODEC.optionalFieldOf("entity", EntityTarget.THIS).forGetter(HasTechniqueLootCondition::target),
             RegistryCodecs.holderOrTagList(MxtResourceKeys.TECHNIQUE).optionalFieldOf("techniques", List.of()).forGetter(HasTechniqueLootCondition::techniques),
             Match.CODEC.optionalFieldOf("match", Match.ANY).forGetter(HasTechniqueLootCondition::match)

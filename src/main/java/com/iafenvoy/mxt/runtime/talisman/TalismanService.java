@@ -20,6 +20,7 @@ import com.iafenvoy.mxt.runtime.spirit.SpiritSource;
 import com.iafenvoy.saturn.attachment.ResourceHolderAttachment;
 import com.iafenvoy.saturn.data.cost.Cost;
 import com.iafenvoy.saturn.data.cost.CostPayment;
+import com.iafenvoy.saturn.data.cost.Debit;
 import com.iafenvoy.saturn.data.cost.context.CostContext;
 import com.iafenvoy.saturn.data.cost.context.CostOrigins;
 import com.iafenvoy.saturn.data.resource.Resource;
@@ -29,6 +30,7 @@ import com.iafenvoy.saturn.registry.SaturnAttachments;
 import com.iafenvoy.saturn.runtime.resource.ResourceService;
 import com.iafenvoy.saturn.runtime.resulting.Failure;
 import com.iafenvoy.saturn.runtime.resulting.Failures;
+import com.iafenvoy.saturn.runtime.resulting.Result;
 import com.iafenvoy.saturn.util.MiscUtil;
 import com.iafenvoy.saturn.util.formula.FormulaContext;
 import com.iafenvoy.saturn.util.formula.NumberProvider;
@@ -277,9 +279,9 @@ public final class TalismanService {
             // The price is paid before anything happens: a type's own effects cannot be taken back, so an invocation that
             // cannot pay must be refused while there is still nothing to undo. Paying here rather than after the effects
             // is what keeps a carrier from firing on a balance it never had.
-            CostPayment.PaymentResult paid = payment.pay();
-            if (!paid.isSuccess()) {
-                say(holder, Component.translatable("actionbar.mxt.talisman.failed", paid.failure().message()));
+            Result<List<Debit>> paid = payment.pay();
+            if (paid instanceof Result.FailureResult<List<Debit>>(Failure failure)) {
+                say(holder, Component.translatable("actionbar.mxt.talisman.failed", failure.message()));
                 return Attempt.REFUSED;
             }
             // What the type does once the price has been paid. It answers for its own targets; the ones that land

@@ -23,7 +23,7 @@ import com.iafenvoy.mxt.runtime.artifact.ArtifactService;
 import com.iafenvoy.mxt.runtime.artifact.FlightService;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationIdentityService;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService;
-import com.iafenvoy.saturn.runtime.resulting.ResultWithData;
+import com.iafenvoy.saturn.runtime.resulting.Result;
 import com.iafenvoy.saturn.runtime.resulting.failures.AbilityFailure;
 import com.iafenvoy.mxt.runtime.resulting.failures.FlightFailure;
 import com.iafenvoy.mxt.runtime.wheel.WheelEntryKinds;
@@ -89,8 +89,8 @@ public final class ArtifactFlightProbes {
             ItemStack pilotMount = new ItemStack(Items.IRON_SWORD);
             ArtifactService.refine(pilotMount, pilot);
             pilot.setItemInHand(InteractionHand.MAIN_HAND, pilotMount);
-            Togglable.PressResult refused = AbilityActivationService.activate(pilot, controlAbility, null);
-            boolean ungranted = refused.failure() == AbilityFailure.NOT_GRANTED
+            Result<Void> refused = AbilityActivationService.activate(pilot, controlAbility, null);
+            boolean ungranted = refused.getFailure().orElse(null) == AbilityFailure.NOT_GRANTED
                     && !pilot.getData(MxtAttachments.FLIGHT).active() && !pilot.getMainHandItem().isEmpty();
             // A technique is the ordinary way in: learning it grants the skill through the same ledger as any grant.
             TechniqueAttachment spirit = pilot.getData(MxtAttachments.TECHNIQUE);
@@ -99,9 +99,9 @@ public final class ArtifactFlightProbes {
             boolean granted = pilot.getData(SaturnAttachments.ABILITY_HOLDER).has(controlAbility);
             double qiBeforePress = pilotResources.get(qiResource);
             context.check("artifact roster flight: the pilot holds qi before the press (" + qiBeforePress + ")", qiBeforePress >= 5.0D);
-            Togglable.PressResult pressed = AbilityActivationService.activate(pilot, controlAbility, null);
+            Result<Void> pressed = AbilityActivationService.activate(pilot, controlAbility, null);
             FlyingSwordEntity sword = pilot.getVehicle() instanceof FlyingSwordEntity value ? value : null;
-            boolean pressedOk = pressed.failure() == null;
+            boolean pressedOk = pressed.getFailure().isEmpty();
             boolean created = sword != null && mountEntry != null;
             boolean active = pilot.getData(MxtAttachments.FLIGHT).active()
                     && pilot.getData(MxtAttachments.FLIGHT).vehicle().filter(vehicle -> vehicle.is(ProbeDefinitions.id("azure_sword_mount"))).isPresent()
@@ -118,7 +118,7 @@ public final class ArtifactFlightProbes {
             // One take-off price, and it is the skill's own, charged by the shared gate.
             boolean paid = close(qiBeforePress - pilotResources.get(qiResource), 5.0D);
             boolean riding = pressedOk && created && active && custody && shape && paid;
-            context.check("artifact roster flight: the press was accepted, failure=" + (pressed.failure() == null ? "none" : pressed.failure()), pressedOk);
+            context.check("artifact roster flight: the press was accepted, failure=" + (pressed.getFailure().isEmpty() ? "none" : pressed.getFailure().orElse(null)), pressedOk);
             context.check("artifact roster flight: a mount entity was created", created);
             context.check("artifact roster flight: the flight state names the mount and the skill", active);
             context.check("artifact roster flight: the artifact is in the mount's custody", custody);
@@ -131,7 +131,7 @@ public final class ArtifactFlightProbes {
                     && !third.startRiding(sword) && sword.getPassengers().size() == 2;
             double qiBeforeTick = pilotResources.get(qiResource);
             boolean flying = sword != null
-                    && FlightService.tick(pilot, controlAbility, mountAbility, FormulaContext.of(pilot)).getData() == FlightService.State.FLYING
+                    && FlightService.tick(pilot, controlAbility, mountAbility, FormulaContext.of(pilot)).getData().orElse(null) == FlightService.State.FLYING
                     // The fuel of a tick is the mount's own price. This sword was refined empty, so the first
                     // tick has nothing in the artifact to burn and the pilot pays it.
                     && close(qiBeforeTick - pilotResources.get(qiResource), 0.1D);
@@ -142,12 +142,13 @@ public final class ArtifactFlightProbes {
             double artifactBefore = sword == null ? 0.0D : ArtifactService.stored(sword.visual(), qi);
             double poolBefore = pilotResources.get(qiResource);
             boolean artifactFuel = sword != null
-                    && FlightService.tick(pilot, controlAbility, mountAbility, FormulaContext.of(pilot)).getData() == FlightService.State.FLYING
+                    && FlightService.tick(pilot, controlAbility, mountAbility, FormulaContext.of(pilot)).getData().orElse(null) == FlightService.State.FLYING
                     && close(artifactBefore - ArtifactService.stored(sword.visual(), qi), 0.1D)
                     && close(poolBefore - pilotResources.get(qiResource), 0.0D)
                     && artifactBefore > 0.0D;
             flying = flying && artifactFuel;
-            boolean landed = FlightService.dismount(pilot, FlightFailure.STOPPED).getData() == FlightService.State.STOPPED
+            // A stop is a refusal now, so the state it stopped from is gone with the failure; the body is the record.
+            boolean landed = FlightService.dismount(pilot, FlightFailure.STOPPED).getFailure().isPresent()
                     && pilot.getVehicle() == null && !pilot.getData(MxtAttachments.FLIGHT).active()
                     && sword != null && sword.isRemoved() && sword.visual().isEmpty()
                     // Nobody is there to take it back, so it lands where the mount was instead of going with it.
@@ -230,17 +231,17 @@ public final class ArtifactFlightProbes {
             TechniqueAttachment crashSpirit = crasher.getData(MxtAttachments.TECHNIQUE);
             crashSpirit.addLearnedTechnique(context.require(MxtResourceKeys.TECHNIQUE, "sword_control_manual"));
             AbilityGrantService.recalculate(crasher);
-            FlyingSwordEntity crashSword = AbilityActivationService.activate(crasher, controlAbility, null).failure() == null
+            FlyingSwordEntity crashSword = AbilityActivationService.activate(crasher, controlAbility, null).getFailure().isEmpty()
                     && crasher.getVehicle() instanceof FlyingSwordEntity value ? value : null;
             if (crashSword != null) {
                 crashSword.setYRot(0.0F);
                 BlockPos wall = crashSword.blockPosition().relative(Direction.SOUTH);
                 context.level().setBlockAndUpdate(wall, Blocks.STONE.defaultBlockState());
                 crashSword.move(MoverType.SELF, new Vec3(0.0D, 0.0D, 1.0D));
-                ResultWithData<FlightService.State> crashed = FlightService.tick(crasher, controlAbility, mountAbility, FormulaContext.of(crasher));
+                Result<FlightService.State> crashed = FlightService.tick(crasher, controlAbility, mountAbility, FormulaContext.of(crasher));
                 boolean hit = crashSword.horizontalCollision;
-                boolean stopped = crashed.getData() == FlightService.State.STOPPED;
-                boolean blocked = crashed.failure() == FlightFailure.COLLISION;
+                boolean stopped = !crasher.getData(MxtAttachments.FLIGHT).active();
+                boolean blocked = crashed.getFailure().orElse(null) == FlightFailure.COLLISION;
                 boolean off = crasher.getVehicle() == null;
                 collision = hit && stopped && blocked && off;
                 context.check("artifact roster flight crash: the move left the collision flag", hit);

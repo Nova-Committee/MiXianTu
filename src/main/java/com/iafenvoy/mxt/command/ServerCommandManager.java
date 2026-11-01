@@ -38,7 +38,7 @@ public final class ServerCommandManager {
         builder.put(FormationCommand::build, config.formation);
         builder.put(_ -> FriendCommand.build(), config.friend);
         builder.put(_ -> LightningCommand.build(), config.lightning);
-        builder.put(LifespanCommand::build, config.lifespan);
+        builder.put(_ -> LifespanCommand.build(), config.lifespan);
         builder.put(PhysiqueCommand::build, config.physique);
         builder.put(QualityCommand::build, config.quality);
         builder.put(RealmCommand::build, config.realm);

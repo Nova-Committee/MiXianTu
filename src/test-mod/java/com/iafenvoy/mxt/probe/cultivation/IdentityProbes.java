@@ -48,8 +48,8 @@ public final class IdentityProbes {
                 context.fail("identity probe: could not create the probe entity");
                 return;
             }
-            boolean granted = MxtKubeJsApi.grantSpiritRoot(probe, ProbeDefinitions.PROBE_FIRE_ROOT).failure() == null
-                    && MxtKubeJsApi.grantPhysique(probe, ProbeDefinitions.PROBE_PHYSIQUE).failure() == null;
+            boolean granted = MxtKubeJsApi.grantSpiritRoot(probe, ProbeDefinitions.PROBE_FIRE_ROOT).getFailure().isEmpty()
+                    && MxtKubeJsApi.grantPhysique(probe, ProbeDefinitions.PROBE_PHYSIQUE).getFailure().isEmpty();
             boolean listed = MxtKubeJsApi.spiritRoots(probe).equals(List.of(ProbeDefinitions.PROBE_FIRE_ROOT.toString()))
                     && MxtKubeJsApi.physiques(probe).equals(List.of(ProbeDefinitions.PROBE_PHYSIQUE.toString()))
                     && MxtKubeJsApi.activeSpiritRoots(probe).equals(List.of(ProbeDefinitions.PROBE_FIRE_ROOT.toString()))
@@ -60,20 +60,20 @@ public final class IdentityProbes {
                     && MxtKubeJsApi.isPhysiqueEnabled(probe, ProbeDefinitions.PROBE_PHYSIQUE);
             // Off is not gone: the body still holds both, nothing of either counts, and switching again is a
             // change that did not happen rather than a second toggle.
-            boolean switchedOff = MxtKubeJsApi.setSpiritRootEnabled(probe, ProbeDefinitions.PROBE_FIRE_ROOT, false).changed()
-                    && MxtKubeJsApi.setPhysiqueEnabled(probe, ProbeDefinitions.PROBE_PHYSIQUE, false).changed()
+            boolean switchedOff = MxtKubeJsApi.setSpiritRootEnabled(probe, ProbeDefinitions.PROBE_FIRE_ROOT, false).getData().orElse(false)
+                    && MxtKubeJsApi.setPhysiqueEnabled(probe, ProbeDefinitions.PROBE_PHYSIQUE, false).getData().orElse(false)
                     && MxtKubeJsApi.hasSpiritRoot(probe, ProbeDefinitions.PROBE_FIRE_ROOT)
                     && MxtKubeJsApi.hasPhysique(probe, ProbeDefinitions.PROBE_PHYSIQUE)
                     && !MxtKubeJsApi.isSpiritRootEnabled(probe, ProbeDefinitions.PROBE_FIRE_ROOT)
                     && MxtKubeJsApi.activeSpiritRoots(probe).isEmpty()
                     && MxtKubeJsApi.activePhysiques(probe).isEmpty()
                     && close(DamageCalculationService.physiqueMultiplier(probe, true), 1.0D)
-                    && !MxtKubeJsApi.setPhysiqueEnabled(probe, ProbeDefinitions.PROBE_PHYSIQUE, false).changed();
+                    && !MxtKubeJsApi.setPhysiqueEnabled(probe, ProbeDefinitions.PROBE_PHYSIQUE, false).getData().orElse(false);
             boolean removed = MxtKubeJsApi.removeSpiritRoot(probe, ProbeDefinitions.PROBE_FIRE_ROOT)
                     && MxtKubeJsApi.removePhysique(probe, ProbeDefinitions.PROBE_PHYSIQUE)
                     && MxtKubeJsApi.spiritRoots(probe).isEmpty() && MxtKubeJsApi.physiques(probe).isEmpty()
                     && !MxtKubeJsApi.hasSpiritRoot(probe, ProbeDefinitions.PROBE_FIRE_ROOT)
-                    && !MxtKubeJsApi.setSpiritRootEnabled(probe, ProbeDefinitions.PROBE_FIRE_ROOT, true).changed();
+                    && !MxtKubeJsApi.setSpiritRootEnabled(probe, ProbeDefinitions.PROBE_FIRE_ROOT, true).getData().orElse(false);
             boolean identity = granted && listed && switchedOff && removed;
             report(context, "identity probe: granted=" + granted + " listed=" + listed
                     + " switched_off=" + switchedOff + " removed=" + removed, identity);

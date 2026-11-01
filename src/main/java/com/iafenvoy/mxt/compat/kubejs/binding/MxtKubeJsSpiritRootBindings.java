@@ -1,7 +1,6 @@
 package com.iafenvoy.mxt.compat.kubejs.binding;
 
 import com.iafenvoy.mxt.compat.kubejs.MxtKubeJsApi;
-import com.iafenvoy.mxt.runtime.cultivation.CultivationToggleService;
 import com.iafenvoy.saturn.runtime.resulting.Result;
 import dev.latvian.mods.kubejs.typings.Info;
 import net.minecraft.resources.Identifier;
@@ -38,7 +37,7 @@ public final class MxtKubeJsSpiritRootBindings {
     }
 
     @Info("Grants a spirit root through the authoritative service and answers what it did: {changed, failure}, where failure is DISABLED, ALREADY_HELD, ELEMENT_CONFLICT or SERVER_ONLY.")
-    public Result grant(LivingEntity entity, String root) {
+    public Result<Void> grant(LivingEntity entity, String root) {
         return MxtKubeJsApi.grantSpiritRoot(entity, id(root));
     }
 
@@ -48,7 +47,7 @@ public final class MxtKubeJsSpiritRootBindings {
     }
 
     @Info("Switches a held spirit root on or off without giving it up, re-deriving what the body is granted; {changed, failure} with NOT_HELD when it holds no such root.")
-    public CultivationToggleService.ToggleResult setEnabled(LivingEntity entity, String root, boolean enabled) {
+    public Result<Boolean> setEnabled(LivingEntity entity, String root, boolean enabled) {
         return MxtKubeJsApi.setSpiritRootEnabled(entity, id(root), enabled);
     }
 

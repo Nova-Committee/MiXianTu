@@ -6,6 +6,7 @@ import com.iafenvoy.mxt.data.quality.QualityLadders;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.item.QualityService;
 import com.iafenvoy.mxt.runtime.item.QualityUpgradeService;
+import com.iafenvoy.saturn.runtime.resulting.Result;
 import com.iafenvoy.saturn.util.HolderHelper;
 import com.iafenvoy.saturn.util.chain.Chain;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
@@ -130,14 +131,14 @@ public final class QualityCommand {
                 source.sendFailure(Component.translatable("command.mxt.quality.no_item"));
                 continue;
             }
-            QualityUpgradeService.UpgradeResult result = QualityUpgradeService.upgrade(living, stack);
-            if (result.isSuccess()) {
+            Result<QualityUpgradeService.QualityUpgrade> result = QualityUpgradeService.upgrade(living, stack);
+            if (result instanceof Result.SuccessResult<QualityUpgradeService.QualityUpgrade> upgradedStep) {
                 upgraded++;
                 source.sendSuccess(() -> Component.translatable("command.mxt.quality.upgraded", stack.getHoverName(),
-                        QualityService.displayName(result.to())), true);
+                        QualityService.displayName(upgradedStep.data().to())), true);
             } else {
                 source.sendFailure(Component.translatable("command.mxt.quality.upgrade_failed", stack.getHoverName(),
-                        result.failure().message()));
+                        result.getFailure().orElseThrow().message()));
             }
         }
         return upgraded;

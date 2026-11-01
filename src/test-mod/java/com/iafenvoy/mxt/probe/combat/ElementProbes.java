@@ -232,16 +232,16 @@ public final class ElementProbes {
                 context.fail("element probe: could not create the probe entities");
                 return;
             }
-            boolean off = CultivationToggleService.setSpiritRootEnabled(toggleProbe, fireRoot, false).changed()
+            boolean off = CultivationToggleService.setSpiritRootEnabled(toggleProbe, fireRoot, false).getData().orElse(false)
                     && !CultivationToggleService.isSpiritRootEnabled(toggleProbe, fireRoot)
                     && Elements.of(toggleProbe).isEmpty()
                     && toggleProbe.getData(MxtAttachments.SPIRIT_IDENTITY).spiritRoots().contains(fireRoot);
-            boolean on = CultivationToggleService.setSpiritRootEnabled(toggleProbe, fireRoot, true).changed()
+            boolean on = CultivationToggleService.setSpiritRootEnabled(toggleProbe, fireRoot, true).getData().orElse(false)
                     && CultivationToggleService.isSpiritRootEnabled(toggleProbe, fireRoot)
                     && Elements.of(toggleProbe).contains(fire);
-            boolean unchanged = !CultivationToggleService.setSpiritRootEnabled(toggleProbe, fireRoot, true).changed();
+            boolean unchanged = !CultivationToggleService.setSpiritRootEnabled(toggleProbe, fireRoot, true).getData().orElse(false);
             boolean notHeld = CultivationToggleService.setSpiritRootEnabled(toggleProbe,
-                    context.require(MxtResourceKeys.SPIRIT_ROOT, ProbeDefinitions.PROBE_WATER_ROOT), false).failure()
+                    context.require(MxtResourceKeys.SPIRIT_ROOT, ProbeDefinitions.PROBE_WATER_ROOT), false).getFailure().orElse(null)
                     == CultivationFailure.NOT_HELD;
             boolean toggle = off && on && unchanged && notHeld;
             String report = "element probe: toggle off=" + off + " on=" + on
@@ -269,7 +269,7 @@ public final class ElementProbes {
                 context.fail("element probe: could not create the probe entities");
                 return;
             }
-            boolean dualGranted = CultivationIdentityService.grantSpiritRoot(toggleProbe, dualRoot).failure() == null;
+            boolean dualGranted = CultivationIdentityService.grantSpiritRoot(toggleProbe, dualRoot).getFailure().isEmpty();
             SpiritIdentityAttachment dualIdentity = toggleProbe.getData(MxtAttachments.SPIRIT_IDENTITY);
             FormulaContext affinityFormula = FormulaContext.EMPTY;
             double onWater = CultivationAffinity.abilityMultiplier(dualIdentity, List.of(Either.left(water)), affinityFormula, AffinityMode.AVERAGE);
@@ -345,13 +345,13 @@ public final class ElementProbes {
                 context.fail("element probe: could not create the probe entities");
                 return;
             }
-            boolean blocked = CultivationIdentityService.grantSpiritRoot(conflictProbe, antiWater).failure() == null
-                    && CultivationIdentityService.grantSpiritRoot(conflictProbe, probeWater).failure()
+            boolean blocked = CultivationIdentityService.grantSpiritRoot(conflictProbe, antiWater).getFailure().isEmpty()
+                    && CultivationIdentityService.grantSpiritRoot(conflictProbe, probeWater).getFailure().orElse(null)
                     == CultivationIdentityFailure.ELEMENT_CONFLICT;
-            boolean inertBlocked = CultivationIdentityService.grantSpiritRoot(conflictProbe, probeInert).failure()
+            boolean inertBlocked = CultivationIdentityService.grantSpiritRoot(conflictProbe, probeInert).getFailure().orElse(null)
                     == CultivationIdentityFailure.ELEMENT_CONFLICT;
-            boolean reopened = CultivationToggleService.setSpiritRootEnabled(conflictProbe, antiWater, false).changed()
-                    && CultivationIdentityService.grantSpiritRoot(conflictProbe, probeWater).failure() == null;
+            boolean reopened = CultivationToggleService.setSpiritRootEnabled(conflictProbe, antiWater, false).getData().orElse(false)
+                    && CultivationIdentityService.grantSpiritRoot(conflictProbe, probeWater).getFailure().isEmpty();
             boolean conflict = blocked && inertBlocked && reopened;
             String report = "element probe: conflict blocked=" + blocked
                     + " inert_blocked=" + inertBlocked + " reopened=" + reopened;

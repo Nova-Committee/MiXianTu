@@ -4,6 +4,8 @@ import com.iafenvoy.mxt.command.ServerCommandManager;
 import com.iafenvoy.mxt.data.rift.*;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.rift.*;
+import com.iafenvoy.saturn.runtime.resulting.Failure;
+import com.iafenvoy.saturn.runtime.resulting.Result;
 import com.mojang.brigadier.arguments.BoolArgumentType;
 import com.mojang.brigadier.arguments.DoubleArgumentType;
 import com.mojang.brigadier.arguments.LongArgumentType;
@@ -154,13 +156,13 @@ public final class RiftCommand {
     }
 
     private static int publish(CommandContext<CommandSourceStack> c, RiftRecord old, RiftTemplate data, boolean reset) {
-        RiftResult result = RiftService.publish(c.getSource().getLevel(), old == null ? null : old.id(), old == null ? 0 : old.revision(), data,
+        Result<RiftRecord> result = RiftService.publish(c.getSource().getLevel(), old == null ? null : old.id(), old == null ? 0 : old.revision(), data,
                 c.getSource().getEntity() == null ? null : c.getSource().getEntity().getUUID(), reset);
-        if (result.isFailure()) {
-            c.getSource().sendFailure(Component.translatable("rift.mxt.failure.edit", result.detail()));
+        if (result instanceof Result.FailureResult<RiftRecord>(Failure failure1)) {
+            c.getSource().sendFailure(Component.translatable("rift.mxt.failure.edit", failure1.message()));
             return 0;
         }
-        c.getSource().sendSuccess(() -> Component.translatable("command.mxt.rift.saved", result.record().id().toString()), true);
+        c.getSource().sendSuccess(() -> Component.translatable("command.mxt.rift.saved", result.getData().orElseThrow().id().toString()), true);
         return 1;
     }
 

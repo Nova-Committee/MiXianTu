@@ -242,12 +242,12 @@ public final class TechniqueItemService {
 
     private static void learn(LivingEntity entity, ItemStack stack, TechniqueBinding binding) {
         TechniqueAttachment spirit = entity.getData(MxtAttachments.TECHNIQUE);
-        Result result = TechniqueService.learn(entity, spirit, binding.technique(), FormulaContext.of(entity));
+        Result<Void> result = TechniqueService.learn(entity, spirit, binding.technique(), FormulaContext.of(entity));
         // Every completed read pays, not only the ones that teach: a refusal is still a read the player
         // spent the hold on. Charged before the outcome is looked at so the two cases cannot drift.
         applyCooldown(entity, stack);
-        if (result.failure() != null) {
-            notifyLearnFailure(entity, binding.technique(), result);
+        if (result instanceof Result.FailureResult<?>(Failure failure1)) {
+            notifyLearnFailure(entity, binding.technique(), failure1);
             return;
         }
         notifyLearned(entity, binding.technique());
@@ -270,11 +270,11 @@ public final class TechniqueItemService {
         player.getCooldowns().addCooldown(stack, ticks);
     }
 
-    private static void notifyLearnFailure(LivingEntity entity, Holder<Technique> technique, Result result) {
-        if (!(entity instanceof ServerPlayer player) || result.failure() == null) return;
+    private static void notifyLearnFailure(LivingEntity entity, Holder<Technique> technique, Failure failure) {
+        if (!(entity instanceof ServerPlayer player)) return;
         player.sendSystemMessage(Component.translatable("actionbar.mxt.technique.failed",
                         DefinitionText.nameOrId(technique),
-                        result.failure().message())
+                        failure.message())
                 .withStyle(ChatFormatting.RED), true);
     }
 }

@@ -27,6 +27,7 @@ public final class FailureSources {
     public static final FailureSource ITEM_QUALITY = FailureSource.of(MxtResourceKeys.ITEM_QUALITY);
     public static final FailureSource PROGRESSION = FailureSource.of(MxtResourceKeys.PROGRESSION);
     public static final FailureSource REALM_STAGE = FailureSource.of(MxtResourceKeys.REALM_STAGE);
+    public static final FailureSource RIFT = FailureSource.of(MxtResourceKeys.RIFT);
     public static final FailureSource SECRET_REALM = FailureSource.of(MxtResourceKeys.SECRET_REALM);
     public static final FailureSource TECHNIQUE = FailureSource.of(MxtResourceKeys.TECHNIQUE);
     public static final FailureSource TRIBULATION = FailureSource.of(MxtResourceKeys.TRIBULATION);

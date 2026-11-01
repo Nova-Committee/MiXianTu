@@ -7,6 +7,8 @@ import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.world.*;
+import com.iafenvoy.saturn.runtime.resulting.Failure;
+import com.iafenvoy.saturn.runtime.resulting.Result;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
@@ -45,7 +47,7 @@ public final class RiftTravelService {
                 fail(entity, "living_only");
                 return;
             }
-            SecretRealmService.TravelResult result;
+            Result<LivingEntity> result;
             if (record.boundDimension().isPresent()) {
                 SecretRealmRecord instance = SecretRealmRegistry.at(ResourceKey.create(Registries.DIMENSION, record.boundDimension().get())).orElse(null);
                 if (instance == null || instance.index() != record.boundIndex() || record.boundInstance().filter(instance.instanceId()::equals).isEmpty()
@@ -71,12 +73,13 @@ public final class RiftTravelService {
                     return;
                 }
                 result = SecretRealmService.enterFromPortal(living, definition.get(), origin);
-                if (result.isSuccess()) SecretRealmRegistry.ofMember(entity.getUUID()).ifPresent(instance ->
-                        RiftService.bind(level, record, instance.dimension().identifier(), instance.index(), instance.instanceId()));
+                if (result instanceof Result.SuccessResult<LivingEntity>)
+                    SecretRealmRegistry.ofMember(entity.getUUID()).ifPresent(instance ->
+                            RiftService.bind(level, record, instance.dimension().identifier(), instance.index(), instance.instanceId()));
             }
-            if (result.isSuccess()) arrived(result.traveller().orElseThrow());
+            if (result instanceof Result.SuccessResult<LivingEntity>) arrived(result.getData().orElseThrow());
             else if (entity instanceof ServerPlayer player)
-                player.sendSystemMessage(result.message().orElseGet(() -> result.failure().message()), true);
+                player.sendSystemMessage(result.getFailure().orElseThrow().message(), true);
             return;
         }
         if (destination instanceof RiftDestination.Return) {
@@ -177,26 +180,30 @@ public final class RiftTravelService {
                 fail(entity, "unsafe_return");
                 return;
             }
-            SecretRealmService.TravelResult result = SecretRealmService.moveToPosition(living, target,
+            Result<LivingEntity> result = SecretRealmService.moveToPosition(living, target,
                     new SecretRealmEntryLocator.Arrival(pos, yaw, pitch), origin, destination.nearby());
-            if (result.isFailure()) {
+            if (result instanceof Result.FailureResult<LivingEntity>(
+                    Failure failure1
+            )) {
                 if (entity instanceof ServerPlayer player)
-                    player.sendSystemMessage(result.message().orElseGet(() -> result.failure().message()), true);
+                    player.sendSystemMessage(failure1.message(), true);
                 return;
             }
-            moved = result.traveller().orElseThrow();
+            moved = result.getData().orElseThrow();
         } else {
             if (SecretRealmRegistry.isRealm(target.dimension())) {
                 fail(entity, "living_only");
                 return;
             }
-            RiftLanding.Inspection landing = RiftLanding.resolve(target, entity, pos, destination.nearby());
-            if (landing.isFailure()) {
-                TravelDiagnostics.rejected(entity, target, pos, "rift_destination", landing.failure().getSerializedName(),
+            Result<RiftLanding.Inspection> landing = RiftLanding.resolve(target, entity, pos, destination.nearby());
+            if (landing instanceof Result.FailureResult<RiftLanding.Inspection>(
+                    Failure failure1
+            )) {
+                TravelDiagnostics.rejected(entity, target, pos, "rift_destination", failure1.getSerializedName(),
                         "rift=" + record.id() + " revision=" + record.revision() + " nearby=" + destination.nearby() + " primary=" + landing);
                 return;
             }
-            pos = landing.position();
+            pos = landing.getData().orElseThrow().position();
             moved = entity.teleport(new TeleportTransition(target, pos, Vec3.ZERO, yaw, pitch, TeleportTransition.DO_NOTHING));
         }
         if (moved != null) arrived(moved);
@@ -215,10 +222,10 @@ public final class RiftTravelService {
             TravelDiagnostics.rejected(entity, level, first, "rift_return", "missing_mesh", "rift=" + record.id());
             return null;
         }
-        RiftLanding.Inspection landing = RiftLanding.resolve(level, entity, first, true,
+        Result<RiftLanding.Inspection> landing = RiftLanding.resolve(level, entity, first, true,
                 pos -> !Double.isFinite(mesh.contact(entity.getBoundingBox().move(pos.subtract(entity.position())), Vec3.ZERO)));
-        if (landing.isSuccess()) return landing.position();
-        TravelDiagnostics.rejected(entity, level, first, "rift_return", landing.failure().getSerializedName(),
+        if (landing instanceof Result.SuccessResult<RiftLanding.Inspection> found) return found.data().position();
+        TravelDiagnostics.rejected(entity, level, first, "rift_return", landing.getFailure().orElseThrow().getSerializedName(),
                 "rift=" + record.id() + " revision=" + record.revision() + " primary=" + landing);
         return null;
     }

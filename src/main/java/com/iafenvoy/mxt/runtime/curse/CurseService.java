@@ -16,7 +16,7 @@ import com.iafenvoy.saturn.data.action.EntityAction;
 import com.iafenvoy.saturn.profiling.ProfilerScope;
 import com.iafenvoy.saturn.profiling.ServerProfiling;
 import com.iafenvoy.saturn.runtime.resulting.Failures;
-import com.iafenvoy.saturn.runtime.resulting.ResultWithData;
+import com.iafenvoy.saturn.runtime.resulting.Result;
 import com.iafenvoy.saturn.util.HolderHelper;
 import com.iafenvoy.saturn.util.MiscUtil;
 import com.iafenvoy.saturn.util.formula.FormulaContext;
@@ -45,7 +45,7 @@ public final class CurseService {
     private CurseService() {
     }
 
-    public static ResultWithData<CurseInstance> apply(CurseHolderAttachment data, Holder<Curse> curse, int stacks, long gameTime, FormulaContext context, Identifier source) {
+    public static Result<CurseInstance> apply(CurseHolderAttachment data, Holder<Curse> curse, int stacks, long gameTime, FormulaContext context, Identifier source) {
         try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.CURSE)) {
             return apply(data, curse, stacks, gameTime, context, source, NeoForge.EVENT_BUS);
         }
@@ -54,23 +54,23 @@ public final class CurseService {
     /**
      * Variant for integrations that own a dedicated event bus.
      */
-    public static ResultWithData<CurseInstance> apply(CurseHolderAttachment data, Holder<Curse> curse, int stacks, long gameTime, FormulaContext context, Identifier source, @NotNull IEventBus eventBus) {
+    public static Result<CurseInstance> apply(CurseHolderAttachment data, Holder<Curse> curse, int stacks, long gameTime, FormulaContext context, Identifier source, @NotNull IEventBus eventBus) {
         try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.CURSE)) {
             return apply(data, curse, stacks, gameTime, context, source, eventBus, OptionalLong.empty());
         }
     }
 
-    public static ResultWithData<CurseInstance> apply(CurseHolderAttachment data, Holder<Curse> curse, int stacks, long gameTime, FormulaContext context, Identifier source, IEventBus eventBus, OptionalLong durationOverride) {
+    public static Result<CurseInstance> apply(CurseHolderAttachment data, Holder<Curse> curse, int stacks, long gameTime, FormulaContext context, Identifier source, IEventBus eventBus, OptionalLong durationOverride) {
         try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.CURSE)) {
             CurseApplyEvent.Pre event = new CurseApplyEvent.Pre(data, curse, stacks, gameTime, context, source);
-            if (eventBus.post(event).isCanceled()) return ResultWithData.failure(null, Failures.CANCELLED);
+            if (eventBus.post(event).isCanceled()) return Result.failure(Failures.CANCELLED);
             // A replacement discards an existing instance and reports the displaced one as a removal, so listeners
             // still learn it disappeared; it runs no action of its own, being an outside decision.
             State displaced = curse.value().stackingMode() == StackingMode.REPLACE ? data.instances().get(curse) : null;
             Set<Identifier> displacedFrom = data.sources().of(curse);
             CurseLedger ledger = read(data);
             Optional<CurseInstance> applied = ledger.apply(curse, event.getStacks(), gameTime, context, durationOverride);
-            if (applied.isEmpty()) return ResultWithData.failure(null, CurseFailure.INVALID_DURATION);
+            if (applied.isEmpty()) return Result.failure(CurseFailure.INVALID_DURATION);
             CurseInstance result = applied.get();
             write(data, ledger);
             // The shared rule with ability grants: a source leaving cannot remove another source's curse.
@@ -79,27 +79,27 @@ public final class CurseService {
             if (displaced != null)
                 eventBus.post(new Post(data, curse, displaced, displacedFrom, Reason.REPLACED, gameTime));
             eventBus.post(new CurseApplyEvent.Post(data, curse, gameTime, context, result));
-            return ResultWithData.success(result);
+            return Result.success(result);
         }
     }
 
-    public static ResultWithData<CurseInstance> apply(Entity target, Holder<Curse> curse, int stacks,
-                                                      long gameTime, FormulaContext context, Identifier source) {
+    public static Result<CurseInstance> apply(Entity target, Holder<Curse> curse, int stacks,
+                                              long gameTime, FormulaContext context, Identifier source) {
         try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.CURSE)) {
             return apply(target, curse, stacks, gameTime, context, source, NeoForge.EVENT_BUS, OptionalLong.empty());
         }
     }
 
-    public static ResultWithData<CurseInstance> apply(@NotNull Entity target, Holder<Curse> curse, int stacks,
-                                                      long gameTime, FormulaContext context, Identifier source, IEventBus eventBus) {
+    public static Result<CurseInstance> apply(@NotNull Entity target, Holder<Curse> curse, int stacks,
+                                              long gameTime, FormulaContext context, Identifier source, IEventBus eventBus) {
         try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.CURSE)) {
             return apply(target, curse, stacks, gameTime, context, source, eventBus, OptionalLong.empty());
         }
     }
 
-    public static ResultWithData<CurseInstance> applyWithDuration(Entity target, Holder<Curse> curse, int stacks,
-                                                                  long gameTime, FormulaContext context, Identifier source,
-                                                                  OptionalLong durationOverride) {
+    public static Result<CurseInstance> applyWithDuration(Entity target, Holder<Curse> curse, int stacks,
+                                                          long gameTime, FormulaContext context, Identifier source,
+                                                          OptionalLong durationOverride) {
         try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.CURSE)) {
             return apply(target, curse, stacks, gameTime, context, source, NeoForge.EVENT_BUS, durationOverride);
         }
@@ -107,20 +107,20 @@ public final class CurseService {
 
     // Full entity-facing transaction: state mutation plus the behaviour a newly created instance owes and the
     // runtime subscriptions that follow it.
-    private static ResultWithData<CurseInstance> apply(Entity target, Holder<Curse> curse, int stacks, long gameTime,
-                                                       FormulaContext context, Identifier source, IEventBus eventBus, OptionalLong durationOverride) {
+    private static Result<CurseInstance> apply(Entity target, Holder<Curse> curse, int stacks, long gameTime,
+                                               FormulaContext context, Identifier source, IEventBus eventBus, OptionalLong durationOverride) {
         try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.CURSE)) {
             Curse definition = curse.value();
             if (!definition.applicationCondition().test(target, context))
-                return ResultWithData.failure(null, CurseFailure.CONDITION);
+                return Result.failure(CurseFailure.CONDITION);
             String key = transactionKey(target, curse);
-            if (!IN_TRANSACTION.get().add(key)) return ResultWithData.failure(null, CurseFailure.REENTRANT);
+            if (!IN_TRANSACTION.get().add(key)) return Result.failure(CurseFailure.REENTRANT);
             try {
                 boolean created = !target.getData(MxtAttachments.CURSE_HOLDER).instances().containsKey(curse)
                         || definition.stackingMode() == StackingMode.REPLACE;
-                ResultWithData<CurseInstance> result = apply(target.getData(MxtAttachments.CURSE_HOLDER), curse, stacks, gameTime,
+                Result<CurseInstance> result = apply(target.getData(MxtAttachments.CURSE_HOLDER), curse, stacks, gameTime,
                         context, source, eventBus, durationOverride);
-                if (result.isSuccess()) {
+                if (result instanceof Result.SuccessResult<CurseInstance>) {
                     // "On apply" means the instance was created: stacking onto, or refreshing, a curse already held is
                     // a later application of the same instance and must not repeat it.
                     if (created && !definition.typedType().inert()) definition.onApply().execute(target, context);

@@ -10,6 +10,7 @@ import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.aura.SpiritStorageComponent;
 import com.iafenvoy.saturn.data.cost.Cost;
 import com.iafenvoy.saturn.data.cost.CostPayment;
+import com.iafenvoy.saturn.data.cost.Debit;
 import com.iafenvoy.saturn.data.cost.CostTarget;
 import com.iafenvoy.mxt.data.cost.builtin.AuraCost;
 import com.iafenvoy.saturn.data.cost.builtin.ResourceCost;
@@ -25,6 +26,7 @@ import com.iafenvoy.mxt.probe.ProbeDefinitions;
 import com.iafenvoy.mxt.registry.*;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactService;
 import com.iafenvoy.saturn.runtime.hold.ItemUseCycles;
+import com.iafenvoy.saturn.runtime.resulting.Result;
 import com.iafenvoy.saturn.runtime.resulting.failures.CostFailure;
 import com.iafenvoy.mxt.runtime.spirit.AuraTransfers;
 import com.iafenvoy.mxt.runtime.spirit.SpiritChargeService;
@@ -119,8 +121,8 @@ public final class AuraDoubleVerifyProbes {
         close(context, "a fractional recipe grants a fractional buffer", bank.getCapacity(null, context.registries(), aura), 24.75D);
         bank.insert(null, context.registries(), aura, 1.75D, true, false);
         CostContext costs = AuraCostContexts.bank(bank, context.player(), FormulaContext.of(context.player()), CostOrigins.SCRIPT);
-        CostPayment.PaymentResult paid = CostPayment.pay(List.of(new AuraCost(aura, new Constant(0.25D))), costs);
-        context.check("fractional bank payment succeeds", paid.isSuccess());
+        Result<List<Debit>> paid = CostPayment.pay(List.of(new AuraCost(aura, new Constant(0.25D))), costs);
+        context.check("fractional bank payment succeeds", paid instanceof Result.SuccessResult<List<Debit>>);
         close(context, "receipt retains the original fractional price", Costs.auras(paid).getOrDefault(aura, 0.0D), 0.25D);
         close(context, "bank loses precisely the quoted amount", bank.aura(aura), 1.5D);
         bank.extract(null, context.registries(), aura, 1.5D, true, false);
@@ -175,20 +177,20 @@ public final class AuraDoubleVerifyProbes {
         SpiritCraftingTableBlockEntity bank = bank(context, aura);
         CostContext first = AuraCostContexts.bank(bank, null, formula, CostOrigins.SCRIPT);
         CostContext second = AuraCostContexts.bank(bank, context.player(), formula, CostOrigins.SCRIPT);
-        context.expect("wrapping one bank retains its physical identity", fee.prepare(first).getData().target(), fee.prepare(second).getData().target());
+        context.expect("wrapping one bank retains its physical identity", fee.prepare(first).getData().orElseThrow().target(), fee.prepare(second).getData().orElseThrow().target());
         ResourceHolderAttachment account = new ResourceHolderAttachment();
         CostContext accountContext = CostContext.account(account, null, formula, CostOrigins.SCRIPT);
         Cost resourceFee = new ResourceCost(aura.value().resource(), new Constant(0.25D));
-        context.expect("aura and resource share one physical account target", fee.prepare(accountContext).getData().target(), resourceFee.prepare(accountContext).getData().target());
+        context.expect("aura and resource share one physical account target", fee.prepare(accountContext).getData().orElseThrow().target(), resourceFee.prepare(accountContext).getData().orElseThrow().target());
         CostContext changed = CostContext.of(null, formula, CostOrigins.SCRIPT).withPayer(context.player());
-        CostTarget.Account target = (CostTarget.Account) fee.prepare(changed).getData().target();
+        CostTarget.Account target = (CostTarget.Account) fee.prepare(changed).getData().orElseThrow().target();
         context.check("account source follows the current payer", target.account() == changed.resourceTarget());
         CostContext quote = AuraCostContexts.withAuraSource(first, AuraCostSources.QUOTE);
-        Cost.Transaction transaction = fee.prepare(quote).getData();
+        Cost.Transaction transaction = fee.prepare(quote).getData().orElseThrow();
         close(context, "quote has no inventory dependency", transaction.amount(), 0.25D);
-        context.expect("quote cannot execute a payment", transaction.execute(true).failure(), CostFailure.NO_CHANNEL);
-        context.expect("same-section positions retain identity", fee.prepare(AuraCostContexts.pool(null, context.level(), context.at(2, 1, 2), formula, CostOrigins.SCRIPT)).getData().target(),
-                fee.prepare(AuraCostContexts.pool(null, context.level(), context.at(2, 1, 2).offset(0, (context.at(2, 1, 2).getY() & 15) == 15 ? -1 : 1, 0), formula, CostOrigins.SCRIPT)).getData().target());
+        context.expect("quote cannot execute a payment", transaction.execute(true).getFailure().orElse(null), CostFailure.NO_CHANNEL);
+        context.expect("same-section positions retain identity", fee.prepare(AuraCostContexts.pool(null, context.level(), context.at(2, 1, 2), formula, CostOrigins.SCRIPT)).getData().orElseThrow().target(),
+                fee.prepare(AuraCostContexts.pool(null, context.level(), context.at(2, 1, 2).offset(0, (context.at(2, 1, 2).getY() & 15) == 15 ? -1 : 1, 0), formula, CostOrigins.SCRIPT)).getData().orElseThrow().target());
     }
 
     private static void capacity(ProbeContext context) {

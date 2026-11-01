@@ -88,7 +88,7 @@ public enum AccessoryRenderManager implements ResourceManagerReloadListener {
     private static AccessoryRenderDefinition resolve(ItemStack stack, List<Rule> rules, Map<Identifier, AccessoryRenderDefinition> cache, AccessoryRenderDefinition fallback) {
         // Cached per item id, so a rule must not match on stack state beyond the item itself.
         Identifier id = BuiltInRegistries.ITEM.getKey(stack.getItem());
-        return cache.computeIfAbsent(id, ignored -> rules.stream()
+        return cache.computeIfAbsent(id, _ -> rules.stream()
                 .filter(rule -> rule.entries().stream().anyMatch(entry -> entry.matches(stack)))
                 .max(Comparator.comparingInt(Rule::priority))
                 .map(Rule::definition).orElse(fallback));

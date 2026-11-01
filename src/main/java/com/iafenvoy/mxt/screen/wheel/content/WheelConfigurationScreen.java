@@ -18,6 +18,7 @@ import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
+import net.minecraft.util.Mth;
 import net.minecraft.world.entity.player.Player;
 import org.jetbrains.annotations.Nullable;
 import org.jspecify.annotations.NonNull;
@@ -111,8 +112,8 @@ public final class WheelConfigurationScreen extends AuiScreen {
      * inside it rather than pinned to a fixed width.
      */
     private void layout() {
-        this.panelWidth = Math.max(1, Math.min(this.width - PANEL_MARGIN * 2, CONTENT_WIDTH + 18));
-        this.panelHeight = Math.max(1, Math.min(this.height - PANEL_MARGIN * 2, PANEL_HEIGHT));
+        this.panelWidth = Mth.clamp(this.width - PANEL_MARGIN * 2, 1, CONTENT_WIDTH + 18);
+        this.panelHeight = Mth.clamp(this.height - PANEL_MARGIN * 2, 1, PANEL_HEIGHT);
         this.panelLeft = (this.width - this.panelWidth) / 2;
         this.panelTop = (this.height - this.panelHeight) / 2;
         // Pools are centred as one block, so a narrow panel squeezes both rather than clipping the right one.
@@ -389,7 +390,7 @@ public final class WheelConfigurationScreen extends AuiScreen {
         int contentHeight = Math.max(0, this.poolsBottom - this.poolsTop);
         for (int pool = 0; pool < 2; pool++) {
             double max = Math.max(0, rows(this.pool(pool).size()) * GRID_STEP - contentHeight);
-            this.scroll[pool] = Math.max(0, Math.min(max, this.scroll[pool]));
+            this.scroll[pool] = Mth.clamp(this.scroll[pool], 0.0D, max);
         }
     }
 

@@ -9,6 +9,7 @@ import com.iafenvoy.mxt.runtime.cultivation.CultivationMethodService;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationModeService;
 import com.iafenvoy.saturn.runtime.resulting.Failure;
 import com.iafenvoy.saturn.runtime.resulting.Failures;
+import com.iafenvoy.saturn.runtime.resulting.Result;
 import com.iafenvoy.saturn.util.DefinitionText;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
@@ -63,9 +64,9 @@ public final class CultivateCommand {
     // body's own conditions still decide whether it runs at all.
     private static int select(CommandSourceStack source, Holder<Cultivation> action) throws CommandSyntaxException {
         ServerPlayer player = source.getPlayerOrException();
-        CultivationMethodService.CultivationResult result = CultivationModeService.startNamed(player, action);
-        if (!result.started()) {
-            Failure failure = result.failure() == null ? Failures.NOT_APPLICABLE : result.failure();
+        Result<CultivationMethodService.CultivationStep> result = CultivationModeService.startNamed(player, action);
+        if (!(result instanceof Result.SuccessResult<CultivationMethodService.CultivationStep> started) || !started.data().started()) {
+            Failure failure = result.getFailure().orElse(Failures.NOT_APPLICABLE);
             source.sendFailure(Component.translatable("command.mxt.cultivate.select.failed",
                     DefinitionText.nameOrId(action), failure.message()));
             return 0;

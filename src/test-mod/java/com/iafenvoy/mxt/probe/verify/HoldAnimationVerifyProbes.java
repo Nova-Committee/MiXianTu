@@ -15,6 +15,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.ItemUseAnimation;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -50,6 +51,6 @@ public final class HoldAnimationVerifyProbes {
         }
         context.note("poses after each tick = " + poses + ", click = " + result);
         context.expect("the pose holds for the whole reading", poses,
-                List.copyOf(new ArrayList<>(java.util.Collections.nCopies(poses.size(), HoldBinding.DEFAULT_HOLD_ANIMATION))));
+                List.copyOf(new ArrayList<>(Collections.nCopies(poses.size(), HoldBinding.DEFAULT_HOLD_ANIMATION))));
     }
 }

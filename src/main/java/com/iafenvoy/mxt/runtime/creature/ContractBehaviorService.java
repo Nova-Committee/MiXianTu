@@ -26,7 +26,7 @@ public final class ContractBehaviorService {
     private ContractBehaviorService() {
     }
 
-    public static Result request(Mob creature, UUID requester, ContractBehavior behavior, boolean force) {
+    public static Result<Void> request(Mob creature, UUID requester, ContractBehavior behavior, boolean force) {
         try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.CREATURE)) {
             ContractAttachment data = creature.getData(MxtAttachments.CONTRACT);
             if (!data.bound()) return Result.failure(ContractFailure.NOT_BOUND);

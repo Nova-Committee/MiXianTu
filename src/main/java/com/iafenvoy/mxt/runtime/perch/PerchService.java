@@ -5,7 +5,6 @@ import com.iafenvoy.mxt.attachment.PerchAttachment;
 import com.iafenvoy.mxt.config.MxtServerConfig;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.resulting.failures.PerchFailure;
-import com.iafenvoy.saturn.runtime.resulting.Failure;
 import com.iafenvoy.saturn.runtime.resulting.Failures;
 import com.iafenvoy.saturn.runtime.resulting.Result;
 import net.minecraft.world.entity.Entity;
@@ -26,45 +25,45 @@ public final class PerchService {
 
     // Who asks the creature: an addon implements {@link Perchable} and the framework does the rest, so no caller
     // has to know a seat coordinate.
-    public static PerchResult perch(Entity entity, Entity vehicle) {
-        if (entity.level().isClientSide()) return PerchResult.refused(Failures.SERVER_ONLY);
-        if (entity == vehicle) return PerchResult.refused(PerchFailure.SELF);
-        if (!(entity instanceof Perchable perchable)) return PerchResult.refused(PerchFailure.NOT_WILLING);
+    public static Result<Boolean> perch(Entity entity, Entity vehicle) {
+        if (entity.level().isClientSide()) return Result.failure(Failures.SERVER_ONLY);
+        if (entity == vehicle) return Result.failure(PerchFailure.SELF);
+        if (!(entity instanceof Perchable perchable)) return Result.failure(PerchFailure.NOT_WILLING);
         Vec3 offset = perchable.perchOffset(vehicle, claimedOffsets(vehicle, entity)).orElse(null);
-        return offset == null ? PerchResult.refused(PerchFailure.NOT_WILLING) : perch(entity, vehicle, offset);
+        return offset == null ? Result.failure(PerchFailure.NOT_WILLING) : perch(entity, vehicle, offset);
     }
 
-    public static PerchResult perch(Entity entity, Entity vehicle, Vec3 offset) {
-        if (entity.level().isClientSide()) return PerchResult.refused(Failures.SERVER_ONLY);
-        if (entity == vehicle) return PerchResult.refused(PerchFailure.SELF);
-        if (!isFinite(offset)) return PerchResult.refused(PerchFailure.INVALID_OFFSET);
+    public static Result<Boolean> perch(Entity entity, Entity vehicle, Vec3 offset) {
+        if (entity.level().isClientSide()) return Result.failure(Failures.SERVER_ONLY);
+        if (entity == vehicle) return Result.failure(PerchFailure.SELF);
+        if (!isFinite(offset)) return Result.failure(PerchFailure.INVALID_OFFSET);
         if (entity.isPassenger() && entity.getVehicle() != vehicle)
-            return PerchResult.refused(PerchFailure.ALREADY_RIDING);
+            return Result.failure(PerchFailure.ALREADY_RIDING);
         if (claimedOffsets(vehicle, entity).size() >= MxtServerConfig.INSTANCE.perch.maxPerches.getValue())
-            return PerchResult.refused(PerchFailure.FULL);
+            return Result.failure(PerchFailure.FULL);
         boolean boarding = perchOffset(entity).isEmpty();
         // Already riding this very vehicle is a move, not a boarding: the platform answers a second startRiding
         // with false, so that case only rewrites the offset.
         if (entity.getVehicle() != vehicle) {
             // Forced: the vanilla gates are one passenger per vehicle and a passenger that is not sneaking, while
             // how many may perch is this service's own count above.
-            if (!entity.startRiding(vehicle, true, true)) return PerchResult.refused(PerchFailure.REFUSED);
+            if (!entity.startRiding(vehicle, true, true)) return Result.failure(PerchFailure.REFUSED);
         }
         entity.getData(MxtAttachments.PERCH).set(offset);
         if (boarding && entity instanceof Perchable perchable) perchable.onPerched(vehicle);
-        return PerchResult.perched();
+        return Result.success(true);
     }
 
-    public static PerchResult release(Entity entity) {
-        if (entity.level().isClientSide()) return PerchResult.refused(Failures.SERVER_ONLY);
+    public static Result<Boolean> release(Entity entity) {
+        if (entity.level().isClientSide()) return Result.failure(Failures.SERVER_ONLY);
         PerchAttachment perch = entity.getExistingData(MxtAttachments.PERCH).orElse(null);
-        if (perch == null || !perch.perched()) return PerchResult.unchanged();
+        if (perch == null || !perch.perched()) return Result.success(false);
         Entity vehicle = entity.getVehicle();
         // Before the ride ends, so a listener on the dismount still sees a perched creature.
         perch.clear();
         entity.stopRiding();
         if (vehicle != null && entity instanceof Perchable perchable) perchable.onPerchReleased(vehicle);
-        return PerchResult.released();
+        return Result.success(true);
     }
 
     public static Optional<Vec3> perchOffset(Entity entity) {
@@ -83,35 +82,5 @@ public final class PerchService {
 
     private static boolean isFinite(Vec3 offset) {
         return Double.isFinite(offset.x) && Double.isFinite(offset.y) && Double.isFinite(offset.z);
-    }
-
-    public static final class PerchResult extends Result {
-        private final boolean changed;
-
-        private PerchResult(boolean changed, Failure failure) {
-            super(failure, null);
-            this.changed = changed;
-        }
-
-        static PerchResult perched() {
-            return new PerchResult(true, null);
-        }
-
-        static PerchResult released() {
-            return new PerchResult(true, null);
-        }
-
-        static PerchResult unchanged() {
-            return new PerchResult(false, null);
-        }
-
-        static PerchResult refused(Failure failure) {
-            return new PerchResult(false, failure);
-        }
-
-        // Releasing what was never perched is neither a change nor a refusal.
-        public boolean changed() {
-            return this.changed;
-        }
     }
 }

@@ -18,7 +18,6 @@ import com.iafenvoy.saturn.profiling.ProfilerScope;
 import com.iafenvoy.saturn.profiling.ServerProfiling;
 import com.iafenvoy.saturn.runtime.resulting.Failures;
 import com.iafenvoy.saturn.runtime.resulting.Result;
-import com.iafenvoy.saturn.runtime.resulting.ResultWithData;
 import com.iafenvoy.saturn.util.HolderHelper;
 import com.iafenvoy.saturn.util.formula.FormulaContext;
 import com.mojang.logging.LogUtils;
@@ -53,7 +52,7 @@ public final class TribulationService {
                 AuraService.getPositionAura(entity.level(), entity.blockPosition()).rules().tribulationModify());
     }
 
-    public static Result start(LivingEntity entity, TribulationAttachment data, Holder<Tribulation> tribulation, long gameTime, FormulaContext context) {
+    public static Result<Void> start(LivingEntity entity, TribulationAttachment data, Holder<Tribulation> tribulation, long gameTime, FormulaContext context) {
         try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.TRIBULATION)) {
             Tribulation definition = tribulation.value();
             if (data.tribulation().isPresent()) return Result.failure(Failures.ALREADY_ACTIVE);
@@ -91,19 +90,19 @@ public final class TribulationService {
         }
     }
 
-    public static ResultWithData<State> tick(LivingEntity entity, TribulationAttachment data, Holder<Tribulation> tribulation, long gameTime, FormulaContext context) {
+    public static Result<State> tick(LivingEntity entity, TribulationAttachment data, Holder<Tribulation> tribulation, long gameTime, FormulaContext context) {
         try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.TRIBULATION)) {
             // A run with nothing left to consume cannot progress - a save whose timeline the codec reduced to nothing,
             // or a cursor that outlived its beats. Dropping it keeps a dead run from blocking the next breakthrough.
             if (data.peek() == null) {
                 if (data.tribulation().isPresent()) data.clear();
-                return ResultWithData.success(State.IDLE);
+                return Result.success(State.IDLE);
             }
             // The wind-up is the run counting itself in: the timeline has not started, so nothing is consumed, no
             // beat begins and no state is written while it lasts.
             if (data.windup() > 0L) {
                 data.tickWindup();
-                return ResultWithData.success(State.RUNNING);
+                return Result.success(State.RUNNING);
             }
             Tribulation definition = tribulation.value();
             FormulaContext runContext = tribulationContext(entity, context);
@@ -117,12 +116,12 @@ public final class TribulationService {
                     data.clear();
                     definition.successAction().execute(entity, runContext);
                     NeoForge.EVENT_BUS.post(new Complete(data, tribulation));
-                    return ResultWithData.success(State.COMPLETED);
+                    return Result.success(State.COMPLETED);
                 }
                 if (++consumed > MAX_BEATS_PER_TICK) {
                     LOGGER.log("Tribulation {} consumed {} beats in one tick without waiting: a branch is "
                             + "probably cycling", HolderHelper.id(tribulation), consumed - 1);
-                    return ResultWithData.success(State.RUNNING);
+                    return Result.success(State.RUNNING);
                 }
                 // The beat reads and writes a draft of the run's state and commits it once it has answered: a beat
                 // that changes nothing leaves the stored value untouched, so nothing has to be saved or synced.
@@ -141,11 +140,11 @@ public final class TribulationService {
                 }
                 Outcome outcome = entry.consume(entryContext);
                 data.setState(state.get());
-                if (outcome == Outcome.RUNNING) return ResultWithData.success(State.RUNNING);
+                if (outcome == Outcome.RUNNING) return Result.success(State.RUNNING);
                 if (outcome == Outcome.FAILED) {
                     data.clear();
                     definition.failAction().execute(entity, runContext);
-                    return ResultWithData.failure(State.FAILED, TribulationFailure.INVALID_ENTRY);
+                    return Result.failure(TribulationFailure.INVALID_ENTRY);
                 }
                 NeoForge.EVENT_BUS.post(new EntryPost(data, tribulation, data.consumed(), entry));
                 data.advance(jump.target());

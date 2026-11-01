@@ -5,12 +5,14 @@ import com.iafenvoy.mxt.data.cultivation.Cultivation;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.runtime.MxtProfilerSources;
-import com.iafenvoy.mxt.runtime.cultivation.CultivationMethodService.CultivationResult;
 import com.iafenvoy.mxt.runtime.CultivationTriggerService;
+import com.iafenvoy.mxt.runtime.MxtProfilerSources;
+import com.iafenvoy.mxt.runtime.cultivation.CultivationMethodService.CultivationStep;
 import com.iafenvoy.saturn.profiling.ProfilerScope;
 import com.iafenvoy.saturn.profiling.ServerProfiling;
+import com.iafenvoy.saturn.runtime.resulting.Failure;
 import com.iafenvoy.saturn.runtime.resulting.Failures;
+import com.iafenvoy.saturn.runtime.resulting.Result;
 import com.iafenvoy.saturn.util.formula.FormulaContext;
 import com.iafenvoy.saturn.util.formula.FormulaContexts;
 import net.minecraft.core.Holder;
@@ -31,7 +33,7 @@ public final class CultivationModeService {
     private CultivationModeService() {
     }
 
-    public static CultivationResult toggle(ServerPlayer player) {
+    public static Result<CultivationStep> toggle(ServerPlayer player) {
         try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.CULTIVATION)) {
             CultivationAttachment spirit = player.getData(MxtAttachments.CULTIVATION);
             // Stopping goes by the stored method: once the running one no longer applies the selector picks another
@@ -40,7 +42,7 @@ public final class CultivationModeService {
             if (spirit.cultivating() && running != null) return stop(player, spirit, running);
             FormulaContext context = FormulaContexts.forEntity(player);
             Holder<Cultivation> action = select(player, context).orElse(null);
-            if (action == null) return CultivationResult.rejected(Failures.NOT_APPLICABLE, null);
+            if (action == null) return Result.failure(Failures.NOT_APPLICABLE);
             return start(player, spirit, action, context);
         }
     }
@@ -62,13 +64,13 @@ public final class CultivationModeService {
                 && CultivationMethodService.canStartCultivation(entity, context);
     }
 
-    public static CultivationResult start(LivingEntity entity, CultivationAttachment spirit, Holder<Cultivation> action,
-                                          FormulaContext context) {
+    public static Result<CultivationStep> start(LivingEntity entity, CultivationAttachment spirit, Holder<Cultivation> action,
+                                                FormulaContext context) {
         try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.CULTIVATION)) {
             Cultivation definition = action.value();
-            CultivationResult result = CultivationMethodService.start(spirit, action, definition, entity.level().getGameTime(),
+            Result<CultivationStep> result = CultivationMethodService.start(spirit, action, definition, entity.level().getGameTime(),
                     () -> applicable(entity, action, context));
-            if (result.started()) {
+            if (result instanceof Result.SuccessResult<CultivationStep> step && step.data().started()) {
                 if (entity instanceof ServerPlayer player) CultivationMovementService.reconcile(player);
                 entity.refreshDimensions();
             }
@@ -76,11 +78,11 @@ public final class CultivationModeService {
         }
     }
 
-    public static CultivationResult stop(LivingEntity entity, CultivationAttachment spirit, Holder<Cultivation> action) {
+    public static Result<CultivationStep> stop(LivingEntity entity, CultivationAttachment spirit, Holder<Cultivation> action) {
         try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.CULTIVATION)) {
-            CultivationResult result = CultivationMethodService.stop(entity, spirit, action, action.value(),
+            Result<CultivationStep> result = CultivationMethodService.stop(entity, spirit, action, action.value(),
                     entity.level().getGameTime());
-            if (result.stopped()) {
+            if (result instanceof Result.SuccessResult<CultivationStep> step && step.data().stopped()) {
                 if (entity instanceof ServerPlayer player) CultivationMovementService.clear(player);
                 entity.refreshDimensions();
                 CultivationTriggerService.clear(entity);
@@ -92,14 +94,14 @@ public final class CultivationModeService {
     // The explicit pick behind {@code /mxt cultivate select}: a named method runs now even when the pack's ordering
     // would choose another, but starting still goes through the same ruler, so one that does not apply is refused
     // without disturbing the session already running. Nothing is remembered - the next press of the key picks again.
-    public static CultivationResult startNamed(LivingEntity entity, Holder<Cultivation> action) {
+    public static Result<CultivationStep> startNamed(LivingEntity entity, Holder<Cultivation> action) {
         CultivationAttachment spirit = entity.getData(MxtAttachments.CULTIVATION);
         Holder<Cultivation> running = spirit.cultivation().orElse(null);
         boolean active = spirit.cultivating() && running != null;
         if (active && Objects.equals(running, action))
-            return CultivationResult.rejected(Failures.ALREADY_ACTIVE, null);
+            return Result.failure(Failures.ALREADY_ACTIVE);
         FormulaContext context = FormulaContexts.forEntity(entity);
-        if (!applicable(entity, action, context)) return CultivationResult.rejected(Failures.NOT_APPLICABLE, null);
+        if (!applicable(entity, action, context)) return Result.failure(Failures.NOT_APPLICABLE);
         if (active) stop(entity, spirit, running);
         return start(entity, spirit, action, context);
     }
@@ -112,10 +114,10 @@ public final class CultivationModeService {
         return true;
     }
 
-    public static void notifyFailure(ServerPlayer player, CultivationResult result) {
-        if (result == null || result.failure() == null) return;
-        Component reason = result.abortReason();
-        if (reason == null) reason = result.failure().message(result.failedResource());
-        player.sendSystemMessage(Component.translatable("actionbar.mxt.cultivation.failed", reason), true);
+    public static void notifyFailure(ServerPlayer player, Result<CultivationStep> result) {
+        if (!(result instanceof Result.FailureResult<CultivationStep>(
+                Failure failure1
+        ))) return;
+        player.sendSystemMessage(Component.translatable("actionbar.mxt.cultivation.failed", failure1.message()), true);
     }
 }

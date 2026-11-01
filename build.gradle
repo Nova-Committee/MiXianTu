@@ -146,7 +146,7 @@ configurations {
 
 dependencies {
     implementation "curse.maven:jupiter-1072905:8569832"
-    implementation "curse.maven:saturn-lib-1767455:9385634"
+    implementation "curse.maven:saturn-lib-1767455:9393421"
     implementation "com.sighs:ApricityUI-neoforge-26.1:${apricityui_version}"
 
     // exp4j is jarJar'd inside Saturn; only its types are needed here.

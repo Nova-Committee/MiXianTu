@@ -5,10 +5,12 @@ import com.iafenvoy.mxt.runtime.MxtProfilerSources;
 import com.iafenvoy.saturn.data.ability.type.UpkeepAbilityType;
 import com.iafenvoy.saturn.data.cost.Cost;
 import com.iafenvoy.saturn.data.cost.CostPayment;
+import com.iafenvoy.saturn.data.cost.Debit;
 import com.iafenvoy.saturn.data.cost.context.CostContext;
 import com.iafenvoy.saturn.data.cost.context.CostOrigins;
 import com.iafenvoy.saturn.profiling.ProfilerScope;
 import com.iafenvoy.saturn.profiling.ServerProfiling;
+import com.iafenvoy.saturn.runtime.resulting.Result;
 import com.iafenvoy.saturn.util.formula.FormulaContext;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
@@ -71,9 +73,9 @@ public final class ArtifactUpkeepService {
         FormulaContext context = FormulaContext.of(holder);
         long interval = interval(upkeep.type(), context);
         if (gameTime % interval != 0L) return false;
-        CostPayment.PaymentResult payment = CostPayment.pay(costs,
+        Result<List<Debit>> payment = CostPayment.pay(costs,
                 CostContext.of(holder, context, CostOrigins.ARTIFACT_UPKEEP));
-        if (payment.isSuccess()) return true;
+        if (payment instanceof Result.SuccessResult<List<Debit>>) return true;
         upkeep.type().onFail().execute(holder, stack, context);
         return false;
     }

@@ -6,11 +6,9 @@ import com.iafenvoy.mxt.data.cultivation.SpiritRoot;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.resulting.failures.CultivationFailure;
 import com.iafenvoy.saturn.runtime.ability.AbilityGrantService;
-import com.iafenvoy.saturn.runtime.resulting.Failure;
 import com.iafenvoy.saturn.runtime.resulting.Result;
 import net.minecraft.core.Holder;
 import net.minecraft.world.entity.LivingEntity;
-import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 
@@ -28,20 +26,20 @@ public final class CultivationToggleService {
 
     // Re-derives what the body is granted in the same step, so the abilities the root handed out are released
     // or handed back with the switch.
-    public static ToggleResult setSpiritRootEnabled(LivingEntity entity, Holder<SpiritRoot> root, boolean enabled) {
+    public static Result<Boolean> setSpiritRootEnabled(LivingEntity entity, Holder<SpiritRoot> root, boolean enabled) {
         SpiritIdentityAttachment spirit = entity.getData(MxtAttachments.SPIRIT_IDENTITY);
-        if (!spirit.spiritRoots().contains(root)) return ToggleResult.rejected(CultivationFailure.NOT_HELD);
-        if (!spirit.setSpiritRootEnabled(root, enabled)) return ToggleResult.unchangedToggle();
+        if (!spirit.spiritRoots().contains(root)) return Result.failure(CultivationFailure.NOT_HELD);
+        if (!spirit.setSpiritRootEnabled(root, enabled)) return Result.success(false);
         AbilityGrantService.recalculate(entity);
-        return ToggleResult.changedToggle();
+        return Result.success(true);
     }
 
-    public static ToggleResult setPhysiqueEnabled(LivingEntity entity, Holder<Physique> physique, boolean enabled) {
+    public static Result<Boolean> setPhysiqueEnabled(LivingEntity entity, Holder<Physique> physique, boolean enabled) {
         SpiritIdentityAttachment spirit = entity.getData(MxtAttachments.SPIRIT_IDENTITY);
-        if (!spirit.physiques().contains(physique)) return ToggleResult.rejected(CultivationFailure.NOT_HELD);
-        if (!spirit.setPhysiqueEnabled(physique, enabled)) return ToggleResult.unchangedToggle();
+        if (!spirit.physiques().contains(physique)) return Result.failure(CultivationFailure.NOT_HELD);
+        if (!spirit.setPhysiqueEnabled(physique, enabled)) return Result.success(false);
         AbilityGrantService.recalculate(entity);
-        return ToggleResult.changedToggle();
+        return Result.success(true);
     }
 
     public static boolean isSpiritRootEnabled(LivingEntity entity, Holder<SpiritRoot> root) {
@@ -53,42 +51,15 @@ public final class CultivationToggleService {
     }
 
     // The shape a "seal your cultivation" effect wants; answers how many toggles that changed.
-    public static ToggleResult setAllEnabled(LivingEntity entity, boolean enabled) {
+    public static Result<Boolean> setAllEnabled(LivingEntity entity, boolean enabled) {
         SpiritIdentityAttachment spirit = entity.getData(MxtAttachments.SPIRIT_IDENTITY);
         int changed = 0;
         for (Holder<SpiritRoot> root : List.copyOf(spirit.spiritRoots()))
             if (spirit.setSpiritRootEnabled(root, enabled)) changed++;
         for (Holder<Physique> physique : List.copyOf(spirit.physiques()))
             if (spirit.setPhysiqueEnabled(physique, enabled)) changed++;
-        if (changed == 0) return ToggleResult.unchangedToggle();
+        if (changed == 0) return Result.success(false);
         AbilityGrantService.recalculate(entity);
-        return ToggleResult.changedToggle();
-    }
-
-    public static final class ToggleResult extends Result {
-        private final boolean changed;
-
-        private ToggleResult(boolean changed, @Nullable Failure failure) {
-            super(failure, null);
-            this.changed = changed;
-        }
-
-        private static ToggleResult changedToggle() {
-            return new ToggleResult(true, null);
-        }
-
-        private static ToggleResult unchangedToggle() {
-            return new ToggleResult(false, null);
-        }
-
-        public static ToggleResult rejected(Failure failure) {
-            return new ToggleResult(false, failure);
-        }
-
-        // Not the same question as failure(): a switch that was already in the state asked for changed nothing
-        // and refused nothing.
-        public boolean changed() {
-            return this.changed;
-        }
+        return Result.success(true);
     }
 }

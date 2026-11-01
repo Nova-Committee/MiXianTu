@@ -17,11 +17,10 @@ import com.iafenvoy.mxt.event.CurseRemoveEvent.Reason;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.runtime.ElementReactionService;
 import com.iafenvoy.mxt.runtime.cultivation.*;
-import com.iafenvoy.mxt.runtime.cultivation.CultivationService.BreakthroughResult;
 import com.iafenvoy.mxt.runtime.curse.CurseInstance;
 import com.iafenvoy.mxt.runtime.curse.CurseService;
-import com.iafenvoy.mxt.runtime.ElementReactionService;
 import com.iafenvoy.mxt.runtime.item.QualityRequirements;
 import com.iafenvoy.mxt.runtime.item.QualityService;
 import com.iafenvoy.mxt.runtime.item.QualityUpgradeService;
@@ -39,9 +38,9 @@ import com.iafenvoy.mxt.runtime.world.AuraWorldAttachment.Shape;
 import com.iafenvoy.mxt.runtime.world.SoulService;
 import com.iafenvoy.saturn.attachment.AbilityAttachment;
 import com.iafenvoy.saturn.data.ability.Ability;
-import com.iafenvoy.saturn.data.ability.Togglable;
 import com.iafenvoy.saturn.data.cost.Cost;
 import com.iafenvoy.saturn.data.cost.CostPayment;
+import com.iafenvoy.saturn.data.cost.Debit;
 import com.iafenvoy.saturn.data.cost.context.CostContext;
 import com.iafenvoy.saturn.data.cost.context.CostOrigins;
 import com.iafenvoy.saturn.data.trigger.TriggerContext;
@@ -50,10 +49,9 @@ import com.iafenvoy.saturn.registry.SaturnResourceKeys;
 import com.iafenvoy.saturn.runtime.ability.AbilityActivationService;
 import com.iafenvoy.saturn.runtime.ability.AbilityEventBridge;
 import com.iafenvoy.saturn.runtime.ability.AbilityService;
-import com.iafenvoy.saturn.runtime.ability.AbilityService.UseResult;
+import com.iafenvoy.saturn.runtime.resulting.Failure;
 import com.iafenvoy.saturn.runtime.resulting.Failures;
 import com.iafenvoy.saturn.runtime.resulting.Result;
-import com.iafenvoy.saturn.runtime.resulting.ResultWithData;
 import com.iafenvoy.saturn.runtime.resulting.failures.AbilityFailure;
 import com.iafenvoy.saturn.runtime.trigger.TriggerDispatcher;
 import com.iafenvoy.saturn.util.HolderHelper;
@@ -81,13 +79,13 @@ public final class MxtKubeJsApi {
     private MxtKubeJsApi() {
     }
 
-    public static UseResult useAbility(@NotNull Entity actor, Identifier id, FormulaContext context) {
+    public static Result<AbilityService.UseData> useAbility(@NotNull Entity actor, Identifier id, FormulaContext context) {
         if (actor.level().isClientSide())
-            return UseResult.rejected(Failures.SERVER_ONLY, null);
+            return Result.failure(Failures.SERVER_ONLY);
         Provider access = actor.level().registryAccess();
         Holder<Ability> ability = MxtDatapackRegistries.holder(access, SaturnResourceKeys.ABILITY, id).orElse(null);
         if (ability == null)
-            return UseResult.rejected(AbilityFailure.NOT_GRANTED, null);
+            return Result.failure(AbilityFailure.NOT_GRANTED);
         return AbilityService.use(ability, actor, actor.getData(SaturnAttachments.ABILITY_HOLDER),
                 actor.getData(SaturnAttachments.RESOURCE_HOLDER), actor.level().getGameTime(), context);
     }
@@ -96,11 +94,11 @@ public final class MxtKubeJsApi {
      * Presses a named ability, whatever kind it is: a cast, a switch or something that opens a window. The
      * carrier is the stack the script names, and an ability that acts on an item refuses without one.
      */
-    public static Togglable.PressResult activateAbility(@NotNull LivingEntity holder, Identifier id, @Nullable ItemStack carrier) {
+    public static Result<Void> activateAbility(@NotNull LivingEntity holder, Identifier id, @Nullable ItemStack carrier) {
         Provider access = holder.level().registryAccess();
         Holder<Ability> ability = MxtDatapackRegistries.holder(access, SaturnResourceKeys.ABILITY, id).orElse(null);
         if (ability == null || holder.level().isClientSide())
-            return Togglable.PressResult.refused(AbilityFailure.UNAVAILABLE);
+            return Result.failure(AbilityFailure.UNAVAILABLE);
         return AbilityActivationService.activate(holder, ability, carrier);
     }
 
@@ -172,11 +170,11 @@ public final class MxtKubeJsApi {
         return abilityKeys(entity).filter(held -> held.is(id)).findFirst();
     }
 
-    public static ResultWithData<CurseInstance> applyCurse(@NotNull Entity target, Identifier id, int stacks, Identifier source, FormulaContext context) {
+    public static Result<CurseInstance> applyCurse(@NotNull Entity target, Identifier id, int stacks, Identifier source, FormulaContext context) {
         if (target.level().isClientSide())
-            return ResultWithData.failure(null, Failures.SERVER_ONLY);
+            return Result.failure(Failures.SERVER_ONLY);
         Holder<Curse> curse = MxtDatapackRegistries.holder(target.level().registryAccess(), MxtResourceKeys.CURSE, id).orElse(null);
-        if (curse == null) return ResultWithData.failure(null, CurseFailure.CONDITION);
+        if (curse == null) return Result.failure(CurseFailure.CONDITION);
         return CurseService.apply(target, curse, stacks, target.level().getGameTime(), context, source);
     }
 
@@ -206,14 +204,14 @@ public final class MxtKubeJsApi {
     /**
      * {@link #applyCurse} with a duration the definition may shorten but never be outlasted by.
      */
-    public static ResultWithData<CurseInstance> applyCurseFor(@NotNull Entity target, Identifier id, int stacks, Identifier source,
-                                                              long durationTicks, FormulaContext context) {
-        if (target.level().isClientSide()) return ResultWithData.failure(null, Failures.SERVER_ONLY);
+    public static Result<CurseInstance> applyCurseFor(@NotNull Entity target, Identifier id, int stacks, Identifier source,
+                                                      long durationTicks, FormulaContext context) {
+        if (target.level().isClientSide()) return Result.failure(Failures.SERVER_ONLY);
         if (durationTicks < 0L) throw new IllegalArgumentException("Curse duration must not be negative");
         return MxtDatapackRegistries.holder(target.level().registryAccess(), MxtResourceKeys.CURSE, id)
                 .map(curse -> CurseService.applyWithDuration(target, curse, stacks, target.level().getGameTime(),
                         context, source, OptionalLong.of(durationTicks)))
-                .orElseGet(() -> ResultWithData.failure(null, CurseFailure.UNKNOWN));
+                .orElseGet(() -> Result.failure(CurseFailure.UNKNOWN));
     }
 
     /**
@@ -333,7 +331,7 @@ public final class MxtKubeJsApi {
      * Grants one spirit root through the service the data pack action uses, so conflict rules and granted
      * abilities behave identically. Unknown definitions are refused, not granted by name.
      */
-    public static Result grantSpiritRoot(@NotNull LivingEntity entity, Identifier id) {
+    public static Result<Void> grantSpiritRoot(@NotNull LivingEntity entity, Identifier id) {
         if (entity.level().isClientSide())
             return Result.failure(Failures.SERVER_ONLY);
         Holder<SpiritRoot> root = MxtDatapackRegistries.holder(entity.level().registryAccess(), MxtResourceKeys.SPIRIT_ROOT, id).orElse(null);
@@ -350,12 +348,12 @@ public final class MxtKubeJsApi {
     /**
      * Switches a held root on or off without giving it up.
      */
-    public static CultivationToggleService.ToggleResult setSpiritRootEnabled(@NotNull LivingEntity entity, Identifier id, boolean enabled) {
+    public static Result<Boolean> setSpiritRootEnabled(@NotNull LivingEntity entity, Identifier id, boolean enabled) {
         if (entity.level().isClientSide())
-            return CultivationToggleService.ToggleResult.rejected(Failures.SERVER_ONLY);
+            return Result.failure(Failures.SERVER_ONLY);
         Holder<SpiritRoot> root = foundSpiritRoot(entity, id);
         return root == null
-                ? CultivationToggleService.ToggleResult.rejected(CultivationFailure.NOT_HELD)
+                ? Result.failure(CultivationFailure.NOT_HELD)
                 : CultivationToggleService.setSpiritRootEnabled(entity, root, enabled);
     }
 
@@ -388,7 +386,7 @@ public final class MxtKubeJsApi {
      * Grants one physique through the service the data pack action uses, including its holder condition and
      * exclusive tags, read against the entity as it is right now.
      */
-    public static Result grantPhysique(@NotNull LivingEntity entity, Identifier id) {
+    public static Result<Void> grantPhysique(@NotNull LivingEntity entity, Identifier id) {
         if (entity.level().isClientSide())
             return Result.failure(Failures.SERVER_ONLY);
         Holder<Physique> physique = MxtDatapackRegistries.holder(entity.level().registryAccess(), MxtResourceKeys.PHYSIQUE, id).orElse(null);
@@ -402,13 +400,11 @@ public final class MxtKubeJsApi {
         return physique != null && !entity.level().isClientSide() && CultivationIdentityService.removePhysique(entity, physique);
     }
 
-    public static CultivationToggleService.ToggleResult setPhysiqueEnabled(@NotNull LivingEntity entity, Identifier id, boolean enabled) {
+    public static Result<Boolean> setPhysiqueEnabled(@NotNull LivingEntity entity, Identifier id, boolean enabled) {
         if (entity.level().isClientSide())
-            return CultivationToggleService.ToggleResult.rejected(Failures.SERVER_ONLY);
+            return Result.failure(Failures.SERVER_ONLY);
         Holder<Physique> physique = foundPhysique(entity, id);
-        return physique == null
-                ? CultivationToggleService.ToggleResult.rejected(CultivationFailure.NOT_HELD)
-                : CultivationToggleService.setPhysiqueEnabled(entity, physique, enabled);
+        return physique == null ? Result.failure(CultivationFailure.NOT_HELD) : CultivationToggleService.setPhysiqueEnabled(entity, physique, enabled);
     }
 
     // Read, never created: asking whether a body holds a root must not leave it holding an empty identity.
@@ -474,8 +470,8 @@ public final class MxtKubeJsApi {
      * Stores a level through the service the operator command uses, so a promotion and a script write the same
      * way. An id the current pack does not provide is refused rather than stored by name.
      */
-    public static Result setProgressionLevel(@NotNull LivingEntity entity, Identifier owner,
-                                             Identifier level, boolean force) {
+    public static Result<Void> setProgressionLevel(@NotNull LivingEntity entity, Identifier owner,
+                                                   Identifier level, boolean force) {
         if (entity.level().isClientSide())
             return Result.failure(Failures.SERVER_ONLY);
         Holder<Progression> resolved = MxtDatapackRegistries.holder(entity.level().registryAccess(), MxtResourceKeys.PROGRESSION, level).orElse(null);
@@ -488,14 +484,13 @@ public final class MxtKubeJsApi {
      * Learns a technique through the service the item and the data pack use, so the learn condition, the
      * exclusive-tag conflict rules and both learn events apply. An unknown definition is refused, not learned by name.
      */
-    public static Result learnTechnique(@NotNull LivingEntity entity, Identifier id) {
+    public static Result<Void> learnTechnique(@NotNull LivingEntity entity, Identifier id) {
         if (entity.level().isClientSide())
             return Result.failure(Failures.SERVER_ONLY);
         Holder<Technique> technique = MxtDatapackRegistries.holder(entity.level().registryAccess(), MxtResourceKeys.TECHNIQUE, id).orElse(null);
         return technique == null
                 ? Result.failure(Failures.DISABLED)
-                : TechniqueService.learn(entity, entity.getData(MxtAttachments.TECHNIQUE), technique,
-                FormulaContext.of(entity));
+                : TechniqueService.learn(entity, entity.getData(MxtAttachments.TECHNIQUE), technique, FormulaContext.of(entity));
     }
 
     /**
@@ -503,7 +498,7 @@ public final class MxtKubeJsApi {
      * resources and the running method live elsewhere and stay put. Asked by id, so a technique the current pack no
      * longer provides can still be given up.
      */
-    public static Result forgetTechnique(@NotNull LivingEntity entity, Identifier id) {
+    public static Result<Void> forgetTechnique(@NotNull LivingEntity entity, Identifier id) {
         if (entity.level().isClientSide())
             return Result.failure(Failures.SERVER_ONLY);
         // A reference the current pack no longer provides has no holder to name, so the record goes by id alone.
@@ -528,11 +523,11 @@ public final class MxtKubeJsApi {
         return null;
     }
 
-    public static BreakthroughResult tryBreakthrough(@NotNull LivingEntity entity, @NotNull Identifier auraId, FormulaContext context) {
+    public static Result<Void> tryBreakthrough(@NotNull LivingEntity entity, @NotNull Identifier auraId, FormulaContext context) {
         if (entity.level().isClientSide())
-            return CultivationService.BreakthroughResult.rejected(Failures.SERVER_ONLY, null);
+            return Result.failure(Failures.SERVER_ONLY);
         Holder<Aura> aura = MxtDatapackRegistries.holder(entity.level().registryAccess(), MxtResourceKeys.AURA, auraId).orElse(null);
-        if (aura == null) return CultivationService.BreakthroughResult.rejected(Failures.DISABLED, null);
+        if (aura == null) return Result.failure(Failures.DISABLED);
         return CultivationService.attempt(entity, entity.getData(MxtAttachments.CULTIVATION),
                 entity.getData(SaturnAttachments.RESOURCE_HOLDER), aura, context, () -> true);
     }
@@ -551,11 +546,15 @@ public final class MxtKubeJsApi {
     /**
      * The shared two-pass cost payment; real deduction failures warn and do not cancel the payment.
      */
-    public static ResultWithData<Map<Identifier, Double>> tryConsumeResources(Entity entity, List<Cost> costs, FormulaContext context) {
+    public static Result<Map<Identifier, Double>> tryConsumeResources(Entity entity, List<Cost> costs, FormulaContext context) {
         if (!(entity instanceof LivingEntity payer) || entity.level().isClientSide())
-            return ResultWithData.failure(Map.of(), Failures.UNKNOWN);
-        CostPayment.PaymentResult payment = CostPayment.pay(costs, CostContext.of(payer, context, CostOrigins.SCRIPT));
-        return payment.isSuccess() ? ResultWithData.success(payment.resources()) : ResultWithData.failure(payment.resources(), Failures.UNKNOWN, payment.failedResource());
+            return Result.failure(Failures.UNKNOWN);
+        Result<List<Debit>> payment = CostPayment.pay(costs, CostContext.of(payer, context, CostOrigins.SCRIPT));
+        if (payment instanceof Result.FailureResult<List<Debit>>(
+                Failure failure1
+        ))
+            return Result.failure(Failures.UNKNOWN, failure1.resource().orElse(null));
+        return Result.success(CostPayment.resources(payment.getData().orElse(List.of())));
     }
 
     /**
@@ -610,7 +609,7 @@ public final class MxtKubeJsApi {
     /**
      * Moves the stack one step up its ladder, paying that step's costs; the result says why nothing happened.
      */
-    public static QualityUpgradeService.UpgradeResult upgradeItemQuality(LivingEntity entity, ItemStack stack) {
+    public static Result<QualityUpgradeService.QualityUpgrade> upgradeItemQuality(LivingEntity entity, ItemStack stack) {
         return QualityUpgradeService.upgrade(entity, stack);
     }
 
@@ -667,11 +666,11 @@ public final class MxtKubeJsApi {
      * Extends or rewrites the ledger; a script cannot write a negative total. Both this and {@link #addLifespan}
      * write while the lifespan system is switched off, because that switch decides whether time passes.
      */
-    public static Result setLifespan(LivingEntity entity, long ticks) {
+    public static Result<Void> setLifespan(LivingEntity entity, long ticks) {
         return LifeSpanService.set(entity, ticks);
     }
 
-    public static Result addLifespan(LivingEntity entity, long ticks) {
+    public static Result<Void> addLifespan(LivingEntity entity, long ticks) {
         return LifeSpanService.add(entity, ticks);
     }
 
@@ -679,7 +678,7 @@ public final class MxtKubeJsApi {
      * Runs the configured reincarnation reset now, the same one the expiry outcome runs. An explicit act, so it
      * also runs while the lifespan system is switched off; a listener may cancel the rebirth event and refuse it.
      */
-    public static Result reincarnateLifespan(LivingEntity entity) {
+    public static Result<Void> reincarnateLifespan(LivingEntity entity) {
         return LifeSpanService.reincarnate(entity);
     }
 

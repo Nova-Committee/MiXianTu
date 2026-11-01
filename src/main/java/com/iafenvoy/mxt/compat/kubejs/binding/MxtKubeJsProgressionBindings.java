@@ -39,7 +39,7 @@ public final class MxtKubeJsProgressionBindings {
     }
 
     @Info("Stores a level and rebuilds what it grants, the same way an operator does it. {changed, failure}, where failure is UNKNOWN_OWNER, FOREIGN_LEVEL, SAME_LEVEL, UNKNOWN_LEVEL or SERVER_ONLY.")
-    public Result setLevel(LivingEntity entity, String owner, String level) {
+    public Result<Void> setLevel(LivingEntity entity, String owner, String level) {
         return MxtKubeJsApi.setProgressionLevel(entity, id(owner), id(level), false);
     }
 

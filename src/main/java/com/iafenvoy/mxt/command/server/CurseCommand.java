@@ -9,7 +9,8 @@ import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.curse.CurseInstance;
 import com.iafenvoy.mxt.runtime.curse.CurseService;
-import com.iafenvoy.saturn.runtime.resulting.ResultWithData;
+import com.iafenvoy.saturn.runtime.resulting.Failures;
+import com.iafenvoy.saturn.runtime.resulting.Result;
 import com.iafenvoy.saturn.util.DefinitionText;
 import com.iafenvoy.saturn.util.formula.FormulaContext;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
@@ -102,15 +103,16 @@ public final class CurseCommand {
         Collection<? extends Entity> targets = EntityArgument.getEntities(ctx, "targets");
         int applied = 0;
         for (Entity target : targets) {
-            ResultWithData<CurseInstance> result = CurseService.applyWithDuration(target, curse, stacks,
+            Result<CurseInstance> result = CurseService.applyWithDuration(target, curse, stacks,
                     target.level().getGameTime(), FormulaContext.of(target), SOURCE, durationTicks);
-            if (result.isSuccess()) {
+            if (result instanceof Result.SuccessResult<CurseInstance>) {
                 applied++;
                 source.sendSuccess(() -> Component.translatable("command.mxt.curse.applied",
                         DefinitionText.nameOrId(curse), stacks, target.getDisplayName()), true);
             } else {
                 source.sendFailure(Component.translatable("command.mxt.curse.apply_failed",
-                        DefinitionText.nameOrId(curse), target.getDisplayName(), String.valueOf(result.failure())));
+                        DefinitionText.nameOrId(curse), target.getDisplayName(),
+                        String.valueOf(result.getFailure().orElse(Failures.UNKNOWN))));
             }
         }
         return applied;

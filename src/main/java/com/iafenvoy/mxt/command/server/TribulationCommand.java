@@ -7,6 +7,7 @@ import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.tribulation.TribulationService;
 import com.iafenvoy.saturn.data.storage.DataStorage;
+import com.iafenvoy.saturn.runtime.resulting.Failure;
 import com.iafenvoy.saturn.runtime.resulting.Result;
 import com.iafenvoy.saturn.util.DefinitionText;
 import com.iafenvoy.saturn.util.formula.FormulaContexts;
@@ -65,11 +66,11 @@ public final class TribulationCommand {
         LivingEntity entity = target(source, target);
         if (entity == null) return 0;
         TribulationAttachment data = entity.getData(MxtAttachments.TRIBULATION);
-        Result result = TribulationService.start(entity, data, tribulation, entity.level().getGameTime(),
+        Result<?> result = TribulationService.start(entity, data, tribulation, entity.level().getGameTime(),
                 FormulaContexts.forEntity(entity));
-        if (!result.isSuccess()) {
+        if (result instanceof Result.FailureResult<?>(Failure failure1)) {
             source.sendFailure(Component.translatable("command.mxt.tribulation.failed", DefinitionText.nameOrId(tribulation),
-                    result.failure().message()));
+                    failure1.message()));
             return 0;
         }
         source.sendSuccess(() -> data.windup() > 0L

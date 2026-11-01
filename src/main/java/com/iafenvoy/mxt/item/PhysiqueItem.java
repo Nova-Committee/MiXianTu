@@ -3,6 +3,7 @@ package com.iafenvoy.mxt.item;
 import com.iafenvoy.mxt.data.cultivation.Physique;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationIdentityService;
+import com.iafenvoy.saturn.runtime.resulting.Failure;
 import com.iafenvoy.saturn.runtime.resulting.Result;
 import com.iafenvoy.saturn.util.DefinitionText;
 import com.iafenvoy.saturn.util.formula.FormulaContext;
@@ -37,9 +38,9 @@ public final class PhysiqueItem extends Item {
             if (player instanceof ServerPlayer serverPlayer1) serverPlayer1.sendSystemMessage(message, true);
             return InteractionResult.FAIL;
         }
-        Result result = CultivationIdentityService.grantPhysique(serverPlayer, physique, FormulaContext.of(serverPlayer));
-        if (result.failure() != null) {
-            Component message = Component.translatable("item.mxt.physique.failed", result.failure().message());
+        Result<?> result = CultivationIdentityService.grantPhysique(serverPlayer, physique, FormulaContext.of(serverPlayer));
+        if (result instanceof Result.FailureResult<?>(Failure failure1)) {
+            Component message = Component.translatable("item.mxt.physique.failed", failure1.message());
             if (player instanceof ServerPlayer serverPlayer1) serverPlayer1.sendSystemMessage(message, true);
             return InteractionResult.FAIL;
         }

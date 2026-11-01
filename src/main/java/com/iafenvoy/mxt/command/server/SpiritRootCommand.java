@@ -120,10 +120,10 @@ public final class SpiritRootCommand {
                 source.sendFailure(Component.translatable("command.mxt.identity.not_living", target.getDisplayName()));
                 continue;
             }
-            Result result = CultivationIdentityService.grantSpiritRoot(living, root);
-            if (result.failure() != null) {
+            Result<?> result = CultivationIdentityService.grantSpiritRoot(living, root);
+            if (result instanceof Result.FailureResult<?>(Failure failure1)) {
                 source.sendFailure(Component.translatable("command.mxt.identity.grant_failed",
-                        DefinitionText.nameOrId(root), target.getDisplayName(), reason(result.failure())));
+                        DefinitionText.nameOrId(root), target.getDisplayName(), reason(failure1)));
                 continue;
             }
             granted++;
@@ -164,9 +164,9 @@ public final class SpiritRootCommand {
                 source.sendFailure(Component.translatable("command.mxt.identity.not_living", target.getDisplayName()));
                 continue;
             }
-            CultivationToggleService.ToggleResult result = CultivationToggleService.setSpiritRootEnabled(living, root, enabled);
-            if (!result.changed()) {
-                source.sendFailure(Component.translatable("command.mxt.identity.toggle_failed", target.getDisplayName(), HolderHelper.id(root), reason(result.failure())));
+            Result<Boolean> result = CultivationToggleService.setSpiritRootEnabled(living, root, enabled);
+            if (!result.getData().orElse(false)) {
+                source.sendFailure(Component.translatable("command.mxt.identity.toggle_failed", target.getDisplayName(), HolderHelper.id(root), reason(result.getFailure().orElse(null))));
                 continue;
             }
             changed++;

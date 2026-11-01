@@ -1,5 +1,7 @@
 package com.iafenvoy.mxt.probe.item;
 
+import com.iafenvoy.saturn.runtime.resulting.Result;
+
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
 import com.iafenvoy.mxt.api.AlchemyWorkstation;
@@ -417,7 +419,7 @@ public final class QualityProbes {
         Generic crossed = new Generic(standard(), context.at(4, 0, 4), spec(context), core(context, id("poor")));
         AlchemyPreview crossPreview = AlchemyWorkstationService.preview(context.player(), crossed);
         expect(context, "gate-core-cross-ladder", crossPreview.blocker().orElse(null), AlchemyFailure.FURNACE_TIER);
-        expect(context, "gate-core-cross-started", AlchemyWorkstationService.start(context.player(), crossed).isSuccess(), false);
+        expect(context, "gate-core-cross-started", AlchemyWorkstationService.start(context.player(), crossed).getFailure().isEmpty(), false);
         expect(context, "gate-core-cross-kept", crossed.container().getItem(0).getCount(), 2);
 
         // One tier up the same ladder satisfies the same floor, and that tier's own alchemy_modifier is what makes the
@@ -444,7 +446,7 @@ public final class QualityProbes {
         AlchemyPreview gated = AlchemyWorkstationService.preview(context.player(), refused);
         expect(context, "gate-input-recipe", resolved(gated), id("alchemy/zz_input_gate"));
         expect(context, "gate-input-refused", gated.blocker().orElse(null), AlchemyFailure.INPUT_TIER);
-        expect(context, "gate-input-started", AlchemyWorkstationService.start(context.player(), refused).isSuccess(), false);
+        expect(context, "gate-input-started", AlchemyWorkstationService.start(context.player(), refused).getFailure().isEmpty(), false);
         expect(context, "gate-input-kept", refused.container().getItem(0).getCount(), 4);
 
         // Marked on the ladder the formula names, the same batch passes the gate and starts. Every non-empty slot
@@ -455,7 +457,7 @@ public final class QualityProbes {
                 grade(context, marked.container().getItem(index), id("alchemy/kiln_a"));
         AlchemyPreview markedPreview = AlchemyWorkstationService.preview(context.player(), marked);
         expect(context, "gate-input-marked-blocker", markedPreview.blocker().orElse(null), null);
-        expect(context, "gate-input-marked-started", AlchemyWorkstationService.start(context.player(), marked).isSuccess(), true);
+        expect(context, "gate-input-marked-started", AlchemyWorkstationService.start(context.player(), marked).getFailure().isEmpty(), true);
 
         // The temperature ceiling is a minimum of three, and the specification is only one of them: the capped
         // fixture answers with its own number even where the walls and the heat block allow far more, a specification

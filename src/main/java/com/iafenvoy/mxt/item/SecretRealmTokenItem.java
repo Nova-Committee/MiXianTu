@@ -9,8 +9,9 @@ import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.runtime.rift.RiftGeometry;
 import com.iafenvoy.mxt.runtime.rift.RiftRecord;
-import com.iafenvoy.mxt.runtime.rift.RiftResult;
 import com.iafenvoy.mxt.runtime.rift.RiftService;
+import com.iafenvoy.saturn.runtime.resulting.Failure;
+import com.iafenvoy.saturn.runtime.resulting.Result;
 import net.minecraft.core.Holder;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
@@ -75,13 +76,13 @@ public final class SecretRealmTokenItem extends Item {
             return InteractionResult.FAIL;
         RiftTemplate data = new RiftTemplate("token", placement, false, preset.shape(), returning ? new RiftDestination.Return()
                 : new RiftDestination.Realm(token.realm().orElseThrow().unwrapKey().orElseThrow().identifier()), preset.appearance(), token.durationTicks(), true);
-        RiftResult result = RiftService.publish(serverPlayer.level(), null, 0, data, player.getUUID(), true);
-        if (result.isFailure()) {
-            serverPlayer.sendSystemMessage(Component.translatable("rift.mxt.failure.edit", result.detail()), true);
+        Result<RiftRecord> result = RiftService.publish(serverPlayer.level(), null, 0, data, player.getUUID(), true);
+        if (result instanceof Result.FailureResult<RiftRecord>(Failure failure1)) {
+            serverPlayer.sendSystemMessage(Component.translatable("rift.mxt.failure.edit", failure1.message()), true);
             return InteractionResult.FAIL;
         }
         stack.set(MxtDataComponents.SECRET_REALM_TOKEN, new SecretRealmTokenComponent(token.realm(), token.preset(), token.durationTicks(),
-                Optional.of(result.record().id()), Optional.of(level.dimension().identifier())));
+                Optional.of(result.getData().orElseThrow().id()), Optional.of(level.dimension().identifier())));
         player.getCooldowns().addCooldown(stack, 20);
         serverPlayer.sendSystemMessage(Component.translatable("item.mxt.secret_realm_token.summoned"), true);
         return InteractionResult.SUCCESS_SERVER;

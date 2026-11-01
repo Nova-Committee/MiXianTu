@@ -3,7 +3,7 @@ package com.iafenvoy.mxt.api;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.saturn.data.cost.Cost;
 import com.iafenvoy.saturn.data.cost.context.CostContext;
-import com.iafenvoy.saturn.runtime.resulting.ResultWithData;
+import com.iafenvoy.saturn.runtime.resulting.Result;
 import net.minecraft.core.Holder;
 
 /**
@@ -21,5 +21,5 @@ public interface AuraCostSource {
      * @param amount  the already evaluated, finite positive amount; do not round or evaluate it again
      * @return a fixed transaction, or a refusal if the source cannot bind this price
      */
-    ResultWithData<Cost.Transaction> bind(CostContext context, Holder<Aura> aura, double amount);
+    Result<Cost.Transaction> bind(CostContext context, Holder<Aura> aura, double amount);
 }

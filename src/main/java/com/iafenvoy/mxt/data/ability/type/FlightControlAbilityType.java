@@ -8,7 +8,7 @@ import com.iafenvoy.saturn.data.ability.*;
 import com.iafenvoy.saturn.data.storage.DataStorageCollector;
 import com.iafenvoy.saturn.data.storage.builtin.CooldownDataStorage;
 import com.iafenvoy.saturn.runtime.resulting.Failure;
-import com.iafenvoy.saturn.runtime.resulting.ResultWithData;
+import com.iafenvoy.saturn.runtime.resulting.Result;
 import com.iafenvoy.saturn.util.OptionalBoolean;
 import com.iafenvoy.saturn.util.formula.NumberProvider;
 import com.iafenvoy.saturn.util.formula.number.Constant;
@@ -83,15 +83,15 @@ public record FlightControlAbilityType(Hand hand, NumberProvider speedMultiplier
     }
 
     @Override
-    public PressResult activate(ToggleContext context) {
+    public Result<Void> activate(ToggleContext context) {
         if (this.state(context).orElse(false)) {
             FlightService.dismount(context.holder(), FlightFailure.STOPPED);
-            return PressResult.activated();
+            return Result.success();
         }
-        ResultWithData<FlightService.State> mounted = FlightService.mount(context.holder(), context.ability(), context.formula());
-        if (mounted.failure() == null) return PressResult.activated();
+        Result<FlightService.State> mounted = FlightService.mount(context.holder(), context.ability(), context.formula());
+        if (mounted instanceof Result.SuccessResult<?>) return Result.success();
         // Each reason a take-off can give is reported as itself; NOT_FLYABLE is the one failure this type cannot
         // produce, since the type was just read.
-        return PressResult.refused(mounted.failure());
+        return Result.failure(mounted.getFailure().orElseThrow());
     }
 }

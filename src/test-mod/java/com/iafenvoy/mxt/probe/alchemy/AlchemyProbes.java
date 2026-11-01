@@ -1,5 +1,7 @@
 package com.iafenvoy.mxt.probe.alchemy;
 
+import com.iafenvoy.saturn.runtime.resulting.Result;
+
 import com.iafenvoy.mxt.data.alchemy.AlchemyFurnaceDefinition;
 import com.iafenvoy.mxt.data.alchemy.MedicinalProperty;
 import com.iafenvoy.mxt.data.aura.Aura;
@@ -21,7 +23,6 @@ import com.iafenvoy.mxt.registry.*;
 import com.iafenvoy.mxt.runtime.alchemy.*;
 import com.iafenvoy.mxt.runtime.alchemy.AlchemyResolver.Candidate;
 import com.iafenvoy.mxt.runtime.alchemy.AlchemyWorkstationService.AlchemyPreview;
-import com.iafenvoy.mxt.runtime.alchemy.AlchemyWorkstationService.StartResult;
 import com.iafenvoy.mxt.runtime.resulting.failures.AlchemyFailure;
 import com.iafenvoy.mxt.screen.menu.AlchemyFurnaceMenu;
 import com.iafenvoy.mxt.testmod.AlchemyTestHeatBlocks;
@@ -159,11 +160,11 @@ public final class AlchemyProbes {
             AlchemyPreview conflict = AlchemyWorkstationService.preview(player, furnace);
             context.expect("conflict", conflict.blocker().orElse(null), AlchemyFailure.CONFLICT);
             int before = furnace.container().getItem(1).getCount();
-            StartResult refused = AlchemyWorkstationService.start(player, furnace);
-            context.expect("conflict-no-spend", refused.isSuccess(), false);
+            Result<Void> refused = AlchemyWorkstationService.start(player, furnace);
+            context.expect("conflict-no-spend", refused.getFailure().isEmpty(), false);
             context.expect("conflict-kept", furnace.container().getItem(1).getCount(), before);
             furnace.container().setItem(1, ItemStack.EMPTY);
-            context.expect("practice-start", AlchemyWorkstationService.start(player, furnace).isSuccess(), true);
+            context.expect("practice-start", AlchemyWorkstationService.start(player, furnace).getFailure().isEmpty(), true);
             tickUntil(level, furnace, 220, phase -> phase == AlchemyPhase.IDLE);
             context.expect("practice-pills", ediblePractice(List.of(stored(furnace, MxtItems.PILL.get()))), true);
         });
@@ -193,7 +194,7 @@ public final class AlchemyProbes {
             furnace.container().setItem(1, new ItemStack(Items.CACTUS));
             AlchemyPreview splitRank = AlchemyWorkstationService.preview(player, furnace);
             context.expect("rank-split", resolvedId(splitRank), resolvedId(high));
-            context.expect("rank-start", AlchemyWorkstationService.start(player, furnace).isSuccess(), true);
+            context.expect("rank-start", AlchemyWorkstationService.start(player, furnace).getFailure().isEmpty(), true);
             tickUntil(level, furnace, 12, phase -> phase == AlchemyPhase.IDLE);
             context.expect("rank-output", stored(furnace, Items.EMERALD).getCount(), 1);
             context.expect("rank-not-low-output", stored(furnace, Items.STICK).isEmpty(), true);
@@ -204,8 +205,8 @@ public final class AlchemyProbes {
             context.expect("tie-ambiguous", tie.blocker().orElse(null), AlchemyFailure.AMBIGUOUS);
             context.expect("tie-unresolved", tie.resolvedRecipe().isEmpty(), true);
             int rose = furnace.container().getItem(1).getCount();
-            StartResult tied = AlchemyWorkstationService.start(player, furnace);
-            context.expect("tie-no-spend", tied.isSuccess(), false);
+            Result<Void> tied = AlchemyWorkstationService.start(player, furnace);
+            context.expect("tie-no-spend", tied.getFailure().isEmpty(), false);
             context.expect("tie-kept", furnace.container().getItem(1).getCount(), rose);
             clearInputs(furnace);
             fill(furnace);
@@ -214,8 +215,8 @@ public final class AlchemyProbes {
             context.expect("cross-ambiguous", crossed.blocker().orElse(null), AlchemyFailure.AMBIGUOUS);
             context.expect("cross-unresolved", crossed.resolvedRecipe().isEmpty(), true);
             int bamboo = furnace.container().getItem(1).getCount();
-            StartResult cross = AlchemyWorkstationService.start(player, furnace);
-            context.expect("cross-no-spend", cross.isSuccess(), false);
+            Result<Void> cross = AlchemyWorkstationService.start(player, furnace);
+            context.expect("cross-no-spend", cross.getFailure().isEmpty(), false);
             context.expect("cross-kept", furnace.container().getItem(1).getCount(), bamboo);
             clearInputs(furnace);
             furnace.container().setItem(0, new ItemStack(Items.ALLIUM));
@@ -236,13 +237,13 @@ public final class AlchemyProbes {
             small.refreshStructure();
             small.setTargetTemperature(50);
             small.container().setItem(1, new ItemStack(Items.ALLIUM));
-            StartResult slots = AlchemyWorkstationService.start(player, small);
-            context.expect("disabled-slot", slots.failure(), AlchemyFailure.SLOTS);
+            Result<Void> slots = AlchemyWorkstationService.start(player, small);
+            context.expect("disabled-slot", slots.getFailure().orElse(null), AlchemyFailure.SLOTS);
             context.expect("disabled-slot-kept", small.container().getItem(1).getCount(), 1);
             small.container().setItem(1, ItemStack.EMPTY);
             small.container().setItem(0, new ItemStack(Items.ALLIUM, 5));
-            StartResult capacity = AlchemyWorkstationService.start(player, small);
-            context.expect("capacity", capacity.failure(), AlchemyFailure.CAPACITY);
+            Result<Void> capacity = AlchemyWorkstationService.start(player, small);
+            context.expect("capacity", capacity.getFailure().orElse(null), AlchemyFailure.CAPACITY);
             context.expect("capacity-kept", small.container().getItem(0).getCount(), 5);
             fixture.clearFurnace(at);
             // No quality component on the stack: the tier is the one this specification declares, which is the only
@@ -251,8 +252,8 @@ public final class AlchemyProbes {
             sealed.refreshStructure();
             sealed.setTargetTemperature(50);
             fill(sealed);
-            StartResult quality = AlchemyWorkstationService.start(player, sealed);
-            context.expect("sealed-quality", quality.failure(), AlchemyFailure.QUALITY_CONDITIONS);
+            Result<Void> quality = AlchemyWorkstationService.start(player, sealed);
+            context.expect("sealed-quality", quality.getFailure().orElse(null), AlchemyFailure.QUALITY_CONDITIONS);
             context.expect("sealed-kept", sealed.container().getItem(0).getCount(), 2);
             context.expect("sealed-heat-kept", heatState(level, sealed).is(AlchemyTestHeatBlocks.FIRE.get()), true);
             fixture.clearFurnace(at);
@@ -264,15 +265,15 @@ public final class AlchemyProbes {
             context.expect("hot-resolved", resolvedId(hotPreview), HOT);
             context.expect("hot-dominates-low", matched(hotPreview, HOT_LOW), true);
             context.expect("hot-not-practice", matched(hotPreview, PRACTICE), false);
-            StartResult hot = AlchemyWorkstationService.start(player, wide);
-            context.expect("hot-temperature", hot.failure(), AlchemyFailure.TEMPERATURE);
+            Result<Void> hot = AlchemyWorkstationService.start(player, wide);
+            context.expect("hot-temperature", hot.getFailure().orElse(null), AlchemyFailure.TEMPERATURE);
             context.expect("hot-kept", wide.container().getItem(0).getCount(), 2);
             context.expect("hot-marker-kept", wide.container().getItem(1).getCount(), 1);
             BlockPos missing = AlchemyFurnaceStructure.world(at, Direction.NORTH, 16);
             level.setBlockAndUpdate(missing, Blocks.AIR.defaultBlockState());
             wide.refreshStructure();
-            StartResult broken = AlchemyWorkstationService.start(player, wide);
-            context.expect("missing-shell", broken.failure(), AlchemyFailure.STRUCTURE);
+            Result<Void> broken = AlchemyWorkstationService.start(player, wide);
+            context.expect("missing-shell", broken.getFailure().orElse(null), AlchemyFailure.STRUCTURE);
             context.expect("missing-kept", wide.container().getItem(0).getCount(), 2);
         });
     }
@@ -292,19 +293,19 @@ public final class AlchemyProbes {
             // The plain core carries no tier of its own, so the default_quality table names the ladder's entry for it.
             AlchemyPreview entry = AlchemyWorkstationService.preview(player, furnace);
             context.expect("core-quality-resolved", resolvedId(entry), HOT);
-            context.expect("core-quality-entry", AlchemyWorkstationService.start(player, furnace).failure(), AlchemyFailure.TEMPERATURE);
+            context.expect("core-quality-entry", AlchemyWorkstationService.start(player, furnace).getFailure().orElse(null), AlchemyFailure.TEMPERATURE);
             context.expect("core-quality-entry-kept", furnace.container().getItem(0).getCount(), 2);
             context.expect("furnace-rank-entry", entry.parameters().map(AlchemyWorkstationService.Parameters::durationTicks).orElse(-1L), 4L);
             // One tier up the same ladder satisfies a floor set at the entry, and that tier's own alchemy_modifier is
             // what shortens the batch: hot's numbers read rank 1 (4 + 1), the tier halves the result.
             furnace.acceptFurnaceItem(tieredCore(level, ProbeDefinitions.id("alchemy/kiln_b")));
             AlchemyPreview higher = AlchemyWorkstationService.preview(player, furnace);
-            context.expect("core-quality-higher", AlchemyWorkstationService.start(player, furnace).failure(), AlchemyFailure.TEMPERATURE);
+            context.expect("core-quality-higher", AlchemyWorkstationService.start(player, furnace).getFailure().orElse(null), AlchemyFailure.TEMPERATURE);
             context.expect("core-tier-speed", higher.parameters().map(AlchemyWorkstationService.Parameters::durationTicks).orElse(-1L), 3L);
             // A tier from another ladder is neither above nor below it, so the requirement refuses instead of guessing.
             furnace.acceptFurnaceItem(tieredCore(level, ProbeDefinitions.id("poor")));
             context.expect("core-quality-cross-ladder", AlchemyWorkstationService.preview(player, furnace).blocker().orElse(null), AlchemyFailure.FURNACE_TIER);
-            context.expect("core-quality-refused", AlchemyWorkstationService.start(player, furnace).isSuccess(), false);
+            context.expect("core-quality-refused", AlchemyWorkstationService.start(player, furnace).getFailure().isEmpty(), false);
             context.expect("core-quality-kept", furnace.container().getItem(0).getCount(), 2);
             context.expect("core-quality-heat-kept", heatState(level, furnace).is(AlchemyTestHeatBlocks.FIRE.get()), true);
             fixture.clearFurnace(at);
@@ -321,8 +322,8 @@ public final class AlchemyProbes {
             furnace.refreshStructure();
             furnace.setTargetTemperature(50);
             fillMarked(furnace, Items.ORANGE_TULIP);
-            StartResult started = AlchemyWorkstationService.start(player, furnace);
-            context.expect("full-start", started.isSuccess(), true);
+            Result<Void> started = AlchemyWorkstationService.start(player, furnace);
+            context.expect("full-start", started.getFailure().isEmpty(), true);
             for (int slot = 5; slot < 9; slot++)
                 furnace.container().setItem(slot, new ItemStack(Items.COBBLESTONE, 64));
             tickUntil(level, furnace, 12, phase -> phase == AlchemyPhase.READY || phase == AlchemyPhase.IDLE);
@@ -341,8 +342,8 @@ public final class AlchemyProbes {
             dual.refreshStructure();
             dual.setTargetTemperature(50);
             fill(dual);
-            StartResult dualStart = AlchemyWorkstationService.start(player, dual);
-            context.expect("alternate-quality-start", dualStart.isSuccess(), true);
+            Result<Void> dualStart = AlchemyWorkstationService.start(player, dual);
+            context.expect("alternate-quality-start", dualStart.getFailure().isEmpty(), true);
             tick(level, dual);
             context.expect("running-heat-not-consumed", heatState(level, dual).is(AlchemyTestHeatBlocks.FIRE.get()), true);
             fixture.clearFurnace(at);
@@ -357,7 +358,7 @@ public final class AlchemyProbes {
             bad.refreshStructure();
             bad.setTargetTemperature(50);
             fill(bad);
-            context.expect("bad-start", AlchemyWorkstationService.start(player, bad).isSuccess(), true);
+            context.expect("bad-start", AlchemyWorkstationService.start(player, bad).getFailure().isEmpty(), true);
             tickUntil(level, bad, 6, phase -> phase == AlchemyPhase.RUNNING);
             context.expect("bad-running", bad.phase(), AlchemyPhase.RUNNING);
             bad.setTargetTemperature(0);
@@ -388,7 +389,7 @@ public final class AlchemyProbes {
             furnace.refreshStructure();
             furnace.setTargetTemperature(50);
             fillMarked(furnace, Items.RED_TULIP);
-            context.expect("save-start", AlchemyWorkstationService.start(player, furnace).isSuccess(), true);
+            context.expect("save-start", AlchemyWorkstationService.start(player, furnace).getFailure().isEmpty(), true);
             AlchemyFurnaceBlockEntity warming = reload(level, furnace);
             context.expect("warming-phase", warming.phase(), AlchemyPhase.WARMING);
             context.expect("warming-recipe", warming.state().session().map(session -> session.recipe().successOutputs().isEmpty()).orElse(true), false);
@@ -453,15 +454,15 @@ public final class AlchemyProbes {
             furnace.refreshStructure();
             furnace.setTargetTemperature(50);
             fill(furnace);
-            StartResult cancelled = AlchemyWorkstationService.start(player, furnace);
-            context.expect("pre-cancel", cancelled.failure(), AlchemyFailure.CANCELLED);
+            Result<Void> cancelled = AlchemyWorkstationService.start(player, furnace);
+            context.expect("pre-cancel", cancelled.getFailure().orElse(null), AlchemyFailure.CANCELLED);
             context.expect("pre-cancel-items", furnace.container().getItem(0).getCount(), 2);
             context.expect("pre-cancel-heat", heatState(level, furnace).is(AlchemyTestHeatBlocks.FIRE.get()), true);
             gate.cancel = false;
             gate.mutate = true;
             fillMarked(furnace, Items.SUNFLOWER);
-            StartResult mutated = AlchemyWorkstationService.start(player, furnace);
-            context.expect("pre-copy-starts", mutated.isSuccess(), true);
+            Result<Void> mutated = AlchemyWorkstationService.start(player, furnace);
+            context.expect("pre-copy-starts", mutated.getFailure().isEmpty(), true);
             context.expect("pre-copy-consumed", furnace.container().getItem(0).isEmpty(), true);
             gate.mutate = false;
             gate.posts = 0;
@@ -574,7 +575,7 @@ public final class AlchemyProbes {
             split.container().setItem(6, new ItemStack(Items.APPLE, 63));
             split.container().setItem(7, new ItemStack(Items.STONE, 64));
             split.container().setItem(8, new ItemStack(Items.STONE, 64));
-            context.expect("split-start", AlchemyWorkstationService.start(player, split).isSuccess(), true);
+            context.expect("split-start", AlchemyWorkstationService.start(player, split).getFailure().isEmpty(), true);
             tickUntil(level, split, 16, phase -> phase == AlchemyPhase.IDLE);
             context.expect("split-apple", split.container().getItem(6).getCount(), 64);
             context.expect("split-diamond", split.container().getItem(5).is(Items.DIAMOND) && split.container().getItem(5).getCount() == 1, true);
@@ -587,7 +588,7 @@ public final class AlchemyProbes {
             pack.container().setItem(6, new ItemStack(Items.APPLE, 63));
             pack.container().setItem(7, new ItemStack(Items.STONE, 64));
             pack.container().setItem(8, new ItemStack(Items.STONE, 64));
-            context.expect("pack-start", AlchemyWorkstationService.start(player, pack).isSuccess(), true);
+            context.expect("pack-start", AlchemyWorkstationService.start(player, pack).getFailure().isEmpty(), true);
             tickUntil(level, pack, 16, phase -> phase == AlchemyPhase.IDLE);
             context.expect("pack-slot5", pack.container().getItem(5).getCount(), 64);
             context.expect("pack-slot6", pack.container().getItem(6).getCount(), 64);
@@ -601,7 +602,7 @@ public final class AlchemyProbes {
             merged.container().setItem(6, new ItemStack(Items.STONE, 64));
             merged.container().setItem(7, new ItemStack(Items.STONE, 64));
             merged.container().setItem(8, new ItemStack(Items.STONE, 64));
-            context.expect("merge-start", AlchemyWorkstationService.start(player, merged).isSuccess(), true);
+            context.expect("merge-start", AlchemyWorkstationService.start(player, merged).getFailure().isEmpty(), true);
             tickUntil(level, merged, 16, phase -> phase == AlchemyPhase.IDLE);
             context.expect("merge-room", merged.container().getItem(5).getCount(), 64);
             context.expect("merge-other", merged.container().getItem(6).is(Items.STONE) && merged.container().getItem(6).getCount() == 64, true);
@@ -622,11 +623,11 @@ public final class AlchemyProbes {
             RandomSource mirror = RandomSource.create(0xA17E5L);
             double first = 10.0D + mirror.nextDouble() * 10.0D;
             double second = 10.0D + mirror.nextDouble() * 10.0D;
-            StartResult started = AlchemyWorkstationService.start(player, furnace);
+            Result<Void> started = AlchemyWorkstationService.start(player, furnace);
             long frozen = furnace.state().session().map(AlchemySession::totalTicks).orElse(-1L);
             long firstTicks = Math.max(1L, Math.round(first));
             long secondTicks = Math.max(1L, Math.round(second));
-            context.expect("roll-started", started.isSuccess(), true);
+            context.expect("roll-started", started.getFailure().isEmpty(), true);
             context.expect("roll-one-evaluation", frozen, firstTicks);
             context.expect("roll-not-second", frozen == secondTicks && firstTicks != secondTicks, false);
             context.expect("roll-target", furnace.state().session().map(AlchemySession::frozenTarget).orElse(-1.0D), 50.0D);
@@ -646,8 +647,8 @@ public final class AlchemyProbes {
             second.setTargetTemperature(50);
             context.expect("claim-conflict", second.structureStatus().conflicts().isEmpty(), false);
             fill(second);
-            StartResult refused = AlchemyWorkstationService.start(player, second);
-            context.expect("conflict-refuse", refused.failure(), AlchemyFailure.STRUCTURE);
+            Result<Void> refused = AlchemyWorkstationService.start(player, second);
+            context.expect("conflict-refuse", refused.getFailure().orElse(null), AlchemyFailure.STRUCTURE);
             context.expect("conflict-no-spend", second.container().getItem(0).getCount(), 2);
             context.expect("conflict-owner-formed", level.getBlockState(at).getValue(AlchemyFurnaceBlock.FORMED), true);
         });
@@ -674,7 +675,7 @@ public final class AlchemyProbes {
             gate.player = player;
             gate.reentered = null;
             AlchemyWorkstationService.start(player, primary);
-            context.expect("reenter-rejected", gate.reentered != null && !gate.reentered.isSuccess() && gate.reentered.failure() == AlchemyFailure.ACTIVE, true);
+            context.expect("reenter-rejected", gate.reentered != null && gate.reentered.getFailure().isPresent() && gate.reentered.getFailure().orElse(null) == AlchemyFailure.ACTIVE, true);
             context.expect("reenter-one-session", primary.state().session().isPresent(), true);
             gate.reenter = false;
             fixture.clearFurnace(at);
@@ -687,9 +688,9 @@ public final class AlchemyProbes {
             gate.move = true;
             gate.primary = moved;
             gate.player = player;
-            StartResult move = AlchemyWorkstationService.start(player, moved);
+            Result<Void> move = AlchemyWorkstationService.start(player, moved);
             gate.move = false;
-            context.expect("move-rejected", move.isSuccess(), false);
+            context.expect("move-rejected", move.getFailure().isEmpty(), false);
             context.expect("move-no-dup", count(player, Items.ALLIUM) + moved.container().getItem(0).getCount(), held + 2);
             fixture.clearFurnace(at);
             AlchemyFurnaceBlockEntity restart = place(level, at, Direction.NORTH, item(level, WIDE), touched);
@@ -699,7 +700,7 @@ public final class AlchemyProbes {
             gate.restart = true;
             gate.primary = restart;
             gate.player = player;
-            context.expect("restart-start", AlchemyWorkstationService.start(player, restart).isSuccess(), true);
+            context.expect("restart-start", AlchemyWorkstationService.start(player, restart).getFailure().isEmpty(), true);
             tickUntil(level, restart, 8, phase -> phase == AlchemyPhase.IDLE || restart.state().session().isEmpty() || restart.phase() == AlchemyPhase.WARMING && gate.restarted);
             gate.restart = false;
             context.expect("post-restart-kept", restart.state().session().isPresent() && restart.phase() != AlchemyPhase.IDLE, true);
@@ -766,7 +767,7 @@ public final class AlchemyProbes {
             furnace.refreshStructure();
             furnace.setTargetTemperature(50);
             fillMarked(furnace, Items.SPORE_BLOSSOM);
-            context.expect("criterion-start", AlchemyWorkstationService.start(player, furnace).isSuccess(), true);
+            context.expect("criterion-start", AlchemyWorkstationService.start(player, furnace).getFailure().isEmpty(), true);
             tickUntil(level, furnace, 16, phase -> phase == AlchemyPhase.IDLE);
             boolean earned = player.getAdvancements().getOrStartProgress(holder).isDone();
             context.expect("criterion-earned", earned, true);
@@ -794,7 +795,7 @@ public final class AlchemyProbes {
             context.expect("brittle-rejects-100", brittle.setTargetTemperature(100.0D), false);
             context.expect("brittle-accepts-80", brittle.setTargetTemperature(80.0D), true);
             fillMarked(brittle, Items.POPPY);
-            context.expect("brittle-hot", AlchemyWorkstationService.start(player, brittle).failure(), AlchemyFailure.TEMPERATURE);
+            context.expect("brittle-hot", AlchemyWorkstationService.start(player, brittle).getFailure().orElse(null), AlchemyFailure.TEMPERATURE);
             context.expect("brittle-kept", brittle.container().getItem(0).getCount(), 2);
             fixture.clearFurnace(at);
             AlchemyFurnaceBlockEntity weak = place(level, at, Direction.NORTH, item(level, WIDE), touched);
@@ -805,7 +806,7 @@ public final class AlchemyProbes {
             context.expect("weak-heat-rejects-100", weak.setTargetTemperature(100.0D), false);
             weak.setTargetTemperature(80.0D);
             fillMarked(weak, Items.POPPY);
-            context.expect("weak-heat-hot", AlchemyWorkstationService.start(player, weak).failure(), AlchemyFailure.TEMPERATURE);
+            context.expect("weak-heat-hot", AlchemyWorkstationService.start(player, weak).getFailure().orElse(null), AlchemyFailure.TEMPERATURE);
             context.expect("weak-heat-kept", weak.container().getItem(0).getCount(), 2);
             context.expect("weak-heat-remains", heatState(level, weak).is(AlchemyTestHeatBlocks.WEAK_FIRE.get()), true);
             fixture.clearFurnace(at);
@@ -822,7 +823,7 @@ public final class AlchemyProbes {
             fill(mixed);
             // A wall casing that keeps its block but loses its material is not a hole in the structure, so the
             // structural check still passes and the beam collapses the temperature ceiling instead.
-            context.expect("missing-material", AlchemyWorkstationService.start(player, mixed).failure(), AlchemyFailure.TEMPERATURE);
+            context.expect("missing-material", AlchemyWorkstationService.start(player, mixed).getFailure().orElse(null), AlchemyFailure.TEMPERATURE);
             context.expect("missing-material-kept", mixed.container().getItem(0).getCount(), 2);
             fixture.clearFurnace(at);
             // A specification that declares its own ceiling is the third and lowest one: kiln walls take 200 and the
@@ -873,10 +874,10 @@ public final class AlchemyProbes {
             fill(furnace);
             gate.primary = furnace;
             gate.removeHeat = true;
-            StartResult result = AlchemyWorkstationService.start(player, furnace);
+            Result<Void> result = AlchemyWorkstationService.start(player, furnace);
             gate.removeHeat = false;
             context.expect("pre-heat-removed", heatState(level, furnace).isAir(), true);
-            context.expect("pre-heat-rejected", result.failure(), AlchemyFailure.TEMPERATURE);
+            context.expect("pre-heat-rejected", result.getFailure().orElse(null), AlchemyFailure.TEMPERATURE);
             context.expect("pre-heat-main-kept", furnace.container().getItem(0).getCount(), 2);
             context.expect("pre-heat-aux-kept", furnace.container().getItem(2).getCount(), 2);
             context.expect("pre-heat-catalyst-kept", furnace.container().getItem(4).getCount(), 1);
@@ -889,11 +890,11 @@ public final class AlchemyProbes {
             gate.player = player;
             gate.restart = true;
             gate.restartResult = null;
-            context.expect("action-replacement-start", AlchemyWorkstationService.start(player, replaced).isSuccess(), true);
+            context.expect("action-replacement-start", AlchemyWorkstationService.start(player, replaced).getFailure().isEmpty(), true);
             tickUntil(level, replaced, 8, phase -> phase == AlchemyPhase.IDLE || level.getBlockState(at).is(Blocks.GOLD_BLOCK));
             gate.restart = false;
             context.expect("action-before-post", level.getBlockState(at).is(Blocks.GOLD_BLOCK), true);
-            context.expect("post-cannot-restart-removed-core", gate.restartResult != null && !gate.restartResult.isSuccess(), true);
+            context.expect("post-cannot-restart-removed-core", gate.restartResult != null && gate.restartResult.getFailure().isPresent(), true);
             BlockPos main = AlchemyFurnaceStructure.world(at, Direction.NORTH, AlchemyFurnaceStructure.MAIN_INDEX);
             context.expect("stale-core-cannot-write-main", ((AlchemyFurnaceInventoryBlockEntity) level.getBlockEntity(main)).inventory().getItem(0).isEmpty(), true);
         });
@@ -930,7 +931,7 @@ public final class AlchemyProbes {
             viewer.getInventory().clearContent();
             furnace.setTargetTemperature(50);
             fill(furnace);
-            context.expect("busy-menu-start", AlchemyWorkstationService.start(player, furnace).isSuccess(), true);
+            context.expect("busy-menu-start", AlchemyWorkstationService.start(player, furnace).getFailure().isEmpty(), true);
             BlockPos mainPos = AlchemyFurnaceStructure.world(at, Direction.NORTH, AlchemyFurnaceStructure.MAIN_INDEX);
             AlchemyFurnaceInventoryBlockEntity main = (AlchemyFurnaceInventoryBlockEntity) level.getBlockEntity(mainPos);
             main.inventory().setItem(0, new ItemStack(Items.ALLIUM));
@@ -1012,7 +1013,7 @@ public final class AlchemyProbes {
             context.expect("heat-non-source", furnace.maximumTemperature(), 0.0D);
             context.expect("heat-absent-rejects-50", furnace.setTargetTemperature(50.0D), false);
             fill(furnace);
-            context.expect("heat-absent-start", AlchemyWorkstationService.start(player, furnace).failure(), AlchemyFailure.TEMPERATURE);
+            context.expect("heat-absent-start", AlchemyWorkstationService.start(player, furnace).getFailure().orElse(null), AlchemyFailure.TEMPERATURE);
             context.expect("heat-absent-kept", furnace.container().getItem(0).getCount(), 2);
             // The API branch answers for itself: the table says 999 for this block, the block says 250 / 25 while lit.
             level.setBlockAndUpdate(furnace.heatSourcePos(), advanced(true));
@@ -1224,7 +1225,7 @@ public final class AlchemyProbes {
         for (int slot = 5; slot < 9; slot++) furnace.container().setItem(slot, ItemStack.EMPTY);
         if (!furnace.setTargetTemperature(target)) return false;
         fill(furnace);
-        return AlchemyWorkstationService.start(player, furnace).isSuccess();
+        return AlchemyWorkstationService.start(player, furnace).getFailure().isEmpty();
     }
 
     private static BlockState advanced(boolean lit) {
@@ -1434,8 +1435,8 @@ public final class AlchemyProbes {
         private AlchemyFurnaceBlockEntity primary;
         private AlchemyFurnaceBlockEntity other;
         private ServerPlayer player;
-        private StartResult reentered;
-        private StartResult restartResult;
+        private Result<Void> reentered;
+        private Result<Void> restartResult;
 
         private Gate(ServerLevel level, List<BlockPos> touched, Set<ItemEntity> drops) {
             this.level = level;

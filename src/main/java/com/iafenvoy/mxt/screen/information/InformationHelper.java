@@ -2,6 +2,7 @@ package com.iafenvoy.mxt.screen.information;
 
 import com.iafenvoy.saturn.util.DefinitionText;
 import net.minecraft.core.Holder;
+import net.minecraft.util.Mth;
 
 import java.util.Collection;
 
@@ -27,9 +28,9 @@ public final class InformationHelper {
     // measure themselves line up only while every row has a name of the same width.
     public static Columns columns(int availableWidth, int widestNameWidth, int widestValueWidth) {
         int width = Math.max(1, availableWidth);
-        int wanted = Math.max(0, Math.min(widestValueWidth, width));
+        int wanted = Mth.clamp(width, 0, widestValueWidth);
         int roomForName = Math.max(width / 4, width - wanted - COLUMN_GAP);
-        int name = Math.max(0, Math.min(widestNameWidth, roomForName));
+        int name = Mth.clamp(roomForName, 0, widestNameWidth);
         return new Columns(name, Math.max(1, width - name - COLUMN_GAP));
     }
 }

@@ -12,7 +12,8 @@ import com.iafenvoy.mxt.runtime.formation.FormationInstance;
 import com.iafenvoy.mxt.runtime.formation.FormationRelations;
 import com.iafenvoy.mxt.runtime.formation.FormationWorldService;
 import com.iafenvoy.saturn.registry.SaturnAttachments;
-import com.iafenvoy.saturn.runtime.resulting.ResultWithData;
+import com.iafenvoy.saturn.runtime.resulting.Failure;
+import com.iafenvoy.saturn.runtime.resulting.Result;
 import com.iafenvoy.saturn.util.DefinitionText;
 import com.iafenvoy.saturn.util.HolderHelper;
 import com.iafenvoy.saturn.util.formula.FormulaContexts;
@@ -102,10 +103,12 @@ public final class FormationPlateItem extends Item {
     private static InteractionResult activateAt(ServerLevel level, BlockPos center, ServerPlayer player, Holder<Formation> formation) {
         if (level.getData(MxtAttachments.FORMATION_WORLD).get(center).isPresent())
             return dismantle(level, center, player);
-        ResultWithData<FormationInstance> result = FormationWorldService.activate(level, center, HolderHelper.id(formation),
+        Result<FormationInstance> result = FormationWorldService.activate(level, center, HolderHelper.id(formation),
                 formation.value(), player.getData(SaturnAttachments.RESOURCE_HOLDER), FormulaContexts.forEntity(player), player.getUUID());
-        if (!result.isSuccess()) {
-            Component message = Component.translatable("item.mxt.formation_plate.failed", result.failure().message());
+        if (result instanceof Result.FailureResult<FormationInstance>(
+                Failure failure1
+        )) {
+            Component message = Component.translatable("item.mxt.formation_plate.failed", failure1.message());
             if ((Player) player instanceof ServerPlayer serverPlayer) serverPlayer.sendSystemMessage(message, true);
             return InteractionResult.FAIL;
         }

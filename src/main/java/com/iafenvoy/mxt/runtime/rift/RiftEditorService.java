@@ -8,6 +8,9 @@ import com.iafenvoy.mxt.item.RiftAnchorItem;
 import com.iafenvoy.mxt.network.payload.RiftEditC2SPayload;
 import com.iafenvoy.mxt.network.payload.RiftEditorS2CPayload;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
+import com.iafenvoy.mxt.runtime.resulting.failures.RiftFailure;
+import com.iafenvoy.saturn.runtime.resulting.Failure;
+import com.iafenvoy.saturn.runtime.resulting.Result;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.JsonOps;
 import net.minecraft.server.level.ServerLevel;
@@ -58,10 +61,10 @@ public final class RiftEditorService {
         send(session, "open_item", null, RiftExport.template(initial));
     }
 
-    public static RiftResult place(ServerPlayer player, InteractionHand hand, RiftPlacement placement) {
-        if (!mayEdit(player)) return RiftResult.rejected("permission");
+    public static Result<RiftRecord> place(ServerPlayer player, InteractionHand hand, RiftPlacement placement) {
+        if (!mayEdit(player)) return Result.failure(RiftFailure.PERMISSION);
         ItemStack stack = player.getItemInHand(hand);
-        if (!(stack.getItem() instanceof RiftAnchorItem)) return RiftResult.rejected("hold_anchor");
+        if (!(stack.getItem() instanceof RiftAnchorItem)) return Result.failure(RiftFailure.HOLD_ANCHOR);
         return RiftService.publish(player.level(), null, 0, itemTemplate(player, stack, placement), player.getUUID(), true);
     }
 
@@ -114,7 +117,8 @@ public final class RiftEditorService {
         }
         switch (payload.action()) {
             case "reload" -> {
-                if (session.item != null) send(session, "item_accepted", null, RiftExport.template(itemTemplate(player, session.item.stack())));
+                if (session.item != null)
+                    send(session, "item_accepted", null, RiftExport.template(itemTemplate(player, session.item.stack())));
                 else if (record != null) send(session, "accepted", record, "");
                 else send(session, "error", null, "missing");
             }
@@ -125,7 +129,7 @@ public final class RiftEditorService {
                 }
                 try {
                     RiftTemplate data = RiftTemplate.CODEC.parse(JsonOps.INSTANCE, JsonParser.parseString(payload.body())).result().orElse(null);
-                    if (data == null || RiftService.validate(session.level, data).isFailure()
+                    if (data == null || RiftService.validate(session.level, data) instanceof Result.FailureResult<Void>
                             || data.placement().origin().distanceToSqr(player.position()) > 64 * 64) {
                         send(session, "error", null, "invalid_json");
                         return;
@@ -165,9 +169,11 @@ public final class RiftEditorService {
                     send(session, "error", null, "distance");
                     return;
                 }
-                RiftResult validated = session.item == null ? RiftService.validate(session.level, data) : RiftService.validateTemplate(session.level, data);
-                if (validated.isFailure()) {
-                    send(session, "error", null, validated.detail());
+                Result<Void> validated = session.item == null ? RiftService.validate(session.level, data) : RiftService.validateTemplate(session.level, data);
+                if (validated instanceof Result.FailureResult<Void>(
+                        Failure failure2
+                )) {
+                    send(session, "error", null, failure2.name());
                     return;
                 }
                 if (session.item != null && (payload.action().equals("submit") || payload.action().equals("blueprint"))) {
@@ -207,11 +213,14 @@ public final class RiftEditorService {
                     return;
                 }
                 boolean reset = payload.action().equals("renew") || record == null || record.data().durationTicks() != data.durationTicks();
-                RiftResult result = RiftService.publish(session.level, session.id, payload.revision(), data, player.getUUID(), reset);
-                if (result.isFailure()) send(session, "error", null, result.detail());
+                Result<RiftRecord> result = RiftService.publish(session.level, session.id, payload.revision(), data, player.getUUID(), reset);
+                if (result instanceof Result.FailureResult<RiftRecord>(
+                        Failure failure1
+                )) send(session, "error", null, failure1.name());
                 else {
-                    session.id = result.record().id();
-                    send(session, "accepted", result.record(), "");
+                    RiftRecord published = result.getData().orElseThrow();
+                    session.id = published.id();
+                    send(session, "accepted", published, "");
                 }
             }
             default -> send(session, "error", null, "unknown_action");

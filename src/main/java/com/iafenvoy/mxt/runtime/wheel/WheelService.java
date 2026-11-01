@@ -12,7 +12,6 @@ import com.iafenvoy.mxt.runtime.spirit.SpiritBurstService;
 import com.iafenvoy.saturn.attachment.AbilityAttachment;
 import com.iafenvoy.saturn.attachment.ResourceHolderAttachment;
 import com.iafenvoy.saturn.data.ability.Ability;
-import com.iafenvoy.saturn.data.ability.Togglable;
 import com.iafenvoy.saturn.registry.SaturnAttachments;
 import com.iafenvoy.saturn.registry.SaturnResourceKeys;
 import com.iafenvoy.saturn.runtime.ability.AbilityActivationService;
@@ -139,9 +138,10 @@ public final class WheelService {
 
     private static boolean activate(ServerPlayer player, Holder<Ability> ability, @Nullable ItemStack carrier,
                                     Identifier id, String verb) {
-        Togglable.PressResult result = AbilityActivationService.activate(player, ability, carrier);
-        if (result.failure() == null) return true;
-        return refuse(player, id, result.failure(), result.failedResource(), verb, "actionbar.mxt.wheel.use_failed");
+        Result<Void> result = AbilityActivationService.activate(player, ability, carrier);
+        if (result instanceof Result.SuccessResult<Void>) return true;
+        return refuse(player, id, result.getFailure().orElseThrow(),
+                result.getFailure().flatMap(Failure::resource).orElse(null), verb, "actionbar.mxt.wheel.use_failed");
     }
 
     // The fallback for an entry whose ability is not pressable at all, which a saved layout can name even though
@@ -149,11 +149,11 @@ public final class WheelService {
     private static boolean use(ServerPlayer player, Holder<Ability> ability) {
         AbilityAttachment abilities = player.getData(SaturnAttachments.ABILITY_HOLDER);
         ResourceHolderAttachment resources = player.getData(SaturnAttachments.RESOURCE_HOLDER);
-        AbilityService.UseResult result = AbilityService.use(ability, player, abilities, resources,
+        Result<AbilityService.UseData> result = AbilityService.use(ability, player, abilities, resources,
                 player.level().getGameTime(), FormulaContext.of(player));
-        if (result.failure() == null) return true;
-        return refuse(player, HolderHelper.id(ability), result.failure(),
-                result.failedResource(), "cast", "actionbar.mxt.wheel.cast_failed");
+        if (result instanceof Result.SuccessResult<?>) return true;
+        return refuse(player, HolderHelper.id(ability), result.getFailure().orElseThrow(),
+                result.getFailure().flatMap(Failure::resource).orElse(null), "cast", "actionbar.mxt.wheel.cast_failed");
     }
 
     // A burst the player cannot pay for is refused the same way an ability is.
@@ -184,11 +184,11 @@ public final class WheelService {
             player.sendSystemMessage(Component.translatable("actionbar.mxt.contract.no_beast"), true);
             return false;
         }
-        Result result = ContractBehaviorService.request(beast, player.getUUID(), behavior, false);
-        if (result.failure() != null) {
+        Result<?> result = ContractBehaviorService.request(beast, player.getUUID(), behavior, false);
+        if (result instanceof Result.FailureResult<?>(Failure failure)) {
             LOGGER.info("Refusing the wheel order {} for {}: {}", id, player.getGameProfile().name(),
-                    result.failure());
-            player.sendSystemMessage(result.failure().message(), true);
+                    failure);
+            player.sendSystemMessage(failure.message(), true);
             return false;
         }
         player.sendSystemMessage(Component.translatable("actionbar.mxt.contract.ordered", beast.getDisplayName(),

@@ -79,7 +79,7 @@ public record Technique(Optional<Holder<ItemQuality>> quality, Optional<IconRefe
             return DataResult.error(() -> "mastery_resource needs default_level to name the progression chain it measures");
         // A pose outside the hold's whitelist is refused here, where the rest of a read is declared too; a pose
         // written without a learn_time is never played and is not an error.
-        return HoldBinding.validate(technique.holdAnimation()).map(ignored -> technique);
+        return HoldBinding.validate(technique.holdAnimation()).map(_ -> technique);
     }
 
     @Override

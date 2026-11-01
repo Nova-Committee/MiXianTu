@@ -5,10 +5,9 @@ import com.iafenvoy.mxt.data.cost.builtin.AuraCost;
 import com.iafenvoy.mxt.data.cost.context.AuraCostContexts;
 import com.iafenvoy.mxt.data.cost.context.AuraCostSources;
 import com.iafenvoy.saturn.data.cost.Cost;
-import com.iafenvoy.saturn.data.cost.CostPayment.PaymentResult;
 import com.iafenvoy.saturn.data.cost.Debit;
 import com.iafenvoy.saturn.data.cost.context.CostContext;
-import com.iafenvoy.saturn.runtime.resulting.ResultWithData;
+import com.iafenvoy.saturn.runtime.resulting.Result;
 import com.mojang.serialization.DataResult;
 import net.minecraft.core.Holder;
 import org.jetbrains.annotations.Nullable;
@@ -48,9 +47,9 @@ public final class Costs {
         Map<Holder<Aura>, Double> amounts = new LinkedHashMap<>();
         for (Cost cost : costs) {
             if (!(cost instanceof AuraCost)) continue;
-            ResultWithData<Cost.Transaction> prepared = cost.prepare(quote);
-            if (prepared.isFailure()) return null;
-            Cost.Transaction transaction = prepared.getData();
+            Result<Cost.Transaction> prepared = cost.prepare(quote);
+            if (prepared instanceof Result.FailureResult<Cost.Transaction>) return null;
+            Cost.Transaction transaction = prepared.getData().orElseThrow();
             if (transaction.target() instanceof AuraCostTarget target)
                 amounts.merge(target.aura(), transaction.amount(), Double::sum);
         }
@@ -61,9 +60,9 @@ public final class Costs {
      * What a finished payment really took in aura, keyed by the aura itself. Only the known debits are reported, so a
      * store that handed over part of a fee shows that part and nothing more.
      */
-    public static Map<Holder<Aura>, Double> auras(PaymentResult result) {
+    public static Map<Holder<Aura>, Double> auras(Result<List<Debit>> result) {
         Map<Holder<Aura>, Double> amounts = new LinkedHashMap<>();
-        for (Debit debit : result.debits())
+        for (Debit debit : result.getData().orElse(List.of()))
             if (debit.target() instanceof AuraCostTarget target)
                 amounts.merge(target.aura(), debit.amount(), Double::sum);
         return amounts;

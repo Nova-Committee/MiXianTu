@@ -77,7 +77,7 @@ public interface HoldBinding extends ItemMatcher {
     // A pose outside ALLOWED_ANIMATIONS is refused; a pose or sound on a declaration that asks for no hold would
     // never be played, which is an unread field and therefore ignored (2026-09-27).
     static DataResult<HoldBinding> validate(HoldBinding hold) {
-        return validate(hold.holdAnimation()).map(ignored -> hold);
+        return validate(hold.holdAnimation()).map(_ -> hold);
     }
 
     // The same rule for a definition that describes a hold without being one - the gesture itself is driven by a

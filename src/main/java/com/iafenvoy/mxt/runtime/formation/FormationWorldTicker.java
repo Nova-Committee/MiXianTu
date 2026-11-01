@@ -15,6 +15,7 @@ import com.iafenvoy.saturn.profiling.ProfilerScope;
 import com.iafenvoy.saturn.profiling.ServerProfiling;
 import com.iafenvoy.saturn.registry.SaturnAttachments;
 import com.iafenvoy.saturn.runtime.Sources;
+import com.iafenvoy.saturn.runtime.resulting.Failure;
 import com.iafenvoy.saturn.runtime.resulting.Result;
 import com.iafenvoy.saturn.util.formula.FormulaContext;
 import net.minecraft.core.BlockPos;
@@ -100,13 +101,13 @@ public final class FormationWorldTicker {
                 : payer.getData(SaturnAttachments.RESOURCE_HOLDER);
         // The formation draws its share of the chunk stock through the same prepass cultivators use, so what it
         // was granted over this period pays the upkeep before the store and then the owner are asked for the rest.
-        Result result = FormationService.maintain(instance, definition, resources, context,
+        Result<Void> result = FormationService.maintain(instance, definition, resources, context,
                 AuraDistributionService.takeUpkeep(level, controller));
-        if (result.isSuccess()) return true;
+        if (result instanceof Result.SuccessResult<Void>) return true;
         // Cancelling keeps the formation registered: it pays nothing and does nothing this period, which is
         // the hook for content that wants a formation to survive a lean stretch.
         if (NeoForge.EVENT_BUS.post(new UpkeepFailed(level, controller, instance, Optional.ofNullable(payer),
-                Optional.ofNullable(result.failedResource()))).isCanceled())
+                result.getFailure().flatMap(Failure::resource))).isCanceled())
             return false;
         FormationWorldService.deactivate(level, controller);
         return false;

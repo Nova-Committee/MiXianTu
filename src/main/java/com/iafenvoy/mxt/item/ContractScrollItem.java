@@ -4,6 +4,7 @@ import com.iafenvoy.mxt.data.item.ContractScrollComponent;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.runtime.creature.ContractService;
 import com.iafenvoy.mxt.runtime.resulting.failures.ContractFailure;
+import com.iafenvoy.saturn.runtime.resulting.Failure;
 import com.iafenvoy.saturn.runtime.resulting.Result;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
@@ -41,9 +42,9 @@ public final class ContractScrollItem extends Item {
             if (player instanceof ServerPlayer serverPlayer) serverPlayer.sendSystemMessage(message, true);
             return InteractionResult.FAIL;
         }
-        Result result = ContractService.bind(scroll.contractType().orElseThrow(), owner, creature, false);
-        if (result.failure() != null) {
-            Component message = result.failure().message();
+        Result<?> result = ContractService.bind(scroll.contractType().orElseThrow(), owner, creature, false);
+        if (result instanceof Result.FailureResult<?>(Failure failure1)) {
+            Component message = failure1.message();
             if (player instanceof ServerPlayer serverPlayer) serverPlayer.sendSystemMessage(message, true);
             return InteractionResult.FAIL;
         }

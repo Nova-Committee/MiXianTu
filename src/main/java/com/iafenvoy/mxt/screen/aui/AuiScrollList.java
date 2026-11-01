@@ -5,6 +5,7 @@ import com.sighs.apricityui.init.Element;
 import com.sighs.apricityui.layout.Position;
 import com.sighs.apricityui.layout.Size;
 import net.minecraft.client.gui.Font;
+import net.minecraft.util.Mth;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
@@ -143,7 +144,7 @@ public final class AuiScrollList<E> {
             return;
         }
         int rows = (this.entries.size() + this.columns() - 1) / this.columns();
-        this.thumbHeight = Math.min(this.height, Math.max(12, this.height * (this.height / this.rowHeight()) / rows));
+        this.thumbHeight = Mth.clamp(this.height * (this.height / this.rowHeight()) / rows, 12, this.height);
         AuiElements.style(this.scrollTrack, "height", this.height + "px");
         AuiElements.style(this.scrollThumb, "height", this.thumbHeight + "px");
         AuiElements.style(this.scrollThumb, "top", Math.round((this.height - this.thumbHeight) * this.scroll / this.maxScroll()) + "px");

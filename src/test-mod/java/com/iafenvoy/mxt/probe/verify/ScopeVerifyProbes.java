@@ -67,13 +67,13 @@ public final class ScopeVerifyProbes {
         // Ten blocks apart with a radius of eight: a band in the middle is inside both, and each centre is inside one.
         BlockPos left = context.playerSpot();
         BlockPos right = left.offset(10, 0, 0);
-        if (!FormationWorldService.activate(level, left, ProbeDefinitions.id("scope_grant_probe"), definition, resources,
-                formula, owner).isSuccess()) {
+        if (FormationWorldService.activate(level, left, ProbeDefinitions.id("scope_grant_probe"), definition, resources,
+                formula, owner).getFailure().isPresent()) {
             context.fail("the left array did not go up");
             return;
         }
-        if (!FormationWorldService.activate(level, right, ProbeDefinitions.id("scope_grant_probe"), definition, resources,
-                formula, owner).isSuccess()) {
+        if (FormationWorldService.activate(level, right, ProbeDefinitions.id("scope_grant_probe"), definition, resources,
+                formula, owner).getFailure().isPresent()) {
             FormationWorldService.deactivate(level, left);
             context.fail("the right array did not go up");
             return;

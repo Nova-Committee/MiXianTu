@@ -8,7 +8,10 @@ import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.*;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 public final class RiftWorldAttachment {
     public static final MapCodec<RiftWorldAttachment> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(

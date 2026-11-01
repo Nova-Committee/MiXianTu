@@ -19,6 +19,7 @@ import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.util.Mth;
 import net.neoforged.neoforge.client.network.ClientPacketDistributor;
 import org.jspecify.annotations.NonNull;
 
@@ -48,12 +49,12 @@ public final class ProfilerScreen extends AuiScreen {
 
     private ProfilerScreen(UUID token, boolean local) {
         super(AuiPages.profilerPage());
-        Minecraft minecraft = Minecraft.getInstance();
         this.token = token;
         this.local = local;
-        this.connection = minecraft.getConnection();
-        this.server = local ? minecraft.getSingleplayerServer() : null;
-        this.player = minecraft.player.getUUID();
+        this.connection = this.minecraft.getConnection();
+        this.server = local ? this.minecraft.getSingleplayerServer() : null;
+        assert this.minecraft.player != null;
+        this.player = this.minecraft.player.getUUID();
     }
 
     public static void control(ProfilerGuiS2CPayload payload) {
@@ -223,7 +224,7 @@ public final class ProfilerScreen extends AuiScreen {
 
     private void layout() {
         int width = (this.width >= ROW_WIDTH + 48 ? ROW_WIDTH : COMPACT_ROW_WIDTH) + 32;
-        int height = Math.max(180, Math.min(680, this.height - 16));
+        int height = Mth.clamp(this.height - 16, 180, 680);
         AuiElements.style(this.panel, "width", width + "px");
         AuiElements.style(this.panel, "height", height + "px");
         AuiElements.setText(this.legend, this.font.plainSubstrByWidth(

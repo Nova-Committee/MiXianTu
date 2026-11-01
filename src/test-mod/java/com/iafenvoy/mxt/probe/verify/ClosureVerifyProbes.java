@@ -28,7 +28,7 @@ import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactService;
 import com.iafenvoy.mxt.runtime.formation.FormationInstance;
 import com.iafenvoy.mxt.runtime.formation.FormationService;
-import com.iafenvoy.saturn.runtime.resulting.ResultWithData;
+import com.iafenvoy.saturn.runtime.resulting.Result;
 import com.iafenvoy.mxt.runtime.tribulation.TribulationService;
 import com.iafenvoy.saturn.runtime.trigger.TriggerDispatcher;
 import com.iafenvoy.saturn.util.formula.FormulaContext;
@@ -188,11 +188,11 @@ public final class ClosureVerifyProbes {
         resources.set(probe, 0.0D, 0.0D, 100_000.0D, -1L, "closure");
         try {
             Holder<Tribulation> branch = context.require(MxtResourceKeys.TRIBULATION, ProbeDefinitions.id("probe_branch"));
-            if (!TribulationService.start(player, data, branch, level.getGameTime(), FormulaContext.of(player)).isSuccess())
+            if (TribulationService.start(player, data, branch, level.getGameTime(), FormulaContext.of(player)).getFailure().isPresent())
                 return "the branching timeline was refused";
-            ResultWithData<TribulationService.State> branchTick = TribulationService.tick(player, data, branch, level.getGameTime(), FormulaContext.of(player));
-            if (branchTick.getData() != TribulationService.State.COMPLETED)
-                return "the branching timeline ended as " + branchTick.getData();
+            Result<TribulationService.State> branchTick = TribulationService.tick(player, data, branch, level.getGameTime(), FormulaContext.of(player));
+            if (branchTick.getData().orElse(null) != TribulationService.State.COMPLETED)
+                return "the branching timeline ended as " + branchTick.getData().orElse(null);
             double branched = resources.get(probe);
             if (!close(branched, 1001.0D))
                 return "the branch added " + branched + " instead of skipping the 100 it jumped over";
@@ -200,14 +200,14 @@ public final class ClosureVerifyProbes {
             data.clear();
             resources.set(probe, 0.0D, 0.0D, 100_000.0D, -1L, "closure");
             Holder<Tribulation> timeout = context.require(MxtResourceKeys.TRIBULATION, ProbeDefinitions.id("probe_wait_timeout"));
-            if (!TribulationService.start(player, data, timeout, level.getGameTime(), FormulaContext.of(player)).isSuccess())
+            if (TribulationService.start(player, data, timeout, level.getGameTime(), FormulaContext.of(player)).getFailure().isPresent())
                 return "the timed-wait timeline was refused";
-            if (TribulationService.tick(player, data, timeout, level.getGameTime(), FormulaContext.of(player)).getData()
+            if (TribulationService.tick(player, data, timeout, level.getGameTime(), FormulaContext.of(player)).getData().orElse(null)
                     != TribulationService.State.RUNNING)
                 return "a wait with a two-tick timeout did not hold the run on its first tick";
-            ResultWithData<TribulationService.State> waitTick = TribulationService.tick(player, data, timeout, level.getGameTime(), FormulaContext.of(player));
-            if (waitTick.getData() != TribulationService.State.COMPLETED)
-                return "a wait that ran out finished as " + waitTick.getData();
+            Result<TribulationService.State> waitTick = TribulationService.tick(player, data, timeout, level.getGameTime(), FormulaContext.of(player));
+            if (waitTick.getData().orElse(null) != TribulationService.State.COMPLETED)
+                return "a wait that ran out finished as " + waitTick.getData().orElse(null);
             if (!close(resources.get(probe), 10.0D))
                 return "the beat after a timed-out wait added " + resources.get(probe) + " instead of 10";
 
@@ -216,11 +216,11 @@ public final class ClosureVerifyProbes {
             data.clear();
             resources.set(probe, 0.0D, 0.0D, 100_000.0D, -1L, "closure");
             Holder<Tribulation> cycle = context.require(MxtResourceKeys.TRIBULATION, ProbeDefinitions.id("probe_branch_cycle"));
-            if (!TribulationService.start(player, data, cycle, level.getGameTime(), FormulaContext.of(player)).isSuccess())
+            if (TribulationService.start(player, data, cycle, level.getGameTime(), FormulaContext.of(player)).getFailure().isPresent())
                 return "the cycling timeline was refused";
-            ResultWithData<TribulationService.State> cycleTick = TribulationService.tick(player, data, cycle, level.getGameTime(), FormulaContext.of(player));
-            if (cycleTick.getData() != TribulationService.State.RUNNING)
-                return "a cycling branch ended as " + cycleTick.getData() + " instead of parking the run";
+            Result<TribulationService.State> cycleTick = TribulationService.tick(player, data, cycle, level.getGameTime(), FormulaContext.of(player));
+            if (cycleTick.getData().orElse(null) != TribulationService.State.RUNNING)
+                return "a cycling branch ended as " + cycleTick.getData().orElse(null) + " instead of parking the run";
             if (!close(resources.get(probe), 0.0D))
                 return "a cycling branch reached the beat it loops over, adding " + resources.get(probe);
         } finally {

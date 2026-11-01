@@ -3,6 +3,7 @@ package com.iafenvoy.mxt.item;
 import com.iafenvoy.mxt.data.cultivation.SpiritRoot;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationIdentityService;
+import com.iafenvoy.saturn.runtime.resulting.Failure;
 import com.iafenvoy.saturn.runtime.resulting.Result;
 import com.iafenvoy.saturn.util.DefinitionText;
 import net.minecraft.core.Holder;
@@ -35,9 +36,9 @@ public final class SpiritRootItem extends Item {
             if (player instanceof ServerPlayer serverPlayer1) serverPlayer1.sendSystemMessage(message, true);
             return InteractionResult.FAIL;
         }
-        Result result = CultivationIdentityService.grantSpiritRoot(serverPlayer, root);
-        if (result.failure() != null) {
-            Component message = Component.translatable("item.mxt.spirit_root.failed", result.failure().message());
+        Result<?> result = CultivationIdentityService.grantSpiritRoot(serverPlayer, root);
+        if (result instanceof Result.FailureResult<?>(Failure failure1)) {
+            Component message = Component.translatable("item.mxt.spirit_root.failed", failure1.message());
             if (player instanceof ServerPlayer serverPlayer1) serverPlayer1.sendSystemMessage(message, true);
             return InteractionResult.FAIL;
         }

@@ -1,8 +1,9 @@
 package com.iafenvoy.mxt.probe.world;
 
+import com.iafenvoy.saturn.runtime.resulting.Result;
+
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.iafenvoy.mxt.attachment.RiftChunkAttachment;
 import com.iafenvoy.mxt.attachment.RiftWorldAttachment;
@@ -87,8 +88,7 @@ public final class RiftProbes {
                 Probe.of("world/rift/chunk_move", RiftProbes::chunkMove),
                 Probe.of("world/rift/chunk_lifecycle", RiftProbes::chunkLifecycle),
                 Probe.of("world/rift/chunk_stale", RiftProbes::chunkStale),
-                Probe.of("world/rift/chunk_expiry", RiftProbes::chunkExpiry),
-                Probe.of("world/rift/chunk_migration", RiftProbes::chunkMigration));
+                Probe.of("world/rift/chunk_expiry", RiftProbes::chunkExpiry));
     }
 
     private static RiftShape concave() {
@@ -177,15 +177,15 @@ public final class RiftProbes {
     }
 
     private static void lifecycle(ProbeContext c) {
-        RiftResult result = RiftService.publish(c.level(), null, 0, template(c, 8), c.player().getUUID(), true);
-        c.check("created", result.isSuccess());
-        if (result.isFailure()) return;
-        RiftRecord r = result.record();
+        Result<RiftRecord> result = RiftService.publish(c.level(), null, 0, template(c, 8), c.player().getUUID(), true);
+        c.check("created", (result instanceof Result.SuccessResult<RiftRecord>));
+        if ((result instanceof Result.FailureResult<RiftRecord>)) return;
+        RiftRecord r = result.getData().orElseThrow();
         long deadline = r.expiresAt();
-        RiftResult edited = RiftService.publish(c.level(), r.id(), r.revision(), RiftEdits.shape(r.data(), RiftEdits.transform(r.data().shape(), Set.of(), new RiftVertex(0, 0), .1, 0, 0, 1, 1, 0)), c.player().getUUID(), false);
-        c.check("edit success", edited.isSuccess());
-        c.expect("expiry preserved", edited.record().expiresAt(), deadline);
-        c.check("stale revision rejected", RiftService.publish(c.level(), r.id(), r.revision(), r.data(), null, false).isFailure());
+        Result<RiftRecord> edited = RiftService.publish(c.level(), r.id(), r.revision(), RiftEdits.shape(r.data(), RiftEdits.transform(r.data().shape(), Set.of(), new RiftVertex(0, 0), .1, 0, 0, 1, 1, 0)), c.player().getUUID(), false);
+        c.check("edit success", (edited instanceof Result.SuccessResult<RiftRecord>));
+        c.expect("expiry preserved", edited.getData().orElseThrow().expiresAt(), deadline);
+        c.check("stale revision rejected", RiftService.publish(c.level(), r.id(), r.revision(), r.data(), null, false) instanceof Result.FailureResult<RiftRecord>);
         c.after(12, () -> {
             c.check("expired removed", RiftService.get(c.level(), r.id()) == null);
             c.done();
@@ -195,9 +195,9 @@ public final class RiftProbes {
     private static void chunkStorage(ProbeContext c) {
         RiftTemplate base = template(c, 1200);
         RiftTemplate data = RiftEdits.shape(base, RiftEdits.transform(base.shape(), Set.of(), new RiftVertex(0, 0), 40, 0, 0, 1, 1, 0));
-        RiftResult result = RiftService.publish(c.level(), null, 0, data, c.player().getUUID(), true);
-        if (!c.check("portal published", result.isSuccess())) return;
-        RiftRecord r = result.record();
+        Result<RiftRecord> result = RiftService.publish(c.level(), null, 0, data, c.player().getUUID(), true);
+        if (!c.check("portal published", (result instanceof Result.SuccessResult<RiftRecord>))) return;
+        RiftRecord r = result.getData().orElseThrow();
         Vec3 center = data.placement().origin().add(40, 1.25, 0);
         LevelChunk chunk = c.level().getChunkAt(BlockPos.containing(center));
         try {
@@ -235,29 +235,29 @@ public final class RiftProbes {
     }
 
     private static void chunkMove(ProbeContext c) {
-        RiftResult result = RiftService.publish(c.level(), null, 0, template(c, 0), null, true);
-        if (!c.check("portal published", result.isSuccess())) return;
-        RiftRecord old = result.record();
+        Result<RiftRecord> result = RiftService.publish(c.level(), null, 0, template(c, 0), null, true);
+        if (!c.check("portal published", (result instanceof Result.SuccessResult<RiftRecord>))) return;
+        RiftRecord old = result.getData().orElseThrow();
         RiftPlacement origin = old.data().placement();
         LevelChunk previous = c.level().getChunkAt(BlockPos.containing(origin.origin()));
         RiftTemplate shifted = RiftEdits.placement(old.data(), new RiftPlacement(origin.origin().add(48, 0, 0), origin.normal(), origin.tangent()));
         try {
-            RiftResult moved = RiftService.publish(c.level(), old.id(), old.revision(), shifted, null, false);
-            if (!c.check("cross-chunk move accepted", moved.isSuccess())) return;
+            Result<RiftRecord> moved = RiftService.publish(c.level(), old.id(), old.revision(), shifted, null, false);
+            if (!c.check("cross-chunk move accepted", (moved instanceof Result.SuccessResult<RiftRecord>))) return;
             LevelChunk target = c.level().getChunkAt(BlockPos.containing(shifted.placement().origin()));
             c.expect("old owner removes record", previous.getData(MxtAttachments.RIFT_CHUNK).get(old.id()), null);
-            c.expect("new owner holds new revision", target.getData(MxtAttachments.RIFT_CHUNK).get(old.id()), moved.record());
+            c.expect("new owner holds new revision", target.getData(MxtAttachments.RIFT_CHUNK).get(old.id()), moved.getData().orElseThrow());
             c.expect("directory points to new owner", RiftService.world(c.level()).location(old.id()).chunk(), target.getPos().pack());
             c.check("both chunks marked for saving", previous.isUnsaved() && target.isUnsaved());
             UUID instance = UUID.randomUUID();
-            RiftService.bind(c.level(), moved.record(), c.level().dimension().identifier(), 4, instance);
+            RiftService.bind(c.level(), moved.getData().orElseThrow(), c.level().dimension().identifier(), 4, instance);
             RiftRecord bound = target.getData(MxtAttachments.RIFT_CHUNK).get(old.id());
             c.expect("binding written to chunk", bound.boundInstance(), Optional.of(instance));
             c.expect("binding updates indexed revision", RiftService.world(c.level()).location(old.id()).revision(), bound.revision());
             RiftTemplate reshaped = RiftEdits.shape(bound.data(), RiftEdits.transform(bound.data().shape(), Set.of(), new RiftVertex(0, 0), 32, 0, 0, 1, 1, 0));
-            RiftResult reshapedResult = RiftService.publish(c.level(), bound.id(), bound.revision(), reshaped, null, false);
-            if (!c.check("outline-only move accepted", reshapedResult.isSuccess())) return;
-            RiftRecord finalRecord = reshapedResult.record();
+            Result<RiftRecord> reshapedResult = RiftService.publish(c.level(), bound.id(), bound.revision(), reshaped, null, false);
+            if (!c.check("outline-only move accepted", (reshapedResult instanceof Result.SuccessResult<RiftRecord>))) return;
+            RiftRecord finalRecord = reshapedResult.getData().orElseThrow();
             LevelChunk finalChunk = c.level().getChunkAt(BlockPos.containing(shifted.placement().origin().add(32, 1.25, 0)));
             c.expect("outline-only move keeps placement origin", finalRecord.data().placement().origin(), bound.data().placement().origin());
             c.expect("outline-only move clears previous center chunk", target.getData(MxtAttachments.RIFT_CHUNK).get(old.id()), null);
@@ -278,9 +278,9 @@ public final class RiftProbes {
         ChunkPos boundary = ChunkPos.containing(BlockPos.containing(base.placement().origin()));
         RiftPlacement placement = new RiftPlacement(new Vec3(boundary.getMinBlockX() + 16, base.placement().origin().y,
                 boundary.getMinBlockZ() + 8), new Vec3(0, 0, 1), new Vec3(1, 0, 0));
-        RiftResult result = RiftService.publish(c.level(), null, 0, RiftEdits.placement(base, placement), null, true);
-        if (!c.check("cross-chunk portal published", result.isSuccess())) return;
-        UUID id = result.record().id();
+        Result<RiftRecord> result = RiftService.publish(c.level(), null, 0, RiftEdits.placement(base, placement), null, true);
+        if (!c.check("cross-chunk portal published", (result instanceof Result.SuccessResult<RiftRecord>))) return;
+        UUID id = result.getData().orElseThrow().id();
         LevelChunk left = c.level().getChunk(boundary.x(), boundary.z());
         LevelChunk owner = c.level().getChunk(boundary.x() + 1, boundary.z());
         RiftWorldAttachment world = RiftService.world(c.level());
@@ -290,22 +290,22 @@ public final class RiftProbes {
             RiftStorage.refresh(c.level());
             RiftStorage.unload(new ChunkEvent.Unload(owner));
             RiftStorage.refresh(c.level());
-            c.expect("edge keeps whole portal active", world.get(id), result.record());
+            c.expect("edge keeps whole portal active", world.get(id), result.getData().orElseThrow());
             c.check("edge retains exact geometry", world.runtime().mesh(id) != null);
             world.evict(id);
             RiftStorage.load(new ChunkEvent.Load(left, false));
             c.expect("load callback defers cross-chunk reads", world.get(id), null);
             RiftStorage.refresh(c.level());
-            c.expect("edge reload resolves complete owner record", world.get(id), result.record());
+            c.expect("edge reload resolves complete owner record", world.get(id), result.getData().orElseThrow());
             RiftStorage.unload(new ChunkEvent.Unload(left));
             RiftStorage.refresh(c.level());
             c.expect("last covered chunk releases full record", world.get(id), null);
             c.expect("last covered chunk releases mesh", world.runtime().mesh(id), null);
             c.check("unload preserves directory", world.location(id) != null);
-            c.expect("unload preserves persisted record", owner.getData(MxtAttachments.RIFT_CHUNK).get(id), result.record());
+            c.expect("unload preserves persisted record", owner.getData(MxtAttachments.RIFT_CHUNK).get(id), result.getData().orElseThrow());
             RiftStorage.load(new ChunkEvent.Load(left, false));
             RiftStorage.refresh(c.level());
-            c.expect("cold edge restores portal", world.get(id), result.record());
+            c.expect("cold edge restores portal", world.get(id), result.getData().orElseThrow());
         } finally {
             RiftStorage.load(new ChunkEvent.Load(left, false));
             RiftStorage.load(new ChunkEvent.Load(owner, false));
@@ -315,9 +315,9 @@ public final class RiftProbes {
     }
 
     private static void chunkStale(ProbeContext c) {
-        RiftResult result = RiftService.publish(c.level(), null, 0, template(c, 0), null, true);
-        if (!c.check("portal published", result.isSuccess())) return;
-        RiftRecord r = result.record();
+        Result<RiftRecord> result = RiftService.publish(c.level(), null, 0, template(c, 0), null, true);
+        if (!c.check("portal published", (result instanceof Result.SuccessResult<RiftRecord>))) return;
+        RiftRecord r = result.getData().orElseThrow();
         LevelChunk chunk = c.level().getChunkAt(BlockPos.containing(r.data().placement().origin()));
         RiftService.remove(c.level(), r.id());
         chunk.getData(MxtAttachments.RIFT_CHUNK).put(r);
@@ -349,40 +349,6 @@ public final class RiftProbes {
             c.expect("expiry clears geometry", world.runtime().mesh(r.id()), null);
             c.done();
         });
-    }
-
-    private static void chunkMigration(ProbeContext c) {
-        RiftWorldAttachment previous = RiftService.world(c.level());
-        RiftTemplate base = template(c, 0);
-        RiftTemplate data = RiftEdits.shape(base, RiftEdits.transform(base.shape(), Set.of(), new RiftVertex(0, 0), 48, 0, 0, 1, 1, 0));
-        RiftRecord r = new RiftRecord(UUID.randomUUID(), 9, data, -1,
-                Optional.of(c.player().getUUID()), Optional.of(c.level().dimension().identifier()), 5, Optional.of(UUID.randomUUID()));
-        RiftGeometry.Mesh mesh = RiftGeometry.mesh(data.shape(), data.placement(), RiftGeometry.triangulate(data.shape()).result().orElseThrow());
-        LevelChunk originChunk = c.level().getChunkAt(BlockPos.containing(data.placement().origin()));
-        LevelChunk centerChunk = c.level().getChunkAt(BlockPos.containing(data.placement().origin().add(48, 1.25, 0)));
-        RiftService.world(c.level()).put(r, mesh);
-        originChunk.getData(MxtAttachments.RIFT_CHUNK).put(r);
-        centerChunk.getData(MxtAttachments.RIFT_CHUNK).remove(r.id());
-        originChunk.markUnsaved();
-        centerChunk.markUnsaved();
-        JsonObject oldDirectory = RiftWorldAttachment.CODEC.codec().encodeStart(JsonOps.INSTANCE, RiftService.world(c.level()))
-                .result().orElseThrow().getAsJsonObject();
-        oldDirectory.getAsJsonArray("locations").get(0).getAsJsonObject().addProperty("chunk", originChunk.getPos().pack());
-        RiftWorldAttachment oldIndex = RiftWorldAttachment.CODEC.codec().parse(JsonOps.INSTANCE, oldDirectory).result().orElseThrow();
-        c.level().setData(MxtAttachments.RIFT_WORLD, oldIndex);
-        try {
-            c.expect("origin-based save transfers without changing record", RiftService.get(c.level(), r.id()), r);
-            c.expect("origin-based save updates directory", oldIndex.location(r.id()).chunk(), centerChunk.getPos().pack());
-            c.expect("origin-based save clears old owner", originChunk.getData(MxtAttachments.RIFT_CHUNK).get(r.id()), null);
-            c.expect("origin-based save persists center owner", centerChunk.getData(MxtAttachments.RIFT_CHUNK).get(r.id()), r);
-            oldIndex.evict(r.id());
-            c.expect("cold reread follows transferred directory", RiftService.get(c.level(), r.id()), r);
-        } finally {
-            RiftService.remove(c.level(), r.id());
-            oldIndex.release();
-            c.level().setData(MxtAttachments.RIFT_WORLD, previous);
-            RiftService.world(c.level());
-        }
     }
 
     private static void layout(ProbeContext c) {
@@ -425,9 +391,9 @@ public final class RiftProbes {
         level.setBlockAndUpdate(BlockPos.containing(target).below(), Blocks.STONE.defaultBlockState());
         RiftTemplate base = template(c, 0);
         RiftTemplate data = new RiftTemplate(base.key(), base.placement(), false, base.shape(), new RiftDestination.Position(Optional.of(level.dimension().identifier()), target, Optional.of(45F), Optional.of(10F), false), base.appearance(), 0, true);
-        RiftResult result = RiftService.publish(level, null, 0, data, null, true);
-        if (!c.check("created", result.isSuccess())) return;
-        RiftRecord r = result.record();
+        Result<RiftRecord> result = RiftService.publish(level, null, 0, data, null, true);
+        if (!c.check("created", (result instanceof Result.SuccessResult<RiftRecord>))) return;
+        RiftRecord r = result.getData().orElseThrow();
         c.player().setPos(data.placement().world(new RiftVertex(0, .1)));
         RiftTravelService.tryEnter(level, r, c.player());
         c.after(40, () -> {
@@ -475,15 +441,15 @@ public final class RiftProbes {
         RiftTemplate base = template(c, 0);
         RiftTemplate data = new RiftTemplate(base.key(), base.placement(), false, base.shape(),
                 new RiftDestination.Realm(definition.unwrapKey().orElseThrow().identifier()), base.appearance(), 0, true);
-        RiftResult result = RiftService.publish(c.level(), null, 0, data, null, true);
-        if (!c.check("entrance created", result.isSuccess())) {
+        Result<RiftRecord> result = RiftService.publish(c.level(), null, 0, data, null, true);
+        if (!c.check("entrance created", (result instanceof Result.SuccessResult<RiftRecord>))) {
             SecretRealmService.destroy(c.server(), instance);
             return;
         }
-        UUID portalId = result.record().id();
+        UUID portalId = result.getData().orElseThrow().id();
         try {
             c.player().setPos(data.placement().origin().add(0, 0, 0.1));
-            RiftTravelService.tryEnter(c.level(), result.record(), c.player());
+            RiftTravelService.tryEnter(c.level(), result.getData().orElseThrow(), c.player());
             RiftRecord bound = RiftService.get(c.level(), portalId);
             if (!c.check("first entry binds instance", bound.boundInstance().equals(Optional.of(instance.instanceId()))))
                 return;
@@ -537,16 +503,16 @@ public final class RiftProbes {
     private static void waitCancel(ProbeContext c) {
         RiftTemplate base = template(c, 0);
         RiftDestination.Position far = new RiftDestination.Position(Optional.of(c.level().dimension().identifier()), new Vec3(12_345_678.5, 100, 12_345_678.5), Optional.empty(), Optional.empty(), false);
-        RiftResult result = RiftService.publish(c.level(), null, 0, new RiftTemplate(base.key(), base.placement(), false, base.shape(), far, base.appearance(), 0, true), null, true);
-        if (!c.check("waiting portal created", result.isSuccess())) return;
+        Result<RiftRecord> result = RiftService.publish(c.level(), null, 0, new RiftTemplate(base.key(), base.placement(), false, base.shape(), far, base.appearance(), 0, true), null, true);
+        if (!c.check("waiting portal created", (result instanceof Result.SuccessResult<RiftRecord>))) return;
         c.player().setPos(base.placement().origin());
         try {
-            RiftTravelService.tryEnter(c.level(), result.record(), c.player());
+            RiftTravelService.tryEnter(c.level(), result.getData().orElseThrow(), c.player());
             c.check("unloaded destination waits", RiftTravelService.waiting(c.player().getUUID()));
-            RiftService.remove(c.level(), result.record().id());
+            RiftService.remove(c.level(), result.getData().orElseThrow().id());
             c.check("removal cancels waiting", !RiftTravelService.waiting(c.player().getUUID()));
         } finally {
-            RiftService.remove(c.level(), result.record().id());
+            RiftService.remove(c.level(), result.getData().orElseThrow().id());
         }
     }
 
@@ -617,8 +583,8 @@ public final class RiftProbes {
     private static void ticketCleanup(ProbeContext c) {
         RiftTemplate base = template(c, 0);
         RiftDestination.Position far = new RiftDestination.Position(Optional.of(c.level().dimension().identifier()), new Vec3(9_876_550.5, 100, 9_876_550.5), Optional.empty(), Optional.empty(), false);
-        RiftResult result = RiftService.publish(c.level(), null, 0, new RiftTemplate(base.key(), base.placement(), false, base.shape(), far, base.appearance(), 0, true), null, true);
-        if (!c.check("cleanup portal created", result.isSuccess())) return;
+        Result<RiftRecord> result = RiftService.publish(c.level(), null, 0, new RiftTemplate(base.key(), base.placement(), false, base.shape(), far, base.appearance(), 0, true), null, true);
+        if (!c.check("cleanup portal created", (result instanceof Result.SuccessResult<RiftRecord>))) return;
         AtomicBoolean throwOnCheck = new AtomicBoolean();
         IllegalStateException expected = new IllegalStateException("probe eligibility failure");
         Vec3 origin = base.placement().origin();
@@ -632,7 +598,7 @@ public final class RiftProbes {
         c.level().addFreshEntity(item);
         ChunkPos pos = ChunkPos.containing(BlockPos.containing(far.pos()));
         try {
-            RiftTravelService.tryEnter(c.level(), result.record(), item);
+            RiftTravelService.tryEnter(c.level(), result.getData().orElseThrow(), item);
             c.check("unloaded target starts wait", RiftTravelService.waiting(item.getUUID()));
             c.expect("wait acquires one ticket", tickets(c, pos), 1L);
             RiftTravelService.tick(c.level());
@@ -649,26 +615,26 @@ public final class RiftProbes {
             c.check("exception removes wait", !RiftTravelService.waiting(item.getUUID()));
             c.expect("exception releases ticket", tickets(c, pos), 0L);
 
-            RiftTravelService.tryEnter(c.level(), result.record(), item);
+            RiftTravelService.tryEnter(c.level(), result.getData().orElseThrow(), item);
             item.setPos(origin.add(0, 0, 5));
             RiftTravelService.tick(c.level());
             c.check("leaving portal removes wait", !RiftTravelService.waiting(item.getUUID()));
             c.expect("leaving portal releases ticket", tickets(c, pos), 0L);
 
             item.setPos(origin);
-            RiftTravelService.tryEnter(c.level(), result.record(), item);
+            RiftTravelService.tryEnter(c.level(), result.getData().orElseThrow(), item);
             RiftTravelService.unload(c.level());
             c.check("unload removes wait", !RiftTravelService.waiting(item.getUUID()));
             c.expect("unload releases ticket", tickets(c, pos), 0L);
 
-            RiftTravelService.tryEnter(c.level(), result.record(), item);
+            RiftTravelService.tryEnter(c.level(), result.getData().orElseThrow(), item);
             RiftTravelService.clear();
             RiftTravelService.clear();
             c.check("shutdown removes wait", !RiftTravelService.waiting(item.getUUID()));
             c.expect("shutdown releases ticket", tickets(c, pos), 0L);
         } finally {
             throwOnCheck.set(false);
-            RiftService.remove(c.level(), result.record().id());
+            RiftService.remove(c.level(), result.getData().orElseThrow().id());
             item.discard();
         }
     }
@@ -746,9 +712,9 @@ public final class RiftProbes {
             c.level().setBlockAndUpdate(front, Blocks.AIR.defaultBlockState());
             Vec3 origin = Vec3.atLowerCornerOf(c.at(10, 1, 8)).add(.5, 0, 0);
             RiftTemplate data = RiftEdits.placement(template(c, 0), new RiftPlacement(origin, new Vec3(0, 0, 1), new Vec3(1, 0, 0)));
-            RiftResult published = RiftService.publish(c.level(), null, 0, data, player.getUUID(), true);
-            if (!c.check("selection portal created", published.isSuccess())) return;
-            RiftRecord portal = published.record();
+            Result<RiftRecord> published = RiftService.publish(c.level(), null, 0, data, player.getUUID(), true);
+            if (!c.check("selection portal created", (published instanceof Result.SuccessResult<RiftRecord>))) return;
+            RiftRecord portal = published.getData().orElseThrow();
             created.add(portal.id());
             int count = RiftService.world(c.level()).records().size();
             RiftAnchorItem anchor = MxtItems.RIFT_ANCHOR.get();
@@ -774,17 +740,17 @@ public final class RiftProbes {
             c.expect("unselected placement retains clicked normal", placed.data().placement().normal(), new Vec3(0, 0, -1));
             RiftService.remove(c.level(), placed.id());
 
-            RiftResult flush = RiftService.publish(c.level(), portal.id(), portal.revision(),
+            Result<RiftRecord> flush = RiftService.publish(c.level(), portal.id(), portal.revision(),
                     RiftEdits.placement(data, new RiftPlacement(new Vec3(origin.x, origin.y, front.getZ()), data.placement().normal(), data.placement().tangent())), player.getUUID(), false);
-            if (!c.check("flush portal update succeeds", flush.isSuccess())) return;
-            portal = flush.record();
+            if (!c.check("flush portal update succeeds", (flush instanceof Result.SuccessResult<RiftRecord>))) return;
+            portal = flush.getData().orElseThrow();
             sent.clear();
             anchor.useOn(new UseOnContext(player, InteractionHand.MAIN_HAND, frontHit));
             c.expect("portal flush with block face remains selectable", sent.getLast().record().map(RiftRecord::id), Optional.of(portal.id()));
 
-            RiftResult restored = RiftService.publish(c.level(), portal.id(), portal.revision(), data, player.getUUID(), false);
-            if (!c.check("portal position restored", restored.isSuccess())) return;
-            portal = restored.record();
+            Result<RiftRecord> restored = RiftService.publish(c.level(), portal.id(), portal.revision(), data, player.getUUID(), false);
+            if (!c.check("portal position restored", (restored instanceof Result.SuccessResult<RiftRecord>))) return;
+            portal = restored.getData().orElseThrow();
             c.level().setBlockAndUpdate(front, Blocks.AIR.defaultBlockState());
             c.playerAt(new Vec3(10.5, 1, 9.5));
             c.look(180, 0);
@@ -792,14 +758,14 @@ public final class RiftProbes {
             anchor.use(c.level(), player, InteractionHand.MAIN_HAND);
             c.expect("back face selects same portal", sent.getLast().record().map(RiftRecord::id), Optional.of(portal.id()));
 
-            RiftResult nearer = RiftService.publish(c.level(), null, 0, RiftEdits.placement(data,
+            Result<RiftRecord> nearer = RiftService.publish(c.level(), null, 0, RiftEdits.placement(data,
                     new RiftPlacement(origin.add(0, 0, .75), data.placement().normal(), data.placement().tangent())), player.getUUID(), true);
-            if (!c.check("nearer portal created", nearer.isSuccess())) return;
-            created.add(nearer.record().id());
+            if (!c.check("nearer portal created", (nearer instanceof Result.SuccessResult<RiftRecord>))) return;
+            created.add(nearer.getData().orElseThrow().id());
             sent.clear();
             anchor.use(c.level(), player, InteractionHand.MAIN_HAND);
-            c.expect("overlapping sight line selects nearest portal", sent.getLast().record().map(RiftRecord::id), Optional.of(nearer.record().id()));
-            RiftService.remove(c.level(), nearer.record().id());
+            c.expect("overlapping sight line selects nearest portal", sent.getLast().record().map(RiftRecord::id), Optional.of(nearer.getData().orElseThrow().id()));
+            RiftService.remove(c.level(), nearer.getData().orElseThrow().id());
 
             player.setShiftKeyDown(true);
             sent.clear();
@@ -840,14 +806,14 @@ public final class RiftProbes {
         c.level().addFreshEntity(item);
         RiftTemplate base = template(c, 0);
         RiftTemplate data = new RiftTemplate(base.key(), base.placement(), false, base.shape(), new RiftDestination.Position(Optional.of(c.level().dimension().identifier()), target, Optional.empty(), Optional.empty(), false), base.appearance(), 0, true);
-        RiftResult result = RiftService.publish(c.level(), null, 0, data, null, true);
+        Result<RiftRecord> result = RiftService.publish(c.level(), null, 0, data, null, true);
         try {
-            if (!c.check("item portal created", result.isSuccess())) return;
-            RiftTravelService.tryEnter(c.level(), result.record(), item);
+            if (!c.check("item portal created", (result instanceof Result.SuccessResult<RiftRecord>))) return;
+            RiftTravelService.tryEnter(c.level(), result.getData().orElseThrow(), item);
             c.expect("nonliving exact position", item.position(), target);
             c.check("returned entity has cooldown", item.isOnPortalCooldown());
         } finally {
-            if (result.isSuccess()) RiftService.remove(c.level(), result.record().id());
+            if ((result instanceof Result.SuccessResult<RiftRecord>)) RiftService.remove(c.level(), result.getData().orElseThrow().id());
             item.discard();
         }
     }
@@ -872,13 +838,13 @@ public final class RiftProbes {
         RiftTemplate base = template(c, 0);
         int x = Math.floorDiv(c.at(12, 0, 12).getX(), 16) * 16 + 16;
         RiftPlacement p = new RiftPlacement(new Vec3(x, base.placement().origin().y, base.placement().origin().z), new Vec3(0, 0, 1), new Vec3(1, 0, 0));
-        RiftResult result = RiftService.publish(c.level(), null, 0, RiftEdits.placement(base, p), null, true);
-        if (!result.isSuccess()) {
+        Result<RiftRecord> result = RiftService.publish(c.level(), null, 0, RiftEdits.placement(base, p), null, true);
+        if (!(result instanceof Result.SuccessResult<RiftRecord>)) {
             player.connection = previous;
-            c.fail("tracking portal publish: " + result.detail());
+            c.fail("tracking portal publish: " + result.getFailure().orElseThrow().message().getString());
             return;
         }
-        UUID id = result.record().id();
+        UUID id = result.getData().orElseThrow().id();
         int z = Math.floorDiv(c.at(12, 0, 12).getZ(), 16);
         LevelChunk left = c.level().getChunk(Math.floorDiv(x, 16) - 1, z);
         LevelChunk right = c.level().getChunk(Math.floorDiv(x, 16), z);

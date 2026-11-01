@@ -1,5 +1,8 @@
 package com.iafenvoy.mxt.probe.world;
 
+import com.iafenvoy.saturn.runtime.resulting.Result;
+
+import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.iafenvoy.mxt.data.item.RiftComponent;
 import com.iafenvoy.mxt.data.rift.*;
@@ -15,6 +18,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.common.ClientboundCustomPayloadPacket;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.CommonListenerCookie;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
@@ -76,16 +80,16 @@ public final class RiftAnchorProbes {
                 c.check("placement never opens an editor", fixture.sent.isEmpty());
             }
             c.expect("placements have distinct identities", fixture.records().stream().map(RiftRecord::id).distinct().count(), (long) count);
-            RiftResult outside = RiftEditorService.place(fixture.player, InteractionHand.MAIN_HAND,
+            Result<RiftRecord> outside = RiftEditorService.place(fixture.player, InteractionHand.MAIN_HAND,
                     new RiftPlacement(new Vec3(c.at(8, 1, 8).getX(), c.level().getMaxY() - 1, c.at(8, 1, 8).getZ()), new Vec3(0, 0, 1), new Vec3(1, 0, 0)));
-            c.check("actual placement validates world height", outside.isFailure());
+            c.check("actual placement validates world height", (outside instanceof Result.FailureResult<RiftRecord>));
             c.expect("invalid placement creates nothing", fixture.records().size(), count);
             stack.remove(MxtDataComponents.RIFT);
-            RiftResult defaults = RiftEditorService.place(fixture.player, InteractionHand.MAIN_HAND,
+            Result<RiftRecord> defaults = RiftEditorService.place(fixture.player, InteractionHand.MAIN_HAND,
                     new RiftPlacement(Vec3.atCenterOf(c.at(24, 2, 20)), new Vec3(0, 0, 1), new Vec3(1, 0, 0)));
-            c.check("empty anchors place a visible enabled default", defaults.isSuccess() && defaults.record().data().enabled());
+            c.check("empty anchors place a visible enabled default", (defaults instanceof Result.SuccessResult<RiftRecord>) && defaults.getData().orElseThrow().data().enabled());
             c.server().getPlayerList().getOps().remove(fixture.identity);
-            c.check("placement rechecks edit permission", RiftEditorService.place(fixture.player, InteractionHand.MAIN_HAND, data.placement()).isFailure());
+            c.check("placement rechecks edit permission", RiftEditorService.place(fixture.player, InteractionHand.MAIN_HAND, data.placement()) instanceof Result.FailureResult<RiftRecord>);
             c.note("anchor placement: six faces/batch/parameters/identity/enabled/bounds/permissions OK");
         }
     }
@@ -125,7 +129,7 @@ public final class RiftAnchorProbes {
                     fixture.request(fixture.open(InteractionHand.MAIN_HAND), "submit", data);
                     c.expect("main hand can also save parameters", main.get(MxtDataComponents.RIFT).blueprint(), Optional.of(data));
                     UUID invalid = fixture.open(InteractionHand.OFF_HAND);
-                    var malformed = JsonParser.parseString(RiftExport.template(data)).getAsJsonObject();
+                    JsonObject malformed = JsonParser.parseString(RiftExport.template(data)).getAsJsonObject();
                     malformed.addProperty("duration_ticks", -1);
                     RiftEditorService.handle(fixture.player, new RiftEditC2SPayload(invalid, "submit", 0, malformed.toString()));
                     c.expect("invalid settings produce an error response", fixture.sent.getLast().action(), "error");
@@ -196,7 +200,9 @@ public final class RiftAnchorProbes {
                     CommonListenerCookie.createInitial(this.player.getGameProfile(), false)) {
                 @Override
                 public void send(@NonNull Packet<?> packet) {
-                    if (packet instanceof ClientboundCustomPayloadPacket wrapped && wrapped.payload() instanceof RiftEditorS2CPayload payload)
+                    if (packet instanceof ClientboundCustomPayloadPacket(
+                            CustomPacketPayload payload1
+                    ) && payload1 instanceof RiftEditorS2CPayload payload)
                         EditorPlayer.this.sent.add(payload);
                     else EditorPlayer.this.connection.send(packet);
                 }

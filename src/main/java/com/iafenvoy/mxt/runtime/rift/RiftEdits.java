@@ -4,6 +4,7 @@ import com.iafenvoy.mxt.data.rift.RiftPlacement;
 import com.iafenvoy.mxt.data.rift.RiftShape;
 import com.iafenvoy.mxt.data.rift.RiftTemplate;
 import com.iafenvoy.mxt.data.rift.RiftVertex;
+import net.minecraft.util.Mth;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.*;
@@ -37,7 +38,7 @@ public final class RiftEdits {
     }
 
     public static RiftShape generate(String type, double width, double height, int count, long seed) {
-        count = Math.max(3, Math.min(64, count));
+        count = Mth.clamp(count, 3, 64);
         List<RiftVertex> points = new ArrayList<>();
         switch (type) {
             case "rectangle" -> points.addAll(List.of(new RiftVertex(-width / 2, 0), new RiftVertex(width / 2, 0),
@@ -57,7 +58,7 @@ public final class RiftEdits {
                 }
             }
             case "rounded" -> {
-                count = Math.max(4, Math.min(120, count));
+                count = Mth.clamp(count, 4, 120);
                 double radius = Math.min(width, height) * 0.2;
                 for (int corner = 0; corner < 4; corner++) {
                     double cx = (corner == 0 || corner == 3 ? 1 : -1) * (width / 2 - radius);

@@ -7,12 +7,12 @@ import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService;
-import com.iafenvoy.mxt.runtime.cultivation.CultivationService.BreakthroughResult;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService.BreakthroughStatus;
 import com.iafenvoy.saturn.attachment.ResourceHolderAttachment;
 import com.iafenvoy.saturn.data.trigger.Trigger;
 import com.iafenvoy.saturn.event.TriggerRehydrateEvent;
 import com.iafenvoy.saturn.registry.SaturnAttachments;
+import com.iafenvoy.saturn.runtime.resulting.Result;
 import com.iafenvoy.saturn.runtime.trigger.TriggerDispatcher;
 import com.iafenvoy.saturn.runtime.trigger.TriggerSubscription;
 import com.iafenvoy.saturn.util.HolderHelper;
@@ -74,10 +74,11 @@ public final class CultivationTriggerService {
                             && entity.getData(MxtAttachments.CULTIVATION).cultivating()
                             && CultivationService.pendingConditionsForChain(entity, chain).map(conditions::equals).orElse(false),
                     signal -> {
-                        BreakthroughResult result = CultivationService.attempt(
+                        Result<Void> result = CultivationService.attempt(
                                 entity, cultivation, resources, chain,
                                 signal.context().formula(), () -> true);
-                        if (result.isSuccess()) TriggerDispatcher.clearModule(entity.getUUID(), MODULE);
+                        if (result instanceof Result.SuccessResult<?>)
+                            TriggerDispatcher.clearModule(entity.getUUID(), MODULE);
                     }, false));
         }
     }

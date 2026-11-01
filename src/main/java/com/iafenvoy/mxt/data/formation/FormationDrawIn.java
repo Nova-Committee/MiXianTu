@@ -40,11 +40,11 @@ public record FormationDrawIn(long raisedAt, float drawn, int drawInTicks, int h
     // `(1 - drawn) * duration` is the same number, so a client that starts from `drawn` lands on the whole figure at the
     // moment the server would have: the two ramps have one slope and only one of them is sent.
     public static FormationDrawIn at(long raisedAt, long gameTime, int durationTicks, int intervalTicks) {
-        long hold = Math.max(MIN_HOLD, Math.min(MAX_HOLD, (long) HOLD_PER_BEAT * intervalTicks));
+        long hold = Mth.clamp((long) HOLD_PER_BEAT * intervalTicks, MIN_HOLD, MAX_HOLD);
         if (durationTicks <= 0) return new FormationDrawIn(raisedAt, 1.0F, 0, (int) hold);
         long elapsed = Math.max(0L, gameTime - raisedAt);
         float drawn = Mth.clamp((float) elapsed / durationTicks, 0.0F, 1.0F);
-        long left = Math.max(0L, Math.min(durationTicks, (long) durationTicks - elapsed));
+        long left = Mth.clamp((long) durationTicks - elapsed, 0L, durationTicks);
         return new FormationDrawIn(raisedAt, drawn, (int) left, (int) hold);
     }
 }

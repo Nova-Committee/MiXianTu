@@ -20,6 +20,7 @@ import com.iafenvoy.mxt.screen.aui.AuiPages;
 import com.iafenvoy.mxt.screen.menu.AlchemyFurnaceView.Numbers;
 import com.iafenvoy.mxt.screen.menu.AlchemyFurnaceView.Status;
 import com.iafenvoy.saturn.runtime.resulting.Failure;
+import com.iafenvoy.saturn.runtime.resulting.Result;
 import com.iafenvoy.saturn.util.DefinitionText;
 import com.sighs.apricityui.screen.ApricityContainerMenu;
 import net.minecraft.core.BlockPos;
@@ -204,8 +205,9 @@ public final class AlchemyFurnaceMenu extends ApricityContainerMenu {
         switch (payload.action()) {
             case TEMPERATURE -> this.acknowledgeTemperature(furnace, payload.temperature());
             case START -> {
-                AlchemyWorkstationService.StartResult result = AlchemyWorkstationService.start(player, furnace);
-                if (result.failure() != null) player.sendSystemMessage(result.failure().message(), true);
+                Result<Void> result = AlchemyWorkstationService.start(player, furnace);
+                if (result instanceof Result.FailureResult<Void>(Failure failure1))
+                    player.sendSystemMessage(failure1.message(), true);
             }
             case ABORT -> AlchemyWorkstationService.abort(player.level(), furnace.getBlockPos(), furnace);
         }

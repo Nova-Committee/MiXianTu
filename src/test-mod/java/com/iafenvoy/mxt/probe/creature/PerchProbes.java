@@ -75,7 +75,7 @@ public final class PerchProbes {
                     && close(first.getY(), vehicle.getY() + tall) && close(first.getZ(), vehicle.getZ());
             first.stopRiding();
 
-            boolean seated = PerchService.perch(first, vehicle, left).changed();
+            boolean seated = PerchService.perch(first, vehicle, left).getData().orElse(false);
             vehicle.positionRider(first);
             boolean declaredSeat = seated && PerchService.perchOffset(first).isPresent()
                     && close(first.getX(), vehicle.getX() + left.x)
@@ -136,7 +136,7 @@ public final class PerchProbes {
             level.addFreshEntity(chicken);
             spawned.add(chicken);
             double shortVehicle = chicken.getDimensions(chicken.getPose()).height();
-            boolean released = PerchService.release(first).changed() && !first.isPassenger()
+            boolean released = PerchService.release(first).getData().orElse(false) && !first.isPassenger()
                     && PerchService.perchOffset(first).isEmpty();
             PerchService.perch(first, chicken, left);
             chicken.positionRider(first);
@@ -183,12 +183,12 @@ public final class PerchProbes {
             spawned.add(third);
 
             PerchService.release(first);
-            boolean firstTwo = PerchService.perch(first, vehicle, left).changed()
-                    && PerchService.perch(second, vehicle, right).changed();
-            boolean thirdRefused = PerchService.perch(third, vehicle, left).failure() == PerchFailure.FULL
+            boolean firstTwo = PerchService.perch(first, vehicle, left).getData().orElse(false)
+                    && PerchService.perch(second, vehicle, right).getData().orElse(false);
+            boolean thirdRefused = PerchService.perch(third, vehicle, left).getFailure().orElse(null) == PerchFailure.FULL
                     && !third.isPassenger();
-            boolean moved = PerchService.perch(first, vehicle, right).changed()
-                    && PerchService.perch(third, vehicle, left).failure() == PerchFailure.FULL;
+            boolean moved = PerchService.perch(first, vehicle, right).getData().orElse(false)
+                    && PerchService.perch(third, vehicle, left).getFailure().orElse(null) == PerchFailure.FULL;
             vehicle.positionRider(first);
             boolean otherSide = close(first.getX(), vehicle.getX() + right.x);
             boolean capacity = firstTwo && thirdRefused && moved && otherSide;
@@ -300,15 +300,15 @@ public final class PerchProbes {
             if (plain != null) spawned.add(plain);
             ProbeBeast.reset();
             ProbeBeast.perchAnswer(Optional.of(new Vec3(0.25D, -0.3D, 0.0D)));
-            boolean asked = PerchService.perch(answerer, host).changed()
+            boolean asked = PerchService.perch(answerer, host).getData().orElse(false)
                     && PerchService.perchOffset(answerer)
                     .filter(offset -> close(offset.x, 0.25D) && close(offset.y, -0.3D)).isPresent()
                     && ProbeBeast.calls().contains("seat:0") && ProbeBeast.calls().contains("perched");
-            boolean unperched = PerchService.release(answerer).changed() && ProbeBeast.calls().contains("unperched");
+            boolean unperched = PerchService.release(answerer).getData().orElse(false) && ProbeBeast.calls().contains("unperched");
             ProbeBeast.perchAnswer(Optional.empty());
-            boolean notWilling = PerchService.perch(answerer, host).failure() == PerchFailure.NOT_WILLING;
+            boolean notWilling = PerchService.perch(answerer, host).getFailure().orElse(null) == PerchFailure.NOT_WILLING;
             boolean notPerchable = plain != null
-                    && PerchService.perch(plain, host).failure() == PerchFailure.NOT_WILLING;
+                    && PerchService.perch(plain, host).getFailure().orElse(null) == PerchFailure.NOT_WILLING;
             boolean answers = asked && unperched && notWilling && notPerchable;
             context.note("perch probe: answered=" + asked + " unperched=" + unperched
                     + " not_willing=" + notWilling + " not_perchable=" + notPerchable

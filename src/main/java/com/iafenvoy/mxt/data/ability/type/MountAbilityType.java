@@ -2,11 +2,11 @@ package com.iafenvoy.mxt.data.ability.type;
 
 import com.iafenvoy.mxt.data.ability.render.MountRender;
 import com.iafenvoy.mxt.data.ability.render.builtin.ItemMountRender;
+import com.iafenvoy.mxt.util.MxtCodecs;
 import com.iafenvoy.saturn.data.ability.AbilityType;
 import com.iafenvoy.saturn.data.action.EntityAction;
 import com.iafenvoy.saturn.data.action.NoOpAction;
 import com.iafenvoy.saturn.util.MiscUtil;
-import com.iafenvoy.mxt.util.MxtCodecs;
 import com.iafenvoy.saturn.util.formula.NumberProvider;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;

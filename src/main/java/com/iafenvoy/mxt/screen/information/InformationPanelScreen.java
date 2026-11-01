@@ -34,6 +34,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.chat.TextColor;
 import net.minecraft.resources.Identifier;
+import net.minecraft.util.Mth;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.Nullable;
@@ -270,11 +271,11 @@ public final class InformationPanelScreen extends AuiScreen {
         if (this.panel == null) return;
         // The page class is (re)applied here, so a screen opened straight onto the second page shows it.
         this.showPage();
-        int width = Math.max(1, Math.min(PANEL_WIDTH, this.width - 12));
-        int height = Math.max(1, Math.min(PANEL_HEIGHT, this.height - 12));
+        int width = Mth.clamp(this.width - 12, 1, PANEL_WIDTH);
+        int height = Mth.clamp(this.height - 12, 1, PANEL_HEIGHT);
         int left = (this.width - width) / 2;
         int top = (this.height - height) / 2;
-        int renderWidth = Math.min(PLAYER_RENDER_WIDTH, Math.max(60, (width - 250) / 2));
+        int renderWidth = Mth.clamp((width - 250) / 2, 60, PLAYER_RENDER_WIDTH);
         // The frame sits right of the equipment column and the right column right of the frame: 20 + 24 + 8 = 52
         // and 52 + renderWidth + 12, both of which are the page's own defaults. Leaving the margin out of the sum
         // moved the frame 20px left (the recess covered the four equipment cells) and the right column with it.

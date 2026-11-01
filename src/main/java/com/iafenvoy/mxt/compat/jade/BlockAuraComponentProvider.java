@@ -49,7 +49,7 @@ public enum BlockAuraComponentProvider implements IBlockComponentProvider {
 
         private void add(BlockAura definition) {
             definition.aura().forEach((aura, value) -> {
-                double[] totals = this.auras.computeIfAbsent(aura, ignored -> new double[2]);
+                double[] totals = this.auras.computeIfAbsent(aura, _ -> new double[2]);
                 totals[0] += value.amount();
                 totals[1] += value.regenPerTick();
             });

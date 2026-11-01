@@ -9,6 +9,7 @@ import com.iafenvoy.saturn.data.resource.Resource;
 import com.iafenvoy.saturn.util.formula.FormulaContext;
 import com.iafenvoy.saturn.util.formula.NumberProvider;
 import net.minecraft.core.Holder;
+import net.minecraft.util.Mth;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
@@ -93,7 +94,7 @@ public final class TechniqueProgress {
         if (!Double.isFinite(done) || !Double.isFinite(span)) return 0.0D;
         // A level that asks for nothing is already satisfied.
         if (span <= 0.0D) return 1.0D;
-        return Math.max(0.0D, Math.min(1.0D, done / span));
+        return Mth.clamp(done / span, 0.0D, 1.0D);
     }
 
     private static double evaluate(NumberProvider provider, FormulaContext context) {

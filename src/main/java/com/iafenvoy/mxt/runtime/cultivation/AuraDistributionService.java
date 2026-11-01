@@ -32,6 +32,7 @@ import net.minecraft.core.SectionPos;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.chunk.LevelChunk;
@@ -121,7 +122,7 @@ public final class AuraDistributionService {
         claimed.forEach((aura, claimedAmount) -> {
             AuraPool pool = stock.get(aura);
             if (pool == null || !Double.isFinite(claimedAmount)) return;
-            double amount = Math.min(Math.max(0.0D, claimedAmount), pool.amount());
+            double amount = Mth.clamp(claimedAmount, 0.0D, pool.amount());
             if (amount <= 0.0D) return;
             pool.change(-amount);
             taken.merge(aura, amount, Double::sum);

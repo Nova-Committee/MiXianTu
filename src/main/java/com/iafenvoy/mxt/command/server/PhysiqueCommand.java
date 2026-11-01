@@ -104,10 +104,10 @@ public final class PhysiqueCommand {
                 source.sendFailure(Component.translatable("command.mxt.identity.not_living", target.getDisplayName()));
                 continue;
             }
-            Result result = CultivationIdentityService.grantPhysique(living, physique, FormulaContext.of(living));
-            if (result.failure() != null) {
+            Result<?> result = CultivationIdentityService.grantPhysique(living, physique, FormulaContext.of(living));
+            if (result instanceof Result.FailureResult<?>(Failure failure1)) {
                 source.sendFailure(Component.translatable("command.mxt.identity.grant_failed",
-                        DefinitionText.nameOrId(physique), target.getDisplayName(), reason(result.failure())));
+                        DefinitionText.nameOrId(physique), target.getDisplayName(), reason(failure1)));
                 continue;
             }
             granted++;
@@ -147,9 +147,9 @@ public final class PhysiqueCommand {
                 source.sendFailure(Component.translatable("command.mxt.identity.not_living", target.getDisplayName()));
                 continue;
             }
-            CultivationToggleService.ToggleResult result = CultivationToggleService.setPhysiqueEnabled(living, physique, enabled);
-            if (!result.changed()) {
-                source.sendFailure(Component.translatable("command.mxt.identity.toggle_failed", target.getDisplayName(), HolderHelper.id(physique), reason(result.failure())));
+            Result<Boolean> result = CultivationToggleService.setPhysiqueEnabled(living, physique, enabled);
+            if (!result.getData().orElse(false)) {
+                source.sendFailure(Component.translatable("command.mxt.identity.toggle_failed", target.getDisplayName(), HolderHelper.id(physique), reason(result.getFailure().orElse(null))));
                 continue;
             }
             changed++;

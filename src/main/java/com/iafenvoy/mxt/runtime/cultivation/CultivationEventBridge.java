@@ -5,20 +5,19 @@ import com.iafenvoy.mxt.data.cultivation.Cultivation;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.runtime.CultivationTriggerService;
 import com.iafenvoy.mxt.runtime.MxtProfilerSources;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService.BreakthroughStatus;
-import com.iafenvoy.mxt.runtime.CultivationTriggerService;
 import com.iafenvoy.mxt.runtime.world.AuraResult;
 import com.iafenvoy.mxt.runtime.world.AuraService;
 import com.iafenvoy.saturn.profiling.ProfilerScope;
 import com.iafenvoy.saturn.profiling.ServerProfiling;
 import com.iafenvoy.saturn.registry.SaturnAttachments;
 import com.iafenvoy.saturn.runtime.resulting.Failure;
+import com.iafenvoy.saturn.runtime.resulting.Result;
 import com.iafenvoy.saturn.util.formula.FormulaContext;
 import com.iafenvoy.saturn.util.formula.FormulaContexts;
 import net.minecraft.core.Holder;
-import net.minecraft.network.chat.Component;
-import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
@@ -86,13 +85,13 @@ public final class CultivationEventBridge {
             FormulaContext context = FormulaContexts.forEntity(entity);
             boolean mayContinue = definition.tickCondition().test(entity, context);
             AuraResult aura = AuraService.getPositionAura(entity.level(), entity.blockPosition());
-            CultivationMethodService.CultivationResult result = CultivationMethodService.tick(entity, spirit, entity.getData(SaturnAttachments.RESOURCE_HOLDER), aura, action, definition,
+            Result<CultivationMethodService.CultivationStep> result = CultivationMethodService.tick(entity, spirit, entity.getData(SaturnAttachments.RESOURCE_HOLDER), aura, action, definition,
                     entity.level().getGameTime(), context, () -> mayContinue);
             if (entity instanceof ServerPlayer player) {
-                if (result.failure() == null) {
+                if (result instanceof Result.SuccessResult<CultivationMethodService.CultivationStep>) {
                     LAST_FAILURES.remove(player.getUUID());
                 } else {
-                    FailureNotice notice = new FailureNotice(result.failure(), result.failedResource(), result.abortReason());
+                    FailureNotice notice = new FailureNotice(result.getFailure().orElseThrow());
                     FailureNotice previous = LAST_FAILURES.put(player.getUUID(), notice);
                     long gameTime = entity.level().getGameTime();
                     if (!notice.equals(previous) || gameTime % 20L == 0L)
@@ -118,6 +117,6 @@ public final class CultivationEventBridge {
         });
     }
 
-    private record FailureNotice(Failure failure, Identifier resource, Component abortReason) {
+    private record FailureNotice(Failure failure) {
     }
 }

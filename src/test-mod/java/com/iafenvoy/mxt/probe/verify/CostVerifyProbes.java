@@ -8,6 +8,7 @@ import com.iafenvoy.saturn.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.saturn.data.cost.Cost;
 import com.iafenvoy.saturn.data.cost.CostPayment;
+import com.iafenvoy.saturn.data.cost.Debit;
 import com.iafenvoy.mxt.data.cost.Costs;
 import com.iafenvoy.mxt.data.cost.builtin.AuraCost;
 import com.iafenvoy.saturn.data.cost.context.CostContext;
@@ -17,6 +18,7 @@ import com.iafenvoy.mxt.probe.Probe;
 import com.iafenvoy.mxt.probe.ProbeContext;
 import com.iafenvoy.mxt.probe.ProbeDefinitions;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.saturn.runtime.resulting.Result;
 import com.iafenvoy.saturn.runtime.resulting.failures.CostFailure;
 import com.iafenvoy.saturn.util.formula.FormulaContext;
 import com.iafenvoy.saturn.util.formula.number.Constant;
@@ -58,48 +60,48 @@ public final class CostVerifyProbes {
         account.set(probe, 100.0D, 0.0D, 10_000.0D, -1L, "probe");
         CostContext costs = CostContext.account(account, null, FormulaContext.of(context.player()), CostOrigins.SCRIPT);
 
-        CostPayment.PaymentResult plain = CostPayment.pay(decodeCosts(registries,
+        Result<List<Debit>> plain = CostPayment.pay(decodeCosts(registries,
                 "[{\"id\": \"mxt_test:trigger_probe\", \"amount\": 3}]"), costs);
-        if (!plain.isSuccess()) return "a plain resource cost was refused: " + plain.failure();
+        if (plain.getFailure().isPresent()) return "a plain resource cost was refused: " + plain.getFailure().orElse(null);
         if (!close(account.get(probe), 97.0D))
             return "a 3-point cost left " + account.get(probe) + " instead of 97";
 
         // VALUE aura and its resource name the same balance, but both entries still execute separately.
         account.set(qi, 10.0D, 0.0D, 100.0D, -1L, "probe");
-        CostPayment.PaymentResult repeated = CostPayment.pay(decodeCosts(registries,
+        Result<List<Debit>> repeated = CostPayment.pay(decodeCosts(registries,
                         "[{\"id\": \"mxt_test:qi\", \"amount\": 1}, {\"type\": \"mxt:aura\", \"aura\": \"mxt_test:qi\", \"amount\": 3}]"),
                 costs);
-        if (!repeated.isSuccess()) return "a resource entry plus the aura it names was refused: " + repeated.failure();
+        if (repeated.getFailure().isPresent()) return "a resource entry plus the aura it names was refused: " + repeated.getFailure().orElse(null);
         if (!close(account.get(qi), 6.0D))
             return "1 + 3 of the same value left " + account.get(qi) + " instead of 6";
 
         double before = account.get(probe);
-        CostPayment.PaymentResult refused = CostPayment.pay(decodeCosts(registries,
+        Result<List<Debit>> refused = CostPayment.pay(decodeCosts(registries,
                         "[{\"id\": \"mxt_test:trigger_probe\", \"amount\": 1}, {\"id\": \"mxt_test:soul_power\", \"amount\": 9999}]"),
                 costs);
-        if (refused.isSuccess()) return "an array whose second entry is unpayable was paid anyway";
+        if (refused.getFailure().isEmpty()) return "an array whose second entry is unpayable was paid anyway";
         if (!close(account.get(probe), before))
             return "a refused payment still took " + (before - account.get(probe)) + " off the first entry";
 
-        CostPayment.PaymentResult item = CostPayment.pay(decodeCosts(registries,
+        Result<List<Debit>> item = CostPayment.pay(decodeCosts(registries,
                 "[{\"type\": \"mxt:item\", \"items\": [\"minecraft:emerald\"], \"amount\": 1}]"), costs);
-        if (item.isSuccess() || item.failure() != CostFailure.NO_CHANNEL)
-            return "an item cost without a player channel read as " + item.failure();
+        if (item.getFailure().isEmpty() || item.getFailure().orElse(null) != CostFailure.NO_CHANNEL)
+            return "an item cost without a player channel read as " + item.getFailure().orElse(null);
 
-        CostPayment.PaymentResult invalid = CostPayment.pay(decodeCosts(registries,
+        Result<List<Debit>> invalid = CostPayment.pay(decodeCosts(registries,
                 "[{\"id\": \"mxt_test:trigger_probe\", \"amount\": 0}]"), costs);
-        if (invalid.isSuccess() || invalid.failure() != CostFailure.INVALID_AMOUNT)
-            return "a zero amount read as " + invalid.failure();
+        if (invalid.getFailure().isEmpty() || invalid.getFailure().orElse(null) != CostFailure.INVALID_AMOUNT)
+            return "a zero amount read as " + invalid.getFailure().orElse(null);
 
         ResourceHolderAttachment personal = context.player().getData(SaturnAttachments.RESOURCE_HOLDER);
         double previous = personal.get(probe);
         personal.set(probe, 10.0D, 0.0D, 10_000.0D, -1L, "probe");
-        CostPayment.PaymentResult onPlayer = CostPayment.pay(decodeCosts(registries,
+        Result<List<Debit>> onPlayer = CostPayment.pay(decodeCosts(registries,
                         "[{\"id\": \"mxt_test:trigger_probe\", \"amount\": 2}]"),
                 CostContext.of(context.player(), FormulaContext.of(context.player()), CostOrigins.SCRIPT));
         double left = personal.get(probe);
         personal.set(probe, previous, 0.0D, 10_000.0D, -1L, "probe");
-        if (!onPlayer.isSuccess()) return "a payer-paid resource cost was refused: " + onPlayer.failure();
+        if (onPlayer.getFailure().isPresent()) return "a payer-paid resource cost was refused: " + onPlayer.getFailure().orElse(null);
         if (!close(left, 8.0D)) return "a payer-paid 2-point cost left " + left + " instead of 8";
 
         // The bill is the amount from here on: replacing the resource fee replaces what is charged, and a fee the edit
@@ -111,8 +113,8 @@ public final class CostVerifyProbes {
             return "a one-entry bill could not be priced: " + edited.failure();
         if (edited.replaceResourceAmounts(Map.of(ProbeDefinitions.QI, 3.0D)).isPresent())
             return "replacing the resource fee of a bill failed: " + edited.failure();
-        CostPayment.PaymentResult swapped = edited.pay();
-        if (!swapped.isSuccess()) return "an edited bill was refused: " + swapped.failure();
+        Result<List<Debit>> swapped = edited.pay();
+        if (swapped.getFailure().isPresent()) return "an edited bill was refused: " + swapped.getFailure().orElse(null);
         if (!close(account.get(probe), 100.0D))
             return "a replaced fee still took " + (100.0D - account.get(probe)) + " of the value it no longer names";
         if (!close(account.get(qi), 47.0D))
@@ -123,9 +125,9 @@ public final class CostVerifyProbes {
         if (scaled.price(decodeCosts(registries, "[{\"id\": \"mxt_test:trigger_probe\", \"amount\": 4}]")).isPresent())
             return "a bill about to be scaled could not be priced: " + scaled.failure();
         if (scaled.scale(transaction -> true, 0.5D).isPresent()) return "scaling a bill failed: " + scaled.failure();
-        CostPayment.PaymentResult half = scaled.pay();
-        CostPayment.PaymentResult again = scaled.pay();
-        if (!half.isSuccess() || again != half) return "paying the same bill twice did not repeat the first answer";
+        Result<List<Debit>> half = scaled.pay();
+        Result<List<Debit>> again = scaled.pay();
+        if (half.getFailure().isPresent() || again != half) return "paying the same bill twice did not repeat the first answer";
         if (!close(account.get(probe), 98.0D))
             return "a 4-point fee scaled to a half left " + account.get(probe) + " instead of 98";
 
@@ -136,8 +138,8 @@ public final class CostVerifyProbes {
             return "a bill about to be cleared could not be priced: " + cleared.failure();
         if (cleared.replaceResourceAmounts(Map.of()).isPresent())
             return "clearing a bill's resource fee failed: " + cleared.failure();
-        CostPayment.PaymentResult nothing = cleared.pay();
-        if (!nothing.isSuccess()) return "a cleared bill was refused: " + nothing.failure();
+        Result<List<Debit>> nothing = cleared.pay();
+        if (nothing.getFailure().isPresent()) return "a cleared bill was refused: " + nothing.getFailure().orElse(null);
         if (!close(account.get(probe), 100.0D))
             return "a cleared fee still took " + (100.0D - account.get(probe));
 

@@ -4,6 +4,7 @@ import com.iafenvoy.mxt.runtime.MxtProfilerSources;
 import com.iafenvoy.saturn.profiling.ProfilerScope;
 import com.iafenvoy.saturn.profiling.ServerProfiling;
 import com.iafenvoy.saturn.util.MiscUtil;
+import net.minecraft.util.Mth;
 
 import java.util.*;
 
@@ -148,7 +149,7 @@ public final class TalismanDrawingScorer {
             double total = (1.0D - shape) + MiscUtil.positive(params.directionWeight()) * direction
                     + MiscUtil.positive(params.topologyWeight()) * topology + MiscUtil.positive(params.orderWeight()) * order;
             if (!Double.isFinite(total)) return degenerate();
-            double completion = Math.min(1.0D, Math.max(0.0D, Math.exp(-total / sigma)));
+            double completion = Mth.clamp(Math.exp(-total / sigma), 0.0D, 1.0D);
             return new Score(completion, clamp01(cover), clamp01(precision), clamp01(shape), clamp01(direction),
                     clamp01(topology), clamp01(order), total, countPoints(playerKeys), anyClosed(playerKeys, tolPx), false);
         }
@@ -485,7 +486,7 @@ public final class TalismanDrawingScorer {
         double length = cumulative[n - 1];
         if (length <= 0.0D) return repeated(points.getFirst());
         int samples = (int) Math.round(length / RESAMPLE_STEP);
-        samples = Math.max(MIN_SAMPLES, Math.min(MAX_SAMPLES, samples));
+        samples = Mth.clamp(samples, MIN_SAMPLES, MAX_SAMPLES);
         double step = length / (samples - 1);
         List<P> out = new ArrayList<>(samples);
         int segment = 0;
@@ -494,7 +495,7 @@ public final class TalismanDrawingScorer {
             while (segment < n - 2 && cumulative[segment + 1] < target) segment++;
             double span = cumulative[segment + 1] - cumulative[segment];
             double t = span <= 0.0D ? 0.0D : (target - cumulative[segment]) / span;
-            t = Math.min(1.0D, Math.max(0.0D, t));
+            t = Mth.clamp(t, 0.0D, 1.0D);
             P a = points.get(segment);
             P b = points.get(segment + 1);
             out.add(new P(a.x() + (b.x() - a.x()) * t, a.y() + (b.y() - a.y()) * t));
@@ -613,7 +614,7 @@ public final class TalismanDrawingScorer {
     }
 
     private static double clamp01(double value) {
-        return Math.min(1.0D, Math.max(0.0D, value));
+        return Mth.clamp(value, 0.0D, 1.0D);
     }
 
     private static Score degenerate() {

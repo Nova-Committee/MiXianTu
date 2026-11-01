@@ -1,5 +1,7 @@
 package com.iafenvoy.mxt.probe.world;
 
+import com.iafenvoy.saturn.runtime.resulting.Result;
+
 import com.iafenvoy.mxt.data.condition.builtin.entity.InSecretRealmEntityCondition;
 import com.iafenvoy.mxt.data.condition.builtin.entity.InSecretRealmEntityCondition.Role;
 import com.iafenvoy.mxt.data.secretrealm.SecretRealm;
@@ -356,20 +358,20 @@ public final class SecretRealmProbes {
         try {
             LivingEntity mobTraveller = spawnBeing(context, overworld, context.at(BEING), null);
             probes.add(mobTraveller);
-            SecretRealmService.TravelResult mobEntered = mobTraveller == null ? null : SecretRealmService.enter(mobTraveller, server, mirror);
+            Result<LivingEntity> mobEntered = mobTraveller == null ? null : SecretRealmService.enter(mobTraveller, server, mirror);
             // A body that is no player is rebuilt by the platform when it crosses a dimension, so the one to read
             // afterwards is the body the call handed back - the one passed in is already gone.
-            LivingEntity mobVisitor = mobEntered == null ? null : mobEntered.traveller().orElse(null);
+            LivingEntity mobVisitor = mobEntered == null ? null : mobEntered.getData().orElse(null);
             if (mobVisitor != null && mobVisitor != mobTraveller) probes.add(mobVisitor);
             SecretRealmRecord mobHome = mobVisitor == null ? null : SecretRealmRegistry.ofMember(mobVisitor.getUUID()).orElse(null);
             if (mobHome != null) opened.add(mobHome.dimension());
-            boolean mobIn = mobVisitor != null && mobEntered.isSuccess() && mobHome != null
+            boolean mobIn = mobVisitor != null && mobEntered.getFailure().isEmpty() && mobHome != null
                     && mobVisitor.level().dimension().equals(mobHome.dimension())
                     && mobVisitor.getData(MxtAttachments.SECRET_REALM_TRAVEL).active();
-            SecretRealmService.TravelResult mobLeft = mobIn ? SecretRealmService.exit(mobVisitor) : null;
-            LivingEntity mobReturned = mobLeft == null ? null : mobLeft.traveller().orElse(null);
+            Result<LivingEntity> mobLeft = mobIn ? SecretRealmService.exit(mobVisitor) : null;
+            LivingEntity mobReturned = mobLeft == null ? null : mobLeft.getData().orElse(null);
             if (mobReturned != null && mobReturned != mobVisitor) probes.add(mobReturned);
-            boolean mobOut = mobLeft != null && mobLeft.isSuccess() && mobReturned != null
+            boolean mobOut = mobLeft != null && mobLeft.getFailure().isEmpty() && mobReturned != null
                     && mobReturned.level().dimension().equals(Level.OVERWORLD)
                     && !mobReturned.getData(MxtAttachments.SECRET_REALM_TRAVEL).active()
                     && SecretRealmRegistry.ofMember(mobReturned.getUUID()).isEmpty();
@@ -439,8 +441,8 @@ public final class SecretRealmProbes {
                 context.fail("verify destroy: the member being could not be spawned");
                 return;
             }
-            SecretRealmService.TravelResult entered = SecretRealmService.enter(member, server, trial);
-            LivingEntity inside = entered.traveller().orElse(null);
+            Result<LivingEntity> entered = SecretRealmService.enter(member, server, trial);
+            LivingEntity inside = entered.getData().orElse(null);
             if (inside != null && inside != member) probes.add(inside);
             SecretRealmRecord record = inside == null ? null : SecretRealmRegistry.ofMember(inside.getUUID()).orElse(null);
             if (record == null) {

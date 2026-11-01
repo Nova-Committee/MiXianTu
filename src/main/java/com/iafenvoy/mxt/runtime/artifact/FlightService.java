@@ -14,13 +14,14 @@ import com.iafenvoy.mxt.runtime.resulting.failures.FlightFailure;
 import com.iafenvoy.saturn.data.ability.Ability;
 import com.iafenvoy.saturn.data.cost.Cost;
 import com.iafenvoy.saturn.data.cost.CostPayment;
+import com.iafenvoy.saturn.data.cost.Debit;
 import com.iafenvoy.saturn.data.cost.context.CostContext;
 import com.iafenvoy.saturn.data.cost.context.CostOrigins;
 import com.iafenvoy.saturn.profiling.ProfilerScope;
 import com.iafenvoy.saturn.profiling.ServerProfiling;
 import com.iafenvoy.saturn.runtime.resulting.Failure;
 import com.iafenvoy.saturn.runtime.resulting.Failures;
-import com.iafenvoy.saturn.runtime.resulting.ResultWithData;
+import com.iafenvoy.saturn.runtime.resulting.Result;
 import com.iafenvoy.saturn.util.HolderHelper;
 import com.iafenvoy.saturn.util.formula.FormulaContext;
 import net.minecraft.core.Holder;
@@ -109,17 +110,17 @@ public final class FlightService {
         return found.type().canMove(speed(found.type(), control, context)) ? null : Failures.INVALID_FORMULA;
     }
 
-    public static ResultWithData<State> mount(LivingEntity holder, Holder<Ability> skill, FormulaContext context) {
+    public static Result<State> mount(LivingEntity holder, Holder<Ability> skill, FormulaContext context) {
         try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.ARTIFACT)) {
             Failure refusal = canMount(holder, skill, context);
-            if (refusal != null) return ResultWithData.failure(State.REJECTED, refusal);
+            if (refusal != null) return Result.failure(refusal);
             FlightControlAbilityType control = (FlightControlAbilityType) skill.value().type();
             Mount found = find(holder, control.hand());
             FlightAttachment data = holder.getData(MxtAttachments.FLIGHT);
             assert found != null;
             double speed = speed(found.type(), control, context);
             MountVehicle vehicle = createVehicle(holder.level(), found.type()).orElse(null);
-            if (vehicle == null) return ResultWithData.failure(State.REJECTED, FlightFailure.CANNOT_MOUNT);
+            if (vehicle == null) return Result.failure(FlightFailure.CANNOT_MOUNT);
             // The contract promises a body, not one that is an entity: only an entity can be created by an EntityType and
             // only an entity can be ridden, so this cast cannot fail where it is made.
             Entity body = (Entity) vehicle;
@@ -134,12 +135,12 @@ public final class FlightService {
             // inside an entity nothing will ever remove.
             if (!holder.level().addFreshEntity(body)) {
                 giveBack(vehicle);
-                return ResultWithData.failure(State.REJECTED, FlightFailure.CANNOT_MOUNT);
+                return Result.failure(FlightFailure.CANNOT_MOUNT);
             }
             if (!holder.startRiding(body, true, true)) {
                 // Discarding is a removal, which is what hands the artifact back, so a failed start costs nothing.
                 body.discard();
-                return ResultWithData.failure(State.REJECTED, FlightFailure.CANNOT_MOUNT);
+                return Result.failure(FlightFailure.CANNOT_MOUNT);
             }
             // The flight allowance is an attribute ({@code NeoForgeMod.CREATIVE_FLIGHT}); the mayfly flag is the
             // deprecated view of it, and reading the attribute is what can actually be written back. Only a player has
@@ -153,7 +154,7 @@ public final class FlightService {
             // The mount's own "the flight has begun" hook. It runs on the driver, because that is the entity a pack can
             // actually give an effect or a resource to; the mount itself is data with a body.
             found.type().actions().onMount().execute(holder, context);
-            return ResultWithData.success(State.MOUNTED);
+            return Result.success(State.MOUNTED);
         }
     }
 
@@ -180,10 +181,10 @@ public final class FlightService {
         return mount.speed().evaluate(context) * control.speedMultiplier().evaluate(context);
     }
 
-    public static ResultWithData<State> tick(LivingEntity holder, Holder<Ability> skill, Holder<Ability> vehicle, FormulaContext context) {
+    public static Result<State> tick(LivingEntity holder, Holder<Ability> skill, Holder<Ability> vehicle, FormulaContext context) {
         try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.ARTIFACT)) {
             FlightAttachment data = holder.getData(MxtAttachments.FLIGHT);
-            if (!data.active()) return ResultWithData.success(State.INACTIVE);
+            if (!data.active()) return Result.success(State.INACTIVE);
             if (!(skill.value().type() instanceof FlightControlAbilityType control))
                 return dismount(holder, FlightFailure.NOT_FLYABLE);
             if (!(vehicle.value().type() instanceof MountAbilityType mount))
@@ -204,7 +205,7 @@ public final class FlightService {
                 return dismount(holder, Failures.INSUFFICIENT_RESOURCE);
             // After the fuel, so a tick this hook runs for is a tick that was paid for.
             mount.actions().tick().execute(holder, context);
-            return ResultWithData.success(State.FLYING);
+            return Result.success(State.FLYING);
         }
     }
 
@@ -220,8 +221,8 @@ public final class FlightService {
         List<Fuel> burned = burn(vehicle, level, planning, context);
         // The bill could not be reduced to what the pilot owes, so this tick has no answer it can trust.
         if (burned == null) return false;
-        CostPayment.PaymentResult payment = planning.pay();
-        if (payment.isSuccess()) return true;
+        Result<List<Debit>> payment = planning.pay();
+        if (payment instanceof Result.SuccessResult<List<Debit>>) return true;
         refund(vehicle, level, burned, context);
         return false;
     }
@@ -309,7 +310,7 @@ public final class FlightService {
 
     // Whatever is left of the flight restores the holder's own pre-flight state, which only a player has. The mount
     // hands the artifact back from its own removal path, so this only has to end the ride.
-    public static ResultWithData<State> dismount(LivingEntity holder, Failure reason) {
+    public static Result<State> dismount(LivingEntity holder, Failure reason) {
         try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.ARTIFACT)) {
             FlightAttachment data = holder.getData(MxtAttachments.FLIGHT);
             Entity body = holder.getVehicle();
@@ -330,7 +331,7 @@ public final class FlightService {
                 player.onUpdateAbilities();
             }
             data.stop();
-            return ResultWithData.failure(State.STOPPED, reason);
+            return Result.failure(reason);
         }
     }
 

@@ -6,6 +6,7 @@ import com.iafenvoy.saturn.util.dispatcher.TickDispatcher;
 import net.minecraft.core.SectionPos;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.phys.AABB;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 
@@ -20,7 +21,7 @@ public final class RiftRuntime implements AutoCloseable {
             RiftGeometry.triangulate(record.data().shape()).result().ifPresent(triangles -> this.put(record, RiftGeometry.mesh(record.data().shape(), record.data().placement(), triangles)));
     }
 
-    public RiftGeometry.Mesh mesh(UUID id) {
+    public @Nullable RiftGeometry.Mesh mesh(UUID id) {
         return this.meshes.get(id);
     }
 

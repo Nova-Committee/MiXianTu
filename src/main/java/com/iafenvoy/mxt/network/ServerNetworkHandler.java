@@ -5,7 +5,7 @@ import com.iafenvoy.mxt.attachment.WheelLayoutAttachment;
 import com.iafenvoy.mxt.item.block.entity.ForgingTableBlockEntity;
 import com.iafenvoy.mxt.network.payload.*;
 import com.iafenvoy.mxt.registry.MxtAttachments;
-import com.iafenvoy.mxt.runtime.cultivation.CultivationMethodService.CultivationResult;
+import com.iafenvoy.mxt.runtime.cultivation.CultivationMethodService.CultivationStep;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationModeService;
 import com.iafenvoy.mxt.runtime.economy.PlayerTradeService;
 import com.iafenvoy.mxt.runtime.forging.ForgingWorkstationService;
@@ -16,6 +16,7 @@ import com.iafenvoy.mxt.screen.menu.*;
 import com.iafenvoy.mxt.util.ProfilerSubscriptions;
 import com.iafenvoy.saturn.profiling.LoggerDispatcher;
 import com.iafenvoy.saturn.profiling.LoggingLevel;
+import com.iafenvoy.saturn.runtime.resulting.Result;
 import com.iafenvoy.saturn.util.PlayerNames;
 import com.mojang.logging.LogUtils;
 import net.minecraft.resources.Identifier;
@@ -164,8 +165,9 @@ public final class ServerNetworkHandler {
 
     static void onCultivationToggle(CultivationToggleC2SPayload payload, IPayloadContext context) {
         if (!(context.player() instanceof ServerPlayer player)) return;
-        CultivationResult result = CultivationModeService.toggle(player);
-        if (!result.started() && !result.stopped()) CultivationModeService.notifyFailure(player, result);
+        Result<CultivationStep> result = CultivationModeService.toggle(player);
+        boolean stepped = result instanceof Result.SuccessResult<CultivationStep> ok && (ok.data().started() || ok.data().stopped());
+        if (!stepped) CultivationModeService.notifyFailure(player, result);
     }
 
     // The key is a held state, so it is written where the flight reads it and nowhere else: a player who is not

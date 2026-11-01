@@ -8,6 +8,8 @@ import com.iafenvoy.mxt.runtime.world.SecretRealmEntryLocator;
 import com.iafenvoy.mxt.runtime.world.SecretRealmRecord;
 import com.iafenvoy.mxt.runtime.world.SecretRealmRegistry;
 import com.iafenvoy.mxt.runtime.world.SecretRealmService;
+import com.iafenvoy.saturn.runtime.resulting.Failure;
+import com.iafenvoy.saturn.runtime.resulting.Result;
 import com.iafenvoy.saturn.util.DefinitionText;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.builder.RequiredArgumentBuilder;
@@ -27,6 +29,7 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.List;
@@ -87,9 +90,11 @@ public final class SecretRealmCommand {
     private static int join(CommandSourceStack source, Identifier dimension) throws CommandSyntaxException {
         SecretRealmRecord record = record(source, dimension);
         if (record == null) return 0;
-        SecretRealmService.TravelResult result = SecretRealmService.enterInstance(source.getPlayerOrException(), record, null, null);
-        if (result.isFailure()) {
-            source.sendFailure(result.message().orElseGet(() -> result.failure().message()));
+        Result<LivingEntity> result = SecretRealmService.enterInstance(source.getPlayerOrException(), record, null, null);
+        if (result instanceof Result.FailureResult<LivingEntity>(
+                Failure failure1
+        )) {
+            source.sendFailure(failure1.message());
             return 0;
         }
         source.sendSuccess(() -> Component.translatable("command.mxt.secret_realm.entered", DefinitionText.nameOrId(record.definition())), true);
@@ -112,12 +117,16 @@ public final class SecretRealmCommand {
         ServerLevel level = source.getServer().getLevel(record.dimension());
         int slot = record.holds(player.getUUID()) ? record.members().indexOf(player.getUUID()) : record.members().size();
         SecretRealmEntryLocator.Arrival arrival = SecretRealmEntryLocator.arrival(level, record, slot, player.getYRot(), player.getXRot());
-        RiftLanding.Inspection primary = RiftLanding.inspect(level, player, arrival.position());
-        RiftLanding.Inspection landing = SecretRealmService.checkArrival(level, player, arrival.position(), true);
+        Result<RiftLanding.Inspection> primary = RiftLanding.inspect(level, player, arrival.position());
+        Result<RiftLanding.Inspection> landing = SecretRealmService.checkArrival(level, player, arrival.position(), true);
+        Vec3 landingPosition = landing.getData().map(RiftLanding.Inspection::position).orElse(arrival.position());
         source.sendSuccess(() -> Component.translatable("command.mxt.secret_realm.landing", dimension.toString(), coordinates(arrival.position()),
-                coordinates(landing.position()), landing.isSuccess() ? Component.translatable("command.mxt.secret_realm.safe") : landing.failure().message(),
-                primary.isSuccess() ? Component.translatable("command.mxt.secret_realm.safe") : primary.failure().message()), false);
-        return landing.isSuccess() ? 1 : 0;
+                coordinates(landingPosition),
+                landing instanceof Result.SuccessResult<RiftLanding.Inspection> ? Component.translatable("command.mxt.secret_realm.safe")
+                        : landing.getFailure().orElseThrow().message(),
+                primary instanceof Result.SuccessResult<RiftLanding.Inspection> ? Component.translatable("command.mxt.secret_realm.safe")
+                        : primary.getFailure().orElseThrow().message()), false);
+        return landing instanceof Result.SuccessResult<RiftLanding.Inspection> ? 1 : 0;
     }
 
     private static int anchor(CommandSourceStack source, Identifier dimension, Vec3 position) throws CommandSyntaxException {
@@ -125,9 +134,11 @@ public final class SecretRealmCommand {
         SecretRealmRecord record = prepare(source, dimension);
         if (record == null) return 0;
         ServerLevel level = source.getServer().getLevel(record.dimension());
-        RiftLanding.Inspection landing = SecretRealmService.checkArrival(level, player, position, false);
-        if (landing.isFailure()) {
-            source.sendFailure(landing.failure().message());
+        Result<RiftLanding.Inspection> landing = SecretRealmService.checkArrival(level, player, position, false);
+        if (landing instanceof Result.FailureResult<RiftLanding.Inspection>(
+                Failure failure1
+        )) {
+            source.sendFailure(failure1.message());
             return 0;
         }
         SecretRealmRegistry.replace(record.withAnchor(position));
@@ -164,10 +175,12 @@ public final class SecretRealmCommand {
 
     private static int enterSecretRealm(CommandSourceStack source, Reference<SecretRealm> definition) throws CommandSyntaxException {
         ServerPlayer player = source.getPlayerOrException();
-        SecretRealmService.TravelResult result = SecretRealmService.enter(player, source.getServer(), definition);
-        if (!result.isSuccess()) {
-            source.sendFailure(result.message().orElseGet(() -> Component.translatable("command.mxt.secret_realm.enter_failed",
-                    result.failure().message())));
+        Result<LivingEntity> result = SecretRealmService.enter(player, source.getServer(), definition);
+        if (result instanceof Result.FailureResult<LivingEntity>(
+                Failure failure1
+        )) {
+            source.sendFailure(Component.translatable("command.mxt.secret_realm.enter_failed",
+                    failure1.message()));
             return 0;
         }
         source.sendSuccess(() -> Component.translatable("command.mxt.secret_realm.entered", DefinitionText.nameOrId(definition)), true);
@@ -176,10 +189,12 @@ public final class SecretRealmCommand {
 
     private static int exitSecretRealm(CommandSourceStack source) throws CommandSyntaxException {
         ServerPlayer player = source.getPlayerOrException();
-        SecretRealmService.TravelResult result = SecretRealmService.exit(player);
-        if (!result.isSuccess()) {
-            source.sendFailure(result.message().orElseGet(() -> Component.translatable("command.mxt.secret_realm.exit_failed",
-                    result.failure().message())));
+        Result<LivingEntity> result = SecretRealmService.exit(player);
+        if (result instanceof Result.FailureResult<LivingEntity>(
+                Failure failure1
+        )) {
+            source.sendFailure(Component.translatable("command.mxt.secret_realm.exit_failed",
+                    failure1.message()));
             return 0;
         }
         source.sendSuccess(() -> Component.translatable("command.mxt.secret_realm.exited"), true);

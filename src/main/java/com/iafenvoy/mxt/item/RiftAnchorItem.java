@@ -1,13 +1,15 @@
 package com.iafenvoy.mxt.item;
 
 import com.iafenvoy.mxt.data.item.RiftComponent;
-import com.iafenvoy.mxt.data.rift.*;
+import com.iafenvoy.mxt.data.rift.RiftDestination;
+import com.iafenvoy.mxt.data.rift.RiftPlacement;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.runtime.rift.RiftEditorService;
 import com.iafenvoy.mxt.runtime.rift.RiftGeometry;
 import com.iafenvoy.mxt.runtime.rift.RiftRecord;
-import com.iafenvoy.mxt.runtime.rift.RiftResult;
 import com.iafenvoy.mxt.runtime.rift.RiftService;
+import com.iafenvoy.saturn.runtime.resulting.Failure;
+import com.iafenvoy.saturn.runtime.resulting.Result;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
@@ -63,12 +65,12 @@ public class RiftAnchorItem extends Item {
         Direction face = context.getClickedFace();
         Vec3 n = new Vec3(face.getStepX(), face.getStepY(), face.getStepZ());
         Vec3 tangent = face.getAxis().isVertical() ? new Vec3(1, 0, 0) : new Vec3(n.z, 0, -n.x);
-        RiftResult result = RiftEditorService.place(player, context.getHand(), new RiftPlacement(context.getClickLocation(), n, tangent));
-        if (result.isFailure()) {
-            player.sendSystemMessage(Component.translatable("rift.mxt.failure.edit", result.detail()), true);
+        Result<RiftRecord> result = RiftEditorService.place(player, context.getHand(), new RiftPlacement(context.getClickLocation(), n, tangent));
+        if (result instanceof Result.FailureResult<RiftRecord>(Failure failure1)) {
+            player.sendSystemMessage(Component.translatable("rift.mxt.failure.edit", failure1.message()), true);
             return InteractionResult.FAIL;
         }
-        player.sendSystemMessage(Component.translatable(result.record().data().enabled() ? "rift.mxt.placed" : "rift.mxt.placed_disabled"), true);
+        player.sendSystemMessage(Component.translatable(result.getData().orElseThrow().data().enabled() ? "rift.mxt.placed" : "rift.mxt.placed_disabled"), true);
         return InteractionResult.SUCCESS_SERVER;
     }
 

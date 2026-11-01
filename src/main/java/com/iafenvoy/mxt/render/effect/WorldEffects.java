@@ -189,9 +189,7 @@ public final class WorldEffects implements AutoCloseable {
             if (prepared == null) return;
             try (prepared) {
                 if (!this.active() || !EffectTargets.valid(target)) return;
-                try (RenderPass pass = RenderSystem.getDevice().createCommandEncoder().createRenderPass(
-                        () -> "MXT world effects", target.getColorTextureView(), OptionalInt.empty(),
-                        target.getDepthTextureView(), OptionalDouble.empty())) {
+                try (RenderPass pass = RenderSystem.getDevice().createCommandEncoder().createRenderPass(() -> "MXT world effects", target.getColorTextureView(), OptionalInt.empty(), target.getDepthTextureView(), OptionalDouble.empty())) {
                     RenderSystem.bindDefaultUniforms(pass);
                     prepared.render(pass);
                 }

@@ -232,7 +232,7 @@ final class MultiblockStructureView {
             return true;
         }
         float progress = (float) ((mouseX - timelineX) / Math.max(1.0D, timelineWidth));
-        this.manualStep = Math.round(clamp(progress, 0.0F, 1.0F) * (maxStep - 1)) + 1;
+        this.manualStep = Math.round(Mth.clamp(progress, 0.0F, 1.0F) * (maxStep - 1)) + 1;
         return true;
     }
 
@@ -256,7 +256,7 @@ final class MultiblockStructureView {
     boolean mouseDragged(double deltaX, double deltaY) {
         if (!this.dragging) return false;
         this.viewYaw += (float) deltaX * DRAG_YAW_SPEED;
-        this.viewPitch = clamp(this.viewPitch + (float) deltaY * DRAG_PITCH_SPEED, -PITCH_LIMIT, PITCH_LIMIT);
+        this.viewPitch = Mth.clamp(this.viewPitch + (float) deltaY * DRAG_PITCH_SPEED, -PITCH_LIMIT, PITCH_LIMIT);
         return true;
     }
 
@@ -322,7 +322,7 @@ final class MultiblockStructureView {
         float vertical = spanY + Math.max(spanX, spanZ) * 0.45F;
         float byWidth = width / Math.max(1.0F, footprint * 1.7F);
         float byHeight = height / Math.max(1.0F, vertical * 1.8F);
-        return clamp(Math.min(byWidth, byHeight), MIN_SCENE_SCALE, MAX_SCENE_SCALE);
+        return Mth.clamp(Math.min(byWidth, byHeight), MIN_SCENE_SCALE, MAX_SCENE_SCALE);
     }
 
     private static int layerCount(MultiblockStructure structure) {
@@ -367,10 +367,6 @@ final class MultiblockStructureView {
 
     private static boolean isInside(double mouseX, double mouseY, int x, int y, int width, int height) {
         return mouseX >= x && mouseX < x + width && mouseY >= y && mouseY < y + height;
-    }
-
-    private static float clamp(float value, float min, float max) {
-        return Math.max(min, Math.min(max, value));
     }
 
     private record StructureBounds(int minX, int minY, int minZ, int maxX, int maxY, int maxZ) {

@@ -10,6 +10,7 @@ import com.iafenvoy.saturn.data.storage.builtin.ContainerDataStorage;
 import com.iafenvoy.saturn.data.storage.builtin.CooldownDataStorage;
 import com.iafenvoy.saturn.runtime.resulting.Failure;
 import com.iafenvoy.saturn.runtime.resulting.Failures;
+import com.iafenvoy.saturn.runtime.resulting.Result;
 import com.iafenvoy.saturn.runtime.resulting.failures.AbilityFailure;
 import com.iafenvoy.saturn.util.DefinitionText;
 import com.iafenvoy.saturn.util.formula.NumberProvider;
@@ -63,9 +64,9 @@ public record StorageAbilityType(NumberProvider slots,
     }
 
     @Override
-    public PressResult activate(ToggleContext context) {
+    public Result<Void> activate(ToggleContext context) {
         Optional<Failure> refusal = this.canActivate(context);
-        if (refusal.isPresent()) return PressResult.refused(refusal.get());
+        if (refusal.isPresent()) return Result.failure(refusal.get());
         ServerPlayer player = (ServerPlayer) context.holder();
         ItemStack carrier = context.carrier();
         int capacity = ArtifactService.storageSlots(carrier, context.ability(), context.formula());
@@ -77,6 +78,6 @@ public record StorageAbilityType(NumberProvider slots,
                 // The client rebuilds the same menu shape from the row count, which is all it needs: the slots
                 // themselves arrive through the menu sync.
                 buffer -> buffer.writeVarInt(rows));
-        return PressResult.activated();
+        return Result.success();
     }
 }

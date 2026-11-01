@@ -10,7 +10,7 @@ import com.iafenvoy.saturn.data.cost.CostTarget;
 import com.iafenvoy.saturn.data.cost.CostTransaction;
 import com.iafenvoy.saturn.data.cost.Debit;
 import com.iafenvoy.saturn.data.cost.builtin.ResourceChannel;
-import com.iafenvoy.saturn.runtime.resulting.ResultWithData;
+import com.iafenvoy.saturn.runtime.resulting.Result;
 import com.iafenvoy.saturn.runtime.resulting.failures.CostFailure;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
@@ -23,7 +23,7 @@ import java.util.List;
 
 public final class AuraCostSources {
     // Read the payer at bind time: withPayer must not leave a source pointing at the previous account.
-    public static final AuraCostSource ACCOUNT = (context, aura, amount) -> ResultWithData.success(ResourceChannel.transaction(context, aura.value().resource(), amount));
+    public static final AuraCostSource ACCOUNT = (context, aura, amount) -> Result.success(ResourceChannel.transaction(context, aura.value().resource(), amount));
     // Quotes carry an amount but deliberately have no inventory to execute against.
     public static final AuraCostSource QUOTE = store(null, null);
 
@@ -42,7 +42,7 @@ public final class AuraCostSources {
     private static AuraCostSource store(@Nullable AuraAccess access, @Nullable Object identity) {
         // access performs transfers; identity names the stock for duplicate checks and re-entrancy guards.
         // A bank uses its original object, a pool uses section coordinates, and a quote has no identity.
-        return (context, aura, amount) -> ResultWithData.success(new StoreTransaction(access, identity, context.payer(), context.registries(), aura, amount));
+        return (context, aura, amount) -> Result.success(new StoreTransaction(access, identity, context.payer(), context.registries(), aura, amount));
     }
 
     private static final class StoreTransaction extends CostTransaction {
@@ -60,7 +60,7 @@ public final class AuraCostSources {
         }
 
         @Override
-        protected ResultWithData<List<Debit>> perform(boolean simulate) {
+        protected Result<List<Debit>> perform(boolean simulate) {
             if (this.access == null) return refused(CostFailure.NO_CHANNEL);
             double amount = this.amount();
             if (!Double.isFinite(amount) || amount < 0.0D) return refused(CostFailure.INVALID_AMOUNT);
@@ -75,7 +75,7 @@ public final class AuraCostSources {
             // A faulty external store may violate exact; preserve its known partial debit for the payment's WARN.
             double taken = amount - remainder;
             List<Debit> debits = taken > 0.0D ? List.of(Debit.of(this.target(), taken)) : List.of();
-            return remainder == 0.0D ? took(debits) : ResultWithData.failure(debits, AuraFailure.INSUFFICIENT_AURA);
+            return remainder == 0.0D ? took(debits) : refused(AuraFailure.INSUFFICIENT_AURA);
         }
 
         @Override

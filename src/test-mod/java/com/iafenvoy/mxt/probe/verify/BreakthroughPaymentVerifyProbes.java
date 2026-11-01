@@ -17,6 +17,9 @@ import com.iafenvoy.saturn.registry.SaturnResourceKeys;
 import com.iafenvoy.saturn.runtime.resource.ResourceSeeding;
 import com.iafenvoy.saturn.runtime.resource.ResourceService;
 import com.iafenvoy.saturn.runtime.resulting.Failures;
+import com.iafenvoy.mxt.runtime.resulting.MessageFailure;
+import com.iafenvoy.saturn.runtime.resulting.Failure;
+import com.iafenvoy.saturn.runtime.resulting.Result;
 import com.iafenvoy.saturn.util.HolderHelper;
 import com.iafenvoy.saturn.util.formula.FormulaContext;
 import net.minecraft.core.Holder;
@@ -56,14 +59,16 @@ public final class BreakthroughPaymentVerifyProbes {
 
         resources.set(payment, 0.0D);
         spirit.setCultivationProgress(aura, threshold);
-        CultivationService.BreakthroughResult refused = CultivationService.attempt(body, spirit, resources, aura, formula, () -> true);
-        context.expect("an empty account is refused", refused.failure(), Failures.INSUFFICIENT_RESOURCE);
+        Result<Void> refused = CultivationService.attempt(body, spirit, resources, aura, formula, () -> true);
+        Failure refusal = refused.getFailure().orElseThrow();
+        context.expect("an empty account is refused",
+                MessageFailure.reason(refusal), Failures.INSUFFICIENT_RESOURCE);
         context.expect("a refused breakthrough stays outside the realm", spirit.realmStage(aura) == null, true);
 
         ProbeKit.ensureResource(body, resources, payment, 100.0D);
         spirit.setCultivationProgress(aura, threshold);
-        CultivationService.BreakthroughResult paid = CultivationService.attempt(body, spirit, resources, aura, formula, () -> true);
-        context.check("a body holding the payment breaks through", paid.isSuccess());
+        Result<Void> paid = CultivationService.attempt(body, spirit, resources, aura, formula, () -> true);
+        context.check("a body holding the payment breaks through", paid instanceof Result.SuccessResult<?>);
         context.expect("the entry cost comes out of the account", resources.get(payment), 75.0D);
         context.expect("the body lands in the entry realm",
                 spirit.realmStage(aura) == null ? "none" : HolderHelper.id(spirit.realmStage(aura)).toString(),

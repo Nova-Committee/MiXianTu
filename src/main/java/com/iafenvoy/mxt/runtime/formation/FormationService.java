@@ -9,23 +9,26 @@ import com.iafenvoy.mxt.runtime.MxtProfilerSources;
 import com.iafenvoy.mxt.runtime.formation.FormationService.MaintainRule.PaymentPlan;
 import com.iafenvoy.saturn.attachment.ResourceHolderAttachment;
 import com.iafenvoy.saturn.data.cost.CostPayment;
+import com.iafenvoy.saturn.data.cost.Debit;
 import com.iafenvoy.saturn.data.cost.context.CostContext;
 import com.iafenvoy.saturn.data.cost.context.CostOrigins;
 import com.iafenvoy.saturn.profiling.ProfilerScope;
 import com.iafenvoy.saturn.profiling.ServerProfiling;
 import com.iafenvoy.saturn.runtime.resource.ResourceTransactions;
 import com.iafenvoy.saturn.runtime.resource.ResourceTransactions.Evaluation;
+import com.iafenvoy.saturn.runtime.resulting.Failure;
 import com.iafenvoy.saturn.runtime.resulting.Failures;
 import com.iafenvoy.saturn.runtime.resulting.Result;
-import com.iafenvoy.saturn.runtime.resulting.ResultWithData;
 import com.iafenvoy.saturn.util.HolderHelper;
 import com.iafenvoy.saturn.util.MiscUtil;
 import com.iafenvoy.saturn.util.formula.FormulaContext;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
+import net.minecraft.util.Mth;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -36,27 +39,27 @@ public final class FormationService {
     private FormationService() {
     }
 
-    public static ResultWithData<FormationInstance> activate(Identifier id, Formation definition, ResourceHolderAttachment resources, FormulaContext context) {
+    public static Result<FormationInstance> activate(Identifier id, Formation definition, ResourceHolderAttachment resources, FormulaContext context) {
         try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.FORMATION)) {
             return activate(id, definition, resources, context, null);
         }
     }
 
-    public static ResultWithData<FormationInstance> activate(Identifier id, Formation definition, ResourceHolderAttachment resources, FormulaContext context, UUID owner) {
+    public static Result<FormationInstance> activate(Identifier id, Formation definition, ResourceHolderAttachment resources, FormulaContext context, UUID owner) {
         try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.FORMATION)) {
             double radius = MiscUtil.positive(definition.radius().evaluate(context));
-            if (radius <= 0.0D) return ResultWithData.failure(null, Failures.INVALID_FORMULA);
+            if (radius <= 0.0D) return Result.failure(Failures.INVALID_FORMULA);
             // The activating player's own account is named directly: activation is driven from a controller block, so
             // there is no entity here to take a channel from, only an account to charge.
-            CostPayment.PaymentResult payment = CostPayment.pay(definition.activationCosts(),
+            Result<List<Debit>> payment = CostPayment.pay(definition.activationCosts(),
                     CostContext.account(resources, null, context, CostOrigins.FORMATION_ACTIVATION));
-            if (!payment.isSuccess())
-                return ResultWithData.failure(null, Failures.INSUFFICIENT_RESOURCE, payment.failedResource());
-            return ResultWithData.success(owner == null ? new FormationInstance(id, radius) : new FormationInstance(id, radius, owner));
+            if (payment instanceof Result.FailureResult<List<Debit>>(Failure failure))
+                return Result.failure(Failures.INSUFFICIENT_RESOURCE, failure.resource().orElse(null));
+            return Result.success(owner == null ? new FormationInstance(id, radius) : new FormationInstance(id, radius, owner));
         }
     }
 
-    public static Result maintain(FormationInstance instance, Formation definition, ResourceHolderAttachment resources, FormulaContext context) {
+    public static Result<Void> maintain(FormationInstance instance, Formation definition, ResourceHolderAttachment resources, FormulaContext context) {
         try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.FORMATION)) {
             return maintain(instance, definition, resources, context, Map.of());
         }
@@ -64,8 +67,7 @@ public final class FormationService {
 
     // The formation's own blocks pay first, then its stock. A failure leaves the instance untouched rather than
     // marking it inactive, because tearing a formation down belongs to FormationWorldService#deactivate.
-    public static Result maintain(FormationInstance instance, Formation definition, ResourceHolderAttachment resources,
-                                  FormulaContext context, Map<Holder<Aura>, Double> supplied) {
+    public static Result<Void> maintain(FormationInstance instance, Formation definition, ResourceHolderAttachment resources, FormulaContext context, Map<Holder<Aura>, Double> supplied) {
         try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.FORMATION)) {
             Map<Holder<Aura>, Double> capacity = definition.storage()
                     .map(storage -> MaintainRule.capacities(storage, context))
@@ -75,8 +77,9 @@ public final class FormationService {
             CostContext costContext = CostContext.account(resources, null, context, CostOrigins.FORMATION_MAINTENANCE);
             PaymentPlan plan = MaintainRule.plan(definition, costContext, supplied, instance.stored(), capacity);
             if (plan == null) return Result.failure(Failures.UNKNOWN);
-            ResultWithData<Map<Identifier, Double>> payment = ResourceTransactions.tryConsume(resources, Evaluation.of(context.registries(), plan.fromOwner()));
-            if (payment.isFailure()) return Result.failure(Failures.UNKNOWN, payment.failedResource());
+            Result<Map<Identifier, Double>> payment = ResourceTransactions.tryConsume(resources, Evaluation.of(context.registries(), plan.fromOwner()));
+            if (payment instanceof Result.FailureResult<Map<Identifier, Double>>(Failure failure))
+                return Result.failure(Failures.UNKNOWN, failure.resource().orElse(null));
             plan.applyTo(instance);
             instance.maintained();
             return Result.success();
@@ -143,7 +146,7 @@ public final class FormationService {
                 double used = Math.min(amount, here);
                 if (used > 0.0D) spentSupply.merge(aura, used, Double::sum);
                 double left = amount - used;
-                double banked = aura == null ? 0.0D : Math.min(left, Math.max(0.0D, stored.getOrDefault(aura, 0.0D)));
+                double banked = aura == null ? 0.0D : Mth.clamp(stored.getOrDefault(aura, 0.0D), 0.0D, left);
                 if (banked > 0.0D) fromStock.merge(aura, banked, Double::sum);
                 double owed = left - banked;
                 if (owed > 0.0D) fromPayer.merge(id, owed, Double::sum);
@@ -154,7 +157,7 @@ public final class FormationService {
                 double surplus = amount - spentSupply.getOrDefault(aura, 0.0D);
                 if (surplus <= 0.0D) return;
                 double room = capacity.getOrDefault(aura, 0.0D) - stored.getOrDefault(aura, 0.0D);
-                double banked = Math.min(surplus, Math.max(0.0D, room));
+                double banked = Mth.clamp(room, 0.0D, surplus);
                 if (banked > 0.0D) deposit.merge(aura, banked, Double::sum);
             });
             return new PaymentPlan(fromStock, fromPayer, deposit);

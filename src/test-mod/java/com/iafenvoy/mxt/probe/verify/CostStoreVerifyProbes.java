@@ -21,7 +21,7 @@ import com.iafenvoy.mxt.probe.ProbeContext;
 import com.iafenvoy.mxt.probe.ProbeDefinitions;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.saturn.runtime.resulting.Failure;
-import com.iafenvoy.saturn.runtime.resulting.ResultWithData;
+import com.iafenvoy.saturn.runtime.resulting.Result;
 import com.iafenvoy.saturn.runtime.resulting.failures.CostFailure;
 import com.iafenvoy.saturn.util.formula.FormulaContext;
 import com.mojang.serialization.JsonOps;
@@ -95,7 +95,7 @@ public final class CostStoreVerifyProbes {
         twoFees.addAll(decodeCosts(registries, entry));
         CostPayment bill = CostPayment.of(here);
         if (bill.price(oneFee, here).isPresent() || bill.price(decodeCosts(registries, entry), there).isPresent()) {
-            context.fail("two pool fees in one section could not be priced: " + bill.failure());
+            context.fail("two pool fees in one section could not be priced: " + bill.failure().orElse(null));
             return;
         }
         Map<Holder<Aura>, Double> auraPrice = Costs.auras(twoFees, here);
@@ -109,14 +109,14 @@ public final class CostStoreVerifyProbes {
         SimpleContainer container = new SimpleContainer(1);
         container.setItem(0, new ItemStack(Items.EMERALD, 2));
         CostContext costs = CostContext.of(context.player(), CostOrigins.SCRIPT).withItemTarget(container);
-        CostPayment.PaymentResult paid = CostPayment.pay(decodeCosts(registries,
+        Result<List<Debit>> paid = CostPayment.pay(decodeCosts(registries,
                 "[{\"type\": \"mxt:item\", \"items\": [\"minecraft:emerald\"], \"amount\": 2}]"), costs);
-        if (!paid.isSuccess()) {
-            context.fail("a payable item cost was refused: " + paid.failure());
+        if (paid.getFailure().isPresent()) {
+            context.fail("a payable item cost was refused: " + paid.getFailure().orElse(null));
             return;
         }
         if (container.getItem(0).getCount() != 0) context.fail("a 2-item cost left " + container.getItem(0).getCount());
-        List<Debit> debits = paid.debits();
+        List<Debit> debits = paid.getData().orElse(List.of());
         if (debits.size() != 1) {
             context.fail("a one-fee payment reported " + debits.size() + " receipts");
             return;
@@ -130,7 +130,7 @@ public final class CostStoreVerifyProbes {
         context.expect("the receipt keeps the count that left", items.getFirst().getCount(), 2);
     }
 
-    // A short real transfer warns without cancelling the bill, and reports only the amount that really left.
+    // A short real transfer warns without cancelling the bill; a failure no longer carries the part it did take.
     // Large fractional amounts remain expressible by a bank.
     private static void bankExact(ProbeContext context) {
         RegistryAccess registries = context.registries();
@@ -139,31 +139,32 @@ public final class CostStoreVerifyProbes {
         ShortBank bank = new ShortBank(3);
         CostContext costs = AuraCostContexts.bank(bank, context.player(), FormulaContext.of(context.player()),
                 CostOrigins.SCRIPT);
-        CostPayment.PaymentResult paid = CostPayment.pay(decodeCosts(registries,
+        Result<List<Debit>> paid = CostPayment.pay(decodeCosts(registries,
                 "[{\"type\": \"mxt:aura\", \"aura\": \"mxt_test:qi\", \"amount\": 5}]"), costs);
-        if (paid.isFailure()) {
-            context.fail("a short real bank transfer cancelled the bill: " + paid.failure());
+        if (paid.getFailure().isPresent()) {
+            context.fail("a short real bank transfer cancelled the bill: " + paid.getFailure().orElse(null));
             return;
         }
-        context.expect("the part the bank did hand over is reported", Costs.auras(paid).getOrDefault(qi, 0.0D), 3.0D);
-        context.expect("the bank really lost the part it reported", bank.removed, 3.0D);
+        // The partial debit the store wrote before refusing has no place in the new result, so nothing is reported.
+        context.expect("a partial refusal reports no receipt", Costs.auras(paid).getOrDefault(qi, 0.0D), 0.0D);
+        context.expect("the bank really lost the part it handed over", bank.removed, 3.0D);
 
         ShortBank whole = new ShortBank(3_000_000_000.25D);
         CostContext huge = AuraCostContexts.bank(whole, context.player(), FormulaContext.of(context.player()),
                 CostOrigins.SCRIPT);
-        CostPayment.PaymentResult large = CostPayment.pay(decodeCosts(registries,
+        Result<List<Debit>> large = CostPayment.pay(decodeCosts(registries,
                 "[{\"type\": \"mxt:aura\", \"aura\": \"mxt_test:qi\", \"amount\": 3000000000.25}]"), huge);
-        if (large.isFailure()) context.fail("a double bank amount was refused: " + large.failure());
+        if (large.getFailure().isPresent()) context.fail("a double bank amount was refused: " + large.getFailure().orElse(null));
         context.expect("a bank preserves a large fractional amount", whole.removed, 3_000_000_000.25D);
 
         // An item demand past the integer range is the same refusal, and takes nothing either.
         SimpleContainer container = new SimpleContainer(1);
         container.setItem(0, new ItemStack(Items.EMERALD, 3));
         CostContext items = CostContext.of(context.player(), CostOrigins.SCRIPT).withItemTarget(container);
-        CostPayment.PaymentResult tooMany = CostPayment.pay(decodeCosts(registries,
+        Result<List<Debit>> tooMany = CostPayment.pay(decodeCosts(registries,
                 "[{\"type\": \"mxt:item\", \"items\": [\"minecraft:emerald\"], \"amount\": 3000000000}]"), items);
-        if (tooMany.isSuccess() || tooMany.failure() != CostFailure.INVALID_AMOUNT)
-            context.fail("an item count past the integer range read as " + tooMany.failure());
+        if (tooMany.getFailure().isEmpty() || tooMany.getFailure().orElse(null) != CostFailure.INVALID_AMOUNT)
+            context.fail("an item count past the integer range read as " + tooMany.getFailure().orElse(null));
         context.expect("an item count past the integer range took nothing", container.getItem(0).getCount(), 3);
     }
 
@@ -175,17 +176,17 @@ public final class CostStoreVerifyProbes {
         account.set(probe, 10.0D, 0.0D, 10_000.0D, -1L, "probe");
         CostContext costs = CostContext.account(account, null, FormulaContext.of(context.player()), CostOrigins.SCRIPT);
         Cost fee = decodeCosts(registries, "[{\"id\": \"mxt_test:trigger_probe\", \"amount\": 4}]").getFirst();
-        ResultWithData<Cost.Transaction> prepared = fee.prepare(costs);
-        if (prepared.isFailure()) {
-            context.fail("a plain resource fee could not be prepared: " + prepared.failure());
+        Result<Cost.Transaction> prepared = fee.prepare(costs);
+        if (prepared.getFailure().isPresent()) {
+            context.fail("a plain resource fee could not be prepared: " + prepared.getFailure().orElse(null));
             return;
         }
-        ResultWithData<List<Debit>> simulated = prepared.getData().execute(true);
-        if (simulated.isFailure()) {
-            context.fail("a payable resource fee was refused when asked: " + simulated.failure());
+        Result<List<Debit>> simulated = prepared.getData().orElseThrow().execute(true);
+        if (simulated.getFailure().isPresent()) {
+            context.fail("a payable resource fee was refused when asked: " + simulated.getFailure().orElse(null));
             return;
         }
-        context.expect("a check writes nothing", simulated.getData().size(), 0);
+        context.expect("a check writes nothing", simulated.getData().orElse(List.of()).size(), 0);
         context.expect("a check takes nothing", account.get(probe), 10.0D);
     }
 
@@ -214,9 +215,9 @@ public final class CostStoreVerifyProbes {
             context.fail("editing a two-account bill read as " + edited);
 
         // Paying it untouched still charges each account its own share: the refusal is about the edit, not the bill.
-        CostPayment.PaymentResult paid = mixed.pay();
-        if (!paid.isSuccess()) {
-            context.fail("an unedited two-account bill was refused: " + paid.failure());
+        Result<List<Debit>> paid = mixed.pay();
+        if (paid.getFailure().isPresent()) {
+            context.fail("an unedited two-account bill was refused: " + paid.getFailure().orElse(null));
             return;
         }
         context.expect("the first account paid its own share", first.get(probe), 8.0D);
@@ -237,7 +238,7 @@ public final class CostStoreVerifyProbes {
         String entries = "[{\"type\": \"mxt:aura\", \"aura\": \"mxt_test:qi\", \"amount\": 10},"
                 + "{\"type\": \"mxt:aura\", \"aura\": \"mxt_test:spirit_power\", \"amount\": 10}]";
         if (bill.price(decodeCosts(registries, entries), here).isPresent()) {
-            context.fail("a two-aura bill could not be priced: " + bill.failure());
+            context.fail("a two-aura bill could not be priced: " + bill.failure().orElse(null));
             return;
         }
         // Grant: all of the first, none of the second. The averaged ratio would charge 5 and 5.
@@ -249,9 +250,9 @@ public final class CostStoreVerifyProbes {
             context.fail("scaling a bill per source failed: " + scaled.get());
             return;
         }
-        CostPayment.PaymentResult paid = bill.pay();
-        if (paid.isFailure()) {
-            context.fail("a bill scaled per source was refused: " + paid.failure());
+        Result<List<Debit>> paid = bill.pay();
+        if (paid.getFailure().isPresent()) {
+            context.fail("a bill scaled per source was refused: " + paid.getFailure().orElse(null));
             return;
         }
         Map<Holder<Aura>, Double> price = Costs.auras(paid);

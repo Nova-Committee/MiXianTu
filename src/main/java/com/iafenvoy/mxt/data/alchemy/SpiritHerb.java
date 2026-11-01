@@ -131,7 +131,7 @@ public record SpiritHerb(List<Either<Holder<Block>, TagKey<Block>>> blocks, int 
                 return DataResult.error(() -> "growth.drops must name at least one drop");
             DataResult<List<Cost>> costs = Costs.validateAuras(growth.costs);
             if (costs instanceof DataResult.Error<List<Cost>> error) return DataResult.error(error::message);
-            return nonNegative(growth.wildAge, "growth.wild_age").map(ignored -> growth);
+            return nonNegative(growth.wildAge, "growth.wild_age").map(_ -> growth);
         }
     }
 }

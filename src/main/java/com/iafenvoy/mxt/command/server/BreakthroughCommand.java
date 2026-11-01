@@ -7,7 +7,8 @@ import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService;
 import com.iafenvoy.mxt.runtime.curse.CurseService;
 import com.iafenvoy.saturn.registry.SaturnAttachments;
-import com.iafenvoy.saturn.runtime.resulting.Failures;
+import com.iafenvoy.saturn.runtime.resulting.Failure;
+import com.iafenvoy.saturn.runtime.resulting.Result;
 import com.iafenvoy.saturn.util.DefinitionText;
 import com.iafenvoy.saturn.util.formula.FormulaContext;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
@@ -38,12 +39,9 @@ public final class BreakthroughCommand {
     private static int attemptBreakthrough(CommandSourceStack source, Reference<Aura> aura) {
         ServerPlayer player = source.getPlayer();
         if (player == null) return 0;
-        CultivationService.BreakthroughResult result = CultivationService.attempt(player, player.getData(MxtAttachments.CULTIVATION), player.getData(SaturnAttachments.RESOURCE_HOLDER), aura, FormulaContext.of(player), () -> true);
-        if (result == null || !result.isSuccess()) {
-            Component reason = result == null || result.failure() == null
-                    ? Failures.UNKNOWN.message()
-                    : result.failure().message(result.failedResource());
-            source.sendFailure(Component.translatable("command.mxt.breakthrough.failed", reason));
+        Result<Void> result = CultivationService.attempt(player, player.getData(MxtAttachments.CULTIVATION), player.getData(SaturnAttachments.RESOURCE_HOLDER), aura, FormulaContext.of(player), () -> true);
+        if (result instanceof Result.FailureResult<Void>(Failure failure1)) {
+            source.sendFailure(Component.translatable("command.mxt.breakthrough.failed", failure1.message()));
             return 0;
         }
         source.sendSuccess(() -> Component.translatable("command.mxt.breakthrough.success", DefinitionText.nameOrId(aura)), true);
