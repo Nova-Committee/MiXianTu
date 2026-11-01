@@ -19,7 +19,7 @@ import com.iafenvoy.mxt.runtime.cultivation.CultivationIdentityService;
 import com.iafenvoy.mxt.runtime.cultivation.TechniqueHold;
 import com.iafenvoy.mxt.runtime.damage.DamageCalculationService;
 import com.iafenvoy.mxt.runtime.damage.DamageElements;
-import com.iafenvoy.mxt.runtime.element.ElementReactionService;
+import com.iafenvoy.mxt.runtime.ElementReactionService;
 import com.iafenvoy.mxt.runtime.hold.HoldLookup;
 import com.iafenvoy.mxt.runtime.item.ItemBindingService;
 import com.iafenvoy.mxt.runtime.progression.ProgressionDamageMultiplier;

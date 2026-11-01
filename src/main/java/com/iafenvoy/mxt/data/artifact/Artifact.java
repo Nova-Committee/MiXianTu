@@ -9,7 +9,7 @@ import com.iafenvoy.saturn.data.action.builtin.item.ConsumeHealthItemAction;
 import com.iafenvoy.saturn.data.condition.EntityCondition;
 import com.iafenvoy.saturn.registry.SaturnResourceKeys;
 import com.iafenvoy.saturn.util.codec.CollectionCodecs;
-import com.iafenvoy.mxt.util.codec.MxtCodecs;
+import com.iafenvoy.mxt.util.MxtCodecs;
 import com.iafenvoy.saturn.util.codec.RegistryCodecs;
 import com.iafenvoy.saturn.util.formula.NumberProvider;
 import com.iafenvoy.saturn.util.formula.number.Constant;

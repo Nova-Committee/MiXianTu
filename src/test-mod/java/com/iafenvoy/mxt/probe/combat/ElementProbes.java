@@ -23,7 +23,7 @@ import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.cultivation.*;
 import com.iafenvoy.mxt.runtime.damage.DamageCalculationService;
 import com.iafenvoy.mxt.runtime.damage.DamageElements;
-import com.iafenvoy.mxt.runtime.element.ElementReactionService;
+import com.iafenvoy.mxt.runtime.ElementReactionService;
 import com.iafenvoy.mxt.runtime.resulting.failures.CultivationFailure;
 import com.iafenvoy.mxt.runtime.resulting.failures.CultivationIdentityFailure;
 import com.iafenvoy.mxt.runtime.world.AuraPool;

@@ -8,7 +8,6 @@ import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.saturn.util.codec.RegistryCodecs;
 import com.mojang.datafixers.util.Either;
-import com.mojang.serialization.DataResult;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
@@ -29,19 +28,12 @@ public record HasTechniqueLootCondition(EntityTarget target,
             EntityTarget.CODEC.optionalFieldOf("entity", EntityTarget.THIS).forGetter(HasTechniqueLootCondition::target),
             RegistryCodecs.holderOrTagList(MxtResourceKeys.TECHNIQUE).optionalFieldOf("techniques", List.of()).forGetter(HasTechniqueLootCondition::techniques),
             Match.CODEC.optionalFieldOf("match", Match.ANY).forGetter(HasTechniqueLootCondition::match)
-    ).apply(i, HasTechniqueLootCondition::new)).validate(HasTechniqueLootCondition::validate);
-
-    private static DataResult<HasTechniqueLootCondition> validate(HasTechniqueLootCondition condition) {
-        return condition.match() == Match.ALL && condition.techniques().isEmpty()
-                ? DataResult.error(() -> "mxt:technique with match all has to name at least one technique")
-                : DataResult.success(condition);
-    }
+    ).apply(i, HasTechniqueLootCondition::new));
 
     @Override
     public boolean test(LootContext context) {
         Entity entity = this.target.get(context);
-        TechniqueAttachment spirit = entity == null ? null
-                : entity.getExistingData(MxtAttachments.TECHNIQUE).orElse(null);
+        TechniqueAttachment spirit = entity == null ? null : entity.getExistingData(MxtAttachments.TECHNIQUE).orElse(null);
         return spirit != null && HasTechniqueEntityCondition.learned(spirit, this.techniques, this.match);
     }
 

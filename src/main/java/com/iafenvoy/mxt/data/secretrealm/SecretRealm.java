@@ -7,7 +7,7 @@ import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.saturn.data.action.EntityAction;
 import com.iafenvoy.saturn.data.condition.EntityCondition;
 import com.iafenvoy.saturn.util.OptionalFloat;
-import com.iafenvoy.mxt.util.codec.MxtCodecs;
+import com.iafenvoy.mxt.util.MxtCodecs;
 import com.iafenvoy.saturn.util.codec.MiscCodecs;
 import com.iafenvoy.saturn.util.codec.OptionalCodecs;
 import com.mojang.datafixers.util.Pair;

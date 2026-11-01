@@ -6,8 +6,10 @@ import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.runtime.rift.RiftEditorService;
 import com.iafenvoy.mxt.runtime.rift.RiftGeometry;
 import com.iafenvoy.mxt.runtime.rift.RiftRecord;
+import com.iafenvoy.mxt.runtime.rift.RiftResult;
 import com.iafenvoy.mxt.runtime.rift.RiftService;
 import net.minecraft.core.Direction;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
@@ -43,7 +45,8 @@ public class RiftAnchorItem extends Item {
             return InteractionResult.SUCCESS_SERVER;
         }
         RiftRecord selected = pick(serverPlayer);
-        RiftEditorService.open(serverPlayer, selected == null ? null : selected.id(), null);
+        if (selected != null) RiftEditorService.open(serverPlayer, selected.id(), null);
+        else RiftEditorService.openItem(serverPlayer, hand);
         return InteractionResult.SUCCESS_SERVER;
     }
 
@@ -57,17 +60,15 @@ public class RiftAnchorItem extends Item {
             RiftEditorService.open(player, selected.id(), null);
             return InteractionResult.SUCCESS_SERVER;
         }
-        RiftComponent component = context.getItemInHand().getOrDefault(MxtDataComponents.RIFT, RiftComponent.EMPTY);
         Direction face = context.getClickedFace();
         Vec3 n = new Vec3(face.getStepX(), face.getStepY(), face.getStepZ());
         Vec3 tangent = face.getAxis().isVertical() ? new Vec3(1, 0, 0) : new Vec3(n.z, 0, -n.x);
-        RiftTemplate base = component.blueprint().orElse(null);
-        RiftDestination destination = component.recorded().orElse(base == null ? new RiftDestination.Position(Optional.of(player.level().dimension().identifier()),
-                player.position(), Optional.empty(), Optional.empty(), false) : base.destination());
-        RiftTemplate data = new RiftTemplate(base == null ? "portal" : base.key(), new RiftPlacement(context.getClickLocation(), n, tangent), false,
-                base == null ? RiftShape.DEFAULT : base.shape(), destination, base == null ? RiftAppearance.DEFAULT : base.appearance(),
-                base == null ? 0 : base.durationTicks(), component.recorded().isPresent() || base != null && base.enabled());
-        RiftEditorService.open(player, null, data);
+        RiftResult result = RiftEditorService.place(player, context.getHand(), new RiftPlacement(context.getClickLocation(), n, tangent));
+        if (result.isFailure()) {
+            player.sendSystemMessage(Component.translatable("rift.mxt.failure.edit", result.detail()), true);
+            return InteractionResult.FAIL;
+        }
+        player.sendSystemMessage(Component.translatable(result.record().data().enabled() ? "rift.mxt.placed" : "rift.mxt.placed_disabled"), true);
         return InteractionResult.SUCCESS_SERVER;
     }
 

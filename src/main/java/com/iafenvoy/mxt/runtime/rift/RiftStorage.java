@@ -31,10 +31,6 @@ public final class RiftStorage {
         if (state.initialized == world) return;
         state.initialized = world;
         state.pending.putAll(state.loaded);
-        for (RiftRecord record : world.legacy()) {
-            if (!record.expired(RiftService.now(level))) write(level, record, mesh(record));
-            world.migrated(record.id());
-        }
         for (RiftLocation location : world.locations()) RiftService.schedule(level, location);
     }
 

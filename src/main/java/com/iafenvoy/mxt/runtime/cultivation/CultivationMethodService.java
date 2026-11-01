@@ -17,7 +17,7 @@ import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.MxtProfilerSources;
 import com.iafenvoy.mxt.runtime.resulting.failures.CultivationFailure;
-import com.iafenvoy.mxt.runtime.trigger.CultivationTriggerService;
+import com.iafenvoy.mxt.runtime.CultivationTriggerService;
 import com.iafenvoy.mxt.runtime.world.AuraResult;
 import com.iafenvoy.saturn.attachment.ResourceHolderAttachment;
 import com.iafenvoy.saturn.data.cost.Cost;

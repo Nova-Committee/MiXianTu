@@ -12,6 +12,7 @@ import com.mojang.serialization.DataResult;
 import com.mojang.serialization.JsonOps;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.network.PacketDistributor;
@@ -46,6 +47,38 @@ public final class RiftEditorService {
         send(session, "open", record, record == null ? RiftExport.template(initial) : "");
     }
 
+    public static void openItem(ServerPlayer player, InteractionHand hand) {
+        if (!mayEdit(player)) return;
+        ItemStack stack = player.getItemInHand(hand);
+        if (!(stack.getItem() instanceof RiftAnchorItem)) return;
+        RiftTemplate initial = itemTemplate(player, stack);
+        Session session = new Session(UUID.randomUUID(), player, player.level(), null, RiftService.now(player.level()));
+        session.item = new ItemTarget(hand, stack, stack.getOrDefault(MxtDataComponents.RIFT, RiftComponent.EMPTY));
+        SESSIONS.put(player.getUUID(), session);
+        send(session, "open_item", null, RiftExport.template(initial));
+    }
+
+    public static RiftResult place(ServerPlayer player, InteractionHand hand, RiftPlacement placement) {
+        if (!mayEdit(player)) return RiftResult.rejected("permission");
+        ItemStack stack = player.getItemInHand(hand);
+        if (!(stack.getItem() instanceof RiftAnchorItem)) return RiftResult.rejected("hold_anchor");
+        return RiftService.publish(player.level(), null, 0, itemTemplate(player, stack, placement), player.getUUID(), true);
+    }
+
+    private static RiftTemplate itemTemplate(ServerPlayer player, ItemStack stack, RiftPlacement placement) {
+        RiftComponent component = stack.getOrDefault(MxtDataComponents.RIFT, RiftComponent.EMPTY);
+        RiftTemplate base = component.blueprint().orElse(null);
+        RiftDestination destination = component.recorded().orElseGet(() -> base != null ? base.destination()
+                : new RiftDestination.Position(Optional.of(player.level().dimension().identifier()), player.position(), Optional.empty(), Optional.empty(), false));
+        return new RiftTemplate(base == null ? "portal" : base.key(), placement, false, base == null ? RiftShape.DEFAULT : base.shape(),
+                destination, base == null ? RiftAppearance.DEFAULT : base.appearance(), base == null ? 0 : base.durationTicks(), base == null || base.enabled());
+    }
+
+    private static RiftTemplate itemTemplate(ServerPlayer player, ItemStack stack) {
+        return itemTemplate(player, stack, new RiftPlacement(player.position().add(player.getLookAngle().scale(3)),
+                new Vec3(0, 0, 1), new Vec3(1, 0, 0)));
+    }
+
     public static void handle(RiftEditC2SPayload payload, IPayloadContext context) {
         if (!(context.player() instanceof ServerPlayer player)) return;
         handle(player, payload);
@@ -65,6 +98,10 @@ public final class RiftEditorService {
             close(session);
             return;
         }
+        if (session.item != null && !session.item.matches(player)) {
+            send(session, "error", null, "item_changed");
+            return;
+        }
         if (now - session.lastAction < 4) {
             send(session, "error", null, "rate_limit");
             return;
@@ -77,10 +114,15 @@ public final class RiftEditorService {
         }
         switch (payload.action()) {
             case "reload" -> {
-                if (record != null) send(session, "accepted", record, "");
+                if (session.item != null) send(session, "item_accepted", null, RiftExport.template(itemTemplate(player, session.item.stack())));
+                else if (record != null) send(session, "accepted", record, "");
                 else send(session, "error", null, "missing");
             }
             case "copy" -> {
+                if (session.item != null) {
+                    send(session, "error", null, "item_only");
+                    return;
+                }
                 try {
                     RiftTemplate data = RiftTemplate.CODEC.parse(JsonOps.INSTANCE, JsonParser.parseString(payload.body())).result().orElse(null);
                     if (data == null || RiftService.validate(session.level, data).isFailure()
@@ -94,6 +136,10 @@ public final class RiftEditorService {
                 }
             }
             case "remove" -> {
+                if (session.item != null) {
+                    send(session, "error", null, "item_only");
+                    return;
+                }
                 if (record == null || record.revision() != payload.revision()) {
                     send(session, "error", null, "revision_conflict");
                     return;
@@ -115,13 +161,25 @@ public final class RiftEditorService {
                     send(session, "error", null, "invalid_json");
                     return;
                 }
-                if (data.placement().origin().distanceToSqr(player.position()) > 64 * 64) {
+                if (session.item == null && data.placement().origin().distanceToSqr(player.position()) > 64 * 64) {
                     send(session, "error", null, "distance");
                     return;
                 }
-                RiftResult validated = RiftService.validate(session.level, data);
+                RiftResult validated = session.item == null ? RiftService.validate(session.level, data) : RiftService.validateTemplate(session.level, data);
                 if (validated.isFailure()) {
                     send(session, "error", null, validated.detail());
+                    return;
+                }
+                if (session.item != null && (payload.action().equals("submit") || payload.action().equals("blueprint"))) {
+                    ItemTarget target = session.item;
+                    RiftComponent component = new RiftComponent(Optional.of(data), Optional.empty());
+                    target.stack().set(MxtDataComponents.RIFT, component);
+                    session.item = new ItemTarget(target.hand(), target.stack(), component);
+                    send(session, "item_accepted", null, RiftExport.template(data));
+                    return;
+                }
+                if (session.item != null && payload.action().equals("renew")) {
+                    send(session, "error", null, "item_only");
                     return;
                 }
                 if (payload.action().equals("blueprint")) {
@@ -130,8 +188,7 @@ public final class RiftEditorService {
                         send(session, "error", null, "hold_anchor");
                         return;
                     }
-                    RiftComponent old = stack.getOrDefault(MxtDataComponents.RIFT, RiftComponent.EMPTY);
-                    stack.set(MxtDataComponents.RIFT, new RiftComponent(Optional.of(data), old.recorded()));
+                    stack.set(MxtDataComponents.RIFT, new RiftComponent(Optional.of(data), Optional.empty()));
                     send(session, "blueprint", null, "");
                     return;
                 }
@@ -186,11 +243,19 @@ public final class RiftEditorService {
         SESSIONS.clear();
     }
 
+    private record ItemTarget(InteractionHand hand, ItemStack stack, RiftComponent component) {
+        boolean matches(ServerPlayer player) {
+            return !this.stack.isEmpty() && player.getItemInHand(this.hand) == this.stack
+                    && this.component.equals(this.stack.getOrDefault(MxtDataComponents.RIFT, RiftComponent.EMPTY));
+        }
+    }
+
     private static final class Session {
         final UUID token;
         final ServerPlayer player;
         final ServerLevel level;
         @Nullable UUID id;
+        @Nullable ItemTarget item;
         long lastSeen, lastAction = Long.MIN_VALUE / 2;
 
         Session(UUID token, ServerPlayer player, ServerLevel level, @Nullable UUID id, long now) {

@@ -1,5 +1,7 @@
 package com.iafenvoy.mxt.runtime.rift;
 
+import com.google.common.collect.LinkedHashMultimap;
+import com.google.common.collect.SetMultimap;
 import com.iafenvoy.saturn.util.dispatcher.TickDispatcher;
 import net.minecraft.core.SectionPos;
 import net.minecraft.world.level.ChunkPos;
@@ -10,28 +12,25 @@ import java.util.*;
 public final class RiftRuntime implements AutoCloseable {
     public final TickDispatcher<UUID> expiry = new TickDispatcher<>(0, 0);
     private final Map<UUID, RiftGeometry.Mesh> meshes = new HashMap<>();
-    private final Map<Long, Set<UUID>> sections = new HashMap<>();
-    private final Map<UUID, Set<Long>> occupied = new HashMap<>();
-    private final Map<Long, Set<UUID>> chunks = new HashMap<>();
+    private final SetMultimap<Long, UUID> sections = LinkedHashMultimap.create(), chunks = LinkedHashMultimap.create();
+    private final SetMultimap<UUID, Long> occupied = LinkedHashMultimap.create();
 
     public RiftRuntime(List<RiftRecord> records) {
-        for (RiftRecord record : records) {
-            RiftGeometry.triangulate(record.data().shape()).result().ifPresent(triangles -> this.put(record,
-                    RiftGeometry.mesh(record.data().shape(), record.data().placement(), triangles)));
-        }
+        for (RiftRecord record : records)
+            RiftGeometry.triangulate(record.data().shape()).result().ifPresent(triangles -> this.put(record, RiftGeometry.mesh(record.data().shape(), record.data().placement(), triangles)));
     }
 
     public RiftGeometry.Mesh mesh(UUID id) {
         return this.meshes.get(id);
     }
 
-    public boolean empty() {
+    public boolean isEmpty() {
         return this.meshes.isEmpty();
     }
 
     public boolean fits(UUID replacing, RiftGeometry.Mesh mesh, int sectionLimit) {
         for (long key : sections(mesh.bounds().inflate(0.5))) {
-            Set<UUID> ids = this.sections.getOrDefault(key, Set.of());
+            Set<UUID> ids = this.sections.get(key);
             if (ids.size() - (replacing != null && ids.contains(replacing) ? 1 : 0) >= sectionLimit) return false;
         }
         return true;
@@ -45,10 +44,10 @@ public final class RiftRuntime implements AutoCloseable {
     public void index(UUID id, AABB bounds) {
         this.remove(id);
         Set<Long> keys = sections(bounds.inflate(0.5));
-        this.occupied.put(id, keys);
+        this.occupied.putAll(id, keys);
         for (long key : keys) {
-            this.sections.computeIfAbsent(key, _ -> new HashSet<>()).add(id);
-            this.chunks.computeIfAbsent(ChunkPos.pack(SectionPos.x(key), SectionPos.z(key)), _ -> new HashSet<>()).add(id);
+            this.sections.put(key, id);
+            this.chunks.put(ChunkPos.pack(SectionPos.x(key), SectionPos.z(key)), id);
         }
     }
 
@@ -57,28 +56,20 @@ public final class RiftRuntime implements AutoCloseable {
     }
 
     public Set<UUID> inChunk(long chunk) {
-        return Set.copyOf(this.chunks.getOrDefault(chunk, Set.of()));
+        return this.chunks.get(chunk);
     }
 
     public void remove(UUID id) {
         this.meshes.remove(id);
-        Set<Long> keys = this.occupied.remove(id);
-        if (keys != null) for (long key : keys) {
-            Set<UUID> ids = this.sections.get(key);
-            ids.remove(id);
-            if (ids.isEmpty()) this.sections.remove(key);
-            long column = ChunkPos.pack(SectionPos.x(key), SectionPos.z(key));
-            Set<UUID> columnIds = this.chunks.get(column);
-            if (columnIds != null) {
-                columnIds.remove(id);
-                if (columnIds.isEmpty()) this.chunks.remove(column);
-            }
+        for (long key : this.occupied.removeAll(id)) {
+            this.sections.remove(key, id);
+            this.chunks.remove(ChunkPos.pack(SectionPos.x(key), SectionPos.z(key)), id);
         }
     }
 
     public Set<UUID> query(AABB bounds) {
         Set<UUID> result = new HashSet<>();
-        for (long key : sections(bounds)) result.addAll(this.sections.getOrDefault(key, Set.of()));
+        for (long key : sections(bounds)) result.addAll(this.sections.get(key));
         return result;
     }
 

@@ -32,7 +32,6 @@ public record HasSpiritRootLootCondition(EntityTarget target,
     @Override
     public boolean test(LootContext context) {
         Entity entity = this.target.get(context);
-        return entity != null && entity.getData(MxtAttachments.SPIRIT_IDENTITY).spiritRoots().stream()
-                .anyMatch(held -> RegistryCodecs.matches(this.spiritRoots, held));
+        return entity != null && entity.getData(MxtAttachments.SPIRIT_IDENTITY).spiritRoots().stream().anyMatch(held -> RegistryCodecs.matches(this.spiritRoots, held));
     }
 }

@@ -1,4 +1,4 @@
-package com.iafenvoy.mxt.runtime.trigger;
+package com.iafenvoy.mxt.runtime;
 
 import com.iafenvoy.mxt.attachment.CultivationAttachment;
 import com.iafenvoy.mxt.data.aura.Aura;

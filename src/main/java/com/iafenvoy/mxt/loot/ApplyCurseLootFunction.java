@@ -1,13 +1,13 @@
 package com.iafenvoy.mxt.loot;
 
 import com.iafenvoy.mxt.MiXianTu;
-import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
-import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.data.curse.Curse;
 import com.iafenvoy.mxt.runtime.curse.CurseService;
 import com.iafenvoy.saturn.util.formula.FormulaContext;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.ItemStack;
@@ -20,19 +20,17 @@ import org.jspecify.annotations.NonNull;
 import java.util.List;
 
 public final class ApplyCurseLootFunction extends LootItemConditionalFunction {
-    // Attribution for the shared curse ledger; the name is data, other sources name themselves differently.
-    private static final Identifier SOURCE = Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "loot");
-
     public static final MapCodec<ApplyCurseLootFunction> CODEC = RecordCodecBuilder.mapCodec(i -> commonFields(i).and(i.group(
             EntityTarget.CODEC.optionalFieldOf("entity", EntityTarget.THIS).forGetter(function -> function.target),
-            Identifier.CODEC.fieldOf("curse").forGetter(function -> function.curse),
+            Curse.CODEC.fieldOf("curse").forGetter(function -> function.curse),
             Codec.intRange(1, 256).optionalFieldOf("stacks", 1).forGetter(function -> function.stacks)
     )).apply(i, ApplyCurseLootFunction::new));
+    private static final Identifier SOURCE = Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "loot");
     private final EntityTarget target;
-    private final Identifier curse;
+    private final Holder<Curse> curse;
     private final int stacks;
 
-    private ApplyCurseLootFunction(List<LootItemCondition> conditions, EntityTarget target, Identifier curse, int stacks) {
+    private ApplyCurseLootFunction(List<LootItemCondition> conditions, EntityTarget target, Holder<Curse> curse, int stacks) {
         super(conditions);
         this.target = target;
         this.curse = curse;
@@ -48,8 +46,7 @@ public final class ApplyCurseLootFunction extends LootItemConditionalFunction {
     public @NonNull ItemStack run(@NonNull ItemStack stack, @NonNull LootContext context) {
         Entity entity = this.target.get(context);
         if (entity != null)
-            MxtDatapackRegistries.holder(entity.registryAccess(), MxtResourceKeys.CURSE, this.curse).ifPresent(curse ->
-                    CurseService.apply(entity, curse, this.stacks, entity.level().getGameTime(), FormulaContext.of(entity), SOURCE));
+            CurseService.apply(entity, this.curse, this.stacks, entity.level().getGameTime(), FormulaContext.of(entity), SOURCE);
         return stack;
     }
 }

@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.runtime.damage;
 
 import com.iafenvoy.mxt.runtime.MxtProfilerSources;
-import com.iafenvoy.mxt.runtime.element.ElementReactionService;
+import com.iafenvoy.mxt.runtime.ElementReactionService;
 import com.iafenvoy.saturn.profiling.ProfilerScope;
 import com.iafenvoy.saturn.profiling.ServerProfiling;
 import com.iafenvoy.saturn.util.formula.FormulaContext;

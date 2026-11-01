@@ -1,4 +1,4 @@
-package com.iafenvoy.mxt.runtime.ability;
+package com.iafenvoy.mxt.runtime;
 
 import com.iafenvoy.mxt.attachment.SpiritIdentityAttachment;
 import com.iafenvoy.mxt.compat.CuriosIntegration;
@@ -46,8 +46,7 @@ public final class MxtAbilityHooks implements AbilityHooks {
         double progression = ProgressionDamageMultiplier.of(actor, ability);
         AbilityAffinity affinity = RegistryCaches.ABILITY_AFFINITY.of(ability);
         if (affinity == null || affinity.isEmpty()) return progression;
-        double value = CultivationAffinity.abilityMultiplier(actor.getData(MxtAttachments.SPIRIT_IDENTITY),
-                affinity.elements(), FormulaContext.of(actor), affinity.mode());
+        double value = CultivationAffinity.abilityMultiplier(actor.getData(MxtAttachments.SPIRIT_IDENTITY), affinity.elements(), FormulaContext.of(actor), affinity.mode());
         return Double.isFinite(value) && value >= 0.0D ? progression * value : 0.0D;
     }
 

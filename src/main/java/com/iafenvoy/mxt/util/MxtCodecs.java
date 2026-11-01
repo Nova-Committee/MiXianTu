@@ -1,4 +1,4 @@
-package com.iafenvoy.mxt.util.codec;
+package com.iafenvoy.mxt.util;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;

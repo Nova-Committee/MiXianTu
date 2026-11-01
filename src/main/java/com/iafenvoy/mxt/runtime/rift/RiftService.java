@@ -79,6 +79,20 @@ public final class RiftService {
     }
 
     public static RiftResult validate(ServerLevel level, RiftTemplate data) {
+        RiftResult checked = validateTemplate(level, data);
+        if (checked.isFailure()) return checked;
+        RiftPlacement placement = data.placement().normalized().result().orElseThrow();
+        for (RiftVertex point : data.shape().vertices()) {
+            Vec3 pos = placement.world(point);
+            if (pos.y < level.getMinY() || pos.y >= level.getMaxY()
+                    || !level.getWorldBorder().isWithinBounds(pos.x, pos.z))
+                return RiftResult.rejected("outside_world");
+        }
+        return RiftResult.accepted(null);
+    }
+
+    // Item blueprints are portable; world containment is checked only when publishing a placed portal.
+    public static RiftResult validateTemplate(ServerLevel level, RiftTemplate data) {
         DataResult<JsonElement> encoded = RiftTemplate.CODEC.encodeStart(JsonOps.INSTANCE, data);
         if (encoded.error().isPresent()) return RiftResult.rejected(encoded.error().get().message());
         DataResult<RiftTemplate> decoded = RiftTemplate.CODEC.parse(JsonOps.INSTANCE, encoded.result().orElseThrow());
@@ -97,13 +111,6 @@ public final class RiftService {
         } else if (data.destination() instanceof RiftDestination.Realm(Identifier realm1)
                 && MxtDatapackRegistries.get(level.registryAccess(), MxtResourceKeys.SECRET_REALM, realm1).isEmpty())
             return RiftResult.rejected("missing_realm");
-        RiftPlacement placement = decoded.result().orElseThrow().placement();
-        for (RiftVertex point : data.shape().vertices()) {
-            Vec3 pos = placement.world(point);
-            if (pos.y < level.getMinY() || pos.y >= level.getMaxY()
-                    || !level.getWorldBorder().isWithinBounds(pos.x, pos.z))
-                return RiftResult.rejected("outside_world");
-        }
         return RiftResult.accepted(null);
     }
 

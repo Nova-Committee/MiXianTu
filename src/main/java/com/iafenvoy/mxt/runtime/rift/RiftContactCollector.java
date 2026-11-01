@@ -48,7 +48,7 @@ public final class RiftContactCollector {
 
     private static void collect(ServerLevel level, Entity entity) {
         RiftWorldAttachment world = level.getExistingData(MxtAttachments.RIFT_WORLD).orElse(null);
-        if (world == null || world.runtime().empty()) {
+        if (world == null || world.runtime().isEmpty()) {
             STATES.remove(entity.getUUID());
             return;
         }

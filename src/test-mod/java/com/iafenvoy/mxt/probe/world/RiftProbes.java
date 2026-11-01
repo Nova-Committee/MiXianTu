@@ -766,10 +766,13 @@ public final class RiftProbes {
             BlockHitResult frontHit = new BlockHitResult(new Vec3(eye.x, eye.y, front.getZ()), Direction.NORTH, front, false);
             sent.clear();
             anchor.useOn(new UseOnContext(player, InteractionHand.MAIN_HAND, frontHit));
-            c.check("foreground block hides portal", sent.getLast().record().isEmpty());
-            RiftTemplate draft = RiftTemplate.CODEC.parse(JsonOps.INSTANCE, JsonParser.parseString(sent.getLast().body())).result().orElseThrow();
-            c.expect("unselected block creates draft at hit face", draft.placement().origin(), frontHit.getLocation());
-            c.expect("unselected draft retains clicked normal", draft.placement().normal(), new Vec3(0, 0, -1));
+            c.check("foreground block places without opening an editor", sent.isEmpty());
+            RiftRecord placed = RiftService.world(c.level()).records().stream()
+                    .filter(r -> !created.contains(r.id()) && r.data().placement().origin().equals(frontHit.getLocation())).findFirst().orElseThrow();
+            created.add(placed.id());
+            c.expect("unselected block places at hit face", placed.data().placement().origin(), frontHit.getLocation());
+            c.expect("unselected placement retains clicked normal", placed.data().placement().normal(), new Vec3(0, 0, -1));
+            RiftService.remove(c.level(), placed.id());
 
             RiftResult flush = RiftService.publish(c.level(), portal.id(), portal.revision(),
                     RiftEdits.placement(data, new RiftPlacement(new Vec3(origin.x, origin.y, front.getZ()), data.placement().normal(), data.placement().tangent())), player.getUUID(), false);

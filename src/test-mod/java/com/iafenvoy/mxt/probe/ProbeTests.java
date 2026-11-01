@@ -23,6 +23,7 @@ import com.iafenvoy.mxt.probe.talisman.StationProbes;
 import com.iafenvoy.mxt.probe.talisman.TalismanProbes;
 import com.iafenvoy.mxt.probe.verify.*;
 import com.iafenvoy.mxt.probe.world.RiftProbes;
+import com.iafenvoy.mxt.probe.world.RiftAnchorProbes;
 import com.iafenvoy.mxt.probe.world.SecretRealmProbes;
 import com.iafenvoy.mxt.probe.world.SecretRealmTravelProbes;
 import com.iafenvoy.mxt.testmod.MxtTestMod;
@@ -109,6 +110,7 @@ public final class ProbeTests {
             TargetSelectorVerifyProbes::probes,
             WheelVerifyProbes::probes,
             RiftProbes::probes,
+            RiftAnchorProbes::probes,
             SecretRealmProbes::probes,
             SecretRealmTravelProbes::probes
     );

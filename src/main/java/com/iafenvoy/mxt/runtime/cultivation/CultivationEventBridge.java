@@ -7,7 +7,7 @@ import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.MxtProfilerSources;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService.BreakthroughStatus;
-import com.iafenvoy.mxt.runtime.trigger.CultivationTriggerService;
+import com.iafenvoy.mxt.runtime.CultivationTriggerService;
 import com.iafenvoy.mxt.runtime.world.AuraResult;
 import com.iafenvoy.mxt.runtime.world.AuraService;
 import com.iafenvoy.saturn.profiling.ProfilerScope;

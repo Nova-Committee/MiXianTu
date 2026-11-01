@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.data.action.builtin.entity;
 
 import com.iafenvoy.mxt.data.cultivation.Element;
-import com.iafenvoy.mxt.runtime.element.ElementReactionService;
+import com.iafenvoy.mxt.runtime.ElementReactionService;
 import com.iafenvoy.saturn.data.action.EntityAction;
 import com.iafenvoy.saturn.data.context.action.EntityActionContext;
 import com.iafenvoy.saturn.util.formula.FormulaContext;

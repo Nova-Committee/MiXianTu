@@ -7,7 +7,7 @@ import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.MxtProfilerSources;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationMethodService.CultivationResult;
-import com.iafenvoy.mxt.runtime.trigger.CultivationTriggerService;
+import com.iafenvoy.mxt.runtime.CultivationTriggerService;
 import com.iafenvoy.saturn.profiling.ProfilerScope;
 import com.iafenvoy.saturn.profiling.ServerProfiling;
 import com.iafenvoy.saturn.runtime.resulting.Failures;

@@ -1,146 +1,114 @@
-/* Shared controls use absolute positioning; this editor keeps them in normal flow. */
+/* Shared theme primitives use absolute positioning outside this editor. */
 #panel .button,
 #panel .t,
-#panel .input {
+#panel .input,
+#panel .recess {
     position: relative;
     flex-shrink: 0;
 }
 
 #panel {
-    width: 760px;
-    max-width: calc(100vw - 16px);
-    height: 400px;
-    max-height: calc(100vh - 16px);
+    width: calc(100vw - 12px);
+    height: calc(100vh - 12px);
     display: flex;
     flex-direction: column;
-    padding: 8px;
+    padding: 6px;
     gap: 6px;
-}
-
-#panel.world-preview {
-    height: auto;
-    align-self: flex-start;
-    margin-top: 8px;
 }
 
 .header,
-.footer,
-#tabs {
-    display: flex;
-    flex-direction: row;
-    gap: 4px;
-    flex-wrap: wrap;
-    flex-shrink: 0;
-}
-
-#panel .button {
-    min-height: 22px;
-    padding: 5px 7px;
-    font-size: 9px;
-}
-
-.header .button { min-width: 48px; }
-.footer { justify-content: flex-end; }
-.footer .button { min-width: 66px; }
-#restore { margin-right: auto; }
-
-#body {
-    display: flex;
-    flex-direction: row;
-    flex: 1;
-    min-height: 0;
-    gap: 8px;
-}
-
-#tools {
-    width: 84px;
-    flex-shrink: 0;
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    overflow-y: auto;
-}
-
-#canvas {
-    width: min(320px, 42vw, calc(125vh - 165px));
-    height: auto;
-    aspect-ratio: 5 / 4;
-    align-self: center;
-    flex-shrink: 0;
-}
-
-#properties {
-    flex: 1;
-    min-width: 0;
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-}
-
-#tabs .button { flex: 1; min-width: 36px; }
-
-#scroll {
-    flex: 1;
-    min-height: 0;
-    overflow-y: auto;
-    padding-right: 6px;
-}
-
-.section {
-    display: none;
-    flex-direction: column;
-    gap: 5px;
-    padding: 2px;
-}
-
-.field {
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
-    flex-shrink: 0;
-    min-width: 0;
-}
-
-.row {
-    display: flex;
-    flex-direction: row;
-    align-items: flex-end;
-    gap: 6px;
-    flex-shrink: 0;
-}
-
-.row > .field,
-.row > .button,
-.axis-field {
-    flex: 1;
-    width: 0;
-    min-width: 0;
-}
-
-.axis-field {
+.header-actions,
+#menus,
+#toolbar,
+#tools,
+#shape_tabs,
+#snap_row {
     display: flex;
     flex-direction: row;
     align-items: center;
-    gap: 3px;
+    flex-shrink: 0;
+    gap: 4px;
 }
 
+.header { gap: 6px; }
+.spacer { flex: 1; min-width: 0; }
+#panel .button { height: 16px; min-height: 16px; padding: 2px 4px; font-size: 9px; }
+#panel #apply { min-width: 32px; }
+#tools .button { min-width: 28px; }
+#toolbar { gap: 8px; }
+#panel #hint_canvas { height: 12px; line-height: 12px; }
+.menu-anchor { position: relative; flex-shrink: 0; }
+
+#panel .menu-popup {
+    position: absolute;
+    top: 20px;
+    left: 0;
+    width: 144px;
+    display: none;
+    flex-direction: column;
+    gap: 3px;
+    padding: 4px;
+    z-index: 20;
+}
+
+#panel .file-menu { width: min(272px, calc(100vw - 116px)); height: min(384px, calc(100vh - 66px)); }
+.menu-scroll { flex: 1; min-height: 0; overflow-y: auto; padding-right: 8px; display: flex; flex-direction: column; gap: 12px; }
+.menu-popup .button { width: 100%; }
+#panel #menu_edit { width: min(144px, calc(100vw - 144px)); }
+#property_toolbar,
+#property_shortcuts { display: flex; flex-direction: row; align-items: center; flex-shrink: 0; gap: 3px; }
+#properties_menu_anchor { display: none; }
+#panel #menu_properties { width: 136px; }
+
+#body { display: flex; flex-direction: row; flex: 1; min-height: 0; gap: 8px; }
+#properties { width: min(208px, 34vw); flex-shrink: 0; min-height: 0; display: flex; flex-direction: column; gap: 6px; }
+#panel #property_heading { height: 12px; line-height: 12px; }
+#shape_tabs { flex-wrap: wrap; }
+#shape_tabs .button { flex: 1 0 40%; min-width: 0; padding: 2px; }
+#scroll { flex: 1; min-height: 0; overflow-y: auto; padding-right: 8px; }
+#workspace { flex: 1; min-width: 0; min-height: 0; display: flex; }
+#canvas_stage { flex: 1; min-width: 0; min-height: 0; display: flex; }
+#canvas { flex: 1; width: 0; min-width: 0; height: 100%; }
+#snap_row { gap: 6px; }
+#snap_row .input { flex: 1; min-width: 0; width: 0; }
+
+.section,
+.shape-group { display: none; flex-direction: column; gap: 12px; }
+.group,
+.field,
+.target-fields { display: flex; flex-direction: column; flex-shrink: 0; min-width: 0; gap: 6px; }
+.field { gap: 3px; }
+#panel .group-title { margin-bottom: 2px; height: 14px; line-height: 14px; }
+.form-row { display: flex; flex-direction: row; align-items: flex-end; gap: 6px; flex-shrink: 0; }
+.form-row > .field,
+.form-row > .button,
+.axis-field { flex: 1; width: 0; min-width: 0; }
+.axis-field { display: flex; flex-direction: row; align-items: center; gap: 3px; }
 #panel .axis-field .input { flex: 1; width: 0; min-width: 0; }
 #panel .axis { width: 6px; }
 #panel .check-field { flex-direction: row; align-items: center; gap: 6px; }
 #panel .checkbox { width: 14px; height: 14px; padding: 0; flex-shrink: 0; }
-.target-fields { display: flex; flex-direction: column; gap: 5px; }
-
 #panel .field .t { height: 12px; line-height: 12px; }
 #panel .input { height: 22px; width: 100%; padding: 3px 5px; }
+#panel .hint { height: auto; min-height: 12px; line-height: 12px; white-space: normal; }
+#feedback { display: flex; flex-direction: column; gap: 3px; flex-shrink: 0; }
+#geometry_status,
 #status { height: 12px; line-height: 12px; }
+#panel.world-preview { height: auto; align-self: flex-start; margin-top: 6px; }
 
-@media (max-width: 620px) {
-    #panel { padding: 6px; gap: 4px; }
-    #body { gap: 5px; }
-    #tools { width: 66px; }
-    #panel #tools .button { padding: 5px 2px; }
-    #canvas { width: min(220px, 32vw, calc(125vh - 165px)); }
-    #panel #tabs .button { min-width: 30px; padding: 5px 3px; }
+@media (max-width: 600px) {
+    #panel { padding: 5px; gap: 5px; }
+    .header { gap: 5px; }
+    #editor_mode,
+    #hint_canvas { display: none; }
+    #panel .button { padding: 2px 3px; }
+    #panel .field .t { height: auto; min-height: 12px; white-space: normal; }
+    #snap_row { flex-direction: column; align-items: stretch; gap: 3px; }
+    #snap_row .input { flex: none; width: 100%; }
+}
+
+@media (max-width: 400px) {
+    #editor_title { display: none; }
+    .header,
+    #menus { gap: 2px; }
 }

@@ -47,6 +47,7 @@ public final class RiftEditorScreen extends AuiScreen {
     private final UUID previewId = UUID.randomUUID();
     private final UUID token;
     private final Identifier dimension;
+    private final boolean itemEditor;
     private final RiftEditSession session;
     private final RiftEditorInputs fields = new RiftEditorInputs();
     private final Map<String, Element> sections = new HashMap<>();
@@ -56,7 +57,10 @@ public final class RiftEditorScreen extends AuiScreen {
     private String tab = "shape", shapeTab = "generate", tool = "select", export = "";
     private Canvas canvas;
     private Element status, panel;
-    private double viewScale = 48, viewU, viewV = 1.2;
+    private final RiftEditorViewport viewport = new RiftEditorViewport();
+    private boolean canvasLayoutDirty = true, propertiesVisible = true;
+    private long canvasViewportVersion = Long.MIN_VALUE;
+    private String openMenu = "";
     private int dragged = -1, selectedEdge = -1, ticks;
     private RiftTemplate beforeDrag;
     private RiftVertex dragFrom;
@@ -73,6 +77,7 @@ public final class RiftEditorScreen extends AuiScreen {
         super(AuiPages.riftPage());
         this.token = payload.token();
         this.dimension = payload.dimension();
+        this.itemEditor = payload.action().equals("open_item");
         this.session = new RiftEditSession(initial);
         this.accepted = initial;
         this.revision = payload.record().map(RiftRecord::revision).orElse(0L);
@@ -83,7 +88,7 @@ public final class RiftEditorScreen extends AuiScreen {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null || !mc.player.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER)
                 || mc.level == null || !mc.level.dimension().identifier().equals(payload.dimension())) return;
-        if (payload.action().equals("open")) {
+        if (payload.action().equals("open") || payload.action().equals("open_item")) {
             RiftTemplate initial = payload.record().map(RiftRecord::data).orElseGet(() -> RiftTemplate.CODEC.parse(JsonOps.INSTANCE,
                     JsonParser.parseString(payload.body())).result().orElseThrow());
             mc.setScreen(new RiftEditorScreen(payload, initial));
@@ -94,32 +99,48 @@ public final class RiftEditorScreen extends AuiScreen {
             case "close" -> screen.onClose();
             case "error" -> {
                 screen.pending = false;
-                screen.message(Component.translatable("rift.mxt.failure.edit", payload.body()));
+                screen.showTab();
+                Component detail = switch (payload.body()) {
+                    case "item_changed", "item_only" -> Component.translatable("rift.mxt.failure." + payload.body());
+                    default -> Component.literal(payload.body());
+                };
+                screen.message(Component.translatable("rift.mxt.failure.edit", detail));
             }
             case "accepted" -> {
-                screen.pending = false;
                 RiftRecord record = payload.record().orElseThrow();
                 screen.portalId = record.id();
                 screen.revision = record.revision();
-                screen.accepted = record.data();
-                if (screen.sentVersion < 0 || screen.sentVersion == screen.session.version()) {
-                    screen.session.apply(record.data());
-                    screen.writeFields();
-                }
-                screen.showTab();
-                screen.message(Component.translatable("screen.mxt.rift.saved"));
+                screen.accept(record.data());
+                screen.message(Component.translatable(record.data().enabled() ? "screen.mxt.rift.saved" : "screen.mxt.rift.saved_disabled"));
+            }
+            case "item_accepted" -> {
+                if (!screen.itemEditor) return;
+                screen.accept(RiftTemplate.CODEC.parse(JsonOps.INSTANCE, JsonParser.parseString(payload.body())).result().orElseThrow());
+                screen.message(Component.translatable("screen.mxt.rift.item_saved"));
             }
             case "export" -> {
                 screen.pending = false;
+                screen.showTab();
                 screen.export = payload.body();
                 mc.keyboardHandler.setClipboard(screen.export);
                 screen.message(Component.translatable("screen.mxt.rift.copied"));
             }
             case "blueprint" -> {
                 screen.pending = false;
+                screen.showTab();
                 screen.message(Component.translatable("screen.mxt.rift.blueprint_saved"));
             }
         }
+    }
+
+    private void accept(RiftTemplate data) {
+        this.pending = false;
+        this.accepted = data;
+        if (this.sentVersion < 0 || this.sentVersion == this.session.version()) {
+            this.session.apply(data);
+            this.writeFields();
+        }
+        this.showTab();
     }
 
     public static List<RiftClientState.Entry> preview() {
@@ -146,8 +167,8 @@ public final class RiftEditorScreen extends AuiScreen {
     @Override
     public void bindPage() {
         this.canvas = this.getOrThrow("canvas", Canvas.class);
-        this.canvas.setWidth(320);
-        this.canvas.setHeight(256);
+        this.canvas.setWidth(this.viewport.width());
+        this.canvas.setHeight(this.viewport.height());
         this.panel = this.getOrThrow("panel");
         this.status = this.getOrThrow("status");
         for (String name : List.of("editor_title", "hint_canvas", "hint_plane", "hint_remove", "hint_color", "hint_return",
@@ -155,22 +176,38 @@ public final class RiftEditorScreen extends AuiScreen {
                 "heading_plane", "heading_lifecycle", "heading_remove", "heading_destination", "heading_material", "heading_effects",
                 "heading_texture", "heading_blueprint", "heading_export", "heading_file"))
             this.text(this.getOrThrow(name), Component.translatable("screen.mxt.rift." + name));
+        if (this.itemEditor) this.text(this.getOrThrow("hint_plane"), Component.translatable("screen.mxt.rift.hint_item_placement"));
         for (String name : SHAPE_TABS)
             this.button("shape_tab_" + name, () -> {
                 this.shapeTab = name;
                 this.showTab();
                 this.getOrThrow("scroll").scrollTo(0, 0);
             });
-        for (String name : List.of("shape", "placement", "target", "appearance", "blueprint")) {
+        for (String name : List.of("shape", "placement", "target", "appearance")) {
             this.sections.put(name, this.getOrThrow("section_" + name));
             this.button("tab_" + name, () -> {
                 if (this.readProperties()) {
                     this.tab = name;
+                    this.propertiesVisible = true;
                     this.showTab();
                     this.getOrThrow("scroll").scrollTo(0, 0);
                 }
             });
         }
+        this.button("tab_blueprint", () -> {
+            if (this.readProperties()) this.toggleMenu("blueprint");
+        });
+        this.button("menu_button_edit", () -> this.toggleMenu("edit"));
+        this.button("menu_button_properties", () -> this.toggleMenu("properties"));
+        this.button("toggle_properties", () -> {
+            this.propertiesVisible = !this.propertiesVisible;
+            this.showTab();
+        });
+        this.button("fit_view", () -> {
+            this.updateCanvasSize();
+            this.viewport.fit(this.session.draft().shape());
+            this.redraw();
+        });
         for (String name : FIELD_NAMES) {
             this.fields.bind(name, this.getOrThrow(name));
             if (!name.matches("(origin|normal|tangent|target_pos)_[xyz]"))
@@ -203,6 +240,7 @@ public final class RiftEditorScreen extends AuiScreen {
             this.writeFields();
         });
         this.button("apply", () -> this.sendDraft("submit"));
+        if (this.itemEditor) this.text(this.getOrThrow("apply"), Component.translatable("screen.mxt.rift.apply_item"));
         this.button("renew", () -> this.sendDraft("renew"));
         this.button("reload", () -> {
             this.sentVersion = -1;
@@ -300,8 +338,9 @@ public final class RiftEditorScreen extends AuiScreen {
         }));
         this.writeFields();
         this.showTab();
+        this.showMenus();
         this.redraw();
-        this.message(Component.translatable("screen.mxt.rift.hint_apply"));
+        this.message(Component.translatable(this.itemEditor ? "screen.mxt.rift.hint_apply_item" : "screen.mxt.rift.hint_apply"));
     }
 
     private static final List<String> SHAPE_TABS = List.of("generate", "vertices", "transform", "curves");
@@ -312,7 +351,10 @@ public final class RiftEditorScreen extends AuiScreen {
     private void button(String id, Runnable action) {
         Element element = this.getOrThrow(id);
         this.text(element, Component.translatable("screen.mxt.rift." + id));
-        this.click(element, action);
+        this.click(element, () -> {
+            action.run();
+            if (!List.of("tab_blueprint", "menu_button_edit", "menu_button_properties").contains(id)) this.closeMenu();
+        });
     }
 
     private void message(Component message) {
@@ -451,6 +493,8 @@ public final class RiftEditorScreen extends AuiScreen {
         if (!action.equals("close") && !action.equals("heartbeat")) {
             this.pending = true;
             this.sentVersion = action.equals("reload") ? -1 : this.session.version();
+            this.showTab();
+            this.message(Component.translatable("screen.mxt.rift.pending"));
         }
         ClientPacketDistributor.sendToServer(new RiftEditC2SPayload(this.token, action, this.revision, body));
     }
@@ -513,14 +557,22 @@ public final class RiftEditorScreen extends AuiScreen {
         for (String name : List.of("select", "draw", "edge", "move", "plane", "fit"))
             AuiElements.setClass(this.getOrThrow("tool_" + name), "selected", name.equals(this.tool));
         AuiElements.style(this.getOrThrow("body"), "display", this.worldPreview ? "none" : "flex");
-        AuiElements.style(this.getOrThrow("tabs"), "display", this.worldPreview ? "none" : "flex");
+        AuiElements.style(this.getOrThrow("toolbar"), "display", this.worldPreview ? "none" : "flex");
+        AuiElements.style(this.getOrThrow("properties"), "display", this.propertiesVisible ? "flex" : "none");
+        this.text(this.getOrThrow("property_heading"), Component.translatable("screen.mxt.rift.tab_" + this.tab));
+        this.text(this.getOrThrow("toggle_properties"), Component.translatable("screen.mxt.rift." + (this.propertiesVisible ? "hide_properties" : "show_properties")));
+        this.canvasLayoutDirty = true;
         AuiElements.setClass(this.panel, "world-preview", this.worldPreview);
         AuiElements.setClass(this.getOrThrow("preview"), "selected", this.worldPreview);
         AuiElements.setClass(this.getOrThrow("camera"), "selected", this.previewCamera);
-        this.text(this.getOrThrow("editor_mode"), Component.translatable(this.portalId == null
-                ? "screen.mxt.rift.mode_new" : "screen.mxt.rift.mode_edit"));
-        for (String name : List.of("reload", "remove", "renew"))
-            AuiElements.setDisabled(this.getOrThrow(name), this.portalId == null);
+        this.text(this.getOrThrow("editor_mode"), Component.translatable(this.itemEditor ? "screen.mxt.rift.mode_item"
+                : this.portalId == null ? "screen.mxt.rift.mode_new" : "screen.mxt.rift.mode_edit"));
+        for (String name : List.of("remove", "renew"))
+            AuiElements.setDisabled(this.getOrThrow(name), this.pending || this.portalId == null);
+        AuiElements.setDisabled(this.getOrThrow("reload"), this.pending || !this.itemEditor && this.portalId == null);
+        AuiElements.setDisabled(this.getOrThrow("copy"), this.pending || this.itemEditor);
+        AuiElements.setDisabled(this.getOrThrow("apply"), this.pending);
+        AuiElements.style(this.getOrThrow("blueprint"), "display", this.itemEditor ? "none" : "flex");
     }
 
     @Override
@@ -536,7 +588,10 @@ public final class RiftEditorScreen extends AuiScreen {
 
     @Override
     public void extractRenderState(@NonNull GuiGraphicsExtractor graphics, int x, int y, float partialTick) {
-        if (this.auiPageWritable() && this.paintedVersion != this.session.version()) this.redraw();
+        if (this.auiPageWritable()) {
+            boolean resized = this.updateCanvasSize();
+            if (resized || this.paintedVersion != this.session.version()) this.redraw();
+        }
         super.extractRenderState(graphics, x, y, partialTick);
     }
 
@@ -547,12 +602,24 @@ public final class RiftEditorScreen extends AuiScreen {
         Element.DOMRect bounds = this.canvas.getBoundingClientRect();
         if (bounds.width <= 0 || bounds.height <= 0 || pointer.x < bounds.left || pointer.y < bounds.top || pointer.x >= bounds.right || pointer.y >= bounds.bottom)
             return null;
-        return new RiftVertex(((pointer.x - bounds.left) / bounds.width * 320 - 160) / this.viewScale + this.viewU, (128 - (pointer.y - bounds.top) / bounds.height * 256) / this.viewScale + this.viewV);
+        return this.viewport.local((pointer.x - bounds.left) / bounds.width * this.viewport.width(),
+                (pointer.y - bounds.top) / bounds.height * this.viewport.height());
     }
 
     @Override
     public boolean mouseClicked(@NonNull MouseButtonEvent event, boolean doubleClick) {
         if (!this.auiBound()) return super.mouseClicked(event, doubleClick);
+        if (!this.openMenu.isEmpty()) {
+            if (this.overElement(this.getOrThrow("footer"), event.x(), event.y())) {
+                this.closeMenu();
+                return super.mouseClicked(event, doubleClick);
+            }
+            if (this.overElement(this.getOrThrow("menu_" + this.openMenu), event.x(), event.y())
+                    || this.overElement(this.getOrThrow("menus"), event.x(), event.y()))
+                return super.mouseClicked(event, doubleClick);
+            this.closeMenu();
+            return true;
+        }
         if (this.worldPreview) {
             if (!this.previewCamera || this.overPanel(event.x(), event.y()))
                 return super.mouseClicked(event, doubleClick);
@@ -581,7 +648,7 @@ public final class RiftEditorScreen extends AuiScreen {
             this.changeShape(new RiftShape(points));
         } else {
             int best = -1;
-            double distance = 8 / this.viewScale;
+            double distance = 8 / this.viewport.scale();
             for (int i = 0; i < shape.vertices().size(); i++) {
                 RiftVertex p = shape.vertices().get(i);
                 double d = Math.hypot(p.u() - point.u(), p.v() - point.v());
@@ -634,6 +701,7 @@ public final class RiftEditorScreen extends AuiScreen {
 
     @Override
     public boolean mouseDragged(@NonNull MouseButtonEvent event, double dx, double dy) {
+        if (!this.openMenu.isEmpty()) return super.mouseDragged(event, dx, dy);
         // MouseHandler.grabMouse() closes the screen; turn inside the editor without capturing it.
         if (this.turningCamera && this.worldPreview && this.previewCamera && event.button() == GLFW.GLFW_MOUSE_BUTTON_RIGHT) {
             if (this.minecraft.player != null) {
@@ -649,8 +717,7 @@ public final class RiftEditorScreen extends AuiScreen {
         }
         RiftVertex point = this.pointer(event.x(), event.y());
         if (this.panning && point != null) {
-            this.viewU -= point.u() - this.dragFrom.u();
-            this.viewV -= point.v() - this.dragFrom.v();
+            this.viewport.pan(this.dragFrom, point);
             this.redraw();
             return true;
         }
@@ -706,6 +773,10 @@ public final class RiftEditorScreen extends AuiScreen {
 
     @Override
     public boolean keyPressed(KeyEvent event) {
+        if (event.key() == GLFW.GLFW_KEY_ESCAPE && !this.openMenu.isEmpty()) {
+            this.closeMenu();
+            return true;
+        }
         if (event.key() == GLFW.GLFW_KEY_ESCAPE && this.previewCamera) {
             this.previewCamera = false;
             this.turningCamera = false;
@@ -715,10 +786,60 @@ public final class RiftEditorScreen extends AuiScreen {
         return super.keyPressed(event);
     }
 
+    private void toggleMenu(String menu) {
+        this.openMenu = this.openMenu.equals(menu) ? "" : menu;
+        this.showMenus();
+    }
+
+    private void closeMenu() {
+        if (this.openMenu.isEmpty()) return;
+        this.openMenu = "";
+        this.showMenus();
+    }
+
+    private void showMenus() {
+        for (String menu : List.of("blueprint", "edit", "properties"))
+            AuiElements.style(this.getOrThrow("menu_" + menu), "display", menu.equals(this.openMenu) ? "flex" : "none");
+        for (String button : List.of("tab_blueprint", "menu_button_edit", "menu_button_properties"))
+            AuiElements.setClass(this.getOrThrow(button), "selected", switch (button) {
+                case "tab_blueprint" -> this.openMenu.equals("blueprint");
+                case "menu_button_edit" -> this.openMenu.equals("edit");
+                default -> this.openMenu.equals("properties");
+            });
+    }
+
+    private boolean updateCanvasSize() {
+        if (this.canvas == null) return false;
+        long version = this.getLinkedDocument().getViewportVersion();
+        if (!this.canvasLayoutDirty && this.canvasViewportVersion == version) return false;
+        boolean overflow = RiftEditorToolbar.layout(this.getLinkedDocument());
+        if (!overflow && this.openMenu.equals("properties")) this.openMenu = "";
+        this.showMenus();
+        this.getLinkedDocument().flushPendingStyleUpdates();
+        this.getLinkedDocument().commitRenderState();
+        if (this.worldPreview) {
+            this.canvasLayoutDirty = false;
+            this.canvasViewportVersion = version;
+            return false;
+        }
+        Element.DOMRect bounds = this.canvas.getBoundingClientRect();
+        if (bounds.width < 1 || bounds.height < 1) return false;
+        this.canvasLayoutDirty = false;
+        this.canvasViewportVersion = version;
+        if (!this.viewport.resize(bounds.width, bounds.height)) return false;
+        this.canvas.setWidth(this.viewport.width());
+        this.canvas.setHeight(this.viewport.height());
+        return true;
+    }
+
     private boolean overPanel(double x, double y) {
-        if (this.panel == null || this.getLinkedDocument() == null) return false;
+        return this.overElement(this.panel, x, y);
+    }
+
+    private boolean overElement(Element element, double x, double y) {
+        if (element == null || this.getLinkedDocument() == null) return false;
         Position pointer = this.getLinkedDocument().screenToDocumentPosition(new Position(x, y));
-        Element.DOMRect bounds = this.panel.getBoundingClientRect();
+        Element.DOMRect bounds = element.getBoundingClientRect();
         return pointer.x >= bounds.left && pointer.y >= bounds.top && pointer.x < bounds.right && pointer.y < bounds.bottom;
     }
 
@@ -785,8 +906,8 @@ public final class RiftEditorScreen extends AuiScreen {
 
     @Override
     public boolean mouseScrolled(double x, double y, double sx, double sy) {
-        if (this.pointer(x, y) == null) return super.mouseScrolled(x, y, sx, sy);
-        this.viewScale = Math.clamp(this.viewScale * Math.pow(1.15, sy), 4, 512);
+        if (!this.openMenu.isEmpty() || this.pointer(x, y) == null) return super.mouseScrolled(x, y, sx, sy);
+        this.viewport.zoom(sy);
         this.redraw();
         return true;
     }
@@ -799,18 +920,22 @@ public final class RiftEditorScreen extends AuiScreen {
         this.canvas.renderOperation(g -> {
             g.setComposite(AlphaComposite.Src);
             g.setColor(new Color(0xFF181818, true));
-            g.fillRect(0, 0, 320, 256);
+            g.fillRect(0, 0, this.viewport.width(), this.viewport.height());
             g.setComposite(AlphaComposite.SrcOver);
             g.setColor(new Color(0xFF303030, true));
-            for (int i = -40; i <= 40; i++) {
-                int x = (int) (160 + (i - this.viewU) * this.viewScale), y = (int) (128 - (i - this.viewV) * this.viewScale);
-                g.drawLine(x, 0, x, 256);
-                g.drawLine(0, y, 320, y);
+            double firstU = Math.ceil(this.viewport.local(0, 0).u()), firstV = Math.floor(this.viewport.local(0, 0).v());
+            for (int i = 0; i <= Math.ceil(this.viewport.width() / this.viewport.scale()); i++) {
+                int x = (int) this.viewport.x(firstU + i);
+                g.drawLine(x, 0, x, this.viewport.height());
+            }
+            for (int i = 0; i <= Math.ceil(this.viewport.height() / this.viewport.scale()); i++) {
+                int y = (int) this.viewport.y(firstV - i);
+                g.drawLine(0, y, this.viewport.width(), y);
             }
             Path2D path = new Path2D.Double();
             for (int i = 0; i < shape.vertices().size(); i++) {
                 RiftVertex p = shape.vertices().get(i);
-                double x = 160 + (p.u() - this.viewU) * this.viewScale, y = 128 - (p.v() - this.viewV) * this.viewScale;
+                double x = this.viewport.x(p.u()), y = this.viewport.y(p.v());
                 if (i == 0) path.moveTo(x, y);
                 else path.lineTo(x, y);
             }
@@ -822,16 +947,16 @@ public final class RiftEditorScreen extends AuiScreen {
             g.draw(path);
             for (int i = 0; i < shape.vertices().size(); i++) {
                 RiftVertex p = shape.vertices().get(i);
-                int x = (int) (160 + (p.u() - this.viewU) * this.viewScale), y = (int) (128 - (p.v() - this.viewV) * this.viewScale);
+                int x = (int) (this.viewport.x(p.u())), y = (int) (this.viewport.y(p.v()));
                 g.setColor(this.session.selected.contains(i) ? Color.YELLOW : Color.WHITE);
                 g.fillRect(x - 2, y - 2, 5, 5);
             }
             if (this.boxSelecting && this.boxTo != null) {
-                double x = 160 + (Math.min(this.dragFrom.u(), this.boxTo.u()) - this.viewU) * this.viewScale;
-                double y = 128 - (Math.max(this.dragFrom.v(), this.boxTo.v()) - this.viewV) * this.viewScale;
+                double x = this.viewport.x(Math.min(this.dragFrom.u(), this.boxTo.u()));
+                double y = this.viewport.y(Math.max(this.dragFrom.v(), this.boxTo.v()));
                 g.setColor(Color.YELLOW);
                 g.draw(new Rectangle2D.Double(x, y,
-                        Math.abs(this.dragFrom.u() - this.boxTo.u()) * this.viewScale, Math.abs(this.dragFrom.v() - this.boxTo.v()) * this.viewScale));
+                        Math.abs(this.dragFrom.u() - this.boxTo.u()) * this.viewport.scale(), Math.abs(this.dragFrom.v() - this.boxTo.v()) * this.viewport.scale()));
             }
         });
         this.text(this.getOrThrow("geometry_status"), Component.translatable("screen.mxt.rift.geometry", shape.vertices().size(), String.format(Locale.ROOT, "%.3f", Math.abs(RiftGeometry.area(shape.vertices()))),
@@ -845,6 +970,8 @@ public final class RiftEditorScreen extends AuiScreen {
         this.fields.clear();
         this.sections.clear();
         this.turningCamera = false;
+        this.openMenu = "";
+        this.canvasLayoutDirty = true;
     }
 
     @Override
