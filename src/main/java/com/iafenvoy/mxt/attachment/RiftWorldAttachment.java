@@ -12,11 +12,9 @@ import java.util.*;
 
 public final class RiftWorldAttachment {
     public static final MapCodec<RiftWorldAttachment> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
-            RiftLocation.CODEC.listOf().lenientOptionalFieldOf("locations", List.of()).forGetter(RiftWorldAttachment::locations),
-            RiftRecord.CODEC.listOf().lenientOptionalFieldOf("portals", List.of()).forGetter(RiftWorldAttachment::legacy)
+            RiftLocation.CODEC.listOf().lenientOptionalFieldOf("locations", List.of()).forGetter(RiftWorldAttachment::locations)
     ).apply(i, RiftWorldAttachment::new));
     private final Map<UUID, RiftLocation> locations = new LinkedHashMap<>();
-    private final List<RiftRecord> legacy = new ArrayList<>();
     // Full records and meshes are only retained while their owner or covered chunks are loaded.
     private final Map<UUID, RiftRecord> records = new LinkedHashMap<>();
     private @Nullable RiftRuntime runtime;
@@ -24,9 +22,8 @@ public final class RiftWorldAttachment {
     public RiftWorldAttachment() {
     }
 
-    private RiftWorldAttachment(List<RiftLocation> locations, List<RiftRecord> legacy) {
+    private RiftWorldAttachment(List<RiftLocation> locations) {
         for (RiftLocation location : locations) this.locations.put(location.id(), location);
-        this.legacy.addAll(legacy);
     }
 
     public List<RiftLocation> locations() {
@@ -35,14 +32,6 @@ public final class RiftWorldAttachment {
 
     public @Nullable RiftLocation location(UUID id) {
         return this.locations.get(id);
-    }
-
-    public List<RiftRecord> legacy() {
-        return List.copyOf(this.legacy);
-    }
-
-    public void migrated(UUID id) {
-        this.legacy.removeIf(record -> record.id().equals(id));
     }
 
     // Active cache only; administrative enumeration goes through RiftService.records.
@@ -68,7 +57,6 @@ public final class RiftWorldAttachment {
     public void remove(UUID id) {
         this.locations.remove(id);
         this.records.remove(id);
-        this.migrated(id);
         this.runtime().remove(id);
     }
 

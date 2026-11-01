@@ -81,6 +81,7 @@ public final class ProbeTests {
             AuraHudVerifyProbes::probes,
             BreakthroughPaymentVerifyProbes::probes,
             ResourceBarVerifyProbes::probes,
+            HoldAnimationVerifyProbes::probes,
             AuraLoadingVerifyProbes::probes,
             AuraDoubleVerifyProbes::probes,
             AuiBindingVerifyProbes::probes,

@@ -53,7 +53,7 @@ public final class RiftEditorScreen extends AuiScreen {
     private RiftTemplate accepted;
     private long revision, sentVersion = -1;
     private boolean pending, worldPreview, previewCamera, closed;
-    private String tab = "shape", tool = "select", export = "";
+    private String tab = "shape", shapeTab = "generate", tool = "select", export = "";
     private Canvas canvas;
     private Element status, panel;
     private double viewScale = 48, viewU, viewV = 1.2;
@@ -106,6 +106,7 @@ public final class RiftEditorScreen extends AuiScreen {
                     screen.session.apply(record.data());
                     screen.writeFields();
                 }
+                screen.showTab();
                 screen.message(Component.translatable("screen.mxt.rift.saved"));
             }
             case "export" -> {
@@ -149,12 +150,24 @@ public final class RiftEditorScreen extends AuiScreen {
         this.canvas.setHeight(256);
         this.panel = this.getOrThrow("panel");
         this.status = this.getOrThrow("status");
+        for (String name : List.of("editor_title", "hint_canvas", "hint_plane", "hint_remove", "hint_color", "hint_return",
+                "heading_generate", "heading_vertices", "heading_pivot", "heading_transform", "heading_edges", "heading_curves",
+                "heading_plane", "heading_lifecycle", "heading_remove", "heading_destination", "heading_material", "heading_effects",
+                "heading_texture", "heading_blueprint", "heading_export", "heading_file"))
+            this.text(this.getOrThrow(name), Component.translatable("screen.mxt.rift." + name));
+        for (String name : SHAPE_TABS)
+            this.button("shape_tab_" + name, () -> {
+                this.shapeTab = name;
+                this.showTab();
+                this.getOrThrow("scroll").scrollTo(0, 0);
+            });
         for (String name : List.of("shape", "placement", "target", "appearance", "blueprint")) {
             this.sections.put(name, this.getOrThrow("section_" + name));
             this.button("tab_" + name, () -> {
                 if (this.readProperties()) {
                     this.tab = name;
                     this.showTab();
+                    this.getOrThrow("scroll").scrollTo(0, 0);
                 }
             });
         }
@@ -288,7 +301,10 @@ public final class RiftEditorScreen extends AuiScreen {
         this.writeFields();
         this.showTab();
         this.redraw();
+        this.message(Component.translatable("screen.mxt.rift.hint_apply"));
     }
+
+    private static final List<String> SHAPE_TABS = List.of("generate", "vertices", "transform", "curves");
 
     private static final List<String> FIELD_NAMES = List.of("width", "height", "count", "seed", "snap", "pivot_u", "pivot_v", "du", "dv", "angle", "scale_u", "scale_v", "shear", "amount", "vertex_u", "vertex_v", "c1u", "c1v", "c2u", "c2v", "tolerance",
             "origin_x", "origin_y", "origin_z", "normal_x", "normal_y", "normal_z", "tangent_x", "tangent_y", "tangent_z", "target_type", "dimension", "target_pos_x", "target_pos_y", "target_pos_z", "realm", "yaw", "pitch", "nearby", "style", "color", "edge_color", "speed", "edge_width", "glow", "particles", "texture_scale", "texture_rotation", "texture_u", "texture_v", "duration", "enabled", "key", "filename", "vertex_index");
@@ -481,6 +497,7 @@ public final class RiftEditorScreen extends AuiScreen {
         String type = this.value("target_type");
         for (String name : List.of("position", "secret_realm"))
             AuiElements.style(this.getOrThrow("target_" + name), "display", name.equals(type) ? "flex" : "none");
+        AuiElements.style(this.getOrThrow("hint_return"), "display", type.equals("return") ? "flex" : "none");
     }
 
     private void showTab() {
@@ -488,11 +505,22 @@ public final class RiftEditorScreen extends AuiScreen {
         this.sections.forEach((key, section) -> AuiElements.style(section, "display", key.equals(this.tab) ? "flex" : "none"));
         for (String name : this.sections.keySet())
             AuiElements.setClass(this.getOrThrow("tab_" + name), "selected", name.equals(this.tab));
+        AuiElements.style(this.getOrThrow("shape_tabs"), "display", this.tab.equals("shape") ? "flex" : "none");
+        for (String name : SHAPE_TABS) {
+            AuiElements.style(this.getOrThrow("shape_" + name), "display", name.equals(this.shapeTab) ? "flex" : "none");
+            AuiElements.setClass(this.getOrThrow("shape_tab_" + name), "selected", name.equals(this.shapeTab));
+        }
         for (String name : List.of("select", "draw", "edge", "move", "plane", "fit"))
             AuiElements.setClass(this.getOrThrow("tool_" + name), "selected", name.equals(this.tool));
         AuiElements.style(this.getOrThrow("body"), "display", this.worldPreview ? "none" : "flex");
+        AuiElements.style(this.getOrThrow("tabs"), "display", this.worldPreview ? "none" : "flex");
         AuiElements.setClass(this.panel, "world-preview", this.worldPreview);
+        AuiElements.setClass(this.getOrThrow("preview"), "selected", this.worldPreview);
         AuiElements.setClass(this.getOrThrow("camera"), "selected", this.previewCamera);
+        this.text(this.getOrThrow("editor_mode"), Component.translatable(this.portalId == null
+                ? "screen.mxt.rift.mode_new" : "screen.mxt.rift.mode_edit"));
+        for (String name : List.of("reload", "remove", "renew"))
+            AuiElements.setDisabled(this.getOrThrow(name), this.portalId == null);
     }
 
     @Override
@@ -806,7 +834,7 @@ public final class RiftEditorScreen extends AuiScreen {
                         Math.abs(this.dragFrom.u() - this.boxTo.u()) * this.viewScale, Math.abs(this.dragFrom.v() - this.boxTo.v()) * this.viewScale));
             }
         });
-        this.message(Component.translatable("screen.mxt.rift.geometry", shape.vertices().size(), String.format(Locale.ROOT, "%.3f", Math.abs(RiftGeometry.area(shape.vertices()))),
+        this.text(this.getOrThrow("geometry_status"), Component.translatable("screen.mxt.rift.geometry", shape.vertices().size(), String.format(Locale.ROOT, "%.3f", Math.abs(RiftGeometry.area(shape.vertices()))),
                 Component.translatable(valid ? "screen.mxt.rift.valid" : "screen.mxt.rift.invalid")));
     }
 

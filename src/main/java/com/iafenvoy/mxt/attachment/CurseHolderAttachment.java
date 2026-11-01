@@ -1,6 +1,5 @@
 package com.iafenvoy.mxt.attachment;
 
-import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.data.curse.Curse;
 import com.iafenvoy.saturn.util.AbstractChangeTrackable;
 import com.iafenvoy.saturn.util.SourceLedger;
@@ -9,7 +8,6 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;
-import net.minecraft.resources.Identifier;
 
 import java.util.*;
 
@@ -34,7 +32,6 @@ public final class CurseHolderAttachment extends AbstractChangeTrackable {
     private CurseHolderAttachment(Map<Holder<Curse>, State> instances, SourceLedger<Holder<Curse>> sources) {
         this.instances = new LinkedHashMap<>(instances);
         this.sources = sources.copy();
-        this.migrateLegacySources();
     }
 
     public Map<Holder<Curse>, State> instances() {
@@ -80,39 +77,17 @@ public final class CurseHolderAttachment extends AbstractChangeTrackable {
         return true;
     }
 
-    // A save written before sources became a set records one free-form string per instance; it is read into the
-    // ledger here so the rest of the runtime only ever sees the shared shape.
-    private void migrateLegacySources() {
-        this.instances.forEach((curse, state) -> state.legacySource()
-                .filter(ignored -> !this.sources.holds(curse))
-                .ifPresent(raw -> this.sources.grant(curse, migrate(raw))));
-    }
-
-    private static Identifier migrate(String raw) {
-        Identifier parsed = Identifier.tryParse(raw);
-        if (parsed != null) return parsed;
-        String path = raw.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9/._-]", "_");
-        return Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "legacy/" + (path.isBlank() ? "unknown" : path));
-    }
-
     // One applied curse. Who keeps it alive is the attachment's source ledger, not part of this payload.
-    public record State(int stacks, long appliedAt, long expiresAt, boolean unknownDefinition,
-                        Optional<String> legacySource) {
+    public record State(int stacks, long appliedAt, long expiresAt, boolean unknownDefinition) {
         public static final Codec<State> CODEC = RecordCodecBuilder.create(i -> i.group(
                 Codec.intRange(1, 256).fieldOf("stacks").forGetter(State::stacks),
                 Codec.LONG.fieldOf("applied_at").forGetter(State::appliedAt),
                 Codec.LONG.fieldOf("expires_at").forGetter(State::expiresAt),
-                Codec.BOOL.lenientOptionalFieldOf("unknown_definition", false).forGetter(State::unknownDefinition),
-                // Read for saves written before the ledger existed; never written back, since the ledger owns it.
-                Codec.STRING.lenientOptionalFieldOf("source").forGetter(State::legacySource)
+                Codec.BOOL.lenientOptionalFieldOf("unknown_definition", false).forGetter(State::unknownDefinition)
         ).apply(i, State::new));
 
         public State(int stacks, long appliedAt, long expiresAt) {
-            this(stacks, appliedAt, expiresAt, false, Optional.empty());
-        }
-
-        public State(int stacks, long appliedAt, long expiresAt, boolean unknownDefinition) {
-            this(stacks, appliedAt, expiresAt, unknownDefinition, Optional.empty());
+            this(stacks, appliedAt, expiresAt, false);
         }
 
         public boolean expiredAt(long gameTime) {
@@ -120,11 +95,11 @@ public final class CurseHolderAttachment extends AbstractChangeTrackable {
         }
 
         public State markedKnown() {
-            return new State(this.stacks, this.appliedAt, this.expiresAt, false, Optional.empty());
+            return new State(this.stacks, this.appliedAt, this.expiresAt, false);
         }
 
         public State markedUnknown() {
-            return new State(this.stacks, this.appliedAt, this.expiresAt, true, Optional.empty());
+            return new State(this.stacks, this.appliedAt, this.expiresAt, true);
         }
     }
 }

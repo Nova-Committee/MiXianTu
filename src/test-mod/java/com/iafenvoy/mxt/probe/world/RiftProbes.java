@@ -357,46 +357,29 @@ public final class RiftProbes {
         RiftTemplate data = RiftEdits.shape(base, RiftEdits.transform(base.shape(), Set.of(), new RiftVertex(0, 0), 48, 0, 0, 1, 1, 0));
         RiftRecord r = new RiftRecord(UUID.randomUUID(), 9, data, -1,
                 Optional.of(c.player().getUUID()), Optional.of(c.level().dimension().identifier()), 5, Optional.of(UUID.randomUUID()));
-        JsonObject legacy = new JsonObject();
-        JsonArray portals = new JsonArray();
-        portals.add(RiftRecord.CODEC.encodeStart(JsonOps.INSTANCE, r).result().orElseThrow());
-        legacy.add("portals", portals);
-        RiftWorldAttachment loaded = RiftWorldAttachment.CODEC.codec().parse(JsonOps.INSTANCE, legacy).result().orElseThrow();
-        c.level().setData(MxtAttachments.RIFT_WORLD, loaded);
+        RiftGeometry.Mesh mesh = RiftGeometry.mesh(data.shape(), data.placement(), RiftGeometry.triangulate(data.shape()).result().orElseThrow());
+        LevelChunk originChunk = c.level().getChunkAt(BlockPos.containing(data.placement().origin()));
+        LevelChunk centerChunk = c.level().getChunkAt(BlockPos.containing(data.placement().origin().add(48, 1.25, 0)));
+        RiftService.world(c.level()).put(r, mesh);
+        originChunk.getData(MxtAttachments.RIFT_CHUNK).put(r);
+        centerChunk.getData(MxtAttachments.RIFT_CHUNK).remove(r.id());
+        originChunk.markUnsaved();
+        centerChunk.markUnsaved();
+        JsonObject oldDirectory = RiftWorldAttachment.CODEC.codec().encodeStart(JsonOps.INSTANCE, RiftService.world(c.level()))
+                .result().orElseThrow().getAsJsonObject();
+        oldDirectory.getAsJsonArray("locations").get(0).getAsJsonObject().addProperty("chunk", originChunk.getPos().pack());
+        RiftWorldAttachment oldIndex = RiftWorldAttachment.CODEC.codec().parse(JsonOps.INSTANCE, oldDirectory).result().orElseThrow();
+        c.level().setData(MxtAttachments.RIFT_WORLD, oldIndex);
         try {
-            c.expect("legacy portal transferred intact", RiftService.get(c.level(), r.id()), r);
-            LevelChunk chunk = c.level().getChunkAt(BlockPos.containing(data.placement().origin().add(48, 1.25, 0)));
-            c.expect("legacy record now belongs to center chunk", chunk.getData(MxtAttachments.RIFT_CHUNK).get(r.id()), r);
-            c.check("legacy payload cleared after transfer", loaded.legacy().isEmpty());
-            c.check("legacy identity indexed", loaded.location(r.id()) != null);
-            RiftService.world(c.level());
-            c.expect("migration is idempotent", loaded.locations().size(), 1);
-
-            LevelChunk originChunk = c.level().getChunkAt(BlockPos.containing(data.placement().origin()));
-            originChunk.getData(MxtAttachments.RIFT_CHUNK).put(r);
-            chunk.getData(MxtAttachments.RIFT_CHUNK).remove(r.id());
-            originChunk.markUnsaved();
-            chunk.markUnsaved();
-            JsonObject oldDirectory = RiftWorldAttachment.CODEC.codec().encodeStart(JsonOps.INSTANCE, loaded).result().orElseThrow().getAsJsonObject();
-            oldDirectory.getAsJsonArray("locations").get(0).getAsJsonObject().addProperty("chunk", originChunk.getPos().pack());
-            RiftWorldAttachment oldIndex = RiftWorldAttachment.CODEC.codec().parse(JsonOps.INSTANCE, oldDirectory).result().orElseThrow();
-            c.level().setData(MxtAttachments.RIFT_WORLD, oldIndex);
-            try {
-                c.expect("origin-based save transfers without changing record", RiftService.get(c.level(), r.id()), r);
-                c.expect("origin-based save updates directory", oldIndex.location(r.id()).chunk(), chunk.getPos().pack());
-                c.expect("origin-based save clears old owner", originChunk.getData(MxtAttachments.RIFT_CHUNK).get(r.id()), null);
-                c.expect("origin-based save persists center owner", chunk.getData(MxtAttachments.RIFT_CHUNK).get(r.id()), r);
-                oldIndex.evict(r.id());
-                c.expect("cold reread follows transferred directory", RiftService.get(c.level(), r.id()), r);
-            } finally {
-                RiftService.remove(c.level(), r.id());
-                oldIndex.release();
-                c.level().setData(MxtAttachments.RIFT_WORLD, loaded);
-                RiftService.world(c.level());
-            }
+            c.expect("origin-based save transfers without changing record", RiftService.get(c.level(), r.id()), r);
+            c.expect("origin-based save updates directory", oldIndex.location(r.id()).chunk(), centerChunk.getPos().pack());
+            c.expect("origin-based save clears old owner", originChunk.getData(MxtAttachments.RIFT_CHUNK).get(r.id()), null);
+            c.expect("origin-based save persists center owner", centerChunk.getData(MxtAttachments.RIFT_CHUNK).get(r.id()), r);
+            oldIndex.evict(r.id());
+            c.expect("cold reread follows transferred directory", RiftService.get(c.level(), r.id()), r);
         } finally {
             RiftService.remove(c.level(), r.id());
-            loaded.release();
+            oldIndex.release();
             c.level().setData(MxtAttachments.RIFT_WORLD, previous);
             RiftService.world(c.level());
         }
