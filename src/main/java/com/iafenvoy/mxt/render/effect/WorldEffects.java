@@ -123,8 +123,7 @@ public final class WorldEffects implements AutoCloseable {
         private final WorldEffects owner = WorldEffects.this;
         private final LevelRenderState view;
         private final LevelRenderer renderer;
-        private final EffectFrame<EffectDraw, SceneDepth> state;
-        private final EffectFrame<EffectDraw, SceneDepth> opaque;
+        private final EffectFrame<EffectDraw, SceneDepth> state, opaque;
         private final Vec3 camera;
         private final boolean panoramic;
         private boolean opaqueSubmitted, opaqueReached;
@@ -136,10 +135,8 @@ public final class WorldEffects implements AutoCloseable {
             this.renderer = event.getLevelRenderer();
             this.camera = this.view.cameraRenderState.pos;
             this.panoramic = this.view.cameraRenderState.isPanoramicMode;
-            this.state = new EffectFrame<>(this.view, WorldEffects.this.generation,
-                    exception -> MiXianTu.LOGGER.error("Failed to finish a world effect view", exception));
-            this.opaque = new EffectFrame<>(this.view, WorldEffects.this.generation,
-                    exception -> MiXianTu.LOGGER.error("Failed to finish an opaque world effect view", exception));
+            this.state = new EffectFrame<>(this.view, WorldEffects.this.generation, e -> MiXianTu.LOGGER.error("Failed to finish a world effect view", e));
+            this.opaque = new EffectFrame<>(this.view, WorldEffects.this.generation, e -> MiXianTu.LOGGER.error("Failed to finish an opaque world effect view", e));
         }
 
         public boolean active() {

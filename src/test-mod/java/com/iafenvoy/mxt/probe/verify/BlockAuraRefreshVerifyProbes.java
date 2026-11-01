@@ -1,5 +1,7 @@
 package com.iafenvoy.mxt.probe.verify;
 
+import com.google.common.collect.ListMultimap;
+import com.google.common.collect.Multimap;
 import com.iafenvoy.mxt.attachment.AuraChunkAttachment;
 import com.iafenvoy.mxt.config.MxtServerConfig;
 import com.iafenvoy.mxt.data.aura.Aura;
@@ -325,6 +327,17 @@ public final class BlockAuraRefreshVerifyProbes {
         }
     }
 
+    @SuppressWarnings("unchecked")
+    private static Multimap<ServerLevel, Object> tickerState(String name) {
+        try {
+            Field field = AuraChunkTicker.class.getDeclaredField(name);
+            field.setAccessible(true);
+            return (Multimap<ServerLevel, Object>) field.get(null);
+        } catch (ReflectiveOperationException exception) {
+            throw new IllegalStateException(exception);
+        }
+    }
+
     // Detached chunks and saved level entries keep controlled ticks from changing the live arena's schedules.
     private static final class Fixture implements AutoCloseable {
         private final ServerLevel level;
@@ -344,7 +357,9 @@ public final class BlockAuraRefreshVerifyProbes {
             this.aura = context.require(MxtResourceKeys.AURA, ProbeDefinitions.QI);
             this.previousTime = this.clock.getGameTime();
             this.previousInterval = MxtServerConfig.INSTANCE.aura.blockAuraTickInterval.getValue();
-            for (String name : List.of("LOADED", "PENDING", "REFRESH", "MAINTENANCE"))
+            for (String name : List.of("LOADED", "PENDING"))
+                this.previous.put(name, tickerState(name).removeAll(this.level));
+            for (String name : List.of("REFRESH", "MAINTENANCE"))
                 this.previous.put(name, state(name).remove(this.level));
             this.clock.setGameTime(100L);
             MxtServerConfig.INSTANCE.aura.blockAuraTickInterval.setValue(interval);
@@ -386,7 +401,7 @@ public final class BlockAuraRefreshVerifyProbes {
 
         @SuppressWarnings("unchecked")
         private List<Object> tasks(LevelChunk chunk) {
-            Map<LevelChunk, List<Object>> chunks = (Map<LevelChunk, List<Object>>) read(state("REFRESH").get(this.level), "chunks");
+            ListMultimap<LevelChunk, Object> chunks = (ListMultimap<LevelChunk, Object>) read(state("REFRESH").get(this.level), "chunks");
             return List.copyOf(chunks.get(chunk));
         }
 
@@ -408,11 +423,18 @@ public final class BlockAuraRefreshVerifyProbes {
         }
 
         @Override
+        @SuppressWarnings("unchecked")
         public void close() {
             try {
                 AuraChunkTicker.onLevelUnload(new LevelEvent.Unload(this.level));
-                for (Map.Entry<String, Object> entry : this.previous.entrySet())
-                    if (entry.getValue() != null) state(entry.getKey()).put(this.level, entry.getValue());
+                for (String name : List.of("LOADED", "PENDING")) {
+                    Object chunks = this.previous.get(name);
+                    if (chunks != null) tickerState(name).putAll(this.level, (Collection<Object>) chunks);
+                }
+                for (String name : List.of("REFRESH", "MAINTENANCE")) {
+                    Object queue = this.previous.get(name);
+                    if (queue != null) state(name).put(this.level, queue);
+                }
             } finally {
                 this.clock.setGameTime(this.previousTime);
                 MxtServerConfig.INSTANCE.aura.blockAuraTickInterval.setValue(this.previousInterval);

@@ -5,9 +5,10 @@ import com.google.common.collect.Multimaps;
 import com.google.common.collect.SetMultimap;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.server.players.NameAndId;
 import net.minecraft.util.TriState;
 
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 
@@ -22,6 +23,9 @@ import java.util.UUID;
  */
 public final class FriendCache {
     private static final SetMultimap<UUID, UUID> FRIENDS = Multimaps.synchronizedSetMultimap(HashMultimap.create());
+    // An absent key and an empty set are the same thing in a multimap, but "seen with no friends" and "never seen"
+    // are different answers, so the owners the mirror has recorded are tracked next to their lists.
+    private static final Set<UUID> KNOWN = Collections.synchronizedSet(new HashSet<>());
 
     private FriendCache() {
     }
@@ -29,19 +33,25 @@ public final class FriendCache {
     // A player with no friend attachment is recorded as having an empty list rather than skipped: "this player has
     // no friends" and "this player is unknown" are different answers.
     public static void refresh(ServerPlayer player) {
+        UUID owner = player.getUUID();
+        Set<UUID> ids = new HashSet<>();
         player.getExistingData(MxtAttachments.FRIEND).ifPresent(friends -> {
-            FRIENDS.putAll(player.getUUID(), friends.permanent().stream().map(NameAndId::id).toList());
-            FRIENDS.putAll(player.getUUID(), friends.temporary().stream().map(NameAndId::id).toList());
+            friends.permanent().forEach(friend -> ids.add(friend.id()));
+            friends.temporary().forEach(friend -> ids.add(friend.id()));
         });
+        // Replaced rather than appended, so a list that shrank between login and logout loses the entries it dropped.
+        FRIENDS.removeAll(owner);
+        FRIENDS.putAll(owner, ids);
+        KNOWN.add(owner);
     }
 
     // The mirrored answer for a named owner, or DEFAULT when that player has never been seen.
     public static TriState lookup(UUID owner, UUID candidate) {
-        Set<UUID> friends = FRIENDS.get(owner);
-        return TriState.from(friends.contains(candidate));
+        return KNOWN.contains(owner) ? TriState.from(FRIENDS.containsEntry(owner, candidate)) : TriState.DEFAULT;
     }
 
     public static void clear() {
         FRIENDS.clear();
+        KNOWN.clear();
     }
 }

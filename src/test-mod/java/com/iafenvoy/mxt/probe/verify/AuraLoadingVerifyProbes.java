@@ -1,5 +1,6 @@
 package com.iafenvoy.mxt.probe.verify;
 
+import com.google.common.collect.Multimap;
 import com.iafenvoy.mxt.attachment.AuraChunkAttachment;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.probe.Probe;
@@ -189,7 +190,23 @@ public final class AuraLoadingVerifyProbes {
             this.pos = pos;
             level.getChunk(pos.x(), pos.z());
             ChunkHolder holder = this.source.chunkMap.getVisibleChunkIfPresent(pos.pack());
-            throw new IllegalStateException("Probe needs a completed chunk holder");
+            if (holder == null || holder.currentlyLoading != null) throw new IllegalStateException("Probe needs a completed chunk holder");
+            this.futures = (AtomicReferenceArray<CompletableFuture<ChunkResult<ChunkAccess>>>) read(GenerationChunkHolder.class, holder, "futures");
+            this.tickets = (TicketStorage) read(ServerChunkCache.class, this.source, "ticketStorage");
+            this.previousTickets = List.copyOf(this.tickets.getTickets(pos.pack()));
+            this.memoEnabled = (boolean) read(AuraQueryCache.class, null, "enabled");
+            for (ChunkStatus status : List.of(ChunkStatus.BIOMES, ChunkStatus.FULL)) {
+                int index = status.getIndex();
+                this.previous.put(index, this.futures.get(index));
+                this.futures.set(index, new CompletableFuture<>() {
+                    @Override
+                    public boolean isDone() {
+                        throw new IllegalStateException("Aura entered the blocking chunk scheduling path");
+                    }
+                });
+            }
+            this.clearChunkCache();
+            AuraQueryCache.setEnabled(false);
         }
 
         private boolean ticketsUnchanged() {
@@ -216,24 +233,32 @@ public final class AuraLoadingVerifyProbes {
         }
     }
 
+    // Loaded and pending chunks are multimaps and the level queues are maps, so a detached entry is either the
+    // values of one level or the queue object itself, and is put back the same way.
     private static final class TickerState implements AutoCloseable {
         private final ServerLevel level;
-        private final Map<Map<ServerLevel, Object>, Object> previous = new IdentityHashMap<>();
+        private final Map<Object, Object> previous = new IdentityHashMap<>();
 
         @SuppressWarnings("unchecked")
         private TickerState(ServerLevel level) {
             this.level = level;
             for (String name : List.of("LOADED", "PENDING", "REFRESH", "MAINTENANCE")) {
-                Map<ServerLevel, Object> state = (Map<ServerLevel, Object>) read(AuraChunkTicker.class, null, name);
-                this.previous.put(state, state.remove(level));
+                Object state = read(AuraChunkTicker.class, null, name);
+                this.previous.put(state, state instanceof Multimap<?, ?> multimap
+                        ? multimap.removeAll(level)
+                        : ((Map<ServerLevel, Object>) state).remove(level));
             }
         }
 
         @Override
+        @SuppressWarnings("unchecked")
         public void close() {
             AuraChunkTicker.onLevelUnload(new LevelEvent.Unload(this.level));
             this.previous.forEach((state, value) -> {
-                if (value != null) state.put(this.level, value);
+                if (value == null) return;
+                if (state instanceof Multimap<?, ?> multimap)
+                    ((Multimap<ServerLevel, Object>) multimap).putAll(this.level, (Collection<Object>) value);
+                else ((Map<ServerLevel, Object>) state).put(this.level, value);
             });
         }
     }
