@@ -13,7 +13,7 @@ import com.iafenvoy.mxt.screen.aui.*;
 import com.iafenvoy.mxt.screen.aui.AuiScrollList.Cell;
 import com.iafenvoy.mxt.screen.information.InformationCollector.InformationEntry;
 import com.iafenvoy.mxt.screen.information.InformationHelper.Columns;
-import com.iafenvoy.mxt.screen.information.InformationManager.Side;
+import com.iafenvoy.saturn.api.playerview.PlayerView;
 import com.iafenvoy.saturn.attachment.ResourceHolderAttachment;
 import com.iafenvoy.saturn.data.IconReference;
 import com.iafenvoy.saturn.data.resource.Resource;
@@ -21,6 +21,13 @@ import com.iafenvoy.saturn.registry.SaturnAttachments;
 import com.iafenvoy.saturn.util.DefinitionText;
 import com.iafenvoy.saturn.util.HolderHelper;
 import com.iafenvoy.saturn.util.formula.FormulaContexts;
+import com.iafenvoy.saturn.view.InformationText;
+import com.iafenvoy.saturn.view.PlayerInformation;
+import com.iafenvoy.saturn.view.PlayerViews;
+import com.iafenvoy.saturn.view.model.InformationContext;
+import com.iafenvoy.saturn.view.model.InformationDocument;
+import com.iafenvoy.saturn.view.model.InformationRow;
+import com.iafenvoy.saturn.view.model.InformationRowContent;
 import com.sighs.apricityui.element.Item;
 import com.sighs.apricityui.init.Document;
 import com.sighs.apricityui.init.Element;
@@ -103,6 +110,7 @@ public final class InformationPanelScreen extends AuiScreen {
      */
     private static final int TECHNIQUE_TOP = TAB_TOP + TAB_HEIGHT + TAB_GAP, TECHNIQUE_EMPTY_TOP = TECHNIQUE_TOP + 6;
     private static final int LABEL_COLOR = 0xFFFFFFFF, MUTED_COLOR = 0xFFC0C0C0, UNKNOWN_COLOR = 0xFF8A8A8A;
+    private static final int VALUE_COLOR = 0xFFE0E4EC, POSITIVE_COLOR = 0xFF55FF55, WARNING_COLOR = 0xFFFFAA00;
     private static final int BAR_FALLBACK_COLOR = 0xFFCFCFCF;
     private static final EquipmentSlot[] EQUIPMENT_SLOTS = {
             EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET
@@ -235,14 +243,30 @@ public final class InformationPanelScreen extends AuiScreen {
 
     private void refreshInformation() {
         if (this.minecraft.player == null) return;
-        if (this.cultivation != null) {
-            this.cultivation.rebuild(this.font,
-                    InformationManager.collectEntries(this.minecraft.player, Side.CULTIVATION));
-        }
-        if (this.basic != null) {
-            this.basic.rebuild(this.font, InformationManager.collectEntries(this.minecraft.player, Side.BASIC));
-        }
+        // One snapshot, two documents: each list asks only for the groups it shows.
+        PlayerView view = PlayerViews.parse(this.minecraft.player);
+        if (this.cultivation != null)
+            this.cultivation.rebuild(this.font, entries(PlayerInformation.collect(view, MxtPlayerInformation.group())));
+        if (this.basic != null)
+            this.basic.rebuild(this.font, entries(PlayerInformation.collect(view, InformationContext.DEFAULT, PlayerInformation.BASIC)));
         this.refreshTechniques();
+    }
+
+    private static List<InformationEntry> entries(InformationDocument document) {
+        List<InformationEntry> entries = new ArrayList<>();
+        for (InformationRow row : document.rows()) {
+            InformationRowContent content = row.content();
+            int color = switch (content.tone()) {
+                case NORMAL -> VALUE_COLOR;
+                case POSITIVE -> POSITIVE_COLOR;
+                case WARNING -> WARNING_COLOR;
+            };
+            // A row's extra lines are stacked under its own label, which is only written on the first of them.
+            List<Component> values = InformationText.lines(content.value());
+            for (int index = 0; index < values.size(); index++)
+                entries.add(new InformationEntry(index == 0 ? content.label() : null, values.get(index), color, content.tooltip()));
+        }
+        return entries;
     }
 
     private void refreshTechniques() {

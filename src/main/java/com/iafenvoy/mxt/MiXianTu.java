@@ -9,6 +9,7 @@ import com.iafenvoy.mxt.registry.*;
 import com.iafenvoy.mxt.registry.cache.RegistryCaches;
 import com.iafenvoy.mxt.runtime.MxtAbilityHooks;
 import com.iafenvoy.mxt.runtime.MxtProfilerSources;
+import com.iafenvoy.mxt.screen.information.MxtPlayerInformation;
 import com.iafenvoy.saturn.registry.SaturnAliases;
 import com.mojang.logging.LogUtils;
 import net.neoforged.bus.api.IEventBus;
@@ -81,6 +82,7 @@ public final class MiXianTu {
         RegistryCaches.init();
         CuriosIntegration.registerPredicates();
         PickerCategories.register();
+        MxtPlayerInformation.register();
     }
 
     /**
