@@ -1,0 +1,42 @@
+{
+  "order": 40,
+  "label": {
+    "translate": "info.mxt.physiques"
+  },
+  "value": {
+    "type": "saturn:list",
+    "source": {
+      "type": "saturn:getter",
+      "getter": {
+        "type": "mxt:information"
+      },
+      "path": [
+        "physiques",
+        "values"
+      ]
+    },
+    "element": {
+      "type": "saturn:text",
+      "component": true,
+      "value": {
+        "type": "saturn:local"
+      }
+    }
+  },
+  "tooltip_expression": {
+    "type": "saturn:text",
+    "component": true,
+    "value": {
+      "type": "saturn:getter",
+      "getter": {
+        "type": "mxt:information"
+      },
+      "path": [
+        "physiques",
+        "tooltip"
+      ]
+    }
+  },
+  "tone": "normal",
+  "missing": "hide"
+}

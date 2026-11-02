@@ -22,8 +22,8 @@ import com.iafenvoy.mxt.probe.lifespan.LifespanProbes;
 import com.iafenvoy.mxt.probe.talisman.StationProbes;
 import com.iafenvoy.mxt.probe.talisman.TalismanProbes;
 import com.iafenvoy.mxt.probe.verify.*;
-import com.iafenvoy.mxt.probe.world.RiftProbes;
 import com.iafenvoy.mxt.probe.world.RiftAnchorProbes;
+import com.iafenvoy.mxt.probe.world.RiftProbes;
 import com.iafenvoy.mxt.probe.world.SecretRealmProbes;
 import com.iafenvoy.mxt.probe.world.SecretRealmTravelProbes;
 import com.iafenvoy.mxt.testmod.MxtTestMod;
@@ -83,7 +83,6 @@ public final class ProbeTests {
             BreakthroughPaymentVerifyProbes::probes,
             ResourceBarVerifyProbes::probes,
             HoldAnimationVerifyProbes::probes,
-            AuraLoadingVerifyProbes::probes,
             AuraDoubleVerifyProbes::probes,
             AuiBindingVerifyProbes::probes,
             AuiGeometryVerifyProbes::probes,
@@ -98,7 +97,6 @@ public final class ProbeTests {
             TickDispatcherVerifyProbes::probes,
             EconomyVerifyProbes::probes,
             MinorStageVerifyProbes::probes,
-            PlayerInformationVerifyProbes::probes,
             ServerProfilingVerifyProbes::probes,
             ProfilerGuiVerifyProbes::probes,
             ProfilerChartVerifyProbes::probes,

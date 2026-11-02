@@ -1,19 +1,13 @@
 package com.iafenvoy.mxt.screen.information;
 
-import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.attachment.*;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.cultivation.LifeSpanService;
-import com.iafenvoy.saturn.api.playerview.PlayerViewField;
-import com.iafenvoy.saturn.api.playerview.PlayerViewWriter;
-import com.iafenvoy.saturn.api.playerview.SavedPlayerViewReader;
-import com.iafenvoy.saturn.view.model.SavedPlayerViewContext;
-import com.iafenvoy.saturn.view.model.ValueOrigin;
+import com.iafenvoy.saturn.data.information.model.SavedPlayerViewContext;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtOps;
 import net.minecraft.nbt.Tag;
-import net.minecraft.resources.Identifier;
 import net.minecraft.resources.RegistryOps;
 import net.neoforged.neoforge.attachment.AttachmentType;
 import net.neoforged.neoforge.registries.DeferredHolder;
@@ -21,7 +15,6 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Set;
 
 /**
  * Reads MiXianTu's rows out of a player's saved attachments, so a view of a body that is not loaded still answers what
@@ -31,21 +24,13 @@ import java.util.Set;
  * <p>The attachments are decoded through their own codecs, which is the same shape the server writes: NeoForge stores
  * each attachment under its registry id inside {@code neoforge:attachments}.
  */
-public final class MxtSavedPlayerView implements SavedPlayerViewReader {
+public final class MxtSavedPlayerView {
     private static final String ATTACHMENTS = "neoforge:attachments";
 
-    @Override
-    public Identifier id() {
-        return Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "saved_information");
+    private MxtSavedPlayerView() {
     }
 
-    @Override
-    public Set<PlayerViewField<?>> fields() {
-        return Set.of(MxtPlayerView.INFORMATION);
-    }
-
-    @Override
-    public void read(SavedPlayerViewContext context, PlayerViewWriter writer) {
+    public static Map<String, MxtPlayerView.Row> read(SavedPlayerViewContext context) {
         CompoundTag attachments = context.player().getCompound(ATTACHMENTS).orElseGet(CompoundTag::new);
         RegistryOps<Tag> ops = context.registries().createSerializationContext(NbtOps.INSTANCE);
         CultivationAttachment cultivation = decode(attachments, MxtAttachments.CULTIVATION, CultivationAttachment.CODEC, ops);
@@ -60,7 +45,7 @@ public final class MxtSavedPlayerView implements SavedPlayerViewReader {
         MxtPlayerView.techniques(decode(attachments, MxtAttachments.TECHNIQUE, TechniqueAttachment.CODEC, ops), rows);
         MxtPlayerView.curses(decode(attachments, MxtAttachments.CURSE_HOLDER, CurseHolderAttachment.CODEC, ops), null,
                 context.meta().capturedGameTime().orElse(null), rows);
-        writer.put(MxtPlayerView.INFORMATION, rows, ValueOrigin.SAVED);
+        return rows;
     }
 
     // A missing attachment and one that fails to decode both leave the row out: the save cannot prove it either way.

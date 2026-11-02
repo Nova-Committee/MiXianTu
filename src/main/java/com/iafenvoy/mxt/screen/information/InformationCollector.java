@@ -12,7 +12,7 @@ import java.util.function.Supplier;
 
 public final class InformationCollector {
     private final Player player;
-    private final List<InformationEntry> entries = new LinkedList<>();
+    private final List<Entry> entries = new LinkedList<>();
 
     public InformationCollector(Player player) {
         this.player = player;
@@ -26,21 +26,21 @@ public final class InformationCollector {
         return this.player.getData(type);
     }
 
-    public List<InformationEntry> getEntries() {
+    public List<Entry> getEntries() {
         return List.copyOf(this.entries);
     }
 
-    public InformationCollector add(InformationEntry entry) {
+    public InformationCollector add(Entry entry) {
         if (entry.fulfilled()) this.entries.add(entry);
         return this;
     }
 
     public InformationCollector add(@Nullable Component name, Component value) {
-        return this.add(new InformationEntry(name, value));
+        return this.add(new Entry(name, value));
     }
 
     public InformationCollector add(@Nullable Component name, Component value, int color, @Nullable Component tooltip) {
-        return this.add(new InformationEntry(name, value, color, Optional.ofNullable(tooltip)));
+        return this.add(new Entry(name, value, color, Optional.ofNullable(tooltip)));
     }
 
     public InformationCollector add(String key, Component value) {
@@ -55,13 +55,13 @@ public final class InformationCollector {
         return this.add((Component) null, value);
     }
 
-    public InformationCollector addAll(List<InformationEntry> entries) {
-        entries.stream().filter(InformationEntry::fulfilled).forEach(this.entries::add);
+    public InformationCollector addAll(List<Entry> entries) {
+        entries.stream().filter(Entry::fulfilled).forEach(this.entries::add);
         return this;
     }
 
-    public record InformationEntry(@Nullable Component name, Component value, int color, Optional<Component> tooltip) {
-        public InformationEntry(@Nullable Component name, Component value) {
+    public record Entry(@Nullable Component name, Component value, int color, Optional<Component> tooltip) {
+        public Entry(@Nullable Component name, Component value) {
             this(name, value, 0xFFE0E4EC, Optional.empty());
         }
 

@@ -53,8 +53,8 @@ public final class WorldEffectsVerifyProbes {
             throw new AssertionError("duplicate capture");
         }) == depth, true);
         context.expect("multiple requests perform one copy", copies.get(), 1);
-        List<String> delivered = new ArrayList<>();
-        frame.drain(delivered::add);
+        frame.drain(_ -> {
+        });
         frame.drain(_ -> {
             throw new AssertionError("duplicate drain");
         });

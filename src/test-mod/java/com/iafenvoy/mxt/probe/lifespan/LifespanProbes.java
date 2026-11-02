@@ -81,7 +81,7 @@ public final class LifespanProbes {
     private static void switchOff(ProbeContext context) {
         Snapshot was = snapshot();
         List<LivingEntity> probes = new ArrayList<>();
-        boolean ok = true;
+        boolean ok;
         try {
             MxtServerConfig.Lifespan settings = MxtServerConfig.INSTANCE.lifespan;
             LivingEntity dormant = probe(context, probes, 1, null);
@@ -107,7 +107,7 @@ public final class LifespanProbes {
     private static void switchOn(ProbeContext context) {
         Snapshot was = snapshot();
         List<LivingEntity> probes = new ArrayList<>();
-        boolean ok = true;
+        boolean ok;
         try {
             MxtServerConfig.Lifespan settings = MxtServerConfig.INSTANCE.lifespan;
             LivingEntity dormant = probe(context, probes, 1, null);
@@ -133,7 +133,7 @@ public final class LifespanProbes {
     private static void ledger(ProbeContext context) {
         Snapshot was = snapshot();
         List<LivingEntity> probes = new ArrayList<>();
-        boolean ok = true;
+        boolean ok;
         try {
             MxtServerConfig.Lifespan settings = MxtServerConfig.INSTANCE.lifespan;
             LivingEntity ledger = probe(context, probes, 1, null);
@@ -169,7 +169,7 @@ public final class LifespanProbes {
     private static void seed(ProbeContext context) {
         Snapshot was = snapshot();
         List<LivingEntity> probes = new ArrayList<>();
-        boolean ok = true;
+        boolean ok;
         try {
             MxtServerConfig.Lifespan settings = MxtServerConfig.INSTANCE.lifespan;
             LivingEntity seeded = probe(context, probes, 1, null);
@@ -197,7 +197,7 @@ public final class LifespanProbes {
     private static void settle(ProbeContext context) {
         Snapshot was = snapshot();
         List<LivingEntity> probes = new ArrayList<>();
-        boolean ok = true;
+        boolean ok;
         try {
             MxtServerConfig.Lifespan settings = MxtServerConfig.INSTANCE.lifespan;
             LivingEntity settled = probe(context, probes, 1, null);
@@ -235,7 +235,7 @@ public final class LifespanProbes {
     private static void preCancel(ProbeContext context) {
         Snapshot was = snapshot();
         List<LivingEntity> probes = new ArrayList<>();
-        boolean ok = true;
+        boolean ok;
         try {
             MxtServerConfig.Lifespan settings = MxtServerConfig.INSTANCE.lifespan;
             LivingEntity cancelled = probe(context, probes, 1, null);
@@ -278,7 +278,7 @@ public final class LifespanProbes {
     private static void death(ProbeContext context) {
         Snapshot was = snapshot();
         List<LivingEntity> probes = new ArrayList<>();
-        boolean ok = true;
+        boolean ok;
         try {
             MxtServerConfig.Lifespan settings = MxtServerConfig.INSTANCE.lifespan;
             LivingEntity doomed = probe(context, probes, 1, null);
@@ -307,7 +307,7 @@ public final class LifespanProbes {
     private static void reincarnate(ProbeContext context) {
         Snapshot was = snapshot();
         List<LivingEntity> probes = new ArrayList<>();
-        boolean ok = true;
+        boolean ok;
         try {
             MxtServerConfig.Lifespan settings = MxtServerConfig.INSTANCE.lifespan;
             LivingEntity reborn = probe(context, probes, 1, ProbeDefinitions.PROBE_FIRE_ROOT);
@@ -358,7 +358,7 @@ public final class LifespanProbes {
     private static void breakthrough(ProbeContext context) {
         Snapshot was = snapshot();
         List<LivingEntity> probes = new ArrayList<>();
-        boolean ok = true;
+        boolean ok;
         try {
             MxtServerConfig.Lifespan settings = MxtServerConfig.INSTANCE.lifespan;
             LivingEntity climber = probe(context, probes, 1, null);
@@ -397,7 +397,7 @@ public final class LifespanProbes {
     private static void action(ProbeContext context) {
         Snapshot was = snapshot();
         List<LivingEntity> probes = new ArrayList<>();
-        boolean ok = true;
+        boolean ok;
         try {
             MxtServerConfig.Lifespan settings = MxtServerConfig.INSTANCE.lifespan;
             LivingEntity acted = probe(context, probes, 1, null);
@@ -428,7 +428,7 @@ public final class LifespanProbes {
     private static void noLedger(ProbeContext context) {
         Snapshot was = snapshot();
         List<LivingEntity> probes = new ArrayList<>();
-        boolean ok = true;
+        boolean ok;
         try {
             MxtServerConfig.Lifespan settings = MxtServerConfig.INSTANCE.lifespan;
             LivingEntity untouched = probe(context, probes, 1, null);
@@ -456,7 +456,7 @@ public final class LifespanProbes {
     private static void explicitReincarnate(ProbeContext context) {
         Snapshot was = snapshot();
         List<LivingEntity> probes = new ArrayList<>();
-        boolean ok = true;
+        boolean ok;
         try {
             MxtServerConfig.Lifespan settings = MxtServerConfig.INSTANCE.lifespan;
             LivingEntity restart = probe(context, probes, 1, ProbeDefinitions.PROBE_FIRE_ROOT);
@@ -523,7 +523,7 @@ public final class LifespanProbes {
     private static void reincarnateAction(ProbeContext context) {
         Snapshot was = snapshot();
         List<LivingEntity> probes = new ArrayList<>();
-        boolean ok = true;
+        boolean ok;
         try {
             MxtServerConfig.Lifespan settings = MxtServerConfig.INSTANCE.lifespan;
             LivingEntity restart = probe(context, probes, 1, ProbeDefinitions.PROBE_FIRE_ROOT);

@@ -1,0 +1,42 @@
+{
+  "order": 20,
+  "label": {
+    "translate": "info.mxt.cultivation_progress"
+  },
+  "value": {
+    "type": "saturn:list",
+    "source": {
+      "type": "saturn:getter",
+      "getter": {
+        "type": "mxt:information"
+      },
+      "path": [
+        "cultivation_progress",
+        "values"
+      ]
+    },
+    "element": {
+      "type": "saturn:text",
+      "component": true,
+      "value": {
+        "type": "saturn:local"
+      }
+    }
+  },
+  "tooltip_expression": {
+    "type": "saturn:text",
+    "component": true,
+    "value": {
+      "type": "saturn:getter",
+      "getter": {
+        "type": "mxt:information"
+      },
+      "path": [
+        "cultivation_progress",
+        "tooltip"
+      ]
+    }
+  },
+  "tone": "normal",
+  "missing": "hide"
+}

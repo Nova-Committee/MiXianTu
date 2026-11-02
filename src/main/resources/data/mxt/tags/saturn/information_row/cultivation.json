@@ -1,0 +1,12 @@
+{
+  "replace": false,
+  "values": [
+    "mxt:realm",
+    "mxt:lifespan",
+    "mxt:cultivation_progress",
+    "mxt:spirit_roots",
+    "mxt:physiques",
+    "mxt:techniques",
+    "mxt:curses"
+  ]
+}

@@ -1,0 +1,42 @@
+{
+  "order": 30,
+  "label": {
+    "translate": "info.mxt.spirit_roots"
+  },
+  "value": {
+    "type": "saturn:list",
+    "source": {
+      "type": "saturn:getter",
+      "getter": {
+        "type": "mxt:information"
+      },
+      "path": [
+        "spirit_roots",
+        "values"
+      ]
+    },
+    "element": {
+      "type": "saturn:text",
+      "component": true,
+      "value": {
+        "type": "saturn:local"
+      }
+    }
+  },
+  "tooltip_expression": {
+    "type": "saturn:text",
+    "component": true,
+    "value": {
+      "type": "saturn:getter",
+      "getter": {
+        "type": "mxt:information"
+      },
+      "path": [
+        "spirit_roots",
+        "tooltip"
+      ]
+    }
+  },
+  "tone": "normal",
+  "missing": "hide"
+}

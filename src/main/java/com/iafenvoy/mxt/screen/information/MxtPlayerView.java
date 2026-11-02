@@ -1,6 +1,5 @@
 package com.iafenvoy.mxt.screen.information;
 
-import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.attachment.CultivationAttachment;
 import com.iafenvoy.mxt.attachment.CurseHolderAttachment;
 import com.iafenvoy.mxt.attachment.CurseHolderAttachment.State;
@@ -12,25 +11,19 @@ import com.iafenvoy.mxt.data.cultivation.Physique;
 import com.iafenvoy.mxt.data.cultivation.RealmStage;
 import com.iafenvoy.mxt.data.cultivation.SpiritRoot;
 import com.iafenvoy.mxt.data.curse.Curse;
+import com.iafenvoy.mxt.data.information.getter.MxtInformationGetter;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService.BreakthroughStatus;
 import com.iafenvoy.mxt.runtime.cultivation.LifeSpanService;
 import com.iafenvoy.mxt.runtime.item.QualityService;
-import com.iafenvoy.saturn.api.playerview.PlayerView;
-import com.iafenvoy.saturn.api.playerview.PlayerViewContributor;
-import com.iafenvoy.saturn.api.playerview.PlayerViewField;
-import com.iafenvoy.saturn.api.playerview.PlayerViewWriter;
+import com.iafenvoy.saturn.data.information.InformationRow;
 import com.iafenvoy.saturn.runtime.resource.ResourceService;
 import com.iafenvoy.saturn.util.DefinitionText;
 import com.iafenvoy.saturn.util.TooltipText;
 import com.iafenvoy.saturn.util.formula.FormulaContext;
 import com.iafenvoy.saturn.util.formula.FormulaContexts;
-import com.iafenvoy.saturn.view.PlayerViewFields;
-import com.iafenvoy.saturn.view.PlayerViews;
-import com.iafenvoy.saturn.view.model.InformationRowContent;
-import com.iafenvoy.saturn.view.model.InformationValue;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import it.unimi.dsi.fastutil.objects.Object2DoubleMap;
@@ -54,32 +47,13 @@ import java.util.*;
  * stage, a curse's display condition - is skipped when no player is passed rather than guessed from the save.
  */
 public final class MxtPlayerView {
-    public static final PlayerViewField<Map<String, Row>> INFORMATION = PlayerViewFields.register(
-            Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "information"), 1,
-            Codec.unboundedMap(Codec.STRING, Row.CODEC));
+    public static final MxtInformationGetter INFORMATION = MxtInformationGetter.INSTANCE;
     private static final int VALUE_COLOR = 0xFFE0E4EC;
     // A held definition that is switched off is still listed, visibly not counting.
     private static final int SWITCHED_OFF_COLOR = 0xFF6E7681;
     private static final int READY_COLOR = 0xFF55FF55;
 
     private MxtPlayerView() {
-    }
-
-    public static void register() {
-        PlayerViews.registerContributor(new Contributor());
-        PlayerViews.registerReader(new MxtSavedPlayerView());
-    }
-
-    // A row is keyed by its registration path; an absent entry means the row has nothing to show and stays hidden.
-    public static Optional<InformationRowContent> row(PlayerView view, String key, String labelKey) {
-        return view.read(INFORMATION).value().map(rows -> rows.get(key))
-                .map(row -> new InformationRowContent(Component.translatable(labelKey), value(row), row.tooltip(), row.tone(), Set.of(INFORMATION.id())));
-    }
-
-    private static InformationValue value(Row row) {
-        List<Component> values = row.values();
-        return values.size() == 1 ? new InformationValue.Text(values.getFirst())
-                : new InformationValue.Values(values.stream().<InformationValue>map(InformationValue.Text::new).toList());
     }
 
     static void realm(@Nullable CultivationAttachment cultivation, @Nullable Player player, Map<String, Row> rows) {
@@ -89,7 +63,7 @@ public final class MxtPlayerView {
             chains.addAll(cultivation.realmStages().keySet());
         }
         if (chains.isEmpty()) {
-            rows.put(MxtPlayerInformation.REALM, new Row(List.of(Component.translatable("info.mxt.mortal")), Optional.empty(), InformationRowContent.Tone.NORMAL));
+            rows.put(MxtPlayerInformation.REALM, new Row(List.of(Component.translatable("info.mxt.mortal")), Optional.empty(), InformationRow.Tone.NORMAL));
             return;
         }
         FormulaContext context = player == null ? null : FormulaContexts.forEntity(player);
@@ -103,7 +77,7 @@ public final class MxtPlayerView {
             values.add(DefinitionText.nameOrId(chain.value().resource()).copy().append(": ").append(name));
         }
         if (!values.isEmpty())
-            rows.put(MxtPlayerInformation.REALM, new Row(values, Optional.empty(), InformationRowContent.Tone.NORMAL));
+            rows.put(MxtPlayerInformation.REALM, new Row(values, Optional.empty(), InformationRow.Tone.NORMAL));
     }
 
     // A mortal, a stage that declares no minor stages, and a name no pack translated all add nothing to the row.
@@ -120,7 +94,7 @@ public final class MxtPlayerView {
 
     static void progress(@Nullable CultivationAttachment cultivation, @Nullable Player player, Map<String, Row> rows) {
         if (cultivation == null || cultivation.cultivationProgresses().isEmpty()) {
-            rows.put(MxtPlayerInformation.PROGRESS, new Row(List.of(Component.literal("-")), Optional.empty(), InformationRowContent.Tone.NORMAL));
+            rows.put(MxtPlayerInformation.PROGRESS, new Row(List.of(Component.literal("-")), Optional.empty(), InformationRow.Tone.NORMAL));
             return;
         }
         FormulaContext context = player == null ? null : FormulaContexts.forEntity(player);
@@ -146,14 +120,14 @@ public final class MxtPlayerView {
         }
         if (!values.isEmpty())
             rows.put(MxtPlayerInformation.PROGRESS, new Row(values, joined(notes),
-                    ready ? InformationRowContent.Tone.POSITIVE : InformationRowContent.Tone.NORMAL));
+                    ready ? InformationRow.Tone.POSITIVE : InformationRow.Tone.NORMAL));
     }
 
     static void lifespan(long remaining, long total, Map<String, Row> rows) {
         MxtServerConfig.Lifespan settings = MxtServerConfig.INSTANCE.lifespan;
         if (!settings.enabled.getValue()) return;
         rows.put(MxtPlayerInformation.LIFESPAN, new Row(List.of(LifeSpanService.display(remaining, total,
-                settings.ticksPerYear.getValue())), Optional.empty(), InformationRowContent.Tone.NORMAL));
+                settings.ticksPerYear.getValue())), Optional.empty(), InformationRow.Tone.NORMAL));
     }
 
     // A root is listed with the element it is bound to, because its own name does not say what it cultivates.
@@ -182,7 +156,7 @@ public final class MxtPlayerView {
             }
             notes.add(identityNote(root, root.value().quality(), active));
         }
-        rows.put(MxtPlayerInformation.SPIRIT_ROOTS, new Row(List.of(line), joined(notes), InformationRowContent.Tone.NORMAL));
+        rows.put(MxtPlayerInformation.SPIRIT_ROOTS, new Row(List.of(line), joined(notes), InformationRow.Tone.NORMAL));
     }
 
     // Duplicates collapse into one entry carrying a ×N count: allow_stacking makes them legal, and a repeated name
@@ -202,7 +176,7 @@ public final class MxtPlayerView {
             if (stacks > 1) line.append(" ×" + stacks);
             notes.add(identityNote(physique, physique.value().quality(), active));
         }
-        rows.put(MxtPlayerInformation.PHYSIQUES, new Row(List.of(line), joined(notes), InformationRowContent.Tone.NORMAL));
+        rows.put(MxtPlayerInformation.PHYSIQUES, new Row(List.of(line), joined(notes), InformationRow.Tone.NORMAL));
     }
 
     static void techniques(@Nullable TechniqueAttachment techniques, Map<String, Row> rows) {
@@ -212,7 +186,7 @@ public final class MxtPlayerView {
             if (index > 0) names.append(", ");
             names.append(DefinitionText.nameOrId(techniques.learnedTechniques().get(index)));
         }
-        rows.put(MxtPlayerInformation.TECHNIQUES, new Row(List.of(names), Optional.empty(), InformationRowContent.Tone.NORMAL));
+        rows.put(MxtPlayerInformation.TECHNIQUES, new Row(List.of(names), Optional.empty(), InformationRow.Tone.NORMAL));
     }
 
     // A curse whose display_condition fails leaves no row behind at all, not an empty one: that is the point of
@@ -231,7 +205,7 @@ public final class MxtPlayerView {
             notes.add(curseTooltip(holder.sources().of(entry.getKey()), entry.getValue(), gameTime));
         }
         if (!values.isEmpty())
-            rows.put(MxtPlayerInformation.CURSES, new Row(values, joined(notes), InformationRowContent.Tone.WARNING));
+            rows.put(MxtPlayerInformation.CURSES, new Row(values, joined(notes), InformationRow.Tone.WARNING));
     }
 
     private static Component curseTooltip(Set<Identifier> sources, State state, @Nullable Long gameTime) {
@@ -270,11 +244,11 @@ public final class MxtPlayerView {
     /**
      * One logical row's encoded content: the value lines, the tooltip shared by them, and the display tone.
      */
-    public record Row(List<Component> values, Optional<Component> tooltip, InformationRowContent.Tone tone) {
+    public record Row(List<Component> values, Optional<Component> tooltip, InformationRow.Tone tone) {
         public static final Codec<Row> CODEC = RecordCodecBuilder.create(i -> i.group(
                 ComponentSerialization.CODEC.listOf().fieldOf("values").forGetter(Row::values),
                 ComponentSerialization.CODEC.optionalFieldOf("tooltip").forGetter(Row::tooltip),
-                InformationRowContent.Tone.CODEC.optionalFieldOf("tone", InformationRowContent.Tone.NORMAL).forGetter(Row::tone)
+                InformationRow.Tone.CODEC.optionalFieldOf("tone", InformationRow.Tone.NORMAL).forGetter(Row::tone)
         ).apply(i, Row::new));
 
         public Row {
@@ -283,30 +257,17 @@ public final class MxtPlayerView {
         }
     }
 
-    private static final class Contributor implements PlayerViewContributor {
-        @Override
-        public Identifier id() {
-            return Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "information");
-        }
-
-        @Override
-        public Set<PlayerViewField<?>> fields() {
-            return Set.of(INFORMATION);
-        }
-
-        @Override
-        public void capture(Player player, PlayerViewWriter writer) {
-            Map<String, Row> rows = new LinkedHashMap<>();
-            CultivationAttachment cultivation = player.getExistingData(MxtAttachments.CULTIVATION).orElse(null);
-            realm(cultivation, player, rows);
-            lifespan(LifeSpanService.remaining(player), LifeSpanService.total(player), rows);
-            progress(cultivation, player, rows);
-            SpiritIdentityAttachment identity = player.getExistingData(MxtAttachments.SPIRIT_IDENTITY).orElse(null);
-            spiritRoots(identity, rows);
-            physiques(identity, rows);
-            techniques(player.getExistingData(MxtAttachments.TECHNIQUE).orElse(null), rows);
-            curses(player.getExistingData(MxtAttachments.CURSE_HOLDER).orElse(null), player, player.level().getGameTime(), rows);
-            writer.put(INFORMATION, rows);
-        }
+    public static Map<String, Row> capture(Player player) {
+        Map<String, Row> rows = new LinkedHashMap<>();
+        CultivationAttachment cultivation = player.getExistingData(MxtAttachments.CULTIVATION).orElse(null);
+        realm(cultivation, player, rows);
+        lifespan(LifeSpanService.remaining(player), LifeSpanService.total(player), rows);
+        progress(cultivation, player, rows);
+        SpiritIdentityAttachment identity = player.getExistingData(MxtAttachments.SPIRIT_IDENTITY).orElse(null);
+        spiritRoots(identity, rows);
+        physiques(identity, rows);
+        techniques(player.getExistingData(MxtAttachments.TECHNIQUE).orElse(null), rows);
+        curses(player.getExistingData(MxtAttachments.CURSE_HOLDER).orElse(null), player, player.level().getGameTime(), rows);
+        return rows;
     }
 }

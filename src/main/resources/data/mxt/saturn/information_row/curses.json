@@ -1,0 +1,42 @@
+{
+  "order": 60,
+  "label": {
+    "translate": "info.mxt.curses"
+  },
+  "value": {
+    "type": "saturn:list",
+    "source": {
+      "type": "saturn:getter",
+      "getter": {
+        "type": "mxt:information"
+      },
+      "path": [
+        "curses",
+        "values"
+      ]
+    },
+    "element": {
+      "type": "saturn:text",
+      "component": true,
+      "value": {
+        "type": "saturn:local"
+      }
+    }
+  },
+  "tooltip_expression": {
+    "type": "saturn:text",
+    "component": true,
+    "value": {
+      "type": "saturn:getter",
+      "getter": {
+        "type": "mxt:information"
+      },
+      "path": [
+        "curses",
+        "tooltip"
+      ]
+    }
+  },
+  "tone": "warning",
+  "missing": "hide"
+}

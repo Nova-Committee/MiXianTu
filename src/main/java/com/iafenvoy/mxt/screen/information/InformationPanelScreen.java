@@ -6,28 +6,27 @@ import com.iafenvoy.mxt.config.MxtClientConfig;
 import com.iafenvoy.mxt.data.progression.Progression;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.cultivation.TechniqueProgress;
-import com.iafenvoy.mxt.runtime.cultivation.TechniqueProgress.Entry;
 import com.iafenvoy.mxt.runtime.cultivation.TechniqueProgress.Mode;
 import com.iafenvoy.mxt.runtime.cultivation.TechniqueProgress.Progress;
 import com.iafenvoy.mxt.screen.aui.*;
 import com.iafenvoy.mxt.screen.aui.AuiScrollList.Cell;
-import com.iafenvoy.mxt.screen.information.InformationCollector.InformationEntry;
 import com.iafenvoy.mxt.screen.information.InformationHelper.Columns;
+import com.iafenvoy.saturn.Saturn;
 import com.iafenvoy.saturn.api.playerview.PlayerView;
 import com.iafenvoy.saturn.attachment.ResourceHolderAttachment;
 import com.iafenvoy.saturn.data.IconReference;
+import com.iafenvoy.saturn.data.information.InformationGroup;
+import com.iafenvoy.saturn.data.information.InformationText;
+import com.iafenvoy.saturn.data.information.PlayerInformation;
+import com.iafenvoy.saturn.data.information.PlayerViews;
+import com.iafenvoy.saturn.data.information.model.InformationDocument;
+import com.iafenvoy.saturn.data.information.model.InformationEntry;
 import com.iafenvoy.saturn.data.resource.Resource;
 import com.iafenvoy.saturn.registry.SaturnAttachments;
+import com.iafenvoy.saturn.registry.SaturnResourceKeys;
 import com.iafenvoy.saturn.util.DefinitionText;
 import com.iafenvoy.saturn.util.HolderHelper;
 import com.iafenvoy.saturn.util.formula.FormulaContexts;
-import com.iafenvoy.saturn.view.InformationText;
-import com.iafenvoy.saturn.view.PlayerInformation;
-import com.iafenvoy.saturn.view.PlayerViews;
-import com.iafenvoy.saturn.view.model.InformationContext;
-import com.iafenvoy.saturn.view.model.InformationDocument;
-import com.iafenvoy.saturn.view.model.InformationRow;
-import com.iafenvoy.saturn.view.model.InformationRowContent;
 import com.sighs.apricityui.element.Item;
 import com.sighs.apricityui.init.Document;
 import com.sighs.apricityui.init.Element;
@@ -37,10 +36,13 @@ import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.core.Holder;
+import net.minecraft.core.Registry;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.FormattedText;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.chat.TextColor;
 import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.item.ItemStack;
@@ -112,14 +114,12 @@ public final class InformationPanelScreen extends AuiScreen {
     private static final int LABEL_COLOR = 0xFFFFFFFF, MUTED_COLOR = 0xFFC0C0C0, UNKNOWN_COLOR = 0xFF8A8A8A;
     private static final int VALUE_COLOR = 0xFFE0E4EC, POSITIVE_COLOR = 0xFF55FF55, WARNING_COLOR = 0xFFFFAA00;
     private static final int BAR_FALLBACK_COLOR = 0xFFCFCFCF;
-    private static final EquipmentSlot[] EQUIPMENT_SLOTS = {
-            EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET
-    };
+    private static final EquipmentSlot[] EQUIPMENT_SLOTS = {EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET};
     @Nullable
     private Element panel, cultivationCaption, basicCaption, preview, tabInfo, tabTechnique, techniquesEmpty;
     private final List<Item> equipment = new ArrayList<>(EQUIPMENT_SLOT_COUNT);
     @Nullable
-    private AuiScrollList<InformationEntry> cultivation, basic;
+    private AuiScrollList<InformationCollector.Entry> cultivation, basic;
     @Nullable
     private AuiScrollList<TechniqueRow> techniques;
     @Nullable
@@ -180,7 +180,7 @@ public final class InformationPanelScreen extends AuiScreen {
         // A row click is a local pick, as the old list's selection was.
         assert this.cultivation != null;
         assert this.basic != null;
-        for (AuiScrollList<InformationEntry> list : List.of(this.cultivation, this.basic))
+        for (AuiScrollList<InformationCollector.Entry> list : List.of(this.cultivation, this.basic))
             for (Cell cell : list.cells)
                 cell.click(() -> this.select(list, cell));
     }
@@ -203,10 +203,10 @@ public final class InformationPanelScreen extends AuiScreen {
         this.shownPage = null;
     }
 
-    private void select(AuiScrollList<InformationEntry> list, Cell cell) {
+    private void select(AuiScrollList<InformationCollector.Entry> list, Cell cell) {
         if (cell.key() == null) return;
         if (list != null) list.markSelected(cell.key());
-        AuiScrollList<InformationEntry> current = list == this.cultivation ? this.basic : this.cultivation;
+        AuiScrollList<InformationCollector.Entry> current = list == this.cultivation ? this.basic : this.cultivation;
         if (current != null) current.markSelected(cell.key());
     }
 
@@ -245,26 +245,31 @@ public final class InformationPanelScreen extends AuiScreen {
         if (this.minecraft.player == null) return;
         // One snapshot, two documents: each list asks only for the groups it shows.
         PlayerView view = PlayerViews.parse(this.minecraft.player);
+        Registry<InformationGroup> registry = this.minecraft.player.registryAccess().lookupOrThrow(SaturnResourceKeys.INFORMATION_GROUP);
+        if (this.basic != null) {
+            Holder<InformationGroup> basicGroup = registry.getOrThrow(ResourceKey.create(SaturnResourceKeys.INFORMATION_GROUP, Identifier.fromNamespaceAndPath(Saturn.MOD_ID, "basic")));
+            this.basic.rebuild(this.font, entries(PlayerInformation.collect(view, basicGroup).withMinimumImportance(45)));
+        }
+        Holder<InformationGroup> group = registry.getOrThrow(ResourceKey.create(SaturnResourceKeys.INFORMATION_GROUP, Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "cultivation")));
+        if (this.cultivationCaption != null)
+            this.text(this.cultivationCaption, group.value().title());
         if (this.cultivation != null)
-            this.cultivation.rebuild(this.font, entries(PlayerInformation.collect(view, MxtPlayerInformation.group())));
-        if (this.basic != null)
-            this.basic.rebuild(this.font, entries(PlayerInformation.collect(view, InformationContext.DEFAULT, PlayerInformation.BASIC)));
+            this.cultivation.rebuild(this.font, entries(PlayerInformation.collect(view, group)));
         this.refreshTechniques();
     }
 
-    private static List<InformationEntry> entries(InformationDocument document) {
-        List<InformationEntry> entries = new ArrayList<>();
-        for (InformationRow row : document.rows()) {
-            InformationRowContent content = row.content();
-            int color = switch (content.tone()) {
+    private static List<InformationCollector.Entry> entries(InformationDocument document) {
+        List<InformationCollector.Entry> entries = new ArrayList<>();
+        for (InformationEntry row : document.rows()) {
+            int color = switch (row.tone()) {
                 case NORMAL -> VALUE_COLOR;
                 case POSITIVE -> POSITIVE_COLOR;
                 case WARNING -> WARNING_COLOR;
             };
             // A row's extra lines are stacked under its own label, which is only written on the first of them.
-            List<Component> values = InformationText.lines(content.value());
+            List<Component> values = InformationText.lines(row.value());
             for (int index = 0; index < values.size(); index++)
-                entries.add(new InformationEntry(index == 0 ? content.label() : null, values.get(index), color, content.tooltip()));
+                entries.add(new InformationCollector.Entry(index == 0 ? row.label() : null, values.get(index), color, row.tooltip()));
         }
         return entries;
     }
@@ -275,10 +280,10 @@ public final class InformationPanelScreen extends AuiScreen {
         TechniqueAttachment spirit = this.minecraft.player.getData(MxtAttachments.TECHNIQUE);
         ResourceHolderAttachment resources = this.minecraft.player.getData(SaturnAttachments.RESOURCE_HOLDER);
         Mode mode = MxtClientConfig.INSTANCE.techniques.progressMode.getValue();
-        List<Entry> rows = TechniqueProgress.rows(spirit, resources,
-                FormulaContexts.forEntity(this.minecraft.player));
+        List<TechniqueProgress.Entry> rows = TechniqueProgress.rows(spirit, resources, FormulaContexts.forEntity(this.minecraft.player));
         List<TechniqueRow> entries = new ArrayList<>(rows.size());
-        for (Entry row : rows) entries.add(new TechniqueRow(row, TechniqueProgress.progress(row, mode)));
+        for (TechniqueProgress.Entry row : rows)
+            entries.add(new TechniqueRow(row, TechniqueProgress.progress(row, mode)));
         list.rebuild(this.font, entries);
         if (this.techniquesEmpty != null) {
             AuiElements.style(this.techniquesEmpty, "display", entries.isEmpty() ? "block" : "none");
@@ -502,6 +507,12 @@ public final class InformationPanelScreen extends AuiScreen {
         return font.plainSubstrByWidth(text, Math.max(0, width - font.width(suffix))) + suffix;
     }
 
+    private static FormattedText abbreviate(Font font, FormattedText text, int width) {
+        if (font.width(text) <= width) return text;
+        FormattedText suffix = FormattedText.of("...");
+        return FormattedText.composite(font.substrByWidth(text, Math.max(0, width - font.width(suffix))), suffix);
+    }
+
     private static String format(double value) {
         return Math.abs(value - Math.rint(value)) < 1.0E-6D
                 ? Long.toString(Math.round(value)) : String.format("%.1f", value);
@@ -510,13 +521,13 @@ public final class InformationPanelScreen extends AuiScreen {
     /**
      * One scrolled entry of the technique table.
      */
-    private record TechniqueRow(Entry row, Progress progress) {
+    private record TechniqueRow(TechniqueProgress.Entry row, Progress progress) {
     }
 
     /**
      * The attribute rows: a name and a value, each cut to its own column.
      */
-    private final class InfoBinding implements AuiScrollList.Binding<InformationEntry> {
+    private final class InfoBinding implements AuiScrollList.Binding<InformationCollector.Entry> {
         private Columns columns = new Columns(0, 1);
 
         @Override
@@ -547,16 +558,16 @@ public final class InformationPanelScreen extends AuiScreen {
          * caption above the list sits at.
          */
         @Override
-        public void prepare(Font font, List<InformationEntry> entries, int width) {
+        public void prepare(Font font, List<InformationCollector.Entry> entries, int width) {
             int available = Math.max(1, width - TEXT_INSET);
             int widestName = 0, widestValue = 0;
-            for (InformationEntry entry : entries) {
+            for (InformationCollector.Entry entry : entries) {
                 if (entry.name() != null) widestName = Math.max(widestName, font.width(entry.name()));
                 widestValue = Math.max(widestValue, font.width(entry.value()));
             }
             this.columns = InformationHelper.columns(available, widestName, widestValue);
             if (width <= 1 || !MiXianTu.isDevMode()) return;
-            for (InformationEntry entry : entries) {
+            for (InformationCollector.Entry entry : entries) {
                 int nameLines = entry.name() == null ? 0
                         : font.split(entry.name(), Math.max(1, this.columns.nameWidth())).size();
                 int valueLines = font.split(entry.value(), Math.max(1, this.columns.valueWidth())).size();
@@ -574,15 +585,16 @@ public final class InformationPanelScreen extends AuiScreen {
         }
 
         @Override
-        public void show(Font font, Cell cell, InformationEntry entry, int index, int left, int top, int width) {
+        public void show(Font font, Cell cell, InformationCollector.Entry entry, int index, int left, int top, int width) {
             String fullName = entry.name() == null ? "" : entry.name().getString();
             String fullValue = entry.value().getString();
             cell.show(fullName + "=" + fullValue, entry, left, top, width);
             // The value column belongs to the block (see prepare), not to this row, so a continuation row lines
             // up with the named ones instead of starting at the left edge.
             AuiElements.style(cell.part(1), "left", (this.columns.nameWidth() + TEXT_INSET) + "px");
-            AuiElements.setText(cell.part(0), abbreviate(font, fullName, Math.max(1, this.columns.nameWidth())));
-            AuiElements.setText(cell.part(1), abbreviate(font, fullValue, Math.max(1, this.columns.valueWidth())));
+            AuiElements.setText(cell.part(0), abbreviate(font, entry.name() == null ? Component.empty() : entry.name(),
+                    Math.max(1, this.columns.nameWidth())));
+            AuiElements.setText(cell.part(1), abbreviate(font, entry.value(), Math.max(1, this.columns.valueWidth())));
             AuiElements.style(cell.part(0), "color", AuiStyles.hex(entry.color()));
             AuiElements.style(cell.part(1), "color", AuiStyles.hex(entry.color()));
         }
@@ -634,7 +646,7 @@ public final class InformationPanelScreen extends AuiScreen {
 
         @Override
         public void show(Font font, Cell cell, TechniqueRow entry, int index, int left, int top, int width) {
-            Entry row = entry.row();
+            TechniqueProgress.Entry row = entry.row();
             cell.show(HolderHelper.id(row.technique()).toString(), entry, left, top, width);
             this.showIcon(cell, row);
             int textX = TECHNIQUE_ICON_SIZE + TECHNIQUE_ICON_GAP;
@@ -674,7 +686,7 @@ public final class InformationPanelScreen extends AuiScreen {
             AuiElements.style(cell.part(7), "width", width + "px");
         }
 
-        private void showIcon(Cell cell, Entry row) {
+        private void showIcon(Cell cell, TechniqueProgress.Entry row) {
             Optional<IconReference> icon = row.technique().value().icon();
             ItemStack stack = icon.flatMap(IconReference::stack).orElse(ItemStack.EMPTY);
             String textureKey = icon.flatMap(IconReference::texture).map(Identifier::toString).orElse("");
@@ -692,12 +704,12 @@ public final class InformationPanelScreen extends AuiScreen {
         }
 
         // A technique has no tier of its own any more, so the name is drawn in the panel's own colour.
-        private Component nameText(Entry row) {
+        private Component nameText(TechniqueProgress.Entry row) {
             return DefinitionText.nameOrId(row.technique());
         }
 
         // The level's own display name when the pack provides one, its rank otherwise.
-        private Component levelText(Entry row) {
+        private Component levelText(TechniqueProgress.Entry row) {
             Holder<Progression> level = row.level();
             if (!row.hasLevel() || level == null)
                 return Component.translatable("screen.mxt.technique_panel.level_unknown");
@@ -707,7 +719,7 @@ public final class InformationPanelScreen extends AuiScreen {
         }
 
         private Component valueText(TechniqueRow entry) {
-            Entry row = entry.row();
+            TechniqueProgress.Entry row = entry.row();
             if (!row.hasLevel() || !row.hasMastery())
                 return Component.translatable("screen.mxt.technique_panel.value_unknown");
             if (!row.hasNextLevel()) return Component.translatable("screen.mxt.technique_panel.value_max");
@@ -717,7 +729,7 @@ public final class InformationPanelScreen extends AuiScreen {
 
         // Tinted with the mastery resource's own particle colour, like the crafting progress bar; the dark skin
         // needs it lifted or a dark tint vanishes into the track.
-        private int fillColor(Entry row) {
+        private int fillColor(TechniqueProgress.Entry row) {
             Holder<Resource> mastery = row.technique().value().masteryResource().orElse(null);
             return mastery == null ? BAR_FALLBACK_COLOR : 0xFF000000 | AuiStyles.readableOnDark(mastery.value().particleColor());
         }
@@ -725,7 +737,7 @@ public final class InformationPanelScreen extends AuiScreen {
         // A row has no room for the level id or the tier, so the tooltip spells both out. Its lines keep their own
         // colours here: the vanilla renderer draws the components, unlike a page element's flattened text.
         private List<Component> tooltipLines(TechniqueRow entry) {
-            Entry row = entry.row();
+            TechniqueProgress.Entry row = entry.row();
             MutableComponent line = this.nameText(row).copy();
             if (row.hasLevel() && row.level() != null)
                 line.append(" ").append(Component.literal(HolderHelper.id(row.level()).toString())

@@ -9,7 +9,6 @@ import com.iafenvoy.mxt.registry.*;
 import com.iafenvoy.mxt.registry.cache.RegistryCaches;
 import com.iafenvoy.mxt.runtime.MxtAbilityHooks;
 import com.iafenvoy.mxt.runtime.MxtProfilerSources;
-import com.iafenvoy.mxt.screen.information.MxtPlayerInformation;
 import com.iafenvoy.saturn.registry.SaturnAliases;
 import com.mojang.logging.LogUtils;
 import net.neoforged.bus.api.IEventBus;
@@ -49,6 +48,7 @@ public final class MiXianTu {
         MxtEntityConditions.REGISTRY.register(bus);
         MxtEntityDataSerializers.REGISTRY.register(bus);
         MxtEntityTypes.REGISTRY.register(bus);
+        MxtEntityValueGetters.REGISTRY.register(bus);
         MxtFormationActionTypes.REGISTRY.register(bus);
         MxtFormationStrokeTypes.REGISTRY.register(bus);
         MxtFormulaVariables.REGISTRY.register(bus);
@@ -82,7 +82,6 @@ public final class MiXianTu {
         RegistryCaches.init();
         CuriosIntegration.registerPredicates();
         PickerCategories.register();
-        MxtPlayerInformation.register();
     }
 
     /**

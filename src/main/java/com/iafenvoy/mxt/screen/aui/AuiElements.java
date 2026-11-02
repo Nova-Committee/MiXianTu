@@ -1,7 +1,11 @@
 package com.iafenvoy.mxt.screen.aui;
 
 import com.sighs.apricityui.init.Element;
+import net.minecraft.network.chat.FormattedText;
+import net.minecraft.network.chat.Style;
 import org.jetbrains.annotations.Nullable;
+
+import java.util.Optional;
 
 /**
  * The writes a page host makes to its elements: text, an inline style property, a class token and the disabled
@@ -23,8 +27,34 @@ public final class AuiElements {
 
     public static void setText(@Nullable Element element, String text) {
         if (element == null) return;
-        if (text.equals(element.getTextContent())) return;
+        if (element.getChildren().isEmpty() && text.equals(element.getTextContent())) return;
         element.setTextContent(text);
+    }
+
+    // Keep inherited Component styles on separate inline runs and reuse them during list layout.
+    public static void setText(@Nullable Element element, FormattedText text) {
+        if (element == null) return;
+        if (element.getChildren().isEmpty()) setText(element, "");
+        int[] index = {0};
+        text.visit((style, contents) -> {
+            if (contents.isEmpty()) return Optional.empty();
+            Element run = index[0] < element.getChildren().size()
+                    ? element.getChildren().get(index[0])
+                    : element.appendChild(new Element(element.getOwnerDocument(), "span"));
+            setText(run, contents);
+            style(run, "white-space", "pre");
+            style(run, "flex-shrink", "0");
+            style(run, "color", style.getColor() == null ? "inherit" : AuiStyles.hex(style.getColor().getValue()));
+            style(run, "font-weight", style.isBold() ? "bold" : "normal");
+            style(run, "font-style", style.isItalic() ? "oblique" : "normal");
+            String decoration = style.isUnderlined() ? "underline" : "";
+            if (style.isStrikethrough()) decoration += " line-through";
+            style(run, "text-decoration-line", decoration.isBlank() ? "none" : decoration.trim());
+            index[0]++;
+            return Optional.empty();
+        }, Style.EMPTY);
+        while (element.getChildren().size() > index[0])
+            element.removeChild(element.getLastElementChild());
     }
 
     public static void setClass(@Nullable Element element, String token, boolean present) {

@@ -1,0 +1,42 @@
+{
+  "order": 10,
+  "label": {
+    "translate": "info.mxt.lifespan"
+  },
+  "value": {
+    "type": "saturn:list",
+    "source": {
+      "type": "saturn:getter",
+      "getter": {
+        "type": "mxt:information"
+      },
+      "path": [
+        "lifespan",
+        "values"
+      ]
+    },
+    "element": {
+      "type": "saturn:text",
+      "component": true,
+      "value": {
+        "type": "saturn:local"
+      }
+    }
+  },
+  "tooltip_expression": {
+    "type": "saturn:text",
+    "component": true,
+    "value": {
+      "type": "saturn:getter",
+      "getter": {
+        "type": "mxt:information"
+      },
+      "path": [
+        "lifespan",
+        "tooltip"
+      ]
+    }
+  },
+  "tone": "normal",
+  "missing": "hide"
+}
