@@ -2,9 +2,7 @@ package com.iafenvoy.mxt.probe.world;
 
 import com.iafenvoy.saturn.runtime.resulting.Result;
 
-import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
-import com.google.gson.JsonParser;
 import com.iafenvoy.mxt.attachment.RiftChunkAttachment;
 import com.iafenvoy.mxt.attachment.RiftWorldAttachment;
 import com.iafenvoy.mxt.data.item.SecretRealmTokenComponent;
@@ -13,6 +11,7 @@ import com.iafenvoy.mxt.data.secretrealm.SecretRealm;
 import com.iafenvoy.mxt.item.RiftAnchorItem;
 import com.iafenvoy.mxt.network.payload.RiftEditC2SPayload;
 import com.iafenvoy.mxt.network.payload.RiftEditorS2CPayload;
+import com.iafenvoy.mxt.network.payload.RiftEditorS2CPayload.EditorAction;
 import com.iafenvoy.mxt.network.payload.RiftSyncS2CPayload;
 import com.iafenvoy.mxt.probe.Probe;
 import com.iafenvoy.mxt.probe.ProbeContext;
@@ -662,14 +661,14 @@ public final class RiftProbes {
         try {
             ops.add(new ServerOpListEntry(identity, LevelBasedPermissionSet.GAMEMASTER, false));
             RiftEditorService.open(player, null, template(c, 0));
-            if (!c.check("authorized session opens", !sent.isEmpty() && sent.getLast().action().equals("open"))) return;
+            if (!c.check("authorized session opens", !sent.isEmpty() && sent.getLast().action() == EditorAction.OPEN)) return;
             UUID token = sent.getLast().token();
             RiftEditorService.handle(player, new RiftEditC2SPayload(UUID.randomUUID(), "submit", 0, RiftExport.template(template(c, 0))));
             c.expect("unknown token cannot create", RiftService.world(c.level()).records().size(), before);
             ops.remove(identity);
             RiftEditorService.handle(player, new RiftEditC2SPayload(token, "submit", 0, RiftExport.template(template(c, 0))));
             c.expect("revoked session cannot create", RiftService.world(c.level()).records().size(), before);
-            c.expect("revoked session closes", sent.getLast().action(), "close");
+            c.expect("revoked session closes", sent.getLast().action(), EditorAction.CLOSE);
         } finally {
             RiftEditorService.clear();
             player.connection = previousConnection;
@@ -780,7 +779,7 @@ public final class RiftProbes {
             RiftEditorS2CPayload opened = sent.getLast();
             RiftEditorService.handle(player, new RiftEditC2SPayload(opened.token(), "remove", portal.revision(), ""));
             c.expect("selected session deletes existing portal", RiftService.get(c.level(), portal.id()), null);
-            c.expect("deleting selected portal closes editor", sent.getLast().action(), "close");
+            c.expect("deleting selected portal closes editor", sent.getLast().action(), EditorAction.CLOSE);
 
             ops.remove(identity);
             sent.clear();

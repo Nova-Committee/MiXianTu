@@ -10,6 +10,7 @@ import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.item.ItemBindingService.ResolvedBindings;
 import com.iafenvoy.mxt.runtime.resulting.failures.QualityFailure;
 import com.iafenvoy.saturn.profiling.ProfilerScope;
+import com.iafenvoy.saturn.registry.SaturnProfilerSources;
 import com.iafenvoy.saturn.profiling.ServerProfiling;
 import com.iafenvoy.saturn.runtime.resulting.Failure;
 import com.iafenvoy.saturn.runtime.resulting.Failures;
@@ -83,7 +84,7 @@ public final class QualityService {
 
     @SubscribeEvent(priority = EventPriority.HIGHEST)
     public static void onAttack(AttackEntityEvent event) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.ITEM)) {
+        try (ProfilerScope _ = ServerProfiling.scope(SaturnProfilerSources.ITEM)) {
             Optional<Failure> failure = checkForEvent(event.getEntity(), event.getEntity().getMainHandItem());
             if (failure.isPresent()) {
                 event.setCanceled(true);
@@ -94,7 +95,7 @@ public final class QualityService {
 
     @SubscribeEvent(priority = EventPriority.HIGHEST)
     public static void onItemUse(RightClickItem event) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.ITEM)) {
+        try (ProfilerScope _ = ServerProfiling.scope(SaturnProfilerSources.ITEM)) {
             ItemStack stack = event.getEntity().getItemInHand(event.getHand());
             Optional<Failure> failure = checkForEvent(event.getEntity(), stack);
             if (failure.isPresent()) {
@@ -108,7 +109,7 @@ public final class QualityService {
 
     @SubscribeEvent(priority = EventPriority.HIGHEST)
     public static void onBlockUse(RightClickBlock event) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.ITEM)) {
+        try (ProfilerScope _ = ServerProfiling.scope(SaturnProfilerSources.ITEM)) {
             Optional<Failure> failure = checkForEvent(event.getEntity(), event.getEntity().getItemInHand(event.getHand()));
             if (failure.isPresent()) {
                 event.setCanceled(true);
@@ -119,7 +120,7 @@ public final class QualityService {
 
     @SubscribeEvent(priority = EventPriority.HIGHEST)
     public static void onUseStart(Start event) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.ITEM)) {
+        try (ProfilerScope _ = ServerProfiling.scope(SaturnProfilerSources.ITEM)) {
             Optional<Failure> failure = checkForEvent(event.getEntity(), event.getItem());
             if (failure.isPresent()) {
                 event.setCanceled(true);
@@ -130,7 +131,7 @@ public final class QualityService {
 
     @SubscribeEvent(priority = EventPriority.HIGHEST)
     public static void onUseTick(Tick event) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.ITEM)) {
+        try (ProfilerScope _ = ServerProfiling.scope(SaturnProfilerSources.ITEM)) {
             Optional<Failure> failure = checkForEvent(event.getEntity(), event.getItem());
             if (failure.isPresent()) {
                 event.setCanceled(true);

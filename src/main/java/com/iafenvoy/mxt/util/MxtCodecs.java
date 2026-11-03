@@ -1,5 +1,6 @@
 package com.iafenvoy.mxt.util;
 
+import com.iafenvoy.saturn.util.codec.MiscCodecs;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import net.minecraft.world.phys.Vec2;
@@ -11,7 +12,8 @@ import java.util.List;
  * {@code MiscCodecs}; a field shape a content definition is written in stays here.
  */
 public final class MxtCodecs {
-    public static final Codec<Double> NON_NEGATIVE = Codec.doubleRange(0.0D, Double.MAX_VALUE);
+    public static final Codec<Double> NON_NEGATIVE_FINITE = MiscCodecs.FINITE.validate(v -> v >= 0 ? DataResult.success(v) : DataResult.error(() -> "Expected a non-negative number"));
+    public static final Codec<Double> POSITIVE_FINITE = MiscCodecs.FINITE.validate(v -> v > 0 ? DataResult.success(v) : DataResult.error(() -> "Expected a positive number"));
 
     // Two element [x, z]: a secret realm border's center and a formation stroke's points are both written this way.
     public static final Codec<Vec2> HORIZONTAL_PAIR = Codec.DOUBLE.listOf().comapFlatMap(

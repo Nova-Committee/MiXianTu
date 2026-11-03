@@ -3,6 +3,7 @@ package com.iafenvoy.mxt.entity;
 import com.iafenvoy.saturn.data.action.EntityAction;
 import com.iafenvoy.saturn.data.context.action.EntityActionContext;
 import com.iafenvoy.saturn.profiling.ProfilerScope;
+import com.iafenvoy.saturn.registry.SaturnProfilerSources;
 import com.iafenvoy.saturn.profiling.ServerProfiling;
 import com.iafenvoy.saturn.util.formula.FormulaContext;
 import net.minecraft.server.level.ServerLevel;
@@ -53,7 +54,7 @@ public abstract class VisualProjectileEntity extends Entity implements OwnableEn
 
     @Override
     public void tick() {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.ENTITY)) {
+        try (ProfilerScope _ = ServerProfiling.scope(SaturnProfilerSources.ENTITY)) {
             super.tick();
             if (this.level().isClientSide()) return;
             if (this.tickCount >= this.lifetime) {

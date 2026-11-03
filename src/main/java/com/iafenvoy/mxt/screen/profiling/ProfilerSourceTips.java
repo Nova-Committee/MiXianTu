@@ -21,12 +21,6 @@ public final class ProfilerSourceTips {
     }
 
     public static List<Component> lines(ProfilerSource source) {
-        for (ServerProfiling.Source registered : ServerProfiling.Source.all())
-            if (registered.id().equals(source.id())) return lines(registered);
-        return List.of();
-    }
-
-    public static List<Component> lines(ServerProfiling.Source source) {
         List<Component> lines = new ArrayList<>(2);
         lines.add(Component.translatableWithFallback(source.translationKey(), source.id()));
         Component tip = Component.translatableWithFallback(source.tooltipKey(), "");

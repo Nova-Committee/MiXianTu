@@ -17,7 +17,6 @@ import com.iafenvoy.mxt.util.ProfilerSubscriptions;
 import com.iafenvoy.saturn.profiling.LoggerDispatcher;
 import com.iafenvoy.saturn.profiling.LoggingLevel;
 import com.iafenvoy.saturn.runtime.resulting.Result;
-import com.iafenvoy.saturn.util.PlayerNames;
 import com.mojang.logging.LogUtils;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
@@ -175,11 +174,5 @@ public final class ServerNetworkHandler {
     static void onFlightDescend(FlightDescendC2SPayload payload, IPayloadContext context) {
         if (!(context.player() instanceof ServerPlayer player)) return;
         player.getExistingData(MxtAttachments.FLIGHT).ifPresent(data -> data.setDescend(payload.pressed()));
-    }
-
-    // Answered out of what the server already knows - the online player, or the name its profile cache kept from a
-    // previous login. Nothing is fetched (see PlayerNames#knownToServer), so an unknown id answers with nothing.
-    static void onOwnerNameRequest(OwnerNameC2SPayload payload, IPayloadContext context) {
-        context.reply(new OwnerNameS2CPayload(payload.owner(), PlayerNames.knownToServer(payload.owner())));
     }
 }

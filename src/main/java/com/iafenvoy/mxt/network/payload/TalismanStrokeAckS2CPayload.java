@@ -12,14 +12,9 @@ import org.jspecify.annotations.NonNull;
  * The answer to one stroke: taken or refused, why, and how much pigment it cost. A refusal is a normal answer -
  * "too fast", "not enough pigment" and "the brush is no longer on the cursor" are all things a player does.
  */
-public record TalismanStrokeAckS2CPayload(int containerId, int index, boolean accepted, int refusal, int charged)
-        implements CustomPacketPayload {
-    /**
-     * No refusal at all, which is what an accepted stroke carries.
-     */
-    public static final int ACCEPTED = -1;
-    public static final Type<TalismanStrokeAckS2CPayload> TYPE =
-            new Type<>(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "talisman_stroke_ack_s2c"));
+public record TalismanStrokeAckS2CPayload(int containerId, int index, boolean accepted, int refusal,
+                                          int charged) implements CustomPacketPayload {
+    public static final Type<TalismanStrokeAckS2CPayload> TYPE = new Type<>(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "talisman_stroke_ack_s2c"));
     public static final StreamCodec<RegistryFriendlyByteBuf, TalismanStrokeAckS2CPayload> STREAM_CODEC = StreamCodec.composite(
             ByteBufCodecs.VAR_INT, TalismanStrokeAckS2CPayload::containerId,
             ByteBufCodecs.VAR_INT, TalismanStrokeAckS2CPayload::index,

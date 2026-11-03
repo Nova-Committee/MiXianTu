@@ -13,7 +13,12 @@ import com.iafenvoy.mxt.runtime.economy.CurrencyPaymentService.Denomination;
 import com.iafenvoy.saturn.profiling.ProfilerScope;
 import com.iafenvoy.saturn.profiling.ProfilerWindowSnapshot;
 import com.iafenvoy.saturn.profiling.ServerProfiling;
-import com.iafenvoy.saturn.profiling.ServerProfiling.Source;
+import com.iafenvoy.saturn.profiling.ProfilerSource;
+import it.unimi.dsi.fastutil.booleans.BooleanArrayList;
+import it.unimi.dsi.fastutil.booleans.BooleanList;
+import it.unimi.dsi.fastutil.longs.LongArrayList;
+import it.unimi.dsi.fastutil.longs.LongList;
+import com.iafenvoy.saturn.registry.SaturnProfilerSources;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import net.minecraft.ChatFormatting;
@@ -93,7 +98,7 @@ public final class ServerProfilingVerifyProbes {
                 expect(context, "only the server thread produces samples", snapshot.producers().size(), 1);
                 ProfilerWindowSnapshot.Producer producer = snapshot.producers().getFirst();
                 expect(context, "nested and worker calls add no duplicate change hit", hits(snapshot, producer, 0, MxtProfilerSources.ECONOMY_CHANGE), 2L);
-                expect(context, "the real payment entry is sampled", hits(snapshot, producer, 0, Source.COST) > 0L, true);
+                expect(context, "the real payment entry is sampled", hits(snapshot, producer, 0, SaturnProfilerSources.COST) > 0L, true);
                 expect(context, "child durations are included by their module",
                         nanos(snapshot, producer, 0, MxtProfilerSources.ECONOMY) >= nanos(snapshot, producer, 0, MxtProfilerSources.ECONOMY_CHANGE), true);
                 expect(context, "the normal server tick is complete", producer.complete(0), true);
@@ -176,7 +181,7 @@ public final class ServerProfilingVerifyProbes {
             expect(context, "the debug on command succeeds", dispatcher.execute("mxt debug on", source), 1);
             expect(context, "the command enables the server owner", ServerProfiling.enabled(context.server()), true);
             expect(context, "status accepts multiple fixed source ids",
-                    dispatcher.execute("mxt debug status server/cost server/economy/change", source), 2);
+                    dispatcher.execute("mxt debug status saturn:cost mxt:economy/change", source), 2);
             expect(context, "status rejects unknown source ids", dispatcher.execute("mxt debug status missing", source), 0);
             expect(context, "the debug off command succeeds", dispatcher.execute("mxt debug off", source), 1);
             expect(context, "the command disables the server owner", ServerProfiling.enabled(context.server()), false);
@@ -210,17 +215,17 @@ public final class ServerProfilingVerifyProbes {
                 return false;
             }
         });
-        ProfilerWindowSnapshot window = ProfilerWindowSnapshot.restore(1L, 1L, 2L, List.of(Source.COST.id()),
-                List.of(new ProfilerWindowSnapshot.ProducerData(1L, "Server thread", 0L,
-                        new long[][]{{1_000_000L, 1L}, {10_000_000L, 2L}, {50_000_000L, 3L}}, new boolean[]{true, true, true}, 3L)));
+        ProfilerWindowSnapshot window = window(2L,
+                List.of(new LongArrayList(new long[]{1_000_000L, 1L}), new LongArrayList(new long[]{10_000_000L, 2L}),
+                        new LongArrayList(new long[]{50_000_000L, 3L})), new BooleanArrayList(new boolean[]{true, true, true}), 3L);
         try {
             Method show = DebugCommand.class.getDeclaredMethod("show", CommandSourceStack.class, List.class, ProfilerWindowSnapshot.class);
             show.setAccessible(true);
-            show.invoke(null, source, List.of(Source.COST), window);
+            show.invoke(null, source, List.of(SaturnProfilerSources.COST), window);
             TranslatableContents header = (TranslatableContents) messages.get(0).getContents();
             TranslatableContents producer = (TranslatableContents) messages.get(1).getContents();
             TranslatableContents row = (TranslatableContents) messages.get(2).getContents();
-            expect(context, "status retains the selected source id", row.getArgs()[0], Source.COST.id());
+            expect(context, "status retains the selected source id", row.getArgs()[0], SaturnProfilerSources.COST.id());
             ChatFormatting[] colors = {ChatFormatting.GREEN, ChatFormatting.YELLOW, ChatFormatting.RED,
                     ChatFormatting.YELLOW, ChatFormatting.RED, ChatFormatting.RED};
             for (int index = 0; index < colors.length; index++)
@@ -229,10 +234,9 @@ public final class ServerProfilingVerifyProbes {
             expect(context, "discarded records are red", ((Component) producer.getArgs()[2]).getStyle().getColor(), TextColor.fromLegacyFormat(ChatFormatting.RED));
 
             messages.clear();
-            ProfilerWindowSnapshot clean = ProfilerWindowSnapshot.restore(1L, 1L, 0L, List.of(Source.COST.id()),
-                    List.of(new ProfilerWindowSnapshot.ProducerData(1L, "Server thread", 0L,
-                            new long[][]{{0L, 0L}}, new boolean[]{true}, 0L)));
-            show.invoke(null, source, List.of(Source.COST), clean);
+            ProfilerWindowSnapshot clean = window(0L, List.of(new LongArrayList(new long[]{0L, 0L})),
+                    new BooleanArrayList(new boolean[]{true}), 0L);
+            show.invoke(null, source, List.of(SaturnProfilerSources.COST), clean);
             header = (TranslatableContents) messages.get(0).getContents();
             producer = (TranslatableContents) messages.get(1).getContents();
             expect(context, "zero dropped batches are green", ((Component) header.getArgs()[1]).getStyle().getColor(), TextColor.fromLegacyFormat(ChatFormatting.GREEN));
@@ -250,11 +254,18 @@ public final class ServerProfilingVerifyProbes {
         }
     }
 
-    private static long hits(ProfilerWindowSnapshot snapshot, ProfilerWindowSnapshot.Producer producer, int sample, Source source) {
+    private static ProfilerWindowSnapshot window(long droppedBatches, List<LongList> samples, BooleanList complete, long discardedSpans) {
+        List<ProfilerSource> sources = List.of(SaturnProfilerSources.COST);
+        return new ProfilerWindowSnapshot(1L, 1L, sources,
+                List.of(new ProfilerWindowSnapshot.Producer(1L, "Server thread", 0L, sources, samples, complete, discardedSpans)),
+                droppedBatches);
+    }
+
+    private static long hits(ProfilerWindowSnapshot snapshot, ProfilerWindowSnapshot.Producer producer, int sample, ProfilerSource source) {
         return producer.hits(sample, snapshot.sources().stream().filter(value -> value.id().equals(source.id())).findFirst().orElseThrow());
     }
 
-    private static long nanos(ProfilerWindowSnapshot snapshot, ProfilerWindowSnapshot.Producer producer, int sample, Source source) {
+    private static long nanos(ProfilerWindowSnapshot snapshot, ProfilerWindowSnapshot.Producer producer, int sample, ProfilerSource source) {
         return producer.nanos(sample, snapshot.sources().stream().filter(value -> value.id().equals(source.id())).findFirst().orElseThrow());
     }
 

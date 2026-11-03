@@ -1,16 +1,19 @@
 package com.iafenvoy.mxt.probe.verify;
 
-import com.iafenvoy.mxt.network.payload.ProfilerGuiS2CPayload;
 import com.iafenvoy.mxt.network.payload.ProfilerSnapshotS2CPayload;
 import com.iafenvoy.mxt.probe.Probe;
 import com.iafenvoy.mxt.probe.ProbeContext;
+import com.iafenvoy.mxt.screen.profiling.ProfilerOpenScreenData;
+import com.iafenvoy.saturn.network.payload.OpenScreenS2CPayload;
 import com.iafenvoy.saturn.profiling.ProfilerFrame;
 import com.iafenvoy.mxt.util.ProfilerSubscriptions;
 import com.iafenvoy.saturn.profiling.ServerProfiling;
 import com.mojang.brigadier.tree.CommandNode;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.network.Connection;
+import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.PacketFlow;
 import net.minecraft.network.protocol.common.ClientboundCustomPayloadPacket;
@@ -22,6 +25,7 @@ import net.minecraft.server.permissions.LevelBasedPermissionSet;
 import net.minecraft.server.players.NameAndId;
 import net.minecraft.server.players.ServerOpList;
 import net.minecraft.server.players.ServerOpListEntry;
+import net.neoforged.neoforge.network.connection.ConnectionType;
 import net.neoforged.neoforge.network.registration.NetworkRegistry;
 import org.jspecify.annotations.NonNull;
 
@@ -36,7 +40,23 @@ public final class ProfilerGuiVerifyProbes {
 
     public static List<Probe> probes() {
         return List.of(Probe.of("verify/profiling/gui_permissions", ProfilerGuiVerifyProbes::permissions),
+                Probe.of("verify/profiling/gui_payload", ProfilerGuiVerifyProbes::payload),
                 Probe.of("verify/profiling/gui_subscription", ProfilerGuiVerifyProbes::subscription));
+    }
+
+    // The grant rides the library's shared open-screen payload, so the registry entry and the codec are the two
+    // things this mod now owns; a round trip is what proves both.
+    private static void payload(ProbeContext context) {
+        ProfilerOpenScreenData data = new ProfilerOpenScreenData(UUID.randomUUID(), true);
+        RegistryFriendlyByteBuf buffer = new RegistryFriendlyByteBuf(Unpooled.buffer(), context.registries(), ConnectionType.NEOFORGE);
+        try {
+            OpenScreenS2CPayload.STREAM_CODEC.encode(buffer, new OpenScreenS2CPayload(data));
+            expect(context, "the grant travels as the shared open-screen payload",
+                    OpenScreenS2CPayload.STREAM_CODEC.decode(buffer).data(), data);
+            expect(context, "the grant is the whole payload", buffer.readableBytes(), 0);
+        } finally {
+            buffer.release();
+        }
     }
 
     private static void permissions(ProbeContext context) {
@@ -70,7 +90,7 @@ public final class ProfilerGuiVerifyProbes {
             @Override
             public void send(@NonNull Packet<?> packet) {
                 if (packet instanceof ClientboundCustomPayloadPacket(CustomPacketPayload payload)
-                        && (payload instanceof ProfilerGuiS2CPayload || payload instanceof ProfilerSnapshotS2CPayload))
+                        && (payload instanceof ProfilerSnapshotS2CPayload || payload instanceof OpenScreenS2CPayload))
                     sent.add(payload);
                 else previousConnection.send(packet);
             }
@@ -137,7 +157,7 @@ public final class ProfilerGuiVerifyProbes {
             });
             context.after(30L, () -> {
                 expect(context, "revoked permission stops delivery", snapshots(sent), 0L);
-                expect(context, "revoked permission closes the GUI", sent.stream().anyMatch(value -> value instanceof ProfilerGuiS2CPayload gui && !gui.open()), true);
+                expect(context, "revoked permission sends no further GUI grant", grants(sent), 0L);
                 ops.add(new ServerOpListEntry(identity, LevelBasedPermissionSet.ADMIN, false));
                 ProfilerSubscriptions.open(player);
                 UUID third = lastGrant(context, sent);
@@ -165,11 +185,18 @@ public final class ProfilerGuiVerifyProbes {
         return sent.stream().filter(ProfilerSnapshotS2CPayload.class::isInstance).count();
     }
 
+    // The library's open-screen payload is shared, so only the one carrying a profiler token counts as a grant.
+    private static long grants(List<CustomPacketPayload> sent) {
+        return sent.stream().filter(value -> value instanceof OpenScreenS2CPayload open
+                && open.data() instanceof ProfilerOpenScreenData).count();
+    }
+
     // The grant is the only payload open() sends. An empty list means an earlier leg already failed, and the legs
     // that follow have to report that rather than throw out of the whole probe.
     private static UUID lastGrant(ProbeContext context, List<CustomPacketPayload> sent) {
-        if (sent.isEmpty() || !(sent.getLast() instanceof ProfilerGuiS2CPayload grant)) {
-            context.fail("the GUI grant sent no ProfilerGuiS2CPayload");
+        if (sent.isEmpty() || !(sent.getLast() instanceof OpenScreenS2CPayload open)
+                || !(open.data() instanceof ProfilerOpenScreenData grant)) {
+            context.fail("the GUI grant sent no open-screen payload carrying a profiler token");
             return null;
         }
         return grant.token();

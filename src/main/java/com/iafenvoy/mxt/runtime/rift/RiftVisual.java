@@ -3,6 +3,9 @@ package com.iafenvoy.mxt.runtime.rift;
 import com.iafenvoy.mxt.data.rift.*;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.resources.Identifier;
 
 public record RiftVisual(RiftPlacement placement, RiftShape shape, RiftAppearance appearance, int color,
@@ -14,6 +17,7 @@ public record RiftVisual(RiftPlacement placement, RiftShape shape, RiftAppearanc
             Codec.INT.fieldOf("color").forGetter(RiftVisual::color),
             Codec.BOOL.fieldOf("enabled").forGetter(RiftVisual::enabled)
     ).apply(i, RiftVisual::new));
+    public static final StreamCodec<RegistryFriendlyByteBuf, RiftVisual> STREAM_CODEC = ByteBufCodecs.fromCodecWithRegistries(RiftVisual.CODEC);
 
     public static RiftVisual of(RiftRecord record) {
         RiftTemplate data = record.data();

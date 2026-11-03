@@ -14,10 +14,9 @@ import org.jspecify.annotations.NonNull;
  * One finished stroke, in bitmap coordinates. The server measures it itself and answers with an acknowledgement;
  * a stroke that is refused has to be erased on the drawing side, or the final reconciliation cannot pass.
  */
-public record TalismanStrokeC2SPayload(int containerId, Identifier recipeId, Stroke stroke)
-        implements CustomPacketPayload {
-    public static final Type<TalismanStrokeC2SPayload> TYPE =
-            new Type<>(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "talisman_stroke_c2s"));
+public record TalismanStrokeC2SPayload(int containerId, Identifier recipeId,
+                                       Stroke stroke) implements CustomPacketPayload {
+    public static final Type<TalismanStrokeC2SPayload> TYPE = new Type<>(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "talisman_stroke_c2s"));
     public static final StreamCodec<RegistryFriendlyByteBuf, TalismanStrokeC2SPayload> STREAM_CODEC = StreamCodec.composite(
             ByteBufCodecs.VAR_INT, TalismanStrokeC2SPayload::containerId,
             Identifier.STREAM_CODEC, TalismanStrokeC2SPayload::recipeId,

@@ -55,7 +55,7 @@ public record StorageAbilityType(NumberProvider slots,
         if (!(context.holder() instanceof ServerPlayer player)) return Optional.of(AbilityFailure.UNAVAILABLE);
         ItemStack carrier = context.carrier();
         if (carrier == null || carrier.isEmpty()) return Optional.of(AbilityFailure.NO_CARRIER);
-        // No slots is the slots formula's own answer, not a state the press cannot describe.
+        // No slot is the slots formula's own answer, not a state the press cannot describe.
         if (ArtifactService.storageSlots(carrier, context.ability(), context.formula()) <= 0)
             return Optional.of(Failures.INVALID_FORMULA);
         if (!ArtifactStorageService.INSTANCE.mayAccess(player.level().registryAccess(), carrier, context.ability(), player))
@@ -73,8 +73,7 @@ public record StorageAbilityType(NumberProvider slots,
         Component title = Component.translatable("screen.mxt.artifact_storage", DefinitionText.nameOrId(context.ability()));
         ArtifactStorageContainer contents = new ArtifactStorageContainer(player, context.ability(), capacity);
         int rows = capacity / ArtifactService.STORAGE_COLUMNS;
-        player.openMenu(new SimpleMenuProvider((id, inventory, opener) ->
-                        new ChestMenu(MxtMenus.ARTIFACT_STORAGE.get(), id, inventory, contents, rows), title),
+        player.openMenu(new SimpleMenuProvider((id, inventory, _) -> new ChestMenu(MxtMenus.ARTIFACT_STORAGE.get(), id, inventory, contents, rows), title),
                 // The client rebuilds the same menu shape from the row count, which is all it needs: the slots
                 // themselves arrive through the menu sync.
                 buffer -> buffer.writeVarInt(rows));

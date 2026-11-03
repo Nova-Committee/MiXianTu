@@ -204,18 +204,12 @@ public final class TalismanWorkstationMenu extends ApricityContainerMenu {
         }
         TalismanWorkstationService.start(player, this.paper, recipeId).ifPresent(started -> {
             this.session = started;
-            TalismanDrawingRecipe.Pattern pattern = started.recipe().pattern();
-            PacketDistributor.sendToPlayer(player, new TalismanDrawingStartS2CPayload(this.containerId, recipeId,
-                    started.recipe().backgroundColor(), started.recipe().foregroundColor(),
-                    pattern.strokes(), pattern.guide().getSerializedName(), pattern.showOrder(), pattern.tolerance(),
-                    started.recipe().judgement(), MxtServerConfig.INSTANCE.talisman.minStrokeInterval.getValue()));
+            PacketDistributor.sendToPlayer(player, new TalismanDrawingStartS2CPayload(this.containerId, recipeId, started.recipe(), MxtServerConfig.INSTANCE.talisman.minStrokeInterval.getValue()));
         });
         // The old formula is already handed back by now, so a replacement that will not start leaves nothing open:
         // the screen has to hear about it, or it would keep drawing against a session the server no longer has.
         if (replacing && this.session == null)
-            PacketDistributor.sendToPlayer(player, new TalismanResultS2CPayload(this.containerId,
-                    TalismanResultS2CPayload.CANCELLED, 0.0D, false,
-                    Component.empty(), ItemStack.EMPTY, 0));
+            PacketDistributor.sendToPlayer(player, new TalismanResultS2CPayload(this.containerId, TalismanResultS2CPayload.Kind.CANCELLED, 0.0D, Component.empty(), ItemStack.EMPTY, 0));
     }
 
     public void stroke(ServerPlayer player, Identifier recipeId, Stroke stroke) {
@@ -227,9 +221,7 @@ public final class TalismanWorkstationMenu extends ApricityContainerMenu {
         }
         int index = this.session.strokeCount();
         TalismanWorkstationService.StrokeResult result = TalismanWorkstationService.stroke(player, this.session, stroke.points());
-        PacketDistributor.sendToPlayer(player, new TalismanStrokeAckS2CPayload(this.containerId, index,
-                result.accepted(), result.refusal() == null
-                ? TalismanStrokeAckS2CPayload.ACCEPTED : result.refusal().ordinal(), result.charged()));
+        PacketDistributor.sendToPlayer(player, new TalismanStrokeAckS2CPayload(this.containerId, index, result.accepted(), result.refusal() == null ? -1 : result.refusal().ordinal(), result.charged()));
         if (this.session.failed()) this.endFailed(player);
     }
 
@@ -237,12 +229,9 @@ public final class TalismanWorkstationMenu extends ApricityContainerMenu {
         if (this.session == null || !this.session.recipeId().equals(recipeId)) return;
         TalismanDrawingSession ended = this.session;
         this.session = null;
-        TalismanWorkstationService.Outcome outcome =
-                TalismanWorkstationService.submit(player, ended, strokes.stream().map(Stroke::points).toList());
+        TalismanWorkstationService.Outcome outcome = TalismanWorkstationService.submit(player, ended, strokes.stream().map(Stroke::points).toList());
         if (outcome.success()) this.playSubmitSound();
-        PacketDistributor.sendToPlayer(player, new TalismanResultS2CPayload(this.containerId,
-                TalismanResultS2CPayload.SETTLED, outcome.completion(), outcome.success(), outcome.text(),
-                outcome.product(), outcome.pigmentSpent()));
+        PacketDistributor.sendToPlayer(player, new TalismanResultS2CPayload(this.containerId, outcome.success() ? TalismanResultS2CPayload.Kind.SUCCESS : TalismanResultS2CPayload.Kind.SETTLED, outcome.completion(), outcome.text(), outcome.product(), outcome.pigmentSpent()));
         // What a formula costs changed with the paper the session took, so the list is recomputed for the next pick.
         this.sendList(player);
     }
@@ -267,9 +256,7 @@ public final class TalismanWorkstationMenu extends ApricityContainerMenu {
         this.session = null;
         boolean failed = ended.drewAnything();
         TalismanWorkstationService.abandon(player, ended);
-        PacketDistributor.sendToPlayer(player, new TalismanResultS2CPayload(this.containerId,
-                failed ? TalismanResultS2CPayload.ABANDONED : TalismanResultS2CPayload.CANCELLED, 0.0D, false,
-                Component.empty(), ItemStack.EMPTY, ended.pigmentSpent()));
+        PacketDistributor.sendToPlayer(player, new TalismanResultS2CPayload(this.containerId, failed ? TalismanResultS2CPayload.Kind.ABANDONED : TalismanResultS2CPayload.Kind.CANCELLED, 0.0D, Component.empty(), ItemStack.EMPTY, ended.pigmentSpent()));
         this.sendList(player);
     }
 
@@ -278,9 +265,7 @@ public final class TalismanWorkstationMenu extends ApricityContainerMenu {
         this.session = null;
         if (ended == null) return;
         TalismanWorkstationService.fail(player, ended);
-        PacketDistributor.sendToPlayer(player, new TalismanResultS2CPayload(this.containerId,
-                TalismanResultS2CPayload.FAILED, 0.0D, false,
-                Component.empty(), ItemStack.EMPTY, ended.pigmentSpent()));
+        PacketDistributor.sendToPlayer(player, new TalismanResultS2CPayload(this.containerId, TalismanResultS2CPayload.Kind.FAILED, 0.0D, Component.empty(), ItemStack.EMPTY, ended.pigmentSpent()));
         this.sendList(player);
     }
 

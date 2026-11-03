@@ -8,6 +8,7 @@ import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.Identifier;
+import org.jetbrains.annotations.NotNull;
 import org.jspecify.annotations.NonNull;
 
 import java.util.Optional;
@@ -17,7 +18,7 @@ import java.util.Optional;
  * {@link ForgingAction#STRIKE}; the other transitions carry none, because the server reads everything else from its
  * own session state. The request names no table: the server resolves it from the menu the sending player has open.
  */
-public record ForgingActionC2SPayload(ForgingAction action,
+public record ForgingActionC2SPayload(@NotNull ForgingAction action,
                                       Optional<Identifier> definition) implements CustomPacketPayload {
     public static final Type<ForgingActionC2SPayload> TYPE = new Type<>(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "forging_action_c2s"));
     public static final StreamCodec<RegistryFriendlyByteBuf, ForgingActionC2SPayload> STREAM_CODEC = StreamCodec.composite(
@@ -26,8 +27,6 @@ public record ForgingActionC2SPayload(ForgingAction action,
             ForgingActionC2SPayload::new);
 
     public ForgingActionC2SPayload {
-        if (action == null)
-            throw new IllegalArgumentException("Forging payload values must not be null");
         if (action.requiresDefinition() != definition.isPresent()) {
             throw new IllegalArgumentException("Forging action " + action + " has an invalid definition argument");
         }

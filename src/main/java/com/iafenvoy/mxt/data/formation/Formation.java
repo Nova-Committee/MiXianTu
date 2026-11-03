@@ -14,6 +14,9 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.RegistryFixedCodec;
 import net.minecraft.util.StringRepresentable;
@@ -105,13 +108,14 @@ public record Formation(Optional<Holder<ItemQuality>> quality, Optional<Identifi
          * for a non-default state; on write the bare id comes back wherever it can.
          */
         private static final Codec<BlockState> STATE = Codec.either(BuiltInRegistries.BLOCK.byNameCodec(), BlockState.CODEC)
-                .xmap(choice -> choice.map(Block::defaultBlockState, Function.identity()),
-                        state -> state.equals(state.getBlock().defaultBlockState())
-                                ? Either.left(state.getBlock()) : Either.right(state));
-
+                .xmap(e -> e.map(Block::defaultBlockState, Function.identity()), Either::right);
         public static final Codec<RequiredBlock> CODEC = RecordCodecBuilder.create(i -> i.group(
                 BlockPos.CODEC.fieldOf("offset").forGetter(RequiredBlock::offset),
                 STATE.fieldOf("state").forGetter(RequiredBlock::state)
         ).apply(i, RequiredBlock::new));
+        public static final StreamCodec<RegistryFriendlyByteBuf, RequiredBlock> STREAM_CODEC = StreamCodec.composite(
+                BlockPos.STREAM_CODEC, RequiredBlock::offset,
+                ByteBufCodecs.fromCodecWithRegistries(BlockState.CODEC), RequiredBlock::state,
+                RequiredBlock::new);
     }
 }

@@ -21,25 +21,28 @@ import java.util.List;
  * <p>The two preprocessing constants are code constants on both sides and are deliberately not sent.
  */
 public record TalismanDrawingStartS2CPayload(int containerId, Identifier recipeId, int backgroundColor,
-                                             int foregroundColor, List<Stroke> strokes, String guide,
-                                             boolean showOrder, double tolerance,
+                                             int foregroundColor, List<Stroke> strokes,
+                                             TalismanDrawingRecipe.Guide guide, boolean showOrder, double tolerance,
                                              TalismanDrawingScorer.Judgement judgement,
                                              int minStrokeInterval) implements CustomPacketPayload {
-    public static final Type<TalismanDrawingStartS2CPayload> TYPE =
-            new Type<>(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "talisman_drawing_start_s2c"));
+    public static final Type<TalismanDrawingStartS2CPayload> TYPE = new Type<>(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "talisman_drawing_start_s2c"));
     public static final StreamCodec<RegistryFriendlyByteBuf, TalismanDrawingStartS2CPayload> STREAM_CODEC = StreamCodec.composite(
             ByteBufCodecs.VAR_INT, TalismanDrawingStartS2CPayload::containerId,
             Identifier.STREAM_CODEC, TalismanDrawingStartS2CPayload::recipeId,
             ByteBufCodecs.VAR_INT, TalismanDrawingStartS2CPayload::backgroundColor,
             ByteBufCodecs.VAR_INT, TalismanDrawingStartS2CPayload::foregroundColor,
-            ByteBufCodecs.fromCodecWithRegistries(TalismanDrawingRecipe.STROKE_CODEC).apply(ByteBufCodecs.list(64)),
-            TalismanDrawingStartS2CPayload::strokes,
-            ByteBufCodecs.STRING_UTF8, TalismanDrawingStartS2CPayload::guide,
+            //FIXME::Codecs
+            ByteBufCodecs.fromCodecWithRegistries(TalismanDrawingRecipe.STROKE_CODEC).apply(ByteBufCodecs.list(64)), TalismanDrawingStartS2CPayload::strokes,
+            TalismanDrawingRecipe.Guide.STREAM_CODEC, TalismanDrawingStartS2CPayload::guide,
             ByteBufCodecs.BOOL, TalismanDrawingStartS2CPayload::showOrder,
             ByteBufCodecs.DOUBLE, TalismanDrawingStartS2CPayload::tolerance,
             ByteBufCodecs.fromCodecWithRegistries(TalismanDrawingRecipe.JUDGEMENT_CODEC), TalismanDrawingStartS2CPayload::judgement,
             ByteBufCodecs.VAR_INT, TalismanDrawingStartS2CPayload::minStrokeInterval,
             TalismanDrawingStartS2CPayload::new);
+
+    public TalismanDrawingStartS2CPayload(int containerId, Identifier recipeId, TalismanDrawingRecipe recipe, int minStrokeInterval) {
+        this(containerId, recipeId, recipe.backgroundColor(), recipe.foregroundColor(), recipe.pattern().strokes(), recipe.pattern().guide(), recipe.pattern().showOrder(), recipe.pattern().tolerance(), recipe.judgement(), minStrokeInterval);
+    }
 
     @Override
     public @NonNull Type<TalismanDrawingStartS2CPayload> type() {

@@ -8,6 +8,7 @@ import com.iafenvoy.mxt.data.item.RiftComponent;
 import com.iafenvoy.mxt.data.rift.*;
 import com.iafenvoy.mxt.network.payload.RiftEditC2SPayload;
 import com.iafenvoy.mxt.network.payload.RiftEditorS2CPayload;
+import com.iafenvoy.mxt.network.payload.RiftEditorS2CPayload.EditorAction;
 import com.iafenvoy.mxt.probe.Probe;
 import com.iafenvoy.mxt.probe.ProbeContext;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
@@ -105,7 +106,7 @@ public final class RiftAnchorProbes {
             RiftDestination recorded = new RiftDestination.Return();
             off.set(MxtDataComponents.RIFT, new RiftComponent(Optional.of(data), Optional.of(recorded)));
             UUID token = fixture.open(InteractionHand.OFF_HAND);
-            c.expect("air opens item editor", fixture.sent.getLast().action(), "open_item");
+            c.expect("air opens item editor", fixture.sent.getLast().action(), EditorAction.OPEN_ITEM);
             RiftTemplate initial = decoded(fixture.sent.getLast());
             c.expect("air reads the used hand's shape", initial.shape(), data.shape());
             c.expect("recorded destination is visible in editor", initial.destination(), recorded);
@@ -113,7 +114,7 @@ public final class RiftAnchorProbes {
             RiftEditorService.handle(fixture.player, new RiftEditC2SPayload(UUID.randomUUID(), "submit", 0, RiftExport.template(portable)));
             c.expect("unknown tokens cannot alter the item", off.get(MxtDataComponents.RIFT).recorded(), Optional.of(recorded));
             fixture.request(token, "submit", portable);
-            c.expect("saving item settings is acknowledged", fixture.sent.getLast().action(), "item_accepted");
+            c.expect("saving item settings is acknowledged", fixture.sent.getLast().action(), EditorAction.ITEM_ACCEPTED);
             c.expect("saved settings round trip", decoded(fixture.sent.getLast()), portable);
             c.expect("offhand receives the blueprint", off.get(MxtDataComponents.RIFT).blueprint(), Optional.of(portable));
             c.expect("saving does not modify the main hand", main.getOrDefault(MxtDataComponents.RIFT, RiftComponent.EMPTY), originalMain);
@@ -124,7 +125,7 @@ public final class RiftAnchorProbes {
             c.after(5, () -> {
                 try {
                     fixture.request(token, "submit", data);
-                    c.expect("same session can save again", fixture.sent.getLast().action(), "item_accepted");
+                    c.expect("same session can save again", fixture.sent.getLast().action(), EditorAction.ITEM_ACCEPTED);
                     c.expect("second save replaces the settings", off.get(MxtDataComponents.RIFT).blueprint(), Optional.of(data));
                     fixture.request(fixture.open(InteractionHand.MAIN_HAND), "submit", data);
                     c.expect("main hand can also save parameters", main.get(MxtDataComponents.RIFT).blueprint(), Optional.of(data));
@@ -132,7 +133,7 @@ public final class RiftAnchorProbes {
                     JsonObject malformed = JsonParser.parseString(RiftExport.template(data)).getAsJsonObject();
                     malformed.addProperty("duration_ticks", -1);
                     RiftEditorService.handle(fixture.player, new RiftEditC2SPayload(invalid, "submit", 0, malformed.toString()));
-                    c.expect("invalid settings produce an error response", fixture.sent.getLast().action(), "error");
+                    c.expect("invalid settings produce an error response", fixture.sent.getLast().action(), EditorAction.ERROR);
                     c.expect("invalid settings preserve the item", off.get(MxtDataComponents.RIFT).blueprint(), Optional.of(data));
                     for (String action : List.of("remove", "copy", "renew")) {
                         fixture.request(fixture.open(InteractionHand.OFF_HAND), action, data);
@@ -149,7 +150,7 @@ public final class RiftAnchorProbes {
                     UUID revoked = fixture.open(InteractionHand.OFF_HAND);
                     c.server().getPlayerList().getOps().remove(fixture.identity);
                     fixture.request(revoked, "submit", data);
-                    c.expect("revoked permission closes item session", fixture.sent.getLast().action(), "close");
+                    c.expect("revoked permission closes item session", fixture.sent.getLast().action(), EditorAction.CLOSE);
                     c.expect("revoked permission leaves settings intact", off.get(MxtDataComponents.RIFT), external);
                     c.check("item editor cannot publish through any tested action", fixture.records().isEmpty());
                     c.note("item parameters: air/main/offhand/save/repeat/roundtrip/portable/conflict/permissions OK");

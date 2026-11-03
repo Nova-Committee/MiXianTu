@@ -5,9 +5,12 @@ import com.iafenvoy.jupiter.render.screen.ConfigSelectScreen;
 import com.iafenvoy.mxt.config.MxtClientConfig;
 import com.iafenvoy.mxt.config.MxtServerConfig;
 import com.iafenvoy.mxt.render.animation.CultivationAnimationController;
+import com.iafenvoy.mxt.screen.profiling.ProfilerOpenScreenData;
+import com.iafenvoy.mxt.screen.profiling.ProfilerScreen;
 import com.iafenvoy.mxt.screen.resourcebar.AuraZoneBarContributor;
 import com.iafenvoy.mxt.screen.wheel.WheelSelectionEntry;
 import com.iafenvoy.mxt.screen.wheel.content.WheelContent;
+import com.iafenvoy.saturn.screen.opener.ClientScreenDispatcher;
 import com.iafenvoy.saturn.screen.resourcebar.ResourceBarContributors;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -27,5 +30,6 @@ public final class MiXianTuClient {
         ResourceBarContributors.register(AuraZoneBarContributor.INSTANCE);
         WheelContent.register();
         WheelSelectionEntry.register();
+        ClientScreenDispatcher.register(ProfilerOpenScreenData.STREAM_CODEC, ProfilerScreen::create);
     }
 }

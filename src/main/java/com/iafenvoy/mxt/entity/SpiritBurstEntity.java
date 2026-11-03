@@ -7,6 +7,7 @@ import com.iafenvoy.mxt.registry.MxtEntityDataSerializers;
 import com.iafenvoy.mxt.registry.MxtEntityTypes;
 import com.iafenvoy.saturn.data.resource.Resource;
 import com.iafenvoy.saturn.profiling.ProfilerScope;
+import com.iafenvoy.saturn.registry.SaturnProfilerSources;
 import com.iafenvoy.saturn.profiling.ServerProfiling;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
@@ -70,7 +71,7 @@ public final class SpiritBurstEntity extends ThrowableProjectile {
 
     @Override
     public void tick() {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.ENTITY)) {
+        try (ProfilerScope _ = ServerProfiling.scope(SaturnProfilerSources.ENTITY)) {
             if (!this.level().isClientSide() && this.tryHitAuraAccess()) return;
             super.tick();
             if (this.level().isClientSide()) this.spawnTrailParticles();

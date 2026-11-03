@@ -4,6 +4,9 @@ import com.iafenvoy.mxt.data.rift.RiftTemplate;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.UUIDUtil;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.resources.Identifier;
 
 import java.util.Optional;
@@ -21,6 +24,7 @@ public record RiftRecord(UUID id, long revision, RiftTemplate data, long expires
             Codec.INT.optionalFieldOf("bound_index", -1).forGetter(RiftRecord::boundIndex),
             UUIDUtil.CODEC.optionalFieldOf("bound_instance").forGetter(RiftRecord::boundInstance)
     ).apply(i, RiftRecord::new));
+    public static final StreamCodec<RegistryFriendlyByteBuf, RiftRecord> STREAM_CODEC = ByteBufCodecs.fromCodecWithRegistries(RiftRecord.CODEC);
 
     public boolean expired(long now) {
         return this.expiresAt >= 0 && now >= this.expiresAt;

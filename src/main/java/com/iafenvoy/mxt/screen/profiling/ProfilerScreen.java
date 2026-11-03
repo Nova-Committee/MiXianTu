@@ -1,6 +1,5 @@
 package com.iafenvoy.mxt.screen.profiling;
 
-import com.iafenvoy.mxt.network.payload.ProfilerGuiS2CPayload;
 import com.iafenvoy.mxt.network.payload.ProfilerSnapshotS2CPayload;
 import com.iafenvoy.mxt.network.payload.ProfilerSubscriptionC2SPayload;
 import com.iafenvoy.mxt.screen.aui.*;
@@ -22,14 +21,13 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.Mth;
 import net.neoforged.neoforge.client.network.ClientPacketDistributor;
 import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
 import java.util.*;
 
 public final class ProfilerScreen extends AuiScreen {
-    private static final int ROW_WIDTH = 472;
-    private static final int COMPACT_ROW_WIDTH = 288;
-    private static final int ROW_HEIGHT = 38;
-    private static final int COMPACT_ROW_HEIGHT = 64;
+    private static final int ROW_WIDTH = 472, ROW_HEIGHT = 38;
+    private static final int COMPACT_ROW_WIDTH = 288, COMPACT_ROW_HEIGHT = 64;
     private static final int ROWS = 24;
     private final UUID token;
     private final boolean local;
@@ -42,9 +40,7 @@ public final class ProfilerScreen extends AuiScreen {
     private AuiScrollList<Row> list;
     private Element panel, status, direction, legend;
     private Sort sort = Sort.AVERAGE;
-    private boolean descending = true;
-    private boolean subscribed;
-    private boolean closed;
+    private boolean descending = true, subscribed, closed;
     private int ticks;
 
     private ProfilerScreen(UUID token, boolean local) {
@@ -57,16 +53,14 @@ public final class ProfilerScreen extends AuiScreen {
         this.player = this.minecraft.player.getUUID();
     }
 
-    public static void control(ProfilerGuiS2CPayload payload) {
-        Minecraft minecraft = Minecraft.getInstance();
-        if (!payload.open()) {
-            if (minecraft.screen instanceof ProfilerScreen screen && screen.token.equals(payload.token()))
-                screen.onClose();
-            return;
-        }
-        if (minecraft.player == null || !ProfilerSubscriptions.mayView(minecraft.player.permissions())) return;
-        if (payload.local() && minecraft.getSingleplayerServer() == null) return;
-        minecraft.setScreen(new ProfilerScreen(payload.token(), payload.local()));
+    // The grant only ever opens; the screen leaves on its own once the server drops the subscription (permissions
+    // arrive as an entity event, so the local check sees a revoked grant in the same tick) or it stops being ours.
+    // Whether this side may see one is answered by the server that sends it and re-checked by authorized() every tick.
+    public static @Nullable ProfilerScreen create(ProfilerOpenScreenData data) {
+        // The dispatcher refuses a null, and its own message is the only thing worth reporting here: a grant with no
+        // client player is not a state this side can be asked to draw.
+        if (Minecraft.getInstance().player == null) return null;
+        return new ProfilerScreen(data.token(), data.local());
     }
 
     public static void receive(ProfilerSnapshotS2CPayload payload) {
@@ -129,10 +123,7 @@ public final class ProfilerScreen extends AuiScreen {
     }
 
     private static String sourceName(ProfilerSource source) {
-        for (ServerProfiling.Source registered : ServerProfiling.Source.all())
-            if (registered.id().equals(source.id()))
-                return Component.translatableWithFallback(registered.translationKey(), source.id()).getString();
-        return source.id();
+        return Component.translatableWithFallback(source.translationKey(), source.id()).getString();
     }
 
     // Only the label answers this: it is the one piece of a row that is cut to its column, so the tooltip is where

@@ -248,18 +248,13 @@ public final class TalismanWorkstationScreen extends AuiContainerScreen<Talisman
         this.strokes.clear();
         this.currentStroke = null;
         this.redrawInk();
-        Component text;
-        if (result.kind() == TalismanResultS2CPayload.CANCELLED)
-            text = Component.translatable("screen.mxt.talisman.result.cancelled");
-        else if (result.kind() == TalismanResultS2CPayload.ABANDONED)
-            text = Component.translatable("screen.mxt.talisman.result.abandoned");
-        else if (result.success())
-            text = Component.translatable("screen.mxt.talisman.result.success", percent(result.completion()));
-        else if (result.kind() == TalismanResultS2CPayload.FAILED)
-            text = Component.translatable("screen.mxt.talisman.result.refused");
-        else
-            text = Component.translatable("screen.mxt.talisman.result.failure", percent(result.completion()));
-        this.text(this.resultLine, text);
+        this.text(this.resultLine, switch (result.kind()) {
+            case CANCELLED -> Component.translatable("screen.mxt.talisman.result.cancelled");
+            case ABANDONED -> Component.translatable("screen.mxt.talisman.result.abandoned");
+            case SUCCESS -> Component.translatable("screen.mxt.talisman.result.success", percent(result.completion()));
+            case FAILED -> Component.translatable("screen.mxt.talisman.result.refused");
+            case SETTLED -> Component.translatable("screen.mxt.talisman.result.failure", percent(result.completion()));
+        });
     }
 
     private void applyPreview() {
@@ -528,6 +523,7 @@ public final class TalismanWorkstationScreen extends AuiContainerScreen<Talisman
     /**
      * A formula colour, as the page and the canvas API want it: plain RGB plus the alpha the layer draws at.
      */
+    // FIXME::Color
     private static Color color(int rgb, int alpha) {
         return new Color((rgb >> 16) & 0xFF, (rgb >> 8) & 0xFF, rgb & 0xFF, Math.clamp(alpha, 0, 255));
     }

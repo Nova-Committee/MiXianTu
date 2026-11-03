@@ -8,10 +8,12 @@ import com.iafenvoy.mxt.registry.MxtRecipeTypes;
 import com.iafenvoy.mxt.runtime.talisman.TalismanDrawingScorer;
 import com.iafenvoy.mxt.runtime.talisman.TalismanDrawingScorer.Point;
 import com.iafenvoy.mxt.runtime.talisman.TalismanDrawingScorer.Stroke;
+import com.iafenvoy.mxt.util.MxtCodecs;
 import com.iafenvoy.saturn.data.action.EntityAction;
 import com.iafenvoy.saturn.data.condition.EntityCondition;
 import com.iafenvoy.saturn.data.cost.Cost;
 import com.iafenvoy.saturn.util.codec.MiscCodecs;
+import com.iafenvoy.saturn.util.codec.MiscStreamCodecs;
 import com.iafenvoy.saturn.util.formula.FormulaVariables;
 import com.iafenvoy.saturn.util.formula.NumberProvider;
 import com.iafenvoy.saturn.util.formula.number.*;
@@ -20,6 +22,7 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import io.netty.buffer.ByteBuf;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -53,18 +56,10 @@ import java.util.*;
  */
 public record TalismanDrawingRecipe(EntityCondition unlockCondition, Holder<Talisman> talisman, List<Cost> costs,
                                     Optional<Ingredient> paper, Pattern pattern, int backgroundColor,
-                                    int foregroundColor, TalismanDrawingScorer.Judgement judgement, Settlement result)
-        implements Recipe<RecipeInput> {
+                                    int foregroundColor, TalismanDrawingScorer.Judgement judgement,
+                                    Settlement result) implements Recipe<RecipeInput> {
     private static final Logger LOGGER = LogUtils.getLogger();
-    /**
-     * The one variable the settlement formulas get from the drawing.
-     */
-    public static final String PERCENTAGE = "percentage";
-    /**
-     * The settlement's second variable: where the paper actually taken sits on its ladder, counted from that
-     * ladder's entry tier. Zero for the entry tier, and for a paper nothing grades.
-     */
-    public static final String PAPER_RANK = "paper_rank";
+    public static final String PERCENTAGE = "percentage", PAPER_RANK = "paper_rank";
     /**
      * How many papers the default cost takes.
      */
@@ -73,15 +68,11 @@ public record TalismanDrawingRecipe(EntityCondition unlockCondition, Holder<Tali
      * The paper a formula is drawn on and the ink its strokes are drawn with, until the formula names its own: a pale
      * yellow and a pure red. The reference layer is neither - it keeps its own faded colour, or it would read as ink.
      */
-    public static final int DEFAULT_BACKGROUND_COLOR = 0xFFFE85;
-    public static final int DEFAULT_FOREGROUND_COLOR = 0xFF0000;
+    public static final int DEFAULT_BACKGROUND_COLOR = 0xFFFE85, DEFAULT_FOREGROUND_COLOR = 0xFF0000;
 
-    public static final Codec<Point> POINT_CODEC = Codec.DOUBLE.listOf(2, 2)
-            .xmap(values -> new Point(values.getFirst(), values.getLast()), point -> List.of(point.x(), point.y()));
-    public static final Codec<Stroke> STROKE_CODEC = POINT_CODEC.listOf(2, 4096)
-            .xmap(Stroke::new, Stroke::points);
-    public static final Codec<List<Stroke>> STROKES_CODEC = STROKE_CODEC.listOf(1, 256)
-            .validate(TalismanDrawingRecipe::validateStrokes);
+    public static final Codec<Point> POINT_CODEC = Codec.DOUBLE.listOf(2, 2).xmap(values -> new Point(values.getFirst(), values.getLast()), point -> List.of(point.x(), point.y()));
+    public static final Codec<Stroke> STROKE_CODEC = POINT_CODEC.listOf(2, 4096).xmap(Stroke::new, Stroke::points);
+    public static final Codec<List<Stroke>> STROKES_CODEC = STROKE_CODEC.listOf(1, 256).validate(TalismanDrawingRecipe::validateStrokes);
 
     /**
      * Scoring parameters. Every field has a default, so the whole block may be left out; the preprocessing
@@ -89,17 +80,15 @@ public record TalismanDrawingRecipe(EntityCondition unlockCondition, Holder<Tali
      *
      * <p>The record itself is the scorer's, so the recipe and the algorithm can never disagree about the fields.
      */
-    public static final Codec<TalismanDrawingScorer.Judgement> JUDGEMENT_CODEC =
-            RecordCodecBuilder.<TalismanDrawingScorer.Judgement>create(i -> i.group(
-                    positive("sigma", 1.0D).forGetter(TalismanDrawingScorer.Judgement::sigma),
-                    weight("direction_weight").forGetter(TalismanDrawingScorer.Judgement::directionWeight),
-                    weight("topology_weight").forGetter(TalismanDrawingScorer.Judgement::topologyWeight),
-                    weight("order_weight").forGetter(TalismanDrawingScorer.Judgement::orderWeight),
-                    Codec.BOOL.optionalFieldOf("stroke_count_strict", false)
-                            .forGetter(TalismanDrawingScorer.Judgement::strokeCountStrict),
-                    nonNegative("min_stroke_length", 0.02D).forGetter(TalismanDrawingScorer.Judgement::minStrokeLength),
-                    Codec.BOOL.optionalFieldOf("preview", true).forGetter(TalismanDrawingScorer.Judgement::preview)
-            ).apply(i, TalismanDrawingScorer.Judgement::new)).validate(TalismanDrawingRecipe::validateJudgement);
+    public static final Codec<TalismanDrawingScorer.Judgement> JUDGEMENT_CODEC = RecordCodecBuilder.<TalismanDrawingScorer.Judgement>create(i -> i.group(
+            MxtCodecs.POSITIVE_FINITE.optionalFieldOf("sigma", 1.0D).forGetter(TalismanDrawingScorer.Judgement::sigma),
+            MxtCodecs.NON_NEGATIVE_FINITE.optionalFieldOf("direction_weight", 0.25D).forGetter(TalismanDrawingScorer.Judgement::directionWeight),
+            MxtCodecs.NON_NEGATIVE_FINITE.optionalFieldOf("topology_weight", 0.25D).forGetter(TalismanDrawingScorer.Judgement::topologyWeight),
+            MxtCodecs.NON_NEGATIVE_FINITE.optionalFieldOf("order_weight", 0.25D).forGetter(TalismanDrawingScorer.Judgement::orderWeight),
+            Codec.BOOL.optionalFieldOf("stroke_count_strict", false).forGetter(TalismanDrawingScorer.Judgement::strokeCountStrict),
+            MxtCodecs.NON_NEGATIVE_FINITE.optionalFieldOf("min_stroke_length", 0.02D).forGetter(TalismanDrawingScorer.Judgement::minStrokeLength),
+            Codec.BOOL.optionalFieldOf("preview", true).forGetter(TalismanDrawingScorer.Judgement::preview)
+    ).apply(i, TalismanDrawingScorer.Judgement::new)).validate(TalismanDrawingRecipe::validateJudgement);
 
     public static final MapCodec<TalismanDrawingRecipe> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             EntityCondition.optionalCodec("unlock_condition").forGetter(TalismanDrawingRecipe::unlockCondition),
@@ -107,16 +96,12 @@ public record TalismanDrawingRecipe(EntityCondition unlockCondition, Holder<Tali
             Cost.LIST_CODEC.optionalFieldOf("costs", List.of()).forGetter(TalismanDrawingRecipe::costs),
             Ingredient.CODEC.optionalFieldOf("paper").forGetter(TalismanDrawingRecipe::paper),
             Pattern.CODEC.fieldOf("pattern").forGetter(TalismanDrawingRecipe::pattern),
-            ExtraCodecs.STRING_RGB_COLOR.optionalFieldOf("background_color", DEFAULT_BACKGROUND_COLOR)
-                    .forGetter(TalismanDrawingRecipe::backgroundColor),
-            ExtraCodecs.STRING_RGB_COLOR.optionalFieldOf("foreground_color", DEFAULT_FOREGROUND_COLOR)
-                    .forGetter(TalismanDrawingRecipe::foregroundColor),
-            JUDGEMENT_CODEC.optionalFieldOf("judgement", TalismanDrawingScorer.Judgement.DEFAULT)
-                    .forGetter(TalismanDrawingRecipe::judgement),
+            ExtraCodecs.STRING_RGB_COLOR.optionalFieldOf("background_color", DEFAULT_BACKGROUND_COLOR).forGetter(TalismanDrawingRecipe::backgroundColor),
+            ExtraCodecs.STRING_RGB_COLOR.optionalFieldOf("foreground_color", DEFAULT_FOREGROUND_COLOR).forGetter(TalismanDrawingRecipe::foregroundColor),
+            JUDGEMENT_CODEC.optionalFieldOf("judgement", TalismanDrawingScorer.Judgement.DEFAULT).forGetter(TalismanDrawingRecipe::judgement),
             Settlement.CODEC.fieldOf("result").forGetter(TalismanDrawingRecipe::result)
     ).apply(i, TalismanDrawingRecipe::new));
-    public static final StreamCodec<RegistryFriendlyByteBuf, TalismanDrawingRecipe> PACKET_CODEC =
-            ByteBufCodecs.fromCodecWithRegistries(CODEC.codec());
+    public static final StreamCodec<RegistryFriendlyByteBuf, TalismanDrawingRecipe> PACKET_CODEC = ByteBufCodecs.fromCodecWithRegistries(CODEC.codec());
 
     /**
      * The outer bound of everything the station slot accepts, and what a formula without {@code paper} takes: a
@@ -130,8 +115,7 @@ public record TalismanDrawingRecipe(EntityCondition unlockCondition, Holder<Tali
         return PAPER;
     }
 
-    private static final TagKey<Item> PAPER = TagKey.create(Registries.ITEM,
-            Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "talisman_paper"));
+    private static final TagKey<Item> PAPER = TagKey.create(Registries.ITEM, Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "talisman_paper"));
 
     @Override
     public boolean matches(@NonNull RecipeInput input, @NonNull Level level) {
@@ -185,8 +169,8 @@ public record TalismanDrawingRecipe(EntityCondition unlockCondition, Holder<Tali
      */
     public enum Guide implements StringRepresentable {
         ALWAYS, FADE, NONE;
-
         public static final Codec<Guide> CODEC = StringRepresentable.fromEnum(Guide::values);
+        public static final StreamCodec<ByteBuf, Guide> STREAM_CODEC = MiscStreamCodecs.enumCodec(Guide.class);
 
         @Override
         public @NonNull String getSerializedName() {
@@ -202,30 +186,9 @@ public record TalismanDrawingRecipe(EntityCondition unlockCondition, Holder<Tali
         public static final Codec<Pattern> CODEC = RecordCodecBuilder.create(i -> i.group(
                 Guide.CODEC.optionalFieldOf("guide", Guide.FADE).forGetter(Pattern::guide),
                 Codec.BOOL.optionalFieldOf("show_order", false).forGetter(Pattern::showOrder),
-                MiscCodecs.FINITE.validate(value -> value > 0.0D
-                                ? DataResult.success(value)
-                                : DataResult.error(() -> "pattern.tolerance must be positive"))
-                        .optionalFieldOf("tolerance", DEFAULT_TOLERANCE).forGetter(Pattern::tolerance),
+                MxtCodecs.POSITIVE_FINITE.optionalFieldOf("tolerance", DEFAULT_TOLERANCE).forGetter(Pattern::tolerance),
                 STROKES_CODEC.fieldOf("strokes").forGetter(Pattern::strokes)
         ).apply(i, Pattern::new));
-    }
-
-    private static MapCodec<Double> positive(String name, double fallback) {
-        return MiscCodecs.FINITE.validate(value -> value > 0.0D
-                ? DataResult.success(value)
-                : DataResult.error(() -> name + " must be positive")).optionalFieldOf(name, fallback);
-    }
-
-    private static MapCodec<Double> weight(String name) {
-        return MiscCodecs.FINITE.validate(value -> value >= 0.0D
-                ? DataResult.success(value)
-                : DataResult.error(() -> name + " must not be negative")).optionalFieldOf(name, 0.25D);
-    }
-
-    private static MapCodec<Double> nonNegative(String name, double fallback) {
-        return MiscCodecs.FINITE.validate(value -> value >= 0.0D
-                ? DataResult.success(value)
-                : DataResult.error(() -> name + " must not be negative")).optionalFieldOf(name, fallback);
     }
 
     private static DataResult<TalismanDrawingScorer.Judgement> validateJudgement(TalismanDrawingScorer.Judgement judgement) {

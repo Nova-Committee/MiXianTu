@@ -58,7 +58,7 @@ public record MountAbilityType(NumberProvider speed, int seats, boolean sit, Opt
             BuiltInRegistries.ENTITY_TYPE.byNameCodec().optionalFieldOf("entity_type").forGetter(MountAbilityType::entityType),
             POSITIVE.optionalFieldOf("width", DEFAULT_WIDTH).forGetter(MountAbilityType::width),
             POSITIVE.optionalFieldOf("height", DEFAULT_HEIGHT).forGetter(MountAbilityType::height),
-            MxtCodecs.NON_NEGATIVE.optionalFieldOf("step_height", 0.0D).forGetter(MountAbilityType::stepHeight),
+            MxtCodecs.NON_NEGATIVE_FINITE.optionalFieldOf("step_height", 0.0D).forGetter(MountAbilityType::stepHeight),
             Vec3.CODEC.listOf().optionalFieldOf("seat_offsets", List.of()).forGetter(MountAbilityType::seatOffsets),
             MountActions.CODEC.optionalFieldOf("mount_action", MountActions.NONE).forGetter(MountAbilityType::actions),
             MountTrail.CODEC.optionalFieldOf("trail").forGetter(MountAbilityType::trail)

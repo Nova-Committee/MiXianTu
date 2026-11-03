@@ -8,6 +8,7 @@ import com.iafenvoy.saturn.data.cost.Debit;
 import com.iafenvoy.saturn.data.cost.context.CostContext;
 import com.iafenvoy.saturn.data.cost.context.CostOrigins;
 import com.iafenvoy.saturn.profiling.ProfilerScope;
+import com.iafenvoy.saturn.registry.SaturnProfilerSources;
 import com.iafenvoy.saturn.profiling.ServerProfiling;
 import com.iafenvoy.saturn.registry.cache.ChainCache;
 import com.iafenvoy.saturn.runtime.resulting.Failure;
@@ -35,7 +36,7 @@ public final class QualityUpgradeService {
     }
 
     public static Result<QualityUpgrade> upgrade(LivingEntity actor, ItemStack stack) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.ITEM)) {
+        try (ProfilerScope _ = ServerProfiling.scope(SaturnProfilerSources.ITEM)) {
             if (actor.level().isClientSide()) return Result.failure(Failures.SERVER_ONLY);
             if (stack.isEmpty()) return Result.failure(QualityFailure.EMPTY);
             Provider access = actor.level().registryAccess();

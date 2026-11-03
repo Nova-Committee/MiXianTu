@@ -55,7 +55,7 @@ public record Artifact(List<Entry> items, Map<Holder<Aura>, NumberProvider> spir
             ItemAction.optionalCodec("use_action").forGetter(Artifact::useAction),
             NumberProvider.CODEC.optionalFieldOf("hold_ticks", new Constant(DEFAULT_HOLD_TICKS)).forGetter(Artifact::holdTicks),
             RegistryCodecs.holderOrTagList(MxtResourceKeys.ELEMENT).optionalFieldOf("element", List.of()).forGetter(Artifact::element),
-            MxtCodecs.NON_NEGATIVE.optionalFieldOf("attachment_multiplier", 1.0D).forGetter(Artifact::attachmentMultiplier),
+            MxtCodecs.NON_NEGATIVE_FINITE.optionalFieldOf("attachment_multiplier", 1.0D).forGetter(Artifact::attachmentMultiplier),
             Codec.INT.optionalFieldOf("priority", DEFAULT_PRIORITY).forGetter(Artifact::priority)
     ).apply(i, Artifact::new));
 

@@ -12,8 +12,7 @@ import org.jspecify.annotations.NonNull;
  * Picking a formula out of the list, which is what opens the drawing.
  */
 public record TalismanSelectC2SPayload(int containerId, Identifier recipeId) implements CustomPacketPayload {
-    public static final Type<TalismanSelectC2SPayload> TYPE =
-            new Type<>(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "talisman_select_c2s"));
+    public static final Type<TalismanSelectC2SPayload> TYPE = new Type<>(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "talisman_select_c2s"));
     public static final StreamCodec<RegistryFriendlyByteBuf, TalismanSelectC2SPayload> STREAM_CODEC = StreamCodec.composite(
             ByteBufCodecs.VAR_INT, TalismanSelectC2SPayload::containerId,
             Identifier.STREAM_CODEC, TalismanSelectC2SPayload::recipeId,

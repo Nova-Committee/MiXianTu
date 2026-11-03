@@ -6,6 +6,7 @@ import com.google.gson.JsonParser;
 import com.iafenvoy.mxt.data.rift.*;
 import com.iafenvoy.mxt.network.payload.RiftEditC2SPayload;
 import com.iafenvoy.mxt.network.payload.RiftEditorS2CPayload;
+import com.iafenvoy.mxt.network.payload.RiftEditorS2CPayload.EditorAction;
 import com.iafenvoy.mxt.render.rift.RiftClientState;
 import com.iafenvoy.mxt.runtime.rift.*;
 import com.iafenvoy.mxt.screen.aui.AuiElements;
@@ -44,8 +45,7 @@ import java.util.*;
 import java.util.List;
 
 public final class RiftEditorScreen extends AuiScreen {
-    private final UUID previewId = UUID.randomUUID();
-    private final UUID token;
+    private final UUID previewId = UUID.randomUUID(), token;
     private final Identifier dimension;
     private final boolean itemEditor;
     private final RiftEditSession session;
@@ -77,7 +77,7 @@ public final class RiftEditorScreen extends AuiScreen {
         super(AuiPages.riftPage());
         this.token = payload.token();
         this.dimension = payload.dimension();
-        this.itemEditor = payload.action().equals("open_item");
+        this.itemEditor = payload.action() == EditorAction.OPEN_ITEM;
         this.session = new RiftEditSession(initial);
         this.accepted = initial;
         this.revision = payload.record().map(RiftRecord::revision).orElse(0L);
@@ -88,16 +88,15 @@ public final class RiftEditorScreen extends AuiScreen {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null || !mc.player.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER)
                 || mc.level == null || !mc.level.dimension().identifier().equals(payload.dimension())) return;
-        if (payload.action().equals("open") || payload.action().equals("open_item")) {
-            RiftTemplate initial = payload.record().map(RiftRecord::data).orElseGet(() -> RiftTemplate.CODEC.parse(JsonOps.INSTANCE,
-                    JsonParser.parseString(payload.body())).result().orElseThrow());
+        if (payload.action() == EditorAction.OPEN || payload.action() == EditorAction.OPEN_ITEM) {
+            RiftTemplate initial = payload.record().map(RiftRecord::data).orElseGet(() -> RiftTemplate.CODEC.parse(JsonOps.INSTANCE, JsonParser.parseString(payload.body())).result().orElseThrow());
             mc.setScreen(new RiftEditorScreen(payload, initial));
             return;
         }
         if (!(mc.screen instanceof RiftEditorScreen screen) || !screen.token.equals(payload.token())) return;
         switch (payload.action()) {
-            case "close" -> screen.onClose();
-            case "error" -> {
+            case CLOSE -> screen.onClose();
+            case ERROR -> {
                 screen.pending = false;
                 screen.showTab();
                 Component detail = switch (payload.body()) {
@@ -106,26 +105,26 @@ public final class RiftEditorScreen extends AuiScreen {
                 };
                 screen.message(Component.translatable("rift.mxt.failure.edit", detail));
             }
-            case "accepted" -> {
+            case ACCEPTED -> {
                 RiftRecord record = payload.record().orElseThrow();
                 screen.portalId = record.id();
                 screen.revision = record.revision();
                 screen.accept(record.data());
                 screen.message(Component.translatable(record.data().enabled() ? "screen.mxt.rift.saved" : "screen.mxt.rift.saved_disabled"));
             }
-            case "item_accepted" -> {
+            case ITEM_ACCEPTED -> {
                 if (!screen.itemEditor) return;
                 screen.accept(RiftTemplate.CODEC.parse(JsonOps.INSTANCE, JsonParser.parseString(payload.body())).result().orElseThrow());
                 screen.message(Component.translatable("screen.mxt.rift.item_saved"));
             }
-            case "export" -> {
+            case EXPORT -> {
                 screen.pending = false;
                 screen.showTab();
                 screen.export = payload.body();
                 mc.keyboardHandler.setClipboard(screen.export);
                 screen.message(Component.translatable("screen.mxt.rift.copied"));
             }
-            case "blueprint" -> {
+            case BLUEPRINT -> {
                 screen.pending = false;
                 screen.showTab();
                 screen.message(Component.translatable("screen.mxt.rift.blueprint_saved"));

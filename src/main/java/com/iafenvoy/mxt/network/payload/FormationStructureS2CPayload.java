@@ -20,12 +20,10 @@ import java.util.List;
 public record FormationStructureS2CPayload(Component title,
                                            List<RequiredBlock> structure) implements CustomPacketPayload {
     public static final int MAX_BLOCKS = 4096;
-    public static final Type<FormationStructureS2CPayload> TYPE =
-            new Type<>(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "formation_structure_s2c"));
+    public static final Type<FormationStructureS2CPayload> TYPE = new Type<>(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "formation_structure_s2c"));
     public static final StreamCodec<RegistryFriendlyByteBuf, FormationStructureS2CPayload> STREAM_CODEC = StreamCodec.composite(
             ComponentSerialization.STREAM_CODEC, FormationStructureS2CPayload::title,
-            ByteBufCodecs.fromCodecWithRegistries(RequiredBlock.CODEC).apply(ByteBufCodecs.list(MAX_BLOCKS)),
-            FormationStructureS2CPayload::structure,
+            RequiredBlock.STREAM_CODEC.apply(ByteBufCodecs.list(MAX_BLOCKS)), FormationStructureS2CPayload::structure,
             FormationStructureS2CPayload::new);
 
     @Override

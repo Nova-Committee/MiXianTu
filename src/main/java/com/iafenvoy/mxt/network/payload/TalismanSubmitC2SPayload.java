@@ -17,11 +17,10 @@ import java.util.List;
  * arrived one at a time: anything that does not match costs the session, which is what a drawing prepared
  * offline cannot survive.
  */
-public record TalismanSubmitC2SPayload(int containerId, Identifier recipeId, List<Stroke> strokes)
-        implements CustomPacketPayload {
+public record TalismanSubmitC2SPayload(int containerId, Identifier recipeId,
+                                       List<Stroke> strokes) implements CustomPacketPayload {
     public static final int MAX_STROKES = 64;
-    public static final Type<TalismanSubmitC2SPayload> TYPE =
-            new Type<>(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "talisman_submit_c2s"));
+    public static final Type<TalismanSubmitC2SPayload> TYPE = new Type<>(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "talisman_submit_c2s"));
     public static final StreamCodec<RegistryFriendlyByteBuf, TalismanSubmitC2SPayload> STREAM_CODEC = StreamCodec.composite(
             ByteBufCodecs.VAR_INT, TalismanSubmitC2SPayload::containerId,
             Identifier.STREAM_CODEC, TalismanSubmitC2SPayload::recipeId,

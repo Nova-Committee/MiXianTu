@@ -23,7 +23,6 @@ public record SpiritCraftingStateS2CPayload(int containerId, List<Row> rows) imp
             SpiritCraftingStateS2CPayload::new);
 
     public SpiritCraftingStateS2CPayload {
-        rows = List.copyOf(rows);
         if (rows.size() > MAX_ROWS) throw new IllegalArgumentException("Too many crafting progress rows");
     }
 

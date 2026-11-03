@@ -5,7 +5,6 @@ import com.iafenvoy.saturn.profiling.Profiler;
 import com.iafenvoy.saturn.profiling.ProfilerSource;
 import com.iafenvoy.saturn.profiling.ProfilerWindowSnapshot;
 import com.iafenvoy.saturn.profiling.ServerProfiling;
-import com.iafenvoy.saturn.profiling.ServerProfiling.Source;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import net.minecraft.ChatFormatting;
@@ -35,7 +34,7 @@ public final class DebugCommand {
                                 .suggests((_, builder) -> {
                                     String remaining = builder.getRemaining();
                                     int offset = remaining.lastIndexOf(' ') + 1;
-                                    return SharedSuggestionProvider.suggest(Source.all().stream().map(Source::id),
+                                    return SharedSuggestionProvider.suggest(ProfilerSource.all().stream().map(ProfilerSource::id),
                                             builder.createOffset(builder.getStart() + offset));
                                 })
                                 .executes(ctx -> status(ctx.getSource(), StringArgumentType.getString(ctx, "sources")))));
@@ -51,10 +50,10 @@ public final class DebugCommand {
     }
 
     private static int status(CommandSourceStack source, String arguments) {
-        LinkedHashSet<Source> selected = new LinkedHashSet<>();
-        if (arguments.isBlank()) selected.addAll(Source.all());
+        LinkedHashSet<ProfilerSource> selected = new LinkedHashSet<>();
+        if (arguments.isBlank()) selected.addAll(ProfilerSource.all());
         else for (String id : arguments.strip().split("\\s+")) {
-            Source match = Source.all().stream().filter(value -> value.id().equals(id)).findFirst().orElse(null);
+            ProfilerSource match = ProfilerSource.all().stream().filter(value -> value.id().equals(id)).findFirst().orElse(null);
             if (match == null) {
                 source.sendFailure(Component.translatable("command.mxt.debug.unknown_source", id));
                 return 0;
@@ -65,13 +64,13 @@ public final class DebugCommand {
             source.sendFailure(Component.translatable("command.mxt.debug.disabled"));
             return 0;
         }
-        List<Source> sources = List.copyOf(selected);
+        List<ProfilerSource> sources = List.copyOf(selected);
         ServerProfiling.snapshot(source.getServer()).thenAccept(snapshot ->
                 source.getServer().execute(() -> show(source, sources, snapshot)));
         return sources.size();
     }
 
-    private static void show(CommandSourceStack source, List<Source> selected, ProfilerWindowSnapshot snapshot) {
+    private static void show(CommandSourceStack source, List<ProfilerSource> selected, ProfilerWindowSnapshot snapshot) {
         if (!ProfilerSubscriptions.mayView(source.permissions())) return;
         if (source.getEntity() instanceof ServerPlayer player && (!ProfilerSubscriptions.mayView(player.permissions())
                 || source.getServer().getPlayerList().getPlayer(player.getUUID()) != player)) return;
@@ -83,7 +82,7 @@ public final class DebugCommand {
         for (ProfilerWindowSnapshot.Producer producer : snapshot.producers()) {
             source.sendSuccess(() -> Component.translatable("command.mxt.debug.producer", producer.name(), number(producer.sampleCount()),
                     discarded(producer.discardedSpans())), false);
-            for (Source selectedSource : selected) {
+            for (ProfilerSource selectedSource : selected) {
                 ProfilerSource registered = snapshot.sources().stream().filter(value -> value.id().equals(selectedSource.id())).findFirst().orElseThrow();
                 ProfilerWindowSnapshot.Statistics stats = producer.statistics(registered);
                 source.sendSuccess(() -> Component.translatable("command.mxt.debug.source", selectedSource.id(),

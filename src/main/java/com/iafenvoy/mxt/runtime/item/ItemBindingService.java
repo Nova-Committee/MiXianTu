@@ -10,6 +10,7 @@ import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.registry.cache.RegistryCaches;
 import com.iafenvoy.saturn.data.AttributeEntry;
 import com.iafenvoy.saturn.profiling.ProfilerScope;
+import com.iafenvoy.saturn.registry.SaturnProfilerSources;
 import com.iafenvoy.saturn.profiling.ServerProfiling;
 import com.iafenvoy.saturn.runtime.hold.ItemUseCycles;
 import com.iafenvoy.saturn.util.formula.FormulaContext;
@@ -64,7 +65,7 @@ public final class ItemBindingService {
 
     @SubscribeEvent
     public static void onEntityTick(Post event) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.ITEM)) {
+        try (ProfilerScope _ = ServerProfiling.scope(SaturnProfilerSources.ITEM)) {
             if (event.getEntity() instanceof LivingEntity entity) {
                 refreshEquipped(entity);
                 tickMainHandWeapon(entity);
@@ -74,14 +75,14 @@ public final class ItemBindingService {
 
     @SubscribeEvent
     public static void onAttack(AttackEntityEvent event) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.ITEM)) {
+        try (ProfilerScope _ = ServerProfiling.scope(SaturnProfilerSources.ITEM)) {
             onMainHandWeaponAttack(event.getEntity(), event.getTarget());
         }
     }
 
     @SubscribeEvent
     public static void onItemUse(RightClickItem event) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.ITEM)) {
+        try (ProfilerScope _ = ServerProfiling.scope(SaturnProfilerSources.ITEM)) {
             if (event.getHand() == InteractionHand.MAIN_HAND)
                 onMainHandWeaponUse(event.getEntity());
         }
@@ -89,7 +90,7 @@ public final class ItemBindingService {
 
     @SubscribeEvent
     public static void onUseFinish(Finish event) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.ITEM)) {
+        try (ProfilerScope _ = ServerProfiling.scope(SaturnProfilerSources.ITEM)) {
             onUseFinish(event.getEntity(), event.getItem());
         }
     }
@@ -210,7 +211,7 @@ public final class ItemBindingService {
     }
 
     public static void tickMainHandWeapon(LivingEntity holder) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.ITEM)) {
+        try (ProfilerScope _ = ServerProfiling.scope(SaturnProfilerSources.ITEM)) {
             if (holder.level().isClientSide()) return;
             ItemStack stack = holder.getMainHandItem();
             if (!RegistryCaches.WEAPON_BINDINGS.mayMatch(stack)) return;
@@ -222,7 +223,7 @@ public final class ItemBindingService {
     }
 
     public static void onMainHandWeaponAttack(LivingEntity holder, Entity target) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.ITEM)) {
+        try (ProfilerScope _ = ServerProfiling.scope(SaturnProfilerSources.ITEM)) {
             if (holder.level().isClientSide()) return;
             ItemStack stack = holder.getMainHandItem();
             if (!RegistryCaches.WEAPON_BINDINGS.mayMatch(stack)) return;
@@ -237,7 +238,7 @@ public final class ItemBindingService {
     }
 
     public static void onMainHandWeaponUse(LivingEntity holder) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.ITEM)) {
+        try (ProfilerScope _ = ServerProfiling.scope(SaturnProfilerSources.ITEM)) {
             if (holder.level().isClientSide()) return;
             ItemStack stack = holder.getMainHandItem();
             if (!RegistryCaches.WEAPON_BINDINGS.mayMatch(stack)) return;
@@ -251,7 +252,7 @@ public final class ItemBindingService {
     // Finish is after vanilla has already consumed the item. Do not re-check canUse: a condition that the dose
     // itself just changed must not erase this settlement. The Start/Tick gate is what refuses an illegal dose.
     public static void onUseFinish(LivingEntity entity, ItemStack stack) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.ITEM)) {
+        try (ProfilerScope _ = ServerProfiling.scope(SaturnProfilerSources.ITEM)) {
             if (entity.level().isClientSide()) return;
             Set<UUID> settling = SETTLING.get();
             if (!settling.add(entity.getUUID())) return;

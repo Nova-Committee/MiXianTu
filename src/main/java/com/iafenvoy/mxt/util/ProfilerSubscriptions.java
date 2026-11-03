@@ -1,10 +1,11 @@
 package com.iafenvoy.mxt.util;
 
-import com.iafenvoy.mxt.network.payload.ProfilerGuiS2CPayload;
 import com.iafenvoy.mxt.network.payload.ProfilerSnapshotS2CPayload;
+import com.iafenvoy.mxt.screen.profiling.ProfilerOpenScreenData;
 import com.iafenvoy.saturn.profiling.ProfilerFrame;
 import com.iafenvoy.saturn.profiling.ProfilerWindowSnapshot;
 import com.iafenvoy.saturn.profiling.ServerProfiling;
+import com.iafenvoy.saturn.screen.opener.ScreenOpener;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.permissions.PermissionSet;
@@ -47,7 +48,7 @@ public final class ProfilerSubscriptions {
         Subscription subscription = new Subscription(player, UUID.randomUUID(), local(state.server), state.tick);
         state.subscriptions.put(player.getUUID(), subscription);
         state.localView = null;
-        PacketDistributor.sendToPlayer(player, new ProfilerGuiS2CPayload(subscription.token, true, subscription.local));
+        ScreenOpener.open(player, new ProfilerOpenScreenData(subscription.token, subscription.local));
         return true;
     }
 
@@ -58,7 +59,7 @@ public final class ProfilerSubscriptions {
         Subscription subscription = state.subscriptions.get(player.getUUID());
         if (subscription == null || subscription.player != player || !subscription.token.equals(token)) return;
         if (!open || !mayView(player.permissions())) {
-            state.remove(subscription, open);
+            state.remove(subscription);
             return;
         }
         subscription.active = true;
@@ -112,9 +113,9 @@ public final class ProfilerSubscriptions {
         state.tick++;
         if (state.subscriptions.isEmpty()) return;
         for (Subscription subscription : state.subscriptions.values().toArray(Subscription[]::new)) {
-            if (!state.valid(subscription)) state.remove(subscription, true);
+            if (!state.valid(subscription)) state.remove(subscription);
             else if (subscription.local != local(server)) {
-                state.remove(subscription, false);
+                state.remove(subscription);
                 open(subscription.player);
             }
         }
@@ -137,9 +138,7 @@ public final class ProfilerSubscriptions {
         private final MinecraftServer server;
         private final Map<UUID, Subscription> subscriptions = new HashMap<>();
         private volatile LocalView localView;
-        private long tick;
-        private long sequence;
-        private long revision;
+        private long tick, sequence, revision;
         private boolean pending;
 
         private State(MinecraftServer server) {
@@ -154,19 +153,19 @@ public final class ProfilerSubscriptions {
                     && mayView(subscription.player.permissions());
         }
 
-        private void remove(Subscription subscription, boolean notify) {
+        // The GUI is never told to close: the client re-checks the grant itself (permissions, connection, player)
+        // every tick, and a dropped subscription simply stops the samples.
+        private void remove(Subscription subscription) {
             this.subscriptions.remove(subscription.player.getUUID(), subscription);
             LocalView view = this.localView;
             if (view != null && view.token.equals(subscription.token)) this.localView = null;
-            if (notify && subscription.player.connection.isAcceptingMessages())
-                PacketDistributor.sendToPlayer(subscription.player, new ProfilerGuiS2CPayload(subscription.token, false, subscription.local));
         }
 
         private void publish(ProfilerWindowSnapshot window) {
             ProfilerFrame frame = new ProfilerFrame(++this.sequence, ServerProfiling.enabled(this.server), window);
             for (Subscription subscription : this.subscriptions.values().toArray(Subscription[]::new)) {
                 if (!this.valid(subscription)) {
-                    this.remove(subscription, true);
+                    this.remove(subscription);
                     continue;
                 }
                 if (!subscription.active) continue;

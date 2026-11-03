@@ -18,8 +18,7 @@ import java.util.List;
  */
 public record TalismanDrawingListS2CPayload(int containerId, List<Row> rows) implements CustomPacketPayload {
     public static final int MAX_ROWS = 256;
-    public static final Type<TalismanDrawingListS2CPayload> TYPE =
-            new Type<>(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "talisman_drawing_list_s2c"));
+    public static final Type<TalismanDrawingListS2CPayload> TYPE = new Type<>(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "talisman_drawing_list_s2c"));
     public static final StreamCodec<RegistryFriendlyByteBuf, TalismanDrawingListS2CPayload> STREAM_CODEC = StreamCodec.composite(
             ByteBufCodecs.VAR_INT, TalismanDrawingListS2CPayload::containerId,
             Row.STREAM_CODEC.apply(ByteBufCodecs.list(MAX_ROWS)), TalismanDrawingListS2CPayload::rows,

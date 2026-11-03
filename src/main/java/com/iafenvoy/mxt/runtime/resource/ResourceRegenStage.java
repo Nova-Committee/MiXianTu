@@ -8,6 +8,7 @@ import com.iafenvoy.saturn.attachment.ResourceHolderAttachment;
 import com.iafenvoy.saturn.data.resource.Resource;
 import com.iafenvoy.saturn.event.CollectTickStagesEvent;
 import com.iafenvoy.saturn.profiling.ProfilerScope;
+import com.iafenvoy.saturn.registry.SaturnProfilerSources;
 import com.iafenvoy.saturn.profiling.ServerProfiling;
 import com.iafenvoy.saturn.registry.SaturnAttachments;
 import com.iafenvoy.saturn.runtime.EntityTickStages;
@@ -34,7 +35,7 @@ public final class ResourceRegenStage {
     }
 
     private static void tick(LivingEntity entity) {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.RESOURCE)) {
+        try (ProfilerScope _ = ServerProfiling.scope(SaturnProfilerSources.RESOURCE)) {
             ResourceHolderAttachment holder = entity.getExistingData(SaturnAttachments.RESOURCE_HOLDER).orElse(null);
             if (holder == null) return;
             // Only profiled values are visited at all: a plain counter is never looked at, and a profiled value

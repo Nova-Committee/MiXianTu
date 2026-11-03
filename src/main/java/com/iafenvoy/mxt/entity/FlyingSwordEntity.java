@@ -7,6 +7,7 @@ import com.iafenvoy.mxt.data.ability.type.MountAbilityType;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactService;
 import com.iafenvoy.saturn.profiling.ProfilerScope;
+import com.iafenvoy.saturn.registry.SaturnProfilerSources;
 import com.iafenvoy.saturn.profiling.ServerProfiling;
 import com.mojang.serialization.Codec;
 import net.minecraft.network.syncher.EntityDataAccessor;
@@ -95,7 +96,7 @@ public final class FlyingSwordEntity extends Entity implements MountVehicle {
 
     @Override
     public void tick() {
-        try (ProfilerScope _ = ServerProfiling.scope(ServerProfiling.Source.ENTITY)) {
+        try (ProfilerScope _ = ServerProfiling.scope(SaturnProfilerSources.ENTITY)) {
             super.tick();
             // The clients are the side that has to apply what they are sent here: the server moves this itself, so a
             // client that skipped this would draw the mount where it spawned and never anywhere else.

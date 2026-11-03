@@ -7,6 +7,7 @@ import com.iafenvoy.mxt.data.rift.*;
 import com.iafenvoy.mxt.item.RiftAnchorItem;
 import com.iafenvoy.mxt.network.payload.RiftEditC2SPayload;
 import com.iafenvoy.mxt.network.payload.RiftEditorS2CPayload;
+import com.iafenvoy.mxt.network.payload.RiftEditorS2CPayload.EditorAction;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.runtime.resulting.failures.RiftFailure;
 import com.iafenvoy.saturn.runtime.resulting.Failure;
@@ -47,7 +48,7 @@ public final class RiftEditorService {
         Session session = new Session(UUID.randomUUID(), player, level, id, RiftService.now(level));
         SESSIONS.put(player.getUUID(), session);
         RiftService.world(level);
-        send(session, "open", record, record == null ? RiftExport.template(initial) : "");
+        send(session, EditorAction.OPEN, record, record == null ? RiftExport.template(initial) : "");
     }
 
     public static void openItem(ServerPlayer player, InteractionHand hand) {
@@ -58,7 +59,7 @@ public final class RiftEditorService {
         Session session = new Session(UUID.randomUUID(), player, player.level(), null, RiftService.now(player.level()));
         session.item = new ItemTarget(hand, stack, stack.getOrDefault(MxtDataComponents.RIFT, RiftComponent.EMPTY));
         SESSIONS.put(player.getUUID(), session);
-        send(session, "open_item", null, RiftExport.template(initial));
+        send(session, EditorAction.OPEN_ITEM, null, RiftExport.template(initial));
     }
 
     public static Result<RiftRecord> place(ServerPlayer player, InteractionHand hand, RiftPlacement placement) {
@@ -102,50 +103,50 @@ public final class RiftEditorService {
             return;
         }
         if (session.item != null && !session.item.matches(player)) {
-            send(session, "error", null, "item_changed");
+            send(session, EditorAction.ERROR, null, "item_changed");
             return;
         }
         if (now - session.lastAction < 4) {
-            send(session, "error", null, "rate_limit");
+            send(session, EditorAction.ERROR, null, "rate_limit");
             return;
         }
         session.lastAction = now;
         RiftRecord record = session.id == null ? null : RiftService.get(session.level, session.id);
         if (session.id != null && (record == null || record.data().placement().origin().distanceToSqr(player.position()) > 64 * 64)) {
-            send(session, "error", null, "missing");
+            send(session, EditorAction.ERROR, null, "missing");
             return;
         }
         switch (payload.action()) {
             case "reload" -> {
                 if (session.item != null)
-                    send(session, "item_accepted", null, RiftExport.template(itemTemplate(player, session.item.stack())));
-                else if (record != null) send(session, "accepted", record, "");
-                else send(session, "error", null, "missing");
+                    send(session, EditorAction.ITEM_ACCEPTED, null, RiftExport.template(itemTemplate(player, session.item.stack())));
+                else if (record != null) send(session, EditorAction.ACCEPTED, record, "");
+                else send(session, EditorAction.ERROR, null, "missing");
             }
             case "copy" -> {
                 if (session.item != null) {
-                    send(session, "error", null, "item_only");
+                    send(session, EditorAction.ERROR, null, "item_only");
                     return;
                 }
                 try {
                     RiftTemplate data = RiftTemplate.CODEC.parse(JsonOps.INSTANCE, JsonParser.parseString(payload.body())).result().orElse(null);
                     if (data == null || RiftService.validate(session.level, data) instanceof Result.FailureResult<Void>
                             || data.placement().origin().distanceToSqr(player.position()) > 64 * 64) {
-                        send(session, "error", null, "invalid_json");
+                        send(session, EditorAction.ERROR, null, "invalid_json");
                         return;
                     }
                     open(player, null, data);
                 } catch (RuntimeException malformed) {
-                    send(session, "error", null, "invalid_json");
+                    send(session, EditorAction.ERROR, null, "invalid_json");
                 }
             }
             case "remove" -> {
                 if (session.item != null) {
-                    send(session, "error", null, "item_only");
+                    send(session, EditorAction.ERROR, null, "item_only");
                     return;
                 }
                 if (record == null || record.revision() != payload.revision()) {
-                    send(session, "error", null, "revision_conflict");
+                    send(session, EditorAction.ERROR, null, "revision_conflict");
                     return;
                 }
                 RiftService.remove(session.level, record.id());
@@ -157,23 +158,23 @@ public final class RiftEditorService {
                 try {
                     DataResult<RiftTemplate> parsed = RiftTemplate.CODEC.parse(JsonOps.INSTANCE, JsonParser.parseString(payload.body()));
                     if (parsed.error().isPresent()) {
-                        send(session, "error", null, parsed.error().get().message());
+                        send(session, EditorAction.ERROR, null, parsed.error().get().message());
                         return;
                     }
                     data = parsed.result().orElseThrow();
                 } catch (RuntimeException malformed) {
-                    send(session, "error", null, "invalid_json");
+                    send(session, EditorAction.ERROR, null, "invalid_json");
                     return;
                 }
                 if (session.item == null && data.placement().origin().distanceToSqr(player.position()) > 64 * 64) {
-                    send(session, "error", null, "distance");
+                    send(session, EditorAction.ERROR, null, "distance");
                     return;
                 }
                 Result<Void> validated = session.item == null ? RiftService.validate(session.level, data) : RiftService.validateTemplate(session.level, data);
                 if (validated instanceof Result.FailureResult<Void>(
                         Failure failure2
                 )) {
-                    send(session, "error", null, failure2.name());
+                    send(session, EditorAction.ERROR, null, failure2.name());
                     return;
                 }
                 if (session.item != null && (payload.action().equals("submit") || payload.action().equals("blueprint"))) {
@@ -181,26 +182,26 @@ public final class RiftEditorService {
                     RiftComponent component = new RiftComponent(Optional.of(data), Optional.empty());
                     target.stack().set(MxtDataComponents.RIFT, component);
                     session.item = new ItemTarget(target.hand(), target.stack(), component);
-                    send(session, "item_accepted", null, RiftExport.template(data));
+                    send(session, EditorAction.ITEM_ACCEPTED, null, RiftExport.template(data));
                     return;
                 }
                 if (session.item != null && payload.action().equals("renew")) {
-                    send(session, "error", null, "item_only");
+                    send(session, EditorAction.ERROR, null, "item_only");
                     return;
                 }
                 if (payload.action().equals("blueprint")) {
                     ItemStack stack = player.getMainHandItem();
                     if (!(stack.getItem() instanceof RiftAnchorItem)) {
-                        send(session, "error", null, "hold_anchor");
+                        send(session, EditorAction.ERROR, null, "hold_anchor");
                         return;
                     }
                     stack.set(MxtDataComponents.RIFT, new RiftComponent(Optional.of(data), Optional.empty()));
-                    send(session, "blueprint", null, "");
+                    send(session, EditorAction.BLUEPRINT, null, "");
                     return;
                 }
                 if (payload.action().startsWith("export_")) {
                     if (payload.action().equals("export_world") && RiftService.world(session.level).locations().size() > 128) {
-                        send(session, "error", null, "budget");
+                        send(session, EditorAction.ERROR, null, "budget");
                         return;
                     }
                     List<RiftTemplate> templates = payload.action().equals("export_world") ? RiftService.records(session.level).stream()
@@ -208,22 +209,22 @@ public final class RiftEditorService {
                     String json = payload.action().equals("export_preset") ? RiftExport.preset(data) : RiftExport.layout(templates,
                             payload.action().equals("export_relative") ? Optional.of(player.position()) : Optional.empty(),
                             payload.action().equals("export_local") ? Optional.of(session.level.dimension().identifier()) : Optional.empty());
-                    if (json.length() > 262144) send(session, "error", null, "budget");
-                    else send(session, "export", null, json);
+                    if (json.length() > 262144) send(session, EditorAction.ERROR, null, "budget");
+                    else send(session, EditorAction.EXPORT, null, json);
                     return;
                 }
                 boolean reset = payload.action().equals("renew") || record == null || record.data().durationTicks() != data.durationTicks();
                 Result<RiftRecord> result = RiftService.publish(session.level, session.id, payload.revision(), data, player.getUUID(), reset);
                 if (result instanceof Result.FailureResult<RiftRecord>(
                         Failure failure1
-                )) send(session, "error", null, failure1.name());
+                )) send(session, EditorAction.ERROR, null, failure1.name());
                 else {
                     RiftRecord published = result.getData().orElseThrow();
                     session.id = published.id();
-                    send(session, "accepted", published, "");
+                    send(session, EditorAction.ACCEPTED, published, "");
                 }
             }
-            default -> send(session, "error", null, "unknown_action");
+            default -> send(session, EditorAction.ERROR, null, "unknown_action");
         }
     }
 
@@ -238,14 +239,14 @@ public final class RiftEditorService {
                     && (!valid(session) || RiftService.now(level) - session.lastSeen > 1200)) close(session);
     }
 
-    private static void send(Session session, String action, @Nullable RiftRecord record, String body) {
+    private static void send(Session session, EditorAction action, @Nullable RiftRecord record, String body) {
         PacketDistributor.sendToPlayer(session.player, new RiftEditorS2CPayload(session.token, session.level.dimension().identifier(), action,
                 Optional.ofNullable(record), body));
     }
 
     private static void close(Session session) {
         SESSIONS.remove(session.player.getUUID());
-        send(session, "close", null, "");
+        send(session, EditorAction.CLOSE, null, "");
     }
 
     public static void clear() {
