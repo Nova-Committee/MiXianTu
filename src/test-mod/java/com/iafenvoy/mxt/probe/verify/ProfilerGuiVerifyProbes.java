@@ -187,15 +187,19 @@ public final class ProfilerGuiVerifyProbes {
 
     // The library's open-screen payload is shared, so only the one carrying a profiler token counts as a grant.
     private static long grants(List<CustomPacketPayload> sent) {
-        return sent.stream().filter(value -> value instanceof OpenScreenS2CPayload open
-                && open.data() instanceof ProfilerOpenScreenData).count();
+        return sent.stream().filter(value -> value instanceof OpenScreenS2CPayload(
+                com.iafenvoy.saturn.screen.opener.OpenScreenData data
+        )
+                && data instanceof ProfilerOpenScreenData).count();
     }
 
     // The grant is the only payload open() sends. An empty list means an earlier leg already failed, and the legs
     // that follow have to report that rather than throw out of the whole probe.
     private static UUID lastGrant(ProbeContext context, List<CustomPacketPayload> sent) {
-        if (sent.isEmpty() || !(sent.getLast() instanceof OpenScreenS2CPayload open)
-                || !(open.data() instanceof ProfilerOpenScreenData grant)) {
+        if (sent.isEmpty() || !(sent.getLast() instanceof OpenScreenS2CPayload(
+                com.iafenvoy.saturn.screen.opener.OpenScreenData data
+        ))
+                || !(data instanceof ProfilerOpenScreenData grant)) {
             context.fail("the GUI grant sent no open-screen payload carrying a profiler token");
             return null;
         }

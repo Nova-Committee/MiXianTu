@@ -15,7 +15,7 @@
        #back                     左上角的返回键；#previous / #restart / #toggle / #next 底部居中的四个控制键
                                  （宽度随文字，由 Java 按字体算好写进来，所以不会随播放/暂停来回跳）
        #timeline                 4px 的时间轴轨道，里面 #timeline_fill 是已播放的一段、#timeline_knob 是滑块
-     键上的字与那三行字都由 Java 写；键的悬停与按下交给 CSS 的 :hover / :active，Java 不再逐帧算 hover。
+     标题、层数与播放状态由 Java 写，固定文案由 translation 标签提供；键的悬停与按下交给 CSS 的 :hover / :active，Java 不再逐帧算 hover。
      页面**不要**写 aui-mouse-events=intercept：时间轴的点击与场景的拖动仍由 Java 做命中判定。 -->
 <div class="overlay" id="top"></div>
 <div class="overlay" id="bottom"></div>
@@ -23,13 +23,13 @@
 
 <div class="t title t-center" id="title"></div>
 <div class="t t-center" id="layer"></div>
-<div class="t dim t-center" id="hint"></div>
+<div class="t dim t-center" id="hint"><translation>screen.mxt.multiblock.hint</translation></div>
 
-<div class="button" id="back"></div>
-<div class="button" id="previous"></div>
-<div class="button" id="restart"></div>
+<div class="button" id="back"><translation>screen.mxt.multiblock.back</translation></div>
+<div class="button" id="previous"><translation>screen.mxt.multiblock.previous</translation></div>
+<div class="button" id="restart"><translation>screen.mxt.multiblock.restart</translation></div>
 <div class="button" id="toggle"></div>
-<div class="button" id="next"></div>
+<div class="button" id="next"><translation>screen.mxt.multiblock.next</translation></div>
 
 <div id="timeline">
     <div id="timeline_fill"></div>

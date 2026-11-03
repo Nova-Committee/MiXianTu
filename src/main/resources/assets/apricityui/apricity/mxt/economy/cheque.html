@@ -8,7 +8,7 @@
 <body>
 <!-- 支票台：旧屏幕是 176x166 的贴图（15 个货币格 + 两个支票格）+ 两个原版 Button，坐标来自
      ChequeTableMenu。槽位壳放在**菜单坐标 − 1**（物品 16x16 画在 18x18 格子的 +1 处）。
-     两颗方向键的字面量由 Java 写（`<` / `>`），HTML 里不写裸的尖括号。 -->
+     两颗方向键用 HTML 字符引用显示尖括号。 -->
 <div class="panel" id="panel" style="width:176px;height:166px">
     <div class="t title" id="title" style="left:8px;top:6px"></div>
 
@@ -26,11 +26,11 @@
         <slot slot-index="0"></slot>
     </container>
 
-    <!-- 两颗 16x16 的方向键：旧版是原版 Button，位置 (104,18) / (104,54)，文字由 Java 写 -->
-    <div class="button" id="check_out" style="left:104px;top:18px;width:16px;height:16px"></div>
-    <div class="button" id="check_in" style="left:104px;top:54px;width:16px;height:16px"></div>
+    <!-- 两颗 16x16 的方向键：旧版是原版 Button，位置 (104,18) / (104,54)，文字由页面声明 -->
+    <div class="button" id="check_out" style="left:104px;top:18px;width:16px;height:16px">&lt;</div>
+    <div class="button" id="check_in" style="left:104px;top:54px;width:16px;height:16px">&gt;</div>
 
-    <div class="t label" id="inventory_label" style="left:8px;top:73px"></div>
+    <div class="t label" id="inventory_label" style="left:8px;top:73px"><translation>container.inventory</translation></div>
     <container class="grid inv" id="inventory" primary="true">
         <slot slot-index="9" repeat="27"></slot>
         <slot slot-index="0" repeat="9"></slot>

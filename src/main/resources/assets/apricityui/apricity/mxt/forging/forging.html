@@ -15,10 +15,10 @@
         （CELL）、行距是 **19**（CELL_PITCH），Java 的命中测试读同一组数。选择格是 `.cell`（空格不画）、
         步骤格是 `.frame`（空格也画，见 forging.css 的说明）。
      3. 数值尺的刻度（0 点 / 当前 / 预测 / 目标区间）位置由 Java 每拍写 left/width/display。
-     4. 三个动作按钮只有壳，**文字由 Java 写**（screen.mxt.forging.use_blueprint / use_method / cancel）。 -->
+     4. 三个动作按钮由 translation 标签提供本地化文字。 -->
 <div class="panel" id="panel" style="width:322px;height:234px">
     <div class="t title" id="title" style="left:7px;top:5px"></div>
-    <div class="t label" id="inventory_label" style="left:81px;top:141px"></div>
+    <div class="t label" id="inventory_label" style="left:81px;top:141px"><translation>container.inventory</translation></div>
 
     <!-- 蓝图槽 x=81、工具槽 x=225（各 3 格，行顶 18/36/54）；输入 4x3 从 (108,18)；产物 (198,36) -->
     <container class="grid" id="blueprints" primary="true" style="left:80px;top:17px;grid-template-columns:1;grid-template-rows:18px 18px 18px">
@@ -82,8 +82,8 @@
     <div class="t" id="meter_value" style="left:81px;top:85px"></div>
 
     <!-- 要求 / 当前两行：标签在 (81,103)/(81,125)，步骤格 6 个从 (134,97)/(134,119) 起、格距 18 -->
-    <div class="t" id="target_caption" style="left:81px;top:103px"></div>
-    <div class="t" id="current_caption" style="left:81px;top:125px"></div>
+    <div class="t" id="target_caption" style="left:81px;top:103px"><translation>screen.mxt.forging.target</translation></div>
+    <div class="t" id="current_caption" style="left:81px;top:125px"><translation>screen.mxt.forging.current</translation></div>
     <div class="frame step" id="target-0" style="left:134px;top:97px"><item class="icon" id="target_item-0" interactive="none"></item><texture class="tex" id="target_tex-0"></div>
     <div class="frame step" id="target-1" style="left:152px;top:97px"><item class="icon" id="target_item-1" interactive="none"></item><texture class="tex" id="target_tex-1"></div>
     <div class="frame step" id="target-2" style="left:170px;top:97px"><item class="icon" id="target_item-2" interactive="none"></item><texture class="tex" id="target_tex-2"></div>
@@ -98,9 +98,9 @@
     <div class="frame step" id="current-5" style="left:224px;top:119px"><item class="icon" id="current_item-5" interactive="none"></item><texture class="tex" id="current_tex-5"></div>
 
     <!-- 三个动作按钮：(7,100)、(250,100)、(7,120) 各 65x16；右列下两行是步数与该件成品品质 -->
-    <div class="button" id="use_blueprint" style="left:7px;top:100px;width:65px;height:16px"></div>
-    <div class="button" id="use_method" style="left:250px;top:100px;width:65px;height:16px"></div>
-    <div class="button" id="cancel" style="left:7px;top:120px;width:65px;height:16px"></div>
+    <div class="button" id="use_blueprint" style="left:7px;top:100px;width:65px;height:16px"><translation>screen.mxt.forging.use_blueprint</translation></div>
+    <div class="button" id="use_method" style="left:250px;top:100px;width:65px;height:16px"><translation>screen.mxt.forging.use_method</translation></div>
+    <div class="button" id="cancel" style="left:7px;top:120px;width:65px;height:16px"><translation>screen.mxt.forging.cancel</translation></div>
     <div class="t t-center" id="steps" style="left:250px;top:124px;width:65px"></div>
     <div class="t t-center" id="quality" style="left:250px;top:137px;width:65px"></div>
 </div>

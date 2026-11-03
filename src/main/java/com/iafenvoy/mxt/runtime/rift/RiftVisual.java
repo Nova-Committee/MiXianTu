@@ -17,7 +17,7 @@ public record RiftVisual(RiftPlacement placement, RiftShape shape, RiftAppearanc
             Codec.INT.fieldOf("color").forGetter(RiftVisual::color),
             Codec.BOOL.fieldOf("enabled").forGetter(RiftVisual::enabled)
     ).apply(i, RiftVisual::new));
-    public static final StreamCodec<RegistryFriendlyByteBuf, RiftVisual> STREAM_CODEC = ByteBufCodecs.fromCodecWithRegistries(RiftVisual.CODEC);
+    public static final StreamCodec<RegistryFriendlyByteBuf, RiftVisual> STREAM_CODEC = ByteBufCodecs.fromCodecWithRegistries(CODEC);
 
     public static RiftVisual of(RiftRecord record) {
         RiftTemplate data = record.data();

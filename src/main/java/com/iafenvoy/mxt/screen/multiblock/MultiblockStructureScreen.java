@@ -30,11 +30,10 @@ public final class MultiblockStructureScreen extends AuiScreen {
     private final MultiblockStructure structure;
     private final MultiblockStructureView view = new MultiblockStructureView();
     @Nullable
-    private Element topBar, bottomBar, scene, back, timeline, timelineFill, timelineKnob;
+    private Element topBar, bottomBar, scene, back, hint, timeline, timelineFill, timelineKnob;
     @Nullable
-    private Label title, layer, hint, backLabel;
+    private Label title, layer, toggleLabel;
     private final List<Element> controlKeys = new ArrayList<>(MultiblockStructureView.CONTROL_COUNT);
-    private final List<Label> controlLabels = new ArrayList<>(MultiblockStructureView.CONTROL_COUNT);
     /**
      * The window size the page was last written with; a resize is the only thing that changes the boxes.
      */
@@ -85,17 +84,12 @@ public final class MultiblockStructureScreen extends AuiScreen {
         this.timelineKnob = this.getOrThrow("timeline_knob");
         this.title = new Label(this.getOrThrow("title"));
         this.layer = new Label(this.getOrThrow("layer"));
-        this.hint = new Label(this.getOrThrow("hint"));
-        this.backLabel = new Label(this.back);
+        this.hint = this.getOrThrow("hint");
 
         this.controlKeys.clear();
         for (String id : List.of("previous", "restart", "toggle", "next"))
             this.controlKeys.add(this.getOrThrow(id));
-        // The back key is the only fixed label on the page: the four controls are rewritten because play and
-        // pause share one key.
-        this.backLabel.show(Component.translatable("screen.mxt.multiblock.back").getString());
-        this.controlLabels.clear();
-        for (Element key : this.controlKeys) this.controlLabels.add(new Label(key));
+        this.toggleLabel = new Label(this.controlKeys.get(2));
         // The keys are the page's; only the two things that need the pointer's position stay here.
         this.click(this.back, this::onClose);
         this.click(this.controlKeys.get(0), () -> this.view.previous(this.structure));
@@ -122,9 +116,8 @@ public final class MultiblockStructureScreen extends AuiScreen {
         this.title = null;
         this.layer = null;
         this.hint = null;
-        this.backLabel = null;
+        this.toggleLabel = null;
         this.controlKeys.clear();
-        this.controlLabels.clear();
         this.shownWidth = -1;
         this.shownHeight = -1;
     }
@@ -141,7 +134,7 @@ public final class MultiblockStructureScreen extends AuiScreen {
         // A line's own box: the page centres the text inside it with `.t-center`.
         if (this.title != null) box(this.title.element(), this.view.title(this.width));
         if (this.layer != null) box(this.layer.element(), this.view.layer(this.width));
-        if (this.hint != null) box(this.hint.element(), this.view.hint(this.width));
+        box(this.hint, this.view.hint(this.width));
         box(this.timeline, this.view.timeline(this.width, this.height));
         List<MultiblockStructureView.StructureControl> controls = this.view.controls(this.font, this.width, this.height);
         for (int index = 0; index < this.controlKeys.size() && index < controls.size(); index++) {
@@ -152,21 +145,17 @@ public final class MultiblockStructureScreen extends AuiScreen {
     }
 
     /**
-     * The per-frame part: the three lines, the four key labels and how far the timeline has run. Every write
+     * The per-frame part: the title, layer, playback label and how far the timeline has run. Every write
      * compares first, so a frame that changes nothing touches the page not at all.
      */
     private void writeState() {
         if (this.title != null) this.title.show(this.structure.title().getString());
-        if (this.hint != null)
-            this.hint.show(Component.translatable("screen.mxt.multiblock.hint").getString());
         int maxStep = this.view.maxStep(this.structure);
         int step = this.view.currentStep(this.structure);
         if (this.layer != null) this.layer.show(maxStep > 0
                 ? Component.translatable("screen.mxt.multiblock.layer", step, maxStep).getString() : "");
         List<MultiblockStructureView.StructureControl> controls = this.view.controls(this.font, this.width, this.height);
-        for (int index = 0; index < this.controlLabels.size() && index < controls.size(); index++) {
-            this.controlLabels.get(index).show(controls.get(index).label().getString());
-        }
+        if (this.toggleLabel != null) this.toggleLabel.show(controls.get(2).label().getString());
         box(this.timelineFill, this.view.timelineFill(this.width, maxStep));
         box(this.timelineKnob, this.view.timelineKnob(this.width, this.height, maxStep));
     }

@@ -120,11 +120,6 @@ public final class ForgingScreen extends AuiContainerScreen<ForgingMenu> {
         this.click(this.useBlueprint, this::useBlueprint);
         this.click(this.useMethod, this::useMethod);
         this.click(this.cancel, this::cancel);
-        // The labels are Java's: the page's three buttons are empty boxes, and the theme's `.button` already
-        // centres whatever text they carry.
-        this.text(this.useBlueprint, Component.translatable("screen.mxt.forging.use_blueprint"));
-        this.text(this.useMethod, Component.translatable("screen.mxt.forging.use_method"));
-        this.text(this.cancel, Component.translatable("screen.mxt.forging.cancel"));
         // A cell draws an icon and nothing else, so its tooltip is the only place a method's name appears.
         for (int index = 0; index < GRID_CELLS; index++) {
             int cell = index;
@@ -137,9 +132,6 @@ public final class ForgingScreen extends AuiContainerScreen<ForgingMenu> {
             this.tooltip(this.historyCells.get(index).root, () -> this.stepTooltip(position, false));
         }
         this.text(this.getOrThrow("title"), this.getTitle());
-        this.text(this.getOrThrow("inventory_label"), Component.translatable("container.inventory"));
-        this.text(this.getOrThrow("target_caption"), Component.translatable("screen.mxt.forging.target"));
-        this.text(this.getOrThrow("current_caption"), Component.translatable("screen.mxt.forging.current"));
     }
 
     /**

@@ -14,6 +14,7 @@ import com.sighs.apricityui.element.Canvas;
 import com.sighs.apricityui.element.Input;
 import com.sighs.apricityui.element.Option;
 import com.sighs.apricityui.element.Select;
+import com.sighs.apricityui.element.Translation;
 import com.sighs.apricityui.event.Event;
 import com.sighs.apricityui.init.Document;
 import com.sighs.apricityui.init.Element;
@@ -21,7 +22,11 @@ import com.sighs.apricityui.layout.LayoutMeasureCache;
 import com.sighs.apricityui.layout.Size;
 import com.sighs.apricityui.parser.HTML;
 import com.sighs.apricityui.render.GeometryQueryScope;
+import net.minecraft.locale.Language;
+import net.minecraft.network.chat.FormattedText;
+import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.phys.Vec3;
+import org.jspecify.annotations.NonNull;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -54,15 +59,18 @@ public final class AuiGeometryVerifyProbes {
         Element.register("input", (document, _) -> new Input(document));
         Element.register("select", (document, _) -> new Select(document));
         Element.register("option", (document, _) -> new Option(document));
+        Element.register("translation", (document, _) -> new Translation(document));
         String path = "mxt_test/aui_rift_geometry_probe.html";
         String css = resource("apricityui/apricity/mxt/common/theme.css") + "\n" + resource("apricityui/apricity/mxt/rift/editor.css");
         String html = resource("apricityui/apricity/mxt/rift/editor.html").replaceAll("<link[^>]*>", "")
                 .replace("</head>", "<style>" + css + "</style></head>");
         HTML.putTemple(path, html);
         int documents = Document.getAll().size();
+        Language original = Language.getInstance();
         try {
             for (String language : List.of("zh_cn", "en_us")) {
                 JsonObject labels = JsonParser.parseString(resource("mxt/lang/" + language + ".json")).getAsJsonObject();
+                Language.inject(language(labels, original));
                 for (int[] size : List.of(new int[]{768, 454}, new int[]{640, 360}, new int[]{480, 270}, new int[]{960, 540},
                         new int[]{320, 240}, new int[]{1280, 720})) {
                     Size.setViewportOverride(size[0], size[1]);
@@ -73,9 +81,13 @@ public final class AuiGeometryVerifyProbes {
                     }
                     try (Document.ContextScope _ = Document.withContext(document)) {
                         for (Element element : document.getElements()) {
-                            if (element.id == null) continue;
-                            String key = "screen.mxt.rift." + (element.id.startsWith("label_") ? "field_" + element.id.substring(6) : element.id);
-                            if (labels.has(key)) element.setTextContent(labels.get(key).getAsString());
+                            if (element instanceof Translation translation) {
+                                String key = translation.getTextContent();
+                                context.check("static translation key exists: " + key, labels.has(key));
+                                context.expect("static translation follows " + language, translation.getTranslatedText(), labels.get(key).getAsString());
+                            } else if (element.id != null && element.id.startsWith("option_")) {
+                                element.setTextContent(labels.get("screen.mxt.rift." + element.id).getAsString());
+                            }
                         }
                         document.getElementById("editor_mode").setTextContent(labels.get("screen.mxt.rift.mode_new").getAsString());
                         document.getElementById("toggle_properties").setTextContent(labels.get("screen.mxt.rift.hide_properties").getAsString());
@@ -190,8 +202,33 @@ public final class AuiGeometryVerifyProbes {
                 }
             }
         } finally {
+            Language.inject(original);
             Size.clearViewportOverride();
         }
+    }
+
+    private static Language language(JsonObject labels, Language fallback) {
+        return new Language() {
+            @Override
+            public @NonNull String getOrDefault(@NonNull String key, @NonNull String defaultValue) {
+                return labels.has(key) ? labels.get(key).getAsString() : fallback.getOrDefault(key, defaultValue);
+            }
+
+            @Override
+            public boolean has(@NonNull String key) {
+                return labels.has(key) || fallback.has(key);
+            }
+
+            @Override
+            public boolean isDefaultRightToLeft() {
+                return false;
+            }
+
+            @Override
+            public @NonNull FormattedCharSequence getVisualOrder(@NonNull FormattedText text) {
+                return fallback.getVisualOrder(text);
+            }
+        };
     }
 
     private static void display(Document document, String id, boolean visible) {
@@ -281,6 +318,15 @@ public final class AuiGeometryVerifyProbes {
                     <= document.getElementById(rows.get(i)).getBoundingClientRect().top);
         inside(context, document, "footer", "header");
         for (String button : List.of("close", "apply")) inside(context, document, button, "footer");
+        for (String id : List.of("tool_select", "tool_draw", "tool_edge", "tool_move", "fit_view", "close")) {
+            Element button = document.getElementById(id);
+            context.check("translated button keeps its layout container: " + id, !(button instanceof Translation));
+            Element label = button.getChildren().getFirst();
+            context.check("button keeps its translation child: " + id, label instanceof Translation);
+            Element.DOMRect bounds = button.getBoundingClientRect(), text = label.getBoundingClientRect();
+            close(context, "button translation is horizontally centered: " + id, text.x + text.width / 2, bounds.x + bounds.width / 2);
+            close(context, "button translation is vertically centered: " + id, text.y + text.height / 2, bounds.y + bounds.height / 2);
+        }
         Element.DOMRect canvas = document.getElementById("canvas").getBoundingClientRect(), body = document.getElementById("body").getBoundingClientRect();
         context.check("canvas takes most of the working area", canvas.width >= body.width * 0.58);
         close(context, "canvas takes the entire working height", canvas.height, body.height);

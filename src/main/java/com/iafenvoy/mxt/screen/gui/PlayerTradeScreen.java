@@ -33,7 +33,6 @@ public final class PlayerTradeScreen extends AuiContainerScreen<PlayerTradeMenu>
         this.click(this.accept, this::toggleAccept);
         this.text(this.getOrThrow("title"), this.getTitle());
         this.text(this.getOrThrow("partner_name"), this.menu.partnerName());
-        this.text(this.getOrThrow("inventory_label"), Component.translatable("container.inventory"));
     }
 
     @Override

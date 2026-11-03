@@ -184,10 +184,6 @@ public final class WheelConfigurationScreen extends AuiScreen {
             this.sectorCells.add(this.cell("sector", sector));
         }
         AuiElements.setText(this.title, this.getTitle().getString());
-        AuiElements.setText(this.headingAura, Component.translatable("wheel.mxt.pool.aura").getString());
-        AuiElements.setText(this.headingOption, Component.translatable("wheel.mxt.pool.ability").getString());
-        AuiElements.setText(this.emptyAura, Component.translatable("wheel.mxt.pool.empty").getString());
-        AuiElements.setText(this.emptyOption, Component.translatable("wheel.mxt.pool.empty").getString());
     }
 
     /**

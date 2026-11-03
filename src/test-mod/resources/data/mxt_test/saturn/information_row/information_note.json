@@ -1,0 +1,16 @@
+{
+  "order": 999,
+  "label": {
+    "text": "Probe"
+  },
+  "value": {
+    "type": "saturn:text",
+    "value": {
+      "type": "saturn:constant",
+      "value": {
+        "text": "Probe"
+      }
+    },
+    "component": true
+  }
+}

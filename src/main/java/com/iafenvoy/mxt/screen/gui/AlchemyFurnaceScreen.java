@@ -61,7 +61,6 @@ public final class AlchemyFurnaceScreen extends AuiContainerScreen<AlchemyFurnac
         if (playerCells.size() != PLAYER_SLOTS)
             throw this.missing("player_inventory (" + playerCells.size() + " slots)");
         this.text(this.title, this.getTitle());
-        this.text(this.getOrThrow("inventory_label"), Component.translatable("container.inventory"));
     }
 
     private void bindMachine(List<Element> machineCells) {
@@ -85,11 +84,6 @@ public final class AlchemyFurnaceScreen extends AuiContainerScreen<AlchemyFurnac
         this.apply = this.getOrThrow("apply");
         this.start = this.getOrThrow("start");
         this.abort = this.getOrThrow("abort");
-        // The page draws bare boxes; the labels come from Java, like every other button of this screen.
-        this.text(this.apply, Component.translatable("screen.mxt.alchemy.apply"));
-        this.text(this.start, Component.translatable("screen.mxt.alchemy.start"));
-        this.text(this.abort, Component.translatable("screen.mxt.alchemy.abort"));
-
         this.click(this.apply, this::applyTemperature);
         this.click(this.start, () -> this.send(Action.START, 0));
         this.click(this.abort, () -> this.send(Action.ABORT, 0));

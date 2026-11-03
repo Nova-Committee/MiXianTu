@@ -1,7 +1,6 @@
 package com.iafenvoy.mxt.screen.profiling;
 
 import com.iafenvoy.saturn.profiling.ProfilerSource;
-import com.iafenvoy.saturn.profiling.ServerProfiling;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 

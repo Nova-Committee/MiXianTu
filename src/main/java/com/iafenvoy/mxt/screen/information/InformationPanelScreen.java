@@ -168,11 +168,6 @@ public final class InformationPanelScreen extends AuiScreen {
 
         for (int index = 0; index < EQUIPMENT_SLOT_COUNT; index++)
             this.equipment.add(this.getOrThrow("equip-" + index, Item.class));
-        this.text(this.cultivationCaption, Component.translatable("info.mxt.cultivation"));
-        this.text(this.basicCaption, Component.translatable("info.mxt.basic"));
-        this.text(this.tabInfo, Component.translatable("screen.mxt.information_panel.tab.info"));
-        this.text(this.tabTechnique, Component.translatable("screen.mxt.technique_panel"));
-        this.text(this.techniquesEmpty, Component.translatable("screen.mxt.technique_panel.empty"));
         assert this.tabInfo != null;
         this.tabInfo.addEventListener("click", _ -> this.setPage(Page.INFO));
         assert this.tabTechnique != null;

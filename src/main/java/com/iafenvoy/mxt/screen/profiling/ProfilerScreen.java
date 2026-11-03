@@ -4,7 +4,10 @@ import com.iafenvoy.mxt.network.payload.ProfilerSnapshotS2CPayload;
 import com.iafenvoy.mxt.network.payload.ProfilerSubscriptionC2SPayload;
 import com.iafenvoy.mxt.screen.aui.*;
 import com.iafenvoy.mxt.util.ProfilerSubscriptions;
-import com.iafenvoy.saturn.profiling.*;
+import com.iafenvoy.saturn.profiling.Profiler;
+import com.iafenvoy.saturn.profiling.ProfilerFrame;
+import com.iafenvoy.saturn.profiling.ProfilerSource;
+import com.iafenvoy.saturn.profiling.ProfilerWindowSnapshot;
 import com.sighs.apricityui.element.Canvas;
 import com.sighs.apricityui.init.Document;
 import com.sighs.apricityui.init.Element;
@@ -38,7 +41,7 @@ public final class ProfilerScreen extends AuiScreen {
     private ProfilerFrame frame = ProfilerFrame.EMPTY;
     private List<Row> rows = List.of();
     private AuiScrollList<Row> list;
-    private Element panel, status, direction, legend;
+    private Element panel, status, direction;
     private Sort sort = Sort.AVERAGE;
     private boolean descending = true, subscribed, closed;
     private int ticks;
@@ -153,16 +156,11 @@ public final class ProfilerScreen extends AuiScreen {
         this.panel = this.getOrThrow("panel");
         this.status = this.getOrThrow("status");
         this.direction = this.getOrThrow("direction");
-        this.text(this.getOrThrow("title"), Component.translatable("screen.mxt.profiler.title"));
-        this.text(this.getOrThrow("columns"), Component.translatable("screen.mxt.profiler.columns"));
-        this.legend = this.getOrThrow("legend");
         Element close = this.getOrThrow("close");
-        this.text(close, Component.translatable("gui.done"));
         this.click(close, this::onClose);
         for (Sort sort : Sort.values()) {
             Element button = this.getOrThrow("sort_" + sort.name().toLowerCase(Locale.ROOT));
             this.sortButtons.add(button);
-            this.text(button, Component.translatable(sort.key));
             this.click(button, () -> {
                 this.sort = sort;
                 this.reorder();
@@ -185,7 +183,7 @@ public final class ProfilerScreen extends AuiScreen {
 
     @Override
     public void onBindingsCleared() {
-        this.panel = this.status = this.direction = this.legend = null;
+        this.panel = this.status = this.direction = null;
         this.list = null;
         this.sortButtons.clear();
     }
@@ -218,8 +216,6 @@ public final class ProfilerScreen extends AuiScreen {
         int height = Mth.clamp(this.height - 16, 180, 680);
         AuiElements.style(this.panel, "width", width + "px");
         AuiElements.style(this.panel, "height", height + "px");
-        AuiElements.setText(this.legend, this.font.plainSubstrByWidth(
-                Component.translatable("screen.mxt.profiler.legend").getString(), width - 80));
         if (this.list != null) {
             AuiElements.style(this.list.root, "width", (width - 32) + "px");
             AuiElements.style(this.list.root, "height", (height - 116) + "px");
@@ -290,14 +286,7 @@ public final class ProfilerScreen extends AuiScreen {
     }
 
     private enum Sort {
-        SOURCE("screen.mxt.profiler.sort.source"), MIN("screen.mxt.profiler.sort.min"),
-        AVERAGE("screen.mxt.profiler.sort.avg"), MAX("screen.mxt.profiler.sort.max");
-
-        private final String key;
-
-        Sort(String key) {
-            this.key = key;
-        }
+        SOURCE, MIN, AVERAGE, MAX
     }
 
     private record Row(ProfilerSource source, ProfilerWindowSnapshot.Producer producer,

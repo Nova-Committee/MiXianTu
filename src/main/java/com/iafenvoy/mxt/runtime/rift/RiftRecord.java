@@ -24,7 +24,7 @@ public record RiftRecord(UUID id, long revision, RiftTemplate data, long expires
             Codec.INT.optionalFieldOf("bound_index", -1).forGetter(RiftRecord::boundIndex),
             UUIDUtil.CODEC.optionalFieldOf("bound_instance").forGetter(RiftRecord::boundInstance)
     ).apply(i, RiftRecord::new));
-    public static final StreamCodec<RegistryFriendlyByteBuf, RiftRecord> STREAM_CODEC = ByteBufCodecs.fromCodecWithRegistries(RiftRecord.CODEC);
+    public static final StreamCodec<RegistryFriendlyByteBuf, RiftRecord> STREAM_CODEC = ByteBufCodecs.fromCodecWithRegistries(CODEC);
 
     public boolean expired(long now) {
         return this.expiresAt >= 0 && now >= this.expiresAt;

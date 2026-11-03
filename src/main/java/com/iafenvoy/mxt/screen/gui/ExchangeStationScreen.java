@@ -62,7 +62,6 @@ public final class ExchangeStationScreen extends AuiContainerScreen<ExchangeStat
             this.click(roots.get(cell), () -> this.choose(this.startIndex + offset));
         }
         this.text(this.getOrThrow("title"), this.getTitle());
-        this.text(this.getOrThrow("inventory_label"), Component.translatable("container.inventory"));
     }
 
     @Override

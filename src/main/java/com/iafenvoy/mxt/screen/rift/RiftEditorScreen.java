@@ -170,11 +170,6 @@ public final class RiftEditorScreen extends AuiScreen {
         this.canvas.setHeight(this.viewport.height());
         this.panel = this.getOrThrow("panel");
         this.status = this.getOrThrow("status");
-        for (String name : List.of("editor_title", "hint_canvas", "hint_plane", "hint_remove", "hint_color", "hint_return",
-                "heading_generate", "heading_vertices", "heading_pivot", "heading_transform", "heading_edges", "heading_curves",
-                "heading_plane", "heading_lifecycle", "heading_remove", "heading_destination", "heading_material", "heading_effects",
-                "heading_texture", "heading_blueprint", "heading_export", "heading_file"))
-            this.text(this.getOrThrow(name), Component.translatable("screen.mxt.rift." + name));
         if (this.itemEditor)
             this.text(this.getOrThrow("hint_plane"), Component.translatable("screen.mxt.rift.hint_item_placement"));
         for (String name : SHAPE_TABS)
@@ -208,13 +203,9 @@ public final class RiftEditorScreen extends AuiScreen {
             this.viewport.fit(this.session.draft().shape());
             this.redraw();
         });
-        for (String name : FIELD_NAMES) {
+        for (String name : FIELD_NAMES)
             this.fields.bind(name, this.getOrThrow(name));
-            if (!name.matches("(origin|normal|tangent|target_pos)_[xyz]"))
-                this.text(this.getOrThrow("label_" + name), Component.translatable("screen.mxt.rift.field_" + name));
-        }
-        for (String name : List.of("origin", "normal", "tangent", "target_pos"))
-            this.text(this.getOrThrow("label_" + name), Component.translatable("screen.mxt.rift.field_" + name));
+        // AUI reads option labels as raw textContent, so nested translation elements cannot localize them.
         for (String name : List.of("position", "secret_realm", "return", "rift", "portal"))
             this.text(this.getOrThrow("option_" + name), Component.translatable("screen.mxt.rift.option_" + name));
         this.getOrThrow("target_type").addEventListener("change", _ -> this.showTargetFields());
@@ -350,7 +341,6 @@ public final class RiftEditorScreen extends AuiScreen {
 
     private void button(String id, Runnable action) {
         Element element = this.getOrThrow(id);
-        this.text(element, Component.translatable("screen.mxt.rift." + id));
         this.click(element, () -> {
             action.run();
             if (!List.of("tab_blueprint", "menu_button_edit", "menu_button_properties").contains(id)) this.closeMenu();

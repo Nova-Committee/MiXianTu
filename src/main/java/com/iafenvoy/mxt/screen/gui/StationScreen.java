@@ -25,6 +25,5 @@ public final class StationScreen extends AuiContainerScreen<StationMenu> {
         if (this.menu.mode() != Mode.TRADE_OWNER)
             this.click(this.getOrThrow("trade"), () -> ClientPacketDistributor.sendToServer(StationTradeC2SPayload.INSTANCE));
         this.text(this.getOrThrow("title"), this.getTitle());
-        this.text(this.getOrThrow("inventory_label"), Component.translatable("container.inventory"));
     }
 }

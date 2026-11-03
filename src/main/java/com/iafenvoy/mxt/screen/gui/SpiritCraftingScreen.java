@@ -64,7 +64,6 @@ public final class SpiritCraftingScreen extends AuiContainerScreen<SpiritCraftin
         // The page's own row is the first one; every further row is a copy of it, made when a recipe asks for it.
         this.rows.add(this.row(prototype));
         this.text(this.getOrThrow("title"), this.getTitle());
-        this.text(this.getOrThrow("inventory_label"), Component.translatable("container.inventory"));
     }
 
     @Override

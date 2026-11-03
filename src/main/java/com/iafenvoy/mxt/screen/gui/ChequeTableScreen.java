@@ -28,9 +28,6 @@ public final class ChequeTableScreen extends AuiContainerScreen<ChequeTableMenu>
         Element checkIn = this.getOrThrow("check_in");
         this.click(checkOut, () -> ClientPacketDistributor.sendToServer(new ChequeActionC2SPayload(false)));
         this.click(checkIn, () -> ClientPacketDistributor.sendToServer(new ChequeActionC2SPayload(true)));
-        this.text(checkOut, Component.literal("<"));
-        this.text(checkIn, Component.literal(">"));
         this.text(this.getOrThrow("title"), this.getTitle());
-        this.text(this.getOrThrow("inventory_label"), Component.translatable("container.inventory"));
     }
 }

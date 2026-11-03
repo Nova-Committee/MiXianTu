@@ -114,8 +114,6 @@ public final class TalismanWorkstationScreen extends AuiContainerScreen<Talisman
         assert this.inkCanvas != null;
         this.inkCanvas.setWidth(CANVAS_WIDTH);
         this.inkCanvas.setHeight(CANVAS_HEIGHT);
-        this.text(this.submitButton, Component.translatable("screen.mxt.talisman.submit"));
-        this.text(this.cancelButton, Component.translatable("screen.mxt.talisman.cancel"));
         for (int index = 0; index < this.rows.size(); index++) {
             int slot = index;
             this.click(this.rows.get(index), () -> this.select(slot));
