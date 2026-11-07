@@ -3,6 +3,7 @@ package com.iafenvoy.mxt.registry;
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.talisman.Talisman;
+import com.iafenvoy.mxt.runtime.world.SoulAppearance;
 import net.minecraft.core.Holder;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.syncher.EntityDataSerializer;
@@ -25,4 +26,5 @@ public final class MxtEntityDataSerializers {
     public static final DeferredHolder<EntityDataSerializer<?>, EntityDataSerializer<List<Integer>>> COLOR_LIST = REGISTRY.register("color_list", () -> EntityDataSerializer.forValueType(ByteBufCodecs.VAR_INT.apply(ByteBufCodecs.list())));
     public static final DeferredHolder<EntityDataSerializer<?>, EntityDataSerializer<Optional<Holder<Aura>>>> AURA = REGISTRY.register("aura", () -> EntityDataSerializer.forValueType(ByteBufCodecs.optional(Aura.STREAM_CODEC)));
     public static final DeferredHolder<EntityDataSerializer<?>, EntityDataSerializer<Optional<Holder<Talisman>>>> TALISMAN = REGISTRY.register("talisman", () -> EntityDataSerializer.forValueType(ByteBufCodecs.optional(Talisman.STREAM_CODEC)));
+    public static final DeferredHolder<EntityDataSerializer<?>, EntityDataSerializer<Optional<SoulAppearance>>> SOUL_APPEARANCE = REGISTRY.register("soul_appearance", () -> EntityDataSerializer.forValueType(ByteBufCodecs.optional(SoulAppearance.STREAM_CODEC)));
 }

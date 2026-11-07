@@ -1,0 +1,8 @@
+{
+  "neoforge:conditions": [
+    { "type": "neoforge:mod_loaded", "modid": "reincarnation" }
+  ],
+  "default_value": 0,
+  "min": 0,
+  "max": 100
+}

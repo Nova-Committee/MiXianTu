@@ -1,21 +1,31 @@
 package com.iafenvoy.mxt.probe.lifespan;
+import com.iafenvoy.mxt.data.aura.Aura;
+import com.iafenvoy.mxt.data.cultivation.Technique;
 import com.iafenvoy.saturn.registry.SaturnResourceKeys;
 import com.iafenvoy.saturn.registry.SaturnAttachments;
 import com.iafenvoy.saturn.attachment.AbilityAttachment;
 import com.iafenvoy.saturn.attachment.ResourceHolderAttachment;
 
+import com.iafenvoy.reincarnation.registry.ReincarnationAttachments;
+import com.iafenvoy.reincarnation.config.ReincarnationServerConfig;
+import com.iafenvoy.reincarnation.api.LifespanApi;
+import com.iafenvoy.reincarnation.api.RebirthMode;
+import com.iafenvoy.reincarnation.api.ReincarnationApi;
+import com.iafenvoy.reincarnation.data.information.getter.LifespanGetter;
+import com.iafenvoy.reincarnation.lifespan.Lifespan;
+import com.iafenvoy.reincarnation.storage.Generations;
 import com.google.gson.JsonParser;
 import com.iafenvoy.jupiter.config.entry.BooleanEntry;
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.attachment.*;
-import com.iafenvoy.mxt.config.MxtServerConfig;
-import com.iafenvoy.mxt.config.MxtServerConfig.LifespanOutcome;
+import com.iafenvoy.reincarnation.config.ReincarnationServerConfig.LifespanOutcome;
 import com.iafenvoy.saturn.data.action.EntityAction;
-import com.iafenvoy.mxt.data.action.builtin.entity.ModifyLifespanAction;
+import com.iafenvoy.reincarnation.data.lifespan.AddLifespanAction;
+import com.iafenvoy.reincarnation.data.lifespan.RemoveLifespanAction;
 import com.iafenvoy.mxt.data.cultivation.RealmStage;
 import com.iafenvoy.saturn.data.resource.Resource;
-import com.iafenvoy.mxt.event.LifeSpanEndEvent;
-import com.iafenvoy.mxt.event.LifeSpanRebirthEvent;
+import com.iafenvoy.reincarnation.event.LifeSpanEndEvent;
+import com.iafenvoy.reincarnation.event.LifeSpanRebirthEvent;
 import com.iafenvoy.mxt.probe.Probe;
 import com.iafenvoy.mxt.probe.ProbeContext;
 import com.iafenvoy.mxt.probe.ProbeDefinitions;
@@ -25,7 +35,7 @@ import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.saturn.runtime.ability.AbilityGrantService;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationIdentityService;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService;
-import com.iafenvoy.mxt.runtime.cultivation.LifeSpanService;
+import com.iafenvoy.reincarnation.lifespan.LifespanService;
 import com.iafenvoy.mxt.runtime.damage.DamageCalculationService;
 import com.iafenvoy.saturn.runtime.resulting.Failures;
 import com.iafenvoy.saturn.runtime.resulting.Result;
@@ -35,16 +45,26 @@ import com.iafenvoy.saturn.util.formula.number.Constant;
 import com.mojang.serialization.JsonOps;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
+import net.minecraft.tags.TagKey;
+import net.minecraft.tags.TagLoader;
+import net.neoforged.neoforge.attachment.AttachmentType;
+import net.neoforged.neoforge.registries.NeoForgeRegistries;
+import com.iafenvoy.reincarnation.registry.tag.AttachmentTypeTags;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.animal.pig.Pig;
 import net.neoforged.neoforge.common.NeoForge;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
 import java.util.function.Consumer;
 
 /**
@@ -52,9 +72,7 @@ import java.util.function.Consumer;
  * each of the three outcomes and the explicit rebirth the command and the script call. Every part is its own probe,
  * so the state an earlier part left in the server config is established again by the part that needs it.
  *
- * <p>Fixture numbers, which is why changing test-pack content changes a part's arithmetic: mxt_test:qi_refining
- * grants 2400 ticks and every part sets the base to 0 unless it says otherwise. The player-only half of the feature
- * is not covered here.
+ * <p>The lifespan_breakthrough fixture grants a net 2400 ticks through success actions.
  */
 public final class LifespanProbes {
     private LifespanProbes() {
@@ -74,7 +92,69 @@ public final class LifespanProbes {
                 Probe.of("lifespan/action", LifespanProbes::action),
                 Probe.of("lifespan/no_ledger", LifespanProbes::noLedger),
                 Probe.of("lifespan/explicit_reincarnate", LifespanProbes::explicitReincarnate),
-                Probe.of("lifespan/reincarnate_action", LifespanProbes::reincarnateAction));
+                Probe.of("lifespan/reincarnate_action", LifespanProbes::reincarnateAction),
+                Probe.kitted("lifespan/full_player_rebirth", context -> fullPlayerRebirth(context, true)),
+                Probe.kitted("lifespan/default_player_rebirth", context -> fullPlayerRebirth(context, false)));
+    }
+
+    private static void fullPlayerRebirth(ProbeContext context, boolean retain) {
+        Snapshot was = snapshot();
+        ServerPlayer old = context.player();
+        try {
+            var settings = ReincarnationServerConfig.INSTANCE.lifespan;
+            settings.enabled.setValue(true);
+            settings.baseLifespan.setValue(24_000L);
+            reincarnationPolicy();
+            if (!retain) {
+                Map<TagKey<AttachmentType<?>>, List<Holder<AttachmentType<?>>>> tags = tags();
+                tags.put(AttachmentTypeTags.KEEP_ON_REBIRTH, List.of());
+                tags(tags);
+                ReincarnationServerConfig.INSTANCE.reset.clearResources.setValue(true);
+            }
+            Holder<RealmStage> stage = context.require(MxtResourceKeys.REALM_STAGE, ProbeDefinitions.QI_REFINING);
+            Holder<Technique> technique = context.require(MxtResourceKeys.TECHNIQUE, ProbeDefinitions.TECHNIQUE);
+            Holder<Resource> resource = context.require(SaturnResourceKeys.RESOURCE, ProbeDefinitions.QI);
+            old.getData(MxtAttachments.CULTIVATION).setRealmStage(stage);
+            old.getData(MxtAttachments.CULTIVATION).setCultivationProgress(ProbeKit.requireProfile(context, ProbeDefinitions.QI), 80);
+            old.getData(MxtAttachments.MINOR_STAGES).raiseMinorStageRecord(stage, 2);
+            CultivationIdentityService.grantSpiritRoot(old, context.require(MxtResourceKeys.SPIRIT_ROOT, ProbeDefinitions.PROBE_FIRE_ROOT));
+            old.getData(MxtAttachments.TECHNIQUE).addLearnedTechnique(technique);
+            old.getData(MxtAttachments.SOUL_STATS).setKarma(12);
+            double amount = old.getData(SaturnAttachments.RESOURCE_HOLDER).get(resource);
+            LifespanApi.set(old, 123);
+            long generation = Generations.current(context.server(), old.getUUID());
+            var result = LifespanApi.rebirth(old, RebirthMode.NEW_LIFE, Component.literal("MiXianTu probe"));
+            context.check("full rebirth succeeds", result.getFailure().isEmpty());
+            if (result.getFailure().isPresent()) return;
+            ServerPlayer fresh = (ServerPlayer) result.getData().orElseThrow();
+            context.check("player replaced and generation advanced", fresh != old && fresh.connection.player == fresh
+                    && Generations.current(context.server(), fresh.getUUID()) == generation + 1);
+            context.check("cultivation and minor stages cleared", fresh.getData(MxtAttachments.CULTIVATION).realmStages().isEmpty()
+                    && fresh.getData(MxtAttachments.MINOR_STAGES).minorStageRecord(stage) == -1
+                    && fresh.getData(MxtAttachments.TRIBULATION).tribulation().isEmpty());
+            if (retain) {
+                context.check("identity and technique preserved by tag", !fresh.getData(MxtAttachments.SPIRIT_IDENTITY).spiritRoots().isEmpty()
+                        && fresh.getData(MxtAttachments.TECHNIQUE).learnedTechniques().contains(technique));
+            } else {
+                context.check("identity and techniques clear by default", fresh.getData(MxtAttachments.SPIRIT_IDENTITY).spiritRoots().isEmpty()
+                        && fresh.getData(MxtAttachments.TECHNIQUE).learnedTechniques().isEmpty());
+            }
+            context.expect("soul follows tag", fresh.getData(MxtAttachments.SOUL_STATS).karma(), retain ? 12.0D : 0.0D);
+            context.expect("resource follows shared config", fresh.getData(SaturnAttachments.RESOURCE_HOLDER).get(resource), retain ? amount : 0.0D);
+            context.expect("new lifespan baseline", LifespanApi.get(fresh), new Lifespan(24_000, 24_000));
+            context.expect("archived lifespan", ReincarnationApi.view(old.getUUID(), generation).orElseThrow()
+                    .read(LifespanGetter.INSTANCE).value().orElseThrow(), new Lifespan(123, 123));
+            context.check("root ability follows retained identity", fresh.getData(SaturnAttachments.ABILITY_HOLDER)
+                    .has(context.require(SaturnResourceKeys.ABILITY, ProbeDefinitions.PROBE_AFFINITY_ABILITY)) == retain);
+            context.note("lifespan probe: full player rebirth checked");
+        } finally {
+            restore(was);
+            ServerPlayer current = old.connection.player;
+            if (current != old) {
+                context.server().getPlayerList().remove(current);
+                current.discard();
+            }
+        }
     }
 
     // 1. Master switch off: nothing settles, no ledger appears, and a write still lands on the books.
@@ -83,18 +163,18 @@ public final class LifespanProbes {
         List<LivingEntity> probes = new ArrayList<>();
         boolean ok;
         try {
-            MxtServerConfig.Lifespan settings = MxtServerConfig.INSTANCE.lifespan;
+            ReincarnationServerConfig.Lifespan settings = ReincarnationServerConfig.INSTANCE.lifespan;
             LivingEntity dormant = probe(context, probes, 1, null);
             if (dormant == null) return;
 
             settings.enabled.setValue(false);
             settings.baseLifespan.setValue(24_000L);
-            boolean dormantSettled = LifeSpanService.settle(dormant);
-            boolean dormantLedger = dormant.getExistingData(MxtAttachments.LIFESPAN).isPresent();
-            boolean dormantWrite = LifeSpanService.set(dormant, 100L).getFailure().isEmpty();
+            boolean dormantSettled = LifespanService.settle(dormant);
+            boolean dormantLedger = dormant.getExistingData(ReincarnationAttachments.LIFESPAN).isPresent();
+            boolean dormantWrite = LifespanService.set(dormant, 100L).getFailure().isEmpty();
             ok = context.check("lifespan probe: switch_off settled=" + dormantSettled + " ledger=" + dormantLedger
-                            + " written=" + LifeSpanService.remaining(dormant),
-                    !dormantSettled && !dormantLedger && dormantWrite && LifeSpanService.remaining(dormant) == 100L);
+                            + " written=" + LifespanService.remaining(dormant),
+                    !dormantSettled && !dormantLedger && dormantWrite && LifespanService.remaining(dormant) == 100L);
             verdict(context, ok);
         } finally {
             restore(was);
@@ -109,18 +189,18 @@ public final class LifespanProbes {
         List<LivingEntity> probes = new ArrayList<>();
         boolean ok;
         try {
-            MxtServerConfig.Lifespan settings = MxtServerConfig.INSTANCE.lifespan;
+            ReincarnationServerConfig.Lifespan settings = ReincarnationServerConfig.INSTANCE.lifespan;
             LivingEntity dormant = probe(context, probes, 1, null);
             if (dormant == null) return;
 
             settings.enabled.setValue(false);
             settings.baseLifespan.setValue(24_000L);
-            LifeSpanService.set(dormant, 100L);
+            LifespanService.set(dormant, 100L);
             settings.enabled.setValue(true);
             settings.agePerSettle.setValue(20);
-            boolean resumed = LifeSpanService.settle(dormant) && LifeSpanService.remaining(dormant) == 80L;
-            ok = context.check("lifespan probe: switch_on remaining=" + LifeSpanService.remaining(dormant)
-                    + "/" + LifeSpanService.total(dormant), resumed);
+            boolean resumed = LifespanService.settle(dormant) && LifespanService.remaining(dormant) == 80L;
+            ok = context.check("lifespan probe: switch_on remaining=" + LifespanService.remaining(dormant)
+                    + "/" + LifespanService.total(dormant), resumed);
             verdict(context, ok);
         } finally {
             restore(was);
@@ -135,23 +215,23 @@ public final class LifespanProbes {
         List<LivingEntity> probes = new ArrayList<>();
         boolean ok;
         try {
-            MxtServerConfig.Lifespan settings = MxtServerConfig.INSTANCE.lifespan;
+            ReincarnationServerConfig.Lifespan settings = ReincarnationServerConfig.INSTANCE.lifespan;
             LivingEntity ledger = probe(context, probes, 1, null);
             if (ledger == null) return;
 
             settings.enabled.setValue(true);
             settings.agePerSettle.setValue(20);
-            LifeSpanService.set(ledger, 100L);
-            boolean setLedger = LifeSpanService.remaining(ledger) == 100L && LifeSpanService.total(ledger) == 100L;
-            LifeSpanService.add(ledger, 50L);
-            boolean added = LifeSpanService.remaining(ledger) == 150L && LifeSpanService.total(ledger) == 150L;
-            LifeSpanService.add(ledger, -30L);
-            boolean spent = LifeSpanService.remaining(ledger) == 120L && LifeSpanService.total(ledger) == 150L;
-            boolean refusedSet = LifeSpanService.set(ledger, -1L).getFailure().isPresent()
-                    && LifeSpanService.remaining(ledger) == 120L && LifeSpanService.total(ledger) == 150L;
+            LifespanService.set(ledger, 100L);
+            boolean setLedger = LifespanService.remaining(ledger) == 100L && LifespanService.total(ledger) == 100L;
+            LifespanService.add(ledger, 50L);
+            boolean added = LifespanService.remaining(ledger) == 150L && LifespanService.total(ledger) == 150L;
+            LifespanService.add(ledger, -30L);
+            boolean spent = LifespanService.remaining(ledger) == 120L && LifespanService.total(ledger) == 150L;
+            boolean refusedSet = LifespanService.set(ledger, -1L).getFailure().isPresent()
+                    && LifespanService.remaining(ledger) == 120L && LifespanService.total(ledger) == 150L;
             // Ageing of zero settles without spending anything.
             settings.agePerSettle.setValue(0);
-            boolean ageless = LifeSpanService.settle(ledger) && LifeSpanService.remaining(ledger) == 120L;
+            boolean ageless = LifespanService.settle(ledger) && LifespanService.remaining(ledger) == 120L;
             settings.agePerSettle.setValue(20);
             ok = context.check("lifespan probe: ledger set=" + setLedger + " added=" + added + " spent=" + spent
                             + " refused=" + refusedSet + " ageless=" + ageless,
@@ -171,7 +251,7 @@ public final class LifespanProbes {
         List<LivingEntity> probes = new ArrayList<>();
         boolean ok;
         try {
-            MxtServerConfig.Lifespan settings = MxtServerConfig.INSTANCE.lifespan;
+            ReincarnationServerConfig.Lifespan settings = ReincarnationServerConfig.INSTANCE.lifespan;
             LivingEntity seeded = probe(context, probes, 1, null);
             LivingEntity plain = probe(context, probes, 2, null);
             if (seeded == null || plain == null) return;
@@ -179,13 +259,13 @@ public final class LifespanProbes {
             settings.enabled.setValue(true);
             settings.agePerSettle.setValue(20);
             settings.baseLifespan.setValue(24_000L);
-            LifeSpanService.add(seeded, 40L);
-            boolean fromBase = LifeSpanService.remaining(seeded) == 24_040L && LifeSpanService.total(seeded) == 24_040L;
+            LifespanService.add(seeded, 40L);
+            boolean fromBase = LifespanService.remaining(seeded) == 24_040L && LifespanService.total(seeded) == 24_040L;
             settings.baseLifespan.setValue(0L);
-            LifeSpanService.add(plain, 40L);
-            boolean fromZero = LifeSpanService.remaining(plain) == 40L && LifeSpanService.total(plain) == 40L;
-            ok = context.check("lifespan probe: seed base=" + LifeSpanService.remaining(seeded)
-                    + " zero=" + LifeSpanService.remaining(plain), fromBase && fromZero);
+            LifespanService.add(plain, 40L);
+            boolean fromZero = LifespanService.remaining(plain) == 40L && LifespanService.total(plain) == 40L;
+            ok = context.check("lifespan probe: seed base=" + LifespanService.remaining(seeded)
+                    + " zero=" + LifespanService.remaining(plain), fromBase && fromZero);
             verdict(context, ok);
         } finally {
             restore(was);
@@ -199,27 +279,27 @@ public final class LifespanProbes {
         List<LivingEntity> probes = new ArrayList<>();
         boolean ok;
         try {
-            MxtServerConfig.Lifespan settings = MxtServerConfig.INSTANCE.lifespan;
+            ReincarnationServerConfig.Lifespan settings = ReincarnationServerConfig.INSTANCE.lifespan;
             LivingEntity settled = probe(context, probes, 1, null);
             if (settled == null) return;
 
             settings.enabled.setValue(true);
             settings.agePerSettle.setValue(20);
             settings.onExpire.setValue(LifespanOutcome.NONE);
-            LifeSpanService.set(settled, 25L);
+            LifespanService.set(settled, 25L);
             List<LifespanOutcome> outcomes = new ArrayList<>();
             Consumer<LifeSpanEndEvent.Post> recorder = event -> outcomes.add(event.getOutcome());
             NeoForge.EVENT_BUS.addListener(recorder);
             boolean decremented;
             boolean expired;
             try {
-                decremented = LifeSpanService.settle(settled) && LifeSpanService.remaining(settled) == 5L
-                        && LifeSpanService.total(settled) == 25L;
-                expired = LifeSpanService.settle(settled);
+                decremented = LifespanService.settle(settled) && LifespanService.remaining(settled) == 5L
+                        && LifespanService.total(settled) == 25L;
+                expired = LifespanService.settle(settled);
             } finally {
                 NeoForge.EVENT_BUS.unregister(recorder);
             }
-            boolean closed = LifeSpanService.remaining(settled) == -1L && LifeSpanService.total(settled) == 0L;
+            boolean closed = LifespanService.remaining(settled) == -1L && LifespanService.total(settled) == 0L;
             ok = context.check("lifespan probe: settle decremented=" + decremented + " closed=" + closed
                             + " outcomes=" + outcomes,
                     decremented && expired && closed && outcomes.equals(List.of(LifespanOutcome.NONE)));
@@ -237,7 +317,7 @@ public final class LifespanProbes {
         List<LivingEntity> probes = new ArrayList<>();
         boolean ok;
         try {
-            MxtServerConfig.Lifespan settings = MxtServerConfig.INSTANCE.lifespan;
+            ReincarnationServerConfig.Lifespan settings = ReincarnationServerConfig.INSTANCE.lifespan;
             LivingEntity cancelled = probe(context, probes, 1, null);
             if (cancelled == null) return;
 
@@ -246,26 +326,26 @@ public final class LifespanProbes {
             Consumer<LifeSpanEndEvent.Pre> refuse = event -> event.setCanceled(true);
             Consumer<LifeSpanEndEvent.Pre> extend = event -> {
                 event.setCanceled(true);
-                if (event.getEntity() instanceof LivingEntity living) LifeSpanService.add(living, 50L);
+                if (event.getEntity() instanceof LivingEntity living) LifespanService.add(living, 50L);
             };
-            LifeSpanService.set(cancelled, 5L);
+            LifespanService.set(cancelled, 5L);
             NeoForge.EVENT_BUS.addListener(refuse);
             try {
-                LifeSpanService.settle(cancelled);
+                LifespanService.settle(cancelled);
             } finally {
                 NeoForge.EVENT_BUS.unregister(refuse);
             }
-            boolean refusedEnd = LifeSpanService.remaining(cancelled) == -1L && LifeSpanService.total(cancelled) == 0L;
-            LifeSpanService.set(cancelled, 5L);
+            boolean refusedEnd = LifespanService.remaining(cancelled) == -1L && LifespanService.total(cancelled) == 0L;
+            LifespanService.set(cancelled, 5L);
             NeoForge.EVENT_BUS.addListener(extend);
             try {
-                LifeSpanService.settle(cancelled);
+                LifespanService.settle(cancelled);
             } finally {
                 NeoForge.EVENT_BUS.unregister(extend);
             }
-            boolean extended = LifeSpanService.remaining(cancelled) == 50L;
+            boolean extended = LifespanService.remaining(cancelled) == 50L;
             ok = context.check("lifespan probe: pre_cancel closed=" + refusedEnd
-                    + " extended=" + LifeSpanService.remaining(cancelled), refusedEnd && extended);
+                    + " extended=" + LifespanService.remaining(cancelled), refusedEnd && extended);
             verdict(context, ok);
         } finally {
             restore(was);
@@ -273,25 +353,25 @@ public final class LifespanProbes {
         }
     }
 
-    // 7. DEATH on a non-player: it really dies, and it dies of the mxt:lifespan cause that the no_bonus
+    // 7. DEATH on a non-player: it really dies, and it dies of the reincarnation:lifespan cause that the no_bonus
     //    tag keeps out of the element pipeline.
     private static void death(ProbeContext context) {
         Snapshot was = snapshot();
         List<LivingEntity> probes = new ArrayList<>();
         boolean ok;
         try {
-            MxtServerConfig.Lifespan settings = MxtServerConfig.INSTANCE.lifespan;
+            ReincarnationServerConfig.Lifespan settings = ReincarnationServerConfig.INSTANCE.lifespan;
             LivingEntity doomed = probe(context, probes, 1, null);
             if (doomed == null) return;
 
             settings.enabled.setValue(true);
             settings.agePerSettle.setValue(20);
             settings.onExpire.setValue(LifespanOutcome.DEATH);
-            LifeSpanService.set(doomed, 5L);
-            LifeSpanService.settle(doomed);
+            LifespanService.set(doomed, 5L);
+            LifespanService.settle(doomed);
             DamageSource cause = doomed.getLastDamageSource();
             boolean died = !doomed.isAlive() && cause != null && DamageCalculationService.bypasses(cause)
-                    && HolderHelper.id(cause.typeHolder()).equals(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "lifespan"));
+                    && cause.is(LifespanService.DAMAGE_TYPE);
             ok = context.check("lifespan probe: death alive=" + doomed.isAlive() + " cause="
                             + (cause == null ? "none" : HolderHelper.id(cause.typeHolder())),
                     died);
@@ -309,7 +389,7 @@ public final class LifespanProbes {
         List<LivingEntity> probes = new ArrayList<>();
         boolean ok;
         try {
-            MxtServerConfig.Lifespan settings = MxtServerConfig.INSTANCE.lifespan;
+            ReincarnationServerConfig.Lifespan settings = ReincarnationServerConfig.INSTANCE.lifespan;
             LivingEntity reborn = probe(context, probes, 1, ProbeDefinitions.PROBE_FIRE_ROOT);
             if (reborn == null) return;
 
@@ -329,19 +409,22 @@ public final class LifespanProbes {
             rebornTechniques.addLearnedTechnique(context.require(MxtResourceKeys.TECHNIQUE, ProbeDefinitions.TECHNIQUE));
             AbilityGrantService.recalculate(reborn);
             boolean realmAbility = rebornAbilities.has(context.require(SaturnResourceKeys.ABILITY, context.id("awaken_divine_sense")));
-            LifeSpanService.set(reborn, 5L);
-            boolean rebornSettled = LifeSpanService.settle(reborn);
+            LifespanService.set(reborn, 5L);
+            boolean rebornSettled = LifespanService.settle(reborn);
+            rebornSpirit = reborn.getData(MxtAttachments.CULTIVATION);
+            rebornStages = reborn.getData(MxtAttachments.MINOR_STAGES);
+            rebornAbilities = reborn.getData(SaturnAttachments.ABILITY_HOLDER);
             boolean reset = rebornSpirit.realmStages().isEmpty() && rebornStages.minorStageRecord(qiRefining) == -1
                     && !rebornAbilities.has(context.require(SaturnResourceKeys.ABILITY, context.id("awaken_divine_sense")));
             // What the body still is keeps its grants, so the root's own ability survives the realm's.
             boolean kept = rebornTechniques.learnedTechniques().contains(context.require(MxtResourceKeys.TECHNIQUE, ProbeDefinitions.TECHNIQUE))
                     && !reborn.getData(MxtAttachments.SPIRIT_IDENTITY).spiritRoots().isEmpty()
                     && rebornAbilities.has(context.require(SaturnResourceKeys.ABILITY, ProbeDefinitions.PROBE_AFFINITY_ABILITY));
-            boolean rebornLedger = LifeSpanService.remaining(reborn) == 24_000L && LifeSpanService.total(reborn) == 24_000L;
+            boolean rebornLedger = LifespanService.remaining(reborn) == 24_000L && LifespanService.total(reborn) == 24_000L;
             ok = context.check("lifespan probe: reincarnate realm_ability=" + realmAbility
                             + " realms=" + rebornSpirit.realmStages().size()
                             + " minor_stage=" + rebornStages.minorStageRecord(qiRefining)
-                            + " kept=" + kept + " ledger=" + LifeSpanService.remaining(reborn),
+                            + " kept=" + kept + " ledger=" + LifespanService.remaining(reborn),
                     realmAbility && rebornSettled && reset && kept && rebornLedger);
             verdict(context, ok);
         } finally {
@@ -350,17 +433,13 @@ public final class LifespanProbes {
         }
     }
 
-    // 9. The realm entry: the fixture stage pays its own lifespan once, on the breakthrough that reaches it.
-    //    The cost is paid in spirit_power, whose cap in this pack only opens for a body standing in the
-    //    spirit_power chain (a plain mortal can hold none of it, so the resource would clamp to 0 and the
-    //    attempt would fail as INSUFFICIENT_RESOURCE). Seating the climber there first is what makes the
-    //    payment possible; the qi chain is a different chain, so this stays the mortal -> first realm step.
+    // The spirit_power realm opens the payment resource's cap; the lifespan chain starts from a mortal.
     private static void breakthrough(ProbeContext context) {
         Snapshot was = snapshot();
         List<LivingEntity> probes = new ArrayList<>();
         boolean ok;
         try {
-            MxtServerConfig.Lifespan settings = MxtServerConfig.INSTANCE.lifespan;
+            ReincarnationServerConfig.Lifespan settings = ReincarnationServerConfig.INSTANCE.lifespan;
             LivingEntity climber = probe(context, probes, 1, null);
             if (climber == null) return;
 
@@ -373,18 +452,27 @@ public final class LifespanProbes {
             climbSpirit.setRealmStage(context.require(MxtResourceKeys.REALM_STAGE, ProbeDefinitions.SPIRIT_POWER_REFINING));
             Holder<Resource> climbPayment = context.require(SaturnResourceKeys.RESOURCE, ProbeDefinitions.SPIRIT_POWER);
             ProbeKit.ensureResource(climber, climbResources, climbPayment, 100.0D);
-            climbSpirit.setCultivationProgress(ProbeKit.requireProfile(context, ProbeDefinitions.QI), 100.0D);
+            Holder<Aura> aura = context.require(MxtResourceKeys.AURA, context.id("lifespan_breakthrough"));
+            FormulaContext formula = FormulaContext.of(climber);
+            climbSpirit.setCultivationProgress(aura, 100.0D);
+            Result<Void> refused = CultivationService.attempt(climber, climbSpirit,
+                    climbResources, aura, formula, () -> false);
+            context.check("failed breakthrough does not run success actions", refused.getFailure().isPresent()
+                    && LifespanService.remaining(climber) <= 0L && !climber.hasEffect(MobEffects.REGENERATION));
             Result<Void> breakthrough = CultivationService.attempt(climber, climbSpirit,
-                    climbResources, ProbeKit.requireProfile(context, ProbeDefinitions.QI), FormulaContext.of(climber), () -> true);
-            boolean declared = context.require(MxtResourceKeys.REALM_STAGE, ProbeDefinitions.QI_REFINING).value().lifespan().isPresent();
+                    climbResources, aura, formula, () -> true);
             // The pack's cap is part of the arithmetic: 25 is the fixture's own cost, and a body that cannot hold
             // that much turns the whole part into an INSUFFICIENT_RESOURCE answer that says nothing about lifespan.
             boolean affordable = climbResources.get(climbPayment) >= 25.0D;
-            boolean granted = (breakthrough instanceof Result.SuccessResult<?>) && LifeSpanService.remaining(climber) == 2_400L
-                    && LifeSpanService.total(climber) == 2_400L;
+            boolean granted = (breakthrough instanceof Result.SuccessResult<?>) && LifespanService.remaining(climber) == 2_400L
+                    && LifespanService.total(climber) == 3_000L;
+            context.check("lifespan and existing success actions compose", climber.hasEffect(MobEffects.REGENERATION));
+            Result<Void> repeated = CultivationService.attempt(climber, climbSpirit, climbResources, aura, formula, () -> true);
+            context.check("completed chain does not grant lifespan again", repeated.getFailure().isPresent()
+                    && LifespanService.remaining(climber) == 2_400L && LifespanService.total(climber) == 3_000L);
             ok = context.check("lifespan probe: breakthrough advanced=" + (breakthrough instanceof Result.SuccessResult<?>)
-                            + " failure=" + breakthrough.getFailure().orElse(null) + " declared=" + declared
-                            + " affordable=" + affordable + " granted=" + LifeSpanService.remaining(climber),
+                            + " failure=" + breakthrough.getFailure().orElse(null)
+                            + " affordable=" + affordable + " granted=" + LifespanService.remaining(climber),
                     affordable && granted);
             verdict(context, ok);
         } finally {
@@ -393,27 +481,27 @@ public final class LifespanProbes {
         }
     }
 
-    // 10. The action entry, both modes.
+    // 10. The add and remove actions.
     private static void action(ProbeContext context) {
         Snapshot was = snapshot();
         List<LivingEntity> probes = new ArrayList<>();
         boolean ok;
         try {
-            MxtServerConfig.Lifespan settings = MxtServerConfig.INSTANCE.lifespan;
+            ReincarnationServerConfig.Lifespan settings = ReincarnationServerConfig.INSTANCE.lifespan;
             LivingEntity acted = probe(context, probes, 1, null);
             if (acted == null) return;
 
             settings.baseLifespan.setValue(0L);
-            new ModifyLifespanAction(ModifyLifespanAction.Mode.ADD, new Constant(30.0D))
+            new AddLifespanAction(new Constant(30.0D))
                     .execute(acted, FormulaContext.of(acted));
-            boolean actionAdded = LifeSpanService.remaining(acted) == 30L && LifeSpanService.total(acted) == 30L;
-            new ModifyLifespanAction(ModifyLifespanAction.Mode.ADD, new Constant(-10.0D))
+            boolean actionAdded = LifespanService.remaining(acted) == 30L && LifespanService.total(acted) == 30L;
+            new RemoveLifespanAction(new Constant(10.0D))
                     .execute(acted, FormulaContext.of(acted));
-            new ModifyLifespanAction(ModifyLifespanAction.Mode.SET, new Constant(-5.0D))
+            new RemoveLifespanAction(new Constant(-5.0D))
                     .execute(acted, FormulaContext.of(acted));
-            boolean actionTook = LifeSpanService.remaining(acted) == 20L && LifeSpanService.total(acted) == 30L;
+            boolean actionTook = LifespanService.remaining(acted) == 20L && LifespanService.total(acted) == 30L;
             ok = context.check("lifespan probe: action added=" + actionAdded + " took=" + actionTook
-                            + " remaining=" + LifeSpanService.remaining(acted),
+                            + " remaining=" + LifespanService.remaining(acted),
                     actionAdded && actionTook);
             verdict(context, ok);
         } finally {
@@ -430,19 +518,19 @@ public final class LifespanProbes {
         List<LivingEntity> probes = new ArrayList<>();
         boolean ok;
         try {
-            MxtServerConfig.Lifespan settings = MxtServerConfig.INSTANCE.lifespan;
+            ReincarnationServerConfig.Lifespan settings = ReincarnationServerConfig.INSTANCE.lifespan;
             LivingEntity untouched = probe(context, probes, 1, null);
             if (untouched == null) return;
 
             settings.enabled.setValue(true);
             settings.baseLifespan.setValue(0L);
-            boolean zeroAdd = LifeSpanService.add(untouched, 0L).getFailure().isEmpty()
-                    && untouched.getExistingData(MxtAttachments.LIFESPAN).isEmpty();
-            boolean clean = !LifeSpanService.settle(untouched)
-                    && untouched.getExistingData(MxtAttachments.LIFESPAN).isEmpty()
-                    && LifeSpanService.remaining(untouched) == -1L;
+            boolean zeroAdd = LifespanService.add(untouched, 0L).getFailure().isEmpty()
+                    && untouched.getExistingData(ReincarnationAttachments.LIFESPAN).isEmpty();
+            boolean clean = !LifespanService.settle(untouched)
+                    && untouched.getExistingData(ReincarnationAttachments.LIFESPAN).isEmpty()
+                    && LifespanService.remaining(untouched) == -1L;
             ok = context.check("lifespan probe: no_ledger zero_add=" + zeroAdd + " settle_created="
-                    + untouched.getExistingData(MxtAttachments.LIFESPAN).isPresent(), zeroAdd && clean);
+                    + untouched.getExistingData(ReincarnationAttachments.LIFESPAN).isPresent(), zeroAdd && clean);
             verdict(context, ok);
         } finally {
             restore(was);
@@ -458,7 +546,7 @@ public final class LifespanProbes {
         List<LivingEntity> probes = new ArrayList<>();
         boolean ok;
         try {
-            MxtServerConfig.Lifespan settings = MxtServerConfig.INSTANCE.lifespan;
+            ReincarnationServerConfig.Lifespan settings = ReincarnationServerConfig.INSTANCE.lifespan;
             LivingEntity restart = probe(context, probes, 1, ProbeDefinitions.PROBE_FIRE_ROOT);
             if (restart == null) return;
 
@@ -473,7 +561,7 @@ public final class LifespanProbes {
             restartIdentity.raiseMinorStageRecord(qiRefining, 2);
             AbilityGrantService.recalculate(restart);
             boolean restartAbility = restartAbilities.has(context.require(SaturnResourceKeys.ABILITY, context.id("awaken_divine_sense")));
-            LifeSpanService.set(restart, 5L);
+            LifespanService.set(restart, 5L);
             boolean[] ended = {false};
             int[] rebirths = {0};
             Consumer<LifeSpanEndEvent.Post> watch = event -> ended[0] = true;
@@ -484,30 +572,33 @@ public final class LifespanProbes {
             NeoForge.EVENT_BUS.addListener(veto);
             Result<Void> refused;
             try {
-                refused = LifeSpanService.reincarnate(restart);
+                refused = LifespanService.reincarnate(restart);
             } finally {
                 NeoForge.EVENT_BUS.unregister(veto);
             }
             // A refused rebirth changes nothing at all: the realm is still there and the ledger still reads 5.
             boolean restartRefused = refused.getFailure().isPresent() && refused.getFailure().orElse(null) == Failures.CANCELLED
-                    && !restartSpirit.realmStages().isEmpty() && LifeSpanService.remaining(restart) == 5L;
+                    && !restartSpirit.realmStages().isEmpty() && LifespanService.remaining(restart) == 5L;
             Result<Void> restarted;
             try {
-                restarted = LifeSpanService.reincarnate(restart);
+                restarted = LifespanService.reincarnate(restart);
             } finally {
                 NeoForge.EVENT_BUS.unregister(watch);
                 NeoForge.EVENT_BUS.unregister(counted);
             }
+            restartSpirit = restart.getData(MxtAttachments.CULTIVATION);
+            restartIdentity = restart.getData(MxtAttachments.MINOR_STAGES);
+            restartAbilities = restart.getData(SaturnAttachments.ABILITY_HOLDER);
             boolean restartReset = restartSpirit.realmStages().isEmpty()
                     && restartIdentity.minorStageRecord(qiRefining) == -1
                     && !restartAbilities.has(context.require(SaturnResourceKeys.ABILITY, context.id("awaken_divine_sense")))
                     && restartAbilities.has(context.require(SaturnResourceKeys.ABILITY, ProbeDefinitions.PROBE_AFFINITY_ABILITY));
-            boolean restartLedger = LifeSpanService.remaining(restart) == 24_000L && LifeSpanService.total(restart) == 24_000L;
+            boolean restartLedger = LifespanService.remaining(restart) == 24_000L && LifespanService.total(restart) == 24_000L;
             ok = context.check("lifespan probe: explicit_reincarnate ran=" + (restarted.getFailure().isEmpty())
                             + " refused=" + restartRefused + " ability=" + restartAbility
                             + " realms=" + restartSpirit.realmStages().size()
                             + " kept_root=" + restartAbilities.has(context.require(SaturnResourceKeys.ABILITY, ProbeDefinitions.PROBE_AFFINITY_ABILITY))
-                            + " ledger=" + LifeSpanService.remaining(restart)
+                            + " ledger=" + LifespanService.remaining(restart)
                             + " rebirth_post=" + rebirths[0] + " end_event=" + ended[0],
                     restartAbility && restarted.getFailure().isEmpty() && restartRefused && restartReset && restartLedger
                             && rebirths[0] == 1 && !ended[0]);
@@ -518,14 +609,14 @@ public final class LifespanProbes {
         }
     }
 
-    // 13. The data pack entry: mxt:reincarnate decodes by its own type name and runs that same reset, which
+    // 13. The data pack entry: reincarnation:reincarnate decodes by its own type name and runs that same reset, which
     //     is what a pack's own reincarnation pill needs instead of waiting for a life to run out.
     private static void reincarnateAction(ProbeContext context) {
         Snapshot was = snapshot();
         List<LivingEntity> probes = new ArrayList<>();
         boolean ok;
         try {
-            MxtServerConfig.Lifespan settings = MxtServerConfig.INSTANCE.lifespan;
+            ReincarnationServerConfig.Lifespan settings = ReincarnationServerConfig.INSTANCE.lifespan;
             LivingEntity restart = probe(context, probes, 1, ProbeDefinitions.PROBE_FIRE_ROOT);
             if (restart == null) return;
 
@@ -537,12 +628,14 @@ public final class LifespanProbes {
             restartSpirit.setRealmStage(qiRefining);
             AbilityGrantService.recalculate(restart);
             EntityAction action = EntityAction.SINGLE_CODEC.parse(JsonOps.INSTANCE,
-                    JsonParser.parseString("{\"type\": \"mxt:reincarnate\"}")).getOrThrow();
+                    JsonParser.parseString("{\"type\": \"reincarnation:reincarnate\"}")).getOrThrow();
             action.execute(restart, FormulaContext.of(restart));
+            LifespanService.flush();
+            restartSpirit = restart.getData(MxtAttachments.CULTIVATION);
             boolean actionRebirth = restartSpirit.realmStages().isEmpty()
-                    && LifeSpanService.remaining(restart) == 24_000L;
+                    && LifespanService.remaining(restart) == 24_000L;
             ok = context.check("lifespan probe: reincarnate_action realms=" + restartSpirit.realmStages().size()
-                    + " ledger=" + LifeSpanService.remaining(restart), actionRebirth);
+                    + " ledger=" + LifespanService.remaining(restart), actionRebirth);
             verdict(context, ok);
         } finally {
             restore(was);
@@ -550,17 +643,26 @@ public final class LifespanProbes {
         }
     }
 
-    // The policy part 8 writes, repeated by the parts that rely on it: every switch is back at its fixture value.
     private static void reincarnationPolicy() {
-        MxtServerConfig.Reincarnation reincarnation = MxtServerConfig.INSTANCE.reincarnation;
-        reincarnation.kills.setValue(false);
-        reincarnation.resetCultivation.setValue(true);
-        reincarnation.clearMinorStages.setValue(true);
-        reincarnation.cancelTribulation.setValue(true);
-        reincarnation.clearResources.setValue(false);
-        reincarnation.keepSpiritRoots.setValue(true);
-        reincarnation.keepTechniques.setValue(true);
-        reincarnation.keepSoul.setValue(true);
+        ReincarnationServerConfig.INSTANCE.lifespan.killOnReset.setValue(false);
+        ReincarnationServerConfig.INSTANCE.reset.clearResources.setValue(false);
+        ReincarnationServerConfig.INSTANCE.reset.resetUnknownModData.setValue(false);
+        Map<TagKey<AttachmentType<?>>, List<Holder<AttachmentType<?>>>> tags = tags();
+        tags.put(AttachmentTypeTags.KEEP_ON_REBIRTH, List.of(
+                NeoForgeRegistries.ATTACHMENT_TYPES.wrapAsHolder(MxtAttachments.SPIRIT_IDENTITY.get()),
+                NeoForgeRegistries.ATTACHMENT_TYPES.wrapAsHolder(MxtAttachments.TECHNIQUE.get()),
+                NeoForgeRegistries.ATTACHMENT_TYPES.wrapAsHolder(MxtAttachments.SOUL_STATS.get())));
+        tags(tags);
+    }
+
+    private static Map<TagKey<AttachmentType<?>>, List<Holder<AttachmentType<?>>>> tags() {
+        Map<TagKey<AttachmentType<?>>, List<Holder<AttachmentType<?>>>> tags = new HashMap<>();
+        NeoForgeRegistries.ATTACHMENT_TYPES.getTags().forEach(tag -> tags.put(tag.key(), tag.stream().toList()));
+        return tags;
+    }
+
+    private static void tags(Map<TagKey<AttachmentType<?>>, List<Holder<AttachmentType<?>>>> tags) {
+        NeoForgeRegistries.ATTACHMENT_TYPES.prepareTagReload(new TagLoader.LoadResult<>(NeoForgeRegistries.Keys.ATTACHMENT_TYPES, tags)).apply();
     }
 
     // One disposable probe entity carrying exactly one spirit root, so what survives a rebirth is never a question.
@@ -597,17 +699,17 @@ public final class LifespanProbes {
 
     // The server config the part writes; every part puts it back, because the config is shared and outlives a probe.
     private record Snapshot(boolean enabled, long base, int age, LifespanOutcome outcome, double fraction,
-                            boolean[] policy) {
+                            boolean[] policy, Map<TagKey<AttachmentType<?>>, List<Holder<AttachmentType<?>>>> tags) {
     }
 
     private static Snapshot snapshot() {
-        MxtServerConfig.Lifespan settings = MxtServerConfig.INSTANCE.lifespan;
+        ReincarnationServerConfig.Lifespan settings = ReincarnationServerConfig.INSTANCE.lifespan;
         return new Snapshot(settings.enabled.getValue(), settings.baseLifespan.getValue(), settings.agePerSettle.getValue(),
-                settings.onExpire.getValue(), settings.warningFraction.getValue(), policy());
+                settings.onExpire.getValue(), settings.warningFraction.getValue(), policy(), tags());
     }
 
     private static void restore(Snapshot snapshot) {
-        MxtServerConfig.Lifespan settings = MxtServerConfig.INSTANCE.lifespan;
+        ReincarnationServerConfig.Lifespan settings = ReincarnationServerConfig.INSTANCE.lifespan;
         settings.enabled.setValue(snapshot.enabled());
         settings.baseLifespan.setValue(snapshot.base());
         settings.agePerSettle.setValue(snapshot.age());
@@ -615,6 +717,7 @@ public final class LifespanProbes {
         settings.warningFraction.setValue(snapshot.fraction());
         BooleanEntry[] entries = policyEntries();
         for (int index = 0; index < entries.length; index++) entries[index].setValue(snapshot.policy()[index]);
+        tags(snapshot.tags());
     }
 
     private static boolean[] policy() {
@@ -625,9 +728,8 @@ public final class LifespanProbes {
     }
 
     private static BooleanEntry[] policyEntries() {
-        MxtServerConfig.Reincarnation reincarnation = MxtServerConfig.INSTANCE.reincarnation;
-        return new BooleanEntry[]{reincarnation.kills, reincarnation.resetCultivation, reincarnation.clearMinorStages,
-                reincarnation.cancelTribulation, reincarnation.clearResources, reincarnation.keepSpiritRoots,
-                reincarnation.keepTechniques, reincarnation.keepSoul};
+        return new BooleanEntry[]{ReincarnationServerConfig.INSTANCE.lifespan.killOnReset,
+                ReincarnationServerConfig.INSTANCE.reset.clearResources,
+                ReincarnationServerConfig.INSTANCE.reset.resetUnknownModData};
     }
 }

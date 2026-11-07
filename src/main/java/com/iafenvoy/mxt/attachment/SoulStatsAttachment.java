@@ -5,10 +5,6 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 
-/**
- * The four long-lived soul numbers. Nothing reads them yet - only reincarnation writes them, through the switch
- * that decides whether they survive a rebirth - so this is the storage the soul system will claim.
- */
 public final class SoulStatsAttachment extends AbstractChangeTrackable {
     public static final MapCodec<SoulStatsAttachment> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             Codec.DOUBLE.lenientOptionalFieldOf("karma", 0.0D).forGetter(SoulStatsAttachment::karma),

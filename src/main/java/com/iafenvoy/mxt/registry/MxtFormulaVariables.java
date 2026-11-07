@@ -1,7 +1,10 @@
 package com.iafenvoy.mxt.registry;
 
 import com.iafenvoy.mxt.MiXianTu;
-import com.iafenvoy.mxt.util.formula.*;
+import com.iafenvoy.mxt.util.formula.ElementVariable;
+import com.iafenvoy.mxt.util.formula.PillToxicityVariable;
+import com.iafenvoy.mxt.util.formula.RealmVariable;
+import com.iafenvoy.mxt.util.formula.SecretRealmVariable;
 import com.iafenvoy.saturn.registry.SaturnRegistries;
 import com.iafenvoy.saturn.util.formula.FormulaContext;
 import com.iafenvoy.saturn.util.formula.FormulaVariable;
@@ -20,6 +23,5 @@ public final class MxtFormulaVariables {
     public static final DeferredHolder<FormulaVariable, FormulaVariable> ELEMENT = REGISTRY.register("element", ElementVariable::new);
     public static final DeferredHolder<FormulaVariable, FormulaVariable> REALM = REGISTRY.register("realm", RealmVariable::new);
     public static final DeferredHolder<FormulaVariable, FormulaVariable> SECRET_REALM = REGISTRY.register("secret_realm", SecretRealmVariable::new);
-    public static final DeferredHolder<FormulaVariable, FormulaVariable> LIFESPAN = REGISTRY.register("lifespan", LifespanVariable::new);
     public static final DeferredHolder<FormulaVariable, FormulaVariable> PILL_TOXICITY = REGISTRY.register("pill_toxicity", PillToxicityVariable::new);
 }

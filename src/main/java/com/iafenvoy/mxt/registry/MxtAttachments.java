@@ -32,7 +32,6 @@ public final class MxtAttachments {
     // Entity. One attachment per module that keeps state, so the reset a module performs cannot reach another's.
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<CultivationAttachment>> CULTIVATION = entity("cultivation", CultivationAttachment::new, CultivationAttachment.CODEC);
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<MinorStageAttachment>> MINOR_STAGES = entity("minor_stages", MinorStageAttachment::new, MinorStageAttachment.CODEC);
-    public static final DeferredHolder<AttachmentType<?>, AttachmentType<LifespanAttachment>> LIFESPAN = entity("lifespan", LifespanAttachment::new, LifespanAttachment.CODEC);
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<SpiritIdentityAttachment>> SPIRIT_IDENTITY = entity("spirit_identity", SpiritIdentityAttachment::new, SpiritIdentityAttachment.CODEC);
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<TechniqueAttachment>> TECHNIQUE = entity("technique", TechniqueAttachment::new, TechniqueAttachment.CODEC);
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<SoulStatsAttachment>> SOUL_STATS = entity("soul_stats", SoulStatsAttachment::new, SoulStatsAttachment.CODEC);

@@ -84,11 +84,6 @@ public final class MxtKubeJsPlugin implements KubeJSPlugin {
         forward(FormationEvent.Tick.class, "formation");
         forward(TickEffects.class, "formation");
         forward(UpkeepFailed.class, "formation");
-        forward(LifeSpanEndEvent.Pre.class, "lifespanEnd");
-        forward(LifeSpanEndEvent.Post.class, "lifespanEnd");
-        // The explicit rebirth only: expiry has its own pair above, and a cancelled Pre there could not be honoured.
-        forward(LifeSpanRebirthEvent.Pre.class, "lifespanRebirth");
-        forward(LifeSpanRebirthEvent.Post.class, "lifespanRebirth");
         forward(EnterPre.class, "secretRealm");
         forward(EnterPost.class, "secretRealm");
         forward(Exit.class, "secretRealm");
@@ -128,7 +123,6 @@ public final class MxtKubeJsPlugin implements KubeJSPlugin {
         registry.add("MxtTechniques", new MxtKubeJsTechniqueBindings());
         registry.add("MxtProgression", new MxtKubeJsProgressionBindings());
         registry.add("MxtQuality", new MxtKubeJsQualityBindings());
-        registry.add("MxtLifespan", new MxtKubeJsLifespanBindings());
         registry.add("MxtSouls", new MxtKubeJsSoulBindings());
         registry.add("MxtTriggers", new MxtKubeJsTriggerBindings());
         registry.add("MxtLoot", new MxtKubeJsLootBindings());

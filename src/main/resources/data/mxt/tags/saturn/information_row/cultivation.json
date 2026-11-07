@@ -2,7 +2,7 @@
   "replace": false,
   "values": [
     "mxt:realm",
-    "mxt:lifespan",
+    {"id": "reincarnation:lifespan", "required": false},
     "mxt:cultivation_progress",
     "mxt:spirit_roots",
     "mxt:physiques",

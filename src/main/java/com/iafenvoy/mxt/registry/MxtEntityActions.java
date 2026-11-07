@@ -2,15 +2,12 @@ package com.iafenvoy.mxt.registry;
 
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.data.action.builtin.entity.*;
-import com.iafenvoy.mxt.runtime.cultivation.LifeSpanService;
 import com.iafenvoy.saturn.data.action.EntityAction;
 import com.iafenvoy.saturn.registry.SaturnRegistries;
 import com.mojang.serialization.MapCodec;
-import net.minecraft.world.entity.LivingEntity;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
-import static com.iafenvoy.saturn.data.action.SimpleActions.createEntity;
 
 @SuppressWarnings("unused")
 public final class MxtEntityActions {
@@ -30,13 +27,7 @@ public final class MxtEntityActions {
     public static final DeferredHolder<MapCodec<? extends EntityAction>, MapCodec<SpawnSwordAuraAction>> SPAWN_SWORD_AURA = REGISTRY.register("spawn_sword_aura", () -> SpawnSwordAuraAction.CODEC);
     public static final DeferredHolder<MapCodec<? extends EntityAction>, MapCodec<ExplodeAction>> EXPLODE = REGISTRY.register("explode", () -> ExplodeAction.CODEC);
     public static final DeferredHolder<MapCodec<? extends EntityAction>, MapCodec<SpawnLightningAction>> SPAWN_LIGHTNING = REGISTRY.register("spawn_lightning", () -> SpawnLightningAction.CODEC);
-    public static final DeferredHolder<MapCodec<? extends EntityAction>, MapCodec<ModifyLifespanAction>> MODIFY_LIFESPAN = REGISTRY.register("modify_lifespan", () -> ModifyLifespanAction.CODEC);
     public static final DeferredHolder<MapCodec<? extends EntityAction>, MapCodec<ModifyPillToxicityAction>> MODIFY_PILL_TOXICITY = REGISTRY.register("modify_pill_toxicity", () -> ModifyPillToxicityAction.CODEC);
-    // A pack's own reincarnation pill, trial or curse ends here instead of waiting for a life to run out; the reset
-    // list, the config switches and any listener's veto are the ones the command and the script entry use.
-    public static final DeferredHolder<MapCodec<? extends EntityAction>, MapCodec<? extends EntityAction>> REINCARNATE = REGISTRY.register("reincarnate", () -> createEntity(ctx -> {
-        if (ctx.entity() instanceof LivingEntity living) LifeSpanService.reincarnate(living);
-    }));
     // The data pack's own way in and out of cultivation: the only other entry point is the player's key.
     public static final DeferredHolder<MapCodec<? extends EntityAction>, MapCodec<StartCultivatingAction>> CULTIVATE = REGISTRY.register("cultivate", () -> StartCultivatingAction.CODEC);
     public static final DeferredHolder<MapCodec<? extends EntityAction>, MapCodec<StopCultivatingAction>> STOP_CULTIVATING = REGISTRY.register("stop_cultivating", () -> StopCultivatingAction.CODEC);

@@ -34,7 +34,7 @@ public final class MxtRenderers {
     @SubscribeEvent
     public static void registerRenderers(RegisterRenderers event) {
         event.registerEntityRenderer(MxtEntityTypes.FLYING_SWORD.get(), FlyingSwordRenderer::new);
-        event.registerEntityRenderer(MxtEntityTypes.SOUL.get(), NoopRenderer::new);
+        event.registerEntityRenderer(MxtEntityTypes.SOUL.get(), SoulRenderer::new);
         event.registerEntityRenderer(MxtEntityTypes.SPIRIT_BURST.get(), NoopRenderer::new);
         // A thrown carrier is drawn as the item itself, turning over in flight at its own random rate.
         event.registerEntityRenderer(MxtEntityTypes.TALISMAN_PROJECTILE.get(), TalismanProjectileRenderer::new);

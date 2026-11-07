@@ -19,6 +19,7 @@ import com.iafenvoy.mxt.probe.item.JadeSlipProbes;
 import com.iafenvoy.mxt.probe.item.QualityProbes;
 import com.iafenvoy.mxt.probe.item.WeaponBindingProbes;
 import com.iafenvoy.mxt.probe.lifespan.LifespanProbes;
+import com.iafenvoy.mxt.probe.lifespan.ReincarnationOptionalProbes;
 import com.iafenvoy.mxt.probe.talisman.StationProbes;
 import com.iafenvoy.mxt.probe.talisman.TalismanProbes;
 import com.iafenvoy.mxt.probe.verify.*;
@@ -26,6 +27,7 @@ import com.iafenvoy.mxt.probe.world.RiftAnchorProbes;
 import com.iafenvoy.mxt.probe.world.RiftProbes;
 import com.iafenvoy.mxt.probe.world.SecretRealmProbes;
 import com.iafenvoy.mxt.probe.world.SecretRealmTravelProbes;
+import com.iafenvoy.mxt.probe.world.SoulProbes;
 import com.iafenvoy.mxt.testmod.MxtTestMod;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.Registries;
@@ -34,6 +36,7 @@ import net.minecraft.gametest.framework.TestData;
 import net.minecraft.gametest.framework.TestEnvironmentDefinition;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.block.Rotation;
+import net.neoforged.fml.ModList;
 import net.neoforged.neoforge.event.RegisterGameTestsEvent;
 import net.neoforged.neoforge.registries.RegisterEvent;
 
@@ -74,7 +77,7 @@ public final class ProbeTests {
             ItemUseCycleVerifyProbes::probes,
             QualityProbes::probes,
             WeaponBindingProbes::probes,
-            LifespanProbes::probes,
+            ReincarnationOptionalProbes::probes,
             StationProbes::probes,
             TalismanProbes::probes,
             AbilityCooldownVerifyProbes::probes,
@@ -109,6 +112,7 @@ public final class ProbeTests {
             TargetSelectorVerifyProbes::probes,
             WheelVerifyProbes::probes,
             RiftProbes::probes,
+            SoulProbes::probes,
             RiftAnchorProbes::probes,
             SecretRealmProbes::probes,
             SecretRealmTravelProbes::probes
@@ -120,6 +124,7 @@ public final class ProbeTests {
     public static List<Probe> all() {
         List<Probe> probes = new ArrayList<>();
         DOMAINS.forEach(domain -> probes.addAll(domain.get()));
+        if (ModList.get().isLoaded("reincarnation")) probes.addAll(LifespanProbes.probes());
         return List.copyOf(probes);
     }
 

@@ -144,9 +144,16 @@ configurations {
     runtimeClasspath.extendsFrom localRuntime
 }
 
+def reincarnationProperties = new Properties()
+file('../Reincarnation/gradle.properties').withInputStream { reincarnationProperties.load(it) }
+
 dependencies {
+    testModCompileOnly files("../Reincarnation/build/libs/reincarnation-" + reincarnationProperties.getProperty('mod_version') + ".jar")
+    if (!providers.gradleProperty('mxtWithoutReincarnation').isPresent()) {
+        localRuntime files("../Reincarnation/build/libs/reincarnation-" + reincarnationProperties.getProperty('mod_version') + ".jar")
+    }
     implementation "curse.maven:jupiter-1072905:8569832"
-    implementation "curse.maven:saturn-lib-1767455:9415373"
+    implementation "curse.maven:saturn-lib-1767455:9449659"
     implementation "com.sighs:ApricityUI-neoforge-26.1:${apricityui_version}"
 
     // exp4j is jarJar'd inside Saturn; only its types are needed here.

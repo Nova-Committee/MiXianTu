@@ -26,6 +26,7 @@ import static net.minecraft.commands.Commands.literal;
  */
 public final class MxtCommand {
     public static void attach(CommandBuildContext context, LiteralArgumentBuilder<CommandSourceStack> root) {
+        root.then(SoulCommand.build());
         root.then(literal("registries").executes(ctx -> listRegistries(ctx.getSource())))
                 .then(literal("attachment").then(literal("status").executes(ctx -> attachmentStatus(ctx.getSource()))));
     }

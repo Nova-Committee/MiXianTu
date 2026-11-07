@@ -36,7 +36,7 @@ public record RealmStage(Holder<Aura> aura, NumberProvider auraShareWeight,
                          EntityCondition cultivateCondition, Optional<Holder<RealmStage>> nextRealm,
                          NumberProvider breakthroughExp, NumberProvider maxExperience, int minorStages,
                          CultivateConditions breakthrough, boolean autoBreakthrough,
-                         List<AttributeEntry> passiveModifiers, Optional<NumberProvider> lifespan,
+                         List<AttributeEntry> passiveModifiers,
                          List<Cost> breakthroughCosts,
                          List<Either<Holder<Ability>, TagKey<Ability>>> abilityRequirements,
                          List<MinorStageAbilities> minorStageAbilities, Optional<Holder<Tribulation>> tribulation,
@@ -58,11 +58,7 @@ public record RealmStage(Holder<Aura> aura, NumberProvider auraShareWeight,
             Codec.INT.optionalFieldOf("minor_stages", 0).forGetter(RealmStage::minorStages),
             CultivateConditions.CODEC.optionalFieldOf("breakthrough", CultivateConditions.EMPTY).forGetter(RealmStage::breakthrough),
             Codec.BOOL.optionalFieldOf("auto_breakthrough", false).forGetter(RealmStage::autoBreakthrough),
-            // Sixteen components; three pairs keep the group at sixteen.
-            MiscCodecs.pair(
-                            AttributeEntry.CODEC.listOf().optionalFieldOf("passive_modifiers", List.of()),
-                            NumberProvider.CODEC.optionalFieldOf("lifespan"))
-                    .forGetter(stage -> Pair.of(stage.passiveModifiers(), stage.lifespan())),
+            AttributeEntry.CODEC.listOf().optionalFieldOf("passive_modifiers", List.of()).forGetter(RealmStage::passiveModifiers),
             Cost.LIST_CODEC.optionalFieldOf("costs", List.of()).forGetter(RealmStage::breakthroughCosts),
             MiscCodecs.pair(
                             RegistryCodecs.holderOrTagList(SaturnResourceKeys.ABILITY).optionalFieldOf("ability_requirements", List.of()),
@@ -80,7 +76,7 @@ public record RealmStage(Holder<Aura> aura, NumberProvider auraShareWeight,
                 maxExperience, minorStages, breakthrough, autoBreakthrough, passive, breakthroughCosts,
                 abilityRequirements, tribulation, actions) -> new RealmStage(aura,
             auraShareWeight, cultivateCondition, nextRealm, breakthroughExp, maxExperience, minorStages, breakthrough,
-            autoBreakthrough, passive.getFirst(), passive.getSecond(), breakthroughCosts,
+            autoBreakthrough, passive, breakthroughCosts,
             abilityRequirements.getFirst(), abilityRequirements.getSecond(),
             tribulation.getFirst(), tribulation.getSecond(), actions.getFirst(), actions.getSecond())));
 
@@ -100,11 +96,6 @@ public record RealmStage(Holder<Aura> aura, NumberProvider auraShareWeight,
                 double value1
         ) && value > value1)
             throw new IllegalArgumentException("Realm breakthrough minimum experience cannot exceed maximum experience");
-        // Lifespan is only ever added, so a negative stage would silently shorten a life; a formula is judged at
-        // the breakthrough instead.
-        if (lifespan.isPresent() && lifespan.get() instanceof Constant(double value)
-                && (!Double.isFinite(value) || value < 0.0D))
-            throw new IllegalArgumentException("Realm stage lifespan must be finite and non-negative");
         if (minorStages < 0 || minorStages > MAX_MINOR_STAGES)
             throw new IllegalArgumentException("Realm minor_stages must be between 0 and " + MAX_MINOR_STAGES
                     + ": " + minorStages);

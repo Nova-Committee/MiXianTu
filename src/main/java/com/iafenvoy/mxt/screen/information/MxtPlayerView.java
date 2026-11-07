@@ -5,7 +5,6 @@ import com.iafenvoy.mxt.attachment.CurseHolderAttachment;
 import com.iafenvoy.mxt.attachment.CurseHolderAttachment.State;
 import com.iafenvoy.mxt.attachment.SpiritIdentityAttachment;
 import com.iafenvoy.mxt.attachment.TechniqueAttachment;
-import com.iafenvoy.mxt.config.MxtServerConfig;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.cultivation.Physique;
 import com.iafenvoy.mxt.data.cultivation.RealmStage;
@@ -16,7 +15,6 @@ import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService.BreakthroughStatus;
-import com.iafenvoy.mxt.runtime.cultivation.LifeSpanService;
 import com.iafenvoy.mxt.runtime.item.QualityService;
 import com.iafenvoy.saturn.data.information.InformationRow;
 import com.iafenvoy.saturn.runtime.resource.ResourceService;
@@ -121,13 +119,6 @@ public final class MxtPlayerView {
         if (!values.isEmpty())
             rows.put(MxtPlayerInformation.PROGRESS, new Row(values, joined(notes),
                     ready ? InformationRow.Tone.POSITIVE : InformationRow.Tone.NORMAL));
-    }
-
-    static void lifespan(long remaining, long total, Map<String, Row> rows) {
-        MxtServerConfig.Lifespan settings = MxtServerConfig.INSTANCE.lifespan;
-        if (!settings.enabled.getValue()) return;
-        rows.put(MxtPlayerInformation.LIFESPAN, new Row(List.of(LifeSpanService.display(remaining, total,
-                settings.ticksPerYear.getValue())), Optional.empty(), InformationRow.Tone.NORMAL));
     }
 
     // A root is listed with the element it is bound to, because its own name does not say what it cultivates.
@@ -261,7 +252,6 @@ public final class MxtPlayerView {
         Map<String, Row> rows = new LinkedHashMap<>();
         CultivationAttachment cultivation = player.getExistingData(MxtAttachments.CULTIVATION).orElse(null);
         realm(cultivation, player, rows);
-        lifespan(LifeSpanService.remaining(player), LifeSpanService.total(player), rows);
         progress(cultivation, player, rows);
         SpiritIdentityAttachment identity = player.getExistingData(MxtAttachments.SPIRIT_IDENTITY).orElse(null);
         spiritRoots(identity, rows);

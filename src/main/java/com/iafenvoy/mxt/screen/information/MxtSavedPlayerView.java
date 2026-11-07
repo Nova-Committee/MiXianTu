@@ -1,8 +1,10 @@
 package com.iafenvoy.mxt.screen.information;
 
-import com.iafenvoy.mxt.attachment.*;
+import com.iafenvoy.mxt.attachment.CultivationAttachment;
+import com.iafenvoy.mxt.attachment.CurseHolderAttachment;
+import com.iafenvoy.mxt.attachment.SpiritIdentityAttachment;
+import com.iafenvoy.mxt.attachment.TechniqueAttachment;
 import com.iafenvoy.mxt.registry.MxtAttachments;
-import com.iafenvoy.mxt.runtime.cultivation.LifeSpanService;
 import com.iafenvoy.saturn.data.information.model.SavedPlayerViewContext;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.nbt.CompoundTag;
@@ -34,10 +36,8 @@ public final class MxtSavedPlayerView {
         CompoundTag attachments = context.player().getCompound(ATTACHMENTS).orElseGet(CompoundTag::new);
         RegistryOps<Tag> ops = context.registries().createSerializationContext(NbtOps.INSTANCE);
         CultivationAttachment cultivation = decode(attachments, MxtAttachments.CULTIVATION, CultivationAttachment.CODEC, ops);
-        LifespanAttachment lifespan = decode(attachments, MxtAttachments.LIFESPAN, LifespanAttachment.CODEC, ops);
         Map<String, MxtPlayerView.Row> rows = new LinkedHashMap<>();
         MxtPlayerView.realm(cultivation, null, rows);
-        MxtPlayerView.lifespan(lifespan == null ? LifeSpanService.UNACCOUNTED : lifespan.lifespanRemaining(), lifespan == null ? LifeSpanService.UNACCOUNTED : lifespan.lifespanTotal(), rows);
         MxtPlayerView.progress(cultivation, null, rows);
         SpiritIdentityAttachment identity = decode(attachments, MxtAttachments.SPIRIT_IDENTITY, SpiritIdentityAttachment.CODEC, ops);
         MxtPlayerView.spiritRoots(identity, rows);

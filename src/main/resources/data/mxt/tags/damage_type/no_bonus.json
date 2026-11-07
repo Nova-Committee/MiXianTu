@@ -2,6 +2,7 @@
   "replace": false,
   "values": [
     "minecraft:out_of_world",
-    "mxt:lifespan"
+    "mxt:lifespan",
+    {"id": "reincarnation:lifespan", "required": false}
   ]
 }

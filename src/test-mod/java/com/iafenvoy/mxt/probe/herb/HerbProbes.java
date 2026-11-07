@@ -1,6 +1,8 @@
 package com.iafenvoy.mxt.probe.herb;
 
+import com.iafenvoy.jupiter.config.entry.IntegerEntry;
 import com.iafenvoy.mxt.attachment.HerbChunkAttachment;
+import com.iafenvoy.mxt.config.MxtServerConfig;
 import com.iafenvoy.mxt.data.alchemy.SpiritHerb;
 import com.iafenvoy.mxt.probe.Probe;
 import com.iafenvoy.mxt.probe.ProbeContext;
@@ -48,10 +50,40 @@ public final class HerbProbes {
                 Probe.of("herb/find_block", HerbProbes::findBlock),
                 Probe.of("herb/placed_clock", HerbProbes::placedClock),
                 Probe.of("herb/wild_roll", HerbProbes::wildRoll),
-                Probe.of("herb/settle", HerbProbes::settle),
+                Probe.of("herb/settle", context -> context.after(20, () -> {
+                    settle(context);
+                    context.done();
+                })),
                 Probe.of("herb/stability", HerbProbes::stability),
                 Probe.of("herb/drops", HerbProbes::drops),
-                Probe.of("herb/unclaimed", HerbProbes::unclaimed));
+                Probe.of("herb/unclaimed", HerbProbes::unclaimed),
+                Probe.of("herb/catch_up_limit", HerbProbes::catchUpLimit));
+    }
+
+    private static void catchUpLimit(ProbeContext context) {
+        context.after(120, () -> {
+            IntegerEntry cap = MxtServerConfig.INSTANCE.alchemy.herbCatchUpTicks;
+            int oldCap = cap.getValue();
+            ServerLevel level = context.level();
+            BlockPos pos = context.at(SPOT);
+            try {
+                level.setBlockAndUpdate(pos, HerbTestBlocks.SOIL.get().defaultBlockState());
+                long start = level.getGameTime() - 100;
+                cap.setValue(20);
+                attachment(level, pos).set(pos, 0, start);
+                settle(level, pos);
+                context.expect("one-period herb cap", clock(level, pos), start + 20);
+                cap.setValue(40);
+                attachment(level, pos).set(pos, 0, start);
+                settle(level, pos);
+                context.expect("two-period herb cap", clock(level, pos), start + 40);
+            } finally {
+                cap.setValue(oldCap);
+                level.setBlockAndUpdate(pos, Blocks.AIR.defaultBlockState());
+                forget(level, pos);
+            }
+            context.done();
+        });
     }
 
     // A herb is identified by its block, and only its block.

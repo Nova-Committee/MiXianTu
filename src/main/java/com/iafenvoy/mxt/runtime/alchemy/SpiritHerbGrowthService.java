@@ -236,7 +236,7 @@ public final class SpiritHerbGrowthService {
     }
 
     private static long catchUpPeriods() {
-        return Math.max(PERIOD, MxtServerConfig.INSTANCE.lifespan.ticksPerYear.getValue()) / PERIOD;
+        return Math.max(PERIOD, MxtServerConfig.INSTANCE.alchemy.herbCatchUpTicks.getValue()) / PERIOD;
     }
 
     // The roll of one item entity, placed the way the block drop path places its own.

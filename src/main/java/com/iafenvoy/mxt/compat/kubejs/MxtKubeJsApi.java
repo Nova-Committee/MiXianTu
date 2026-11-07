@@ -652,37 +652,6 @@ public final class MxtKubeJsApi {
     }
 
     /**
-     * The lifespan ledger, read without creating it: {@code -1} means this body has no ledger at all.
-     */
-    public static long lifespanRemaining(Entity entity) {
-        return entity.level().isClientSide() ? -1L : LifeSpanService.remaining(entity);
-    }
-
-    public static long lifespanTotal(Entity entity) {
-        return entity.level().isClientSide() ? -1L : LifeSpanService.total(entity);
-    }
-
-    /**
-     * Extends or rewrites the ledger; a script cannot write a negative total. Both this and {@link #addLifespan}
-     * write while the lifespan system is switched off, because that switch decides whether time passes.
-     */
-    public static Result<Void> setLifespan(LivingEntity entity, long ticks) {
-        return LifeSpanService.set(entity, ticks);
-    }
-
-    public static Result<Void> addLifespan(LivingEntity entity, long ticks) {
-        return LifeSpanService.add(entity, ticks);
-    }
-
-    /**
-     * Runs the configured reincarnation reset now, the same one the expiry outcome runs. An explicit act, so it
-     * also runs while the lifespan system is switched off; a listener may cancel the rebirth event and refuse it.
-     */
-    public static Result<Void> reincarnateLifespan(LivingEntity entity) {
-        return LifeSpanService.reincarnate(entity);
-    }
-
-    /**
      * Publishes a server-authoritative custom trigger signal; finite numeric values are also added to the formula
      * context. The actor and level cannot be spoofed by the script.
      */

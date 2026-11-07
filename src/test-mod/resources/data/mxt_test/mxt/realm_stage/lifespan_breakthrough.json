@@ -1,0 +1,14 @@
+{
+  "neoforge:conditions": [
+    { "type": "neoforge:mod_loaded", "modid": "reincarnation" }
+  ],
+  "aura": "mxt_test:lifespan_breakthrough",
+  "breakthrough_exp": 100,
+  "max_experience": 100,
+  "costs": [{ "id": "mxt_test:spirit_power", "amount": 25 }],
+  "success_action": [
+    { "type": "mxt:apply_effect", "effect": "minecraft:regeneration", "duration_ticks": 100 },
+    { "type": "reincarnation:add_lifespan", "amount": 3000 },
+    { "type": "reincarnation:remove_lifespan", "amount": 600 }
+  ]
+}

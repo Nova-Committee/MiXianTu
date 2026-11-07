@@ -8,6 +8,7 @@ import com.iafenvoy.saturn.network.payload.OpenScreenS2CPayload;
 import com.iafenvoy.saturn.profiling.ProfilerFrame;
 import com.iafenvoy.mxt.util.ProfilerSubscriptions;
 import com.iafenvoy.saturn.profiling.ServerProfiling;
+import com.iafenvoy.saturn.screen.opener.OpenScreenData;
 import com.mojang.brigadier.tree.CommandNode;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
@@ -188,7 +189,7 @@ public final class ProfilerGuiVerifyProbes {
     // The library's open-screen payload is shared, so only the one carrying a profiler token counts as a grant.
     private static long grants(List<CustomPacketPayload> sent) {
         return sent.stream().filter(value -> value instanceof OpenScreenS2CPayload(
-                com.iafenvoy.saturn.screen.opener.OpenScreenData data
+                OpenScreenData data
         )
                 && data instanceof ProfilerOpenScreenData).count();
     }
@@ -197,7 +198,7 @@ public final class ProfilerGuiVerifyProbes {
     // that follow have to report that rather than throw out of the whole probe.
     private static UUID lastGrant(ProbeContext context, List<CustomPacketPayload> sent) {
         if (sent.isEmpty() || !(sent.getLast() instanceof OpenScreenS2CPayload(
-                com.iafenvoy.saturn.screen.opener.OpenScreenData data
+                OpenScreenData data
         ))
                 || !(data instanceof ProfilerOpenScreenData grant)) {
             context.fail("the GUI grant sent no open-screen payload carrying a profiler token");

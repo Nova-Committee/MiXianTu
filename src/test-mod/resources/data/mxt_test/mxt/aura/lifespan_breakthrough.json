@@ -1,0 +1,7 @@
+{
+  "neoforge:conditions": [
+    { "type": "neoforge:mod_loaded", "modid": "reincarnation" }
+  ],
+  "resource": "mxt_test:lifespan_breakthrough",
+  "first_realm": "mxt_test:lifespan_breakthrough"
+}

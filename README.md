@@ -99,13 +99,14 @@ datapacks or content packs; installing the mod alone does not give you a complet
 | Wheel and Character UI        |   ✅    | Abilities (artifact skills included) and spirit power share one wheel: the main wheel's twelve cells are yours to arrange, the pages behind it follow what you carry and the Beast Taming Bell in hand, and holding `R` uses the cell you point at.                                   |
 | Resources                     |   ✅    | Numeric resources such as cultivation progress and spirit power can be defined; they regenerate by rule, are consumed by abilities and cultivation, and are drawn as resource bars on the HUD.                                                                                        |
 | Aura                          |   ✅    | The world has different aura concentrations per dimension, biome and block, changing over time and with formations; players can query the concentration at their position and see the result through particles, fog and the HUD.                                                      |
-| Cultivation and Realms        |   ✅    | Players meditate to gather cultivation progress, faster where aura is dense, and break through to the next realm once the datapack requirements are met; realms and packs grant lifespan, and running out means death or rebirth as configured.                                       |
+| Cultivation and Realms        |   ✅    | Players meditate to gather cultivation progress, faster where aura is dense, and break through to the next realm once the datapack requirements are met; optional Reincarnation integration lets data packs configure breakthrough lifespan grants and expiry outcomes.                                       |
 | Elements                      |   ✅    | Defines elements and the overcoming and adaptation relations between them, read by spirit roots, aura and other gameplay.                                                                                                                                                             |
 | Spirit Roots and Physiques    |   ✅    | Spirit roots and physiques can be granted to players, affecting cultivation, ability strength or passive attributes; exclusions are defined by datapacks, and a held one can be switched off without being given up.                                                                  |
 | Techniques                    |   ✅    | Learning a cultivation technique grants active moves or passive bonuses, and exclusion tags stop certain techniques from being learned together; a manual is an item with the `mxt:technique` component, and the mod generates a technique book per technique.                        |
 | Abilities and Curses          |   ✅    | Abilities support costs, cooldowns, duration, targeting and event triggers, with customizable sword aura, meteor projectiles and light beam particles; curses attach to characters, trigger periodically and can be purified.                                                         |
 | Formations                    |   ✅    | Players build and activate formations; a formation keeps running by consuming resources, applies effects within its area and temporarily provides buffs/debuffs.                                                                                                                      |
 | Tribulations                  |   ✅    | A tribulation can be triggered on a realm breakthrough: it consumes a timeline of beats (an action, an idle wait, or a wait for a condition), gets harder with the realm and the local aura, and success or failure each run their own outcome.                                       |
+| Souls | 🚧 | Configurable souls on creature or player death preserve serialized state and display translucent apparitions; supports command creation, reclaiming and configurable expiry. |
 | Creature Profiles & Contracts |   🚧   | Creature profiles define a creature's strength, inner core and spawn action, and can declare a mastery ladder the beast climbs; players can contract a beast and order it to follow, wander, hold or come back with the Beast Taming Bell.                                            |
 | Secret Realms                 |   🚧   | Each entry opens an instance dimension on demand from a secret realm definition, with its own border, generation, structures and landing spot, claimable terrain, member and time limits, and enter/exit conditions. Includes planar portal editing, token summons and layout export. |
 | Spirit Crafting Table         |   ✅    | Crafting with a spirit crafting recipe at the Spirit Crafting Table costs aura in addition to materials, deducted when the result is taken out.                                                                                                                                       |
@@ -120,6 +121,8 @@ datapacks or content packs; installing the mod alone does not give you a complet
 | Curios Slots                  |   ✅    | Players have Curios slots for a back weapon, a belt item and four artifacts, rendered on the character and swappable with the main hand by keybind.                                                                                                                                   |
 | Friend and Foe Identification |   ✅    | Every player keeps a list of the players they treat as their own, for the session or saved with the world; other mods or scripts can answer the same question through a TriState event asked by player id.                                                                            |
 
+Reincarnation is optional. When installed, it provides lifespan, ageing, reincarnation and past-life queries, and data packs can configure lifespan changes through breakthrough success actions. Cultivation works without it. Reincarnation controls attachment retention through its tag; data clears by default. Herb catch-up has its own limit in the Alchemy settings.
+
 ## FAQ
 
 ### Why does nothing change in game after installing the mod?
@@ -129,8 +132,7 @@ recipes. You need a datapack or content pack (including content written with Kub
 
 ### What dependencies are required?
 
-Jupiter and ApricityUI are required dependencies needed manual installation, and every other required dependency is
-bundled inside the mod. KubeJS is only needed if you want to register content from scripts. JEI and Jade are optional
+Jupiter and ApricityUI must be installed separately. Other required dependencies are bundled inside the mod. Reincarnation is an optional lifespan and reincarnation integration; install its required dependencies when using it. KubeJS is only needed if you want to register content from scripts. JEI and Jade are optional
 compatibility mods, and the game works fine without them.
 
 ### Can I make my own content pack and distribute it?
