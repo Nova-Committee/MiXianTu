@@ -1,5 +1,6 @@
 package com.iafenvoy.mxt.runtime.formation;
 
+import com.iafenvoy.mxt.runtime.MxtSources;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.SetMultimap;
 import com.iafenvoy.mxt.data.formation.Formation;
@@ -53,7 +54,7 @@ final class FormationEntityActions {
     // sweep over players all ask it, so none of them can release a grant another one still owes.
     static void releaseIfUncovered(ServerLevel level, Entity entity, Identifier definition, @Nullable BlockPos leaving) {
         if (!coveredElsewhere(level, entity, definition, leaving))
-            FormationGrants.release(entity, Sources.formation(definition));
+            FormationGrants.release(entity, MxtSources.formation(definition));
     }
 
     // Releases everything the formation handed to the entities it was tracking, runs their leaving beat, then

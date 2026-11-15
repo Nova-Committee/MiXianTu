@@ -1,5 +1,6 @@
 package com.iafenvoy.mxt.runtime.alchemy;
 
+import com.iafenvoy.mxt.data.cost.context.CostSources;
 import com.iafenvoy.mxt.attachment.HerbChunkAttachment;
 import com.iafenvoy.mxt.config.MxtServerConfig;
 import com.iafenvoy.mxt.data.alchemy.SpiritHerb;
@@ -11,7 +12,6 @@ import com.iafenvoy.mxt.runtime.MxtProfilerSources;
 import com.iafenvoy.mxt.runtime.item.QualityService;
 import com.iafenvoy.mxt.runtime.world.AuraService;
 import com.iafenvoy.saturn.data.cost.CostPayment;
-import com.iafenvoy.saturn.data.cost.context.CostOrigins;
 import com.iafenvoy.saturn.profiling.ProfilerScope;
 import com.iafenvoy.saturn.profiling.ServerProfiling;
 import com.iafenvoy.saturn.util.MiscUtil;
@@ -202,7 +202,7 @@ public final class SpiritHerbGrowthService {
         FormulaContext formula = FormulaContext.of(level).with(SpiritHerbService.HERB_AGE, age);
         if (!growth.condition().test(level, pos, formula)) return age;
         double amount = SpiritHerbService.appliedGrowth(growth.growthRate(), formula, bonus);
-        CostPayment.pay(growth.costs(), AuraCostContexts.pool(null, level, pos, formula, CostOrigins.HERB_GROWTH));
+        CostPayment.pay(growth.costs(), AuraCostContexts.pool(null, level, pos, formula, CostSources.HERB_GROWTH));
         return Math.min(growth.maxAge(), age + amount);
     }
 

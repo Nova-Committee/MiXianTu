@@ -1,5 +1,6 @@
 package com.iafenvoy.mxt.runtime.talisman;
 
+import com.iafenvoy.mxt.data.cost.context.CostSources;
 import com.iafenvoy.mxt.api.UseItemAuraAccess;
 import com.iafenvoy.mxt.config.MxtServerConfig;
 import com.iafenvoy.mxt.data.aura.Aura;
@@ -22,7 +23,6 @@ import com.iafenvoy.saturn.data.cost.Cost;
 import com.iafenvoy.saturn.data.cost.CostPayment;
 import com.iafenvoy.saturn.data.cost.Debit;
 import com.iafenvoy.saturn.data.cost.context.CostContext;
-import com.iafenvoy.saturn.data.cost.context.CostOrigins;
 import com.iafenvoy.saturn.data.resource.Resource;
 import com.iafenvoy.saturn.profiling.ProfilerScope;
 import com.iafenvoy.saturn.profiling.ServerProfiling;
@@ -269,7 +269,7 @@ public final class TalismanService {
             // an aura comes out of the carrier's own store rather than from an account.
             List<Cost> holderCosts = written.value().costs().stream()
                     .filter(cost -> !(cost instanceof AuraCost)).toList();
-            CostContext costContext = CostContext.of(holder, context, CostOrigins.TALISMAN);
+            CostContext costContext = CostContext.of(holder, context, CostSources.TALISMAN);
             CostPayment payment = CostPayment.of(costContext);
             Optional<Failure> priced = payment.price(holderCosts);
             if (priced.isPresent()) {

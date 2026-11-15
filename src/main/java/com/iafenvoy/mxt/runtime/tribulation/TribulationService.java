@@ -52,6 +52,11 @@ public final class TribulationService {
                 AuraService.getPositionAura(entity.level(), entity.blockPosition()).rules().tribulationModify());
     }
 
+    public static double effectiveScale(Tribulation definition, FormulaContext context) {
+        return definition.difficultyScale().evaluate(context)
+                * Math.max(0.0D, 1.0D + context.value("aura_tribulation_modifier"));
+    }
+
     public static Result<Void> start(LivingEntity entity, TribulationAttachment data, Holder<Tribulation> tribulation, long gameTime, FormulaContext context) {
         try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.TRIBULATION)) {
             Tribulation definition = tribulation.value();
@@ -63,7 +68,7 @@ public final class TribulationService {
             // can be reported as a refusal instead of a failure halfway through a committed timeline.
             FormulaContext runContext = tribulationContext(entity, context);
             TimelineContext probe = new TimelineContext(entity, runContext, gameTime,
-                    definition.difficultyScale().evaluate(runContext), timeline.size(), new TimelineState(), new TimelineJump());
+                    effectiveScale(definition, runContext), timeline.size(), new TimelineState(), new TimelineJump());
             for (TimelineEntry entry : timeline) {
                 if (!entry.validate(probe)) return Result.failure(TribulationFailure.INVALID_ENTRY);
             }
@@ -106,7 +111,7 @@ public final class TribulationService {
             }
             Tribulation definition = tribulation.value();
             FormulaContext runContext = tribulationContext(entity, context);
-            double scale = definition.difficultyScale().evaluate(runContext);
+            double scale = effectiveScale(definition, runContext);
             // The head of the cursor is the beat being consumed. A beat that finishes moves on by one; a branch beat
             // leaves a target behind, which is the only thing that can send the run backwards.
             int consumed = 0;

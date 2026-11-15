@@ -1,5 +1,6 @@
 package com.iafenvoy.mxt.entity;
 
+import com.iafenvoy.mxt.runtime.MxtProfilerSources;
 import com.iafenvoy.mxt.data.talisman.Talisman;
 import com.iafenvoy.mxt.data.talisman.TalismanUse;
 import com.iafenvoy.mxt.registry.MxtEntityDataSerializers;
@@ -7,7 +8,6 @@ import com.iafenvoy.mxt.registry.MxtEntityTypes;
 import com.iafenvoy.mxt.registry.MxtItems;
 import com.iafenvoy.saturn.profiling.ProfilerScope;
 import com.iafenvoy.saturn.profiling.ServerProfiling;
-import com.iafenvoy.saturn.registry.SaturnProfilerSources;
 import com.iafenvoy.saturn.util.formula.FormulaContext;
 import net.minecraft.core.Holder;
 import net.minecraft.network.syncher.EntityDataAccessor;
@@ -71,7 +71,7 @@ public final class TalismanProjectileEntity extends ThrowableItemProjectile {
 
     @Override
     public void tick() {
-        try (ProfilerScope _ = ServerProfiling.scope(SaturnProfilerSources.ENTITY)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.ENTITY)) {
             super.tick();
             if (!this.level().isClientSide() && this.tickCount >= MAX_LIFETIME_TICKS) this.discard();
         }

@@ -1,5 +1,8 @@
 package com.iafenvoy.mxt.runtime.cultivation;
 
+import com.iafenvoy.mxt.data.trigger.MxtTriggerSignals;
+import com.iafenvoy.saturn.runtime.trigger.TriggerPublishing;
+import com.iafenvoy.mxt.data.cost.context.CostSources;
 import com.iafenvoy.mxt.attachment.CultivationAttachment;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.cultivation.CultivateConditions;
@@ -17,12 +20,10 @@ import com.iafenvoy.saturn.attachment.ResourceHolderAttachment;
 import com.iafenvoy.saturn.data.cost.CostPayment;
 import com.iafenvoy.saturn.data.cost.Debit;
 import com.iafenvoy.saturn.data.cost.context.CostContext;
-import com.iafenvoy.saturn.data.cost.context.CostOrigins;
 import com.iafenvoy.saturn.profiling.ProfilerScope;
 import com.iafenvoy.saturn.profiling.ServerProfiling;
 import com.iafenvoy.saturn.registry.SaturnAttachments;
 import com.iafenvoy.saturn.registry.SaturnResourceKeys;
-import com.iafenvoy.saturn.runtime.ability.AbilityEventBridge;
 import com.iafenvoy.saturn.runtime.resource.ResourceService;
 import com.iafenvoy.saturn.runtime.resulting.Failure;
 import com.iafenvoy.saturn.runtime.resulting.Failures;
@@ -100,7 +101,7 @@ public final class CultivationService {
                 // Sampled here so every tribulation phase is scaled by the current environment, not only the
                 // phase that starts at breakthrough.
                 target.tribulation().ifPresent(tribulation -> TribulationService.start(entity, entity.getData(MxtAttachments.TRIBULATION), tribulation, entity.level().getGameTime(), context));
-                AbilityEventBridge.onBreakthrough(entity, context);
+                TriggerPublishing.publish(MxtTriggerSignals.BREAKTHROUGH, entity, context.with("breakthrough", 1.0D));
                 // The new realm starts on its own first minor stage, which is itself an unlock threshold.
                 MinorStageService.refresh(entity, aura, resourceContext);
             } else target.failAction().execute(entity, context);
@@ -116,7 +117,7 @@ public final class CultivationService {
         double progress = spirit.cultivationProgress(aura);
         if (progress < minimum) return Result.failure(CultivationFailure.INSUFFICIENT_PROGRESS);
         if (!conditionsMet.getAsBoolean()) return Result.failure(Failures.CONDITIONS);
-        CostContext costContext = CostContext.of(entity, context, CostOrigins.BREAKTHROUGH);
+        CostContext costContext = CostContext.of(entity, context, CostSources.BREAKTHROUGH);
         CostPayment plan = CostPayment.of(costContext);
         Optional<Failure> refusal = plan.price(target.breakthroughCosts());
         if (refusal.isPresent()) return Result.failure(refusal.get(), null);

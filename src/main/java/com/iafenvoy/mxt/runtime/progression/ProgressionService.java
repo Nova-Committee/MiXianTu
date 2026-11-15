@@ -1,5 +1,6 @@
 package com.iafenvoy.mxt.runtime.progression;
 
+import com.iafenvoy.mxt.data.trigger.MxtTriggerSignals;
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.data.progression.Progression;
 import com.iafenvoy.mxt.data.progression.ProgressionConfig;
@@ -11,7 +12,6 @@ import com.iafenvoy.saturn.data.condition.AlwaysCondition;
 import com.iafenvoy.saturn.data.condition.EntityCondition;
 import com.iafenvoy.saturn.data.resource.Resource;
 import com.iafenvoy.saturn.data.trigger.TriggerContext;
-import com.iafenvoy.saturn.data.trigger.TriggerSignals;
 import com.iafenvoy.saturn.profiling.ProfilerScope;
 import com.iafenvoy.saturn.profiling.ServerProfiling;
 import com.iafenvoy.saturn.registry.SaturnAttachments;
@@ -125,7 +125,7 @@ public final class ProgressionService {
         TriggerContext triggerContext = new TriggerContext().actor(entity).level(entity.level()).formula(formula.with("level", rank));
         triggerContext.set("owner", owner.toString());
         triggerContext.set("level", (double) rank);
-        TriggerDispatcher.publish(TriggerSignals.PROGRESSION_LEVEL, triggerContext, entity.level().getGameTime());
+        TriggerDispatcher.publish(MxtTriggerSignals.PROGRESSION_LEVEL, triggerContext, entity.level().getGameTime());
     }
 
     /**

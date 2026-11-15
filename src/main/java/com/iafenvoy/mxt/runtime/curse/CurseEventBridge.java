@@ -94,7 +94,7 @@ public final class CurseEventBridge {
         }
         List<ApplyCurseAction> curios = new ArrayList<>();
         for (ItemStack stack : CuriosIntegration.equipped(entity)) curios.addAll(carried(stack));
-        if (!curios.isEmpty()) declared.put(Sources.CURIOS, curios);
+        if (!curios.isEmpty()) declared.put(Sources.EQUIPPED, curios);
         // Nothing is carried and there is nothing of ours to release: reading the attachment here would create
         // one on every living entity in the world for nothing.
         if (declared.isEmpty() && !entity.hasData(MxtAttachments.CURSE_HOLDER.get())) return;
@@ -125,7 +125,7 @@ public final class CurseEventBridge {
         // source counts as carried gear here even though the ability side treats it as part of the body: what this
         // asks is whether the source belongs to what is equipped right now.
         for (Identifier known : holder.sources().allSources()) {
-            if ((!Sources.isEquipment(known) && !known.equals(Sources.CURIOS)) || declared.containsKey(known)) continue;
+            if ((!Sources.isEquipment(known) && !known.equals(Sources.EQUIPPED)) || declared.containsKey(known)) continue;
             CurseService.reconcileSource(entity, known, List.of(), gameTime);
         }
     }

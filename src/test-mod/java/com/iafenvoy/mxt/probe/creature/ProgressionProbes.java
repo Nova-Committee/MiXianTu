@@ -1,4 +1,7 @@
 package com.iafenvoy.mxt.probe.creature;
+
+import com.iafenvoy.mxt.data.trigger.MxtTriggerSignals;
+import com.iafenvoy.mxt.runtime.MxtSources;
 import com.iafenvoy.saturn.registry.SaturnResourceKeys;
 import com.iafenvoy.saturn.registry.SaturnAttachments;
 import com.iafenvoy.saturn.runtime.Sources;
@@ -12,7 +15,6 @@ import com.iafenvoy.mxt.data.creature.ContractBehaviors;
 import com.iafenvoy.mxt.data.creature.ContractType;
 import com.iafenvoy.mxt.data.progression.Progression;
 import com.iafenvoy.saturn.data.resource.Resource;
-import com.iafenvoy.saturn.data.trigger.TriggerSignals;
 import com.iafenvoy.saturn.data.trigger.builtin.BuiltinTrigger;
 import com.iafenvoy.mxt.probe.Probe;
 import com.iafenvoy.mxt.probe.ProbeContext;
@@ -115,7 +117,7 @@ public final class ProgressionProbes {
         Holder<Ability> growthAbility = context.require(SaturnResourceKeys.ABILITY, ProbeDefinitions.PROGRESSION_GROWTH);
         Holder<Resource> growth = context.require(SaturnResourceKeys.RESOURCE, ProbeDefinitions.BEAST_GROWTH);
         // The id a creature's grants are written under: one category, so ending the bond can revoke exactly them.
-        Identifier grantSource = Sources.granted(Sources.Grant.CREATURE, ProbeDefinitions.PROBE_BEAST_PROFILE);
+        Identifier grantSource = Sources.granted(MxtSources.Grant.CREATURE, ProbeDefinitions.PROBE_BEAST_PROFILE);
         String identity = "progression_probe";
         List<Long> signals = new ArrayList<>();
         ProbeBeast beast = null;
@@ -123,7 +125,7 @@ public final class ProgressionProbes {
             beast = spawnProbeBeast(level, context.player().blockPosition().offset(4, 0, 0));
             spawned.add(beast);
             TriggerDispatcher.register(new TriggerSubscription(beast.getUUID(), "probe", identity,
-                    new BuiltinTrigger(TriggerSignals.PROGRESSION_LEVEL), signal -> true,
+                    new BuiltinTrigger(MxtTriggerSignals.PROGRESSION_LEVEL), signal -> true,
                     signal -> signals.add(signal.gameTime()), false));
             ResourceHolderAttachment resources = beast.getData(SaturnAttachments.RESOURCE_HOLDER);
             AbilityAttachment abilities = beast.getData(SaturnAttachments.ABILITY_HOLDER);
@@ -172,7 +174,7 @@ public final class ProgressionProbes {
             beast = spawnProbeBeast(level, context.player().blockPosition().offset(4, 0, 0));
             spawned.add(beast);
             TriggerDispatcher.register(new TriggerSubscription(beast.getUUID(), "probe", identity,
-                    new BuiltinTrigger(TriggerSignals.PROGRESSION_LEVEL), signal -> true,
+                    new BuiltinTrigger(MxtTriggerSignals.PROGRESSION_LEVEL), signal -> true,
                     signal -> signals.add(signal.gameTime()), false));
             ResourceHolderAttachment resources = beast.getData(SaturnAttachments.RESOURCE_HOLDER);
             // The reading leg reads a creature that already climbed once, so the promotion is the setup here.
@@ -218,7 +220,7 @@ public final class ProgressionProbes {
             beast = spawnProbeBeast(level, context.player().blockPosition().offset(4, 0, 0));
             spawned.add(beast);
             TriggerDispatcher.register(new TriggerSubscription(beast.getUUID(), "probe", identity,
-                    new BuiltinTrigger(TriggerSignals.PROGRESSION_LEVEL), signal -> true,
+                    new BuiltinTrigger(MxtTriggerSignals.PROGRESSION_LEVEL), signal -> true,
                     signal -> signals.add(signal.gameTime()), false));
             ResourceHolderAttachment resources = beast.getData(SaturnAttachments.RESOURCE_HOLDER);
             // The write is observed from the level a natural promotion reached, so that promotion is the setup.

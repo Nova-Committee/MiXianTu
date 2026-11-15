@@ -1369,5 +1369,9 @@
   "config.mxt.server.souls.lifetime_ticks": "灵魂体保留时间",
   "config.mxt.server.souls.lifetime_ticks.tooltip": "所有灵魂体的保留时间，单位为游戏刻，默认 6000（约 5 分钟）；0 为永久。区块卸载期间也计时，重新加载后检查清理；修改会作用于现有灵魂体。",
   "config.mxt.server.alchemy.herb_catch_up_ticks": "灵草单次补算上限（刻）",
-  "config.mxt.server.alchemy.herb_catch_up_ticks.tooltip": "限制灵草单次结算补算的游戏刻数，与寿元显示换算无关。"
+  "config.mxt.server.alchemy.herb_catch_up_ticks.tooltip": "限制灵草单次结算补算的游戏刻数，与寿元显示换算无关。",
+  "mxt.profiling.mxt.item": "物品",
+  "mxt.profiling.mxt.item.tooltip": "物品绑定、品质升降与丹药使用。",
+  "mxt.profiling.mxt.entity": "实体",
+  "mxt.profiling.mxt.entity.tooltip": "本模组自定义实体的每 tick 工作：剑气、符箓弹、爆裂、流星等。"
 }

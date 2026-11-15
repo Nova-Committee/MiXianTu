@@ -1,5 +1,6 @@
 package com.iafenvoy.mxt.data.formation.builtin;
 
+import com.iafenvoy.mxt.runtime.MxtSources;
 import com.iafenvoy.mxt.data.formation.FormationActionType;
 import com.iafenvoy.mxt.data.formation.FormationIntervals;
 import com.iafenvoy.mxt.runtime.formation.FormationActionContext;
@@ -48,7 +49,7 @@ public record BuffFormationAction(List<Holder<Ability>> abilities, TargetMode ta
     public void interval(FormationActionContext context) {
         Entity entity = context.entity();
         if (entity == null) return;
-        Identifier source = Sources.formation(context.carrier().id());
+        Identifier source = MxtSources.formation(context.carrier().id());
         if (!targets(this.target, entity, context.carrier().owners())) {
             // An entity the module no longer has anything for must not keep the formation's grant, or losing
             // friend status while standing still leaves the gift behind. Releasing an unused source is cheap.

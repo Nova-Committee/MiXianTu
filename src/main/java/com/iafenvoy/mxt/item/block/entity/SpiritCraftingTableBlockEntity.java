@@ -1,5 +1,6 @@
 package com.iafenvoy.mxt.item.block.entity;
 
+import com.iafenvoy.mxt.data.cost.context.CostSources;
 import com.iafenvoy.mxt.api.AuraAccess;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.cost.Costs;
@@ -14,7 +15,6 @@ import com.iafenvoy.mxt.screen.menu.SpiritCraftingMenu;
 import com.iafenvoy.saturn.data.cost.Cost;
 import com.iafenvoy.saturn.data.cost.CostPayment;
 import com.iafenvoy.saturn.data.cost.context.CostContext;
-import com.iafenvoy.saturn.data.cost.context.CostOrigins;
 import com.iafenvoy.saturn.profiling.ProfilerScope;
 import com.iafenvoy.saturn.profiling.ServerProfiling;
 import com.iafenvoy.saturn.runtime.resulting.Result;
@@ -108,7 +108,7 @@ public final class SpiritCraftingTableBlockEntity extends BlockEntity implements
         if (!this.hasAura(costs) || (!stored.isEmpty() && (!ItemStack.isSameItemSameComponents(stored, produced)
                 || stored.getCount() + produced.getCount() > max))) return;
         // Paid through the shared transaction, so a recipe's aura price behaves like every other cost.
-        CostContext bankContext = AuraCostContexts.bank(this, null, FormulaContext.of(this.level), CostOrigins.RECIPE);
+        CostContext bankContext = AuraCostContexts.bank(this, null, FormulaContext.of(this.level), CostSources.RECIPE);
         if (CostPayment.pay(recipe.aura(), bankContext) instanceof Result.FailureResult<?>) return;
         for (int index = 0; index < this.grid.getContainerSize(); index++) this.grid.getItem(index).shrink(1);
         if (stored.isEmpty()) this.result.setItem(0, produced);
@@ -119,7 +119,7 @@ public final class SpiritCraftingTableBlockEntity extends BlockEntity implements
 
     private Map<Holder<Aura>, Double> costs(List<Cost> aura) {
         Map<Holder<Aura>, Double> amounts = Costs.auras(aura,
-                CostContext.account(null, null, FormulaContext.of(this.level), CostOrigins.RECIPE));
+                CostContext.account(null, null, FormulaContext.of(this.level), CostSources.RECIPE));
         if (amounts == null) return Map.of();
         return Collections.unmodifiableMap(new LinkedHashMap<>(amounts));
     }

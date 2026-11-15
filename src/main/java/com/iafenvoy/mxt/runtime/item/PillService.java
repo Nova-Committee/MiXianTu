@@ -1,5 +1,6 @@
 package com.iafenvoy.mxt.runtime.item;
 
+import com.iafenvoy.mxt.runtime.MxtProfilerSources;
 import com.iafenvoy.mxt.attachment.PillToxicityAttachment;
 import com.iafenvoy.mxt.attachment.PillUsageAttachment;
 import com.iafenvoy.mxt.config.MxtServerConfig;
@@ -9,7 +10,6 @@ import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.item.ItemBindingService.PillResolution;
 import com.iafenvoy.saturn.profiling.ProfilerScope;
 import com.iafenvoy.saturn.profiling.ServerProfiling;
-import com.iafenvoy.saturn.registry.SaturnProfilerSources;
 import com.iafenvoy.saturn.runtime.resulting.Failure;
 import com.iafenvoy.saturn.runtime.resulting.Failures;
 import com.iafenvoy.saturn.util.MiscUtil;
@@ -94,7 +94,7 @@ public final class PillService {
     }
 
     public static Result apply(LivingEntity entity, Pill definition) {
-        try (ProfilerScope _ = ServerProfiling.scope(SaturnProfilerSources.ITEM)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.ITEM)) {
             // Toxicity and the overdose action are state: the settlement is the server's, and the caller already is.
             if (entity.level().isClientSide()) return Result.consumed(0.0D);
             FormulaContext context = FormulaContext.of(entity);
@@ -139,7 +139,7 @@ public final class PillService {
 
     @SubscribeEvent
     public static void onEntityTick(EntityTickEvent.Post event) {
-        try (ProfilerScope _ = ServerProfiling.scope(SaturnProfilerSources.ITEM)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.ITEM)) {
             if (!(event.getEntity() instanceof LivingEntity entity) || entity.level().isClientSide()) return;
             double rate = MiscUtil.positive(MxtServerConfig.INSTANCE.alchemy.toxicityDecayPerSecond.getValue());
             if (rate <= 0.0D) return;

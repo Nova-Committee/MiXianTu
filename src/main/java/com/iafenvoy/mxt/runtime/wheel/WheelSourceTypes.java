@@ -185,7 +185,7 @@ public final class WheelSourceTypes {
 
         @Override
         public List<Identifier> grantSources(LivingEntity entity) {
-            return List.of(Sources.CURIOS);
+            return List.of(Sources.EQUIPPED);
         }
 
         @Override

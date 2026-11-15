@@ -1,5 +1,6 @@
 package com.iafenvoy.mxt.runtime.creature;
 
+import com.iafenvoy.mxt.data.cost.context.CostSources;
 import com.iafenvoy.mxt.api.Contractable;
 import com.iafenvoy.mxt.attachment.ContractAttachment;
 import com.iafenvoy.mxt.data.creature.ContractContext;
@@ -12,7 +13,6 @@ import com.iafenvoy.mxt.runtime.MxtProfilerSources;
 import com.iafenvoy.mxt.runtime.resulting.failures.ContractFailure;
 import com.iafenvoy.saturn.data.cost.CostPayment;
 import com.iafenvoy.saturn.data.cost.context.CostContext;
-import com.iafenvoy.saturn.data.cost.context.CostOrigins;
 import com.iafenvoy.saturn.profiling.ProfilerScope;
 import com.iafenvoy.saturn.profiling.ServerProfiling;
 import com.iafenvoy.saturn.runtime.ability.AbilityGrantService;
@@ -68,7 +68,7 @@ public final class ContractService {
             if (NeoForge.EVENT_BUS.post(new Pre(data, Optional.of(type), owner.getUUID(), Action.BIND)).isCanceled())
                 return Result.failure(Failures.CANCELLED);
             if (!force && !definition.costs().isEmpty() && CostPayment.pay(definition.costs(),
-                    CostContext.of(owner, CostOrigins.CONTRACT).withFormula(formula)) instanceof Result.FailureResult<?>)
+                    CostContext.of(owner, CostSources.CONTRACT).withFormula(formula)) instanceof Result.FailureResult<?>)
                 return Result.failure(Failures.INSUFFICIENT_COST);
             data.bind(type, owner.level().getGameTime());
             contractable.setContractOwner(owner);

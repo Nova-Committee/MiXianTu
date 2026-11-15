@@ -9,6 +9,8 @@ import com.iafenvoy.saturn.profiling.ProfilerSource;
  * already claims is not claimed twice.
  */
 public final class MxtProfilerSources {
+    public static final ProfilerSource ITEM = ProfilerSource.register(MiXianTu.MOD_ID, "item");
+    public static final ProfilerSource ENTITY = ProfilerSource.register(MiXianTu.MOD_ID, "entity");
     public static final ProfilerSource AURA = ProfilerSource.register(MiXianTu.MOD_ID, "aura");
     public static final ProfilerSource AURA_QUERY = ProfilerSource.register(MiXianTu.MOD_ID, "aura/query", AURA);
     public static final ProfilerSource AURA_BLOCK_CACHE = ProfilerSource.register(MiXianTu.MOD_ID, "aura/block_cache", AURA);

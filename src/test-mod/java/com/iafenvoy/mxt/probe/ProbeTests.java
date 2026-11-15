@@ -81,6 +81,7 @@ public final class ProbeTests {
             StationProbes::probes,
             TalismanProbes::probes,
             AbilityCooldownVerifyProbes::probes,
+            SaturnBoundaryProbes::probes,
             AuraVerifyProbes::probes,
             AuraHudVerifyProbes::probes,
             BreakthroughPaymentVerifyProbes::probes,

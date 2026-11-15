@@ -1,6 +1,7 @@
 package com.iafenvoy.mxt.runtime;
 
 import com.iafenvoy.mxt.attachment.SpiritIdentityAttachment;
+import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.compat.CuriosIntegration;
 import com.iafenvoy.mxt.data.ability.AbilityAffinity;
 import com.iafenvoy.mxt.registry.MxtAttachments;
@@ -15,6 +16,7 @@ import com.iafenvoy.saturn.data.ability.Ability;
 import com.iafenvoy.saturn.util.HolderHelper;
 import com.iafenvoy.saturn.util.formula.FormulaContext;
 import net.minecraft.core.Holder;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
@@ -34,7 +36,7 @@ public final class MxtAbilityHooks implements AbilityHooks {
     }
 
     public static void install() {
-        AbilityHooks.set(INSTANCE);
+        AbilityHooks.register(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "abilities"), INSTANCE);
     }
 
     /**

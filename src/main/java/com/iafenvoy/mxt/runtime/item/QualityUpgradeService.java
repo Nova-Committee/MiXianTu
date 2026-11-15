@@ -1,15 +1,15 @@
 package com.iafenvoy.mxt.runtime.item;
 
+import com.iafenvoy.mxt.runtime.MxtProfilerSources;
+import com.iafenvoy.mxt.data.cost.context.CostSources;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.data.quality.QualityLadders;
 import com.iafenvoy.mxt.runtime.resulting.failures.QualityFailure;
 import com.iafenvoy.saturn.data.cost.CostPayment;
 import com.iafenvoy.saturn.data.cost.Debit;
 import com.iafenvoy.saturn.data.cost.context.CostContext;
-import com.iafenvoy.saturn.data.cost.context.CostOrigins;
 import com.iafenvoy.saturn.profiling.ProfilerScope;
 import com.iafenvoy.saturn.profiling.ServerProfiling;
-import com.iafenvoy.saturn.registry.SaturnProfilerSources;
 import com.iafenvoy.saturn.registry.cache.ChainCache;
 import com.iafenvoy.saturn.runtime.resulting.Failure;
 import com.iafenvoy.saturn.runtime.resulting.Failures;
@@ -36,7 +36,7 @@ public final class QualityUpgradeService {
     }
 
     public static Result<QualityUpgrade> upgrade(LivingEntity actor, ItemStack stack) {
-        try (ProfilerScope _ = ServerProfiling.scope(SaturnProfilerSources.ITEM)) {
+        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.ITEM)) {
             if (actor.level().isClientSide()) return Result.failure(Failures.SERVER_ONLY);
             if (stack.isEmpty()) return Result.failure(QualityFailure.EMPTY);
             Provider access = actor.level().registryAccess();
@@ -51,7 +51,7 @@ public final class QualityUpgradeService {
             ItemQuality step = next.value();
             FormulaContext formula = FormulaContext.of(actor);
             if (!step.upgradeCondition().test(actor, formula)) return Result.failure(Failures.CONDITION_FAILED);
-            CostContext context = CostContext.of(actor, formula, CostOrigins.QUALITY_UPGRADE);
+            CostContext context = CostContext.of(actor, formula, CostSources.QUALITY_UPGRADE);
             Result<List<Debit>> payment = CostPayment.pay(step.upgradeCosts(), context);
             // The tier is written only after the price is actually paid, so a refusal leaves the stack untouched.
             if (payment instanceof Result.FailureResult<List<Debit>>(Failure failure))

@@ -1,5 +1,6 @@
 package com.iafenvoy.mxt.runtime.cultivation;
 
+import com.iafenvoy.mxt.data.cost.context.CostSources;
 import com.iafenvoy.mxt.attachment.CultivationAttachment;
 import com.iafenvoy.mxt.config.MxtServerConfig;
 import com.iafenvoy.mxt.data.aura.Aura;
@@ -25,7 +26,6 @@ import com.iafenvoy.saturn.data.cost.Cost;
 import com.iafenvoy.saturn.data.cost.CostPayment;
 import com.iafenvoy.saturn.data.cost.Debit;
 import com.iafenvoy.saturn.data.cost.context.CostContext;
-import com.iafenvoy.saturn.data.cost.context.CostOrigins;
 import com.iafenvoy.saturn.data.resource.Resource;
 import com.iafenvoy.saturn.profiling.ProfilerScope;
 import com.iafenvoy.saturn.profiling.ServerProfiling;
@@ -121,8 +121,8 @@ public final class CultivationMethodService {
             // without a settlement.
             List<Cost> groundCosts = definition.costs().stream().filter(cost -> cost instanceof AuraCost).toList();
             List<Cost> bodyCosts = definition.costs().stream().filter(cost -> !(cost instanceof AuraCost)).toList();
-            CostContext auraContext = AuraCostContexts.pool(entity, entity.level(), entity.blockPosition(), context, CostOrigins.CULTIVATION);
-            CostContext costContext = CostContext.of(entity, context, CostOrigins.CULTIVATION);
+            CostContext auraContext = AuraCostContexts.pool(entity, entity.level(), entity.blockPosition(), context, CostSources.CULTIVATION);
+            CostContext costContext = CostContext.of(entity, context, CostSources.CULTIVATION);
             CostPayment bill = CostPayment.of(costContext);
             // Whatever size is available is not asked here: this tick's share is decided below, and the payment is what
             // checks the pool against the amount actually spent, so both halves are only priced.

@@ -1,5 +1,6 @@
 package com.iafenvoy.mxt.runtime.resource;
 
+import com.iafenvoy.mxt.runtime.MxtTickStages;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
@@ -11,7 +12,6 @@ import com.iafenvoy.saturn.profiling.ProfilerScope;
 import com.iafenvoy.saturn.profiling.ServerProfiling;
 import com.iafenvoy.saturn.registry.SaturnAttachments;
 import com.iafenvoy.saturn.registry.SaturnProfilerSources;
-import com.iafenvoy.saturn.runtime.EntityTickStages;
 import com.iafenvoy.saturn.runtime.resource.ResourceService;
 import com.iafenvoy.saturn.util.formula.FormulaContext;
 import net.minecraft.core.Holder;
@@ -31,7 +31,7 @@ public final class ResourceRegenStage {
 
     @SubscribeEvent
     public static void onCollectStages(CollectTickStagesEvent event) {
-        event.add("resource_regen", EntityTickStages.AURA_REGEN, ResourceRegenStage::tick);
+        event.add("resource_regen", MxtTickStages.RESOURCE_REGEN, ResourceRegenStage::tick);
     }
 
     private static void tick(LivingEntity entity) {

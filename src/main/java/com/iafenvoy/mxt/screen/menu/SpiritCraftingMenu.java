@@ -1,5 +1,6 @@
 package com.iafenvoy.mxt.screen.menu;
 
+import com.iafenvoy.mxt.data.cost.context.CostSources;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.cost.Costs;
 import com.iafenvoy.mxt.item.block.entity.SpiritCraftingTableBlockEntity;
@@ -14,7 +15,6 @@ import com.iafenvoy.mxt.runtime.MxtProfilerSources;
 import com.iafenvoy.mxt.screen.aui.AuiPages;
 import com.iafenvoy.saturn.data.cost.Cost;
 import com.iafenvoy.saturn.data.cost.context.CostContext;
-import com.iafenvoy.saturn.data.cost.context.CostOrigins;
 import com.iafenvoy.saturn.profiling.ProfilerScope;
 import com.iafenvoy.saturn.profiling.ServerProfiling;
 import com.iafenvoy.saturn.util.formula.FormulaContext;
@@ -163,7 +163,7 @@ public final class SpiritCraftingMenu extends ApricityContainerMenu {
 
     private Map<Holder<Aura>, Double> costs(List<Cost> aura) {
         Map<Holder<Aura>, Double> amounts = Costs.auras(aura,
-                CostContext.of(this.player, FormulaContext.of(this.player), CostOrigins.RECIPE));
+                CostContext.of(this.player, FormulaContext.of(this.player), CostSources.RECIPE));
         if (amounts == null) return Map.of();
         return Collections.unmodifiableMap(new LinkedHashMap<>(amounts));
     }

@@ -1,10 +1,10 @@
 package com.iafenvoy.mxt.runtime.progression;
 
+import com.iafenvoy.mxt.runtime.MxtTickStages;
 import com.iafenvoy.mxt.runtime.MxtProfilerSources;
 import com.iafenvoy.saturn.event.CollectTickStagesEvent;
 import com.iafenvoy.saturn.profiling.ProfilerScope;
 import com.iafenvoy.saturn.profiling.ServerProfiling;
-import com.iafenvoy.saturn.runtime.EntityTickStages;
 import com.iafenvoy.saturn.runtime.ability.AbilityGrantService;
 import net.minecraft.world.entity.LivingEntity;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -23,7 +23,7 @@ public final class ProgressionTickStage {
 
     @SubscribeEvent
     public static void onCollectStages(CollectTickStagesEvent event) {
-        event.add("progression", EntityTickStages.PROGRESSION, ProgressionTickStage::tick);
+        event.add("progression", MxtTickStages.PROGRESSION, ProgressionTickStage::tick);
     }
 
     private static void tick(LivingEntity entity) {

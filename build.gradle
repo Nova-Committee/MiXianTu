@@ -144,16 +144,9 @@ configurations {
     runtimeClasspath.extendsFrom localRuntime
 }
 
-def reincarnationProperties = new Properties()
-file('../Reincarnation/gradle.properties').withInputStream { reincarnationProperties.load(it) }
-
 dependencies {
-    testModCompileOnly files("../Reincarnation/build/libs/reincarnation-" + reincarnationProperties.getProperty('mod_version') + ".jar")
-    if (!providers.gradleProperty('mxtWithoutReincarnation').isPresent()) {
-        localRuntime files("../Reincarnation/build/libs/reincarnation-" + reincarnationProperties.getProperty('mod_version') + ".jar")
-    }
     implementation "curse.maven:jupiter-1072905:8569832"
-    implementation "curse.maven:saturn-lib-1767455:9449659"
+    implementation "curse.maven:saturn-lib-1767455:9538254"
     implementation "com.sighs:ApricityUI-neoforge-26.1:${apricityui_version}"
 
     // exp4j is jarJar'd inside Saturn; only its types are needed here.
@@ -175,6 +168,9 @@ dependencies {
     // Development only: GeckoLib rendering is optional (the compileOnly line above), but without it on the run
     // classpath there is no way to look at a mount that asks for a GeckoLib model.
     localRuntime "com.geckolib:geckolib-neoforge-${minecraft_version}:${geckolib_version}"
+
+    testModCompileOnly "curse.maven:reincarnation-1785404:9492925"
+    localRuntime "curse.maven:reincarnation-1785404:9492925"
 
     //FTB
     compileOnly "dev.ftb.mods:ftb-library:26.1.2.8"

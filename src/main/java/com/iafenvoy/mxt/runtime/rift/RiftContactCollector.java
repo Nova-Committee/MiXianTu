@@ -1,12 +1,12 @@
 package com.iafenvoy.mxt.runtime.rift;
 
+import com.iafenvoy.mxt.runtime.MxtTickStages;
 import com.iafenvoy.mxt.attachment.RiftWorldAttachment;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.MxtProfilerSources;
 import com.iafenvoy.saturn.event.CollectTickStagesEvent;
 import com.iafenvoy.saturn.profiling.ProfilerScope;
 import com.iafenvoy.saturn.profiling.ServerProfiling;
-import com.iafenvoy.saturn.runtime.EntityTickStages;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
@@ -31,7 +31,7 @@ public final class RiftContactCollector {
 
     @SubscribeEvent
     public static void stages(CollectTickStagesEvent event) {
-        event.add("rift", EntityTickStages.RIFTS, RiftContactCollector::collect);
+        event.add("rift", MxtTickStages.RIFTS, RiftContactCollector::collect);
     }
 
     @SubscribeEvent

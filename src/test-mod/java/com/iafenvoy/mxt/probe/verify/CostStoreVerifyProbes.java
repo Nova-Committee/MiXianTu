@@ -1,4 +1,6 @@
 package com.iafenvoy.mxt.probe.verify;
+
+import com.iafenvoy.mxt.data.cost.context.AuraSection;
 import com.iafenvoy.mxt.data.cost.context.AuraCostContexts;
 import com.iafenvoy.mxt.data.cost.AuraCostTarget;
 import com.iafenvoy.mxt.data.cost.Costs;
@@ -11,7 +13,6 @@ import com.iafenvoy.saturn.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.saturn.data.cost.Cost;
 import com.iafenvoy.saturn.data.cost.CostPayment;
-import com.iafenvoy.saturn.data.cost.CostTarget;
 import com.iafenvoy.saturn.data.cost.Debit;
 import com.iafenvoy.saturn.data.cost.context.CostContext;
 import com.iafenvoy.saturn.data.cost.context.CostOrigins;
@@ -77,10 +78,10 @@ public final class CostStoreVerifyProbes {
         BlockPos sibling = new BlockPos(SectionPos.sectionToBlockCoord(chunkX, 15), base.getY(),
                 SectionPos.sectionToBlockCoord(chunkZ, 15));
         BlockPos above = base.above(16);
-        CostTarget.Section near = CostTarget.Section.of(dimension, base);
-        CostTarget.Section far = CostTarget.Section.of(dimension, sibling);
+        AuraSection near = AuraSection.of(dimension, base);
+        AuraSection far = AuraSection.of(dimension, sibling);
         context.expect("two positions of one section are one store", near, far);
-        if (near.equals(CostTarget.Section.of(dimension, above)))
+        if (near.equals(AuraSection.of(dimension, above)))
             context.fail("two sections of one chunk read as one store");
 
         // The price projection sums two fees of one section without merging the transactions themselves.

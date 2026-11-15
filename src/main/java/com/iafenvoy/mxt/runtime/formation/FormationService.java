@@ -1,5 +1,6 @@
 package com.iafenvoy.mxt.runtime.formation;
 
+import com.iafenvoy.mxt.data.cost.context.CostSources;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.cost.context.AuraCostContexts;
 import com.iafenvoy.mxt.data.cost.context.AuraCostSources;
@@ -11,7 +12,6 @@ import com.iafenvoy.saturn.attachment.ResourceHolderAttachment;
 import com.iafenvoy.saturn.data.cost.CostPayment;
 import com.iafenvoy.saturn.data.cost.Debit;
 import com.iafenvoy.saturn.data.cost.context.CostContext;
-import com.iafenvoy.saturn.data.cost.context.CostOrigins;
 import com.iafenvoy.saturn.profiling.ProfilerScope;
 import com.iafenvoy.saturn.profiling.ServerProfiling;
 import com.iafenvoy.saturn.runtime.resource.ResourceTransactions;
@@ -52,7 +52,7 @@ public final class FormationService {
             // The activating player's own account is named directly: activation is driven from a controller block, so
             // there is no entity here to take a channel from, only an account to charge.
             Result<List<Debit>> payment = CostPayment.pay(definition.activationCosts(),
-                    CostContext.account(resources, null, context, CostOrigins.FORMATION_ACTIVATION));
+                    CostContext.account(resources, null, context, CostSources.FORMATION_ACTIVATION));
             if (payment instanceof Result.FailureResult<List<Debit>>(Failure failure))
                 return Result.failure(Failures.INSUFFICIENT_RESOURCE, failure.resource().orElse(null));
             return Result.success(owner == null ? new FormationInstance(id, radius) : new FormationInstance(id, radius, owner));
@@ -74,7 +74,7 @@ public final class FormationService {
                     .orElse(Map.of());
             // A formation pays from its own stores first and then from an account that may have no owner behind it,
             // so the account is named directly rather than reached through a payer.
-            CostContext costContext = CostContext.account(resources, null, context, CostOrigins.FORMATION_MAINTENANCE);
+            CostContext costContext = CostContext.account(resources, null, context, CostSources.FORMATION_MAINTENANCE);
             PaymentPlan plan = MaintainRule.plan(definition, costContext, supplied, instance.stored(), capacity);
             if (plan == null) return Result.failure(Failures.UNKNOWN);
             Result<Map<Identifier, Double>> payment = ResourceTransactions.tryConsume(resources, Evaluation.of(context.registries(), plan.fromOwner()));

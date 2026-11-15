@@ -1,5 +1,6 @@
 package com.iafenvoy.mxt.runtime.cultivation;
 
+import com.iafenvoy.mxt.data.cost.context.CostSources;
 import com.iafenvoy.mxt.attachment.CultivationAttachment;
 import com.iafenvoy.mxt.config.MxtServerConfig;
 import com.iafenvoy.mxt.data.aura.Aura;
@@ -19,7 +20,6 @@ import com.iafenvoy.mxt.runtime.world.AuraResult;
 import com.iafenvoy.mxt.runtime.world.AuraService;
 import com.iafenvoy.mxt.runtime.world.BlockAuraService;
 import com.iafenvoy.saturn.data.cost.context.CostContext;
-import com.iafenvoy.saturn.data.cost.context.CostOrigins;
 import com.iafenvoy.saturn.profiling.ProfilerScope;
 import com.iafenvoy.saturn.profiling.ServerProfiling;
 import com.iafenvoy.saturn.util.MiscUtil;
@@ -365,7 +365,7 @@ public final class AuraDistributionService {
     }
 
     private static Map<Holder<Aura>, Double> evaluateCosts(Cultivation action, FormulaContext context) {
-        return Costs.auras(action.costs(), CostContext.of(null, context, CostOrigins.CULTIVATION));
+        return Costs.auras(action.costs(), CostContext.of(null, context, CostSources.CULTIVATION));
     }
 
     private record Slot(long chunk, int sectionY) {

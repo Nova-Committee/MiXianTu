@@ -1,5 +1,6 @@
 package com.iafenvoy.mxt.runtime.formation;
 
+import com.iafenvoy.mxt.runtime.MxtSources;
 import com.iafenvoy.mxt.data.formation.Formation;
 import com.iafenvoy.mxt.data.formation.FormationIntervals;
 import com.iafenvoy.mxt.event.FormationEvent.Tick;
@@ -121,7 +122,7 @@ public final class FormationWorldTicker {
         double radiusSquared = radius * radius;
         Vec3 center = controller.getCenter();
         FormationCarrier carrier = FormationActionContext.carrier(instance, controller);
-        Identifier source = Sources.formation(instance.formation());
+        Identifier source = MxtSources.formation(instance.formation());
         // Resolved once per formation rather than per entity: the id outlives the owner logging out and the
         // entity does not, so a manager-level source can still answer for an absent owner.
         FormationOwners owners = instance.owners();

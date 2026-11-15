@@ -1,5 +1,6 @@
 package com.iafenvoy.mxt.runtime.forging;
 
+import com.iafenvoy.mxt.data.cost.context.CostSources;
 import com.iafenvoy.mxt.data.artifact.ForgingResultComponent;
 import com.iafenvoy.mxt.data.forging.ForgingBlueprint;
 import com.iafenvoy.mxt.data.forging.ForgingMethod;
@@ -13,7 +14,6 @@ import com.iafenvoy.saturn.attachment.ResourceHolderAttachment;
 import com.iafenvoy.saturn.data.cost.CostPayment;
 import com.iafenvoy.saturn.data.cost.Debit;
 import com.iafenvoy.saturn.data.cost.context.CostContext;
-import com.iafenvoy.saturn.data.cost.context.CostOrigins;
 import com.iafenvoy.saturn.profiling.ProfilerScope;
 import com.iafenvoy.saturn.profiling.ServerProfiling;
 import com.iafenvoy.saturn.runtime.resulting.Failure;
@@ -72,7 +72,7 @@ public final class ForgingService {
             StrikePre event = new StrikePre(player, surface.pos(), new ForgingSessionView(session), method, resources, context);
             Failure refusal = postEvent(event);
             if (refusal != null) return Result.failure(refusal);
-            CostContext costContext = CostContext.of(player, context, CostOrigins.FORGING);
+            CostContext costContext = CostContext.of(player, context, CostSources.FORGING);
             CostPayment plan = CostPayment.of(costContext);
             if (plan.price(event.getCosts()).isPresent())
                 return Result.failure(Failures.INVALID_FORMULA);

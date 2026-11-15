@@ -1369,5 +1369,9 @@
   "config.mxt.server.souls.lifetime_ticks": "Soul lifetime",
   "config.mxt.server.souls.lifetime_ticks.tooltip": "Lifetime of all souls in game ticks, default 6000 (about 5 minutes); 0 keeps them permanently. Time also passes while their chunk is unloaded, and cleanup occurs after loading. Changes affect existing souls.",
   "config.mxt.server.alchemy.herb_catch_up_ticks": "Herb catch-up limit (ticks)",
-  "config.mxt.server.alchemy.herb_catch_up_ticks.tooltip": "Maximum game ticks of herb growth processed in one settlement, independent of lifespan display conversion."
+  "config.mxt.server.alchemy.herb_catch_up_ticks.tooltip": "Maximum game ticks of herb growth processed in one settlement, independent of lifespan display conversion.",
+  "mxt.profiling.mxt.item": "Items",
+  "mxt.profiling.mxt.item.tooltip": "Item binding, quality changes and pill use.",
+  "mxt.profiling.mxt.entity": "Entities",
+  "mxt.profiling.mxt.entity.tooltip": "The per-tick work of this mod's own entities: sword aura, projectiles, bursts, meteors."
 }

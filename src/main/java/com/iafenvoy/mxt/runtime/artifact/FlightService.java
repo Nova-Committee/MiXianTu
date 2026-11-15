@@ -1,5 +1,6 @@
 package com.iafenvoy.mxt.runtime.artifact;
 
+import com.iafenvoy.mxt.data.cost.context.CostSources;
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.api.MountVehicle;
 import com.iafenvoy.mxt.attachment.FlightAttachment;
@@ -16,7 +17,6 @@ import com.iafenvoy.saturn.data.cost.Cost;
 import com.iafenvoy.saturn.data.cost.CostPayment;
 import com.iafenvoy.saturn.data.cost.Debit;
 import com.iafenvoy.saturn.data.cost.context.CostContext;
-import com.iafenvoy.saturn.data.cost.context.CostOrigins;
 import com.iafenvoy.saturn.profiling.ProfilerScope;
 import com.iafenvoy.saturn.profiling.ServerProfiling;
 import com.iafenvoy.saturn.runtime.resulting.Failure;
@@ -215,7 +215,7 @@ public final class FlightService {
     // pays what is left - the artifact's share is handed back when the remainder cannot be paid.
     private static boolean payFuel(LivingEntity holder, MountVehicle vehicle, Level level, List<Cost> costs,
                                    FormulaContext context) {
-        CostContext costContext = CostContext.of(holder, context, CostOrigins.ARTIFACT_FLIGHT);
+        CostContext costContext = CostContext.of(holder, context, CostSources.ARTIFACT_FLIGHT);
         CostPayment planning = CostPayment.of(costContext);
         if (planning.price(costs).isPresent()) return false;
         List<Fuel> burned = burn(vehicle, level, planning, context);

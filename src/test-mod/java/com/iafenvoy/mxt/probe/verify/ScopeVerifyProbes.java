@@ -1,4 +1,6 @@
 package com.iafenvoy.mxt.probe.verify;
+
+import com.iafenvoy.mxt.runtime.MxtSources;
 import com.iafenvoy.saturn.registry.SaturnAttachments;
 import com.iafenvoy.saturn.registry.SaturnRegistries;
 
@@ -79,7 +81,7 @@ public final class ScopeVerifyProbes {
             return;
         }
         ServerPlayer player = context.player();
-        Identifier source = Sources.formation(ProbeDefinitions.id("scope_grant_probe"));
+        Identifier source = MxtSources.formation(ProbeDefinitions.id("scope_grant_probe"));
         try {
             // Inside both, so both arrays track the player; the source is one, so it is granted once either way.
             player.setPos(left.getX() + 5.5D, left.getY(), left.getZ() + 0.5D);

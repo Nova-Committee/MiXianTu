@@ -6,7 +6,6 @@ import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.cost.AuraCostTarget;
 import com.iafenvoy.mxt.runtime.resulting.failures.AuraFailure;
 import com.iafenvoy.mxt.runtime.world.WorldAuraAccess;
-import com.iafenvoy.saturn.data.cost.CostTarget;
 import com.iafenvoy.saturn.data.cost.CostTransaction;
 import com.iafenvoy.saturn.data.cost.Debit;
 import com.iafenvoy.saturn.data.cost.builtin.ResourceChannel;
@@ -32,7 +31,7 @@ public final class AuraCostSources {
 
     public static AuraCostSource pool(Level level, BlockPos pos) {
         // Different positions in one section still spend the same stock.
-        return store(new WorldAuraAccess(level, pos), CostTarget.Section.of(level.dimension(), pos));
+        return store(new WorldAuraAccess(level, pos), AuraSection.of(level.dimension(), pos));
     }
 
     public static AuraCostSource bank(AuraAccess access) {

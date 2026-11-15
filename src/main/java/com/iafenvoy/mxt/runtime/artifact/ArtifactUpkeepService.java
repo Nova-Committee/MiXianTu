@@ -1,5 +1,6 @@
 package com.iafenvoy.mxt.runtime.artifact;
 
+import com.iafenvoy.mxt.data.cost.context.CostSources;
 import com.iafenvoy.mxt.compat.CuriosIntegration;
 import com.iafenvoy.mxt.runtime.MxtProfilerSources;
 import com.iafenvoy.saturn.data.ability.type.UpkeepAbilityType;
@@ -7,7 +8,6 @@ import com.iafenvoy.saturn.data.cost.Cost;
 import com.iafenvoy.saturn.data.cost.CostPayment;
 import com.iafenvoy.saturn.data.cost.Debit;
 import com.iafenvoy.saturn.data.cost.context.CostContext;
-import com.iafenvoy.saturn.data.cost.context.CostOrigins;
 import com.iafenvoy.saturn.profiling.ProfilerScope;
 import com.iafenvoy.saturn.profiling.ServerProfiling;
 import com.iafenvoy.saturn.runtime.resulting.Result;
@@ -74,7 +74,7 @@ public final class ArtifactUpkeepService {
         long interval = interval(upkeep.type(), context);
         if (gameTime % interval != 0L) return false;
         Result<List<Debit>> payment = CostPayment.pay(costs,
-                CostContext.of(holder, context, CostOrigins.ARTIFACT_UPKEEP));
+                CostContext.of(holder, context, CostSources.ARTIFACT_UPKEEP));
         if (payment instanceof Result.SuccessResult<List<Debit>>) return true;
         upkeep.type().onFail().execute(holder, stack, context);
         return false;

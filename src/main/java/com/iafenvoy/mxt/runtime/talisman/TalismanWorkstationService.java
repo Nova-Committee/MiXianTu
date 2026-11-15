@@ -1,5 +1,6 @@
 package com.iafenvoy.mxt.runtime.talisman;
 
+import com.iafenvoy.mxt.data.cost.context.CostSources;
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.api.ItemAuraAccess;
 import com.iafenvoy.mxt.config.MxtServerConfig;
@@ -20,7 +21,6 @@ import com.iafenvoy.saturn.data.cost.Cost;
 import com.iafenvoy.saturn.data.cost.CostPayment;
 import com.iafenvoy.saturn.data.cost.builtin.ItemCost;
 import com.iafenvoy.saturn.data.cost.context.CostContext;
-import com.iafenvoy.saturn.data.cost.context.CostOrigins;
 import com.iafenvoy.saturn.data.resource.Resource;
 import com.iafenvoy.saturn.profiling.ProfilerScope;
 import com.iafenvoy.saturn.profiling.ServerProfiling;
@@ -392,7 +392,7 @@ public final class TalismanWorkstationService {
     }
 
     private static CostContext context(ServerPlayer player, Container paperSlot) {
-        return CostContext.of(player, CostOrigins.TALISMAN_DRAWING).withItemTarget(paperSlot);
+        return CostContext.of(player, CostSources.TALISMAN_DRAWING).withItemTarget(paperSlot);
     }
 
     private static ItemStack carried(ServerPlayer player) {
