@@ -103,7 +103,7 @@ Reincarnation 为可选联动：安装后提供寿元、老化、转世和前世
 
 ### 需要哪些前置？
 
-Jupiter 和 ApricityUI 为需要手动安装的必需前置，其他必需前置均已打包进模组本体；Reincarnation 为可选的寿元与转世联动，安装时需同时满足它的前置要求；KubeJS 只在你想用脚本注册内容时需要。JEI 和
+Jupiter 和 ApricityUI 为需要手动安装的必需前置，其他必需前置均已打包进模组本体；结构预览使用的 Ponder 与 Catnip 也已内置，无需另装；Reincarnation 为可选的寿元与转世联动，安装时需同时满足它的前置要求；KubeJS 只在你想用脚本注册内容时需要。JEI 和
 Jade 为可选兼容模组，不装也能正常游玩。
 
 ### 可以做自己的内容包并分发吗？

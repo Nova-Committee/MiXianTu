@@ -1,9 +1,9 @@
 package com.iafenvoy.mxt.runtime.item;
 
-import com.iafenvoy.mxt.runtime.MxtProfilerSources;
 import com.iafenvoy.mxt.data.cost.context.CostSources;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.data.quality.QualityLadders;
+import com.iafenvoy.mxt.runtime.MxtProfilerSources;
 import com.iafenvoy.mxt.runtime.resulting.failures.QualityFailure;
 import com.iafenvoy.saturn.data.cost.CostPayment;
 import com.iafenvoy.saturn.data.cost.Debit;

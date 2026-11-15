@@ -1,9 +1,9 @@
 package com.iafenvoy.mxt.runtime.rift;
 
-import com.iafenvoy.mxt.runtime.MxtTickStages;
 import com.iafenvoy.mxt.attachment.RiftWorldAttachment;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.MxtProfilerSources;
+import com.iafenvoy.mxt.runtime.MxtTickStages;
 import com.iafenvoy.saturn.event.CollectTickStagesEvent;
 import com.iafenvoy.saturn.profiling.ProfilerScope;
 import com.iafenvoy.saturn.profiling.ServerProfiling;

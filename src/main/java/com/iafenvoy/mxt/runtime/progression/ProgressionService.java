@@ -1,10 +1,10 @@
 package com.iafenvoy.mxt.runtime.progression;
 
-import com.iafenvoy.mxt.data.trigger.MxtTriggerSignals;
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.data.progression.Progression;
 import com.iafenvoy.mxt.data.progression.ProgressionConfig;
 import com.iafenvoy.mxt.data.progression.ProgressionOwner;
+import com.iafenvoy.mxt.data.trigger.MxtTriggerSignals;
 import com.iafenvoy.mxt.registry.cache.RegistryCaches;
 import com.iafenvoy.mxt.runtime.MxtProfilerSources;
 import com.iafenvoy.saturn.data.ability.Ability;

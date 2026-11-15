@@ -5,6 +5,7 @@ import com.iafenvoy.jupiter.render.screen.ConfigSelectScreen;
 import com.iafenvoy.mxt.config.MxtClientConfig;
 import com.iafenvoy.mxt.config.MxtServerConfig;
 import com.iafenvoy.mxt.render.animation.CultivationAnimationController;
+import com.iafenvoy.mxt.screen.ponder.FormationPonder;
 import com.iafenvoy.mxt.screen.profiling.ProfilerOpenScreenData;
 import com.iafenvoy.mxt.screen.profiling.ProfilerScreen;
 import com.iafenvoy.mxt.screen.resourcebar.AuraZoneBarContributor;
@@ -26,6 +27,7 @@ public final class MiXianTuClient {
         event.getContainer().registerExtensionPoint(IConfigScreenFactory.class, (_, parent) -> ConfigSelectScreen.builder("config.mxt.title", parent).client(MxtClientConfig.INSTANCE).server(MxtServerConfig.INSTANCE).build());
 
         CultivationAnimationController.register();
+        FormationPonder.register();
         // The resource-bar HUD entries are the library's; the aura bars hang off the zone, so they are contributed.
         ResourceBarContributors.register(AuraZoneBarContributor.INSTANCE);
         WheelContent.register();

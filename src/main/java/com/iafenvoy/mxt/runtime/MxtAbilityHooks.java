@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.runtime;
 
-import com.iafenvoy.mxt.attachment.SpiritIdentityAttachment;
 import com.iafenvoy.mxt.MiXianTu;
+import com.iafenvoy.mxt.attachment.SpiritIdentityAttachment;
 import com.iafenvoy.mxt.compat.CuriosIntegration;
 import com.iafenvoy.mxt.data.ability.AbilityAffinity;
 import com.iafenvoy.mxt.registry.MxtAttachments;

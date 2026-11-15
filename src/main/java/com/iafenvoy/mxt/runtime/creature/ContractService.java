@@ -1,8 +1,8 @@
 package com.iafenvoy.mxt.runtime.creature;
 
-import com.iafenvoy.mxt.data.cost.context.CostSources;
 import com.iafenvoy.mxt.api.Contractable;
 import com.iafenvoy.mxt.attachment.ContractAttachment;
+import com.iafenvoy.mxt.data.cost.context.CostSources;
 import com.iafenvoy.mxt.data.creature.ContractContext;
 import com.iafenvoy.mxt.data.creature.ContractType;
 import com.iafenvoy.mxt.event.SpiritContractEvent.Action;

@@ -132,7 +132,7 @@ recipes. You need a datapack or content pack (including content written with Kub
 
 ### What dependencies are required?
 
-Jupiter and ApricityUI must be installed separately. Other required dependencies are bundled inside the mod. Reincarnation is an optional lifespan and reincarnation integration; install its required dependencies when using it. KubeJS is only needed if you want to register content from scripts. JEI and Jade are optional
+Jupiter and ApricityUI must be installed separately. Other required dependencies are bundled inside the mod. Ponder and Catnip are also bundled for structure previews, with no separate installation needed. Reincarnation is an optional lifespan and reincarnation integration; install its required dependencies when using it. KubeJS is only needed if you want to register content from scripts. JEI and Jade are optional
 compatibility mods, and the game works fine without them.
 
 ### Can I make my own content pack and distribute it?

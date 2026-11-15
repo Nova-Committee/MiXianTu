@@ -72,6 +72,13 @@ ordering = "AFTER"
 side = "BOTH"
 
 [[dependencies.${mod_id}]]
+modId = "ponder"
+type = "required"
+versionRange = "[${ponder_version}]"
+ordering = "AFTER"
+side = "CLIENT"
+
+[[dependencies.${mod_id}]]
 modId = "picker"
 type = "required"
 versionRange = "[0,)"

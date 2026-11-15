@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.runtime.progression;
 
-import com.iafenvoy.mxt.runtime.MxtTickStages;
 import com.iafenvoy.mxt.runtime.MxtProfilerSources;
+import com.iafenvoy.mxt.runtime.MxtTickStages;
 import com.iafenvoy.saturn.event.CollectTickStagesEvent;
 import com.iafenvoy.saturn.profiling.ProfilerScope;
 import com.iafenvoy.saturn.profiling.ServerProfiling;

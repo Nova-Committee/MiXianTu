@@ -1,11 +1,11 @@
 package com.iafenvoy.mxt.entity;
 
-import com.iafenvoy.mxt.runtime.MxtProfilerSources;
 import com.iafenvoy.mxt.api.AuraAccess;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.particle.SpiritWispParticleOptions;
 import com.iafenvoy.mxt.registry.MxtEntityDataSerializers;
 import com.iafenvoy.mxt.registry.MxtEntityTypes;
+import com.iafenvoy.mxt.runtime.MxtProfilerSources;
 import com.iafenvoy.saturn.data.resource.Resource;
 import com.iafenvoy.saturn.profiling.ProfilerScope;
 import com.iafenvoy.saturn.profiling.ServerProfiling;

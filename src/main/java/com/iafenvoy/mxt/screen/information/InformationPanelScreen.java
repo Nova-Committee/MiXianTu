@@ -405,8 +405,7 @@ public final class InformationPanelScreen extends AuiScreen {
 
     /**
      * The page's own tooltips, through the vanilla renderer instead of ApricityUI's: the lines are components with
-     * their own colours, which a page element's flattened text cannot carry. Submitted after {@code super}, like
-     * the multi-block page's cell tooltips, so they land over the page.
+     * their own colours, which a page element's flattened text cannot carry. Submitted after {@code super}.
      */
     private void extractTooltip(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
         if (this.page == Page.INFO) this.extractEquipmentTooltip(graphics, mouseX, mouseY);

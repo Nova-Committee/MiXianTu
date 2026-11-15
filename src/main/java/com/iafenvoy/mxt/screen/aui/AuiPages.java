@@ -48,10 +48,6 @@ public final class AuiPages {
      */
     public static final String INFORMATION = "mxt/information";
     /**
-     * The formation structure preview: a page over the whole window, with the scene drawn by Java.
-     */
-    public static final String MULTIBLOCK = "mxt/multiblock";
-    /**
      * The talisman drawing workstation: the formula list, the station slot and the paper the player traces on.
      */
     public static final String TALISMAN = "mxt/talisman";
@@ -80,10 +76,6 @@ public final class AuiPages {
 
     public static String economyPage(String name) {
         return page(ECONOMY, name);
-    }
-
-    public static String multiblockPage() {
-        return page(MULTIBLOCK, "structure");
     }
 
     public static String talismanPage() {

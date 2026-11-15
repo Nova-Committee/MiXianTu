@@ -1,6 +1,5 @@
 package com.iafenvoy.mxt.runtime.item;
 
-import com.iafenvoy.mxt.runtime.MxtProfilerSources;
 import com.iafenvoy.mxt.api.QualityProvider;
 import com.iafenvoy.mxt.data.quality.DefaultQuality;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
@@ -8,6 +7,7 @@ import com.iafenvoy.mxt.data.quality.ItemQuality.Modifier;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.runtime.MxtProfilerSources;
 import com.iafenvoy.mxt.runtime.item.ItemBindingService.ResolvedBindings;
 import com.iafenvoy.mxt.runtime.resulting.failures.QualityFailure;
 import com.iafenvoy.saturn.profiling.ProfilerScope;

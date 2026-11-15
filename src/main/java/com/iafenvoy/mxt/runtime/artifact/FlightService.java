@@ -1,6 +1,5 @@
 package com.iafenvoy.mxt.runtime.artifact;
 
-import com.iafenvoy.mxt.data.cost.context.CostSources;
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.api.MountVehicle;
 import com.iafenvoy.mxt.attachment.FlightAttachment;
@@ -8,6 +7,7 @@ import com.iafenvoy.mxt.data.ability.type.FlightControlAbilityType;
 import com.iafenvoy.mxt.data.ability.type.MountAbilityType;
 import com.iafenvoy.mxt.data.artifact.Artifact;
 import com.iafenvoy.mxt.data.aura.Aura;
+import com.iafenvoy.mxt.data.cost.context.CostSources;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtEntityTypes;
 import com.iafenvoy.mxt.runtime.MxtProfilerSources;

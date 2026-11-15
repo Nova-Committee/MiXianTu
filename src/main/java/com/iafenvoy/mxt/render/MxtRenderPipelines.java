@@ -67,11 +67,6 @@ public final class MxtRenderPipelines {
             .withCull(true).build();
     public static final RenderPipeline LIGHT_BEAM_DEPTH = lightBeamDepth("light_beam_depth", CompareOp.LESS_THAN_OR_EQUAL).build();
     public static final RenderPipeline LIGHT_BEAM_GLOW_DEPTH = lightBeamDepth("light_beam_glow_depth", CompareOp.ALWAYS_PASS).build();
-    // Depth test off: a depth-tested outline only reads as a box for the faces pointing at the camera.
-    public static final RenderPipeline MULTIBLOCK_OUTLINE = RenderPipeline.builder(RenderPipelines.LINES_SNIPPET)
-            .withLocation(id("pipeline/multiblock_outline"))
-            .withDepthStencilState(new DepthStencilState(CompareOp.ALWAYS_PASS, false))
-            .build();
 
     private static RenderPipeline riftPipeline(String shader) {
         return RenderPipeline.builder(RenderPipelines.MATRICES_PROJECTION_SNIPPET, RenderPipelines.GLOBALS_SNIPPET)
@@ -135,6 +130,5 @@ public final class MxtRenderPipelines {
         event.registerPipeline(LIGHT_BEAM);
         event.registerPipeline(LIGHT_BEAM_DEPTH);
         event.registerPipeline(LIGHT_BEAM_GLOW_DEPTH);
-        event.registerPipeline(MULTIBLOCK_OUTLINE);
     }
 }

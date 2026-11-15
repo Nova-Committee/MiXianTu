@@ -5,7 +5,7 @@
 
 ## 项目概述
 
-NeoForge 修真框架模组，本体只出框架与规则、世界观内容在数据包：Java 25 / Minecraft 26.1.2 / NeoForge 26.1.2.99，模组版本以 `gradle.properties` 为准。
+NeoForge 修真框架模组，本体只出框架与规则、世界观内容在数据包：Java 25 / Minecraft 26.1.2 / NeoForge 26.1.2.109，模组版本以 `gradle.properties` 为准。
 核心架构一条链：**数据包定义**（`data/<模块>/`，Codec + 加载期校验，走原版 datapack registry）→ **运行时服务**（`runtime/<模块>/`，结算、事务、调度）→ **附件**（`attachment/`，存档与同步状态）。模块之间用 NeoForge 事件通信（根 `event/` 给外部模组听，`event/dispatcher/` 只给本模组内部用），每实体 tick 顺序用表（`runtime/EntityTickStages`）。界面与 HUD 在 `screen/`。
 
 ## 构建 & 运行命令

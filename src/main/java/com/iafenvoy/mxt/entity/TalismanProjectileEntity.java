@@ -1,11 +1,11 @@
 package com.iafenvoy.mxt.entity;
 
-import com.iafenvoy.mxt.runtime.MxtProfilerSources;
 import com.iafenvoy.mxt.data.talisman.Talisman;
 import com.iafenvoy.mxt.data.talisman.TalismanUse;
 import com.iafenvoy.mxt.registry.MxtEntityDataSerializers;
 import com.iafenvoy.mxt.registry.MxtEntityTypes;
 import com.iafenvoy.mxt.registry.MxtItems;
+import com.iafenvoy.mxt.runtime.MxtProfilerSources;
 import com.iafenvoy.saturn.profiling.ProfilerScope;
 import com.iafenvoy.saturn.profiling.ServerProfiling;
 import com.iafenvoy.saturn.util.formula.FormulaContext;

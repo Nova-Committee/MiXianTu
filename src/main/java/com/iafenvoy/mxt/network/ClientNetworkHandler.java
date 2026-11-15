@@ -6,8 +6,7 @@ import com.iafenvoy.mxt.runtime.world.AuraClientState;
 import com.iafenvoy.mxt.screen.menu.AlchemyFurnaceMenu;
 import com.iafenvoy.mxt.screen.menu.SpiritCraftingMenu;
 import com.iafenvoy.mxt.screen.menu.TalismanWorkstationMenu;
-import com.iafenvoy.mxt.screen.multiblock.MultiblockStructure;
-import com.iafenvoy.mxt.screen.multiblock.MultiblockStructureScreen;
+import com.iafenvoy.mxt.screen.ponder.FormationPonder;
 import com.iafenvoy.mxt.screen.profiling.ProfilerScreen;
 import com.iafenvoy.mxt.screen.rift.RiftEditorScreen;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
@@ -70,10 +69,6 @@ public final class ClientNetworkHandler {
     // The structure travels in the payload, so the screen is built from what the server resolved rather than from
     // anything this side would have to look up.
     static void onFormationStructure(FormationStructureS2CPayload payload, IPayloadContext context) {
-        context.enqueueWork(() -> MultiblockStructureScreen.open(new MultiblockStructure(payload.title(),
-                payload.structure().stream()
-                        .map(block -> MultiblockStructure.BlockEntry.of(block.offset().getX(), block.offset().getY(),
-                                block.offset().getZ(), block.state()))
-                        .toList())));
+        context.enqueueWork(() -> FormationPonder.open(payload.title(), payload.structure()));
     }
 }

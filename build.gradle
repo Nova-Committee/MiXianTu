@@ -28,6 +28,13 @@ testModSourceSet.compileClasspath += sourceSets.main.output + sourceSets.main.co
 testModSourceSet.runtimeClasspath += sourceSets.main.output + sourceSets.main.runtimeClasspath
 
 repositories {
+    exclusiveContent {
+        forRepository { maven { url = "https://maven.createmod.net:6085/" } }
+        filter {
+            includeGroup "net.createmod.ponder"
+            includeGroup "net.createmod.catnip"
+        }
+    }
     maven { url = "https://cursemaven.com" }
     maven { url = "https://jitpack.io" }
     maven { url = "https://maven.sighs.cc/repository/maven-public/" }
@@ -149,6 +156,10 @@ dependencies {
     implementation "curse.maven:saturn-lib-1767455:9538254"
     implementation "com.sighs:ApricityUI-neoforge-26.1:${apricityui_version}"
 
+    // Keep embedding explicit; the preview does not use Catnip's Flywheel helper.
+    implementation(jarJar("net.createmod.ponder:ponder-neoforge:$ponder_version")) { transitive = false }
+    implementation(jarJar("net.createmod.catnip:catnip-neoforge:$ponder_version")) { transitive = false }
+
     // exp4j is jarJar'd inside Saturn; only its types are needed here.
     compileOnly "net.objecthunter:exp4j:0.4.8"
     implementation jarJar("top.theillusivec4.curios:curios-neoforge:$curios_version")
@@ -191,6 +202,7 @@ var generateModMetadata = tasks.register("generateModMetadata", ProcessResources
             minecraft_version      : minecraft_version,
             minecraft_version_range: minecraft_version_range,
             neo_version            : neo_version,
+            ponder_version         : ponder_version,
             curios_version         : curios_version,
             apricityui_version     : apricityui_version,
             geckolib_version       : geckolib_version,

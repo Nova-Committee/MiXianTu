@@ -101,7 +101,7 @@ public final class LifespanProbes {
         Snapshot was = snapshot();
         ServerPlayer old = context.player();
         try {
-            var settings = ReincarnationServerConfig.INSTANCE.lifespan;
+            ReincarnationServerConfig.Lifespan settings = ReincarnationServerConfig.INSTANCE.lifespan;
             settings.enabled.setValue(true);
             settings.baseLifespan.setValue(24_000L);
             reincarnationPolicy();
@@ -123,7 +123,7 @@ public final class LifespanProbes {
             double amount = old.getData(SaturnAttachments.RESOURCE_HOLDER).get(resource);
             LifespanApi.set(old, 123);
             long generation = Generations.current(context.server(), old.getUUID());
-            var result = LifespanApi.rebirth(old, RebirthMode.NEW_LIFE, Component.literal("MiXianTu probe"));
+            Result<LivingEntity> result = LifespanApi.rebirth(old, RebirthMode.NEW_LIFE, Component.literal("MiXianTu probe"));
             context.check("full rebirth succeeds", result.getFailure().isEmpty());
             if (result.getFailure().isPresent()) return;
             ServerPlayer fresh = (ServerPlayer) result.getData().orElseThrow();

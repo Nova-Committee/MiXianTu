@@ -1,6 +1,5 @@
 package com.iafenvoy.mxt.runtime.cultivation;
 
-import com.iafenvoy.mxt.runtime.MxtSources;
 import com.iafenvoy.mxt.attachment.CultivationAttachment;
 import com.iafenvoy.mxt.attachment.MinorStageAttachment;
 import com.iafenvoy.mxt.attachment.SpiritIdentityAttachment;
@@ -12,6 +11,7 @@ import com.iafenvoy.mxt.data.cultivation.Technique;
 import com.iafenvoy.mxt.data.progression.ProgressionHolder;
 import com.iafenvoy.mxt.event.CollectProgressionOwnersEvent;
 import com.iafenvoy.mxt.registry.MxtAttachments;
+import com.iafenvoy.mxt.runtime.MxtSources;
 import com.iafenvoy.mxt.runtime.progression.ProgressionOwners;
 import com.iafenvoy.mxt.runtime.progression.ProgressionService;
 import com.iafenvoy.saturn.event.CollectAbilityGrantsEvent;

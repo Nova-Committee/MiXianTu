@@ -1,6 +1,7 @@
 package com.iafenvoy.mxt.probe.verify;
 
 import com.google.common.collect.LinkedHashMultimap;
+import com.google.gson.JsonElement;
 import com.iafenvoy.mxt.data.Tribulation;
 import com.iafenvoy.mxt.data.storage.runtime.AuraPulse;
 import com.iafenvoy.mxt.data.trigger.MxtTriggerSignals;
@@ -65,18 +66,18 @@ public final class SaturnBoundaryProbes {
         Identifier second = Identifier.parse("second:quest");
         Identifier manual = Identifier.parse("third:item");
         AbilityAttachment state = new AbilityAttachment();
-        var event = new CollectAbilityGrantsEvent(context.player());
+        CollectAbilityGrantsEvent event = new CollectAbilityGrantsEvent(context.player());
         event.want(first, ability);
-        var result = AbilityGrantService.reconcile(state, event.getDesired());
+        AbilityGrantService.Result result = AbilityGrantService.reconcile(state, event.getDesired());
         leg(context, "external source granted", result.granted() == 1 && state.managedSources().contains(first));
         state.storage().set(ability, new IdleCountdown(17), 0);
-        var desired = LinkedHashMultimap.<Identifier, Holder<Ability>>create();
+        LinkedHashMultimap<Identifier, Holder<Ability>> desired = LinkedHashMultimap.<Identifier, Holder<Ability>>create();
         desired.put(second, ability);
         result = AbilityGrantService.reconcile(state, desired);
         leg(context, "source handoff", result.granted() == 1 && result.revoked() == 1
                 && state.storage().get(ability, IdleCountdown.class).orElseThrow().remaining() == 17);
         state.grant(ability, manual);
-        var ops = RegistryOps.create(JsonOps.INSTANCE, context.registries());
+        RegistryOps<JsonElement> ops = RegistryOps.create(JsonOps.INSTANCE, context.registries());
         state = AbilityAttachment.CODEC.codec().parse(ops, AbilityAttachment.CODEC.codec().encodeStart(ops, state).getOrThrow()).getOrThrow();
         leg(context, "ownership saved", state.managedSources().equals(Set.of(second)));
         leg(context, "ownership copied", state.copy().managedSources().equals(Set.of(second)));
@@ -97,7 +98,7 @@ public final class SaturnBoundaryProbes {
         for (Registry<?> registry : SaturnRegistries.all()) {
             if (!(registry instanceof DefaultedRegistry<?> defaults)) continue;
             count++;
-            var key = defaults.getDefaultKey();
+            Identifier key = defaults.getDefaultKey();
             Object value = defaults.getOptional(key).orElseThrow();
             leg(context, "default " + registry.key().identifier(), key.getNamespace().equals("saturn")
                     && defaults.getValue(Identifier.parse("mxt_test:absent_default_probe")) == value
@@ -128,7 +129,7 @@ public final class SaturnBoundaryProbes {
                 public List<ItemStack> equippedItems(LivingEntity entity) { return List.of(shared); }
             });
             leg(context, "ability union", AbilityHooks.get().itemAbilities(context.player(), shared).stream().filter(ability::equals).count() == 1);
-            var equipment = AbilityHooks.get().equippedItems(context.player());
+            List<ItemStack> equipment = AbilityHooks.get().equippedItems(context.player());
             leg(context, "equipment identity", equipment.stream().filter(stack -> stack == shared).count() == 1
                     && equipment.stream().filter(stack -> stack == separate).count() == 1);
             AbilityHooks.register(first, null);
@@ -145,10 +146,10 @@ public final class SaturnBoundaryProbes {
                 new Constant(2), new Constant(10), false, NoOpAction.INSTANCE, NoOpAction.INSTANCE);
         double scale = TribulationService.effectiveScale(definition, formula);
         leg(context, "tribulation effective scale", Math.abs(scale - 3) < 1.0E-9);
-        var host = new TimelineContext(context.player(), formula, 0, scale, 1, new TimelineState(), new TimelineJump());
+        TimelineContext host = new TimelineContext(context.player(), formula, 0, scale, 1, new TimelineState(), new TimelineJump());
         leg(context, "host applies multiplier once", host.ticks(new Constant(20)) == 60 && host.ticks(definition.windup()) == 30);
         leg(context, "deadline unscaled", host.unscaledTicks(new Constant(20)) == 20);
-        var generic = new TimelineContext(context.player(), formula, 0, 1, 1, new TimelineState(), new TimelineJump());
+        TimelineContext generic = new TimelineContext(context.player(), formula, 0, 1, 1, new TimelineState(), new TimelineJump());
         leg(context, "generic ignores host variable", generic.ticks(new Constant(20)) == 20);
     }
 
@@ -162,9 +163,9 @@ public final class SaturnBoundaryProbes {
                 && MxtProfilerSources.ENTITY.key().equals(Identifier.parse("mxt:entity"))
                 && !SaturnRegistries.PROFILER_SOURCE.containsKey(Identifier.parse("saturn:item"))
                 && !SaturnRegistries.PROFILER_SOURCE.containsKey(Identifier.parse("saturn:entity")));
-        var ops = RegistryOps.create(JsonOps.INSTANCE, context.registries());
-        var saved = DataStorage.CODEC.encodeStart(ops, new AuraPulse(23)).getOrThrow();
-        var restored = DataStorage.CODEC.parse(ops, saved).getOrThrow();
+        RegistryOps<JsonElement> ops = RegistryOps.create(JsonOps.INSTANCE, context.registries());
+        JsonElement saved = DataStorage.CODEC.encodeStart(ops, new AuraPulse(23)).getOrThrow();
+        DataStorage restored = DataStorage.CODEC.parse(ops, saved).getOrThrow();
         leg(context, "legacy aura storage", restored instanceof AuraPulse pulse && pulse.nextTick() == 23
                 && saved.getAsJsonObject().get("type").getAsString().equals("mxt:aura_pulse"));
     }

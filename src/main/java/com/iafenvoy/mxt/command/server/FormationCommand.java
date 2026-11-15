@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.command.server;
 
-import com.iafenvoy.mxt.data.cost.context.CostSources;
 import com.iafenvoy.mxt.command.ServerCommandManager;
+import com.iafenvoy.mxt.data.cost.context.CostSources;
 import com.iafenvoy.mxt.data.formation.Formation;
 import com.iafenvoy.mxt.data.formation.Formation.RequiredBlock;
 import com.iafenvoy.mxt.data.item.FormationPlateComponent;
@@ -13,6 +13,7 @@ import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.cultivation.AuraDistributionService;
 import com.iafenvoy.mxt.runtime.formation.FormationInstance;
+import com.iafenvoy.mxt.runtime.formation.FormationPreview;
 import com.iafenvoy.mxt.runtime.formation.FormationService;
 import com.iafenvoy.mxt.runtime.formation.FormationStructures;
 import com.iafenvoy.saturn.attachment.ResourceHolderAttachment;
@@ -103,8 +104,13 @@ public final class FormationCommand {
                     structure.size(), FormationStructureS2CPayload.MAX_BLOCKS));
             return 0;
         }
+        Optional<FormationPreview> preview = FormationPreview.prepare(structure);
+        if (preview.isEmpty()) {
+            source.sendFailure(Component.translatable("command.mxt.formation.show.unsupported", FormationPreview.MAX_SPAN));
+            return 0;
+        }
         PacketDistributor.sendToPlayer(player, new FormationStructureS2CPayload(
-                DefinitionText.nameOrId(definition), structure));
+                DefinitionText.nameOrId(definition), preview.get().blocks()));
         source.sendSuccess(() -> Component.translatable("command.mxt.formation.show.done",
                 DefinitionText.nameOrId(definition), structure.size()), false);
         return structure.size();

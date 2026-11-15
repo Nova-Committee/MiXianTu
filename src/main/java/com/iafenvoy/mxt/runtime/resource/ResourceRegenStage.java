@@ -1,9 +1,9 @@
 package com.iafenvoy.mxt.runtime.resource;
 
-import com.iafenvoy.mxt.runtime.MxtTickStages;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.runtime.MxtTickStages;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationMethodService;
 import com.iafenvoy.saturn.attachment.ResourceHolderAttachment;
 import com.iafenvoy.saturn.data.resource.Resource;

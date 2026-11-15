@@ -2,6 +2,7 @@ package com.iafenvoy.mxt.network.payload;
 
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.data.formation.Formation.RequiredBlock;
+import com.iafenvoy.mxt.runtime.formation.FormationPreview;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.ComponentSerialization;
@@ -19,7 +20,7 @@ import java.util.List;
  */
 public record FormationStructureS2CPayload(Component title,
                                            List<RequiredBlock> structure) implements CustomPacketPayload {
-    public static final int MAX_BLOCKS = 4096;
+    public static final int MAX_BLOCKS = FormationPreview.MAX_BLOCKS;
     public static final Type<FormationStructureS2CPayload> TYPE = new Type<>(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "formation_structure_s2c"));
     public static final StreamCodec<RegistryFriendlyByteBuf, FormationStructureS2CPayload> STREAM_CODEC = StreamCodec.composite(
             ComponentSerialization.STREAM_CODEC, FormationStructureS2CPayload::title,

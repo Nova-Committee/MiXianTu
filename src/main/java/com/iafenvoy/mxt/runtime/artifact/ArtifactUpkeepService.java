@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.runtime.artifact;
 
-import com.iafenvoy.mxt.data.cost.context.CostSources;
 import com.iafenvoy.mxt.compat.CuriosIntegration;
+import com.iafenvoy.mxt.data.cost.context.CostSources;
 import com.iafenvoy.mxt.runtime.MxtProfilerSources;
 import com.iafenvoy.saturn.data.ability.type.UpkeepAbilityType;
 import com.iafenvoy.saturn.data.cost.Cost;

@@ -125,7 +125,8 @@ public final class CurseEventBridge {
         // source counts as carried gear here even though the ability side treats it as part of the body: what this
         // asks is whether the source belongs to what is equipped right now.
         for (Identifier known : holder.sources().allSources()) {
-            if ((!Sources.isEquipment(known) && !known.equals(Sources.EQUIPPED)) || declared.containsKey(known)) continue;
+            if ((!Sources.isEquipment(known) && !known.equals(Sources.EQUIPPED)) || declared.containsKey(known))
+                continue;
             CurseService.reconcileSource(entity, known, List.of(), gameTime);
         }
     }

@@ -219,6 +219,7 @@
   "command.mxt.formation.show.missing": "The structure template %s this formation declares could not be found.",
   "command.mxt.formation.show.none": "%s declares no structure (structure_check is always).",
   "command.mxt.formation.show.too_large": "This structure has %s blocks, over the %s block preview limit.",
+  "command.mxt.formation.show.unsupported": "Cannot preview an empty structure or a structure spanning more than %s blocks along any axis.",
   "command.mxt.formation.upkeep": "%s formation(s) cover you; what the next period still asks of the payer:",
   "command.mxt.formation.upkeep.empty": "You are not inside any formation.",
   "command.mxt.friend.added_permanent": "Added %s as a permanent friend.",
@@ -970,14 +971,6 @@
   "screen.mxt.item_picker": "Item Picker",
   "screen.mxt.item_picker.empty": "No item is available.",
   "screen.mxt.item_picker.no_match": "No item matches the search.",
-  "screen.mxt.multiblock.back": "Back",
-  "screen.mxt.multiblock.hint": "Drag to turn the view · click the timeline to jump to a layer",
-  "screen.mxt.multiblock.layer": "Layer %s / %s",
-  "screen.mxt.multiblock.next": "Next",
-  "screen.mxt.multiblock.pause": "Pause",
-  "screen.mxt.multiblock.play": "Play",
-  "screen.mxt.multiblock.previous": "Previous",
-  "screen.mxt.multiblock.restart": "Restart",
   "screen.mxt.player_trade": "Player Trade",
   "screen.mxt.player_trade.accept": "Accept",
   "screen.mxt.player_trade.accepted": "Accepted",
@@ -1373,5 +1366,7 @@
   "mxt.profiling.mxt.item": "Items",
   "mxt.profiling.mxt.item.tooltip": "Item binding, quality changes and pill use.",
   "mxt.profiling.mxt.entity": "Entities",
-  "mxt.profiling.mxt.entity.tooltip": "The per-tick work of this mod's own entities: sword aura, projectiles, bursts, meteors."
+  "mxt.profiling.mxt.entity.tooltip": "The per-tick work of this mod's own entities: sword aura, projectiles, bursts, meteors.",
+  "mxt.ponder.formation_preview.header": "Formation Structure Preview",
+  "mxt.ponder.formation_preview.text_1": "Structure: %s"
 }

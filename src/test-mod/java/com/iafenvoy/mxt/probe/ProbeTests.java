@@ -37,6 +37,7 @@ import net.minecraft.gametest.framework.TestEnvironmentDefinition;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.block.Rotation;
 import net.neoforged.fml.ModList;
+import net.neoforged.fml.loading.FMLEnvironment;
 import net.neoforged.neoforge.event.RegisterGameTestsEvent;
 import net.neoforged.neoforge.registries.RegisterEvent;
 
@@ -60,6 +61,8 @@ public final class ProbeTests {
     private static final List<Supplier<List<Probe>>> DOMAINS = List.<Supplier<List<Probe>>>of(
             MessageProbes::probes,
             FormationProbes::probes,
+            FormationPreviewVerifyProbes::probes,
+            PonderConfigVerifyProbes::probes,
             AlchemyGateProbes::probes,
             AlchemyProbes::probes,
             PillProbes::probes,
@@ -125,6 +128,10 @@ public final class ProbeTests {
     public static List<Probe> all() {
         List<Probe> probes = new ArrayList<>();
         DOMAINS.forEach(domain -> probes.addAll(domain.get()));
+        if (FMLEnvironment.getDist().isClient()) {
+            probes.addAll(PonderRenderVerifyProbes.probes());
+            probes.addAll(PonderSceneVerifyProbes.probes());
+        }
         if (ModList.get().isLoaded("reincarnation")) probes.addAll(LifespanProbes.probes());
         return List.copyOf(probes);
     }

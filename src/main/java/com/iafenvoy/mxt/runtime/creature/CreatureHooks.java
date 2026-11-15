@@ -1,10 +1,10 @@
 package com.iafenvoy.mxt.runtime.creature;
 
-import com.iafenvoy.mxt.runtime.MxtSources;
 import com.iafenvoy.mxt.attachment.CreatureSpiritAttachment;
 import com.iafenvoy.mxt.data.creature.ContractType;
 import com.iafenvoy.mxt.event.CollectProgressionOwnersEvent;
 import com.iafenvoy.mxt.registry.MxtAttachments;
+import com.iafenvoy.mxt.runtime.MxtSources;
 import com.iafenvoy.mxt.runtime.progression.ProgressionOwners;
 import com.iafenvoy.mxt.runtime.progression.ProgressionService;
 import com.iafenvoy.saturn.event.CollectAbilityGrantsEvent;

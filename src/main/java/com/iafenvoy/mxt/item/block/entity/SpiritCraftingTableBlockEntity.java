@@ -1,10 +1,10 @@
 package com.iafenvoy.mxt.item.block.entity;
 
-import com.iafenvoy.mxt.data.cost.context.CostSources;
 import com.iafenvoy.mxt.api.AuraAccess;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.cost.Costs;
 import com.iafenvoy.mxt.data.cost.context.AuraCostContexts;
+import com.iafenvoy.mxt.data.cost.context.CostSources;
 import com.iafenvoy.mxt.recipe.SpiritCraftingInput;
 import com.iafenvoy.mxt.recipe.SpiritRecipe;
 import com.iafenvoy.mxt.registry.MxtBlockEntities;

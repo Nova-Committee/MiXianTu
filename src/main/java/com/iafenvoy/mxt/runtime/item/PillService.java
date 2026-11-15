@@ -1,12 +1,12 @@
 package com.iafenvoy.mxt.runtime.item;
 
-import com.iafenvoy.mxt.runtime.MxtProfilerSources;
 import com.iafenvoy.mxt.attachment.PillToxicityAttachment;
 import com.iafenvoy.mxt.attachment.PillUsageAttachment;
 import com.iafenvoy.mxt.config.MxtServerConfig;
 import com.iafenvoy.mxt.data.item.Pill;
 import com.iafenvoy.mxt.data.item.PillBinding;
 import com.iafenvoy.mxt.registry.MxtAttachments;
+import com.iafenvoy.mxt.runtime.MxtProfilerSources;
 import com.iafenvoy.mxt.runtime.item.ItemBindingService.PillResolution;
 import com.iafenvoy.saturn.profiling.ProfilerScope;
 import com.iafenvoy.saturn.profiling.ServerProfiling;

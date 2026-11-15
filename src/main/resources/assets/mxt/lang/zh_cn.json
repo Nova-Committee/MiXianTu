@@ -219,6 +219,7 @@
   "command.mxt.formation.show.missing": "找不到该阵法声明的结构模板 %s。",
   "command.mxt.formation.show.none": "%s 没有声明结构（structure_check 为 always）。",
   "command.mxt.formation.show.too_large": "该结构有 %s 个方块，超过预览上限 %s。",
+  "command.mxt.formation.show.unsupported": "无法预览空结构，或结构任一方向的跨度超过 %s 格。",
   "command.mxt.formation.upkeep": "你所在范围内有 %s 座阵法，下一期还差的份额：",
   "command.mxt.formation.upkeep.empty": "你不在任何阵法范围内。",
   "command.mxt.friend.added_permanent": "已添加永久好友 %s。",
@@ -970,14 +971,6 @@
   "screen.mxt.item_picker": "物品选择",
   "screen.mxt.item_picker.empty": "没有可选的物品。",
   "screen.mxt.item_picker.no_match": "没有匹配搜索的物品。",
-  "screen.mxt.multiblock.back": "返回",
-  "screen.mxt.multiblock.hint": "拖动旋转视角 · 点击时间轴跳到某一层",
-  "screen.mxt.multiblock.layer": "第 %s / %s 层",
-  "screen.mxt.multiblock.next": "下一层",
-  "screen.mxt.multiblock.pause": "暂停",
-  "screen.mxt.multiblock.play": "播放",
-  "screen.mxt.multiblock.previous": "上一层",
-  "screen.mxt.multiblock.restart": "重播",
   "screen.mxt.player_trade": "玩家交易",
   "screen.mxt.player_trade.accept": "确认",
   "screen.mxt.player_trade.accepted": "已确认",
@@ -1373,5 +1366,7 @@
   "mxt.profiling.mxt.item": "物品",
   "mxt.profiling.mxt.item.tooltip": "物品绑定、品质升降与丹药使用。",
   "mxt.profiling.mxt.entity": "实体",
-  "mxt.profiling.mxt.entity.tooltip": "本模组自定义实体的每 tick 工作：剑气、符箓弹、爆裂、流星等。"
+  "mxt.profiling.mxt.entity.tooltip": "本模组自定义实体的每 tick 工作：剑气、符箓弹、爆裂、流星等。",
+  "mxt.ponder.formation_preview.header": "阵法结构预览",
+  "mxt.ponder.formation_preview.text_1": "结构：%s"
 }

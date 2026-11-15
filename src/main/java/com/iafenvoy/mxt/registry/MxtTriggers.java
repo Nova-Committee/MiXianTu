@@ -1,12 +1,12 @@
 package com.iafenvoy.mxt.registry;
 
-import net.minecraft.resources.Identifier;
-import com.iafenvoy.mxt.data.trigger.MxtTriggerSignals;
 import com.iafenvoy.mxt.MiXianTu;
+import com.iafenvoy.mxt.data.trigger.MxtTriggerSignals;
 import com.iafenvoy.saturn.data.trigger.Trigger;
 import com.iafenvoy.saturn.data.trigger.builtin.BuiltinTrigger;
 import com.iafenvoy.saturn.registry.SaturnRegistries;
 import com.mojang.serialization.MapCodec;
+import net.minecraft.resources.Identifier;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 

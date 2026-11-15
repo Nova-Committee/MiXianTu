@@ -1,8 +1,8 @@
 package com.iafenvoy.mxt.screen.menu;
 
-import com.iafenvoy.mxt.data.cost.context.CostSources;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.cost.Costs;
+import com.iafenvoy.mxt.data.cost.context.CostSources;
 import com.iafenvoy.mxt.item.block.entity.SpiritCraftingTableBlockEntity;
 import com.iafenvoy.mxt.network.payload.SpiritCraftingStateS2CPayload;
 import com.iafenvoy.mxt.network.payload.SpiritCraftingStateS2CPayload.Row;

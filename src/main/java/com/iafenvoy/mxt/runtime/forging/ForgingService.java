@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.runtime.forging;
 
-import com.iafenvoy.mxt.data.cost.context.CostSources;
 import com.iafenvoy.mxt.data.artifact.ForgingResultComponent;
+import com.iafenvoy.mxt.data.cost.context.CostSources;
 import com.iafenvoy.mxt.data.forging.ForgingBlueprint;
 import com.iafenvoy.mxt.data.forging.ForgingMethod;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
