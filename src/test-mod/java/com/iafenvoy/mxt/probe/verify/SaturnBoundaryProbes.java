@@ -71,7 +71,7 @@ public final class SaturnBoundaryProbes {
         AbilityGrantService.Result result = AbilityGrantService.reconcile(state, event.getDesired());
         leg(context, "external source granted", result.granted() == 1 && state.managedSources().contains(first));
         state.storage().set(ability, new IdleCountdown(17), 0);
-        LinkedHashMultimap<Identifier, Holder<Ability>> desired = LinkedHashMultimap.<Identifier, Holder<Ability>>create();
+        LinkedHashMultimap<Identifier, Holder<Ability>> desired = LinkedHashMultimap.create();
         desired.put(second, ability);
         result = AbilityGrantService.reconcile(state, desired);
         leg(context, "source handoff", result.granted() == 1 && result.revoked() == 1

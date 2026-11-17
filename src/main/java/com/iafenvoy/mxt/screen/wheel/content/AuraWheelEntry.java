@@ -1,13 +1,12 @@
 package com.iafenvoy.mxt.screen.wheel.content;
 
-import com.iafenvoy.mxt.api.WheelEntryKind;
-import com.iafenvoy.mxt.api.WheelMenuEntry;
 import com.iafenvoy.mxt.attachment.SpiritBurstCooldownAttachment;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.spirit.SpiritBurstService;
-import com.iafenvoy.mxt.runtime.wheel.WheelEntryKinds;
-import com.iafenvoy.mxt.screen.wheel.WheelSelection;
+import com.iafenvoy.mxt.runtime.wheel.MxtWheelSources;
+import com.iafenvoy.saturn.api.wheel.WheelEntryKind;
+import com.iafenvoy.saturn.api.wheel.WheelMenuEntry;
 import com.iafenvoy.saturn.data.IconReference;
 import com.iafenvoy.saturn.data.resource.Resource;
 import com.iafenvoy.saturn.registry.SaturnAttachments;
@@ -33,7 +32,7 @@ public record AuraWheelEntry(Identifier id, Holder<Aura> aura) implements WheelM
 
     @Override
     public WheelEntryKind kind() {
-        return WheelEntryKinds.AURA;
+        return MxtWheelSources.AURA;
     }
 
     @Override
@@ -87,8 +86,4 @@ public record AuraWheelEntry(Identifier id, Holder<Aura> aura) implements WheelM
         return lines;
     }
 
-    @Override
-    public void onSelected(WheelSelection selection) {
-        WheelTrigger.send(this, selection.source());
-    }
 }

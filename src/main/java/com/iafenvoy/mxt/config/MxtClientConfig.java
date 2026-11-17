@@ -21,7 +21,6 @@ public final class MxtClientConfig extends AutoInitConfigContainer {
     public final Information information = new Information();
     public final Techniques techniques = new Techniques();
     public final Rifts rifts = new Rifts();
-    public final Wheel wheel = new Wheel();
     public final Tooltips tooltips = new Tooltips();
     public final Flames flames = new Flames();
     public final Effects effects = new Effects();
@@ -67,32 +66,6 @@ public final class MxtClientConfig extends AutoInitConfigContainer {
         }
     }
 
-    /**
-     * How the wheel menu is driven: whether the key holds the wheel up or toggles it. Spending the selection is
-     * the use key's job, not a setting.
-     */
-    public static final class Wheel extends AutoInitConfigCategoryBase {
-        public final EnumEntry<WheelMode> mode = EnumEntry.builder("config.mxt.client.wheel.mode", WheelMode.HOLD)
-                .key("mode")
-                .tooltip("config.mxt.client.wheel.mode.tooltip")
-                .nameProvider(value -> Component.translatable("config.mxt.client.wheel.mode." + value.name().toLowerCase()))
-                .build();
-        // On by default: every page looks the same on the ring, and the wheel is the one screen where the mouse is
-        // already in hand.
-        public final BooleanEntry scrollSwitch = BooleanEntry.builder("config.mxt.client.wheel.scroll_switch", true)
-                .key("scroll_switch")
-                .tooltip("config.mxt.client.wheel.scroll_switch.tooltip")
-                .build();
-        // Wrapping is what the wheel has always done, so it stays the default; off parks the page at either end.
-        public final BooleanEntry wrapPages = BooleanEntry.builder("config.mxt.client.wheel.wrap_pages", true)
-                .key("wrap_pages")
-                .tooltip("config.mxt.client.wheel.wrap_pages.tooltip")
-                .build();
-
-        private Wheel() {
-            super("wheel", "config.mxt.client.wheel");
-        }
-    }
 
     public static final class Flames extends AutoInitConfigCategoryBase {
         public final BooleanEntry enabled = BooleanEntry.builder("config.mxt.client.flames.enabled", true)
@@ -135,9 +108,6 @@ public final class MxtClientConfig extends AutoInitConfigContainer {
         }
     }
 
-    public enum WheelMode {
-        HOLD, TOGGLE
-    }
 
     /**
      * Item tooltip switches. The name line is the one line no appender can reach, so whether a quality is

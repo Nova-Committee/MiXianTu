@@ -29,7 +29,7 @@ public record FormationPonderScene(Component title, FormationPreview preview) {
         builder.removeShadow();
         builder.setNextUpEnabled(false);
         builder.showBasePlate();
-        TreeMap<Integer, Selection> layers = new TreeMap<Integer, Selection>();
+        TreeMap<Integer, Selection> layers = new TreeMap<>();
         for (RequiredBlock block : this.preview.blocks())
             layers.merge(block.offset().getY(), util.select().position(block.offset()), Selection::add);
         TextWindowElement description = new TextWindowElement();

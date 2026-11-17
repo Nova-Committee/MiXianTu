@@ -1,11 +1,11 @@
 package com.iafenvoy.mxt.runtime.wheel.builtin;
 
 import com.iafenvoy.mxt.MiXianTu;
-import com.iafenvoy.mxt.api.WheelEntryKind;
-import com.iafenvoy.mxt.api.WheelSource;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.runtime.wheel.WheelService;
+import com.iafenvoy.mxt.runtime.wheel.MxtWheelActions;
+import com.iafenvoy.saturn.api.wheel.WheelEntryKind;
+import com.iafenvoy.saturn.api.wheel.WheelSource;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
@@ -37,6 +37,6 @@ public final class AuraKind implements WheelEntryKind {
 
     @Override
     public boolean trigger(ServerPlayer player, WheelSource source, Identifier id) {
-        return WheelService.burst(player, id);
+        return MxtWheelActions.burst(player, id);
     }
 }

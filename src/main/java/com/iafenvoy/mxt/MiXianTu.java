@@ -9,6 +9,7 @@ import com.iafenvoy.mxt.registry.*;
 import com.iafenvoy.mxt.registry.cache.RegistryCaches;
 import com.iafenvoy.mxt.runtime.MxtAbilityHooks;
 import com.iafenvoy.mxt.runtime.MxtProfilerSources;
+import com.iafenvoy.mxt.runtime.wheel.MxtWheelSources;
 import com.iafenvoy.saturn.registry.SaturnAliases;
 import com.mojang.logging.LogUtils;
 import net.neoforged.bus.api.IEventBus;
@@ -75,6 +76,7 @@ public final class MiXianTu {
         // Old packs and scripts name the built-ins as mxt:<path>; Saturn answers to saturn:<path> and keeps the alias.
         SaturnAliases.add(MOD_ID);
         MxtAbilityHooks.install();
+        MxtWheelSources.register();
         MxtProfilerSources.init();
     }
 

@@ -1,4 +1,5 @@
 package com.iafenvoy.mxt.probe.artifact;
+import com.iafenvoy.saturn.attachment.WheelLayoutAttachment;
 import com.iafenvoy.saturn.registry.SaturnResourceKeys;
 import com.iafenvoy.saturn.registry.SaturnAttachments;
 
@@ -26,9 +27,11 @@ import com.iafenvoy.mxt.runtime.cultivation.CultivationService;
 import com.iafenvoy.saturn.runtime.resulting.Result;
 import com.iafenvoy.saturn.runtime.resulting.failures.AbilityFailure;
 import com.iafenvoy.mxt.runtime.resulting.failures.FlightFailure;
-import com.iafenvoy.mxt.runtime.wheel.WheelEntryKinds;
-import com.iafenvoy.mxt.runtime.wheel.WheelService;
-import com.iafenvoy.mxt.runtime.wheel.WheelSourceTypes;
+import com.iafenvoy.saturn.runtime.wheel.WheelEntryKinds;
+import com.iafenvoy.saturn.runtime.wheel.WheelLayout;
+import com.iafenvoy.saturn.runtime.wheel.WheelService;
+import com.iafenvoy.saturn.runtime.wheel.WheelSlot;
+import com.iafenvoy.saturn.runtime.wheel.WheelSourceTypes;
 import com.iafenvoy.saturn.util.HolderHelper;
 import com.iafenvoy.saturn.util.formula.FormulaContext;
 import net.minecraft.core.BlockPos;
@@ -188,26 +191,34 @@ public final class ArtifactFlightProbes {
         TechniqueAttachment playerSpirit = player.getData(MxtAttachments.TECHNIQUE);
         playerSpirit.addLearnedTechnique(context.require(MxtResourceKeys.TECHNIQUE, "sword_control_manual"));
         AbilityGrantService.recalculate(player);
-        int ownedBefore = ownedSwords(player);
-        ItemStack playerMount = new ItemStack(Items.IRON_SWORD);
-        ArtifactService.refine(playerMount, player);
-        player.setItemInHand(InteractionHand.MAIN_HAND, playerMount);
-        Identifier controlId = HolderHelper.id(controlAbility);
-        boolean firstTrigger = WheelService.trigger(player, WheelSourceTypes.MAIN_HAND, WheelEntryKinds.ABILITY, controlId, Optional.of(true));
-        boolean playerRiding = firstTrigger && player.getVehicle() instanceof FlyingSwordEntity;
-        context.check("artifact roster flight directed: the payload mounts (trigger=" + firstTrigger + ", vehicle="
-                + player.getVehicle() + ")", playerRiding);
-        boolean secondTrigger = WheelService.trigger(player, WheelSourceTypes.MAIN_HAND, WheelEntryKinds.ABILITY, controlId, Optional.of(true));
-        boolean playerIdle = secondTrigger && player.getVehicle() instanceof FlyingSwordEntity;
-        context.check("artifact roster flight directed: asking for the state it is already in changes nothing (trigger="
-                + secondTrigger + ", vehicle=" + player.getVehicle() + ")", playerIdle);
-        boolean thirdTrigger = WheelService.trigger(player, WheelSourceTypes.MAIN_HAND, WheelEntryKinds.ABILITY, controlId, Optional.of(false));
-        boolean playerLanded = thirdTrigger && player.getVehicle() == null && ownedSwords(player) == ownedBefore + 1;
-        player.setItemInHand(InteractionHand.MAIN_HAND, heldBefore);
-        context.check("artifact roster flight directed: giving it back returns one sword to the owner (trigger="
-                + thirdTrigger + ", vehicle=" + player.getVehicle() + ", swords " + ownedBefore + " -> "
-                + ownedSwords(player) + ")", playerLanded);
-        context.check("artifact roster flight directed", playerRiding && playerIdle && playerLanded);
+        WheelLayoutAttachment wheel = player.getData(SaturnAttachments.WHEEL_LAYOUT);
+        Optional<WheelLayout> previousLayout = wheel.layout();
+        wheel.setLayout(WheelLayout.EMPTY.with(0,
+                WheelSlot.of(WheelEntryKinds.ABILITY, HolderHelper.id(controlAbility))));
+        try {
+            int ownedBefore = ownedSwords(player);
+            ItemStack playerMount = new ItemStack(Items.IRON_SWORD);
+            ArtifactService.refine(playerMount, player);
+            player.setItemInHand(InteractionHand.MAIN_HAND, playerMount);
+            Identifier controlId = HolderHelper.id(controlAbility);
+            boolean firstTrigger = WheelService.trigger(player, WheelSourceTypes.CONFIGURED, WheelEntryKinds.ABILITY, controlId, Optional.of(true));
+            boolean playerRiding = firstTrigger && player.getVehicle() instanceof FlyingSwordEntity;
+            context.check("artifact roster flight directed: the payload mounts (trigger=" + firstTrigger + ", vehicle="
+                    + player.getVehicle() + ")", playerRiding);
+            boolean secondTrigger = WheelService.trigger(player, WheelSourceTypes.CONFIGURED, WheelEntryKinds.ABILITY, controlId, Optional.of(true));
+            boolean playerIdle = secondTrigger && player.getVehicle() instanceof FlyingSwordEntity;
+            context.check("artifact roster flight directed: asking for the state it is already in changes nothing (trigger="
+                    + secondTrigger + ", vehicle=" + player.getVehicle() + ")", playerIdle);
+            boolean thirdTrigger = WheelService.trigger(player, WheelSourceTypes.CONFIGURED, WheelEntryKinds.ABILITY, controlId, Optional.of(false));
+            boolean playerLanded = thirdTrigger && player.getVehicle() == null && ownedSwords(player) == ownedBefore + 1;
+            context.check("artifact roster flight directed: giving it back returns one sword to the owner (trigger="
+                    + thirdTrigger + ", vehicle=" + player.getVehicle() + ", swords " + ownedBefore + " -> "
+                    + ownedSwords(player) + ")", playerLanded);
+            context.check("artifact roster flight directed", playerRiding && playerIdle && playerLanded);
+        } finally {
+            player.setItemInHand(InteractionHand.MAIN_HAND, heldBefore);
+            wheel.setLayout(previousLayout.orElse(null));
+        }
     }
 
     // Hitting something ends the flight. The probe cannot press a movement key, so the mount is moved into a

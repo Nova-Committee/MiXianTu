@@ -5,8 +5,8 @@ import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.creature.ContractBells;
 import com.iafenvoy.mxt.runtime.creature.Contracts;
 import com.iafenvoy.mxt.runtime.resulting.failures.ContractFailure;
-import com.iafenvoy.mxt.runtime.wheel.WheelSourceTypes;
-import com.iafenvoy.mxt.screen.wheel.WheelMenuController;
+import com.iafenvoy.mxt.runtime.wheel.MxtWheelSources;
+import com.iafenvoy.saturn.screen.wheel.WheelMenuController;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
@@ -65,7 +65,7 @@ public final class BeastTamingBellItem extends Item {
         // The wheel is a screen, so it is the client that opens it; the server half of this use has nothing to do
         // with the order, which is sent from the wheel and checked again there.
         if (level.isClientSide() && FMLEnvironment.getDist() == Dist.CLIENT)
-            WheelMenuController.openAt(WheelSourceTypes.CONTRACT,
+            WheelMenuController.openAt(MxtWheelSources.CONTRACT,
                     Component.translatable("item.mxt.beast_taming_bell.no_target"));
         return InteractionResult.SUCCESS;
     }

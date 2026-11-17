@@ -1,10 +1,10 @@
 package com.iafenvoy.mxt.runtime.wheel.builtin;
 
 import com.iafenvoy.mxt.MiXianTu;
-import com.iafenvoy.mxt.api.WheelEntryKind;
-import com.iafenvoy.mxt.api.WheelSource;
 import com.iafenvoy.mxt.data.creature.ContractBehaviors;
-import com.iafenvoy.mxt.runtime.wheel.WheelService;
+import com.iafenvoy.mxt.runtime.wheel.MxtWheelActions;
+import com.iafenvoy.saturn.api.wheel.WheelEntryKind;
+import com.iafenvoy.saturn.api.wheel.WheelSource;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
@@ -38,6 +38,6 @@ public final class BehaviorKind implements WheelEntryKind {
 
     @Override
     public boolean trigger(ServerPlayer player, WheelSource source, Identifier id) {
-        return WheelService.order(player, id);
+        return MxtWheelActions.order(player, id);
     }
 }

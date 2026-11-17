@@ -84,7 +84,7 @@ public final class PonderSceneVerifyProbes {
         for (int guiScale : new int[]{1, 2, 4}) {
             transform.updateScreenParams(641, 359, 0, guiScale);
             Vec2 projected = transform.sceneToScreen(Vec3.atCenterOf(target), 0);
-            AtomicReference<BlockPos> picked = new AtomicReference<BlockPos>();
+            AtomicReference<BlockPos> picked = new AtomicReference<>();
             PonderPickingCompatibility.withGuiCoordinates(scene, () -> {
                 Pair<ItemStack, BlockPos> result = scene.rayTraceScene(transform.screenToScene(projected.x, projected.y, 1000, 0),
                         transform.screenToScene(projected.x, projected.y, -100, 0));

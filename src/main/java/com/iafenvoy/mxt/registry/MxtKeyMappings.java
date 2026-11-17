@@ -6,8 +6,6 @@ import com.iafenvoy.mxt.network.payload.BackSlotSwapC2SPayload;
 import com.iafenvoy.mxt.network.payload.CultivationToggleC2SPayload;
 import com.iafenvoy.mxt.network.payload.FlightDescendC2SPayload;
 import com.iafenvoy.mxt.screen.information.InformationPanelScreen;
-import com.iafenvoy.mxt.screen.wheel.WheelGeometry;
-import com.iafenvoy.mxt.screen.wheel.content.WheelConfigurationScreen;
 import com.mojang.blaze3d.platform.InputConstants;
 import com.mojang.blaze3d.platform.InputConstants.Type;
 import net.minecraft.client.KeyMapping;
@@ -31,20 +29,13 @@ import java.util.function.Consumer;
 @EventBusSubscriber(Dist.CLIENT)
 public final class MxtKeyMappings {
     private static final Category CATEGORY = new Category(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "general"));
-    private static final Category WHEEL_SLOT_CATEGORY = new Category(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "wheel_slot"));
 
     public static final KeyMappingHolder SWAP_BACK = new KeyMappingHolder("key.mxt.swap_back", Type.KEYSYM, InputConstants.UNKNOWN.getValue(), CATEGORY);
     public static final KeyMappingHolder CULTIVATE = new KeyMappingHolder("key.mxt.cultivate", Type.KEYSYM, InputConstants.KEY_C, CATEGORY);
     public static final KeyMappingHolder INFORMATION_PANEL = new KeyMappingHolder("key.mxt.information_panel", Type.KEYSYM, InputConstants.KEY_Z, CATEGORY);
-    public static final KeyMappingHolder WHEEL = new KeyMappingHolder("key.mxt.wheel", Type.KEYSYM, InputConstants.KEY_R, CATEGORY);
-    public static final KeyMappingHolder WHEEL_USE = new KeyMappingHolder("key.mxt.wheel_use", Type.KEYSYM, InputConstants.KEY_V, CATEGORY);
-    public static final KeyMappingHolder WHEEL_CONFIGURATION = new KeyMappingHolder("key.mxt.wheel_configuration", Type.KEYSYM, InputConstants.UNKNOWN.getValue(), CATEGORY);
-    public static final KeyMappingHolder WHEEL_PREVIOUS = new KeyMappingHolder("key.mxt.wheel_previous", Type.KEYSYM, InputConstants.KEY_LEFT, CATEGORY);
-    public static final KeyMappingHolder WHEEL_NEXT = new KeyMappingHolder("key.mxt.wheel_next", Type.KEYSYM, InputConstants.KEY_RIGHT, CATEGORY);
     // Descending cannot be vanilla's sneak: sneaking is how a rider gets off a mount, so the flight has its own key.
     public static final KeyMappingHolder FLIGHT_DESCEND = new KeyMappingHolder("key.mxt.flight_descend", Type.KEYSYM, InputConstants.KEY_X, CATEGORY);
 
-    public static final List<KeyMappingHolder> WHEEL_SLOTS = new ArrayList<>(WheelGeometry.SECTORS);
     private static boolean wasRiding;
     private static boolean informationPanelDown;
 
@@ -55,22 +46,14 @@ public final class MxtKeyMappings {
         CULTIVATE.onStateChange(pressed -> {
             if (pressed) ClientPacketDistributor.sendToServer(CultivationToggleC2SPayload.INSTANCE);
         });
-        WHEEL_CONFIGURATION.onStateChange(pressed -> {
-            if (pressed && Minecraft.getInstance().screen == null) WheelConfigurationScreen.open();
-        });
         // Both edges are sent: the server reads this as "the key is held", not as "the key was pressed".
         FLIGHT_DESCEND.onStateChange(pressed -> ClientPacketDistributor.sendToServer(new FlightDescendC2SPayload(pressed)));
 
-        // The sector is the key's own sort order inside the category: KeyMapping#compareTo compares the order
-        // before the translated name, so the twelve are listed 1..12 in every language.
-        for (int sector = 0; sector < WheelGeometry.SECTORS; sector++)
-            WHEEL_SLOTS.add(new KeyMappingHolder("key.mxt.wheel_slot." + (sector + 1), Type.KEYSYM, InputConstants.UNKNOWN.getValue(), WHEEL_SLOT_CATEGORY, sector));
     }
 
     @SubscribeEvent
     public static void register(RegisterKeyMappingsEvent event) {
         event.registerCategory(CATEGORY);
-        event.registerCategory(WHEEL_SLOT_CATEGORY);
         KeyMappingHolder.HOLDERS.stream().map(KeyMappingHolder::get).forEach(event::register);
     }
 

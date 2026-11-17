@@ -1,10 +1,9 @@
 package com.iafenvoy.mxt.screen.wheel.content;
 
-import com.iafenvoy.mxt.api.WheelEntryKind;
-import com.iafenvoy.mxt.api.WheelMenuEntry;
 import com.iafenvoy.mxt.data.creature.ContractBehavior;
-import com.iafenvoy.mxt.runtime.wheel.WheelEntryKinds;
-import com.iafenvoy.mxt.screen.wheel.WheelSelection;
+import com.iafenvoy.mxt.runtime.wheel.MxtWheelSources;
+import com.iafenvoy.saturn.api.wheel.WheelEntryKind;
+import com.iafenvoy.saturn.api.wheel.WheelMenuEntry;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
@@ -23,7 +22,7 @@ public record ContractWheelEntry(ContractBehavior behavior) implements WheelMenu
 
     @Override
     public WheelEntryKind kind() {
-        return WheelEntryKinds.BEHAVIOR;
+        return MxtWheelSources.BEHAVIOR;
     }
 
     @Override
@@ -49,8 +48,4 @@ public record ContractWheelEntry(ContractBehavior behavior) implements WheelMenu
                         ? "wheel.mxt.tooltip.behavior_momentary" : "wheel.mxt.tooltip.behavior_state"));
     }
 
-    @Override
-    public void onSelected(WheelSelection selection) {
-        WheelTrigger.send(this, selection.source());
-    }
 }

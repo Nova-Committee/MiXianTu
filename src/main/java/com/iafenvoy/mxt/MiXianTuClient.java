@@ -9,8 +9,7 @@ import com.iafenvoy.mxt.screen.ponder.FormationPonder;
 import com.iafenvoy.mxt.screen.profiling.ProfilerOpenScreenData;
 import com.iafenvoy.mxt.screen.profiling.ProfilerScreen;
 import com.iafenvoy.mxt.screen.resourcebar.AuraZoneBarContributor;
-import com.iafenvoy.mxt.screen.wheel.WheelSelectionEntry;
-import com.iafenvoy.mxt.screen.wheel.content.WheelContent;
+import com.iafenvoy.mxt.screen.wheel.content.MxtWheelContent;
 import com.iafenvoy.saturn.screen.opener.ClientScreenDispatcher;
 import com.iafenvoy.saturn.screen.resourcebar.ResourceBarContributors;
 import net.neoforged.api.distmarker.Dist;
@@ -30,8 +29,7 @@ public final class MiXianTuClient {
         FormationPonder.register();
         // The resource-bar HUD entries are the library's; the aura bars hang off the zone, so they are contributed.
         ResourceBarContributors.register(AuraZoneBarContributor.INSTANCE);
-        WheelContent.register();
-        WheelSelectionEntry.register();
+        event.enqueueWork(MxtWheelContent::register);
         ClientScreenDispatcher.register(ProfilerOpenScreenData.STREAM_CODEC, ProfilerScreen::create);
     }
 }

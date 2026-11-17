@@ -21,11 +21,6 @@ public final class AuiPages {
      */
     public static final String ALCHEMY = "mxt/alchemy";
     /**
-     * The in-game wheel and the editor {@code /wheel} opens, each with its own stylesheet. The HUD grid draws
-     * itself and has no page.
-     */
-    public static final String WHEEL = "mxt/wheel";
-    /**
      * The one theme every page links; it sits in its own folder beside the page folders, so a page links
      * {@code ../common/theme.css}.
      */
@@ -64,14 +59,6 @@ public final class AuiPages {
 
     public static String alchemyPage(String name) {
         return page(ALCHEMY, name);
-    }
-
-    public static String wheelPage() {
-        return page(WHEEL, "wheel");
-    }
-
-    public static String wheelConfigPage() {
-        return page(WHEEL, "wheel_config");
     }
 
     public static String economyPage(String name) {

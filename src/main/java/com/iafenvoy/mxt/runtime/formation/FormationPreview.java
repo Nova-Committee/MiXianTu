@@ -20,7 +20,7 @@ public record FormationPreview(List<RequiredBlock> blocks, int width, int height
 
     public static Optional<FormationPreview> prepare(List<RequiredBlock> structure) {
         if (structure.isEmpty() || structure.size() > MAX_BLOCKS) return Optional.empty();
-        LinkedHashMap<BlockPos, RequiredBlock> states = new LinkedHashMap<BlockPos, RequiredBlock>();
+        LinkedHashMap<BlockPos, RequiredBlock> states = new LinkedHashMap<>();
         for (RequiredBlock block : structure) states.put(block.offset(), block);
         List<RequiredBlock> blocks = states.values().stream().filter(block -> !block.state().isAir()).toList();
         if (blocks.isEmpty()) return Optional.empty();
@@ -53,7 +53,7 @@ public record FormationPreview(List<RequiredBlock> blocks, int width, int height
 
     public List<RequiredBlock> displayBlocks() {
         int size = this.basePlateSize();
-        ArrayList<RequiredBlock> display = new ArrayList<RequiredBlock>(this.blocks.size() + size * size);
+        ArrayList<RequiredBlock> display = new ArrayList<>(this.blocks.size() + size * size);
         for (int x = -BASE_PLATE_BORDER; x < size - BASE_PLATE_BORDER; x++)
             for (int z = -BASE_PLATE_BORDER; z < size - BASE_PLATE_BORDER; z++)
                 display.add(new RequiredBlock(new BlockPos(x, 0, z),

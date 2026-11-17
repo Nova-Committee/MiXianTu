@@ -2,6 +2,7 @@ package com.iafenvoy.mxt.probe.creature;
 import com.iafenvoy.saturn.registry.SaturnResourceKeys;
 import com.iafenvoy.saturn.registry.SaturnAttachments;
 
+import com.iafenvoy.mxt.runtime.wheel.MxtWheelSources;
 import com.iafenvoy.mxt.api.Contractable;
 import com.iafenvoy.saturn.attachment.AbilityAttachment;
 import com.iafenvoy.mxt.attachment.CreatureSpiritAttachment;
@@ -21,9 +22,9 @@ import com.iafenvoy.mxt.runtime.creature.*;
 import com.iafenvoy.saturn.runtime.resulting.Failures;
 import com.iafenvoy.saturn.runtime.resulting.Result;
 import com.iafenvoy.mxt.runtime.resulting.failures.ContractFailure;
-import com.iafenvoy.mxt.runtime.wheel.WheelEntryKinds;
-import com.iafenvoy.mxt.runtime.wheel.WheelService;
-import com.iafenvoy.mxt.runtime.wheel.WheelSourceTypes;
+import com.iafenvoy.saturn.runtime.wheel.WheelEntryKinds;
+import com.iafenvoy.saturn.runtime.wheel.WheelService;
+import com.iafenvoy.saturn.runtime.wheel.WheelSourceTypes;
 import com.iafenvoy.mxt.testmod.MxtTestEntities;
 import com.iafenvoy.mxt.testmod.ProbeBeast;
 import com.iafenvoy.saturn.util.HolderHelper;
@@ -376,11 +377,11 @@ public final class ContractProbes {
             ItemStack bell = player.getMainHandItem();
             bell.getItem().interactLivingEntity(bell, player, beast, InteractionHand.MAIN_HAND);
 
-            boolean ordered = WheelService.trigger(player, WheelSourceTypes.CONTRACT, WheelEntryKinds.BEHAVIOR,
+            boolean ordered = WheelService.trigger(player, MxtWheelSources.CONTRACT, MxtWheelSources.BEHAVIOR,
                     ContractBehaviors.WANDER.id())
                     && beast.getData(MxtAttachments.CONTRACT).behavior().equals(ContractBehaviors.WANDER);
             ProbeBeast.refuseBehavior(true);
-            boolean refusedOrder = !WheelService.trigger(player, WheelSourceTypes.CONTRACT, WheelEntryKinds.BEHAVIOR,
+            boolean refusedOrder = !WheelService.trigger(player, MxtWheelSources.CONTRACT, MxtWheelSources.BEHAVIOR,
                     ContractBehaviors.STAY.id())
                     && beast.getData(MxtAttachments.CONTRACT).behavior().equals(ContractBehaviors.WANDER);
             ProbeBeast.refuseBehavior(false);
@@ -554,9 +555,9 @@ public final class ContractProbes {
             player.setItemInHand(InteractionHand.MAIN_HAND, MxtItems.BEAST_TAMING_BELL.toStack());
             ItemStack bell = player.getMainHandItem();
             bell.getItem().interactLivingEntity(bell, player, beast, InteractionHand.MAIN_HAND);
-            WheelService.trigger(player, WheelSourceTypes.CONTRACT, WheelEntryKinds.BEHAVIOR, ContractBehaviors.WANDER.id());
+            WheelService.trigger(player, MxtWheelSources.CONTRACT, MxtWheelSources.BEHAVIOR, ContractBehaviors.WANDER.id());
             ProbeBeast.refuseBehavior(true);
-            WheelService.trigger(player, WheelSourceTypes.CONTRACT, WheelEntryKinds.BEHAVIOR, ContractBehaviors.STAY.id());
+            WheelService.trigger(player, MxtWheelSources.CONTRACT, MxtWheelSources.BEHAVIOR, ContractBehaviors.STAY.id());
             ProbeBeast.refuseBehavior(false);
             BlockPos far = context.at(29, 1, 29);
             beast.setPos(far.getX() + 0.5D, far.getY(), far.getZ() + 0.5D);

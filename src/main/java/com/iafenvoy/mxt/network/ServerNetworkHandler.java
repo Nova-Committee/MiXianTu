@@ -1,7 +1,5 @@
 package com.iafenvoy.mxt.network;
 
-import com.iafenvoy.mxt.MiXianTu;
-import com.iafenvoy.mxt.attachment.WheelLayoutAttachment;
 import com.iafenvoy.mxt.item.block.entity.ForgingTableBlockEntity;
 import com.iafenvoy.mxt.network.payload.*;
 import com.iafenvoy.mxt.registry.MxtAttachments;
@@ -9,9 +7,6 @@ import com.iafenvoy.mxt.runtime.cultivation.CultivationMethodService.Cultivation
 import com.iafenvoy.mxt.runtime.cultivation.CultivationModeService;
 import com.iafenvoy.mxt.runtime.economy.PlayerTradeService;
 import com.iafenvoy.mxt.runtime.forging.ForgingWorkstationService;
-import com.iafenvoy.mxt.runtime.wheel.WheelEntryKinds;
-import com.iafenvoy.mxt.runtime.wheel.WheelService;
-import com.iafenvoy.mxt.runtime.wheel.WheelSourceTypes;
 import com.iafenvoy.mxt.screen.menu.*;
 import com.iafenvoy.mxt.util.ProfilerSubscriptions;
 import com.iafenvoy.saturn.profiling.LoggerDispatcher;
@@ -29,8 +24,6 @@ import top.theillusivec4.curios.api.CuriosApi;
 import top.theillusivec4.curios.api.SlotContext;
 import top.theillusivec4.curios.api.type.inventory.IDynamicStackHandler;
 
-import java.util.OptionalInt;
-
 
 public final class ServerNetworkHandler {
     static void onProfilerSubscription(ProfilerSubscriptionC2SPayload payload, IPayloadContext context) {
@@ -41,34 +34,6 @@ public final class ServerNetworkHandler {
     public static final Logger LOGGER = LogUtils.getLogger();
     // One line per action the client sends, so a held key would repeat it: the trace is development-only.
     private static final LoggerDispatcher FORGING_TRACE = LoggerDispatcher.of(LogUtils.getLogger(), LoggingLevel.DEBUG, LoggingLevel.NONE);
-
-    // The payload carries what was chosen and off which page, and nothing else: whether the player may use it is
-    // decided here and by the pipeline behind it, never by the screen that sent this. A filled-in direction asks for
-    // one named state instead of a flip.
-    static void onWheelAction(WheelActionC2SPayload payload, IPayloadContext context) {
-        if (!(context.player() instanceof ServerPlayer player)) return;
-        // The page and the kind travel as ids, so a request naming one this side does not know is refused here
-        // rather than failing the packet: a content mod may add either without a protocol of its own.
-        WheelService.trigger(player, WheelSourceTypes.byId(payload.source()).orElse(null),
-                WheelEntryKinds.byId(payload.kind()).orElse(null), payload.id(), payload.enabled());
-    }
-
-    // Forced to twelve sectors with every id resolved, so it can only contain things this server could trigger.
-    static void onWheelLayout(WheelLayoutC2SPayload payload, IPayloadContext context) {
-        if (!(context.player() instanceof ServerPlayer player)) return;
-        WheelLayoutAttachment attachment = player.getData(MxtAttachments.WHEEL_LAYOUT);
-        attachment.setLayout(WheelService.sanitize(player, payload.layout()));
-    }
-
-    // A number outside the numbering is stored as "nothing armed" and logged, since only a client bug produces one.
-    static void onWheelSelection(WheelSelectionC2SPayload payload, IPayloadContext context) {
-        if (!(context.player() instanceof ServerPlayer player)) return;
-        Integer submitted = payload.armed().orElse(null);
-        OptionalInt armed = WheelService.sanitizeArmed(submitted);
-        if (submitted != null && armed.isEmpty())
-            MiXianTu.LOGGER.warn("Discarding the wheel cell {} sent by {}: not a cell number", submitted, player.getGameProfile().name());
-        player.getData(MxtAttachments.WHEEL_LAYOUT).setArmed(armed);
-    }
 
     static void onForgingAction(ForgingActionC2SPayload payload, IPayloadContext context) {
         if (!(context.player() instanceof ServerPlayer player)) return;
