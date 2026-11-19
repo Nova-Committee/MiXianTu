@@ -28,6 +28,8 @@ MiXianTu 的八项转世配置全部移除。通用设置移入 Reincarnation：
 
 ## 验证
 
+当前 MiXianTu 只保留8组联动探针：伤害管线、到期转世、突破增寿、显式转世、转世行为、完整玩家换世的标签保留与默认清空，以及可选依赖。移除8组 Reincarnation 基础测试及其专用实现：`switch_off`、`switch_on`、`ledger`、`seed`、`settle`、`pre_cancel`、`action`、`no_ledger`；基础行为由 Reincarnation 自身测试负责。主代码与测试代码编译通过，保留的测试 ID 和方法实现已核对未变。下文16项同装探针结果为删除前的历史验证，本次清理未重新运行 GameTest。
+
 寿元行为拆分后，Reincarnation 的 `build` 与全部 43 项必需测试通过；MiXianTu 编译和资源处理通过，同装 16 项与未安装 1 项探针通过。新 JSON 使用 `add_lifespan` / `remove_lifespan` 与非负 `amount`，覆盖公式求值、负数拒绝、零值不建账与扣除下限。日志为 Reincarnation 的 `build/lifespan-actions-validation.log`，以及本项目的 `build/lifespan-actions-present.log`、`build/lifespan-actions-absent.log`。中英 220 页对齐，站内链接校验和构建通过，未运行客户端。
 
 Reincarnation 构建和 43 项必需 GameTest 通过。MiXianTu 主代码、测试代码编译通过，同装 Reincarnation 的 16 项寿元探针通过，包含默认清空和标签保留两个完整玩家换世场景、技能重建、资源策略及突破增寿。纯数据驱动改造后重新通过 16 项同装寿元探针，覆盖成功行为组合、寿元正负增量、失败不执行、链结束不重复授予。未安装时重新通过 1 项突破探针，确认通用成功行为有效、条件化寿元定义缺席。日志为 `build/lifespan-datapack-present.log` 与 `build/lifespan-datapack-absent.log`。未安装 Reincarnation 的冷启动和突破探针 1 项、灵草探针 8 项通过。Reincarnation 与可选 KubeJS 同装的完整 45 项必需测试通过。中英页面 220 对齐，链接与配置名称校验零问题，文档站构建通过。

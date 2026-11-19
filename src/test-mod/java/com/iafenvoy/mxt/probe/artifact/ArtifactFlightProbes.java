@@ -7,7 +7,6 @@ import com.iafenvoy.mxt.attachment.CultivationAttachment;
 import com.iafenvoy.saturn.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.attachment.TechniqueAttachment;
 import com.iafenvoy.saturn.data.ability.Ability;
-import com.iafenvoy.saturn.data.ability.Togglable;
 import com.iafenvoy.mxt.data.ability.type.MountAbilityType;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.saturn.data.resource.Resource;

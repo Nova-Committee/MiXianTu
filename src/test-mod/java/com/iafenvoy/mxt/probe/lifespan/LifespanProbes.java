@@ -6,7 +6,6 @@ import com.iafenvoy.saturn.registry.SaturnAttachments;
 import com.iafenvoy.saturn.attachment.AbilityAttachment;
 import com.iafenvoy.saturn.attachment.ResourceHolderAttachment;
 
-import com.iafenvoy.reincarnation.registry.ReincarnationAttachments;
 import com.iafenvoy.reincarnation.config.ReincarnationServerConfig;
 import com.iafenvoy.reincarnation.api.LifespanApi;
 import com.iafenvoy.reincarnation.api.RebirthMode;
@@ -16,12 +15,9 @@ import com.iafenvoy.reincarnation.lifespan.Lifespan;
 import com.iafenvoy.reincarnation.storage.Generations;
 import com.google.gson.JsonParser;
 import com.iafenvoy.jupiter.config.entry.BooleanEntry;
-import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.attachment.*;
 import com.iafenvoy.reincarnation.config.ReincarnationServerConfig.LifespanOutcome;
 import com.iafenvoy.saturn.data.action.EntityAction;
-import com.iafenvoy.reincarnation.data.lifespan.AddLifespanAction;
-import com.iafenvoy.reincarnation.data.lifespan.RemoveLifespanAction;
 import com.iafenvoy.mxt.data.cultivation.RealmStage;
 import com.iafenvoy.saturn.data.resource.Resource;
 import com.iafenvoy.reincarnation.event.LifeSpanEndEvent;
@@ -41,7 +37,6 @@ import com.iafenvoy.saturn.runtime.resulting.Failures;
 import com.iafenvoy.saturn.runtime.resulting.Result;
 import com.iafenvoy.saturn.util.HolderHelper;
 import com.iafenvoy.saturn.util.formula.FormulaContext;
-import com.iafenvoy.saturn.util.formula.number.Constant;
 import com.mojang.serialization.JsonOps;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
@@ -68,11 +63,8 @@ import java.util.HashMap;
 import java.util.function.Consumer;
 
 /**
- * The whole lifespan ledger, driven on disposable probes: the master switch, both numbers, seeding, the settlement,
- * each of the three outcomes and the explicit rebirth the command and the script call. Every part is its own probe,
- * so the state an earlier part left in the server config is established again by the part that needs it.
- *
- * <p>The lifespan_breakthrough fixture grants a net 2400 ticks through success actions.
+ * Reincarnation integration with cultivation, damage, attachment retention and ability rebuilding.
+ * The lifespan_breakthrough fixture grants a net 2400 ticks through success actions.
  */
 public final class LifespanProbes {
     private LifespanProbes() {
@@ -80,17 +72,9 @@ public final class LifespanProbes {
 
     public static List<Probe> probes() {
         return List.of(
-                Probe.of("lifespan/switch_off", LifespanProbes::switchOff),
-                Probe.of("lifespan/switch_on", LifespanProbes::switchOn),
-                Probe.of("lifespan/ledger", LifespanProbes::ledger),
-                Probe.of("lifespan/seed", LifespanProbes::seed),
-                Probe.of("lifespan/settle", LifespanProbes::settle),
-                Probe.of("lifespan/pre_cancel", LifespanProbes::preCancel),
                 Probe.of("lifespan/death", LifespanProbes::death),
                 Probe.of("lifespan/reincarnate", LifespanProbes::reincarnate),
                 Probe.kitted("lifespan/breakthrough", LifespanProbes::breakthrough),
-                Probe.of("lifespan/action", LifespanProbes::action),
-                Probe.of("lifespan/no_ledger", LifespanProbes::noLedger),
                 Probe.of("lifespan/explicit_reincarnate", LifespanProbes::explicitReincarnate),
                 Probe.of("lifespan/reincarnate_action", LifespanProbes::reincarnateAction),
                 Probe.kitted("lifespan/full_player_rebirth", context -> fullPlayerRebirth(context, true)),
@@ -157,203 +141,7 @@ public final class LifespanProbes {
         }
     }
 
-    // 1. Master switch off: nothing settles, no ledger appears, and a write still lands on the books.
-    private static void switchOff(ProbeContext context) {
-        Snapshot was = snapshot();
-        List<LivingEntity> probes = new ArrayList<>();
-        boolean ok;
-        try {
-            ReincarnationServerConfig.Lifespan settings = ReincarnationServerConfig.INSTANCE.lifespan;
-            LivingEntity dormant = probe(context, probes, 1, null);
-            if (dormant == null) return;
-
-            settings.enabled.setValue(false);
-            settings.baseLifespan.setValue(24_000L);
-            boolean dormantSettled = LifespanService.settle(dormant);
-            boolean dormantLedger = dormant.getExistingData(ReincarnationAttachments.LIFESPAN).isPresent();
-            boolean dormantWrite = LifespanService.set(dormant, 100L).getFailure().isEmpty();
-            ok = context.check("lifespan probe: switch_off settled=" + dormantSettled + " ledger=" + dormantLedger
-                            + " written=" + LifespanService.remaining(dormant),
-                    !dormantSettled && !dormantLedger && dormantWrite && LifespanService.remaining(dormant) == 100L);
-            verdict(context, ok);
-        } finally {
-            restore(was);
-            discard(probes);
-        }
-    }
-
-    // 2. Switching it back on resumes that ledger where the write left it: switching off never back-pays. The write
-    // part 1 asserts is repeated, because a part runs on its own and shares no state with the one before it.
-    private static void switchOn(ProbeContext context) {
-        Snapshot was = snapshot();
-        List<LivingEntity> probes = new ArrayList<>();
-        boolean ok;
-        try {
-            ReincarnationServerConfig.Lifespan settings = ReincarnationServerConfig.INSTANCE.lifespan;
-            LivingEntity dormant = probe(context, probes, 1, null);
-            if (dormant == null) return;
-
-            settings.enabled.setValue(false);
-            settings.baseLifespan.setValue(24_000L);
-            LifespanService.set(dormant, 100L);
-            settings.enabled.setValue(true);
-            settings.agePerSettle.setValue(20);
-            boolean resumed = LifespanService.settle(dormant) && LifespanService.remaining(dormant) == 80L;
-            ok = context.check("lifespan probe: switch_on remaining=" + LifespanService.remaining(dormant)
-                    + "/" + LifespanService.total(dormant), resumed);
-            verdict(context, ok);
-        } finally {
-            restore(was);
-            discard(probes);
-        }
-    }
-
-    // 3. The ledger: a set rewrites both numbers, a positive add grows both, a negative one only spends
-    //    what is left, and a negative set is refused.
-    private static void ledger(ProbeContext context) {
-        Snapshot was = snapshot();
-        List<LivingEntity> probes = new ArrayList<>();
-        boolean ok;
-        try {
-            ReincarnationServerConfig.Lifespan settings = ReincarnationServerConfig.INSTANCE.lifespan;
-            LivingEntity ledger = probe(context, probes, 1, null);
-            if (ledger == null) return;
-
-            settings.enabled.setValue(true);
-            settings.agePerSettle.setValue(20);
-            LifespanService.set(ledger, 100L);
-            boolean setLedger = LifespanService.remaining(ledger) == 100L && LifespanService.total(ledger) == 100L;
-            LifespanService.add(ledger, 50L);
-            boolean added = LifespanService.remaining(ledger) == 150L && LifespanService.total(ledger) == 150L;
-            LifespanService.add(ledger, -30L);
-            boolean spent = LifespanService.remaining(ledger) == 120L && LifespanService.total(ledger) == 150L;
-            boolean refusedSet = LifespanService.set(ledger, -1L).getFailure().isPresent()
-                    && LifespanService.remaining(ledger) == 120L && LifespanService.total(ledger) == 150L;
-            // Ageing of zero settles without spending anything.
-            settings.agePerSettle.setValue(0);
-            boolean ageless = LifespanService.settle(ledger) && LifespanService.remaining(ledger) == 120L;
-            settings.agePerSettle.setValue(20);
-            ok = context.check("lifespan probe: ledger set=" + setLedger + " added=" + added + " spent=" + spent
-                            + " refused=" + refusedSet + " ageless=" + ageless,
-                    setLedger && added && spent && refusedSet && ageless);
-            verdict(context, ok);
-        } finally {
-            restore(was);
-            discard(probes);
-        }
-    }
-
-    // 4. Seeding: a body with no ledger only takes the configured base, and a base of zero seeds nothing.
-    //    The zero-base half runs on its own probe, because it is the only thing that has to leave a body
-    //    with a ledger behind.
-    private static void seed(ProbeContext context) {
-        Snapshot was = snapshot();
-        List<LivingEntity> probes = new ArrayList<>();
-        boolean ok;
-        try {
-            ReincarnationServerConfig.Lifespan settings = ReincarnationServerConfig.INSTANCE.lifespan;
-            LivingEntity seeded = probe(context, probes, 1, null);
-            LivingEntity plain = probe(context, probes, 2, null);
-            if (seeded == null || plain == null) return;
-
-            settings.enabled.setValue(true);
-            settings.agePerSettle.setValue(20);
-            settings.baseLifespan.setValue(24_000L);
-            LifespanService.add(seeded, 40L);
-            boolean fromBase = LifespanService.remaining(seeded) == 24_040L && LifespanService.total(seeded) == 24_040L;
-            settings.baseLifespan.setValue(0L);
-            LifespanService.add(plain, 40L);
-            boolean fromZero = LifespanService.remaining(plain) == 40L && LifespanService.total(plain) == 40L;
-            ok = context.check("lifespan probe: seed base=" + LifespanService.remaining(seeded)
-                    + " zero=" + LifespanService.remaining(plain), fromBase && fromZero);
-            verdict(context, ok);
-        } finally {
-            restore(was);
-            discard(probes);
-        }
-    }
-
-    // 5. Settlement and the NONE outcome: 25 spends down to 5 and then closes the account at 0.
-    private static void settle(ProbeContext context) {
-        Snapshot was = snapshot();
-        List<LivingEntity> probes = new ArrayList<>();
-        boolean ok;
-        try {
-            ReincarnationServerConfig.Lifespan settings = ReincarnationServerConfig.INSTANCE.lifespan;
-            LivingEntity settled = probe(context, probes, 1, null);
-            if (settled == null) return;
-
-            settings.enabled.setValue(true);
-            settings.agePerSettle.setValue(20);
-            settings.onExpire.setValue(LifespanOutcome.NONE);
-            LifespanService.set(settled, 25L);
-            List<LifespanOutcome> outcomes = new ArrayList<>();
-            Consumer<LifeSpanEndEvent.Post> recorder = event -> outcomes.add(event.getOutcome());
-            NeoForge.EVENT_BUS.addListener(recorder);
-            boolean decremented;
-            boolean expired;
-            try {
-                decremented = LifespanService.settle(settled) && LifespanService.remaining(settled) == 5L
-                        && LifespanService.total(settled) == 25L;
-                expired = LifespanService.settle(settled);
-            } finally {
-                NeoForge.EVENT_BUS.unregister(recorder);
-            }
-            boolean closed = LifespanService.remaining(settled) == -1L && LifespanService.total(settled) == 0L;
-            ok = context.check("lifespan probe: settle decremented=" + decremented + " closed=" + closed
-                            + " outcomes=" + outcomes,
-                    decremented && expired && closed && outcomes.equals(List.of(LifespanOutcome.NONE)));
-            verdict(context, ok);
-        } finally {
-            restore(was);
-            discard(probes);
-        }
-    }
-
-    // 6. Cancelling the end inside the event: writing nothing closes the account, buying time keeps the
-    //    countdown running - which is the whole point of the cancellable event.
-    private static void preCancel(ProbeContext context) {
-        Snapshot was = snapshot();
-        List<LivingEntity> probes = new ArrayList<>();
-        boolean ok;
-        try {
-            ReincarnationServerConfig.Lifespan settings = ReincarnationServerConfig.INSTANCE.lifespan;
-            LivingEntity cancelled = probe(context, probes, 1, null);
-            if (cancelled == null) return;
-
-            settings.enabled.setValue(true);
-            settings.agePerSettle.setValue(20);
-            Consumer<LifeSpanEndEvent.Pre> refuse = event -> event.setCanceled(true);
-            Consumer<LifeSpanEndEvent.Pre> extend = event -> {
-                event.setCanceled(true);
-                if (event.getEntity() instanceof LivingEntity living) LifespanService.add(living, 50L);
-            };
-            LifespanService.set(cancelled, 5L);
-            NeoForge.EVENT_BUS.addListener(refuse);
-            try {
-                LifespanService.settle(cancelled);
-            } finally {
-                NeoForge.EVENT_BUS.unregister(refuse);
-            }
-            boolean refusedEnd = LifespanService.remaining(cancelled) == -1L && LifespanService.total(cancelled) == 0L;
-            LifespanService.set(cancelled, 5L);
-            NeoForge.EVENT_BUS.addListener(extend);
-            try {
-                LifespanService.settle(cancelled);
-            } finally {
-                NeoForge.EVENT_BUS.unregister(extend);
-            }
-            boolean extended = LifespanService.remaining(cancelled) == 50L;
-            ok = context.check("lifespan probe: pre_cancel closed=" + refusedEnd
-                    + " extended=" + LifespanService.remaining(cancelled), refusedEnd && extended);
-            verdict(context, ok);
-        } finally {
-            restore(was);
-            discard(probes);
-        }
-    }
-
-    // 7. DEATH on a non-player: it really dies, and it dies of the reincarnation:lifespan cause that the no_bonus
+    // DEATH on a non-player: it really dies, and it dies of the reincarnation:lifespan cause that the no_bonus
     //    tag keeps out of the element pipeline.
     private static void death(ProbeContext context) {
         Snapshot was = snapshot();
@@ -382,7 +170,7 @@ public final class LifespanProbes {
         }
     }
 
-    // 8. REINCARNATE: the realm, its progress and its minor stage records are gone and the abilities they
+    // REINCARNATE: the realm, its progress and its minor stage records are gone and the abilities they
     //    granted are taken back, while roots and techniques survive and the ledger restarts at the base.
     private static void reincarnate(ProbeContext context) {
         Snapshot was = snapshot();
@@ -481,66 +269,7 @@ public final class LifespanProbes {
         }
     }
 
-    // 10. The add and remove actions.
-    private static void action(ProbeContext context) {
-        Snapshot was = snapshot();
-        List<LivingEntity> probes = new ArrayList<>();
-        boolean ok;
-        try {
-            ReincarnationServerConfig.Lifespan settings = ReincarnationServerConfig.INSTANCE.lifespan;
-            LivingEntity acted = probe(context, probes, 1, null);
-            if (acted == null) return;
-
-            settings.baseLifespan.setValue(0L);
-            new AddLifespanAction(new Constant(30.0D))
-                    .execute(acted, FormulaContext.of(acted));
-            boolean actionAdded = LifespanService.remaining(acted) == 30L && LifespanService.total(acted) == 30L;
-            new RemoveLifespanAction(new Constant(10.0D))
-                    .execute(acted, FormulaContext.of(acted));
-            new RemoveLifespanAction(new Constant(-5.0D))
-                    .execute(acted, FormulaContext.of(acted));
-            boolean actionTook = LifespanService.remaining(acted) == 20L && LifespanService.total(acted) == 30L;
-            ok = context.check("lifespan probe: action added=" + actionAdded + " took=" + actionTook
-                            + " remaining=" + LifespanService.remaining(acted),
-                    actionAdded && actionTook);
-            verdict(context, ok);
-        } finally {
-            restore(was);
-            discard(probes);
-        }
-    }
-
-    // 11. Regression: neither adding nothing nor settling may give a body that never had a ledger one.
-    //     A stage whose formula rounds to zero goes through add(..., 0) on every breakthrough, so a zero
-    //     that opened a 0/0 account would sentence the body at the next settlement.
-    private static void noLedger(ProbeContext context) {
-        Snapshot was = snapshot();
-        List<LivingEntity> probes = new ArrayList<>();
-        boolean ok;
-        try {
-            ReincarnationServerConfig.Lifespan settings = ReincarnationServerConfig.INSTANCE.lifespan;
-            LivingEntity untouched = probe(context, probes, 1, null);
-            if (untouched == null) return;
-
-            settings.enabled.setValue(true);
-            settings.baseLifespan.setValue(0L);
-            boolean zeroAdd = LifespanService.add(untouched, 0L).getFailure().isEmpty()
-                    && untouched.getExistingData(ReincarnationAttachments.LIFESPAN).isEmpty();
-            boolean clean = !LifespanService.settle(untouched)
-                    && untouched.getExistingData(ReincarnationAttachments.LIFESPAN).isEmpty()
-                    && LifespanService.remaining(untouched) == -1L;
-            ok = context.check("lifespan probe: no_ledger zero_add=" + zeroAdd + " settle_created="
-                    + untouched.getExistingData(ReincarnationAttachments.LIFESPAN).isPresent(), zeroAdd && clean);
-            verdict(context, ok);
-        } finally {
-            restore(was);
-            discard(probes);
-        }
-    }
-
-    // 12. The explicit entry point the command, the script and the action call, on part 8's policy: it runs
-    //     the same reset without an expiry - so no end event fires - and it works while the system is
-    //     switched off, because a command is not time passing. Its own Pre may refuse it outright.
+    // Explicit rebirth resets cultivation without an expiry, even with ageing disabled; Pre may cancel it.
     private static void explicitReincarnate(ProbeContext context) {
         Snapshot was = snapshot();
         List<LivingEntity> probes = new ArrayList<>();
@@ -609,8 +338,7 @@ public final class LifespanProbes {
         }
     }
 
-    // 13. The data pack entry: reincarnation:reincarnate decodes by its own type name and runs that same reset, which
-    //     is what a pack's own reincarnation pill needs instead of waiting for a life to run out.
+    // The datapack action must reset cultivation through the same rebirth path.
     private static void reincarnateAction(ProbeContext context) {
         Snapshot was = snapshot();
         List<LivingEntity> probes = new ArrayList<>();

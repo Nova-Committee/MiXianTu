@@ -1,7 +1,5 @@
 package com.iafenvoy.mxt.probe.item;
 
-import com.iafenvoy.saturn.runtime.resulting.Result;
-
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
 import com.iafenvoy.mxt.api.AlchemyWorkstation;
