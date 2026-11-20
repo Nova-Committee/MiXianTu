@@ -2,6 +2,8 @@
 
 以下文档链接均指向独立维护的 [IAFEnvoy/docs](https://github.com/IAFEnvoy/docs)。修改源文件时，在该项目的实际检出目录中定位 `docs-zh/mod/mxt/` 与 `docs-en/mod/mxt/`，并同步两种语言；不假定本仓库存在 `docs/` 目录。站点协作规范见其 [AGENTS.md](https://github.com/IAFEnvoy/docs/blob/main/AGENTS.md)。
 
+README、说明文档与对外分享中的文档站链接，优先使用不带 `/en` 或 `/zh` 语言前缀的地址，例如 `https://docs.iafenvoy.com/docs/mod/mxt`。站点会沿用读者已保存的语言偏好；没有偏好时显示语言选择页。仅在明确需要指定语言时使用带前缀的地址。
+
 | 改了什么 | 必须一并改 |
 | --- | --- |
 | 新增 / 改名 / 删除数据包字段 | [数据格式参考](https://docs.iafenvoy.com/zh/docs/mod/mxt/datapack/json)中的定义页（中英各一份）→ 测试包示例（README 与站点首页的**介绍列**只在模块范围变化时才改） |
