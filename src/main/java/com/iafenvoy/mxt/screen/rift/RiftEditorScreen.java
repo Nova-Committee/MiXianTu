@@ -289,7 +289,7 @@ public final class RiftEditorScreen extends AuiScreen {
         }));
         this.button("record_target", () -> {
             if (this.minecraft.player == null) return;
-            this.value("dimension", this.minecraft.level.dimension().identifier().toString());
+            this.value("dimension", this.minecraft.player.level().dimension().identifier().toString());
             this.fields.vector("target_pos", this.minecraft.player.position());
             this.fields.number("yaw", this.minecraft.player.getYRot());
             this.fields.number("pitch", this.minecraft.player.getXRot());

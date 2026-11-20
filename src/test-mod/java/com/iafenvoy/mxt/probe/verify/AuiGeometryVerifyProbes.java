@@ -93,20 +93,21 @@ public final class AuiGeometryVerifyProbes {
                     Size.setViewportOverride(viewport[0], viewport[1]);
                     Document document = Document.create(path);
                     if (!context.check("slot page created: " + page.path(), document != null && document.body != null)) return;
-                    try (var _ = Document.withContext(document)) {
+                    assert document != null;
+                    try (Document.ContextScope _ = Document.withContext(document)) {
                         document.registerUaStylesheet("mxt_test/actual-global.css", resource("apricityui/apricity/global.css"));
                         ContainerExpander.expand(document);
                         SlotContentRules.normalizeTemplate(document);
                         document.flushPendingStyleUpdates();
                         document.commitRenderState();
-                        try (var _ = GeometryQueryScope.open()) {
+                        try (GeometryQueryScope _ = GeometryQueryScope.open()) {
                             for (SlotGrid grid : page.grids()) slotGrid(context, document, page.path(), grid);
                         }
                         Slot hovered = (Slot) document.getElementById(page.grids().getFirst().id()).getFirstElementChild();
                         hovered.setHover(true);
                         document.flushPendingStyleUpdates();
                         document.commitRenderState();
-                        try (var _ = GeometryQueryScope.open()) {
+                        try (GeometryQueryScope _ = GeometryQueryScope.open()) {
                             slotItem(context, hovered, page.path() + " hovered item");
                         }
                     } finally {
@@ -148,6 +149,7 @@ public final class AuiGeometryVerifyProbes {
     private static void slotItem(ProbeContext context, Slot slot, String label) {
         Element item = SlotContentRules.getDisplayItem(slot);
         if (!context.check(label + " exists", item != null)) return;
+        assert item != null;
         Element.DOMRect outer = slot.getBoundingClientRect(), inner = item.getBoundingClientRect();
         close(context, label + " x inset", inner.x - outer.x, 1);
         close(context, label + " y inset", inner.y - outer.y, 1);
@@ -190,6 +192,7 @@ public final class AuiGeometryVerifyProbes {
                         if (document != null) document.remove();
                         return;
                     }
+                    assert document != null;
                     try (Document.ContextScope _ = Document.withContext(document)) {
                         for (Element element : document.getElements()) {
                             if (element instanceof Translation translation) {

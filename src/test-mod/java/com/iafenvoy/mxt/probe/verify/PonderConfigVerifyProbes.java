@@ -52,7 +52,7 @@ public final class PonderConfigVerifyProbes {
             leg(context, "file values override defaults", fixture.root.editingMode.get() && fixture.root.comfyReading.get());
             leg(context, "nested value initialized from file", fixture.root.options.count.get() == 9);
             leg(context, "normal loading event and file path retained", fixture.root.loads == 1
-                    && fixture.config.getFullPath().equals(fixture.file()));
+                    && fixture.file().equals(fixture.config.getFullPath()));
 
             fixture.root.editingMode.set(false);
             try (BufferedReader reader = Files.newBufferedReader(fixture.file())) {
@@ -94,6 +94,7 @@ public final class PonderConfigVerifyProbes {
         private Fixture() throws IOException {
             ModContainer container = ModList.get().getModContainerById(MxtTestMod.MOD_ID).orElseThrow();
             this.bus = container.getEventBus();
+            assert this.bus != null;
             ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
             ModConfigSpec.BooleanValue editing = builder.define("editingMode", false);
             ModConfigSpec.BooleanValue comfy = builder.define("comfyReading", false);

@@ -203,7 +203,9 @@ public final class RiftProbes {
             c.expect("center chunk holds complete record", chunk.getData(MxtAttachments.RIFT_CHUNK).get(r.id()), r);
             ChunkPos originChunk = ChunkPos.containing(BlockPos.containing(data.placement().origin()));
             c.check("offset outline uses a different chunk from origin", !originChunk.equals(chunk.getPos()));
-            c.expect("directory uses actual outline center", RiftService.world(c.level()).location(r.id()).chunk(), chunk.getPos().pack());
+            RiftLocation location = RiftService.world(c.level()).location(r.id());
+            assert location != null;
+            c.expect("directory uses actual outline center", location.chunk(), chunk.getPos().pack());
             RiftTemplate rebased = RiftEdits.placement(RiftEdits.shape(data, RiftEdits.transform(data.shape(), Set.of(), new RiftVertex(0, 0),
                     -48, 0, 0, 1, 1, 0)), new RiftPlacement(data.placement().origin().add(48, 0, 0), data.placement().normal(), data.placement().tangent()));
             RiftGeometry.Mesh rebasedMesh = RiftGeometry.mesh(rebased.shape(), rebased.placement(), RiftGeometry.triangulate(rebased.shape()).result().orElseThrow());
@@ -225,8 +227,10 @@ public final class RiftProbes {
             RiftWorldAttachment restored = RiftWorldAttachment.CODEC.codec().parse(JsonOps.INSTANCE, json).result().orElseThrow();
             c.expect("directory survives restart", restored.location(r.id()), world.location(r.id()));
             c.check("full record cache starts empty", restored.get(r.id()) == null && restored.runtime().mesh(r.id()) == null);
-            c.check("dormant sections remain indexed", restored.runtime().query(world.location(r.id()).bounds()).contains(r.id()));
-            c.check("dormant records count toward density", !restored.runtime().fits(null, world.runtime().mesh(r.id()), 1));
+            c.check("dormant sections remain indexed", restored.runtime().query(location.bounds()).contains(r.id()));
+            RiftGeometry.Mesh mesh = world.runtime().mesh(r.id());
+            assert mesh != null;
+            c.check("dormant records count toward density", !restored.runtime().fits(null, mesh, 1));
             restored.release();
         } finally {
             RiftService.remove(c.level(), r.id());
@@ -246,13 +250,18 @@ public final class RiftProbes {
             LevelChunk target = c.level().getChunkAt(BlockPos.containing(shifted.placement().origin()));
             c.expect("old owner removes record", previous.getData(MxtAttachments.RIFT_CHUNK).get(old.id()), null);
             c.expect("new owner holds new revision", target.getData(MxtAttachments.RIFT_CHUNK).get(old.id()), moved.getData().orElseThrow());
-            c.expect("directory points to new owner", RiftService.world(c.level()).location(old.id()).chunk(), target.getPos().pack());
+            RiftLocation location = RiftService.world(c.level()).location(old.id());
+            assert location != null;
+            c.expect("directory points to new owner", location.chunk(), target.getPos().pack());
             c.check("both chunks marked for saving", previous.isUnsaved() && target.isUnsaved());
             UUID instance = UUID.randomUUID();
             RiftService.bind(c.level(), moved.getData().orElseThrow(), c.level().dimension().identifier(), 4, instance);
             RiftRecord bound = target.getData(MxtAttachments.RIFT_CHUNK).get(old.id());
+            assert bound != null;
             c.expect("binding written to chunk", bound.boundInstance(), Optional.of(instance));
-            c.expect("binding updates indexed revision", RiftService.world(c.level()).location(old.id()).revision(), bound.revision());
+            RiftLocation boundLocation = RiftService.world(c.level()).location(old.id());
+            assert boundLocation != null;
+            c.expect("binding updates indexed revision", boundLocation.revision(), bound.revision());
             RiftTemplate reshaped = RiftEdits.shape(bound.data(), RiftEdits.transform(bound.data().shape(), Set.of(), new RiftVertex(0, 0), 32, 0, 0, 1, 1, 0));
             Result<RiftRecord> reshapedResult = RiftService.publish(c.level(), bound.id(), bound.revision(), reshaped, null, false);
             if (!c.check("outline-only move accepted", (reshapedResult instanceof Result.SuccessResult<RiftRecord>))) return;
@@ -359,8 +368,10 @@ public final class RiftProbes {
         c.check("layout idempotent", RiftService.layout(c.level(), identity, Vec3.ZERO, List.of(d)));
         c.expect("one added", RiftService.world(c.level()).records().size(), before + 1);
         UUID id = UUID.nameUUIDFromBytes((identity + "/" + d.key()).getBytes(StandardCharsets.UTF_8));
-        close(c, "layout normal normalized", RiftService.get(c.level(), id).data().placement().normal().length(), 1);
-        close(c, "layout tangent normalized", RiftService.get(c.level(), id).data().placement().tangent().length(), 1);
+        RiftRecord installed = RiftService.get(c.level(), id);
+        assert installed != null;
+        close(c, "layout normal normalized", installed.data().placement().normal().length(), 1);
+        close(c, "layout tangent normalized", installed.data().placement().tangent().length(), 1);
         RiftService.remove(c.level(), id);
         c.check("duplicate keys reject", !RiftService.layout(c.level(), identity, Vec3.ZERO, List.of(d, d)));
         c.expect("batch untouched", RiftService.world(c.level()).records().size(), before);
@@ -420,14 +431,18 @@ public final class RiftProbes {
         stack.getItem().use(c.level(), c.player(), InteractionHand.MAIN_HAND);
         SecretRealmTokenComponent token = stack.get(MxtDataComponents.SECRET_REALM_TOKEN);
         if (!c.check("token creates a portal", token != null && token.summoned().isPresent())) return;
+        assert token != null;
         UUID id = token.summoned().orElseThrow();
         RiftRecord portal = RiftService.get(c.level(), id);
+        assert portal != null;
         c.expect("summon does not teleport", c.player().position(), origin);
         c.expect("summon keeps item", stack.getCount(), 1);
         c.expect("permanent by default", portal.expiresAt(), -1L);
         c.player().getCooldowns().removeCooldown(c.player().getCooldowns().getCooldownGroup(stack));
         stack.getItem().use(c.level(), c.player(), InteractionHand.MAIN_HAND);
-        c.expect("repeat reuses portal", stack.get(MxtDataComponents.SECRET_REALM_TOKEN).summoned(), Optional.of(id));
+        SecretRealmTokenComponent repeated = stack.get(MxtDataComponents.SECRET_REALM_TOKEN);
+        assert repeated != null;
+        c.expect("repeat reuses portal", repeated.summoned(), Optional.of(id));
         RiftService.remove(c.level(), id);
     }
 
@@ -436,6 +451,7 @@ public final class RiftProbes {
         SecretRealmRecord planned = SecretRealmService.plan(definition, 0, 1, RiftService.now(c.level()));
         SecretRealmRecord instance = SecretRealmService.open(c.server(), planned).orElseThrow();
         ServerLevel destination = c.server().getLevel(instance.dimension());
+        assert destination != null;
         destination.setBlockAndUpdate(new BlockPos(0, 64, 0), Blocks.STONE.defaultBlockState());
         RiftTemplate base = template(c, 0);
         RiftTemplate data = new RiftTemplate(base.key(), base.placement(), false, base.shape(),
@@ -450,6 +466,7 @@ public final class RiftProbes {
             c.player().setPos(data.placement().origin().add(0, 0, 0.1));
             RiftTravelService.tryEnter(c.level(), result.getData().orElseThrow(), c.player());
             RiftRecord bound = RiftService.get(c.level(), portalId);
+            assert bound != null;
             if (!c.check("first entry binds instance", bound.boundInstance().equals(Optional.of(instance.instanceId()))))
                 return;
             ServerPlayer guest = c.join(new Vec3(10.5, 0, 12.5));
@@ -469,6 +486,7 @@ public final class RiftProbes {
         SecretRealmRecord instance = SecretRealmService.open(c.server(), SecretRealmService.plan(definition, 0, 2, RiftService.now(c.level()))).orElseThrow();
         try {
             ServerLevel level = c.server().getLevel(instance.dimension());
+            assert level != null;
             List<RiftRecord> records = RiftService.world(level).records();
             c.expect("layout publishes once", records.size(), 1);
             c.check("prepared flag", instance.prepared());
@@ -561,12 +579,12 @@ public final class RiftProbes {
         TicketStorage storage = new TicketStorage();
         ChunkPos pos = new ChunkPos(710_002, 710_002);
         storage.addTicketWithRadius(type, pos, 2);
-        for (int tick = 0; tick < 250; tick++) storage.purgeStaleTickets(null);
+        for (int tick = 0; tick < 250; tick++) storage.purgeStaleTickets(c.level().getChunkSource().chunkMap);
         c.expect("ticket survives valid wait", storage.getTickets(pos.pack()).size(), 1);
         storage.addTicketWithRadius(type, pos, 2);
-        for (int tick = 0; tick < 300; tick++) storage.purgeStaleTickets(null);
+        for (int tick = 0; tick < 300; tick++) storage.purgeStaleTickets(c.level().getChunkSource().chunkMap);
         c.expect("later acquisition refreshes full timeout", storage.getTickets(pos.pack()).size(), 1);
-        storage.purgeStaleTickets(null);
+        storage.purgeStaleTickets(c.level().getChunkSource().chunkMap);
         c.expect("orphan expires without a loaded chunk holder", storage.getTickets(pos.pack()).size(), 0);
 
         ChunkPos actual = new ChunkPos(710_003, 710_003);

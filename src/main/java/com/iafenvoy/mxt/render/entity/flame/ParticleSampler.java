@@ -49,6 +49,7 @@ public final class ParticleSampler implements AutoCloseable {
                 if (isSurface) {
                     float u0 = (quad % 8) / 8.0F;
                     float u1 = u0 + 0.125F;
+                    @SuppressWarnings("IntegerDivisionInFloatingPointContext")
                     float ring = quad / 8;
                     vertex(data, u0, ring, 0);
                     vertex(data, u1, ring, 0);

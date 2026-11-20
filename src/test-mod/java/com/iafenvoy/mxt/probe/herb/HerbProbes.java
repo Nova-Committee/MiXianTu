@@ -153,7 +153,7 @@ public final class HerbProbes {
         forget(level, pos);
 
         ok &= check(context, "herb probe: an untouched wild block has no row", clock(level, pos), null);
-        double rolled = ageAt(level, pos);
+        double rolled = requireAge(level, pos);
         ok &= check(context, "herb probe: the first read rolls a non-negative age", rolled >= 0.0D, true);
         ok &= check(context, "herb probe: the rolled age is capped at max_age", rolled <= 40.0D, true);
 
@@ -172,7 +172,7 @@ public final class HerbProbes {
         level.setBlockAndUpdate(fractional, Blocks.AIR.defaultBlockState());
         level.setBlockAndUpdate(fractional, HerbTestBlocks.WILD_ROLLED.get().defaultBlockState());
         forget(level, fractional);
-        double firstRoll = ageAt(level, fractional);
+        double firstRoll = requireAge(level, fractional);
         ok &= check(context, "herb probe: a rolled age survives the first read exactly",
                 ageAt(level, fractional), firstRoll);
         ok &= check(context, "herb probe: a rolled age survives the second read exactly",
@@ -196,7 +196,7 @@ public final class HerbProbes {
         // Rewind the clock and let the real settlement run, so the period boundary is the server's own.
         rewind(level, pos, 20);
         settle(level, pos);
-        double afterOne = ageAt(level, pos);
+        double afterOne = requireAge(level, pos);
         ok &= check(context, "herb probe: one period grows the plant", afterOne > 0.0D, true);
         ok &= check(context, "herb probe: growth stops at mature_age for a constant rate", afterOne <= MAX, true);
 
@@ -207,7 +207,7 @@ public final class HerbProbes {
         // Time paid for twice is time grown twice.
         rewind(level, pos, 20);
         settle(level, pos);
-        ok &= check(context, "herb probe: a second period grows further", ageAt(level, pos) >= afterOne, true);
+        ok &= check(context, "herb probe: a second period grows further", requireAge(level, pos) >= afterOne, true);
         level.setBlockAndUpdate(pos, Blocks.AIR.defaultBlockState());
         forget(level, pos);
     }
@@ -224,11 +224,11 @@ public final class HerbProbes {
 
         // Give it real time behind it, then read many times in a row without any time passing between the reads.
         rewind(level, pos, 400);
-        double first = ageAt(level, pos);
+        double first = requireAge(level, pos);
         ok &= check(context, "herb probe: a long span grows the plant", first > 0.0D, true);
         boolean stable = true;
         for (int i = 0; i < 8; i++)
-            stable &= ageAt(level, pos) == first;
+            stable &= requireAge(level, pos) == first;
         // Repeated identical reads are the exact shape of the bug: Jade polls, so a plant that answers differently
         // each time shows up as a number flickering between two values.
         ok &= check(context, "herb probe: repeated reads answer the same age", stable, true);
@@ -239,7 +239,7 @@ public final class HerbProbes {
         for (int i = 0; i < 8; i++) {
             rewind(level, pos, 20);
             settle(level, pos);
-            double now = ageAt(level, pos);
+            double now = requireAge(level, pos);
             monotonic &= now >= seen;
             seen = now;
         }
@@ -295,6 +295,12 @@ public final class HerbProbes {
         ok &= check(context, "herb probe: an unclaimed block gets no clock", clock(level, pos), null);
         ok &= check(context, "herb probe: an unclaimed block has no age", ageAt(level, pos), null);
         level.setBlockAndUpdate(pos, Blocks.AIR.defaultBlockState());
+    }
+
+    private static double requireAge(ServerLevel level, BlockPos pos) {
+        Double age = ageAt(level, pos);
+        assert age != null;
+        return age;
     }
 
     private static Double ageAt(ServerLevel level, BlockPos pos) {

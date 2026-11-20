@@ -73,6 +73,7 @@ public final class RiftContactCollector {
             RiftRecord record = world.get(id);
             if (record == null || record.expired(now) || !record.data().enabled()) continue;
             RiftGeometry.Mesh mesh = world.runtime().mesh(id);
+            assert mesh != null;
             if (Double.isFinite(mesh.contact(current, Vec3.ZERO))) touching = true;
             double at = mesh.contact(previous, movement);
             if (!Double.isFinite(at)) continue;

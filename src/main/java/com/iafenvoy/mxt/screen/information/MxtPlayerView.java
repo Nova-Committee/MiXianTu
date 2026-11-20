@@ -64,6 +64,7 @@ public final class MxtPlayerView {
             rows.put(MxtPlayerInformation.REALM, new Row(List.of(Component.translatable("info.mxt.mortal")), Optional.empty(), InformationRow.Tone.NORMAL));
             return;
         }
+        assert cultivation != null;
         FormulaContext context = player == null ? null : FormulaContexts.forEntity(player);
         List<Component> values = new ArrayList<>();
         for (Holder<Aura> chain : chains) {

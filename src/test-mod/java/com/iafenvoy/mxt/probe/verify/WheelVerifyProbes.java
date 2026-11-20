@@ -213,8 +213,9 @@ public final class WheelVerifyProbes {
             context.check(name + " long pool scrolls", scroll > 0);
             context.expect(name + " scissor top", layout.optionAt(layout.left() + 1, layout.top() - 1, scroll, 200), -1);
             context.expect(name + " cell gap", layout.optionAt(layout.left() + 23, layout.top() + 1, 0, 200), -1);
-            context.expect(name + " last row reachable", layout.optionAt(layout.x(199) + 1,
-                    layout.top() + 199 / layout.columns() * WheelConfigurationLayout.STEP - scroll + 1, scroll, 200), 199);
+            @SuppressWarnings("IntegerDivisionInFloatingPointContext")
+            double lastRowY = layout.top() + 199 / layout.columns() * WheelConfigurationLayout.STEP - scroll + 1;
+            context.expect(name + " last row reachable", layout.optionAt(layout.x(199) + 1, lastRowY, scroll, 200), 199);
         }
     }
 

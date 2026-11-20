@@ -105,7 +105,9 @@ public final class AuraDoubleVerifyProbes {
             close(context, "simulation accepts a fractional withdrawal", access.extract(context.player(), context.registries(), stack, aura, 0.25D, true, true), 0.0D);
             context.check("simulation does not rewrite the component", stack.get(MxtDataComponents.SPIRIT_STORAGE) == original);
             close(context, "one unit is withdrawn", access.extract(context.player(), context.registries(), stack, aura, 1.0D, true, false), 0.0D);
-            close(context, "fractional remainder survives", stack.get(MxtDataComponents.SPIRIT_STORAGE).get(aura), 0.75D);
+            SpiritStorageComponent stored = stack.get(MxtDataComponents.SPIRIT_STORAGE);
+            assert stored != null;
+            close(context, "fractional remainder survives", stored.get(aura), 0.75D);
         }
     }
 
@@ -143,7 +145,9 @@ public final class AuraDoubleVerifyProbes {
         context.player().startUsingItem(InteractionHand.MAIN_HAND);
         SpiritChargeService.onUseTick(new LivingEntityUseItemEvent.Tick(context.player(), talisman, 200));
         context.player().releaseUsingItem();
-        close(context, "held pouring fills the final quarter", talisman.get(MxtDataComponents.SPIRIT_STORAGE).get(spirit), capacity);
+        SpiritStorageComponent stored = talisman.get(MxtDataComponents.SPIRIT_STORAGE);
+        assert stored != null;
+        close(context, "held pouring fills the final quarter", stored.get(spirit), capacity);
         close(context, "held pouring charges only the final quarter", account.get(spirit.value().resource()), 0.75D);
     }
 
@@ -164,7 +168,9 @@ public final class AuraDoubleVerifyProbes {
         context.check("the click starts the pour", context.player().isUsingItem());
         SpiritChargeService.onUseTick(new LivingEntityUseItemEvent.Tick(context.player(), talisman,
                 context.player().getUseItemRemainingTicks()));
-        close(context, "one click tick stores the intake", talisman.get(MxtDataComponents.SPIRIT_STORAGE).get(spirit), 1.0D);
+        SpiritStorageComponent stored = talisman.get(MxtDataComponents.SPIRIT_STORAGE);
+        assert stored != null;
+        close(context, "one click tick stores the intake", stored.get(spirit), 1.0D);
         close(context, "one click tick charges one unit", account.get(resource), 9.0D);
         context.player().releaseUsingItem();
         context.expect("releasing ends the pour", ItemUseCycles.current(context.player()), null);

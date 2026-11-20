@@ -23,6 +23,7 @@ import com.iafenvoy.saturn.util.HolderHelper;
 import com.iafenvoy.saturn.util.MiscUtil;
 import com.iafenvoy.saturn.util.formula.FormulaContext;
 import net.minecraft.core.Holder;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
 import org.jetbrains.annotations.Nullable;
@@ -77,9 +78,13 @@ public final class FormationService {
             CostContext costContext = CostContext.account(resources, null, context, CostSources.FORMATION_MAINTENANCE);
             PaymentPlan plan = MaintainRule.plan(definition, costContext, supplied, instance.stored(), capacity);
             if (plan == null) return Result.failure(Failures.UNKNOWN);
-            Result<Map<Identifier, Double>> payment = ResourceTransactions.tryConsume(resources, Evaluation.of(context.registries(), plan.fromOwner()));
-            if (payment instanceof Result.FailureResult<Map<Identifier, Double>>(Failure failure))
-                return Result.failure(Failures.UNKNOWN, failure.resource().orElse(null));
+            if (!plan.fromOwner().isEmpty()) {
+                HolderLookup.Provider registries = context.registries();
+                if (registries == null) return Result.failure(Failures.UNKNOWN);
+                Result<Map<Identifier, Double>> payment = ResourceTransactions.tryConsume(resources, Evaluation.of(registries, plan.fromOwner()));
+                if (payment instanceof Result.FailureResult<Map<Identifier, Double>>(Failure failure))
+                    return Result.failure(Failures.UNKNOWN, failure.resource().orElse(null));
+            }
             plan.applyTo(instance);
             instance.maintained();
             return Result.success();

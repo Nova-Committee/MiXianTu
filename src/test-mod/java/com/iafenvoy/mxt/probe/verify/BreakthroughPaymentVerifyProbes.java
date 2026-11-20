@@ -70,8 +70,9 @@ public final class BreakthroughPaymentVerifyProbes {
         Result<Void> paid = CultivationService.attempt(body, spirit, resources, aura, formula, () -> true);
         context.check("a body holding the payment breaks through", paid instanceof Result.SuccessResult<?>);
         context.expect("the entry cost comes out of the account", resources.get(payment), 75.0D);
+        Holder<RealmStage> stage = spirit.realmStage(aura);
         context.expect("the body lands in the entry realm",
-                spirit.realmStage(aura) == null ? "none" : HolderHelper.id(spirit.realmStage(aura)).toString(),
+                stage == null ? "none" : HolderHelper.id(stage).toString(),
                 HolderHelper.id(entry).toString());
 
         // A save written while the cap was zero could never hold anything: the login pass seeds it again.

@@ -14,9 +14,11 @@ import net.createmod.ponder.impl.client.element.TextWindowElement;
 import net.createmod.ponder.impl.client.registration.PonderLocalization;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipComponent;
 import net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipPositioner;
 import net.minecraft.client.gui.screens.inventory.tooltip.DefaultTooltipPositioner;
+import net.minecraft.client.renderer.state.gui.GuiRenderState;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
@@ -107,29 +109,30 @@ public final class PonderSceneVerifyProbes {
     }
 
     private static void tooltip(ProbeContext context) {
+        GuiGraphicsExtractor graphics = new GuiGraphicsExtractor(Minecraft.getInstance(), new GuiRenderState(), 0, 0);
         Font font = Minecraft.getInstance().font;
         ItemStack stack = new ItemStack(Items.GOLD_BLOCK);
         List<ClientTooltipComponent> components = List.of(ClientTooltipComponent.create(Component.literal("Gold block").getVisualOrderText()));
         ClientTooltipPositioner positioner = DefaultTooltipPositioner.INSTANCE;
-        RenderTooltipEvent.Pre event = new RenderTooltipEvent.Pre(stack, null, 0, 0, 640, 360, font, components, positioner);
+        RenderTooltipEvent.Pre event = new RenderTooltipEvent.Pre(stack, graphics, 0, 0, 640, 360, font, components, positioner);
         PonderTooltipCompatibility.reposition(event, 240, 120);
         Vector2ic position = positioner.positionTooltip(640, 360, event.getX(), event.getY(), 80, 20);
         leg(context, "deferred tooltip follows mouse", position.x() == 252 && position.y() == 108);
         leg(context, "tooltip contents and styling preserved", event.getItemStack() == stack && event.getFont() == font
                 && event.getComponents().equals(components) && event.getTooltipPositioner() == positioner && !event.isCanceled());
-        RenderTooltipEvent.Pre moved = new RenderTooltipEvent.Pre(stack, null, 0, 0, 640, 360, font, components, positioner);
+        RenderTooltipEvent.Pre moved = new RenderTooltipEvent.Pre(stack, graphics, 0, 0, 640, 360, font, components, positioner);
         PonderTooltipCompatibility.reposition(moved, 380, 200);
         Vector2ic movedPosition = positioner.positionTooltip(640, 360, moved.getX(), moved.getY(), 80, 20);
         leg(context, "next tooltip follows moved mouse", movedPosition.x() == 392 && movedPosition.y() == 188);
-        RenderTooltipEvent.Pre edge = new RenderTooltipEvent.Pre(stack, null, 0, 0, 640, 360, font, components, positioner);
+        RenderTooltipEvent.Pre edge = new RenderTooltipEvent.Pre(stack, graphics, 0, 0, 640, 360, font, components, positioner);
         PonderTooltipCompatibility.reposition(edge, 635, 355);
         Vector2ic edgePosition = positioner.positionTooltip(640, 360, edge.getX(), edge.getY(), 80, 20);
         leg(context, "native tooltip stays inside right and bottom edges", edgePosition.x() == 543 && edgePosition.y() == 337);
-        RenderTooltipEvent.Pre anchored = new RenderTooltipEvent.Pre(stack, null, 45, 0, 640, 360, font, components, positioner);
+        RenderTooltipEvent.Pre anchored = new RenderTooltipEvent.Pre(stack, graphics, 45, 0, 640, 360, font, components, positioner);
         PonderTooltipCompatibility.reposition(anchored, 240, 120);
         leg(context, "explicit tooltip anchor preserved", anchored.getX() == 45 && anchored.getY() == 0);
         ClientTooltipPositioner custom = (width, height, x, y, tooltipWidth, tooltipHeight) -> new Vector2i(4, 4);
-        RenderTooltipEvent.Pre customEvent = new RenderTooltipEvent.Pre(stack, null, 0, 0, 640, 360, font, components, custom);
+        RenderTooltipEvent.Pre customEvent = new RenderTooltipEvent.Pre(stack, graphics, 0, 0, 640, 360, font, components, custom);
         PonderTooltipCompatibility.reposition(customEvent, 240, 120);
         leg(context, "custom tooltip positioner preserved", customEvent.getX() == 0 && customEvent.getY() == 0
                 && customEvent.getTooltipPositioner() == custom);

@@ -80,8 +80,9 @@ public final class QualityProbes {
         ItemStack cobble = new ItemStack(Items.COBBLESTONE);     // table: poor
         ItemStack dirt = new ItemStack(Items.DIRT);              // no tier anywhere
         ItemQualityCondition membership = quality(ops, "{\"type\": \"mxt:item_quality\", \"quality\": [\"mxt_test:normal\"]}");
+        assert membership != null;
         leg(context, "membership",
-                membership != null && ask(access, membership.requirement(), clay)
+                ask(access, membership.requirement(), clay)
                         && !ask(access, membership.requirement(), cobble) && !ask(access, membership.requirement(), dirt),
                 "clay=" + ask(access, membership.requirement(), clay) + " cobble=" + ask(access, membership.requirement(), cobble)
                         + " dirt=" + ask(access, membership.requirement(), dirt),
@@ -96,8 +97,9 @@ public final class QualityProbes {
         ItemStack star = new ItemStack(Items.NETHER_STAR);       // table: poor, written as a tag key
         ItemStack graded = named(Items.DIRT, tier(access, "mxt_test:excellent"));
         ItemQualityCondition minimum = quality(ops, "{\"type\": \"mxt:item_quality\", \"min_quality\": \"mxt_test:normal\"}");
+        assert minimum != null;
         leg(context, "min_same_chain",
-                minimum != null && ask(access, minimum.requirement(), clay) && ask(access, minimum.requirement(), graded)
+                ask(access, minimum.requirement(), clay) && ask(access, minimum.requirement(), graded)
                         && !ask(access, minimum.requirement(), cobble) && !ask(access, minimum.requirement(), star),
                 "normal=" + ask(access, minimum.requirement(), clay) + " excellent=" + ask(access, minimum.requirement(), graded)
                         + " poor=" + ask(access, minimum.requirement(), cobble) + " tagged_poor=" + ask(access, minimum.requirement(), star),
@@ -110,9 +112,11 @@ public final class QualityProbes {
         ItemStack clay = new ItemStack(Items.CLAY_BALL);         // table: normal
         ItemStack kiln = named(Items.DIRT, tier(access, "mxt_test:alchemy/kiln_a"));
         ItemQualityCondition minimum = quality(ops, "{\"type\": \"mxt:item_quality\", \"min_quality\": \"mxt_test:normal\"}");
+        assert minimum != null;
         ItemQualityCondition kilnMinimum = quality(ops, "{\"type\": \"mxt:item_quality\", \"min_quality\": \"mxt_test:alchemy/kiln_a\"}");
+        assert kilnMinimum != null;
         leg(context, "cross_chain",
-                kilnMinimum != null && !ask(access, minimum.requirement(), kiln) && ask(access, kilnMinimum.requirement(), kiln) && !ask(access, kilnMinimum.requirement(), clay),
+                !ask(access, minimum.requirement(), kiln) && ask(access, kilnMinimum.requirement(), kiln) && !ask(access, kilnMinimum.requirement(), clay),
                 "kiln_vs_normal=" + ask(access, minimum.requirement(), kiln)
                         + " kiln_vs_kiln=" + ask(access, kilnMinimum.requirement(), kiln)
                         + " clay_vs_kiln=" + ask(access, kilnMinimum.requirement(), clay),
@@ -230,10 +234,11 @@ public final class QualityProbes {
         ItemStack clay = new ItemStack(Items.CLAY_BALL);         // table: normal
         ItemStack clayGraded = named(Items.CLAY_BALL, tier(access, "mxt_test:excellent"));
         ItemQualityCondition membership = quality(ops, "{\"type\": \"mxt:item_quality\", \"quality\": [\"mxt_test:normal\"]}");
+        assert membership != null;
         ItemQualityCondition gradedMembership = quality(ops, "{\"type\": \"mxt:item_quality\", \"quality\": [\"mxt_test:excellent\"]}");
+        assert gradedMembership != null;
         leg(context, "tier_source_layers",
-                gradedMembership != null
-                        && !ask(access, gradedMembership.requirement(), clay) && ask(access, gradedMembership.requirement(), clayGraded)
+                !ask(access, gradedMembership.requirement(), clay) && ask(access, gradedMembership.requirement(), clayGraded)
                         && ask(access, membership.requirement(), clay) && !ask(access, membership.requirement(), clayGraded),
                 "table_as_excellent=" + ask(access, gradedMembership.requirement(), clay)
                         + " graded_as_excellent=" + ask(access, gradedMembership.requirement(), clayGraded)

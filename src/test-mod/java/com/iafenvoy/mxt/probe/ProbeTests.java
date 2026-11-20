@@ -21,6 +21,7 @@ import com.iafenvoy.mxt.probe.verify.*;
 import com.iafenvoy.mxt.probe.world.RiftAnchorProbes;
 import com.iafenvoy.mxt.probe.world.RiftProbes;
 import com.iafenvoy.mxt.probe.world.SecretRealmProbes;
+import com.iafenvoy.mxt.probe.world.SecretRealmClientProbes;
 import com.iafenvoy.mxt.probe.world.SecretRealmTravelProbes;
 import com.iafenvoy.mxt.probe.world.SoulProbes;
 import com.iafenvoy.mxt.testmod.MxtTestMod;
@@ -121,6 +122,7 @@ public final class ProbeTests {
         if (FMLEnvironment.getDist().isClient()) {
             probes.addAll(PonderRenderVerifyProbes.probes());
             probes.addAll(PonderSceneVerifyProbes.probes());
+            probes.addAll(SecretRealmClientProbes.probes());
         }
         if (ModList.get().isLoaded("reincarnation")) probes.addAll(LifespanProbes.probes());
         return List.copyOf(probes);

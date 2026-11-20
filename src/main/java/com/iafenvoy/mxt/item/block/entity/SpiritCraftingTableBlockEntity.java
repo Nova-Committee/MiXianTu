@@ -100,7 +100,7 @@ public final class SpiritCraftingTableBlockEntity extends BlockEntity implements
             this.clearAura();
             return;
         }
-        Map<Holder<Aura>, Double> costs = this.costs(recipe.aura());
+        Map<Holder<Aura>, Double> costs = this.costs(recipe.aura(), level);
         this.configureAuraCosts(costs);
         ItemStack produced = recipe.result().create();
         ItemStack stored = this.result.getItem(0);
@@ -108,7 +108,7 @@ public final class SpiritCraftingTableBlockEntity extends BlockEntity implements
         if (!this.hasAura(costs) || (!stored.isEmpty() && (!ItemStack.isSameItemSameComponents(stored, produced)
                 || stored.getCount() + produced.getCount() > max))) return;
         // Paid through the shared transaction, so a recipe's aura price behaves like every other cost.
-        CostContext bankContext = AuraCostContexts.bank(this, null, FormulaContext.of(this.level), CostSources.RECIPE);
+        CostContext bankContext = AuraCostContexts.bank(this, null, FormulaContext.of(level), CostSources.RECIPE);
         if (CostPayment.pay(recipe.aura(), bankContext) instanceof Result.FailureResult<?>) return;
         for (int index = 0; index < this.grid.getContainerSize(); index++) this.grid.getItem(index).shrink(1);
         if (stored.isEmpty()) this.result.setItem(0, produced);
@@ -117,9 +117,9 @@ public final class SpiritCraftingTableBlockEntity extends BlockEntity implements
         this.result.setChanged();
     }
 
-    private Map<Holder<Aura>, Double> costs(List<Cost> aura) {
+    private Map<Holder<Aura>, Double> costs(List<Cost> aura, Level level) {
         Map<Holder<Aura>, Double> amounts = Costs.auras(aura,
-                CostContext.account(null, null, FormulaContext.of(this.level), CostSources.RECIPE));
+                CostContext.account(null, null, FormulaContext.of(level), CostSources.RECIPE));
         if (amounts == null) return Map.of();
         return Collections.unmodifiableMap(new LinkedHashMap<>(amounts));
     }

@@ -53,7 +53,8 @@ public final class SecretRealmService {
     }
 
     public static Result<LivingEntity> enterFromPortal(LivingEntity traveller, Holder<SecretRealm> definition, Vec3 origin) {
-        return enter(traveller, traveller.level().getServer(), definition, null, null, origin, true);
+        if (!(traveller.level() instanceof ServerLevel level)) return refused(Failures.SERVER_ONLY);
+        return enter(traveller, level.getServer(), definition, null, null, origin, true);
     }
 
     public static Result<LivingEntity> enterInstance(LivingEntity traveller, SecretRealmRecord selected, @Nullable Arrival arrival, @Nullable Vec3 origin) {
@@ -61,11 +62,12 @@ public final class SecretRealmService {
     }
 
     private static Result<LivingEntity> enterInstance(LivingEntity traveller, SecretRealmRecord selected, @Nullable Arrival arrival, @Nullable Vec3 origin, boolean nearby) {
+        if (!(traveller.level() instanceof ServerLevel level)) return refused(Failures.SERVER_ONLY);
         SecretRealmRecord current = SecretRealmRegistry.at(selected.dimension()).orElse(null);
         if (current == null || current.index() != selected.index() || !current.instanceId().equals(selected.instanceId()) || !current.definition().equals(selected.definition())
-                || current.expired(traveller.level().getServer().overworld().getGameTime()))
+                || current.expired(level.getServer().overworld().getGameTime()))
             return refused(SecretRealmFailure.MISSING_DIMENSION);
-        return enter(traveller, traveller.level().getServer(), current.definition(), current, arrival, origin, nearby);
+        return enter(traveller, level.getServer(), current.definition(), current, arrival, origin, nearby);
     }
 
     public static Result<LivingEntity> moveToPosition(LivingEntity traveller, ServerLevel destination, Arrival arrival) {
@@ -77,6 +79,7 @@ public final class SecretRealmService {
     }
 
     public static Result<LivingEntity> moveToPosition(LivingEntity traveller, ServerLevel destination, Arrival arrival, @Nullable Vec3 origin, boolean nearby) {
+        if (!(traveller.level() instanceof ServerLevel)) return refused(Failures.SERVER_ONLY);
         SecretRealmRecord target = SecretRealmRegistry.at(destination.dimension()).orElse(null);
         SecretRealmRecord held = SecretRealmRegistry.ofMember(traveller.getUUID()).orElse(null);
         if (target != null && !(target.instance().generation() instanceof ExistingGeneration)
@@ -88,7 +91,7 @@ public final class SecretRealmService {
             if (!held.instance().exitCondition().test(traveller, FormulaContext.of(traveller)))
                 return refused(SecretRealmFailure.EXIT_DENIED, held.instance().exitDeniedMessage());
             Moved moved = leave(traveller, true, destination, arrival, nearby);
-            return moved.failure() == null ? Result.success(moved.traveller()) : refused(moved.failure());
+            return moved.result();
         }
         Result<RiftLanding.Inspection> landing = prepareArrival(destination, traveller, arrival.position(), nearby);
         if (landing instanceof Result.FailureResult<RiftLanding.Inspection>(Failure failure1)) {
@@ -103,6 +106,7 @@ public final class SecretRealmService {
 
     private static Result<LivingEntity> enter(LivingEntity traveller, MinecraftServer server, Holder<SecretRealm> definition,
                                               @Nullable SecretRealmRecord selected, @Nullable Arrival fixedArrival, @Nullable Vec3 fixedOrigin, boolean nearby) {
+        if (!(traveller.level() instanceof ServerLevel)) return refused(Failures.SERVER_ONLY);
         try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.SECRET_REALM)) {
             // A token can outlive the definition it names, so the current registry is the last word on whether this realm
             // still exists. Kept here rather than at the token, because every caller has to be held to it.
@@ -203,6 +207,7 @@ public final class SecretRealmService {
     }
 
     public static Result<LivingEntity> exit(LivingEntity traveller) {
+        if (!(traveller.level() instanceof ServerLevel)) return refused(Failures.SERVER_ONLY);
         try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.SECRET_REALM)) {
             SecretRealmTravelAttachment travel = travel(traveller);
             Holder<SecretRealm> definition = travel == null ? null : travel.realm().orElse(null);
@@ -211,7 +216,7 @@ public final class SecretRealmService {
             if (!value.exitCondition().test(traveller, FormulaContext.of(traveller)))
                 return refused(SecretRealmFailure.EXIT_DENIED, value.exitDeniedMessage());
             Moved moved = leave(traveller);
-            return moved.failure() == null ? Result.success(moved.traveller()) : refused(moved.failure());
+            return moved.result();
         }
     }
 
@@ -231,10 +236,11 @@ public final class SecretRealmService {
     }
 
     private static Moved leave(LivingEntity traveller, boolean settle, @Nullable ServerLevel destination, @Nullable Arrival arrival, boolean nearby) {
+        if (!(traveller.level() instanceof ServerLevel level)) return Moved.refused(Failures.SERVER_ONLY);
         SecretRealmTravelAttachment travel = travel(traveller);
         Holder<SecretRealm> definition = travel == null ? null : travel.realm().orElse(null);
         if (definition == null || !travel.active()) return Moved.arrived(traveller);
-        MinecraftServer server = traveller.level().getServer();
+        MinecraftServer server = level.getServer();
         ServerLevel origin = destination == null ? origin(server, travel).orElse(null) : destination;
         if (origin == null) return Moved.refused(SecretRealmFailure.MISSING_ORIGIN);
         Optional<SecretRealmRecord> held = SecretRealmRegistry.ofMember(traveller.getUUID());
@@ -369,11 +375,12 @@ public final class SecretRealmService {
     // For a traveller whose instance no longer holds them: what a destroyed or expired secret realm leaves behind
     // for one that was not loaded at the time (an offline player, or any other kind of traveller).
     public static boolean returnIfOrphaned(LivingEntity traveller) {
+        if (!(traveller.level() instanceof ServerLevel level)) return false;
         try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.SECRET_REALM)) {
             SecretRealmTravelAttachment travel = travel(traveller);
             if (travel == null || !travel.active()) return false;
             if (SecretRealmRegistry.ofMember(traveller.getUUID()).isPresent()) return false;
-            MinecraftServer server = traveller.level().getServer();
+            MinecraftServer server = level.getServer();
             ServerLevel origin = origin(server, travel).orElse(null);
             if (origin == null) return false;
             LivingEntity arrived = move(traveller, origin, travel.originX(), travel.originY(), travel.originZ(),
@@ -449,6 +456,12 @@ public final class SecretRealmService {
     // The answer to a move out: the refusal, and the body that came out - a non-player crossing a dimension is
     // rebuilt, so it is not always the entity handed in.
     private record Moved(@Nullable Failure failure, @Nullable LivingEntity traveller) {
+        Result<LivingEntity> result() {
+            if (this.failure != null) return SecretRealmService.refused(this.failure);
+            assert this.traveller != null;
+            return Result.success(this.traveller);
+        }
+
         static Moved refused(Failure failure) {
             return new Moved(failure, null);
         }

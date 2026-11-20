@@ -100,6 +100,7 @@ public final class CostStoreVerifyProbes {
             return;
         }
         Map<Holder<Aura>, Double> auraPrice = Costs.auras(twoFees, here);
+        assert auraPrice != null;
         context.expect("the projection totals two fees of one section", auraPrice.getOrDefault(qi, 0.0D), 2.0D);
     }
 

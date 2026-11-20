@@ -1,4 +1,5 @@
 package com.iafenvoy.mxt.probe.formation;
+import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.saturn.registry.SaturnAttachments;
 
 import com.google.gson.JsonElement;
@@ -17,11 +18,13 @@ import com.iafenvoy.mxt.testmod.FormationProbeActions;
 import com.iafenvoy.saturn.util.formula.FormulaContext;
 import com.mojang.serialization.JsonOps;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.RegistryOps;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -35,8 +38,39 @@ public final class FormationProbes {
     public static List<Probe> probes() {
         return List.of(
                 Probe.of("formation/beats", FormationProbes::beats),
+                Probe.of("formation/maintenance_context", FormationProbes::maintenanceContext),
                 Probe.of("formation/shape", FormationProbes::shape),
                 Probe.of("formation/structure", FormationProbes::structure));
+    }
+
+    private static void maintenanceContext(ProbeContext context) {
+        Formation definition = formation(context, """
+                {"radius": 8, "structure_check": "always",
+                 "maintenance_costs": [{"id": "mxt_test:qi", "amount": 4}]}""");
+        Formation free = formation(context, """
+                {"radius": 8, "structure_check": "always"}""");
+        if (definition == null || free == null) return;
+        Holder<Aura> qi = context.require(MxtResourceKeys.AURA, ProbeDefinitions.QI);
+        ResourceHolderAttachment resources = new ResourceHolderAttachment();
+        resources.set(qi.value().resource(), 10.0D);
+        FormationInstance instance = instance(context);
+        instance.stored().put(qi, 1.0D);
+        context.check("unresolved owner payment is refused",
+                FormationService.maintain(instance, definition, resources, FormulaContext.EMPTY).getFailure().isPresent());
+        context.expect("refusal preserves owner balance", resources.get(qi.value().resource()), 10.0D);
+        context.expect("refusal preserves stock", instance.stored().get(qi), 1.0D);
+        context.expect("refusal does not count maintenance", instance.maintenanceCount(), 0L);
+        context.check("supply and stock need no registry context",
+                FormationService.maintain(instance, definition, resources, FormulaContext.EMPTY, Map.of(qi, 3.0D)).getFailure().isEmpty());
+        context.expect("covered payment consumes the stock", instance.stored().getOrDefault(qi, 0.0D), 0.0D);
+        context.expect("covered payment leaves owner balance", resources.get(qi.value().resource()), 10.0D);
+        context.expect("covered payment counts once", instance.maintenanceCount(), 1L);
+        context.check("world context resolves owner payment",
+                FormationService.maintain(instance, definition, resources, FormulaContext.of(context.level())).getFailure().isEmpty());
+        context.expect("resolved payment deducts exactly four", resources.get(qi.value().resource()), 6.0D);
+        context.expect("resolved payment counts once", instance.maintenanceCount(), 2L);
+        context.check("free maintenance accepts an empty context",
+                FormationService.maintain(instance(context), free, resources, FormulaContext.EMPTY).getFailure().isEmpty());
     }
 
     // A module of the test pack writes down every beat it is offered, so the dispatch is read directly: what a pack

@@ -105,8 +105,11 @@ public final class LightBeamParticleVerifyProbes {
         LightBeamParticleFrame frame = new LightBeamParticleFrame();
         LightBeamParticleOptions glowing = new LightBeamParticleOptions(0xFFFFFFFF, 0, 0, 0, 12, .18F, FlowDirection.UP, 1,
                 200, true, 2, 16, true, true, false, true);
-        for (int beam = 0; beam < 200; beam++)
-            frame.add(new LightBeamParticleShape(glowing, beam % 20, 0, beam / 20, beam), 20, 0, Vec3.ZERO);
+        for (int beam = 0; beam < 200; beam++) {
+            @SuppressWarnings("IntegerDivisionInFloatingPointContext")
+            double row = beam / 20;
+            frame.add(new LightBeamParticleShape(glowing, beam % 20, 0, row, beam), 20, 0, Vec3.ZERO);
+        }
         frame.build(Vec3.ZERO, box -> true);
         expect(context, "glow participates in the global frame budget", frame.entries().size() <= LightBeamParticleMesh.MAX_INSTANCES, true);
         expect(context, "each accepted visible beam keeps its glow", frame.entries().stream().filter(entry -> entry.segment().glow()).count(), 200L);
@@ -162,9 +165,12 @@ public final class LightBeamParticleVerifyProbes {
         expect(context, "bounded sample cache preserves seeds after eviction", stable, true);
         expect(context, "channel and cell thinning obey every frame quota", bounded, true);
         LightBeamParticleFrame frame = new LightBeamParticleFrame();
-        for (int beam = 0; beam < 200; beam++)
+        for (int beam = 0; beam < 200; beam++) {
+            @SuppressWarnings("IntegerDivisionInFloatingPointContext")
+            double row = beam / 20;
             frame.add(new LightBeamParticleShape(new LightBeamParticleOptions(0xFFFFFFFF, 0, 0, 0, 12, .18F,
-                    FlowDirection.UP, 1, 200, true, 2, 16, true, true), beam % 20, 0, beam / 20, beam), 20, 0, Vec3.ZERO);
+                    FlowDirection.UP, 1, 200, true, 2, 16, true, true), beam % 20, 0, row, beam), 20, 0, Vec3.ZERO);
+        }
         frame.build(Vec3.ZERO, box -> true);
         expect(context, "many beams respect the global instance budget", frame.entries().size() <= LightBeamParticleMesh.MAX_INSTANCES, true);
         boolean sorted = true;

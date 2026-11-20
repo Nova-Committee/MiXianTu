@@ -79,8 +79,11 @@ public class ColoredLightningBoltRenderer extends EntityRenderer<ColoredLightnin
                         float previousZ = currentZ;
                         // The trunk wanders less than the two branches hanging off it.
                         int spread = strand == 0 ? 11 : 31;
-                        currentX += layerRandom.nextInt(spread) - spread / 2;
-                        currentZ += layerRandom.nextInt(spread) - spread / 2;
+                        // Keep the discrete offsets symmetric around zero.
+                        @SuppressWarnings("IntegerDivisionInFloatingPointContext")
+                        float center = spread / 2;
+                        currentX += layerRandom.nextInt(spread) - center;
+                        currentZ += layerRandom.nextInt(spread) - center;
                         float top = 0.1F + layer * 0.2F;
                         if (strand == 0) top *= height * 0.1F + 1.0F;
                         float bottom = 0.1F + layer * 0.2F;

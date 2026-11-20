@@ -198,12 +198,19 @@ public final class ItemAuraService {
         ItemStack off = entity.getOffhandItem();
         ItemStack selected = ItemStack.EMPTY;
         double remainder = Double.POSITIVE_INFINITY;
-        if (isPartialFuel(entity, main) && main.get(MxtDataComponents.ITEM_AURA).remain() < remainder) {
-            selected = main;
-            remainder = main.get(MxtDataComponents.ITEM_AURA).remain();
+        if (isPartialFuel(entity, main)) {
+            ItemAuraComponent state = main.get(MxtDataComponents.ITEM_AURA);
+            assert state != null;
+            if (state.remain() < remainder) {
+                selected = main;
+                remainder = state.remain();
+            }
         }
-        if (isPartialFuel(entity, off) && off.get(MxtDataComponents.ITEM_AURA).remain() < remainder)
-            selected = off;
+        if (isPartialFuel(entity, off)) {
+            ItemAuraComponent state = off.get(MxtDataComponents.ITEM_AURA);
+            assert state != null;
+            if (state.remain() < remainder) selected = off;
+        }
         return selected.isEmpty() ? ItemStack.EMPTY : selected.split(selected.getCount());
     }
 

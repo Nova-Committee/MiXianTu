@@ -115,6 +115,7 @@ public final class SecretRealmCommand {
         SecretRealmRecord record = prepare(source, dimension);
         if (record == null) return 0;
         ServerLevel level = source.getServer().getLevel(record.dimension());
+        assert level != null;
         int slot = record.holds(player.getUUID()) ? record.members().indexOf(player.getUUID()) : record.members().size();
         SecretRealmEntryLocator.Arrival arrival = SecretRealmEntryLocator.arrival(level, record, slot, player.getYRot(), player.getXRot());
         Result<RiftLanding.Inspection> primary = RiftLanding.inspect(level, player, arrival.position());
@@ -134,6 +135,7 @@ public final class SecretRealmCommand {
         SecretRealmRecord record = prepare(source, dimension);
         if (record == null) return 0;
         ServerLevel level = source.getServer().getLevel(record.dimension());
+        assert level != null;
         Result<RiftLanding.Inspection> landing = SecretRealmService.checkArrival(level, player, position, false);
         if (landing instanceof Result.FailureResult<RiftLanding.Inspection>(
                 Failure failure1

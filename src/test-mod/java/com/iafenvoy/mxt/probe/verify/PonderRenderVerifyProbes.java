@@ -44,6 +44,7 @@ public final class PonderRenderVerifyProbes {
     private static void registration(ProbeContext context) {
         Set<Class<?>> factories = factoriesAtCollection;
         leg(context, "NeoForge collection event observed", factories != null);
+        assert factories != null;
         leg(context, "factories collected before client setup", collectedBeforeSetup);
         leg(context, "Ponder scene available at collection", factories.contains(PonderSceneRenderState.class));
         leg(context, "Catnip block model available at collection", factories.contains(GuiBlockModelRenderState.class));

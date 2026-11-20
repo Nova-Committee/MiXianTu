@@ -60,6 +60,7 @@ public final class SecretRealmTravelProbes {
     private static void platformSearch(ProbeContext c) {
         SecretRealmRecord record = open(c);
         ServerLevel level = c.server().getLevel(record.dimension());
+        assert level != null;
         boolean flying = c.player().getAbilities().flying;
         c.player().getAbilities().flying = false;
         try {
@@ -103,6 +104,7 @@ public final class SecretRealmTravelProbes {
     private static void platformGuards(ProbeContext c) {
         SecretRealmRecord record = open(c);
         ServerLevel level = c.server().getLevel(record.dimension());
+        assert level != null;
         boolean flying = c.player().getAbilities().flying;
         c.player().getAbilities().flying = false;
         try {
@@ -146,6 +148,7 @@ public final class SecretRealmTravelProbes {
     private static void platformTravel(ProbeContext c) {
         SecretRealmRecord record = open(c);
         ServerLevel target = c.server().getLevel(record.dimension());
+        assert target != null;
         ServerPlayer player = c.player();
         boolean flying = player.getAbilities().flying;
         player.getAbilities().flying = false;
@@ -192,6 +195,7 @@ public final class SecretRealmTravelProbes {
         SecretRealmRecord record = SecretRealmService.open(c.server(), SecretRealmService.plan(definition, 0, 12345,
                 c.server().overworld().getGameTime())).orElseThrow();
         ServerLevel level = c.server().getLevel(record.dimension());
+        assert level != null;
         ServerPlayer player = c.player();
         ServerPlayer second = c.join(new Vec3(8.5, 0, 8.5));
         boolean flying = player.getAbilities().flying, secondFlying = second.getAbilities().flying;
@@ -240,6 +244,7 @@ public final class SecretRealmTravelProbes {
     private static void trialLanding(ProbeContext c) {
         SecretRealmRecord record = open(c);
         ServerLevel level = c.server().getLevel(record.dimension());
+        assert level != null;
         boolean flying = c.player().getAbilities().flying;
         c.player().getAbilities().flying = false;
         try {
@@ -266,6 +271,7 @@ public final class SecretRealmTravelProbes {
     private static void diagnostics(ProbeContext c) {
         SecretRealmRecord record = open(c);
         ServerLevel level = c.server().getLevel(record.dimension());
+        assert level != null;
         Vec3 pos = new Vec3(9.5, 65, 9.5);
         BlockPos feet = BlockPos.containing(pos);
         boolean flying = c.player().getAbilities().flying;

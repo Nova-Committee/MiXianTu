@@ -79,6 +79,8 @@ public final class WorldEffectsVerifyProbes {
         EffectTargetPool<String, AutoCloseable>.Lease a = pool.acquire("depth", 4, () -> closes::incrementAndGet);
         EffectTargetPool<String, AutoCloseable>.Lease b = pool.acquire("depth", 4, () -> closes::incrementAndGet);
         context.expect("simultaneous views get separate targets", a != null && b != null && a.get() != b.get(), true);
+        assert a != null;
+        assert b != null;
         context.expect("overbudget cannot evict active targets", pool.acquire("color", 8, () -> {
             throw new AssertionError("overbudget factory");
         }), null);
@@ -89,9 +91,11 @@ public final class WorldEffectsVerifyProbes {
             throw new AssertionError("failed reuse");
         });
         context.expect("an idle exact match is reused", reused != null && reused.get() == first, true);
+        assert reused != null;
         reused.close();
         EffectTargetPool<String, AutoCloseable>.Lease color = pool.acquire("color", 8, () -> closes::incrementAndGet);
         context.expect("idle depth is evicted to fit another format", color != null && closes.get() == 1, true);
+        assert color != null;
         context.expect("borrowed depth remains alive", b.get() != null, true);
         context.expect("budget counts all live textures", pool.bytes(), 12L);
         for (int i = 0; i < 121; i++) pool.endFrame();
@@ -104,6 +108,7 @@ public final class WorldEffectsVerifyProbes {
         context.expect("expired idle targets release their budget", pool.bytes(), 0L);
         context.expect("every allocated target closes once", closes.get(), 3);
         EffectTargetPool<String, AutoCloseable>.Lease outstanding = pool.acquire("new", 4, () -> closes::incrementAndGet);
+        assert outstanding != null;
         pool.close();
         pool.close();
         context.expect("shutdown invalidates outstanding leases", outstanding.get(), null);
@@ -176,6 +181,8 @@ public final class WorldEffectsVerifyProbes {
             throw new IllegalStateException("close probe");
         });
         EffectTargetPool<String, AutoCloseable>.Lease good = pool.acquire("good", 4, () -> closes::incrementAndGet);
+        assert bad != null;
+        assert good != null;
         pool.close();
         context.expect("cleanup continues after an individual close fails", closes.get(), 3);
         context.expect("close failure is reported once", failures.size(), 1);
@@ -191,6 +198,7 @@ public final class WorldEffectsVerifyProbes {
         context.expect("shutdown during construction leaves no budget", reentrant.bytes(), 0L);
         EffectTargetPool<String, AutoCloseable> eviction = new EffectTargetPool<>(4, 1, failures::add);
         EffectTargetPool<String, AutoCloseable>.Lease evicted = eviction.acquire("old", 4, () -> eviction);
+        assert evicted != null;
         evicted.close();
         context.expect("shutdown from eviction prevents further allocation", eviction.acquire("new", 4, () -> {
             throw new AssertionError("allocation after eviction shutdown");

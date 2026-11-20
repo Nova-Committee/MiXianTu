@@ -136,8 +136,12 @@ public final class WorkstationBoundaryProbes {
         BlockPos pos = context.at(8, 1, 8);
         BlockState previous = level.getBlockState(pos);
         try {
-            context.expect("tag claim cached", RegistryCaches.HEAT_SOURCE.get(Blocks.REDSTONE_BLOCK).maxTemperature(), 150.0D);
-            context.expect("priority overrides tag", RegistryCaches.HEAT_SOURCE.get(Blocks.LAPIS_BLOCK).maxTemperature(), 80.0D);
+            HeatSource tagged = RegistryCaches.HEAT_SOURCE.get(Blocks.REDSTONE_BLOCK);
+            HeatSource override = RegistryCaches.HEAT_SOURCE.get(Blocks.LAPIS_BLOCK);
+            assert tagged != null;
+            assert override != null;
+            context.expect("tag claim cached", tagged.maxTemperature(), 150.0D);
+            context.expect("priority overrides tag", override.maxTemperature(), 80.0D);
             level.setBlockAndUpdate(pos, Blocks.REDSTONE_BLOCK.defaultBlockState());
             context.expect("tag temperature", AlchemyHeatService.maxTemperature(level, pos), 150.0D);
             context.expect("tag heating", AlchemyHeatService.heatingPerTick(level, pos), 40.0D);

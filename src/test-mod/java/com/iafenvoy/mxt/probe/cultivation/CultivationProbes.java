@@ -79,6 +79,7 @@ public final class CultivationProbes {
         List<LivingEntity> probes = new ArrayList<>();
         for (LivingEntity probe : Collections.singletonList(solo)) if (probe != null) probes.add(probe);
         if (!created(context, probes, 1)) return;
+        assert solo != null;
         try {
             boolean pickedFree = picks(CultivationModeService.select(solo, contextOf(solo)), ProbeDefinitions.FREE_MEDITATION);
             boolean untouched = solo.getExistingData(MxtAttachments.CULTIVATION).map(spirit -> !spirit.cultivating() && spirit.cultivation().isEmpty()).orElse(true);
@@ -103,6 +104,7 @@ public final class CultivationProbes {
         List<LivingEntity> probes = new ArrayList<>();
         for (LivingEntity probe : Collections.singletonList(learner)) if (probe != null) probes.add(probe);
         if (!created(context, probes, 1)) return;
+        assert learner != null;
         try {
             boolean noneLearned = !asks(named, learner) && !asks(strict, learner) && asks(worldly, learner);
             boolean learnedBreathing = TechniqueService.learn(learner, learner.getData(MxtAttachments.TECHNIQUE), breathing, contextOf(learner)).getFailure().isEmpty();
@@ -124,6 +126,7 @@ public final class CultivationProbes {
         List<LivingEntity> probes = new ArrayList<>();
         for (LivingEntity probe : Collections.singletonList(veteran)) if (probe != null) probes.add(probe);
         if (!created(context, probes, 1)) return;
+        assert veteran != null;
         try {
             CultivationAttachment veteranSpirit = veteran.getData(MxtAttachments.CULTIVATION);
             boolean seatedFree = started(CultivationModeService.start(veteran, veteranSpirit, free, contextOf(veteran))) && runs(veteranSpirit, ProbeDefinitions.FREE_MEDITATION);
@@ -148,6 +151,8 @@ public final class CultivationProbes {
         List<LivingEntity> probes = new ArrayList<>();
         for (LivingEntity probe : Arrays.asList(seatA, seatB)) if (probe != null) probes.add(probe);
         if (!created(context, probes, 2)) return;
+        assert seatA != null;
+        assert seatB != null;
         seatB.setItemInHand(InteractionHand.MAIN_HAND, carrier.copy());
         Set<UUID> friends = friends(probes);
         Consumer<FriendEvent.Relation> relation = relations(friends, new HashSet<>());
@@ -190,6 +195,11 @@ public final class CultivationProbes {
         for (LivingEntity probe : Arrays.asList(runA, runB, learner, solo, lonely))
             if (probe != null) probes.add(probe);
         if (!created(context, probes, 5)) return;
+        assert runA != null;
+        assert runB != null;
+        assert learner != null;
+        assert solo != null;
+        assert lonely != null;
         for (LivingEntity probe : Arrays.asList(runA, runB))
             probe.setItemInHand(InteractionHand.MAIN_HAND, carrier.copy());
         // The baseline leg reads a body that has techniques, which is what its own source leg taught a learner.
@@ -256,6 +266,15 @@ public final class CultivationProbes {
         for (LivingEntity probe : Arrays.asList(bareA, bareB, crowdA, crowd1, crowd2, crowd3, rangeA, rangeFar, lonely))
             if (probe != null) probes.add(probe);
         if (!created(context, probes, 9)) return;
+        assert bareA != null;
+        assert bareB != null;
+        assert crowdA != null;
+        assert crowd1 != null;
+        assert crowd2 != null;
+        assert crowd3 != null;
+        assert rangeA != null;
+        assert rangeFar != null;
+        assert lonely != null;
         for (LivingEntity probe : Arrays.asList(bareA, crowd1, crowd2, crowd3, rangeFar))
             probe.setItemInHand(InteractionHand.MAIN_HAND, carrier.copy());
         // The two extra crowd members join the friend pool only for the count leg.
@@ -293,6 +312,9 @@ public final class CultivationProbes {
         List<LivingEntity> probes = new ArrayList<>();
         for (LivingEntity probe : Arrays.asList(actor, learner, lonely)) if (probe != null) probes.add(probe);
         if (!created(context, probes, 3)) return;
+        assert actor != null;
+        assert learner != null;
+        assert lonely != null;
         actor.setItemInHand(InteractionHand.MAIN_HAND, carrier.copy());
         // The named form needs a body that has the manual, which is what its own source leg taught a learner.
         TechniqueService.learn(learner, learner.getData(MxtAttachments.TECHNIQUE), breathing, contextOf(learner));
@@ -333,6 +355,9 @@ public final class CultivationProbes {
         List<LivingEntity> probes = new ArrayList<>();
         for (LivingEntity probe : Arrays.asList(veteran, actor, learner)) if (probe != null) probes.add(probe);
         if (!created(context, probes, 3)) return;
+        assert veteran != null;
+        assert actor != null;
+        assert learner != null;
         actor.setItemInHand(InteractionHand.MAIN_HAND, carrier.copy());
         // This leg reads three bodies the earlier ones left mid-scenario: veteran learned the breathing manual and is
         // off its own free session, actor runs free meditation, and learner runs the named method.
@@ -366,6 +391,7 @@ public final class CultivationProbes {
         List<LivingEntity> probes = new ArrayList<>();
         for (LivingEntity probe : Collections.singletonList(bareA)) if (probe != null) probes.add(probe);
         if (!created(context, probes, 1)) return;
+        assert bareA != null;
         bareA.setItemInHand(InteractionHand.MAIN_HAND, carrier.copy());
         try {
             TechniqueAttachment bareIdentity = bareA.getData(MxtAttachments.TECHNIQUE);
@@ -395,6 +421,9 @@ public final class CultivationProbes {
         List<LivingEntity> probes = new ArrayList<>();
         for (LivingEntity probe : Arrays.asList(seatB, bareB, crowd1)) if (probe != null) probes.add(probe);
         if (!created(context, probes, 3)) return;
+        assert seatB != null;
+        assert bareB != null;
+        assert crowd1 != null;
         for (LivingEntity probe : Arrays.asList(seatB, crowd1))
             probe.setItemInHand(InteractionHand.MAIN_HAND, carrier.copy());
         Set<UUID> friends = friends(probes);

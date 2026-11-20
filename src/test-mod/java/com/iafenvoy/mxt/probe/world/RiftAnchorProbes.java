@@ -112,13 +112,17 @@ public final class RiftAnchorProbes {
             c.expect("recorded destination is visible in editor", initial.destination(), recorded);
             RiftTemplate portable = RiftEdits.placement(data, new RiftPlacement(new Vec3(0, c.level().getMaxY() + 64, 0), new Vec3(0, 0, 1), new Vec3(1, 0, 0)));
             RiftEditorService.handle(fixture.player, new RiftEditC2SPayload(UUID.randomUUID(), "submit", 0, RiftExport.template(portable)));
-            c.expect("unknown tokens cannot alter the item", off.get(MxtDataComponents.RIFT).recorded(), Optional.of(recorded));
+            RiftComponent unchanged = off.get(MxtDataComponents.RIFT);
+            assert unchanged != null;
+            c.expect("unknown tokens cannot alter the item", unchanged.recorded(), Optional.of(recorded));
             fixture.request(token, "submit", portable);
             c.expect("saving item settings is acknowledged", fixture.sent.getLast().action(), EditorAction.ITEM_ACCEPTED);
             c.expect("saved settings round trip", decoded(fixture.sent.getLast()), portable);
-            c.expect("offhand receives the blueprint", off.get(MxtDataComponents.RIFT).blueprint(), Optional.of(portable));
+            RiftComponent saved = off.get(MxtDataComponents.RIFT);
+            assert saved != null;
+            c.expect("offhand receives the blueprint", saved.blueprint(), Optional.of(portable));
             c.expect("saving does not modify the main hand", main.getOrDefault(MxtDataComponents.RIFT, RiftComponent.EMPTY), originalMain);
-            c.check("saving clears the previous destination override", off.get(MxtDataComponents.RIFT).recorded().isEmpty());
+            c.check("saving clears the previous destination override", saved.recorded().isEmpty());
             c.check("saving settings never creates a world portal", fixture.records().isEmpty());
             fixture.request(token, "submit", data);
             c.expect("rapid requests get an explicit response", fixture.sent.getLast().body(), "rate_limit");
@@ -126,15 +130,21 @@ public final class RiftAnchorProbes {
                 try {
                     fixture.request(token, "submit", data);
                     c.expect("same session can save again", fixture.sent.getLast().action(), EditorAction.ITEM_ACCEPTED);
-                    c.expect("second save replaces the settings", off.get(MxtDataComponents.RIFT).blueprint(), Optional.of(data));
+                    RiftComponent second = off.get(MxtDataComponents.RIFT);
+                    assert second != null;
+                    c.expect("second save replaces the settings", second.blueprint(), Optional.of(data));
                     fixture.request(fixture.open(InteractionHand.MAIN_HAND), "submit", data);
-                    c.expect("main hand can also save parameters", main.get(MxtDataComponents.RIFT).blueprint(), Optional.of(data));
+                    RiftComponent mainSaved = main.get(MxtDataComponents.RIFT);
+                    assert mainSaved != null;
+                    c.expect("main hand can also save parameters", mainSaved.blueprint(), Optional.of(data));
                     UUID invalid = fixture.open(InteractionHand.OFF_HAND);
                     JsonObject malformed = JsonParser.parseString(RiftExport.template(data)).getAsJsonObject();
                     malformed.addProperty("duration_ticks", -1);
                     RiftEditorService.handle(fixture.player, new RiftEditC2SPayload(invalid, "submit", 0, malformed.toString()));
                     c.expect("invalid settings produce an error response", fixture.sent.getLast().action(), EditorAction.ERROR);
-                    c.expect("invalid settings preserve the item", off.get(MxtDataComponents.RIFT).blueprint(), Optional.of(data));
+                    RiftComponent afterInvalid = off.get(MxtDataComponents.RIFT);
+                    assert afterInvalid != null;
+                    c.expect("invalid settings preserve the item", afterInvalid.blueprint(), Optional.of(data));
                     for (String action : List.of("remove", "copy", "renew")) {
                         fixture.request(fixture.open(InteractionHand.OFF_HAND), action, data);
                         c.expect("item mode rejects world operation " + action, fixture.sent.getLast().body(), "item_only");

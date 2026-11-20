@@ -7,6 +7,7 @@ import com.iafenvoy.saturn.util.CloseableResources;
 import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.systems.RenderPass;
 import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.textures.GpuTextureView;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.LevelRenderer;
 import net.minecraft.client.renderer.state.level.LevelRenderState;
@@ -186,7 +187,9 @@ public final class WorldEffects implements AutoCloseable {
             if (prepared == null) return;
             try (prepared) {
                 if (!this.active() || !EffectTargets.valid(target)) return;
-                try (RenderPass pass = RenderSystem.getDevice().createCommandEncoder().createRenderPass(() -> "MXT world effects", target.getColorTextureView(), OptionalInt.empty(), target.getDepthTextureView(), OptionalDouble.empty())) {
+                GpuTextureView color = target.getColorTextureView();
+                assert color != null;
+                try (RenderPass pass = RenderSystem.getDevice().createCommandEncoder().createRenderPass(() -> "MXT world effects", color, OptionalInt.empty(), target.getDepthTextureView(), OptionalDouble.empty())) {
                     RenderSystem.bindDefaultUniforms(pass);
                     prepared.render(pass);
                 }
