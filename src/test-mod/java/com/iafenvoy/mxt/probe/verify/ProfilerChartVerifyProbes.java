@@ -41,9 +41,9 @@ public final class ProfilerChartVerifyProbes {
         BufferedImage fresh = new BufferedImage(Profiler.WINDOW_TICKS, 32, BufferedImage.TYPE_INT_ARGB);
         draw(fresh, idle);
         expect(context, "a reused row equals a fresh chart in every pixel", Arrays.equals(pixels(reused), pixels(fresh)), true);
-        expect(context, "the old peak is immediately replaced", reused.getRGB(20, 5), 0xFFFFFDF7);
-        expect(context, "the old incomplete-tick marker is immediately replaced", reused.getRGB(12, 0), 0xFFFFFDF7);
-        expect(context, "the vertical axis has no antialiased edge", reused.getRGB(0, 5), 0xFF73796C);
+        expect(context, "the old peak is immediately replaced", reused.getRGB(20, 5), 0xFFF1E8D6);
+        expect(context, "the old incomplete-tick marker is immediately replaced", reused.getRGB(12, 0), 0xFFF1E8D6);
+        expect(context, "the vertical axis has no antialiased edge", reused.getRGB(0, 5), 0xFF756553);
         for (int frame = 0; frame < 8; frame++) draw(reused, idle);
         expect(context, "repeated frames do not accumulate opacity", Arrays.equals(pixels(reused), pixels(fresh)), true);
         draw(reused, peak);

@@ -11,3 +11,9 @@
     left: 7px;
     top: 83px;
 }
+
+#panel {
+    --ornament-image: url("/mxt/economy/ornaments/coin-chain.svg");
+    --ornament-size: 24px 54px;
+    --ornament-position: 101px 17px;
+}

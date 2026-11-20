@@ -41,3 +41,9 @@
     width: 16px;
     height: 18px;
 }
+
+#panel {
+    --ornament-image: url("/mxt/economy/ornaments/contract-knot.svg");
+    --ornament-size: 14px 54px;
+    --ornament-position: 81px 16px;
+}

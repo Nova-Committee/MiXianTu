@@ -1,4 +1,4 @@
-/* Information page geometry; shared colours come from theme.css. */
+/* The character and technique pages share the parchment theme and their original hitboxes. */
 
 body {
     display: block;
@@ -6,6 +6,9 @@ body {
 
 #panel {
     position: absolute;
+    --ornament-image: url("/mxt/common/ornaments/cloud-scroll.svg");
+    --ornament-size: 96px 18px;
+    --ornament-position: 96% 8px;
 }
 
 .tab {
@@ -28,6 +31,13 @@ body {
 #preview {
     width: 120px;
     height: 96px;
+    background-color: var(--surface-deep);
+    background-image: url("/mxt/common/ornaments/jade-halo.svg"), linear-gradient(135deg, rgba(184,134,40,0.12), transparent 35%), linear-gradient(315deg, rgba(184,134,40,0.12), transparent 35%);
+    background-size: 84px 84px, 100% 100%, 100% 100%;
+    background-position: 50% 50%, 0 0, 0 0;
+    background-repeat: no-repeat;
+    box-shadow: inset 0 0 0 1px var(--edge), inset 0 0 0 3px var(--paper-rim), inset 0 0 0 4px var(--gold-trim);
+    border-radius: 0;
 }
 
 #equipment {
@@ -40,6 +50,8 @@ body {
     left: 0;
     width: 24px;
     height: 24px;
+    background-color: var(--wood);
+    box-shadow: inset 0 0 0 1px var(--paper-rim);
 }
 
 .equip-icon {
@@ -53,6 +65,12 @@ body {
 .list {
     position: absolute;
 }
+
+#cultivation_caption,
+#basic_caption { color: var(--red); }
+
+#cultivation,
+#basic { background-image: linear-gradient(var(--edge-light) 1px, transparent 1px); }
 
 .row {
     position: absolute;
@@ -81,6 +99,8 @@ body {
     top: 5px;
     width: 24px;
     height: 24px;
+    background-color: var(--wood);
+    box-shadow: inset 0 0 0 1px var(--paper-rim);
 }
 
 .tframe .icon,

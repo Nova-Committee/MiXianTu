@@ -4,6 +4,9 @@
 #panel {
     width: 308px;
     height: 166px;
+    --ornament-image: url("/mxt/spirit_crafting/ornaments/aura-array.svg");
+    --ornament-size: 30px 46px;
+    --ornament-position: 88px 20px;
 }
 
 /* 合成格 (30,17)、结果格 (124,35)、背包 (8,84)：坐标来自 SpiritCraftingMenu，

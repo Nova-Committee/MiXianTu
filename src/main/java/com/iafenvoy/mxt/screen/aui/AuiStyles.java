@@ -10,18 +10,18 @@ import java.util.Locale;
  * vanilla renderer, so there is no page-side tooltip style to keep in step with the theme.
  */
 public final class AuiStyles {
-    public static final int INK = 0xFF303C33, INK_DARK = 0xFF293A30, INK_MUTED = 0xFF73796C;
-    public static final int CANVAS = 0xFFF5F2E9, SURFACE = 0xFFFFFDF7, SURFACE_SOFT = 0xFFF0EFE4, EDGE = 0xFFD7D9C9;
-    public static final int GREEN = 0xFF436650, GOLD = 0xFF997232, RED = 0xFFAD513E, PURPLE = 0xFF7C6882;
+    public static final int INK = 0xFF3A322A, INK_DARK = 0xFF30261E, INK_MUTED = 0xFF756553;
+    public static final int CANVAS = 0xFFF6F1E4, SURFACE = 0xFFF1E8D6, SURFACE_SOFT = 0xFFE8DDCA, EDGE = 0xFF6B5848;
+    public static final int GREEN = 0xFF436650, GOLD = 0xFFB88628, RED = 0xFF9C2C2C, PURPLE = 0xFF7C6882;
 
-    // Capping every channel at 104 gives at least 4.5:1 contrast on Songyan's darkest paper surface.
+    // The warm paper is darker than white; cap each channel to preserve 4.5:1 text contrast.
     public static int readableOnPaper(int rgb) {
         int red = (rgb >> 16) & 0xFF;
         int green = (rgb >> 8) & 0xFF;
         int blue = rgb & 0xFF;
         int brightest = Math.max(red, Math.max(green, blue));
-        if (brightest <= 104) return rgb & 0xFFFFFF;
-        double scale = 104.0D / brightest;
+        if (brightest <= 92) return rgb & 0xFFFFFF;
+        double scale = 92.0D / brightest;
         return ((int) Math.round(red * scale) << 16) | ((int) Math.round(green * scale) << 8) | (int) Math.round(blue * scale);
     }
 

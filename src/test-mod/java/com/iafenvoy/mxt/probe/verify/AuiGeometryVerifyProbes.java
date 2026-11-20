@@ -10,6 +10,7 @@ import com.iafenvoy.mxt.probe.ProbeContext;
 import com.iafenvoy.mxt.screen.rift.RiftEditorInputs;
 import com.iafenvoy.mxt.screen.rift.RiftEditorToolbar;
 import com.iafenvoy.mxt.screen.rift.RiftEditorViewport;
+import com.sighs.apricityui.dom.SlotContentRules;
 import com.sighs.apricityui.dom.expander.ContainerExpander;
 import com.sighs.apricityui.element.Canvas;
 import com.sighs.apricityui.element.Container;
@@ -93,11 +94,20 @@ public final class AuiGeometryVerifyProbes {
                     Document document = Document.create(path);
                     if (!context.check("slot page created: " + page.path(), document != null && document.body != null)) return;
                     try (var _ = Document.withContext(document)) {
+                        document.registerUaStylesheet("mxt_test/actual-global.css", resource("apricityui/apricity/global.css"));
                         ContainerExpander.expand(document);
+                        SlotContentRules.normalizeTemplate(document);
                         document.flushPendingStyleUpdates();
                         document.commitRenderState();
                         try (var _ = GeometryQueryScope.open()) {
                             for (SlotGrid grid : page.grids()) slotGrid(context, document, page.path(), grid);
+                        }
+                        Slot hovered = (Slot) document.getElementById(page.grids().getFirst().id()).getFirstElementChild();
+                        hovered.setHover(true);
+                        document.flushPendingStyleUpdates();
+                        document.commitRenderState();
+                        try (var _ = GeometryQueryScope.open()) {
+                            slotItem(context, hovered, page.path() + " hovered item");
                         }
                     } finally {
                         document.remove();
@@ -128,10 +138,21 @@ public final class AuiGeometryVerifyProbes {
             close(context, label + " slot " + expectedIndex + " y", rect.y - panel.y, grid.top() + y);
             close(context, label + " slot " + expectedIndex + " width", rect.width, 18);
             close(context, label + " slot " + expectedIndex + " height", rect.height, 18);
+            slotItem(context, slot, label + " slot " + expectedIndex + " item");
             context.check(label + " slot " + expectedIndex + " is inside the panel",
                     rect.x >= panel.x && rect.y >= panel.y && rect.x + rect.width <= panel.x + panel.width
                             && rect.y + rect.height <= panel.y + panel.height);
         }
+    }
+
+    private static void slotItem(ProbeContext context, Slot slot, String label) {
+        Element item = SlotContentRules.getDisplayItem(slot);
+        if (!context.check(label + " exists", item != null)) return;
+        Element.DOMRect outer = slot.getBoundingClientRect(), inner = item.getBoundingClientRect();
+        close(context, label + " x inset", inner.x - outer.x, 1);
+        close(context, label + " y inset", inner.y - outer.y, 1);
+        close(context, label + " width", inner.width, 16);
+        close(context, label + " height", inner.height, 16);
     }
 
     private static String resource(String path) {

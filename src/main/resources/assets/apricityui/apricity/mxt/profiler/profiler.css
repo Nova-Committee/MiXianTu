@@ -1,4 +1,9 @@
 #panel { width: 504px; height: 420px; }
+#panel {
+    --ornament-image: url("/mxt/profiler/ornaments/timing-dial.svg");
+    --ornament-size: 28px 28px;
+    --ornament-position: 98% 8px;
+}
 #title { left: 10px; top: 10px; }
 #status { left: 10px; top: 25px; }
 #sort_source, #sort_min, #sort_average, #sort_max, #direction { top: 42px; height: 18px; }

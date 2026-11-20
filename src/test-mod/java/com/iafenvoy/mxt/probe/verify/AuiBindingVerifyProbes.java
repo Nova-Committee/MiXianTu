@@ -27,8 +27,8 @@ public final class AuiBindingVerifyProbes {
 
     private static void paperColors(ProbeContext context) {
         context.expect("dark data colour is unchanged", AuiStyles.readableOnPaper(0x123456), 0x123456);
-        context.expect("white data colour is legible", AuiStyles.readableOnPaper(0xFFFFFF), 0x686868);
-        context.expect("green hue is preserved", AuiStyles.readableOnPaper(0x55FF55), 0x236823);
+        context.expect("white data colour is legible", AuiStyles.readableOnPaper(0xFFFFFF), 0x5C5C5C);
+        context.expect("green hue is preserved", AuiStyles.readableOnPaper(0x55FF55), 0x1F5C1F);
         context.expect("black avoids division by zero", AuiStyles.readableOnPaper(0), 0);
         context.expect("alpha is excluded from CSS text", AuiStyles.textColor(0x80123456), "#123456");
         for (int red = 0; red <= 255; red += 17)
@@ -37,12 +37,22 @@ public final class AuiBindingVerifyProbes {
                     int rgb = (red << 16) | (green << 8) | blue;
                     int readable = AuiStyles.readableOnPaper(rgb);
                     int brightest = Math.max(readable >> 16, Math.max((readable >> 8) & 255, readable & 255));
-                    if (brightest > 104 || AuiStyles.readableOnPaper(readable) != readable) {
+                    if (brightest > 92 || AuiStyles.readableOnPaper(readable) != readable
+                            || (luminance(0xE2D6BD) + 0.05) / (luminance(readable) + 0.05) < 4.5) {
                         context.check("all sampled colours are readable and stable", false);
                         return;
                     }
                 }
-        context.check("4096 sampled colours are readable and stable", true);
+        context.check("4096 sampled colours have 4.5:1 contrast on the darkest paper and are stable", true);
+    }
+
+    private static double luminance(int rgb) {
+        double[] channels = {(rgb >> 16) & 255, (rgb >> 8) & 255, rgb & 255};
+        for (int index = 0; index < channels.length; index++) {
+            double channel = channels[index] / 255.0;
+            channels[index] = channel <= 0.04045 ? channel / 12.92 : Math.pow((channel + 0.055) / 1.055, 2.4);
+        }
+        return channels[0] * 0.2126 + channels[1] * 0.7152 + channels[2] * 0.0722;
     }
 
     private static void styledText(ProbeContext context) {
@@ -60,9 +70,9 @@ public final class AuiBindingVerifyProbes {
         context.expect("each component segment has its own run", value.getChildren().size(), 5);
         List<Element> runs = List.copyOf(value.getChildren());
         context.expect("root RGB color reaches the rendered run", Text.getFontColor(runs.get(0)), 0xFF123456);
-        context.expect("nested fire color overrides the root", Text.getFontColor(runs.get(1)), 0xFF682300);
+        context.expect("nested fire color overrides the root", Text.getFontColor(runs.get(1)), 0xFF5C1F00);
         context.expect("uncolored separator inherits the component root", Text.getFontColor(runs.get(2)), 0xFF123456);
-        context.expect("nested water color survives", Text.getFontColor(runs.get(3)), 0xFF152A68);
+        context.expect("nested water color survives", Text.getFontColor(runs.get(3)), 0xFF12255C);
         context.check("bold is rendered", Text.of(runs.get(1)).isBold());
         context.check("italic is rendered", Text.of(runs.get(3)).isOblique());
         AuiElements.setText(value, text.copy());
@@ -70,7 +80,7 @@ public final class AuiBindingVerifyProbes {
 
         AuiElements.setText(value, Component.literal(text.getString()).withColor(0x55FF55));
         context.expect("same text can change color without retaining old segments", value.getChildren().size(), 1);
-        context.expect("refreshed ready color reaches the renderer", Text.getFontColor(value.getFirstElementChild()), 0xFF236823);
+        context.expect("refreshed ready color reaches the renderer", Text.getFontColor(value.getFirstElementChild()), 0xFF1F5C1F);
         AuiElements.setText(value, Component.literal("ordinary row"));
         context.expect("reused row falls back to its own default color", Text.getFontColor(value.getFirstElementChild()), 0xFFE0E4EC);
         context.check("reused row does not keep bold or italic", !Text.of(value.getFirstElementChild()).isBold()

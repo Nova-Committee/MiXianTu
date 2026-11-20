@@ -8,6 +8,9 @@
 }
 
 #panel {
+    --ornament-image: url("/mxt/rift/ornaments/plane-compass.svg");
+    --ornament-size: 24px 24px;
+    --ornament-position: 100% 100%;
     width: calc(100vw - 12px);
     height: calc(100vh - 12px);
     display: flex;
@@ -95,6 +98,14 @@
 #geometry_status,
 #status { height: 12px; line-height: 12px; }
 #panel.world-preview { height: auto; align-self: flex-start; margin-top: 6px; }
+
+#panel .group-title,
+#panel #property_heading {
+    background-image: url("/mxt/rift/ornaments/plane-compass.svg"), linear-gradient(var(--edge-light), var(--edge-light));
+    background-size: 12px 12px, 100% 1px;
+    background-position: 100% 0, 0 100%;
+    background-repeat: no-repeat;
+}
 
 @media (max-width: 600px) {
     #panel { padding: 5px; gap: 5px; }

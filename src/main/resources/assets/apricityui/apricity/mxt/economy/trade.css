@@ -12,6 +12,12 @@
     top: 139px;
 }
 
+#panel {
+    --ornament-image: url("/mxt/economy/ornaments/contract-knot.svg");
+    --ornament-size: 14px 54px;
+    --ornament-position: 81px 35px;
+}
+
 #partner_state { color: var(--ink-muted); }
 #partner_state:hover {
     background-color: var(--surface);

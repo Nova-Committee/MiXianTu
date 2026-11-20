@@ -111,8 +111,8 @@ public final class InformationPanelScreen extends AuiScreen {
      * two tabs keep between themselves - instead of one caption below it. The page carries the same defaults.
      */
     private static final int TECHNIQUE_TOP = TAB_TOP + TAB_HEIGHT + TAB_GAP, TECHNIQUE_EMPTY_TOP = TECHNIQUE_TOP + 6;
-    private static final int LABEL_COLOR = AuiStyles.INK_DARK, MUTED_COLOR = AuiStyles.INK_MUTED, UNKNOWN_COLOR = 0xFF909985;
-    private static final int VALUE_COLOR = AuiStyles.INK, POSITIVE_COLOR = AuiStyles.GREEN, WARNING_COLOR = 0xFF936725;
+    private static final int LABEL_COLOR = AuiStyles.INK_MUTED, MUTED_COLOR = AuiStyles.INK_MUTED, UNKNOWN_COLOR = 0xFF887A64;
+    private static final int VALUE_COLOR = AuiStyles.INK, POSITIVE_COLOR = AuiStyles.GREEN, WARNING_COLOR = 0xFF89631F;
     private static final int BAR_FALLBACK_COLOR = AuiStyles.GREEN;
     private static final EquipmentSlot[] EQUIPMENT_SLOTS = {EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET};
     @Nullable
@@ -589,7 +589,7 @@ public final class InformationPanelScreen extends AuiScreen {
             AuiElements.setText(cell.part(0), abbreviate(font, entry.name() == null ? Component.empty() : entry.name(),
                     Math.max(1, this.columns.nameWidth())));
             AuiElements.setText(cell.part(1), abbreviate(font, entry.value(), Math.max(1, this.columns.valueWidth())));
-            AuiElements.style(cell.part(0), "color", AuiStyles.hex(entry.color()));
+            AuiElements.style(cell.part(0), "color", AuiStyles.hex(LABEL_COLOR));
             AuiElements.style(cell.part(1), "color", AuiStyles.hex(entry.color()));
         }
     }

@@ -12,6 +12,15 @@
     top: 83px;
 }
 
+#panel {
+    --ornament-image: url("/mxt/economy/ornaments/coin.svg");
+    --ornament-size: 32px 32px;
+    --ornament-position: 12px 25px;
+    --ornament-secondary-image: url("/mxt/economy/ornaments/coin.svg");
+    --ornament-secondary-size: 32px 32px;
+    --ornament-secondary-position: 135px 25px;
+}
+
 /* ── 条目格：可点，悬停加白、选中更亮（旧版是 recipe / recipe_highlighted / recipe_selected 三张精灵）。
  * 皮与三种状态在主题的 .cell（Java 写 selected / icon-item / empty 三个类）。 ── */
 .cell {

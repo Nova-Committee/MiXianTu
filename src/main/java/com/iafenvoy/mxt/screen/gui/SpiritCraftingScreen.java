@@ -96,7 +96,7 @@ public final class SpiritCraftingScreen extends AuiContainerScreen<SpiritCraftin
             }
             double required = this.menu.progressRequirement(index);
             double amount = Math.min(this.menu.progressAmount(index), required);
-            // The aura's own particle colour, lifted so it stays readable on the dark skin.
+            // Preserve the aura's hue while keeping its label readable on paper.
             String color = AuiStyles.textColor(aura.value().resource().value().particleColor());
             int filled = required <= 0 ? 0 : (int) Math.round(amount / required * BAR_WIDTH);
             row.show(AURA_PADDING + index * pitch, DefinitionText.nameOrId(aura).getString(),
