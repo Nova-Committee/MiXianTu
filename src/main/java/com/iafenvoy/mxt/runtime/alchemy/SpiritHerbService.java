@@ -4,7 +4,6 @@ import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.data.alchemy.MedicinalProperty;
 import com.iafenvoy.mxt.data.alchemy.SpiritHerb;
 import com.iafenvoy.mxt.data.alchemy.SpiritHerb.Growth;
-import com.iafenvoy.mxt.recipe.AlchemyRole;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
@@ -26,10 +25,12 @@ import net.minecraft.world.level.block.state.BlockState;
 import java.util.*;
 
 /**
- * Resolves the highest-priority herb binding, its age and the potency of one furnace role. Age is a formula
+ * Resolves the highest-priority herb binding, its age and the potency of one effect channel. Age is a formula
  * input, not a second multiplier: a pack that wants older herbs to be stronger writes {@code herb_age} into the potency.
  */
 public final class SpiritHerbService {
+    public enum EffectChannel {MAIN, AUXILIARY, CATALYST}
+
     public static final String HERB_AGE = "herb_age";
 
     private SpiritHerbService() {
@@ -117,20 +118,20 @@ public final class SpiritHerbService {
      * Empty only when no loaded binding claims the stack. A matching herb with no power in this role is still
      * returned, so the furnace can refuse it as zero power rather than as an unknown item.
      */
-    public static Optional<HerbPotency> potency(Provider access, ItemStack stack, AlchemyRole role, FormulaContext context) {
+    public static Optional<HerbPotency> potency(Provider access, ItemStack stack, EffectChannel role, FormulaContext context) {
         return find(access, stack).map(herb -> potency(herb, stack, role, context));
     }
 
-    public static HerbPotency potency(Holder<SpiritHerb> herb, ItemStack stack, AlchemyRole role, FormulaContext context) {
+    public static HerbPotency potency(Holder<SpiritHerb> herb, ItemStack stack, EffectChannel role, FormulaContext context) {
         SpiritHerb value = herb.value();
         int years = age(stack, value);
         FormulaContext aged = context.with(HERB_AGE, years);
         double bias = value.thermalBias();
-        if (role == AlchemyRole.CATALYST) {
+        if (role == EffectChannel.CATALYST) {
             double catalyst = MiscUtil.positive(value.catalystPower().evaluate(aged));
             return new HerbPotency(herb, years, Map.of(), catalyst, bias, catalyst);
         }
-        Map<Holder<MedicinalProperty>, NumberProvider> source = role == AlchemyRole.MAIN ? value.mainEffects() : value.auxiliaryEffects();
+        Map<Holder<MedicinalProperty>, NumberProvider> source = role == EffectChannel.MAIN ? value.mainEffects() : value.auxiliaryEffects();
         Map<Holder<MedicinalProperty>, Double> properties = new LinkedHashMap<>();
         double total = 0.0D;
         for (Map.Entry<Holder<MedicinalProperty>, NumberProvider> entry : source.entrySet()) {

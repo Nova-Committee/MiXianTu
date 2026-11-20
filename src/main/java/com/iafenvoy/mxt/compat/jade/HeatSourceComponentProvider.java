@@ -10,10 +10,6 @@ import snownee.jade.api.IBlockComponentProvider;
 import snownee.jade.api.ITooltip;
 import snownee.jade.api.config.IPluginConfig;
 
-/**
- * The heat a block gives, the way the furnace reads it: what {@link HeatSourceDataProvider} sent, so a block that
- * answers for itself - a lit fire, a filled brazier - reads the same as one the {@code mxt:heat_source} table covers.
- */
 public enum HeatSourceComponentProvider implements IBlockComponentProvider {
     INSTANCE;
 

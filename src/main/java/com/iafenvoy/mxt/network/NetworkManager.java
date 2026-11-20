@@ -24,29 +24,18 @@ public final class NetworkManager {
         PayloadRegistrar registrar = event.registrar("1")
                 .playToServer(RiftEditC2SPayload.TYPE, RiftEditC2SPayload.STREAM_CODEC, new MainThreadPayloadHandler<>(RiftEditorService::handle))
                 .playToServer(ProfilerSubscriptionC2SPayload.TYPE, ProfilerSubscriptionC2SPayload.STREAM_CODEC, new MainThreadPayloadHandler<>(ServerNetworkHandler::onProfilerSubscription))
-                .playToServer(ForgingActionC2SPayload.TYPE, ForgingActionC2SPayload.STREAM_CODEC, new MainThreadPayloadHandler<>(ServerNetworkHandler::onForgingAction))
-                .playToServer(AlchemyActionC2SPayload.TYPE, AlchemyActionC2SPayload.STREAM_CODEC, new MainThreadPayloadHandler<>(ServerNetworkHandler::onAlchemyAction))
                 .playToServer(ChequeActionC2SPayload.TYPE, ChequeActionC2SPayload.STREAM_CODEC, new MainThreadPayloadHandler<>(ServerNetworkHandler::onChequeAction))
                 .playToServer(StationTradeC2SPayload.TYPE, StationTradeC2SPayload.STREAM_CODEC, new MainThreadPayloadHandler<>(ServerNetworkHandler::onStationTrade))
                 .playToServer(PlayerTradeActionC2SPayload.TYPE, PlayerTradeActionC2SPayload.STREAM_CODEC, new MainThreadPayloadHandler<>(ServerNetworkHandler::onPlayerTradeAction))
                 .playToServer(BackSlotSwapC2SPayload.TYPE, BackSlotSwapC2SPayload.STREAM_CODEC, new MainThreadPayloadHandler<>(ServerNetworkHandler::onBackSlotSwap))
                 .playToServer(CultivationToggleC2SPayload.TYPE, CultivationToggleC2SPayload.STREAM_CODEC, new MainThreadPayloadHandler<>(ServerNetworkHandler::onCultivationToggle))
-                .playToServer(FlightDescendC2SPayload.TYPE, FlightDescendC2SPayload.STREAM_CODEC, new MainThreadPayloadHandler<>(ServerNetworkHandler::onFlightDescend))
-                .playToServer(TalismanSelectC2SPayload.TYPE, TalismanSelectC2SPayload.STREAM_CODEC, new MainThreadPayloadHandler<>(ServerNetworkHandler::onTalismanSelect))
-                .playToServer(TalismanStrokeC2SPayload.TYPE, TalismanStrokeC2SPayload.STREAM_CODEC, new MainThreadPayloadHandler<>(ServerNetworkHandler::onTalismanStroke))
-                .playToServer(TalismanSubmitC2SPayload.TYPE, TalismanSubmitC2SPayload.STREAM_CODEC, new MainThreadPayloadHandler<>(ServerNetworkHandler::onTalismanSubmit))
-                .playToServer(TalismanCancelC2SPayload.TYPE, TalismanCancelC2SPayload.STREAM_CODEC, new MainThreadPayloadHandler<>(ServerNetworkHandler::onTalismanCancel));
+                .playToServer(FlightDescendC2SPayload.TYPE, FlightDescendC2SPayload.STREAM_CODEC, new MainThreadPayloadHandler<>(ServerNetworkHandler::onFlightDescend));
 
         registrar.playToClient(RiftSyncS2CPayload.TYPE, RiftSyncS2CPayload.STREAM_CODEC, new MainThreadPayloadHandler<>(ClientNetworkHandler::onRiftSync))
                 .playToClient(RiftEditorS2CPayload.TYPE, RiftEditorS2CPayload.STREAM_CODEC, new MainThreadPayloadHandler<>(ClientNetworkHandler::onRiftEditor));
         registrar.playToClient(ProfilerSnapshotS2CPayload.TYPE, ProfilerSnapshotS2CPayload.STREAM_CODEC, new MainThreadPayloadHandler<>(ClientNetworkHandler::onProfilerSnapshot))
                 .playToClient(AuraStateS2CPayload.TYPE, AuraStateS2CPayload.STREAM_CODEC, new MainThreadPayloadHandler<>(ClientNetworkHandler::onAuraState))
                 .playToClient(SpiritCraftingStateS2CPayload.TYPE, SpiritCraftingStateS2CPayload.STREAM_CODEC, new MainThreadPayloadHandler<>(ClientNetworkHandler::onSpiritCraftingState))
-                .playToClient(AlchemyStateS2CPayload.TYPE, AlchemyStateS2CPayload.STREAM_CODEC, new MainThreadPayloadHandler<>(ClientNetworkHandler::onAlchemyState))
-                .playToClient(FormationStructureS2CPayload.TYPE, FormationStructureS2CPayload.STREAM_CODEC, new MainThreadPayloadHandler<>(ClientNetworkHandler::onFormationStructure))
-                .playToClient(TalismanDrawingListS2CPayload.TYPE, TalismanDrawingListS2CPayload.STREAM_CODEC, new MainThreadPayloadHandler<>(ClientNetworkHandler::onTalismanList))
-                .playToClient(TalismanDrawingStartS2CPayload.TYPE, TalismanDrawingStartS2CPayload.STREAM_CODEC, new MainThreadPayloadHandler<>(ClientNetworkHandler::onTalismanStart))
-                .playToClient(TalismanStrokeAckS2CPayload.TYPE, TalismanStrokeAckS2CPayload.STREAM_CODEC, new MainThreadPayloadHandler<>(ClientNetworkHandler::onTalismanStrokeAck))
-                .playToClient(TalismanResultS2CPayload.TYPE, TalismanResultS2CPayload.STREAM_CODEC, new MainThreadPayloadHandler<>(ClientNetworkHandler::onTalismanResult));
+                .playToClient(FormationStructureS2CPayload.TYPE, FormationStructureS2CPayload.STREAM_CODEC, new MainThreadPayloadHandler<>(ClientNetworkHandler::onFormationStructure));
     }
 }

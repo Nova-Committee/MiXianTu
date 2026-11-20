@@ -1,7 +1,6 @@
 package com.iafenvoy.mxt.compat.jei;
 
 import com.iafenvoy.mxt.MiXianTu;
-import com.iafenvoy.mxt.recipe.AlchemyRecipe;
 import com.iafenvoy.mxt.recipe.SpiritShapedRecipe;
 import com.iafenvoy.mxt.recipe.SpiritShapelessRecipe;
 import com.iafenvoy.mxt.registry.MxtBlocks;
@@ -22,13 +21,12 @@ import net.minecraft.world.item.crafting.RecipeManager;
 import org.jspecify.annotations.NonNull;
 
 /**
- * JEI integration for the datapack-driven spirit crafting and alchemy recipes.
+ * JEI integration for datapack-driven spirit crafting recipes.
  */
 @JeiPlugin
 public final class MxtJeiPlugin implements IModPlugin {
     public static final IRecipeHolderType<SpiritShapedRecipe> SHAPED = IRecipeHolderType.create(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "spirit_shaped"));
     public static final IRecipeHolderType<SpiritShapelessRecipe> SHAPELESS = IRecipeHolderType.create(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "spirit_shapeless"));
-    public static final IRecipeHolderType<AlchemyRecipe> ALCHEMY = IRecipeHolderType.create(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "alchemy"));
 
     @Override
     public @NonNull Identifier getPluginUid() {
@@ -38,8 +36,7 @@ public final class MxtJeiPlugin implements IModPlugin {
     @Override
     public void registerCategories(IRecipeCategoryRegistration registration) {
         IGuiHelper gui = registration.getJeiHelpers().getGuiHelper();
-        registration.addRecipeCategories(new SpiritShapedCategory(gui), new SpiritShapelessCategory(gui),
-                new AlchemyCategory(gui));
+        registration.addRecipeCategories(new SpiritShapedCategory(gui), new SpiritShapelessCategory(gui));
     }
 
     @Override
@@ -54,9 +51,6 @@ public final class MxtJeiPlugin implements IModPlugin {
         registration.addRecipes(SHAPELESS, recipes.getRecipes().stream()
                 .filter(holder -> holder.value() instanceof SpiritShapelessRecipe)
                 .map(MxtJeiPlugin::<SpiritShapelessRecipe>castHolder).toList());
-        registration.addRecipes(ALCHEMY, recipes.getRecipes().stream()
-                .filter(holder -> holder.value() instanceof AlchemyRecipe)
-                .map(MxtJeiPlugin::<AlchemyRecipe>castHolder).toList());
     }
 
     @SuppressWarnings("unchecked")
@@ -70,7 +64,6 @@ public final class MxtJeiPlugin implements IModPlugin {
         registration.addCraftingStation(SHAPED, item);
         registration.addCraftingStation(SHAPELESS, item);
         // Every furnace specification shares this one block item, so it is the only station the category can name.
-        registration.addCraftingStation(ALCHEMY, MxtBlocks.ALCHEMY_FURNACE.get().asItem());
     }
 
     @Override

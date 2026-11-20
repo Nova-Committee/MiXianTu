@@ -10,6 +10,25 @@ import java.util.Locale;
  * vanilla renderer, so there is no page-side tooltip style to keep in step with the theme.
  */
 public final class AuiStyles {
+    public static final int INK = 0xFF303C33, INK_DARK = 0xFF293A30, INK_MUTED = 0xFF73796C;
+    public static final int CANVAS = 0xFFF5F2E9, SURFACE = 0xFFFFFDF7, SURFACE_SOFT = 0xFFF0EFE4, EDGE = 0xFFD7D9C9;
+    public static final int GREEN = 0xFF436650, GOLD = 0xFF997232, RED = 0xFFAD513E, PURPLE = 0xFF7C6882;
+
+    // Capping every channel at 104 gives at least 4.5:1 contrast on Songyan's darkest paper surface.
+    public static int readableOnPaper(int rgb) {
+        int red = (rgb >> 16) & 0xFF;
+        int green = (rgb >> 8) & 0xFF;
+        int blue = rgb & 0xFF;
+        int brightest = Math.max(red, Math.max(green, blue));
+        if (brightest <= 104) return rgb & 0xFFFFFF;
+        double scale = 104.0D / brightest;
+        return ((int) Math.round(red * scale) << 16) | ((int) Math.round(green * scale) << 8) | (int) Math.round(blue * scale);
+    }
+
+    public static String textColor(int rgb) {
+        return hex(readableOnPaper(rgb));
+    }
+
     /**
      * The brightest channel a colour needs before the dark page skin can carry it.
      */

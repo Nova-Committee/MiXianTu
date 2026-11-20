@@ -1,24 +1,19 @@
 package com.iafenvoy.mxt.network;
 
-import com.iafenvoy.mxt.item.block.entity.ForgingTableBlockEntity;
 import com.iafenvoy.mxt.network.payload.*;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationMethodService.CultivationStep;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationModeService;
 import com.iafenvoy.mxt.runtime.economy.PlayerTradeService;
-import com.iafenvoy.mxt.runtime.forging.ForgingWorkstationService;
-import com.iafenvoy.mxt.screen.menu.*;
+import com.iafenvoy.mxt.screen.menu.ChequeTableMenu;
+import com.iafenvoy.mxt.screen.menu.StationMenu;
 import com.iafenvoy.mxt.util.ProfilerSubscriptions;
-import com.iafenvoy.saturn.profiling.LoggerDispatcher;
-import com.iafenvoy.saturn.profiling.LoggingLevel;
 import com.iafenvoy.saturn.runtime.resulting.Result;
 import com.mojang.logging.LogUtils;
-import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
-import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import top.theillusivec4.curios.api.CuriosApi;
 import top.theillusivec4.curios.api.SlotContext;
@@ -33,67 +28,15 @@ public final class ServerNetworkHandler {
 
     public static final Logger LOGGER = LogUtils.getLogger();
     // One line per action the client sends, so a held key would repeat it: the trace is development-only.
-    private static final LoggerDispatcher FORGING_TRACE = LoggerDispatcher.of(LogUtils.getLogger(), LoggingLevel.DEBUG, LoggingLevel.NONE);
 
-    static void onForgingAction(ForgingActionC2SPayload payload, IPayloadContext context) {
-        if (!(context.player() instanceof ServerPlayer player)) return;
-        // The table comes from the menu the player has open, not from the packet: the client cannot reach the block
-        // at all (its ContainerLevelAccess is NULL), so a position in the request would have to be trusted coming
-        // back. Resolving here is what leaves the distance check as the only remaining thing to verify.
-        if (!(player.containerMenu instanceof ForgingMenu menu)) return;
-        if (!(menu.table() instanceof ForgingTableBlockEntity table)) return;
-        Identifier definition = payload.definition().orElse(null);
-        // `active` is logged after the call for the two actions that can settle a session by themselves: a strike
-        // that completes the piece ends it, so "the session is gone afterwards" is the success path.
-        switch (payload.action()) {
-            case SELECT ->
-                    FORGING_TRACE.log("forging SELECT definition={} selectable={} methods={} outcome={} active={}", definition, table.selectableBlueprintIds(), table.availableMethodIds(), ForgingWorkstationService.start(player, table, definition), table.forgingState().active());
-            case STRIKE ->
-                    FORGING_TRACE.log("forging STRIKE definition={} available={} outcome={} active={}", definition, table.availableMethodIds(), ForgingWorkstationService.strike(player, table, definition), table.forgingState().active());
-            case FINISH ->
-                    FORGING_TRACE.log("forging FINISH outcome={}", ForgingWorkstationService.finish(player, table));
-            case CANCEL ->
-                    FORGING_TRACE.log("forging CANCEL outcome={}", ForgingWorkstationService.cancel(player, table));
-        }
-    }
-
-    static void onAlchemyAction(AlchemyActionC2SPayload payload, IPayloadContext context) {
-        if (!(context.player() instanceof ServerPlayer player)) return;
-        if (!(player.containerMenu instanceof AlchemyFurnaceMenu menu) || menu.containerId != payload.containerId() || !menu.stillValid(player))
-            return;
-        menu.handleAction(player, payload);
-    }
 
     // Every drawing request is routed through the menu the player has open, so nothing here trusts a position, a
     // session or a recipe the client named: the menu either has that session or it refuses.
-    static void onTalismanSelect(TalismanSelectC2SPayload payload, IPayloadContext context) {
-        TalismanWorkstationMenu menu = talismanMenu(context, payload.containerId());
-        if (menu != null) menu.select((ServerPlayer) context.player(), payload.recipeId());
-    }
 
-    static void onTalismanStroke(TalismanStrokeC2SPayload payload, IPayloadContext context) {
-        TalismanWorkstationMenu menu = talismanMenu(context, payload.containerId());
-        if (menu != null) menu.stroke((ServerPlayer) context.player(), payload.recipeId(), payload.stroke());
-    }
-
-    static void onTalismanSubmit(TalismanSubmitC2SPayload payload, IPayloadContext context) {
-        TalismanWorkstationMenu menu = talismanMenu(context, payload.containerId());
-        if (menu != null) menu.submit((ServerPlayer) context.player(), payload.recipeId(), payload.strokes());
-    }
-
-    static void onTalismanCancel(TalismanCancelC2SPayload payload, IPayloadContext context) {
-        TalismanWorkstationMenu menu = talismanMenu(context, payload.containerId());
-        if (menu != null) menu.cancel((ServerPlayer) context.player());
-    }
 
     // The menu is resolved from the open container and checked against the id the client sent, so a stale or
     // forged id can only ever be ignored.
-    private static @Nullable TalismanWorkstationMenu talismanMenu(IPayloadContext context, int containerId) {
-        if (!(context.player() instanceof ServerPlayer player)) return null;
-        if (!(player.containerMenu instanceof TalismanWorkstationMenu menu)) return null;
-        if (menu.containerId != containerId || !menu.stillValid(player)) return null;
-        return menu;
-    }
+
 
     static void onChequeAction(ChequeActionC2SPayload payload, IPayloadContext context) {
         Player player = context.player();

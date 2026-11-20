@@ -10,10 +10,13 @@ import com.iafenvoy.mxt.probe.ProbeContext;
 import com.iafenvoy.mxt.screen.rift.RiftEditorInputs;
 import com.iafenvoy.mxt.screen.rift.RiftEditorToolbar;
 import com.iafenvoy.mxt.screen.rift.RiftEditorViewport;
+import com.sighs.apricityui.dom.expander.ContainerExpander;
 import com.sighs.apricityui.element.Canvas;
+import com.sighs.apricityui.element.Container;
 import com.sighs.apricityui.element.Input;
 import com.sighs.apricityui.element.Option;
 import com.sighs.apricityui.element.Select;
+import com.sighs.apricityui.element.Slot;
 import com.sighs.apricityui.element.Translation;
 import com.sighs.apricityui.event.Event;
 import com.sighs.apricityui.init.Document;
@@ -41,7 +44,94 @@ public final class AuiGeometryVerifyProbes {
     }
 
     public static List<Probe> probes() {
-        return List.of(Probe.of("verify/aui/rift_geometry", AuiGeometryVerifyProbes::riftGeometry));
+        return List.of(Probe.of("verify/aui/rift_geometry", AuiGeometryVerifyProbes::riftGeometry),
+                Probe.of("verify/aui/slot_geometry", AuiGeometryVerifyProbes::slotGeometry));
+    }
+
+    private record SlotGrid(String id, int columns, int rows, int left, int top, boolean playerInventory) {
+        SlotGrid(String id, int columns, int rows, int left, int top) {
+            this(id, columns, rows, left, top, false);
+        }
+    }
+
+    private record SlotPage(String path, String stylesheet, List<SlotGrid> grids) {
+    }
+
+    private static SlotGrid inventory(int top) {
+        return new SlotGrid("inventory", 9, 4, 7, top, true);
+    }
+
+    private static void slotGeometry(ProbeContext context) {
+        Element.register("container", (document, _) -> new Container(document));
+        Element.register("slot", (document, _) -> new Slot(document));
+        List<SlotPage> pages = List.of(
+                new SlotPage("spirit_crafting/spirit_crafting", "spirit_crafting/spirit_crafting.css", List.of(
+                        new SlotGrid("crafting", 3, 3, 29, 16), new SlotGrid("result", 1, 1, 123, 34), inventory(83))),
+                new SlotPage("economy/cheque", "economy/cheque.css", List.of(
+                        new SlotGrid("currency", 5, 3, 7, 17), new SlotGrid("cheque_in", 1, 1, 133, 17),
+                        new SlotGrid("cheque_out", 1, 1, 133, 53), inventory(83))),
+                new SlotPage("economy/exchange", "economy/exchange.css", List.of(
+                        new SlotGrid("input", 1, 1, 19, 32), new SlotGrid("result", 1, 1, 142, 32), inventory(83))),
+                new SlotPage("economy/station_customer", "economy/station.css", List.of(
+                        new SlotGrid("costs", 4, 3, 7, 17), new SlotGrid("rewards", 4, 3, 97, 17), inventory(83))),
+                new SlotPage("economy/station_owner", "economy/station.css", List.of(
+                        new SlotGrid("costs", 4, 3, 7, 15), new SlotGrid("rewards", 4, 3, 97, 15),
+                        new SlotGrid("stock", 7, 3, 7, 71), new SlotGrid("display", 1, 1, 151, 71), inventory(139))),
+                new SlotPage("economy/trade", "economy/trade.css", List.of(
+                        new SlotGrid("offer", 4, 5, 7, 17), new SlotGrid("partner", 4, 5, 97, 17), inventory(139))));
+        int documents = Document.getAll().size();
+        try {
+            for (SlotPage page : pages) {
+                String css = resource("apricityui/apricity/mxt/common/theme.css") + "\n"
+                        + resource("apricityui/apricity/mxt/" + page.stylesheet());
+                String html = resource("apricityui/apricity/mxt/" + page.path() + ".html")
+                        .replaceAll("<link[^>]*>", "").replace("</head>", "<style>" + css + "</style></head>");
+                String path = "mxt_test/aui_slots_" + page.path().replace('/', '_') + ".html";
+                HTML.putTemple(path, html);
+                for (int[] viewport : List.of(new int[]{320, 240}, new int[]{640, 360}, new int[]{960, 540})) {
+                    Size.setViewportOverride(viewport[0], viewport[1]);
+                    Document document = Document.create(path);
+                    if (!context.check("slot page created: " + page.path(), document != null && document.body != null)) return;
+                    try (var _ = Document.withContext(document)) {
+                        ContainerExpander.expand(document);
+                        document.flushPendingStyleUpdates();
+                        document.commitRenderState();
+                        try (var _ = GeometryQueryScope.open()) {
+                            for (SlotGrid grid : page.grids()) slotGrid(context, document, page.path(), grid);
+                        }
+                    } finally {
+                        document.remove();
+                    }
+                }
+            }
+        } finally {
+            Size.clearViewportOverride();
+        }
+        context.expect("slot geometry releases documents", Document.getAll().size(), documents);
+    }
+
+    private static void slotGrid(ProbeContext context, Document document, String page, SlotGrid grid) {
+        String label = page + " #" + grid.id();
+        Element container = document.getElementById(grid.id());
+        if (!context.check(label + " container exists", container instanceof Container)) return;
+        List<Slot> slots = container.getChildren().stream().filter(Slot.class::isInstance).map(Slot.class::cast).toList();
+        context.expect(label + " expanded slot count", slots.size(), grid.columns() * grid.rows());
+        context.expect(label + " unique indices", slots.stream().map(Slot::getSlotIndex).distinct().count(), (long) slots.size());
+        Element.DOMRect panel = document.getElementById("panel").getBoundingClientRect();
+        for (int index = 0; index < slots.size(); index++) {
+            Slot slot = slots.get(index);
+            int expectedIndex = grid.playerInventory() ? (index + 9) % 36 : index;
+            context.expect(label + " menu slot order " + index, slot.getSlotIndex(), expectedIndex);
+            int y = grid.playerInventory() && index >= 27 ? 58 : index / grid.columns() * 18;
+            Element.DOMRect rect = slot.getBoundingClientRect();
+            close(context, label + " slot " + expectedIndex + " x", rect.x - panel.x, grid.left() + index % grid.columns() * 18);
+            close(context, label + " slot " + expectedIndex + " y", rect.y - panel.y, grid.top() + y);
+            close(context, label + " slot " + expectedIndex + " width", rect.width, 18);
+            close(context, label + " slot " + expectedIndex + " height", rect.height, 18);
+            context.check(label + " slot " + expectedIndex + " is inside the panel",
+                    rect.x >= panel.x && rect.y >= panel.y && rect.x + rect.width <= panel.x + panel.width
+                            && rect.y + rect.height <= panel.y + panel.height);
+        }
     }
 
     private static String resource(String path) {

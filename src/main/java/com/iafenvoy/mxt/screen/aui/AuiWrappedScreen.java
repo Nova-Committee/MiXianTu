@@ -197,7 +197,7 @@ public interface AuiWrappedScreen extends AuiLinkedScreen {
         AuiElements.setText(element, text.getString());
         TextColor color = text.getStyle().getColor();
         if (color == null) return;
-        AuiElements.style(element, "color", AuiStyles.hex(color.getValue()));
+        AuiElements.style(element, "color", AuiStyles.textColor(color.getValue()));
     }
 
     default void click(@Nullable Element element, Runnable action) {

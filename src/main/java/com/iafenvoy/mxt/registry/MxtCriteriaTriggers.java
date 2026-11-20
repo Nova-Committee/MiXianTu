@@ -12,7 +12,6 @@ public final class MxtCriteriaTriggers {
 
     public static final DeferredHolder<CriterionTrigger<?>, IdentifierCriterionTrigger> BREAKTHROUGH = register("breakthrough");
     public static final DeferredHolder<CriterionTrigger<?>, IdentifierCriterionTrigger> ABILITY = register("ability");
-    public static final DeferredHolder<CriterionTrigger<?>, IdentifierCriterionTrigger> ALCHEMY = register("alchemy");
     public static final DeferredHolder<CriterionTrigger<?>, IdentifierCriterionTrigger> TRIBULATION = register("tribulation");
 
     private static DeferredHolder<CriterionTrigger<?>, IdentifierCriterionTrigger> register(String id) {

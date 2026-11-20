@@ -2,7 +2,9 @@ package com.iafenvoy.mxt.registry;
 
 import com.iafenvoy.mxt.data.Tribulation;
 import com.iafenvoy.mxt.data.ability.AbilityAffinity;
-import com.iafenvoy.mxt.data.alchemy.*;
+import com.iafenvoy.mxt.data.alchemy.HeatSource;
+import com.iafenvoy.mxt.data.alchemy.MedicinalProperty;
+import com.iafenvoy.mxt.data.alchemy.SpiritHerb;
 import com.iafenvoy.mxt.data.artifact.Artifact;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.aura.AuraZone;
@@ -13,10 +15,6 @@ import com.iafenvoy.mxt.data.creature.CreatureProfile;
 import com.iafenvoy.mxt.data.cultivation.*;
 import com.iafenvoy.mxt.data.curse.Curse;
 import com.iafenvoy.mxt.data.economy.CurrencyValue;
-import com.iafenvoy.mxt.data.forging.BlueprintBinding;
-import com.iafenvoy.mxt.data.forging.ForgingBlueprint;
-import com.iafenvoy.mxt.data.forging.ForgingMethod;
-import com.iafenvoy.mxt.data.forging.ToolBinding;
 import com.iafenvoy.mxt.data.formation.Formation;
 import com.iafenvoy.mxt.data.formation.FormationShape;
 import com.iafenvoy.mxt.data.item.*;
@@ -61,18 +59,12 @@ public final class MxtDatapackRegistries {
         register(event, MxtResourceKeys.SPIRIT_ROOT, SpiritRoot.DIRECT_CODEC);
         register(event, MxtResourceKeys.PHYSIQUE, Physique.DIRECT_CODEC);
         register(event, MxtResourceKeys.CURSE, Curse.DIRECT_CODEC);
-        register(event, MxtResourceKeys.FORGING_METHOD, ForgingMethod.DIRECT_CODEC);
-        register(event, MxtResourceKeys.FORGING_BLUEPRINT, ForgingBlueprint.DIRECT_CODEC);
-        register(event, MxtResourceKeys.TOOL_BINDING, ToolBinding.DIRECT_CODEC);
-        register(event, MxtResourceKeys.BLUEPRINT_BINDING, BlueprintBinding.DIRECT_CODEC);
         register(event, MxtResourceKeys.TECHNIQUE, Technique.DIRECT_CODEC);
         register(event, MxtResourceKeys.PROGRESSION, Progression.DIRECT_CODEC);
         register(event, MxtResourceKeys.CULTIVATION, Cultivation.DIRECT_CODEC);
         register(event, MxtResourceKeys.ARTIFACT, Artifact.DIRECT_CODEC);
         register(event, MxtResourceKeys.MEDICINAL_PROPERTY, MedicinalProperty.DIRECT_CODEC);
         register(event, MxtResourceKeys.SPIRIT_HERB, SpiritHerb.DIRECT_CODEC);
-        register(event, MxtResourceKeys.ALCHEMY_FURNACE, AlchemyFurnaceDefinition.DIRECT_CODEC);
-        register(event, MxtResourceKeys.ALCHEMY_WALL_MATERIAL, AlchemyWallMaterial.DIRECT_CODEC);
         register(event, MxtResourceKeys.HEAT_SOURCE, HeatSource.DIRECT_CODEC);
         register(event, MxtResourceKeys.FORMATION, Formation.DIRECT_CODEC);
         register(event, MxtResourceKeys.FORMATION_SHAPE, FormationShape.DIRECT_CODEC);
@@ -97,13 +89,14 @@ public final class MxtDatapackRegistries {
         register(event, MxtResourceKeys.TECHNIQUE_BINDING, TechniqueBinding.CODEC);
     }
 
-    private static <T> void register(NewRegistry event, ResourceKey<Registry<T>> key, Codec<T> codec) {
+    // Addons use the same entry point so administrative registry listings include their definitions.
+    public static <T> void register(NewRegistry event, ResourceKey<Registry<T>> key, Codec<T> codec) {
         event.dataPackRegistry(key, codec, codec);
         KEYS.add(key);
     }
 
     public static List<ResourceKey<? extends Registry<?>>> registries() {
-        return KEYS;
+        return List.copyOf(KEYS);
     }
 
     public static <T> Stream<Reference<T>> holders(Provider access, ResourceKey<? extends Registry<T>> key) {

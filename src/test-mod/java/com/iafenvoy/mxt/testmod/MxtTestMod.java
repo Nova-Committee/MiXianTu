@@ -8,7 +8,9 @@ import net.minecraft.resources.Identifier;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.RegisterGameTestsEvent;
 import net.neoforged.neoforge.event.entity.EntityAttributeCreationEvent;
+import net.neoforged.neoforge.registries.RegisterEvent;
 import org.slf4j.Logger;
 
 /**
@@ -22,18 +24,16 @@ public final class MxtTestMod {
 
     public MxtTestMod(IEventBus modBus) {
         MxtTestItems.REGISTRY.register(modBus);
-        MxtTestForgeItems.REGISTRY.register(modBus);
         MxtTestTechniqueItems.REGISTRY.register(modBus);
         MxtTestWeaponItems.REGISTRY.register(modBus);
-        AlchemyTestHeatBlocks.register(modBus);
         HerbTestBlocks.register(modBus);
         MxtTestEntities.REGISTRY.register(modBus);
         PillProbeActions.REGISTRY.register(modBus);
         FormationProbeActions.REGISTRY.register(modBus);
         ProbeMountRenders.REGISTRY.register(modBus);
         modBus.addListener(MxtTestMod::registerAttributes);
-        modBus.addListener(ProbeTests::registerFunctions);
-        modBus.addListener(ProbeTests::registerTests);
+        modBus.addListener(RegisterEvent.class, ProbeTests::registerFunctions);
+        modBus.addListener(RegisterGameTestsEvent.class, ProbeTests::registerTests);
         NeoForge.EVENT_BUS.addListener(MxtTestMod::logCurseRemovals);
         LOGGER.info("Loaded MiXianTu test mod");
     }

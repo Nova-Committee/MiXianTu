@@ -3,7 +3,7 @@
 **English** | [简体中文](README-zh.md)
 
 MiXianTu is a **cultivation mod framework**: it provides the **generic rules and runtime** that cultivation gameplay
-needs — cultivation, aura environment, realms and resources, abilities, formations, tribulations, forging, alchemy,
+needs — cultivation, aura environment, realms and resources, abilities, formations, tribulations,
 economy — without prescribing any particular setting or numbers.
 
 The actual items, blocks and recipes are provided by datapacks, KubeJS or other content mods, and MiXianTu's data tables
@@ -20,8 +20,9 @@ the changelog.**
 
 ## Links
 
-- **[Documentation](https://mxt.iafenvoy.com/)**: full documentation for datapacks, KubeJS and Java
-  development. **Still being written**, and will keep being updated.
+- **[Documentation](https://docs.iafenvoy.com/en/docs/mod/mxt)**: datapack, KubeJS and Java development guides, including
+  the three workstation addons. Documentation sources are maintained separately in [IAFEnvoy/docs](https://github.com/IAFEnvoy/docs),
+  are not included when cloning this repository, and require no fixed local directory layout.
 - **[Datapack Visual Editor](https://datapack.mcdev.tech/)**: edit this mod's datapacks in the browser as a form, with
   field descriptions and registry completion, so you never have to write JSON by hand.
 - **[AGENTS.md](AGENTS.md)**: the house rules to read before an AI (or any other contributor) changes this
@@ -38,12 +39,7 @@ the changelog.**
   cell numbering - you arrange the main wheel's twelve cells yourself, and the pages behind it come from your main hand,
   offhand, artifacts and the contract beast your Beast Taming Bell is tuned to, opening another page whenever one is
   not enough; plus resource bars and an aura HUD.
-- **Blocks**: Spirit Crafting Table (uses aura recipes and deducts aura when the result is taken out), Forge Table,
-  Exchange Station, Trade Station, Cheque Table, Display Stand, plus Spirit Stone Ore and Spirit Stone Block. An
-  alchemy furnace is hand-built as a 3×3×3: core at the front, main bin on the left when you face it, auxiliary bin on
-  the right, output on top, and 18 material walls - the two layers above the base are filled, and the base only needs
-  its four corners, so the five cells between them are not checked. **No herb block is among them**: a herb definition
-  claims existing blocks with `blocks` and its own fruit with `growth.drops`, and the mod registers no herb block.
+- **Blocks**: Spirit Crafting Table, Exchange Station, Trade Station, Cheque Table, Display Stands, Spirit Stone Ore and Spirit Stone Block. Furnaces, forge tables and drawing tables come from Alchemy Workstations, Forging Workstations and Talisman Workstations respectively. Herb definitions claim existing blocks; the core registers no herb blocks.
 - **Items**: materials such as Lesser to Supreme Spirit Stones, Spirit Iron, Spirit Wood and Cinnabar; generic items
   such as Spirit Ring, Spirit Stone Bag, Spirit Vessel, Identification Mirror, Technique Book, Jade Slip, Blank Talisman
   Paper, Talisman Brush and Talisman (written with a sigil, poured full of aura, and spent the moment it
@@ -87,6 +83,8 @@ datapacks or content packs; installing the mod alone does not give you a complet
   publish and subscribe to; register items from a script first and let the binding tables handle them.
 - **Java API**: interfaces for data table registration, attachments, networking, screens and client rendering.
 
+Furnaces, forge tables, drawing tables and their workflows are provided by three optional workstation addons. The core keeps shared brushes, cinnabar, paper, dregs, pills and talismans. Addon items use the MiXianTu creative tab.
+
 ## Module Status
 
 - **✅ Done**: everything is implemented and passed basic tests; minor changes may still happen later.
@@ -110,11 +108,11 @@ datapacks or content packs; installing the mod alone does not give you a complet
 | Creature Profiles & Contracts |   🚧   | Creature profiles define a creature's strength, inner core and spawn action, and can declare a mastery ladder the beast climbs; players can contract a beast and order it to follow, wander, hold or come back with the Beast Taming Bell.                                            |
 | Secret Realms                 |   🚧   | Each entry opens an instance dimension on demand from a secret realm definition, with its own border, generation, structures and landing spot, claimable terrain, member and time limits, and enter/exit conditions. Includes planar portal editing, token summons and layout export. |
 | Spirit Crafting Table         |   ✅    | Crafting with a spirit crafting recipe at the Spirit Crafting Table costs aura in addition to materials, deducted when the result is taken out.                                                                                                                                       |
-| Forging                       |   ✅    | At a Forge Table, several materials are hammered into a result following a blueprint; different tools unlock different methods, and the quality of the result depends on the process and the number of steps.                                                                         |
-| Alchemy                       |   🚧   | Hand-build a 3×3×3 furnace from a core, role bins and walls, and put a heat block in the bottom centre cell. When the player starts, it resolves the output from the actual properties. Pills keep use limits, cooldowns and toxicity.                                                |
+| Forging Workstations (addon) | 🚧 | The addon provides forge tables, blueprints, tool bindings and forging workflows; shared materials and outputs stay in the core. |
+| Pills and Alchemy | 🚧 | The core keeps pills, herbs, medicinal properties, toxicity and shared heat sources. Alchemy Workstations provides the furnace, walls and recipes. |
 | Spirit Herbs                  |   ✅    | Any existing block can be a spirit herb: a definition claims blocks with `blocks` and its own fruit with `growth.drops`; placing one starts its age, world-generated ones already carry their own, and breaking it tiers the fruit by that age.                                       |
 | Item Binding                  |   ✅    | Brings existing items into gameplay: attach passive behavior and vanilla attribute modifiers to any item, or bind abilities that fire on right-click use and on attack.                                                                                                               |
-| Talismans                     |   ✅    | A Talisman Brush inscribes one definition onto a carrier (one holds one); a full right-click hold fires it, at the cost of a carrier or the wear it declares. A drawing workstation turns a traced formula into success and tier.                                                     |
+| Talismans | ✅ | The core provides carriers, aura infusion and invocation; Talisman Workstations provides drawing tables, scoring, sessions and drawing recipes. |
 | Quality                       |   ✅    | Items carry a quality shown in their tooltip; `quality` and `next` link the tiers into a ladder, and a stack's tier resolves in three layers: the item component, the `quality` its definition declares, and the `default_quality` registry.                                          |
 | Artifacts                     |   ✅    | Items become artifacts via `artifact`: `items` claims them, `spirit_capacity` sets a per-aura ceiling, and `abilities` names what carrying it grants. An artifact can also declare itself a flying mount (speed, seats, fuel, looks).                                                 |
 | Economy                       |   ✅    | Items can be defined as currency with a value, supporting exchange and change; players can trade directly with each other, or use trade stations and cheques to settle transactions.                                                                                                  |

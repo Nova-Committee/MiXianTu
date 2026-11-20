@@ -40,7 +40,6 @@ public final class RegistryCaches {
     public static final ChainCache<ItemQuality> QUALITY_CHAIN = new ChainCache<>(MxtResourceKeys.ITEM_QUALITY)
             .validateOrder(ItemQuality::quality, RegistryCaches::inheritsName)
             .validateChain(RegistryCaches::oneLadderName);
-    public static final HeatSourceCache HEAT_SOURCE = new HeatSourceCache();
     public static final ReverseMappingListCache<Identifier, TriggerRule> TRIGGER_RULES_BY_SIGNAL = new ReverseMappingListCache<>(SaturnResourceKeys.TRIGGER, rule -> List.of(rule.value().trigger().signalType()));
     public static final ReverseMappingListCache<Block, BlockAura> BLOCK_AURA = new ReverseMappingListCache<>(MxtResourceKeys.BLOCK_AURA, (aura) -> RegistryCodecs.resolve(aura.value().blocks(), BuiltInRegistries.BLOCK).map(Holder::value).toList());
     public static final ReverseMappingCache<Holder<Resource>, Aura> RESOURCE_AURA = new ReverseMappingCache<>(MxtResourceKeys.AURA, aura -> aura.value().resource());
@@ -48,6 +47,7 @@ public final class RegistryCaches {
     public static final FormulaNameCache<Element> ELEMENT_NAMES = new FormulaNameCache<>(MxtResourceKeys.ELEMENT, "element");
     public static final FormulaNameCache<Attribute> ATTRIBUTE_NAMES = new FormulaNameCache<>(Registries.ATTRIBUTE, "attribute");
     public static final OrderCache<ElementReaction> ELEMENT_REACTION_ORDER = new OrderCache<>(MxtResourceKeys.ELEMENT_REACTION, Comparator.<Holder.Reference<ElementReaction>>comparingInt(h -> h.value().priority()).reversed().thenComparing(h -> h.key().identifier()));
+    public static final HeatSourceCache HEAT_SOURCE = new HeatSourceCache();
     public static final DamageElementsCache DAMAGE_ELEMENTS = new DamageElementsCache();
     public static final AbilityAffinityCache ABILITY_AFFINITY = AbilityAffinityCache.of();
     // Change is made greedily, so the set it is made from is checked when the pack loads.

@@ -19,8 +19,8 @@ import java.util.Locale;
 /**
  * Small, bounded text helpers shared by the JEI recipe categories.
  */
-final class SpiritJeiText {
-    static final int PANEL_BACKGROUND = 0xC6C6C6;
+public final class SpiritJeiText {
+    public static final int PANEL_BACKGROUND = 0xC6C6C6;
     private static final double TEXT_CONTRAST_TARGET = 4.5D;
 
     private SpiritJeiText() {
@@ -61,7 +61,7 @@ final class SpiritJeiText {
         return DefinitionText.nameOrId(aura).getString();
     }
 
-    static String providerName(NumberProvider provider) {
+    public static String providerName(NumberProvider provider) {
         if (provider instanceof Constant(double value)) {
             if (value == Math.rint(value)) return Long.toString((long) value);
             return String.format(Locale.ROOT, "%.2f", value);
@@ -76,7 +76,7 @@ final class SpiritJeiText {
         return clipped + "...";
     }
 
-    static int readableTextColor(int candidate, int background) {
+    public static int readableTextColor(int candidate, int background) {
         return contrastRatio(background, candidate) >= TEXT_CONTRAST_TARGET
                 ? candidate : (contrastRatio(background, 0x000000) >= contrastRatio(background, 0xFFFFFF) ? 0x000000 : 0xFFFFFF);
     }

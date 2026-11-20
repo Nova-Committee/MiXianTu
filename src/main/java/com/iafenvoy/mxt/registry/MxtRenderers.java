@@ -83,9 +83,6 @@ public final class MxtRenderers {
         page(event, MxtMenus.TRADE_STATION_CUSTOMER.get(), (menu, inventory, title) -> new StationScreen((StationMenu) menu, inventory, title));
         page(event, MxtMenus.PLAYER_TRADE.get(), (menu, inventory, title) -> new PlayerTradeScreen((PlayerTradeMenu) menu, inventory, title));
         page(event, MxtMenus.SPIRIT_CRAFTING_TABLE.get(), (menu, inventory, title) -> new SpiritCraftingScreen((SpiritCraftingMenu) menu, inventory, title));
-        page(event, MxtMenus.FORGING_TABLE.get(), (menu, inventory, title) -> new ForgingScreen((ForgingMenu) menu, inventory, title));
-        page(event, MxtMenus.ALCHEMY_FURNACE.get(), (menu, inventory, title) -> new AlchemyFurnaceScreen((AlchemyFurnaceMenu) menu, inventory, title));
-        page(event, MxtMenus.TALISMAN_WORKSTATION.get(), (menu, inventory, title) -> new TalismanWorkstationScreen((TalismanWorkstationMenu) menu, inventory, title));
         event.register(MxtMenus.ARTIFACT_STORAGE.get(), ContainerScreen::new);
     }
 
@@ -96,7 +93,7 @@ public final class MxtRenderers {
      * factory the menu its own menu type has just built, which is the page's menu.
      */
     @SuppressWarnings({"unchecked", "rawtypes"})
-    private static void page(RegisterMenuScreensEvent event, MenuType<?> type, MenuScreens.ScreenConstructor constructor) {
+    public static void page(RegisterMenuScreensEvent event, MenuType<?> type, MenuScreens.ScreenConstructor constructor) {
         event.register((MenuType) type, constructor);
     }
 }

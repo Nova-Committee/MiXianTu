@@ -6,7 +6,6 @@ import com.iafenvoy.mxt.data.alchemy.SpiritHerb.Growth;
 import com.iafenvoy.mxt.data.aura.BlockAura;
 import com.iafenvoy.mxt.data.item.*;
 import com.iafenvoy.mxt.data.item.TalismanComponent.TriggerMode;
-import com.iafenvoy.mxt.registry.MxtBlocks;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.registry.MxtItems;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
@@ -60,8 +59,6 @@ public final class PickerCategories {
         registerMatcher(MxtResourceKeys.ARTIFACT);
         registerMatcher(MxtResourceKeys.ITEM_BINDING);
         registerMatcher(MxtResourceKeys.WEAPON_BINDING);
-        registerMatcher(MxtResourceKeys.TOOL_BINDING);
-        registerMatcher(MxtResourceKeys.BLUEPRINT_BINDING);
         registerMatcher(MxtResourceKeys.DEFAULT_QUALITY);
 
         // Block-shaped definitions: the definition names no item, so the row is every block its `blocks` claims.
@@ -82,15 +79,7 @@ public final class PickerCategories {
         // A technique has no item of its own: the row is the carrier the mod generates for it, which is the item
         // the declaration names or the jade slip.
         PickerCatalogue.registerSingle(MxtResourceKeys.TECHNIQUE, (holder, access) -> described(ItemBindingService.techniqueCarrier(access, holder), holder));
-        PickerCatalogue.registerSingle(MxtResourceKeys.ALCHEMY_FURNACE, (holder, access) -> {
-            ItemStack stack = componentStack(MxtBlocks.ALCHEMY_FURNACE.toStack(), MxtDataComponents.ALCHEMY_FURNACE, holder);
-            Component name = searchName(holder);
-            Component quality = QualityService.find(access, stack)
-                    .map(QualityService::displayName)
-                    .orElse(Component.translatable("screen.mxt.alchemy.no_quality"));
-            return new PickerRow(stack, names(name, quality, idName(HolderHelper.idOrNull(holder))));
-        });
-        PickerCatalogue.registerSingle(MxtResourceKeys.ALCHEMY_WALL_MATERIAL, holder -> described(componentStack(MxtBlocks.ALCHEMY_FURNACE_CASING.toStack(), MxtDataComponents.ALCHEMY_WALL_MATERIAL, holder), holder));
+
 
         // Auras have no item of their own, so one stand-in item carries whatever the definition is called.
         PickerCatalogue.registerSingle(MxtResourceKeys.AURA, holder -> described(MxtItems.SPIRIT_STONE.toStack(), holder));
@@ -166,7 +155,7 @@ public final class PickerCategories {
 
     // A definition that names blocks rather than items is expanded against the block registry: every block it
     // claims is one row, named by the definition, so a tag entry shows the whole family it covers.
-    private static <T> void registerBlocks(ResourceKey<Registry<T>> key, Function<T, List<Either<Holder<Block>, TagKey<Block>>>> blocks) {
+    public static <T> void registerBlocks(ResourceKey<Registry<T>> key, Function<T, List<Either<Holder<Block>, TagKey<Block>>>> blocks) {
         PickerCatalogue.register(key, (holder, access) -> {
             Identifier id = HolderHelper.idOrNull(holder);
             Component definition = searchName(holder);
@@ -180,11 +169,11 @@ public final class PickerCategories {
         });
     }
 
-    private static <T extends ItemMatcher> void registerMatcher(ResourceKey<Registry<T>> key) {
+    public static <T extends ItemMatcher> void registerMatcher(ResourceKey<Registry<T>> key) {
         registerMatcher(key, ItemMatcher::entries);
     }
 
-    private static <T> void registerMatcher(ResourceKey<Registry<T>> key, Function<T, List<Entry>> entries) {
+    public static <T> void registerMatcher(ResourceKey<Registry<T>> key, Function<T, List<Entry>> entries) {
         PickerCatalogue.register(key, holder -> {
             Identifier id = HolderHelper.idOrNull(holder);
             Component definition = searchName(holder);
@@ -195,32 +184,32 @@ public final class PickerCategories {
         });
     }
 
-    private static PickerRow described(ItemStack stack, Holder<?> holder) {
+    public static PickerRow described(ItemStack stack, Holder<?> holder) {
         return described(stack, holder, searchName(holder));
     }
 
     // The picker never draws these: they only widen what the search box matches, and a key no pack translated would
     // widen it with noise. The id is added separately, so dropping one loses no way to find the row.
-    private static @Nullable Component searchName(Holder<?> holder) {
+    public static @Nullable Component searchName(Holder<?> holder) {
         return DefinitionText.resolved(DefinitionText.text(holder)).orElse(null);
     }
 
-    private static PickerRow described(ItemStack stack, Holder<?> holder, Component name) {
+    public static PickerRow described(ItemStack stack, Holder<?> holder, Component name) {
         return new PickerRow(stack, names(name, idName(HolderHelper.idOrNull(holder))));
     }
 
     // A null or blank name is dropped rather than left to match every search term, which is also what a missing id contributes.
-    private static List<Component> names(Component... names) {
+    public static List<Component> names(Component... names) {
         List<Component> kept = new ArrayList<>(names.length);
         for (Component name : names) if (name != null && !name.getString().isBlank()) kept.add(name.copy());
         return kept.isEmpty() ? List.of() : List.copyOf(kept);
     }
 
-    private static @Nullable Component idName(@Nullable Identifier id) {
+    public static @Nullable Component idName(@Nullable Identifier id) {
         return id == null ? null : Component.literal(id.toString());
     }
 
-    private static <T> ItemStack componentStack(ItemStack stack, DeferredHolder<DataComponentType<?>, DataComponentType<T>> type, T value) {
+    public static <T> ItemStack componentStack(ItemStack stack, DeferredHolder<DataComponentType<?>, DataComponentType<T>> type, T value) {
         stack.set(type.get(), value);
         return stack;
     }

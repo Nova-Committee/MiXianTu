@@ -1,0 +1,5 @@
+{
+  "blocks": ["#mxt_test:shared_heat_sources"],
+  "max_temperature": 150,
+  "heating_per_tick": 40
+}

@@ -25,9 +25,7 @@ public final class MxtProfilerSources {
     public static final ProfilerSource ARTIFACT = ProfilerSource.register(MiXianTu.MOD_ID, "artifact");
     public static final ProfilerSource SPIRIT = ProfilerSource.register(MiXianTu.MOD_ID, "spirit");
     public static final ProfilerSource CREATURE = ProfilerSource.register(MiXianTu.MOD_ID, "creature");
-    public static final ProfilerSource ALCHEMY = ProfilerSource.register(MiXianTu.MOD_ID, "alchemy");
     public static final ProfilerSource HERB = ProfilerSource.register(MiXianTu.MOD_ID, "herb");
-    public static final ProfilerSource FORGING = ProfilerSource.register(MiXianTu.MOD_ID, "forging");
     public static final ProfilerSource TALISMAN = ProfilerSource.register(MiXianTu.MOD_ID, "talisman");
     public static final ProfilerSource CRAFTING = ProfilerSource.register(MiXianTu.MOD_ID, "crafting");
     public static final ProfilerSource ECONOMY = ProfilerSource.register(MiXianTu.MOD_ID, "economy");

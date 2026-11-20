@@ -1,0 +1,6 @@
+{
+  "blocks": ["minecraft:lapis_block"],
+  "max_temperature": 80,
+  "heating_per_tick": 10,
+  "priority": 5
+}

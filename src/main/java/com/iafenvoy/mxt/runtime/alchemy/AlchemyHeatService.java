@@ -11,8 +11,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * How hot the block in a furnace's heat cell is. A block implementing {@link AlchemyHeatSource} answers for itself
- * and wins over the table; every other block is looked up in {@code mxt:heat_source}.
+ * Shared heat lookup: dynamic block answers take precedence over the datapack table.
  */
 public final class AlchemyHeatService {
     public static double maxTemperature(ServerLevel level, BlockPos pos) {

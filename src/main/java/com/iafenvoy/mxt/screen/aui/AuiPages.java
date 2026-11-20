@@ -17,18 +17,10 @@ import org.jetbrains.annotations.Nullable;
  */
 public final class AuiPages {
     /**
-     * The four furnace views, sharing one stylesheet.
-     */
-    public static final String ALCHEMY = "mxt/alchemy";
-    /**
      * The one theme every page links; it sits in its own folder beside the page folders, so a page links
      * {@code ../common/theme.css}.
      */
     public static final String COMMON = "mxt/common";
-    /**
-     * The forge table.
-     */
-    public static final String FORGING = "mxt/forging";
     /**
      * The spirit crafting table: the vanilla crafting grid plus the aura progress panel.
      */
@@ -42,10 +34,6 @@ public final class AuiPages {
      * The player information panel.
      */
     public static final String INFORMATION = "mxt/information";
-    /**
-     * The talisman drawing workstation: the formula list, the station slot and the paper the player traces on.
-     */
-    public static final String TALISMAN = "mxt/talisman";
     public static final String PROFILER = "mxt/profiler";
 
     public static String riftPage() {
@@ -57,17 +45,11 @@ public final class AuiPages {
     private AuiPages() {
     }
 
-    public static String alchemyPage(String name) {
-        return page(ALCHEMY, name);
-    }
 
     public static String economyPage(String name) {
         return page(ECONOMY, name);
     }
 
-    public static String talismanPage() {
-        return page(TALISMAN, "talisman");
-    }
 
     public static String profilerPage() {
         return page(PROFILER, "profiler");

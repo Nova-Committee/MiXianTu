@@ -1,7 +1,0 @@
-{
-  "blocks": "minecraft:lilac",
-  "main_effects": {
-    "mxt_test:alchemy/mark_roll": 1
-  },
-  "thermal_bias": 0
-}

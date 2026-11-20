@@ -14,12 +14,12 @@
      行数不能写死在页面里——旧屏幕那 122px 高的面板按 26px 行距只装得下 4 行，写 8 行会漏到面板外面。 -->
 <div class="panel" id="panel">
     <div class="t title" id="title" style="left:8px;top:6px"></div>
-    <container class="grid" id="crafting" primary="true" style="left:29px;top:16px;grid-template-columns:3;grid-template-rows:18px 18px 18px">
+    <container class="grid" id="crafting" primary="true" style="left:29px;top:16px;grid-template-columns:repeat(3,18px);grid-template-rows:18px 18px 18px">
         <slot slot-index="0"></slot><slot slot-index="1"></slot><slot slot-index="2"></slot>
         <slot slot-index="3"></slot><slot slot-index="4"></slot><slot slot-index="5"></slot>
         <slot slot-index="6"></slot><slot slot-index="7"></slot><slot slot-index="8"></slot>
     </container>
-    <container class="grid" id="result" primary="true" style="left:123px;top:34px;grid-template-columns:1">
+    <container class="grid" id="result" primary="true" style="left:123px;top:34px;grid-template-columns:18px">
         <slot slot-index="0"></slot>
     </container>
     <div class="t label" id="inventory_label" style="left:8px;top:72px"><translation>container.inventory</translation></div>

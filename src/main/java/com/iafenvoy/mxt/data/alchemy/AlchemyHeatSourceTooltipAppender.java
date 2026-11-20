@@ -27,12 +27,8 @@ import org.jspecify.annotations.Nullable;
 import java.util.Comparator;
 import java.util.function.Consumer;
 
-/**
- * What a block heats a furnace to, read from the client's copy of the {@code mxt:heat_source} registry. A block
- * implementing {@link AlchemyHeatSource} answers for itself on the server, so its numbers are not on this side:
- * naming the entry it overrides would state a value the furnace never reads.
- */
-@EventBusSubscriber(Dist.CLIENT)
+// Dynamic heat is server-only; showing a static entry for such a block would report values it never uses.
+@EventBusSubscriber(modid = "mxt", value = Dist.CLIENT)
 public final class AlchemyHeatSourceTooltipAppender {
     private AlchemyHeatSourceTooltipAppender() {
     }

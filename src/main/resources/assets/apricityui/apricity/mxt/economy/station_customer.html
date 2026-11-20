@@ -11,17 +11,17 @@
      菜单把两片分成两段连续区间（costs 12 格在前、rewards 12 格在后），由 ApricityUI 的 SlotDataBinder 对上。 -->
 <div class="panel" id="panel" style="width:176px;height:167px">
     <div class="t title" id="title" style="left:8px;top:6px"></div>
-    <container class="grid" id="costs" primary="true" style="left:7px;top:17px;grid-template-rows:18px 18px 18px;grid-template-columns:4">
+    <container class="grid" id="costs" primary="true" style="left:7px;top:17px;grid-template-rows:18px 18px 18px;grid-template-columns:repeat(4,18px)">
         <slot slot-index="0"></slot><slot slot-index="1"></slot><slot slot-index="2"></slot><slot slot-index="3"></slot>
         <slot slot-index="4"></slot><slot slot-index="5"></slot><slot slot-index="6"></slot><slot slot-index="7"></slot>
         <slot slot-index="8"></slot><slot slot-index="9"></slot><slot slot-index="10"></slot><slot slot-index="11"></slot>
     </container>
-    <container class="grid" id="rewards" primary="true" style="left:97px;top:17px;grid-template-rows:18px 18px 18px;grid-template-columns:4">
+    <container class="grid" id="rewards" primary="true" style="left:97px;top:17px;grid-template-rows:18px 18px 18px;grid-template-columns:repeat(4,18px)">
         <slot slot-index="0"></slot><slot slot-index="1"></slot><slot slot-index="2"></slot><slot slot-index="3"></slot>
         <slot slot-index="4"></slot><slot slot-index="5"></slot><slot slot-index="6"></slot><slot slot-index="7"></slot>
         <slot slot-index="8"></slot><slot slot-index="9"></slot><slot slot-index="10"></slot><slot slot-index="11"></slot>
     </container>
-    <div class="button" id="trade">→</div>
+    <div class="button button-primary" id="trade">→</div>
     <div class="t label" id="inventory_label" style="left:8px;top:73px"><translation>container.inventory</translation></div>
     <container class="inv inv-customer" id="inventory" primary="true">
         <slot slot-index="9" repeat="27"></slot>

@@ -5,8 +5,6 @@
     "mxt:cheque_table",
     "mxt:trade_station",
     "mxt:system_station",
-    "mxt:spirit_crafting_table",
-    "mxt:forging_table",
-    "mxt:talisman_workstation"
+    "mxt:spirit_crafting_table"
   ]
 }

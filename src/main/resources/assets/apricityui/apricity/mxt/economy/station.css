@@ -7,7 +7,7 @@
 #costs,
 #rewards {
     width: 72px;
-    grid-template-columns: 4;
+    grid-template-columns: repeat(4,18px);
 }
 
 /* ── 店主：展示格 (152,72)、库存 7x3 (8,72) ── */
@@ -20,7 +20,7 @@
     left: 7px;
     top: 71px;
     width: 126px;
-    grid-template-columns: 7;
+    grid-template-columns: repeat(7,18px);
 }
 
 /* ── 玩家背包：顾客 84、店主 140（同样 −1） ── */

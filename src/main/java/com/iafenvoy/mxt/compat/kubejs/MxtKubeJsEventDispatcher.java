@@ -40,9 +40,7 @@ final class MxtKubeJsEventDispatcher implements Dispatcher {
     private static final EventHandler CURSE_REMOVE = EVENTS.server("curseRemove", () -> GenericKubeEvent.class);
     private static final EventHandler CULTIVATION_BREAK = EVENTS.server("cultivationBreak", () -> GenericKubeEvent.class);
     private static final EventHandler TECHNIQUE_LEARN = EVENTS.server("techniqueLearn", () -> GenericKubeEvent.class);
-    private static final EventHandler ALCHEMY_CRAFT = EVENTS.server("alchemyCraft", () -> GenericKubeEvent.class);
     private static final EventHandler ARTIFACT_REFINE = EVENTS.server("artifactRefine", () -> GenericKubeEvent.class);
-    private static final EventHandler FORGING = EVENTS.server("forging", () -> GenericKubeEvent.class);
     private static final EventHandler FORMATION = EVENTS.server("formation", () -> GenericKubeEvent.class);
     private static final EventHandler SECRET_REALM = EVENTS.server("secretRealm", () -> GenericKubeEvent.class);
     private static final EventHandler SOUL = EVENTS.server("soul", () -> GenericKubeEvent.class);
@@ -87,9 +85,7 @@ final class MxtKubeJsEventDispatcher implements Dispatcher {
             case "curseRemove" -> CURSE_REMOVE;
             case "cultivationBreak" -> CULTIVATION_BREAK;
             case "techniqueLearn" -> TECHNIQUE_LEARN;
-            case "alchemyCraft" -> ALCHEMY_CRAFT;
             case "artifactRefine" -> ARTIFACT_REFINE;
-            case "forging" -> FORGING;
             case "formation" -> FORMATION;
             case "secretRealm" -> SECRET_REALM;
             case "soul" -> SOUL;

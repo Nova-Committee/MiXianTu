@@ -111,9 +111,9 @@ public final class InformationPanelScreen extends AuiScreen {
      * two tabs keep between themselves - instead of one caption below it. The page carries the same defaults.
      */
     private static final int TECHNIQUE_TOP = TAB_TOP + TAB_HEIGHT + TAB_GAP, TECHNIQUE_EMPTY_TOP = TECHNIQUE_TOP + 6;
-    private static final int LABEL_COLOR = 0xFFFFFFFF, MUTED_COLOR = 0xFFC0C0C0, UNKNOWN_COLOR = 0xFF8A8A8A;
-    private static final int VALUE_COLOR = 0xFFE0E4EC, POSITIVE_COLOR = 0xFF55FF55, WARNING_COLOR = 0xFFFFAA00;
-    private static final int BAR_FALLBACK_COLOR = 0xFFCFCFCF;
+    private static final int LABEL_COLOR = AuiStyles.INK_DARK, MUTED_COLOR = AuiStyles.INK_MUTED, UNKNOWN_COLOR = 0xFF909985;
+    private static final int VALUE_COLOR = AuiStyles.INK, POSITIVE_COLOR = AuiStyles.GREEN, WARNING_COLOR = 0xFF936725;
+    private static final int BAR_FALLBACK_COLOR = AuiStyles.GREEN;
     private static final EquipmentSlot[] EQUIPMENT_SLOTS = {EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET};
     @Nullable
     private Element panel, cultivationCaption, basicCaption, preview, tabInfo, tabTechnique, techniquesEmpty;
@@ -721,11 +721,10 @@ public final class InformationPanelScreen extends AuiScreen {
                     format(entry.progress().done()), format(entry.progress().span()));
         }
 
-        // Tinted with the mastery resource's own particle colour, like the crafting progress bar; the dark skin
-        // needs it lifted or a dark tint vanishes into the track.
+        // Use the same paper-safe tint as the crafting progress bar.
         private int fillColor(TechniqueProgress.Entry row) {
             Holder<Resource> mastery = row.technique().value().masteryResource().orElse(null);
-            return mastery == null ? BAR_FALLBACK_COLOR : 0xFF000000 | AuiStyles.readableOnDark(mastery.value().particleColor());
+            return mastery == null ? BAR_FALLBACK_COLOR : 0xFF000000 | AuiStyles.readableOnPaper(mastery.value().particleColor());
         }
 
         // A row has no room for the level id or the tier, so the tooltip spells both out. Its lines keep their own
@@ -742,6 +741,6 @@ public final class InformationPanelScreen extends AuiScreen {
 
     private static String styleColor(Component component) {
         TextColor style = component.getStyle().getColor();
-        return AuiStyles.hex(style == null ? LABEL_COLOR : style.getValue());
+        return style == null ? AuiStyles.hex(LABEL_COLOR) : AuiStyles.textColor(style.getValue());
     }
 }

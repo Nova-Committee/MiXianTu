@@ -1,7 +1,0 @@
-{
-  "blocks": "minecraft:spore_blossom",
-  "main_effects": {
-    "mxt_test:alchemy/mark_proof": 1
-  },
-  "thermal_bias": 0
-}

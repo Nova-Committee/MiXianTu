@@ -1,7 +1,0 @@
-{
-  "main_slots": 2,
-  "auxiliary_slots": 2,
-  "quality": "mxt_test:alchemy/sealed",
-  "capacity": 64,
-  "cooling_per_tick": 40
-}

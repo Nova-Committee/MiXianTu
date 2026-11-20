@@ -1,7 +1,0 @@
-{
-  "blocks": "minecraft:orange_tulip",
-  "main_effects": {
-    "mxt_test:alchemy/mark_balanced": 1
-  },
-  "thermal_bias": 0
-}

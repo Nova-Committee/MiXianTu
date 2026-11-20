@@ -7,7 +7,6 @@ import com.iafenvoy.mxt.event.*;
 import com.iafenvoy.mxt.event.AuraZoneEvent.Enter;
 import com.iafenvoy.mxt.event.AuraZoneEvent.Leave;
 import com.iafenvoy.mxt.event.AuraZoneEvent.Tick;
-import com.iafenvoy.mxt.event.ForgingEvent.*;
 import com.iafenvoy.mxt.event.FormationEvent.Activate;
 import com.iafenvoy.mxt.event.FormationEvent.Deactivate;
 import com.iafenvoy.mxt.event.FormationEvent.TickEffects;
@@ -66,17 +65,8 @@ public final class MxtKubeJsPlugin implements KubeJSPlugin {
         forward(CultivationBreakEvent.Post.class, "cultivationBreak");
         forward(TechniqueLearnEvent.Pre.class, "techniqueLearn");
         forward(TechniqueLearnEvent.Post.class, "techniqueLearn");
-        forward(AlchemyCraftEvent.Pre.class, "alchemyCraft");
-        forward(AlchemyCraftEvent.Post.class, "alchemyCraft");
         forward(ArtifactRefineEvent.Pre.class, "artifactRefine");
         forward(ArtifactRefineEvent.Post.class, "artifactRefine");
-        forward(Start.class, "forging");
-        forward(Started.class, "forging");
-        forward(StrikePre.class, "forging");
-        forward(StrikePost.class, "forging");
-        forward(CompletePre.class, "forging");
-        forward(CompletePost.class, "forging");
-        forward(Cancel.class, "forging");
         forward(Activate.class, "formation");
         forward(Deactivate.class, "formation");
         // All three share one script group and are told apart by isCancellable()/getPhase(): Tick is the

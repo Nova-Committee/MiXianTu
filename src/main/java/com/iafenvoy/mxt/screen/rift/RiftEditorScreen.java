@@ -12,6 +12,7 @@ import com.iafenvoy.mxt.runtime.rift.*;
 import com.iafenvoy.mxt.screen.aui.AuiElements;
 import com.iafenvoy.mxt.screen.aui.AuiPages;
 import com.iafenvoy.mxt.screen.aui.AuiScreen;
+import com.iafenvoy.mxt.screen.aui.AuiStyles;
 import com.mojang.blaze3d.platform.Window;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.JsonOps;
@@ -909,10 +910,10 @@ public final class RiftEditorScreen extends AuiScreen {
         boolean valid = RiftGeometry.triangulate(shape).isSuccess();
         this.canvas.renderOperation(g -> {
             g.setComposite(AlphaComposite.Src);
-            g.setColor(new Color(0xFF181818, true));
+            g.setColor(new Color(AuiStyles.SURFACE_SOFT, true));
             g.fillRect(0, 0, this.viewport.width(), this.viewport.height());
             g.setComposite(AlphaComposite.SrcOver);
-            g.setColor(new Color(0xFF303030, true));
+            g.setColor(new Color(AuiStyles.EDGE, true));
             double firstU = Math.ceil(this.viewport.local(0, 0).u()), firstV = Math.floor(this.viewport.local(0, 0).v());
             for (int i = 0; i <= Math.ceil(this.viewport.width() / this.viewport.scale()); i++) {
                 int x = (int) this.viewport.x(firstU + i);
@@ -930,21 +931,21 @@ public final class RiftEditorScreen extends AuiScreen {
                 else path.lineTo(x, y);
             }
             if (!shape.vertices().isEmpty()) path.closePath();
-            g.setColor(new Color(valid ? 0x6055FFFF : 0x60FF5555, true));
+            g.setColor(new Color(0x30000000 | ((valid ? AuiStyles.GREEN : AuiStyles.RED) & 0xFFFFFF), true));
             g.fill(path);
-            g.setColor(new Color(valid ? 0xFF55FFFF : 0xFFFF5555, true));
+            g.setColor(new Color(valid ? AuiStyles.GREEN : AuiStyles.RED, true));
             g.setStroke(new BasicStroke(1));
             g.draw(path);
             for (int i = 0; i < shape.vertices().size(); i++) {
                 RiftVertex p = shape.vertices().get(i);
                 int x = (int) (this.viewport.x(p.u())), y = (int) (this.viewport.y(p.v()));
-                g.setColor(this.session.selected.contains(i) ? Color.YELLOW : Color.WHITE);
+                g.setColor(new Color(this.session.selected.contains(i) ? AuiStyles.GOLD : AuiStyles.INK, true));
                 g.fillRect(x - 2, y - 2, 5, 5);
             }
             if (this.boxSelecting && this.boxTo != null) {
                 double x = this.viewport.x(Math.min(this.dragFrom.u(), this.boxTo.u()));
                 double y = this.viewport.y(Math.max(this.dragFrom.v(), this.boxTo.v()));
-                g.setColor(Color.YELLOW);
+                g.setColor(new Color(AuiStyles.GOLD, true));
                 g.draw(new Rectangle2D.Double(x, y,
                         Math.abs(this.dragFrom.u() - this.boxTo.u()) * this.viewport.scale(), Math.abs(this.dragFrom.v() - this.boxTo.v()) * this.viewport.scale()));
             }

@@ -2,63 +2,39 @@ package com.iafenvoy.mxt.probe.item;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
-import com.iafenvoy.mxt.api.AlchemyWorkstation;
 import com.iafenvoy.mxt.compat.kubejs.MxtKubeJsApi;
 import com.iafenvoy.saturn.compat.kubejs.codec.SaturnKubeJsDataCodec;
-import com.iafenvoy.mxt.data.alchemy.AlchemyFurnaceDefinition;
-import com.iafenvoy.mxt.data.alchemy.MedicinalProperty;
 import com.iafenvoy.saturn.data.condition.ItemCondition;
 import com.iafenvoy.saturn.data.condition.builtin.item.ItemMatcherCondition;
 import com.iafenvoy.mxt.data.condition.builtin.item.ItemQualityCondition;
-import com.iafenvoy.mxt.data.forging.ForgingBlueprint;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.data.quality.QualityIngredient;
 import com.iafenvoy.mxt.data.quality.QualityLadders;
 import com.iafenvoy.mxt.data.quality.QualityRequirement;
 import com.iafenvoy.mxt.probe.Probe;
 import com.iafenvoy.mxt.probe.ProbeContext;
-import com.iafenvoy.mxt.recipe.AlchemyRecipe;
-import com.iafenvoy.mxt.recipe.TalismanDrawingRecipe;
 import com.iafenvoy.mxt.registry.*;
 import com.iafenvoy.mxt.registry.cache.RegistryCaches;
 import com.iafenvoy.mxt.runtime.alchemy.*;
-import com.iafenvoy.mxt.runtime.alchemy.AlchemyWorkstationService.AlchemyPreview;
-import com.iafenvoy.mxt.runtime.forging.ForgingSurface;
-import com.iafenvoy.mxt.runtime.forging.ForgingWorkstationService;
 import com.iafenvoy.mxt.runtime.item.QualityRequirements;
 import com.iafenvoy.mxt.runtime.item.QualityService;
-import com.iafenvoy.mxt.runtime.resulting.failures.AlchemyFailure;
 import com.iafenvoy.saturn.util.HolderHelper;
-import com.iafenvoy.saturn.util.formula.FormulaContext;
 import com.iafenvoy.saturn.util.matcher.ItemMatcher;
 import com.iafenvoy.saturn.util.matcher.builtin.IngredientEntry;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.JsonOps;
-import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
 import net.minecraft.core.Holder;
 import net.minecraft.core.RegistryAccess;
-import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.RegistryOps;
-import net.minecraft.resources.ResourceKey;
-import net.minecraft.world.Container;
-import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
-import net.neoforged.neoforge.common.crafting.SizedIngredient;
 
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 
-/**
- * The quality gate where a pack writes it: the three adapters are decoded from JSON exactly as a pack writes them,
- * against the fixtures this pack ships (the {@code default_quality} table, its tag key, a tier named on a stack by a
- * component, and one deliberately broken ladder), and then asked about real stacks.
- */
 public final class QualityProbes {
     private QualityProbes() {
     }
@@ -74,15 +50,11 @@ public final class QualityProbes {
                 Probe.of("item/quality/domain_gate", QualityProbes::domainGate),
                 Probe.of("item/quality/matcher_entry", QualityProbes::matcherEntry),
                 Probe.of("item/quality/ingredient", QualityProbes::ingredient),
-                Probe.of("item/quality/forge_input", QualityProbes::forgeInput),
                 Probe.of("item/quality/ingredient_entry", QualityProbes::ingredientEntry),
-                Probe.of("item/quality/formula_paper", QualityProbes::formulaPaper),
                 Probe.of("item/quality/tier_source_layers", QualityProbes::tierSourceLayers),
                 Probe.of("item/quality/empty_requirement", QualityProbes::emptyRequirement),
                 Probe.of("item/quality/default_quality_priority", QualityProbes::defaultQualityPriority),
-                Probe.of("item/quality/kubejs_requirement", QualityProbes::kubejsRequirement),
-                Probe.of("item/quality/alchemy_core_gate", QualityProbes::alchemyCoreGate),
-                Probe.of("item/quality/gates", QualityProbes::gates));
+                Probe.of("item/quality/kubejs_requirement", QualityProbes::kubejsRequirement));
     }
 
     private static void table(ProbeContext context) {
@@ -93,7 +65,6 @@ public final class QualityProbes {
                 "clay=" + read(access, clay) + " cobble=" + read(access, cobble), "clay=normal cobble=poor");
     }
 
-    // A tag key answers for every item the tag holds, which is the point of writing one.
     private static void tagKey(ProbeContext context) {
         RegistryAccess access = context.registries();
         ItemStack star = new ItemStack(Items.NETHER_STAR);       // table: poor, written as a tag key
@@ -117,7 +88,6 @@ public final class QualityProbes {
                 "clay=true cobble=false dirt=false");
     }
 
-    // poor < normal < excellent on mxt_test:forged, so the middle and the top pass and the bottom does not.
     private static void minSameChain(ProbeContext context) {
         RegistryAccess access = context.registries();
         RegistryOps<JsonElement> ops = ops(context);
@@ -134,7 +104,6 @@ public final class QualityProbes {
                 "normal=true excellent=true poor=false tagged_poor=false");
     }
 
-    // kiln_a sits on a chain of its own, so a minimum from another chain can never be reached.
     private static void crossChain(ProbeContext context) {
         RegistryAccess access = context.registries();
         RegistryOps<JsonElement> ops = ops(context);
@@ -150,10 +119,6 @@ public final class QualityProbes {
                 "kiln_vs_normal=false kiln_vs_kiln=true clay_vs_kiln=false");
     }
 
-    // The refused ladder: two tiers point at each other, so the walk has no entry to start from, no walked
-    // ladder holds either of them, and a requirement naming one can never pass. A next pointing at a tier
-    // the pack does not provide cannot be written at all - the registry refuses to load - so a cycle is the
-    // one shape a pack can actually reach.
     private static void compareRefusedLadder(ProbeContext context) {
         RegistryAccess access = context.registries();
         Holder<ItemQuality> refusedTier = tier(access, "mxt_test:refused_probe");
@@ -173,9 +138,6 @@ public final class QualityProbes {
                 "rank=99 self=99 at_least_self=false requirement=false");
     }
 
-    // The domain gate, in four answers: a ladder that names itself once and inherits the name downwards is a ladder
-    // and is usable; a ladder whose tiers write two different names is not published at all, so neither its steps nor
-    // its upgrade can be read; and the two realms' own gate refuses a line that climbs from one aura into another.
     private static void domainGate(ProbeContext context) {
         RegistryAccess access = context.registries();
         Holder<ItemQuality> inheritLow = tier(access, "mxt_test:inherit_low");
@@ -212,7 +174,6 @@ public final class QualityProbes {
                 "low_indexed=false high_indexed=false");
     }
 
-
     private static void matcherEntry(ProbeContext context) {
         RegistryAccess access = context.registries();
         RegistryOps<JsonElement> ops = ops(context);
@@ -230,8 +191,6 @@ public final class QualityProbes {
                 "shape=true clay=true graded_clay=true cobble=false dirt=false");
     }
 
-    // The ingredient adapter is the one that reaches every recipe, so it is decoded through the same vanilla
-    // codec a recipe file uses.
     private static void ingredient(ProbeContext context) {
         RegistryOps<JsonElement> ops = ops(context);
         ItemStack clay = new ItemStack(Items.CLAY_BALL);         // table: normal
@@ -248,28 +207,6 @@ public final class QualityProbes {
                 "shape=true clay=true cobble=false dirt=false");
     }
 
-    private static void forgeInput(ProbeContext context) {
-        RegistryAccess access = context.registries();
-        ItemStack clay = new ItemStack(Items.CLAY_BALL);         // table: normal
-        ItemStack cobble = new ItemStack(Items.COBBLESTONE);     // table: poor
-        ForgingBlueprint gate = blueprint(access, "quality_gate");
-        SizedIngredient entry = gate == null || gate.input().isEmpty() ? null : gate.input().getFirst();
-        SimpleContainer forge = new SimpleContainer(ForgingSurface.TOTAL_SLOTS);
-        forge.setItem(ForgingSurface.INPUT_START, clay.copy());
-        boolean covered = entry != null && ForgingWorkstationService.materialsCovered(forge, gate.input());
-        int have = entry == null ? -1 : ForgingWorkstationService.availableCount(forge, entry);
-        forge.setItem(ForgingSurface.INPUT_START, cobble.copy());
-        leg(context, "forge_input",
-                entry != null && entry.count() == 1 && entry.ingredient().isCustom() && covered && have == 1
-                        && !ForgingWorkstationService.materialsCovered(forge, gate.input()),
-                entry == null ? "blueprint missing"
-                        : "custom=" + entry.ingredient().isCustom() + " needs=" + entry.count() + " covered=" + covered
-                        + " graded=" + have + " poor_covered=" + ForgingWorkstationService.materialsCovered(forge, gate.input()),
-                "custom=true needs=1 covered=true graded=1 poor_covered=false");
-    }
-
-    // The matcher entry that asks a whole ingredient: it is how a cost - the drawing's paper among them -
-    // carries an ingredient type at all.
     private static void ingredientEntry(ProbeContext context) {
         RegistryAccess access = context.registries();
         RegistryOps<JsonElement> ops = ops(context);
@@ -287,34 +224,6 @@ public final class QualityProbes {
                 "shape=true clay=true cobble=false");
     }
 
-    // A formula's own paper field, read back from the recipes the data pack actually loaded: the ward asks
-    // for at least mxt_test:normal, so only a graded paper passes there, and the sigil names none and falls
-    // back to the tag.
-    private static void formulaPaper(ProbeContext context) {
-        RegistryAccess access = context.registries();
-        TalismanDrawingRecipe ward = drawing(context, "drawing_ward");
-        TalismanDrawingRecipe sigil = drawing(context, "drawing_sigil");
-        Ingredient wardPaper = ward == null ? null : ward.paper().orElse(null);
-        ItemStack blank = new ItemStack(MxtItems.BLANK_TALISMAN.get());
-        ItemStack plainPaper = new ItemStack(Items.PAPER);
-        ItemStack gradedBlank = named(MxtItems.BLANK_TALISMAN.get(), tier(access, "mxt_test:excellent"));
-        ItemStack poorBlank = named(MxtItems.BLANK_TALISMAN.get(), tier(access, "mxt_test:poor"));
-        leg(context, "formula_paper",
-                wardPaper != null && wardPaper.isCustom() && sigil != null && sigil.paper().isEmpty()
-                        && wardPaper.test(gradedBlank) && !wardPaper.test(poorBlank)
-                        && !wardPaper.test(blank) && !wardPaper.test(plainPaper),
-                "ward_custom=" + (wardPaper != null && wardPaper.isCustom())
-                        + " sigil_default=" + (sigil != null && sigil.paper().isEmpty())
-                        + " excellent=" + (wardPaper != null && wardPaper.test(gradedBlank))
-                        + " poor=" + (wardPaper != null && wardPaper.test(poorBlank))
-                        + " none=" + (wardPaper != null && wardPaper.test(blank))
-                        + " vanilla_paper=" + (wardPaper != null && wardPaper.test(plainPaper)),
-                "ward_custom=true sigil_default=true excellent=true poor=false none=false vanilla_paper=false");
-    }
-
-    // Which source answered decides the membership answer: the component on a graded clay ball makes it
-    // excellent, while a plain one reads the default_quality table and is normal, so the same requirement
-    // takes one and refuses the other.
     private static void tierSourceLayers(ProbeContext context) {
         RegistryAccess access = context.registries();
         RegistryOps<JsonElement> ops = ops(context);
@@ -332,7 +241,6 @@ public final class QualityProbes {
                 "table_as_excellent=false graded_as_excellent=true graded_as_normal=false");
     }
 
-    // Nothing asked passes whatever the stack is: neither half written means "any tier, including none".
     private static void emptyRequirement(ProbeContext context) {
         RegistryAccess access = context.registries();
         ItemStack clay = new ItemStack(Items.CLAY_BALL);         // table: normal
@@ -345,9 +253,6 @@ public final class QualityProbes {
                 "clay=true dirt=true");
     }
 
-    // The table takes a priority the way every other item table does, and the bare tier id is still the whole
-    // value: gravel is named by a tag at priority 0 and by itself at 5, flint the other way round, so both
-    // directions of the merger are exercised by the fixtures.
     private static void defaultQualityPriority(ProbeContext context) {
         RegistryAccess access = context.registries();
         ItemStack gravel = new ItemStack(Items.GRAVEL);
@@ -358,9 +263,6 @@ public final class QualityProbes {
                 "gravel=mxt_test:normal flint=mxt_test:excellent");
     }
 
-    // The script-side entry points, called the way a script's binding calls them: a requirement decoded from
-    // the same JSON a pack writes, and a tier id, both answered by the same single point. The test server
-    // loads no KubeJS, so what is checked here is the validated operation the binding delegates to.
     private static void kubejsRequirement(ProbeContext context) {
         RegistryAccess access = context.registries();
         ItemStack clay = new ItemStack(Items.CLAY_BALL);         // table: normal
@@ -384,103 +286,6 @@ public final class QualityProbes {
                 "decoded=true normal=true poor=false at_least_normal=true poor_at_least=false cross_ladder=false");
     }
 
-    // The alchemy side asks about its machine rather than its slots: the loaded formula names the core tier
-    // it needs, and the rank it carries is a plain value its duration formula reads.
-    private static void alchemyCoreGate(ProbeContext context) {
-        RegistryOps<JsonElement> ops = ops(context);
-        String recipeBase = recipeBase();
-        AlchemyRecipe formula = alchemy(context, "hot");
-        Object gradedGate = decode(ops, AlchemyRecipe.CODEC.codec(),
-                recipeBase + "\"furnace_quality\": {\"min_quality\": \"mxt_test:alchemy/kiln_a\"}}");
-        double entryDuration = formula == null ? -1.0D
-                : formula.duration().evaluate(FormulaContext.EMPTY.with(AlchemyRecipe.FURNACE_RANK, 0.0D));
-        double upperDuration = formula == null ? -1.0D
-                : formula.duration().evaluate(FormulaContext.EMPTY.with(AlchemyRecipe.FURNACE_RANK, 1.0D));
-        leg(context, "alchemy_core_gate",
-                gradedGate != null && entryDuration == 4.0D && upperDuration == 5.0D,
-                "graded=" + (gradedGate != null)
-                        + " duration_at_0=" + entryDuration + " duration_at_1=" + upperDuration,
-                "graded=true duration_at_0=4.0 duration_at_1=5.0");
-    }
-
-    // Both gates again from a stub controller and a real player: those legs need no placed multiblock, so
-    // they run wherever this probe does.
-    private static void gates(ProbeContext context) {
-        Generic core = new Generic(standard(), context.at(4, 0, 4), spec(context), core(context));
-        AlchemyPreview entry = AlchemyWorkstationService.preview(context.player(), core);
-        expect(context, "gate-core-entry-recipe", resolved(entry), id("alchemy/hot"));
-        expect(context, "gate-core-entry-blocker", entry.blocker().orElse(null), AlchemyFailure.TEMPERATURE);
-        expect(context, "gate-core-entry-duration", duration(entry), 4L);
-
-        // A tier from another ladder is neither above nor below the one the formula names, so the gate refuses and
-        // the batch is left untouched.
-        Generic crossed = new Generic(standard(), context.at(4, 0, 4), spec(context), core(context, id("poor")));
-        AlchemyPreview crossPreview = AlchemyWorkstationService.preview(context.player(), crossed);
-        expect(context, "gate-core-cross-ladder", crossPreview.blocker().orElse(null), AlchemyFailure.FURNACE_TIER);
-        expect(context, "gate-core-cross-started", AlchemyWorkstationService.start(context.player(), crossed).getFailure().isEmpty(), false);
-        expect(context, "gate-core-cross-kept", crossed.container().getItem(0).getCount(), 2);
-
-        // One tier up the same ladder satisfies the same floor, and that tier's own alchemy_modifier is what makes the
-        // batch shorter: hot's own numbers read the rank (4 + 1), the tier halves the result. The mixture is untouched
-        // by the core, which is the whole point - a better furnace never changes what the herbs add up to.
-        Generic upper = new Generic(standard(), context.at(4, 0, 4), spec(context), core(context, id("alchemy/kiln_b")));
-        AlchemyPreview higher = AlchemyWorkstationService.preview(context.player(), upper);
-        expect(context, "gate-core-upper-recipe", resolved(higher), id("alchemy/hot"));
-        expect(context, "gate-core-upper-blocker", higher.blocker().orElse(null), AlchemyFailure.TEMPERATURE);
-        expect(context, "core-tier-speed", duration(higher), 3L);
-        expect(context, "core-tier-mixture", property(context, higher, "alchemy/heat"), 2.0D);
-
-        // The material side of the same rule, on the entry core: one input tier whose own alchemy_modifier is 2 halves
-        // this batch as well, which is the factor the core's is multiplied by.
-        Generic quick = new Generic(standard(), context.at(4, 0, 4), spec(context), core(context));
-        grade(context, quick.container().getItem(0), id("alchemy/quick"));
-        AlchemyPreview quickened = AlchemyWorkstationService.preview(context.player(), quick);
-        expect(context, "material-tier-speed", duration(quickened), 2L);
-
-        // The input gate, on a formula that only this probe can reach: doubling every herb picks the gated recipe
-        // because it is the only candidate that strictly covers the two ungated ones. Every input has to answer, so
-        // the batch is refused while the herbs carry no tier of their own.
-        Generic refused = new Generic(doubled(), context.at(4, 0, 4), spec(context), core(context));
-        AlchemyPreview gated = AlchemyWorkstationService.preview(context.player(), refused);
-        expect(context, "gate-input-recipe", resolved(gated), id("alchemy/zz_input_gate"));
-        expect(context, "gate-input-refused", gated.blocker().orElse(null), AlchemyFailure.INPUT_TIER);
-        expect(context, "gate-input-started", AlchemyWorkstationService.start(context.player(), refused).getFailure().isEmpty(), false);
-        expect(context, "gate-input-kept", refused.container().getItem(0).getCount(), 4);
-
-        // Marked on the ladder the formula names, the same batch passes the gate and starts. Every non-empty slot
-        // answers the requirement, so every one of them has to be marked.
-        Generic marked = new Generic(doubled(), context.at(4, 0, 4), spec(context), core(context));
-        for (int index = 0; index < AlchemySlots.OUTPUT_START; index++)
-            if (!marked.container().getItem(index).isEmpty())
-                grade(context, marked.container().getItem(index), id("alchemy/kiln_a"));
-        AlchemyPreview markedPreview = AlchemyWorkstationService.preview(context.player(), marked);
-        expect(context, "gate-input-marked-blocker", markedPreview.blocker().orElse(null), null);
-        expect(context, "gate-input-marked-started", AlchemyWorkstationService.start(context.player(), marked).getFailure().isEmpty(), true);
-
-        // The temperature ceiling is a minimum of three, and the specification is only one of them: the capped
-        // fixture answers with its own number even where the walls and the heat block allow far more, a specification
-        // that declares nothing lets the walls and the heat block decide, and either of those being unavailable reads
-        // as a furnace that cannot run at all.
-        AlchemyFurnaceDefinition capped = spec(context, "alchemy/capped");
-        AlchemyFurnaceDefinition wide = spec(context, "alchemy/wide");
-        expect(context, "temperature-limit-wall-binds",
-                AlchemyFurnaceDefinition.temperatureLimit(60.0D, 150.0D, wide), 60.0D);
-        expect(context, "temperature-limit-heat-binds",
-                AlchemyFurnaceDefinition.temperatureLimit(200.0D, 80.0D, wide), 80.0D);
-        expect(context, "temperature-limit-core-binds",
-                AlchemyFurnaceDefinition.temperatureLimit(200.0D, 150.0D, capped), 60.0D);
-        expect(context, "temperature-limit-no-core",
-                AlchemyFurnaceDefinition.temperatureLimit(200.0D, 150.0D, null), 150.0D);
-        expect(context, "temperature-limit-unavailable",
-                AlchemyFurnaceDefinition.temperatureLimit(0.0D, 150.0D, capped), 0.0D);
-    }
-
-    private static String recipeBase() {
-        return "{\"main_requirements\": {\"mxt_test:herb/main\": 1}, \"catalyst_requirement\": 1, "
-                + "\"target_temperature\": 50, \"duration\": 4, "
-                + "\"success_outputs\": [{\"id\": \"minecraft:stick\", \"count\": 1}], ";
-    }
-
     private static RegistryOps<JsonElement> ops(ProbeContext context) {
         return RegistryOps.create(JsonOps.INSTANCE, context.registries());
     }
@@ -502,8 +307,6 @@ public final class QualityProbes {
         return codec.parse(ops, JsonParser.parseString(json)).result().orElse(null);
     }
 
-    // Asked through the runtime's own entry point rather than through the condition, because a condition also wants
-    // the holder entity while the question here is the tier itself.
     private static boolean ask(RegistryAccess access, QualityRequirement requirement, ItemStack stack) {
         return QualityRequirements.test(access, stack, requirement);
     }
@@ -527,210 +330,10 @@ public final class QualityProbes {
                 .orElseThrow();
     }
 
-    private static ForgingBlueprint blueprint(RegistryAccess access, String path) {
-        return MxtDatapackRegistries.holder(access, MxtResourceKeys.FORGING_BLUEPRINT, Identifier.fromNamespaceAndPath("mxt_test", path))
-                .map(Holder::value).orElse(null);
-    }
-
-    // Through the recipe manager rather than the codec: what a formula's paper field is has to be what the data
-    // pack loaded, not what the same JSON decodes to a second time.
-    private static TalismanDrawingRecipe drawing(ProbeContext context, String path) {
-        return context.server().getRecipeManager()
-                .byKey(ResourceKey.create(Registries.RECIPE, Identifier.fromNamespaceAndPath("mxt_test", "talisman/" + path)))
-                .filter(holder -> holder.value() instanceof TalismanDrawingRecipe)
-                .map(holder -> (TalismanDrawingRecipe) holder.value())
-                .orElse(null);
-    }
-
-    private static AlchemyRecipe alchemy(ProbeContext context, String path) {
-        return context.server().getRecipeManager()
-                .byKey(ResourceKey.create(Registries.RECIPE, Identifier.fromNamespaceAndPath("mxt_test", "alchemy/" + path)))
-                .filter(holder -> holder.value() instanceof AlchemyRecipe)
-                .map(holder -> (AlchemyRecipe) holder.value())
-                .orElse(null);
-    }
-
-    private static Identifier id(String path) {
-        return Identifier.fromNamespaceAndPath("mxt_test", path);
-    }
-
-    // One leg of the old command: the value is asserted, and the line it printed is kept, on the branch it printed it.
     private static boolean leg(ProbeContext context, String name, boolean ok, String actual, String expected) {
         String line = "quality probe: " + name + " actual=" + actual + " expected=" + expected + (ok ? " OK" : " MISMATCH");
         if (ok) context.note(line);
         else context.fail(line);
         return ok;
-    }
-
-    // The gate legs asserted with the old command's own helper, which reported both values.
-    private static void expect(ProbeContext context, String name, Object actual, Object expected) {
-        boolean ok = Objects.equals(expected, actual);
-        String line = "alchemy gate probe: " + (ok ? "OK" : "MISMATCH") + " " + name
-                + " actual=" + actual + " expected=" + expected;
-        if (ok) context.note(line);
-        else context.fail(line);
-    }
-
-    private static SimpleContainer standard() {
-        SimpleContainer container = new SimpleContainer(AlchemySlots.TOTAL);
-        container.setItem(0, new ItemStack(Items.ALLIUM, 2));
-        container.setItem(1, new ItemStack(Items.POPPY));
-        container.setItem(2, new ItemStack(Items.CORNFLOWER, 2));
-        container.setItem(4, new ItemStack(Items.OXEYE_DAISY));
-        return container;
-    }
-
-    // The same mixture doubled, which is what makes the gated recipe dominate instead of tying with the ungated two.
-    private static SimpleContainer doubled() {
-        SimpleContainer container = new SimpleContainer(AlchemySlots.TOTAL);
-        container.setItem(0, new ItemStack(Items.ALLIUM, 4));
-        container.setItem(1, new ItemStack(Items.POPPY));
-        container.setItem(2, new ItemStack(Items.CORNFLOWER, 4));
-        container.setItem(4, new ItemStack(Items.OXEYE_DAISY));
-        return container;
-    }
-
-    private static ItemStack core(ProbeContext context) {
-        ItemStack stack = MxtBlocks.ALCHEMY_FURNACE.toStack();
-        stack.set(MxtDataComponents.ALCHEMY_FURNACE, spec(context));
-        return stack;
-    }
-
-    private static ItemStack core(ProbeContext context, Identifier quality) {
-        ItemStack stack = core(context);
-        grade(context, stack, quality);
-        return stack;
-    }
-
-    private static void grade(ProbeContext context, ItemStack stack, Identifier quality) {
-        Holder<ItemQuality> holder = MxtDatapackRegistries
-                .holder(context.registries(), MxtResourceKeys.ITEM_QUALITY, quality).orElseThrow();
-        stack.set(MxtDataComponents.QUALITY, holder);
-    }
-
-    private static Holder<AlchemyFurnaceDefinition> spec(ProbeContext context) {
-        return MxtDatapackRegistries.holder(context.registries(), MxtResourceKeys.ALCHEMY_FURNACE, id("alchemy/wide")).orElseThrow();
-    }
-
-    private static AlchemyFurnaceDefinition spec(ProbeContext context, String path) {
-        return MxtDatapackRegistries.holder(context.registries(), MxtResourceKeys.ALCHEMY_FURNACE, id(path))
-                .map(Holder::value).orElseThrow();
-    }
-
-    private static Identifier resolved(AlchemyPreview preview) {
-        return preview.resolvedRecipe().map(ResourceKey::identifier).orElse(null);
-    }
-
-    private static long duration(AlchemyPreview preview) {
-        return preview.parameters().map(AlchemyWorkstationService.Parameters::durationTicks).orElse(-1L);
-    }
-
-    private static double property(ProbeContext context, AlchemyPreview preview, String property) {
-        Holder<MedicinalProperty> holder = MxtDatapackRegistries
-                .holder(context.registries(), MxtResourceKeys.MEDICINAL_PROPERTY, id(property)).orElseThrow();
-        return preview.mixture().main().getOrDefault(holder, -1.0D);
-    }
-
-    /**
-     * A controller that owns its own slots: the gates under test read the recipe, the core item and the mixture, so
-     * the structure and the heat cell are answers this stub simply states.
-     */
-    private static final class Generic implements AlchemyWorkstation {
-        private static final double STATION_TEMPERATURE = 50.0D;
-        private static final double TEMPERATURE_LIMIT = 200.0D;
-        private final Container container;
-        private final BlockPos pos;
-        private final Holder<AlchemyFurnaceDefinition> spec;
-        private final AlchemyWorkstationState state = new AlchemyWorkstationState();
-        private final ItemStack core;
-        private double temperature;
-
-        private Generic(Container container, BlockPos pos, Holder<AlchemyFurnaceDefinition> spec, ItemStack core) {
-            this.container = container;
-            this.pos = pos;
-            this.spec = spec;
-            this.core = core;
-            this.state.setTargetTemperature(STATION_TEMPERATURE);
-        }
-
-        @Override
-        public Container container() {
-            return this.container;
-        }
-
-        @Override
-        public AlchemyWorkstationState state() {
-            return this.state;
-        }
-
-        @Override
-        public BlockPos getBlockPos() {
-            return this.pos;
-        }
-
-        @Override
-        public ItemStack furnaceItem() {
-            return this.core;
-        }
-
-        @Override
-        public Optional<Holder<AlchemyFurnaceDefinition>> furnaceDefinition() {
-            return Optional.of(this.spec);
-        }
-
-        @Override
-        public double temperature() {
-            return this.temperature;
-        }
-
-        @Override
-        public double targetTemperature() {
-            return this.state.targetTemperature();
-        }
-
-        @Override
-        public boolean setTargetTemperature(double temperature) {
-            this.state.setTargetTemperature(temperature);
-            return true;
-        }
-
-        @Override
-        public void setTemperature(double temperature) {
-            this.temperature = temperature;
-        }
-
-        @Override
-        public BlockPos heatSourcePos() {
-            return this.pos;
-        }
-
-        @Override
-        public double wallTemperatureLimit() {
-            return TEMPERATURE_LIMIT;
-        }
-
-        @Override
-        public double heatTemperatureLimit() {
-            return TEMPERATURE_LIMIT;
-        }
-
-        @Override
-        public double maximumTemperature() {
-            return TEMPERATURE_LIMIT;
-        }
-
-        @Override
-        public AlchemyFurnaceStructure.Status structureStatus() {
-            return new AlchemyFurnaceStructure.Status(true, true, List.of(), List.of(), List.of(), this.pos, Direction.NORTH);
-        }
-
-        @Override
-        public AlchemyPhase phase() {
-            return this.state.phase();
-        }
-
-        @Override
-        public void setChanged() {
-        }
     }
 }

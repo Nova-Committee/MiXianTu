@@ -1,10 +1,7 @@
 package com.iafenvoy.mxt.registry;
 
 import com.iafenvoy.mxt.MiXianTu;
-import com.iafenvoy.mxt.data.alchemy.AlchemyFurnaceDefinition;
-import com.iafenvoy.mxt.data.alchemy.AlchemyWallMaterial;
 import com.iafenvoy.mxt.data.artifact.ArtifactStateComponent;
-import com.iafenvoy.mxt.data.artifact.ForgingResultComponent;
 import com.iafenvoy.mxt.data.artifact.ItemAbilitiesComponent;
 import com.iafenvoy.mxt.data.aura.ItemAuraComponent;
 import com.iafenvoy.mxt.data.aura.SpiritStorageComponent;
@@ -14,15 +11,12 @@ import com.iafenvoy.mxt.data.cultivation.SpiritRoot;
 import com.iafenvoy.mxt.data.cultivation.Technique;
 import com.iafenvoy.mxt.data.curse.CurseContainerComponent;
 import com.iafenvoy.mxt.data.economy.ChequeComponent;
-import com.iafenvoy.mxt.data.forging.ForgingBlueprint;
-import com.iafenvoy.mxt.data.forging.ForgingMethod;
 import com.iafenvoy.mxt.data.item.*;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.saturn.data.ability.Ability;
 import com.iafenvoy.saturn.data.storage.DataStorageHolder;
 import com.iafenvoy.saturn.util.codec.MiscCodecs;
 import com.iafenvoy.saturn.util.codec.RegistryCodecs;
-import com.iafenvoy.saturn.util.codec.TolerantListCodec;
 import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
 import net.minecraft.core.Holder;
@@ -42,9 +36,6 @@ import java.util.List;
 public final class MxtDataComponents {
     public static final DataComponents REGISTRY = DeferredRegister.createDataComponents(Registries.DATA_COMPONENT_TYPE, MiXianTu.MOD_ID);
 
-    public static final DeferredHolder<DataComponentType<?>, DataComponentType<ForgingResultComponent>> FORGING_RESULT = register("forging_result", ForgingResultComponent.CODEC);
-    public static final DeferredHolder<DataComponentType<?>, DataComponentType<List<Holder<ForgingMethod>>>> FORGING_METHODS = register("forging_methods", TolerantListCodec.create(ForgingMethod.CODEC));
-    public static final DeferredHolder<DataComponentType<?>, DataComponentType<List<Holder<ForgingBlueprint>>>> FORGING_BLUEPRINTS = register("forging_blueprints", TolerantListCodec.create(ForgingBlueprint.CODEC));
     public static final DeferredHolder<DataComponentType<?>, DataComponentType<Holder<ItemQuality>>> QUALITY = register("quality", ItemQuality.CODEC);
     public static final DeferredHolder<DataComponentType<?>, DataComponentType<List<Either<Holder<Element>, TagKey<Element>>>>> ELEMENT = register("element", RegistryCodecs.holderOrTagList(MxtResourceKeys.ELEMENT));
     public static final DeferredHolder<DataComponentType<?>, DataComponentType<PillComponent>> PILL = register("pill", PillComponent.CODEC);
@@ -77,8 +68,6 @@ public final class MxtDataComponents {
     public static final DeferredHolder<DataComponentType<?>, DataComponentType<Holder<Physique>>> PHYSIQUE = register("physique", Physique.CODEC);
     public static final DeferredHolder<DataComponentType<?>, DataComponentType<Integer>> HERB_AGE = register("herb_age", Codec.intRange(0, Integer.MAX_VALUE));
     public static final DeferredHolder<DataComponentType<?>, DataComponentType<Integer>> BRUSH_PIGMENT = register("brush_pigment", Codec.intRange(0, Integer.MAX_VALUE));
-    public static final DeferredHolder<DataComponentType<?>, DataComponentType<Holder<AlchemyFurnaceDefinition>>> ALCHEMY_FURNACE = register("alchemy_furnace", AlchemyFurnaceDefinition.CODEC);
-    public static final DeferredHolder<DataComponentType<?>, DataComponentType<Holder<AlchemyWallMaterial>>> ALCHEMY_WALL_MATERIAL = register("alchemy_wall_material", AlchemyWallMaterial.CODEC);
     public static final DeferredHolder<DataComponentType<?>, DataComponentType<Component>> STORED_TEXT = register("stored_text", MiscCodecs.TRANSLATABLE_COMPONENT);
     // How long holding a jade slip takes. Written only when a slip should be read faster or slower than the standard
     // two seconds, which is the default the item applies when the component is absent.

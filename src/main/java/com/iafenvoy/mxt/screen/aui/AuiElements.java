@@ -44,7 +44,7 @@ public final class AuiElements {
             setText(run, contents);
             style(run, "white-space", "pre");
             style(run, "flex-shrink", "0");
-            style(run, "color", style.getColor() == null ? "inherit" : AuiStyles.hex(style.getColor().getValue()));
+            style(run, "color", style.getColor() == null ? "inherit" : AuiStyles.textColor(style.getColor().getValue()));
             style(run, "font-weight", style.isBold() ? "bold" : "normal");
             style(run, "font-style", style.isItalic() ? "oblique" : "normal");
             String decoration = style.isUnderlined() ? "underline" : "";

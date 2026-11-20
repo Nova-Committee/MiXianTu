@@ -18,8 +18,6 @@ final class QualityCarriers {
 
     static void register() {
         QualityService.carry(MxtDataComponents.TECHNIQUE);
-        QualityService.carry(MxtDataComponents.ALCHEMY_FURNACE);
-        QualityService.carry(MxtDataComponents.ALCHEMY_WALL_MATERIAL);
         QualityService.carry(MxtDataComponents.SPIRIT_ROOT);
         QualityService.carry(MxtDataComponents.PHYSIQUE);
         QualityService.carry(MxtDataComponents.PILL, PillComponent::pill);

@@ -13,12 +13,7 @@ import net.minecraft.world.level.block.Block;
 
 import java.util.List;
 
-/**
- * Heat of one or more blocks: the ceiling a furnace may reach and how fast it climbs. The furnace reads the block in
- * its bottom centre cell only. Overlapping definitions resolve by {@code priority} - the highest wins, and only a
- * tie falls back to registry order, the same rule the item matchers use. A block implementing
- * {@code com.iafenvoy.mxt.api.AlchemyHeatSource} overrides its entry here.
- */
+// The highest priority wins; ties retain registry order. Dynamic block answers override the table.
 public record HeatSource(List<Either<Holder<Block>, TagKey<Block>>> blocks, double maxTemperature,
                          double heatingPerTick, int priority) {
     private static final Codec<Double> POSITIVE = Codec.DOUBLE.validate(HeatSource::positive);

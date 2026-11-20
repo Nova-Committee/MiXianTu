@@ -17,13 +17,11 @@ import net.minecraft.resources.Identifier;
 public final class FailureSources {
     public static final FailureSource COMMON = new FailureSource(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "common"));
     public static final FailureSource ABILITY = FailureSource.of(SaturnResourceKeys.ABILITY);
-    public static final FailureSource ALCHEMY_FURNACE = FailureSource.of(MxtResourceKeys.ALCHEMY_FURNACE);
     public static final FailureSource ARTIFACT = FailureSource.of(MxtResourceKeys.ARTIFACT);
     public static final FailureSource CONTRACT_TYPE = FailureSource.of(MxtResourceKeys.CONTRACT_TYPE);
     public static final FailureSource CULTIVATION = FailureSource.of(MxtResourceKeys.CULTIVATION);
     public static final FailureSource CURSE = FailureSource.of(MxtResourceKeys.CURSE);
     public static final FailureSource FORMATION = FailureSource.of(MxtResourceKeys.FORMATION);
-    public static final FailureSource FORGING_BLUEPRINT = FailureSource.of(MxtResourceKeys.FORGING_BLUEPRINT);
     public static final FailureSource ITEM_QUALITY = FailureSource.of(MxtResourceKeys.ITEM_QUALITY);
     public static final FailureSource PROGRESSION = FailureSource.of(MxtResourceKeys.PROGRESSION);
     public static final FailureSource REALM_STAGE = FailureSource.of(MxtResourceKeys.REALM_STAGE);

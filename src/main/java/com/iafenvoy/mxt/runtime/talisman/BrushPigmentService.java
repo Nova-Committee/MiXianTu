@@ -4,8 +4,6 @@ import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.config.MxtServerConfig;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.registry.MxtItems;
-import com.iafenvoy.mxt.runtime.talisman.TalismanDrawingScorer.Point;
-import com.iafenvoy.saturn.util.MiscUtil;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.tags.TagKey;
@@ -14,19 +12,16 @@ import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 
-import java.util.List;
 
 /**
- * The brush's own store of pigment: which items feed it, how much it holds, how a dip adds to it and how much one
- * stroke takes out.
+ * The brush's own store of pigment: which items feed it, how much it holds, how a dip adds to it and how much it contains.
  *
  * <p>Which items count is one item tag, not a recipe: every item in {@code #mxt:brush_pigment} is one portion, and
  * what a portion is worth is a server setting. Both the brush's dipping hooks and the workstation's pigment slot
  * read only this class.
  *
  * <p>Pigment is the tool's state, not a price a payer owns, so it never goes through {@code Cost} - the same
- * exception the aura store of a talisman carrier already is. Everything here reads the server config, and every
- * amount a client sends is ignored: only the lengths the server measures are charged.
+ * exception the aura store of a talisman carrier already is. The tool store stays independent of how a workflow calculates its charge.
  */
 public final class BrushPigmentService {
     /**
@@ -114,29 +109,9 @@ public final class BrushPigmentService {
         return required <= 0 || pigment(brush) >= required;
     }
 
-    /**
-     * What one stroke of this measured length costs, once rate, floor and cap have had their say.
-     */
-    public static int chargeFor(double length) {
-        MxtServerConfig.Talisman settings = MxtServerConfig.INSTANCE.talisman;
-        double rate = settings.pigmentRate.getValue();
-        double raw = MiscUtil.positive(length) > 0.0D ? length * rate : 0.0D;
-        int charge = raw >= Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) Math.ceil(raw);
-        charge = Math.max(charge, settings.pigmentFloor.getValue());
-        int cap = settings.pigmentCap.getValue();
-        return cap > 0 ? Math.min(charge, cap) : charge;
-    }
-
-    public static int chargeForStroke(List<Point> points) {
-        return chargeFor(length(points));
-    }
-
-    public static double length(List<Point> points) {
-        double total = 0.0D;
-        for (int index = 1; index < points.size(); index++) {
-            Point previous = points.get(index - 1), current = points.get(index);
-            total += Math.hypot(current.x() - previous.x(), current.y() - previous.y());
-        }
-        return total;
+    public static boolean consume(ItemStack brush, int amount) {
+        if (!isBrush(brush) || amount < 0 || !hasPigment(brush, amount)) return false;
+        brush.set(MxtDataComponents.BRUSH_PIGMENT, pigment(brush) - amount);
+        return true;
     }
 }

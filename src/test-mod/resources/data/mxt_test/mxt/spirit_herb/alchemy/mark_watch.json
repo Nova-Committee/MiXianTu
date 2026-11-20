@@ -1,7 +1,0 @@
-{
-  "blocks": "minecraft:sunflower",
-  "main_effects": {
-    "mxt_test:alchemy/mark_watch": 1
-  },
-  "thermal_bias": 0
-}

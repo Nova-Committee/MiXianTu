@@ -60,12 +60,7 @@
         </div>
     </div>
 
-    <!-- ── 第二页：功法（旧 TechniquePanelScreen 的那张表） ──
-         一行 34px：24x24 图标框（图标 16x16 居中，走 <item> 或 <texture>）、名字（档位色）、
-         等级、右对齐的熟练度、进度条（凹槽 1px 黑边 + #373737 内底，填充色取灵气粒子色）、
-         行底两条 1px 分隔线（#555555 上、#ffffff 下）。
-         这一页没有标题行，所以列表贴着页签带下沿起（y=31 = 10+15+6，Java 的 TECHNIQUE_TOP），
-         不是第一页那种"标题下面一格"的 52：面板同样高，列表因此多出一行（272 = 8 行）。 -->
+    <!-- Technique rows share the theme palette; mastery resources provide the progress tint. -->
     <div class="page" id="page_technique">
         <div class="t" id="techniques_empty" style="left:26px;top:37px"><translation>screen.mxt.technique_panel.empty</translation></div>
         <div class="list" id="techniques" style="left:20px;top:31px;width:470px;height:272px">

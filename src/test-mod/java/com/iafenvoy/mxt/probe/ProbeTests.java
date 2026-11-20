@@ -1,8 +1,6 @@
 package com.iafenvoy.mxt.probe;
 
 import com.iafenvoy.mxt.probe.ability.MessageProbes;
-import com.iafenvoy.mxt.probe.alchemy.AlchemyGateProbes;
-import com.iafenvoy.mxt.probe.alchemy.AlchemyProbes;
 import com.iafenvoy.mxt.probe.alchemy.PillProbes;
 import com.iafenvoy.mxt.probe.artifact.ArtifactProbes;
 import com.iafenvoy.mxt.probe.combat.DamageProbes;
@@ -14,14 +12,11 @@ import com.iafenvoy.mxt.probe.cultivation.CultivationProbes;
 import com.iafenvoy.mxt.probe.cultivation.IdentityProbes;
 import com.iafenvoy.mxt.probe.formation.FormationProbes;
 import com.iafenvoy.mxt.probe.herb.HerbProbes;
-import com.iafenvoy.mxt.probe.item.DrawingProbes;
 import com.iafenvoy.mxt.probe.item.JadeSlipProbes;
 import com.iafenvoy.mxt.probe.item.QualityProbes;
 import com.iafenvoy.mxt.probe.item.WeaponBindingProbes;
 import com.iafenvoy.mxt.probe.lifespan.LifespanProbes;
 import com.iafenvoy.mxt.probe.lifespan.ReincarnationOptionalProbes;
-import com.iafenvoy.mxt.probe.talisman.StationProbes;
-import com.iafenvoy.mxt.probe.talisman.TalismanProbes;
 import com.iafenvoy.mxt.probe.verify.*;
 import com.iafenvoy.mxt.probe.world.RiftAnchorProbes;
 import com.iafenvoy.mxt.probe.world.RiftProbes;
@@ -63,8 +58,6 @@ public final class ProbeTests {
             FormationProbes::probes,
             FormationPreviewVerifyProbes::probes,
             PonderConfigVerifyProbes::probes,
-            AlchemyGateProbes::probes,
-            AlchemyProbes::probes,
             PillProbes::probes,
             ArtifactProbes::probes,
             DamageProbes::probes,
@@ -75,14 +68,12 @@ public final class ProbeTests {
             CultivationProbes::probes,
             IdentityProbes::probes,
             HerbProbes::probes,
-            DrawingProbes::probes,
             JadeSlipProbes::probes,
             ItemUseCycleVerifyProbes::probes,
             QualityProbes::probes,
+            WorkstationBoundaryProbes::probes,
             WeaponBindingProbes::probes,
             ReincarnationOptionalProbes::probes,
-            StationProbes::probes,
-            TalismanProbes::probes,
             AbilityCooldownVerifyProbes::probes,
             SaturnBoundaryProbes::probes,
             AuraVerifyProbes::probes,
@@ -108,7 +99,6 @@ public final class ProbeTests {
             ProfilerGuiVerifyProbes::probes,
             ProfilerChartVerifyProbes::probes,
             TalismanVerifyProbes::probes,
-            TalismanSessionVerifyProbes::probes,
             ScopeVerifyProbes::probes,
             FriendVerifyProbes::probes,
             StoreVerifyProbes::probes,
@@ -137,13 +127,21 @@ public final class ProbeTests {
     }
 
     public static void registerFunctions(RegisterEvent event) {
-        for (Probe probe : all())
+        registerFunctions(event, all());
+    }
+
+    public static void registerFunctions(RegisterEvent event, List<Probe> probes) {
+        for (Probe probe : probes)
             event.register(Registries.TEST_FUNCTION, probe.functionKey().identifier(), () -> helper -> ProbeContext.run(probe, helper));
     }
 
     public static void registerTests(RegisterGameTestsEvent event) {
-        for (Probe probe : all()) {
-            Holder<TestEnvironmentDefinition<?>> environment = event.registerEnvironment(Identifier.fromNamespaceAndPath(MxtTestMod.MOD_ID, "isolated/" + probe.id().getPath()), new TestEnvironmentDefinition.AllOf(List.of()));
+        registerTests(event, all());
+    }
+
+    public static void registerTests(RegisterGameTestsEvent event, List<Probe> probes) {
+        for (Probe probe : probes) {
+            Holder<TestEnvironmentDefinition<?>> environment = event.registerEnvironment(Identifier.fromNamespaceAndPath(probe.id().getNamespace(), "isolated/" + probe.id().getPath()), new TestEnvironmentDefinition.AllOf(List.of()));
             TestData<Holder<TestEnvironmentDefinition<?>>> data = new TestData<>(environment, probe.structure(), probe.maxTicks(), 0, true, Rotation.NONE, false, 1, 1, true, 0);
             event.registerTest(probe.id(), new FunctionGameTestInstance(probe.functionKey(), data));
         }
