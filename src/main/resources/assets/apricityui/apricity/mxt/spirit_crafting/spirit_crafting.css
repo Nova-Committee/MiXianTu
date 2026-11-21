@@ -4,9 +4,38 @@
 #panel {
     width: 308px;
     height: 166px;
-    --ornament-image: url("/mxt/spirit_crafting/ornaments/aura-array.svg");
-    --ornament-size: 30px 46px;
-    --ornament-position: 88px 20px;
+}
+
+#title {
+    width: 156px;
+    padding-left: 4px;
+    box-sizing: border-box;
+    box-shadow: inset 2px 0 0 0 var(--title-ink);
+    background-image: linear-gradient(90deg, var(--edge-light), transparent);
+    background-size: 100% 1px;
+    background-position: 0 100%;
+    background-repeat: no-repeat;
+}
+
+#crafting_array {
+    position: absolute;
+    left: 88px;
+    top: 20px;
+    width: 30px;
+    height: 46px;
+    pointer-events: none;
+    background-image: var(--array-image);
+    background-size: 30px 46px;
+    background-repeat: no-repeat;
+    opacity: 0.45;
+}
+
+#crafting_array.active { animation: mxt-aura-breathe 3.2s ease-in-out infinite; }
+
+@keyframes mxt-aura-breathe {
+    0% { opacity: 0.45; }
+    50% { opacity: 1; }
+    100% { opacity: 0.45; }
 }
 
 /* 合成格 (30,17)、结果格 (124,35)、背包 (8,84)：坐标来自 SpiritCraftingMenu，
@@ -43,7 +72,7 @@
     box-sizing: border-box;
 }
 
-/* 一行：名字与"已有 / 需要"同行，进度条在下面。**不用主题的 .row**：那是可点列表行，带悬停高亮。
+/* 一行：有图标时占左侧 20px，无图标时显示名字；数值与进度条留在右侧。
  * 高 18 = 名字 9 + 2px + 条 7，是 Java 排版、以及行多时压缩行距的基准（见 SpiritCraftingScreen 的 ROW_HEIGHT）；
  * 宽 105 = 面板宽 125 − 左右各 10px 内边距。 */
 .aura-row {
@@ -56,19 +85,46 @@
 .name {
     left: 0;
     top: 0;
-    width: 72px;
+    width: 45px;
+    overflow: hidden;
 }
 
 .amount {
-    left: 0;
+    left: 45px;
     top: 0;
-    width: 105px;
+    width: 60px;
+    overflow: hidden;
     justify-content: flex-end;
 }
+
+.aura-item,
+.aura-texture {
+    display: none;
+    position: absolute;
+    left: 0;
+    top: 1px;
+    width: 16px;
+    height: 16px;
+    image-rendering: pixelated;
+    pointer-events: none;
+}
+
+.aura-row.has-icon .name { display: none; }
+.aura-row.icon-item .aura-item,
+.aura-row.icon-texture .aura-texture { display: block; }
+.aura-row.has-icon .amount { left: 20px; width: 85px; }
+.aura-row.has-icon .bar { left: 20px; width: 85px; }
 
 .bar {
     left: 0;
     top: 11px;
     width: 105px;
     height: 7px;
+}
+
+.subpanel.aura {
+    background-image: var(--landscape-image);
+    background-size: 96px 54px;
+    background-position: 100% 100%;
+    background-repeat: no-repeat;
 }

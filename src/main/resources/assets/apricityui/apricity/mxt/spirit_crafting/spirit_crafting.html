@@ -13,6 +13,7 @@
      灵气进度**只声明一行**（#aura_row）：配方要几种灵气，Java 就复制几行（见 SpiritCraftingScreen）。
      行数不能写死在页面里——旧屏幕那 122px 高的面板按 26px 行距只装得下 4 行，写 8 行会漏到面板外面。 -->
 <div class="panel" id="panel">
+    <div id="crafting_array"></div>
     <div class="t title" id="title" style="left:8px;top:6px"></div>
     <container class="grid" id="crafting" primary="true" style="left:29px;top:16px;grid-template-columns:repeat(3,18px);grid-template-rows:18px 18px 18px">
         <slot slot-index="0"></slot><slot slot-index="1"></slot><slot slot-index="2"></slot>
@@ -29,6 +30,8 @@
     </container>
     <div class="subpanel aura" id="aura_panel">
         <div class="aura-row" id="aura_row">
+            <item class="aura-item" interactive="none"></item>
+            <texture class="aura-texture" />
             <div class="t name"></div>
             <div class="t amount"></div>
             <div class="bar"><div class="fill"></div></div>

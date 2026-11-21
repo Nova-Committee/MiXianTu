@@ -749,9 +749,6 @@
   "jade.mxt.spirit_herb.age": "药龄 %s / 成熟 %s",
   "jade.mxt.spirit_herb.immature": "尚未成熟",
   "jade.mxt.spirit_herb.mature": "已经成熟",
-  "jei.mxt.aura_cost": "灵气消耗：%s",
-  "jei.mxt.aura_cost_label": "灵气消耗：",
-  "jei.mxt.aura_cost_none": "无灵气消耗",
   "jei.mxt.aura_dynamic": "动态",
   "jei.mxt.spirit_shaped": "灵气有序合成",
   "jei.mxt.spirit_shapeless": "灵气无序合成",
@@ -1144,5 +1141,11 @@
   "mxt.ponder.formation_preview.header": "阵法结构预览",
   "mxt.ponder.formation_preview.text_1": "结构：%s",
   "config.mxt.server.talisman.use_cooldown": "使用冷却",
-  "config.mxt.server.talisman.use_cooldown.tooltip": "徒手激发符箓后，符箓进入的物品栏冷却（刻）；0 表示不加冷却。冷却按物品计算、对该玩家的所有符箓生效；冷却期间长按灌注也会被拒绝，连那一 tick 的灵气都不会灌进去。摆在展示架上的符箓不读也不记这个窗口。"
+  "config.mxt.server.talisman.use_cooldown.tooltip": "徒手激发符箓后，符箓进入的物品栏冷却（刻）；0 表示不加冷却。冷却按物品计算、对该玩家的所有符箓生效；冷却期间长按灌注也会被拒绝，连那一 tick 的灵气都不会灌进去。摆在展示架上的符箓不读也不记这个窗口。",
+  "config.mxt.client.appearance": "界面外观",
+  "config.mxt.client.appearance.theme": "界面主题",
+  "config.mxt.client.appearance.theme.tooltip": "选择 MiXianTu 及工作站附属的 AUI 界面主题。关闭并重新打开界面后生效，不改变槽位位置和 GUI 缩放。",
+  "config.mxt.client.appearance.theme.parchment": "宣纸朱砂",
+  "config.mxt.client.appearance.theme.jade": "青玉竹简",
+  "config.mxt.client.appearance.theme.ink_gold": "玄墨鎏金"
 }

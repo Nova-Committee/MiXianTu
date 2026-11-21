@@ -1,0 +1,12 @@
+SKIP 01-parchment-character.png
+START 01-parchment-workbench.png
+START 02-jade-character.png
+START 02-jade-workbench.png
+SAVED 01-parchment-workbench.png: (1536, 1024), b64_json, 31.8s
+START 03-ink-gold-character.png
+SAVED 02-jade-character.png: (1536, 1024), b64_json, 34.6s
+START 03-ink-gold-workbench.png
+SAVED 02-jade-workbench.png: (1536, 1024), b64_json, 42.4s
+SAVED 03-ink-gold-character.png: (1536, 1024), b64_json, 34.4s
+SAVED 03-ink-gold-workbench.png: (1536, 1024), b64_json, 33.0s
+RESULT 6/6

@@ -111,15 +111,15 @@ public final class InformationPanelScreen extends AuiScreen {
      * two tabs keep between themselves - instead of one caption below it. The page carries the same defaults.
      */
     private static final int TECHNIQUE_TOP = TAB_TOP + TAB_HEIGHT + TAB_GAP, TECHNIQUE_EMPTY_TOP = TECHNIQUE_TOP + 6;
-    private static final int LABEL_COLOR = AuiStyles.INK_MUTED, MUTED_COLOR = AuiStyles.INK_MUTED, UNKNOWN_COLOR = 0xFF887A64;
-    private static final int VALUE_COLOR = AuiStyles.INK, POSITIVE_COLOR = AuiStyles.GREEN, WARNING_COLOR = 0xFF89631F;
-    private static final int BAR_FALLBACK_COLOR = AuiStyles.GREEN;
+    private static final String LABEL_COLOR = "var(--ink-muted)", MUTED_COLOR = "var(--ink-muted)", UNKNOWN_COLOR = "var(--disabled-foreground)";
+    private static final String VALUE_COLOR = "var(--ink)", POSITIVE_COLOR = "var(--green)", WARNING_COLOR = "var(--gold-ink)";
+    private static final String BAR_FALLBACK_COLOR = "var(--green)";
     private static final EquipmentSlot[] EQUIPMENT_SLOTS = {EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET};
     @Nullable
     private Element panel, cultivationCaption, basicCaption, preview, tabInfo, tabTechnique, techniquesEmpty;
     private final List<Item> equipment = new ArrayList<>(EQUIPMENT_SLOT_COUNT);
     @Nullable
-    private AuiScrollList<InformationCollector.Entry> cultivation, basic;
+    private AuiScrollList<InformationLine> cultivation, basic;
     @Nullable
     private AuiScrollList<TechniqueRow> techniques;
     @Nullable
@@ -175,7 +175,7 @@ public final class InformationPanelScreen extends AuiScreen {
         // A row click is a local pick, as the old list's selection was.
         assert this.cultivation != null;
         assert this.basic != null;
-        for (AuiScrollList<InformationCollector.Entry> list : List.of(this.cultivation, this.basic))
+        for (AuiScrollList<InformationLine> list : List.of(this.cultivation, this.basic))
             for (Cell cell : list.cells)
                 cell.click(() -> this.select(list, cell));
     }
@@ -198,10 +198,10 @@ public final class InformationPanelScreen extends AuiScreen {
         this.shownPage = null;
     }
 
-    private void select(AuiScrollList<InformationCollector.Entry> list, Cell cell) {
+    private void select(AuiScrollList<InformationLine> list, Cell cell) {
         if (cell.key() == null) return;
         if (list != null) list.markSelected(cell.key());
-        AuiScrollList<InformationCollector.Entry> current = list == this.cultivation ? this.basic : this.cultivation;
+        AuiScrollList<InformationLine> current = list == this.cultivation ? this.basic : this.cultivation;
         if (current != null) current.markSelected(cell.key());
     }
 
@@ -253,18 +253,13 @@ public final class InformationPanelScreen extends AuiScreen {
         this.refreshTechniques();
     }
 
-    private static List<InformationCollector.Entry> entries(InformationDocument document) {
-        List<InformationCollector.Entry> entries = new ArrayList<>();
+    private static List<InformationLine> entries(InformationDocument document) {
+        List<InformationLine> entries = new ArrayList<>();
         for (InformationEntry row : document.rows()) {
-            int color = switch (row.tone()) {
-                case NORMAL -> VALUE_COLOR;
-                case POSITIVE -> POSITIVE_COLOR;
-                case WARNING -> WARNING_COLOR;
-            };
             // A row's extra lines are stacked under its own label, which is only written on the first of them.
             List<Component> values = InformationText.lines(row.value());
             for (int index = 0; index < values.size(); index++)
-                entries.add(new InformationCollector.Entry(index == 0 ? row.label() : null, values.get(index), color, row.tooltip()));
+                entries.add(new InformationLine(row, index == 0 ? row.label() : null, values.get(index)));
         }
         return entries;
     }
@@ -452,6 +447,7 @@ public final class InformationPanelScreen extends AuiScreen {
         for (int index = 0; index < this.equipment.size(); index++) {
             ItemStack stack = this.minecraft.player.getItemBySlot(EQUIPMENT_SLOTS[index]);
             Item item = this.equipment.get(index);
+            AuiElements.setClass(item.parentElement, "empty", stack.isEmpty());
             if (stack.isEmpty()) item.clearDrivenState(Item.Source.INGREDIENT);
             else item.setIngredientStack(stack);
         }
@@ -521,7 +517,7 @@ public final class InformationPanelScreen extends AuiScreen {
     /**
      * The attribute rows: a name and a value, each cut to its own column.
      */
-    private final class InfoBinding implements AuiScrollList.Binding<InformationCollector.Entry> {
+    private final class InfoBinding implements AuiScrollList.Binding<InformationLine> {
         private Columns columns = new Columns(0, 1);
 
         @Override
@@ -552,16 +548,16 @@ public final class InformationPanelScreen extends AuiScreen {
          * caption above the list sits at.
          */
         @Override
-        public void prepare(Font font, List<InformationCollector.Entry> entries, int width) {
+        public void prepare(Font font, List<InformationLine> entries, int width) {
             int available = Math.max(1, width - TEXT_INSET);
             int widestName = 0, widestValue = 0;
-            for (InformationCollector.Entry entry : entries) {
+            for (InformationLine entry : entries) {
                 if (entry.name() != null) widestName = Math.max(widestName, font.width(entry.name()));
                 widestValue = Math.max(widestValue, font.width(entry.value()));
             }
             this.columns = InformationHelper.columns(available, widestName, widestValue);
             if (width <= 1 || !MiXianTu.isDevMode()) return;
-            for (InformationCollector.Entry entry : entries) {
+            for (InformationLine entry : entries) {
                 int nameLines = entry.name() == null ? 0
                         : font.split(entry.name(), Math.max(1, this.columns.nameWidth())).size();
                 int valueLines = font.split(entry.value(), Math.max(1, this.columns.valueWidth())).size();
@@ -579,7 +575,7 @@ public final class InformationPanelScreen extends AuiScreen {
         }
 
         @Override
-        public void show(Font font, Cell cell, InformationCollector.Entry entry, int index, int left, int top, int width) {
+        public void show(Font font, Cell cell, InformationLine entry, int index, int left, int top, int width) {
             String fullName = entry.name() == null ? "" : entry.name().getString();
             String fullValue = entry.value().getString();
             cell.show(fullName + "=" + fullValue, entry, left, top, width);
@@ -589,8 +585,12 @@ public final class InformationPanelScreen extends AuiScreen {
             AuiElements.setText(cell.part(0), abbreviate(font, entry.name() == null ? Component.empty() : entry.name(),
                     Math.max(1, this.columns.nameWidth())));
             AuiElements.setText(cell.part(1), abbreviate(font, entry.value(), Math.max(1, this.columns.valueWidth())));
-            AuiElements.style(cell.part(0), "color", AuiStyles.hex(LABEL_COLOR));
-            AuiElements.style(cell.part(1), "color", AuiStyles.hex(entry.color()));
+            AuiElements.style(cell.part(0), "color", LABEL_COLOR);
+            AuiElements.style(cell.part(1), "color", switch (entry.source().tone()) {
+                case NORMAL -> VALUE_COLOR;
+                case POSITIVE -> POSITIVE_COLOR;
+                case WARNING -> WARNING_COLOR;
+            });
         }
     }
 
@@ -664,18 +664,17 @@ public final class InformationPanelScreen extends AuiScreen {
             AuiElements.setText(cell.part(2), name.getString());
             AuiElements.setText(cell.part(3), levelWidth > 0 ? level.getString() : "");
             AuiElements.setText(cell.part(4), value.getString());
-            AuiElements.style(cell.part(2), "color", styleColor(full));
+            AuiElements.style(cell.part(2), "color", styleColor(cell.part(2), full));
             AuiElements.style(cell.part(3), "left", (textX + nameWidth + TECHNIQUE_NAME_GAP) + "px");
-            AuiElements.style(cell.part(3), "color", AuiStyles.hex(row.hasLevel() ? MUTED_COLOR : UNKNOWN_COLOR));
+            AuiElements.style(cell.part(3), "color", row.hasLevel() ? MUTED_COLOR : UNKNOWN_COLOR);
             AuiElements.style(cell.part(4), "left", valueLeft + "px");
-            AuiElements.style(cell.part(4), "color", AuiStyles.hex(MUTED_COLOR));
+            AuiElements.style(cell.part(4), "color", MUTED_COLOR);
             int barWidth = Math.max(1, width - textX);
             AuiElements.style(cell.part(5), "left", textX + "px");
             AuiElements.style(cell.part(5), "top", TECHNIQUE_BAR_TOP + "px");
             AuiElements.style(cell.part(5), "width", barWidth + "px");
-            int filled = (int) Math.round((barWidth - 2) * entry.progress().fraction());
-            AuiElements.style(cell.part(6), "width", Math.max(0, Math.min(filled, barWidth - 2)) + "px");
-            AuiElements.style(cell.part(6), "background-color", AuiStyles.hex(this.fillColor(row)));
+            AuiElements.style(cell.part(6), "width", AuiStyles.progressWidth(barWidth, entry.progress().fraction()) + "px");
+            AuiElements.style(cell.part(6), "background-color", this.fillColor(row));
             AuiElements.style(cell.part(7), "top", TECHNIQUE_SEPARATOR_TOP + "px");
             AuiElements.style(cell.part(7), "width", width + "px");
         }
@@ -721,10 +720,9 @@ public final class InformationPanelScreen extends AuiScreen {
                     format(entry.progress().done()), format(entry.progress().span()));
         }
 
-        // Use the same paper-safe tint as the crafting progress bar.
-        private int fillColor(TechniqueProgress.Entry row) {
+        private String fillColor(TechniqueProgress.Entry row) {
             Holder<Resource> mastery = row.technique().value().masteryResource().orElse(null);
-            return mastery == null ? BAR_FALLBACK_COLOR : 0xFF000000 | AuiStyles.readableOnPaper(mastery.value().particleColor());
+            return mastery == null ? BAR_FALLBACK_COLOR : AuiStyles.hex(mastery.value().particleColor());
         }
 
         // A row has no room for the level id or the tier, so the tooltip spells both out. Its lines keep their own
@@ -739,8 +737,11 @@ public final class InformationPanelScreen extends AuiScreen {
         }
     }
 
-    private static String styleColor(Component component) {
+    private record InformationLine(InformationEntry source, @Nullable Component name, Component value) {
+    }
+
+    private static String styleColor(Element element, Component component) {
         TextColor style = component.getStyle().getColor();
-        return style == null ? AuiStyles.hex(LABEL_COLOR) : AuiStyles.textColor(style.getValue());
+        return style == null ? LABEL_COLOR : AuiStyles.textColor(element, style.getValue());
     }
 }

@@ -24,7 +24,6 @@ import com.iafenvoy.mxt.probe.world.SecretRealmProbes;
 import com.iafenvoy.mxt.probe.world.SecretRealmClientProbes;
 import com.iafenvoy.mxt.probe.world.SecretRealmTravelProbes;
 import com.iafenvoy.mxt.probe.world.SoulProbes;
-import com.iafenvoy.mxt.testmod.MxtTestMod;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.gametest.framework.FunctionGameTestInstance;
@@ -85,6 +84,7 @@ public final class ProbeTests {
             AuraDoubleVerifyProbes::probes,
             AuiBindingVerifyProbes::probes,
             AuiGeometryVerifyProbes::probes,
+            AuiThemeVerifyProbes::probes,
             BlockAuraRefreshVerifyProbes::probes,
             LightBeamParticleVerifyProbes::probes,
             WorldEffectsVerifyProbes::probes,

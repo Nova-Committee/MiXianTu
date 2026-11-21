@@ -9,6 +9,7 @@ import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.cultivation.Physique;
 import com.iafenvoy.mxt.data.cultivation.RealmStage;
 import com.iafenvoy.mxt.data.cultivation.SpiritRoot;
+import com.iafenvoy.mxt.data.cultivation.Technique;
 import com.iafenvoy.mxt.data.curse.Curse;
 import com.iafenvoy.mxt.data.information.getter.MxtInformationGetter;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
@@ -173,12 +174,10 @@ public final class MxtPlayerView {
 
     static void techniques(@Nullable TechniqueAttachment techniques, Map<String, Row> rows) {
         if (techniques == null || techniques.learnedTechniques().isEmpty()) return;
-        MutableComponent names = Component.empty();
-        for (int index = 0; index < techniques.learnedTechniques().size(); index++) {
-            if (index > 0) names.append(", ");
-            names.append(DefinitionText.nameOrId(techniques.learnedTechniques().get(index)));
-        }
-        rows.put(MxtPlayerInformation.TECHNIQUES, new Row(List.of(names), Optional.empty(), InformationRow.Tone.NORMAL));
+        List<Component> names = new ArrayList<>();
+        for (Holder<Technique> technique : techniques.learnedTechniques())
+            names.add(DefinitionText.nameOrId(technique));
+        rows.put(MxtPlayerInformation.TECHNIQUES, new Row(names, Optional.empty(), InformationRow.Tone.NORMAL));
     }
 
     // A curse whose display_condition fails leaves no row behind at all, not an empty one: that is the point of

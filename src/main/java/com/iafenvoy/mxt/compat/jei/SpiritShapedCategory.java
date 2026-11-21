@@ -7,10 +7,9 @@ import mezz.jei.api.gui.builder.IRecipeSlotBuilder;
 import mezz.jei.api.gui.drawable.IDrawable;
 import mezz.jei.api.gui.ingredient.IRecipeSlotsView;
 import mezz.jei.api.helpers.IGuiHelper;
+import mezz.jei.api.gui.widgets.IRecipeExtrasBuilder;
 import mezz.jei.api.recipe.IFocusGroup;
 import mezz.jei.api.recipe.category.AbstractRecipeCategory;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.crafting.Ingredient;
@@ -26,7 +25,7 @@ final class SpiritShapedCategory extends AbstractRecipeCategory<RecipeHolder<Spi
 
     SpiritShapedCategory(IGuiHelper gui) {
         super(MxtJeiPlugin.SHAPED, Component.translatable("jei.mxt.spirit_shaped"),
-                gui.createDrawableItemStack(MxtBlocks.SPIRIT_CRAFTING_TABLE.toStack()), 140, 88);
+                gui.createDrawableItemStack(MxtBlocks.SPIRIT_CRAFTING_TABLE.toStack()), 140, 120);
         this.arrow = gui.getRecipeArrow();
     }
 
@@ -54,12 +53,13 @@ final class SpiritShapedCategory extends AbstractRecipeCategory<RecipeHolder<Spi
 
     @Override
     public void draw(RecipeHolder<SpiritShapedRecipe> holder, @NonNull IRecipeSlotsView slots, @NonNull GuiGraphicsExtractor graphics, double mouseX, double mouseY) {
-        Font font = Minecraft.getInstance().font;
         this.arrow.draw(graphics, 76, 26);
-        int y = 62;
-        for (Component line : SpiritJeiText.auraLines(holder.value().aura(), font, 124)) {
-            graphics.text(font, line, 8, y, 0xFF666666, false);
-            y += 10;
-        }
+    }
+
+    @Override
+    public void createRecipeExtras(IRecipeExtrasBuilder builder, RecipeHolder<SpiritShapedRecipe> holder, @NonNull IFocusGroup focuses) {
+        SpiritJeiAuraWidget widget = new SpiritJeiAuraWidget(SpiritJeiText.auraEntries(holder.value().aura()));
+        builder.addWidget(widget);
+        builder.addInputHandler(widget);
     }
 }

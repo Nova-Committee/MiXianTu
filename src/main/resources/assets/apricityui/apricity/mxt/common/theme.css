@@ -1,4 +1,10 @@
-/* Parchment, ink and wood; native slot geometry and the 9px bitmap font stay unchanged. */
+/* TODO: Reuse shared SVGs when AUI adds its planned support for styling SVG colours from page CSS.
+ * External SVGs currently rasterize independently, so themes use pre-coloured variants. */
+@import "themes/parchment.css";
+@import "themes/jade.css";
+@import "themes/ink-gold.css";
+
+/* Shared geometry, controls and decoration layers for all three themes. */
 html,
 body {
     overflow: hidden;
@@ -10,40 +16,6 @@ body {
 }
 
 body {
-    --ink: #3a322a;
-    --ink-muted: #756553;
-    --ink-dark: #30261e;
-    --ink-on-accent: #f6f1e4;
-    --canvas: #f6f1e4;
-    --surface: #f1e8d6;
-    --surface-deep: #e2d6bd;
-    --surface-soft: #e8ddca;
-    --edge: #6b5848;
-    --edge-light: rgba(80,60,40,0.25);
-    --edge-hover: #977646;
-    --paper-rim: #ddcbb0;
-    --wood: #ddcbae;
-    --wood-hover: #cfb993;
-    --wood-ink: #54402f;
-    --gold-trim: #b88628;
-    --gold-ink: #89631f;
-    --green: #436650;
-    --green-hover: #34553f;
-    --green-shadow: #284230;
-    --purple: #7c6882;
-    --gold: #b88628;
-    --red: #9c2c2c;
-    --red-hover: #842525;
-    --red-shadow: #6d2020;
-    --blue: #4c737e;
-    --tint-green: #e4e3cd;
-    --tint-gold: #ede0c5;
-    --edge-green: #9d9f7c;
-    --selection: #e3d4b8;
-    --focus: #a38a53;
-    --disabled-background: #e3dac8;
-    --disabled-border: #b9aa91;
-    --disabled-foreground: #968873;
     width: 100vw;
     height: 100vh;
     margin: 0;
@@ -69,7 +41,7 @@ body {
     position: relative;
     box-sizing: border-box;
     background-color: var(--canvas);
-    background-image: url("/mxt/common/ornaments/corner-tl.svg"), url("/mxt/common/ornaments/corner-tr.svg"), url("/mxt/common/ornaments/corner-bl.svg"), url("/mxt/common/ornaments/corner-br.svg"), var(--ornament-image), var(--ornament-secondary-image), repeating-linear-gradient(0deg, rgba(139,119,95,0.03) 0px, rgba(139,119,95,0.03) 1px, transparent 1px, transparent 4px);
+    background-image: var(--corner-tl-image), var(--corner-tr-image), var(--corner-bl-image), var(--corner-br-image), var(--ornament-image), var(--ornament-secondary-image), var(--material-image);
     background-size: 12px 12px, 12px 12px, 12px 12px, 12px 12px, var(--ornament-size), var(--ornament-secondary-size), 100% 100%;
     background-position: 0 0, 100% 0, 0 100%, 100% 100%, var(--ornament-position), var(--ornament-secondary-position), 0 0;
     background-repeat: no-repeat;
@@ -113,7 +85,7 @@ body {
 
 .t-end { justify-content: flex-end; }
 .t-center { justify-content: center; }
-.title { font-weight: bold; color: var(--red); }
+.title { font-weight: bold; color: var(--title-ink); }
 .highlight { color: var(--red); }
 .secondary-highlight { color: var(--gold-ink); }
 
@@ -208,52 +180,53 @@ slot:hover {
 .button.button-primary,
 .button.accepted,
 .button.accepted:hover {
-    background-color: var(--green);
-    border-color: var(--green);
+    background-color: var(--primary);
+    border-color: var(--primary);
     color: var(--ink-on-accent);
 }
 
 .button.button-primary:hover {
-    background-color: var(--green-hover);
-    border-color: var(--green-hover);
+    background-color: var(--primary-hover);
+    border-color: var(--primary-hover);
     color: var(--ink-on-accent);
 }
 
 .button.button-primary:active {
-    background-color: var(--green-shadow);
-    border-color: var(--green-shadow);
+    background-color: var(--primary-shadow);
+    border-color: var(--primary-shadow);
     color: var(--ink-on-accent);
 }
 
 .button.button-danger {
-    background-color: var(--red);
-    border-color: var(--red);
+    background-color: var(--danger);
+    border-color: var(--danger);
     color: var(--ink-on-accent);
 }
 
 .button.button-danger:hover {
-    background-color: var(--red-hover);
-    border-color: var(--red-hover);
+    background-color: var(--danger-hover);
+    border-color: var(--danger-hover);
     color: var(--ink-on-accent);
 }
 
 .button.button-danger:active {
-    background-color: var(--red-shadow);
-    border-color: var(--red-shadow);
+    background-color: var(--danger-shadow);
+    border-color: var(--danger-shadow);
     color: var(--ink-on-accent);
 }
 
 .tab {
     background-color: var(--wood);
+    background-image: linear-gradient(180deg, var(--preview-sheen), transparent);
     color: var(--wood-ink);
     border-radius: 0;
 }
 .tab.selected,
 .button.selected {
     background-color: var(--surface-soft);
-    color: var(--red);
+    color: var(--title-ink);
     border-color: var(--edge);
-    box-shadow: inset 0 -2px 0 0 var(--red);
+    box-shadow: inset 0 -2px 0 0 var(--title-ink);
 }
 .tab.selected:hover,
 .button.selected:hover { background-color: var(--selection); }
@@ -358,26 +331,28 @@ option {
     font-size: 9px;
 }
 
-.bar {
+.bar,
+.tbar {
     position: absolute;
     box-sizing: border-box;
     background-color: var(--surface-deep);
-    box-shadow: inset 0 0 0 1px var(--edge);
+    border: 0;
+    box-shadow: inset 0 0 0 1px var(--edge), inset 0 0 0 2px var(--paper-rim);
     border-radius: 2px;
 }
 
-.fill {
+.fill,
+.tfill {
     position: absolute;
     left: 2px;
     top: 2px;
     width: 0;
     height: 3px;
     background-color: var(--green);
+    background-image: linear-gradient(180deg, var(--progress-sheen), transparent);
     border-radius: 1px;
 }
 
-.tbar { border: 1px solid var(--edge); border-radius: 2px; background-color: var(--surface-deep); }
-.tfill { border-radius: 1px; background-color: var(--green); }
 .tsep { background-image: linear-gradient(var(--edge-light) 50%, transparent 50%); }
 #techniques_empty { color: var(--ink-muted); }
 

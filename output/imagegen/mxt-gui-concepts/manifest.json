@@ -1,0 +1,54 @@
+{
+  "model": "gpt-image-2",
+  "images": [
+    {
+      "file": "01-parchment-character.png",
+      "dimensions": [
+        1536,
+        1024
+      ],
+      "bytes": 2138202
+    },
+    {
+      "file": "01-parchment-workbench.png",
+      "dimensions": [
+        1536,
+        1024
+      ],
+      "bytes": 2084885
+    },
+    {
+      "file": "02-jade-character.png",
+      "dimensions": [
+        1536,
+        1024
+      ],
+      "bytes": 1905112
+    },
+    {
+      "file": "02-jade-workbench.png",
+      "dimensions": [
+        1536,
+        1024
+      ],
+      "bytes": 1727398
+    },
+    {
+      "file": "03-ink-gold-character.png",
+      "dimensions": [
+        1536,
+        1024
+      ],
+      "bytes": 2015734
+    },
+    {
+      "file": "03-ink-gold-workbench.png",
+      "dimensions": [
+        1536,
+        1024
+      ],
+      "bytes": 1972184
+    }
+  ],
+  "prompt_file": "prompts-v2.jsonl"
+}

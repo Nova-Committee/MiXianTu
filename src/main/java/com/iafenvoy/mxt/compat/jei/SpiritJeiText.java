@@ -1,16 +1,13 @@
 package com.iafenvoy.mxt.compat.jei;
 
-import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.cost.builtin.AuraCost;
+import com.iafenvoy.mxt.screen.AuraDisplay;
 import com.iafenvoy.saturn.data.cost.Cost;
-import com.iafenvoy.saturn.util.DefinitionText;
 import com.iafenvoy.saturn.util.formula.NumberProvider;
 import com.iafenvoy.saturn.util.formula.number.Constant;
 import com.iafenvoy.saturn.util.formula.number.Expression;
 import net.minecraft.client.gui.Font;
-import net.minecraft.core.Holder;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.MutableComponent;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -26,39 +23,20 @@ public final class SpiritJeiText {
     private SpiritJeiText() {
     }
 
-    static List<Component> auraLines(List<Cost> aura, Font font, int maxWidth) {
-        List<Component> lines = new ArrayList<>();
-        if (aura.isEmpty()) {
-            lines.add(Component.translatable("jei.mxt.aura_cost_none"));
-            return lines;
-        }
-        boolean first = true;
-        for (Cost cost : aura) {
-            if (!(cost instanceof AuraCost entry)) continue;
-            lines.add(auraLine(entry, first, font, maxWidth));
-            first = false;
-            if (lines.size() == 3) break;
-        }
-        return lines;
+    public static List<AuraEntry> auraEntries(List<Cost> costs) {
+        List<AuraEntry> entries = new ArrayList<>();
+        for (Cost cost : costs)
+            if (cost instanceof AuraCost(
+                    net.minecraft.core.Holder<com.iafenvoy.mxt.data.aura.Aura> aura, NumberProvider amount
+            ))
+                entries.add(new AuraEntry(AuraDisplay.of(aura), providerName(amount)));
+        return List.copyOf(entries);
     }
 
-    private static MutableComponent auraLine(AuraCost entry, boolean first, Font font, int maxWidth) {
-        String value = providerName(entry.amount());
-        String name = resourceName(entry.aura());
-        MutableComponent line = first ? Component.translatable("jei.mxt.aura_cost_label") : Component.empty();
-        int color = entry.aura().value().auraType()
-                .map(type -> type.value().color()).orElse(0xFFFFFF);
-        line.append(Component.literal(name).withColor(readableTextColor(color, PANEL_BACKGROUND)));
-        line.append(Component.literal(" x" + value));
-        if (font.width(line) <= maxWidth) return line;
-        String shortened = trim(font, value, Math.max(12, maxWidth - font.width(name) - (first ? 22 : 8)));
-        line = first ? Component.translatable("jei.mxt.aura_cost_label") : Component.empty();
-        line.append(Component.literal(name).withColor(readableTextColor(color, PANEL_BACKGROUND)));
-        return line.append(Component.literal(" x" + shortened));
-    }
-
-    private static String resourceName(Holder<Aura> aura) {
-        return DefinitionText.nameOrId(aura).getString();
+    public record AuraEntry(AuraDisplay display, String amount) {
+        public List<Component> tooltip() {
+            return this.display.tooltip(Component.literal("× " + this.amount));
+        }
     }
 
     public static String providerName(NumberProvider provider) {
@@ -70,10 +48,10 @@ public final class SpiritJeiText {
         return Component.translatable("jei.mxt.aura_dynamic").getString();
     }
 
-    private static String trim(Font font, String value, int maxWidth) {
+    static String trim(Font font, String value, int maxWidth) {
         if (font.width(value) <= maxWidth) return value;
         String clipped = font.plainSubstrByWidth(value, Math.max(0, maxWidth - font.width("...")));
-        return clipped + "...";
+        return clipped + (font.width("...") <= maxWidth ? "..." : "");
     }
 
     public static int readableTextColor(int candidate, int background) {

@@ -3,10 +3,12 @@ package com.iafenvoy.mxt.probe.verify;
 import com.iafenvoy.mxt.probe.Probe;
 import com.iafenvoy.mxt.probe.ProbeContext;
 import com.iafenvoy.mxt.screen.profiling.ProfilerChart;
+import com.iafenvoy.mxt.screen.aui.AuiStyles;
 import com.iafenvoy.saturn.profiling.Profiler;
 import com.iafenvoy.saturn.profiling.ProfilerSource;
 import com.iafenvoy.saturn.profiling.ProfilerWindowSnapshot;
 import com.iafenvoy.saturn.registry.SaturnProfilerSources;
+import com.iafenvoy.saturn.registry.SaturnRegistries;
 import it.unimi.dsi.fastutil.booleans.BooleanArrayList;
 import it.unimi.dsi.fastutil.booleans.BooleanList;
 import it.unimi.dsi.fastutil.longs.LongArrayList;
@@ -16,6 +18,7 @@ import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 
@@ -67,16 +70,26 @@ public final class ProfilerChartVerifyProbes {
 
     private static ProfilerWindowSnapshot window(List<LongList> samples, BooleanList complete) {
         ProfilerSource source = SaturnProfilerSources.COST;
-        List<ProfilerSource> sources = List.of(source);
+        List<ProfilerSource> sources = new ArrayList<>();
+        SaturnRegistries.PROFILER_SOURCE.forEach(sources::add);
+        sources.sort(Comparator.comparingInt(ProfilerSource::index));
+        List<LongList> expanded = samples.stream().<LongList>map(row -> {
+            LongArrayList columns = new LongArrayList(new long[sources.size() * 2]);
+            columns.set(source.index() * 2, row.getLong(0));
+            columns.set(source.index() * 2 + 1, row.getLong(1));
+            return columns;
+        }).toList();
         return new ProfilerWindowSnapshot(1L, 1L, sources,
-                List.of(new ProfilerWindowSnapshot.Producer(1L, "Server thread", 0L, sources, samples, complete, 0L)), 0L);
+                List.of(new ProfilerWindowSnapshot.Producer(1L, "Server thread", 0L, sources, expanded, new BooleanArrayList(complete), 0L)), 0L);
     }
 
     private static void draw(BufferedImage image, ProfilerWindowSnapshot window) {
         Graphics2D graphics = image.createGraphics();
         try {
             graphics.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-            ProfilerChart.draw(graphics, window.producers().getFirst(), window.sources().getFirst(), 4D);
+            ProfilerChart.draw(graphics, window.producers().getFirst(), SaturnProfilerSources.COST, 4D,
+                    new AuiStyles.Palette(0xFF3A322A, 0xFF756553, 0xFFF1E8D6, 0xFFE8DDCA, 0xFF6B5848,
+                            0xFF436650, 0xFFB88628, 0xFF9C2C2C, 0xFF7C6882));
         } finally {
             graphics.dispose();
         }

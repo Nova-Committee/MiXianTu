@@ -1,12 +1,10 @@
 package com.iafenvoy.mxt.screen.gui;
 
 import com.iafenvoy.mxt.data.aura.Aura;
+import com.iafenvoy.mxt.screen.AuraDisplay;
 import com.iafenvoy.mxt.screen.aui.AuiContainerScreen;
 import com.iafenvoy.mxt.screen.aui.AuiElements;
-import com.iafenvoy.mxt.screen.aui.AuiStyles;
 import com.iafenvoy.mxt.screen.menu.SpiritCraftingMenu;
-import com.iafenvoy.saturn.util.DefinitionText;
-import com.iafenvoy.saturn.util.TooltipText;
 import com.sighs.apricityui.init.Element;
 import net.minecraft.core.Holder;
 import net.minecraft.network.chat.Component;
@@ -29,11 +27,6 @@ public final class SpiritCraftingScreen extends AuiContainerScreen<SpiritCraftin
      * Rows the page may grow to; the menu publishes at most this many.
      */
     private static final int ROWS = 8;
-    private static final int BAR_WIDTH = 105;
-    /**
-     * The interior the filled part is drawn in: 2px in from both sides, hence the 4px shortfall.
-     */
-    private static final int BAR_INSET = 2;
     /**
      * Aura panel metrics, mirroring {@code .subpanel.aura} / {@code .aura-row} in the page's stylesheet: rows are
      * packed from the top padding at the page's own 26px pitch and squeezed down to their own 18px height once a
@@ -41,7 +34,7 @@ public final class SpiritCraftingScreen extends AuiContainerScreen<SpiritCraftin
      */
     private static final int AURA_PANEL_HEIGHT = 155, AURA_PADDING = 10, ROW_HEIGHT = 18, ROW_PITCH = 26;
 
-    private final List<Row> rows = new ArrayList<>(ROWS);
+    private final List<SpiritCraftingAuraRow> rows = new ArrayList<>(ROWS);
     @Nullable
     private Element auraPanel;
     /**
@@ -49,6 +42,8 @@ public final class SpiritCraftingScreen extends AuiContainerScreen<SpiritCraftin
      */
     @Nullable
     private Element auraRow;
+    @Nullable
+    private Element craftingArray;
 
     public SpiritCraftingScreen(SpiritCraftingMenu menu, Inventory inventory, Component title) {
         super(menu, inventory, title);
@@ -58,6 +53,7 @@ public final class SpiritCraftingScreen extends AuiContainerScreen<SpiritCraftin
     public void bindPage() {
         this.panel = this.getOrThrow("panel");
         this.auraPanel = this.getOrThrow("aura_panel");
+        this.craftingArray = this.getOrThrow("crafting_array");
 
         Element prototype = this.getOrThrow("aura_row");
         this.auraRow = prototype;
@@ -71,6 +67,7 @@ public final class SpiritCraftingScreen extends AuiContainerScreen<SpiritCraftin
         this.rows.clear();
         this.auraPanel = null;
         this.auraRow = null;
+        this.craftingArray = null;
     }
 
     @Override
@@ -85,22 +82,18 @@ public final class SpiritCraftingScreen extends AuiContainerScreen<SpiritCraftin
         if (panel == null || prototype == null) return;
         int count = 0;
         while (count < ROWS && this.menu.progressAura(count) != null) count++;
+        AuiElements.setClass(this.craftingArray, "active", count > 0);
         this.fitRows(panel, prototype, count);
         int pitch = pitch(count);
         for (int index = 0; index < this.rows.size(); index++) {
-            Row row = this.rows.get(index);
+            SpiritCraftingAuraRow row = this.rows.get(index);
             Holder<Aura> aura = index < count ? this.menu.progressAura(index) : null;
             if (aura == null) {
                 row.hide();
                 continue;
             }
             double required = this.menu.progressRequirement(index);
-            double amount = Math.min(this.menu.progressAmount(index), required);
-            // Preserve the aura's hue while keeping its label readable on paper.
-            String color = AuiStyles.textColor(aura.value().resource().value().particleColor());
-            int filled = required <= 0 ? 0 : (int) Math.round(amount / required * BAR_WIDTH);
-            row.show(AURA_PADDING + index * pitch, DefinitionText.nameOrId(aura).getString(),
-                    TooltipText.number(amount) + " / " + TooltipText.number(required), color, filled);
+            row.show(AURA_PADDING + index * pitch, AuraDisplay.of(aura), this.menu.progressAmount(index), required);
         }
     }
 
@@ -132,42 +125,9 @@ public final class SpiritCraftingScreen extends AuiContainerScreen<SpiritCraftin
         return panel.appendChild(copy);
     }
 
-    private Row row(Element root) {
-        return new Row(root, this.part(root, ".name"), this.part(root, ".amount"), this.part(root, ".bar .fill"));
-    }
-
-    /**
-     * One named element of a row. A copy carries the same children as the prototype, so this only faults on a page
-     * whose row is not the row this screen expects.
-     */
-    private Element part(Element root, String selector) {
-        Element found = root.querySelector(selector);
-        if (found == null) throw this.missing("aura_row " + selector);
-        return found;
-    }
-
-    /**
-     * One aura row: a name, a right-aligned "have / need" and the filled part of the bar. Every write goes through
-     * {@link AuiElements}, which compares first, because the rows are refreshed on every container tick.
-     */
-    private record Row(Element root, Element name, Element amount, Element fill) {
-        private void show(int top, String aura, String progress, String color, int filled) {
-            AuiElements.style(this.root, "top", top + "px");
-            AuiElements.style(this.root, "display", "block");
-            AuiElements.setText(this.name, aura);
-            AuiElements.style(this.name, "color", color);
-            AuiElements.setText(this.amount, progress);
-            AuiElements.style(this.fill, "background-color", color);
-            // The old screen filled from 2px in and stopped 2px short of the right edge.
-            AuiElements.style(this.fill, "width", Math.max(0, filled - BAR_INSET * 2) + "px");
-        }
-
-        /**
-         * Hides a row the recipe on the grid does not need. An unused row is kept for the next recipe rather than
-         * removed: the page is rebuilt wholesale by a hot reload, so nothing outlives the bind this way.
-         */
-        private void hide() {
-            AuiElements.style(this.root, "display", "none");
-        }
+    private SpiritCraftingAuraRow row(Element root) {
+        SpiritCraftingAuraRow row = new SpiritCraftingAuraRow(root);
+        this.tooltip(root, row::tooltip);
+        return row;
     }
 }

@@ -7,8 +7,11 @@ import com.iafenvoy.jupiter.config.entry.EnumEntry;
 import com.iafenvoy.jupiter.config.entry.IntegerEntry;
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.runtime.cultivation.TechniqueProgress.Mode;
+import com.iafenvoy.mxt.screen.aui.AuiTheme;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
+
+import java.util.Locale;
 
 /**
  * Client-only controls for the mod's own overlays, one tab per feature; an entry's name stays short and its
@@ -18,6 +21,7 @@ import net.minecraft.resources.Identifier;
 public final class MxtClientConfig extends AutoInitConfigContainer {
     public static final MxtClientConfig INSTANCE = new MxtClientConfig();
 
+    public final Appearance appearance = new Appearance();
     public final Information information = new Information();
     public final Techniques techniques = new Techniques();
     public final Rifts rifts = new Rifts();
@@ -28,6 +32,18 @@ public final class MxtClientConfig extends AutoInitConfigContainer {
     private MxtClientConfig() {
         super(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "client"), "config.mxt.client", "./config/mxt/mxt-client.json");
         this.dataFixer.registerKeyRule("^config\\.mxt\\.client\\.[a-z_]+\\.([a-z_]+)$", key -> key.substring(key.lastIndexOf('.') + 1));
+    }
+
+    public static final class Appearance extends AutoInitConfigCategoryBase {
+        public final EnumEntry<AuiTheme> theme = EnumEntry.builder("config.mxt.client.appearance.theme", AuiTheme.PARCHMENT)
+                .key("theme")
+                .tooltip("config.mxt.client.appearance.theme.tooltip")
+                .nameProvider(value -> Component.translatable("config.mxt.client.appearance.theme." + value.name().toLowerCase(Locale.ROOT)))
+                .build();
+
+        private Appearance() {
+            super("appearance", "config.mxt.client.appearance");
+        }
     }
 
     public static final class Information extends AutoInitConfigCategoryBase {

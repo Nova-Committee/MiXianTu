@@ -1,0 +1,19 @@
+{
+  "model": "gpt-image-2",
+  "transport": "b64_json",
+  "size": [
+    1536,
+    1024
+  ],
+  "seconds": 33.0,
+  "response_fields": [
+    "created",
+    "data",
+    "usage"
+  ],
+  "image_fields": [
+    "b64_json",
+    "url",
+    "revised_prompt"
+  ]
+}

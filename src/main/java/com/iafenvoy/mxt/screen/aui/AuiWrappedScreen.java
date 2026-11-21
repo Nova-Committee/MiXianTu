@@ -70,6 +70,7 @@ public interface AuiWrappedScreen extends AuiLinkedScreen {
                 && state.boundGeneration == current.getRefreshGeneration()) return;
         this.auiClearBindings();
         if (current == null) return;
+        AuiTheme.current().apply(current);
         try {
             this.bindPage();
         } catch (NoSuchElementException exception) {
@@ -197,7 +198,7 @@ public interface AuiWrappedScreen extends AuiLinkedScreen {
         AuiElements.setText(element, text.getString());
         TextColor color = text.getStyle().getColor();
         if (color == null) return;
-        AuiElements.style(element, "color", AuiStyles.textColor(color.getValue()));
+        AuiElements.style(element, "color", AuiStyles.textColor(element, color.getValue()));
     }
 
     default void click(@Nullable Element element, Runnable action) {

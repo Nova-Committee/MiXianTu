@@ -749,9 +749,6 @@
   "jade.mxt.spirit_herb.age": "Age: %s / mature %s",
   "jade.mxt.spirit_herb.immature": "Not yet mature",
   "jade.mxt.spirit_herb.mature": "Mature",
-  "jei.mxt.aura_cost": "Aura cost: %s",
-  "jei.mxt.aura_cost_label": "Aura cost:",
-  "jei.mxt.aura_cost_none": "No aura cost",
   "jei.mxt.aura_dynamic": "Dynamic",
   "jei.mxt.spirit_shaped": "Spirit Shaped Crafting",
   "jei.mxt.spirit_shapeless": "Spirit Shapeless Crafting",
@@ -1144,5 +1141,11 @@
   "mxt.ponder.formation_preview.header": "Formation Structure Preview",
   "mxt.ponder.formation_preview.text_1": "Structure: %s",
   "config.mxt.server.talisman.use_cooldown": "Use Cooldown",
-  "config.mxt.server.talisman.use_cooldown.tooltip": "Item cooldown in ticks after invoking a talisman by hand; 0 disables it. It covers every talisman the player holds, and while it runs a hand pour is refused too, so not even that tick of aura moves. A carrier standing on a display stand reads no window and leaves none."
+  "config.mxt.server.talisman.use_cooldown.tooltip": "Item cooldown in ticks after invoking a talisman by hand; 0 disables it. It covers every talisman the player holds, and while it runs a hand pour is refused too, so not even that tick of aura moves. A carrier standing on a display stand reads no window and leaves none.",
+  "config.mxt.client.appearance": "Appearance",
+  "config.mxt.client.appearance.theme": "GUI Theme",
+  "config.mxt.client.appearance.theme.tooltip": "Choose the AUI theme for MiXianTu and its workstation addons. Close and reopen a screen to apply. Slot positions and GUI scale stay unchanged.",
+  "config.mxt.client.appearance.theme.parchment": "Parchment and Cinnabar",
+  "config.mxt.client.appearance.theme.jade": "Jade and Bamboo",
+  "config.mxt.client.appearance.theme.ink_gold": "Ink and Gold"
 }

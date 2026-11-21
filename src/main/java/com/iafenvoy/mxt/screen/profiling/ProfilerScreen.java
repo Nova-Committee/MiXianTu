@@ -333,7 +333,8 @@ public final class ProfilerScreen extends AuiScreen {
             AuiElements.setText(cell.part(2), row.axis);
             if (!changed) return;
             Canvas chart = (Canvas) cell.part(3);
-            chart.renderOperation(graphics -> ProfilerChart.draw(graphics, row.producer, row.source, row.ceiling));
+            AuiStyles.Palette palette = AuiStyles.palette(chart);
+            chart.renderOperation(graphics -> ProfilerChart.draw(graphics, row.producer, row.source, row.ceiling, palette));
         }
     }
 }

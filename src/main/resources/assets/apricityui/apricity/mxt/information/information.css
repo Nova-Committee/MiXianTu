@@ -6,7 +6,7 @@ body {
 
 #panel {
     position: absolute;
-    --ornament-image: url("/mxt/common/ornaments/cloud-scroll.svg");
+    --ornament-image: var(--cloud-image);
     --ornament-size: 96px 18px;
     --ornament-position: 96% 8px;
 }
@@ -32,7 +32,7 @@ body {
     width: 120px;
     height: 96px;
     background-color: var(--surface-deep);
-    background-image: url("/mxt/common/ornaments/jade-halo.svg"), linear-gradient(135deg, rgba(184,134,40,0.12), transparent 35%), linear-gradient(315deg, rgba(184,134,40,0.12), transparent 35%);
+    background-image: var(--preview-image), linear-gradient(135deg, var(--preview-sheen), transparent 35%), linear-gradient(315deg, var(--preview-sheen), transparent 35%);
     background-size: 84px 84px, 100% 100%, 100% 100%;
     background-position: 50% 50%, 0 0, 0 0;
     background-repeat: no-repeat;
@@ -54,6 +54,18 @@ body {
     box-shadow: inset 0 0 0 1px var(--paper-rim);
 }
 
+.equip.empty {
+    background-image: var(--equipment-placeholder);
+    background-size: 16px 16px;
+    background-position: 50% 50%;
+    background-repeat: no-repeat;
+}
+
+.equip-head { --equipment-placeholder: var(--armor-helmet-image); }
+.equip-chest { --equipment-placeholder: var(--armor-chestplate-image); }
+.equip-legs { --equipment-placeholder: var(--armor-leggings-image); }
+.equip-feet { --equipment-placeholder: var(--armor-boots-image); }
+
 .equip-icon {
     position: absolute;
     left: 3px;
@@ -67,7 +79,7 @@ body {
 }
 
 #cultivation_caption,
-#basic_caption { color: var(--red); }
+#basic_caption { color: var(--title-ink); }
 
 #cultivation,
 #basic { background-image: linear-gradient(var(--edge-light) 1px, transparent 1px); }
@@ -138,10 +150,10 @@ body {
 
 .tfill {
     position: absolute;
-    left: 0;
-    top: 0;
+    left: 2px;
+    top: 2px;
     width: 0;
-    height: 5px;
+    height: 3px;
 }
 
 .tsep {
@@ -150,4 +162,19 @@ body {
     top: 31px;
     width: 40px;
     height: 2px;
+}
+
+/* Small title plaques and a low-opacity wash leave the reading area unobstructed. */
+#cultivation_caption,
+#basic_caption {
+    background-color: var(--title-wash);
+    box-shadow: inset 0 -1px 0 0 var(--edge-light);
+}
+.rname { color: var(--ink-muted); }
+.rvalue { color: var(--ink); }
+#cultivation {
+    background-image: var(--landscape-image), linear-gradient(var(--edge-light) 1px, transparent 1px);
+    background-size: 96px 54px, 100% 100%;
+    background-position: 100% 100%, 0 0;
+    background-repeat: no-repeat;
 }

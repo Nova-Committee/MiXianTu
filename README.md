@@ -96,7 +96,7 @@ See the [Documentation](https://docs.iafenvoy.com/docs/mod/mxt/tutorial/) for mo
 | Curios Slots                   |   ✅    | Equip back weapons, belt items, techniques and artifacts, with character rendering and keybinds for main-hand swapping.                                                          |
 | Friend and Foe Identification  |   ✅    | Maintain temporary or persistent friend lists and let mods or scripts provide relationship checks.                                                                               |
 
-Reincarnation is optional. When installed, it provides lifespan, ageing, reincarnation and past-life queries, and data
+Reincarnation is optional. When installed, it provides lifespan, aging, reincarnation and past-life queries, and data
 packs can configure lifespan changes through breakthrough success actions. Cultivation works without it. Reincarnation
 controls attachment retention through its tag; data clears by default.
 

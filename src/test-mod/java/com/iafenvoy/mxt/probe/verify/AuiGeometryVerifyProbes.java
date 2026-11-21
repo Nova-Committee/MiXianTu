@@ -2,11 +2,15 @@ package com.iafenvoy.mxt.probe.verify;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.data.rift.RiftShape;
 import com.iafenvoy.mxt.data.rift.RiftVertex;
 import com.iafenvoy.mxt.probe.Probe;
 import com.iafenvoy.mxt.probe.ProbeContext;
+import com.iafenvoy.mxt.screen.AuraDisplay;
+import com.iafenvoy.mxt.screen.aui.AuiElements;
+import com.iafenvoy.mxt.screen.aui.AuiStyles;
+import com.iafenvoy.mxt.screen.gui.SpiritCraftingAuraRow;
+import com.iafenvoy.saturn.data.IconReference;
 import com.iafenvoy.mxt.screen.rift.RiftEditorInputs;
 import com.iafenvoy.mxt.screen.rift.RiftEditorToolbar;
 import com.iafenvoy.mxt.screen.rift.RiftEditorViewport;
@@ -15,10 +19,12 @@ import com.sighs.apricityui.dom.expander.ContainerExpander;
 import com.sighs.apricityui.element.Canvas;
 import com.sighs.apricityui.element.Container;
 import com.sighs.apricityui.element.Input;
+import com.sighs.apricityui.element.Item;
 import com.sighs.apricityui.element.Option;
 import com.sighs.apricityui.element.Select;
 import com.sighs.apricityui.element.Slot;
 import com.sighs.apricityui.element.Translation;
+import com.sighs.apricityui.element.Texture;
 import com.sighs.apricityui.event.Event;
 import com.sighs.apricityui.init.Document;
 import com.sighs.apricityui.init.Element;
@@ -26,19 +32,22 @@ import com.sighs.apricityui.layout.LayoutMeasureCache;
 import com.sighs.apricityui.layout.Size;
 import com.sighs.apricityui.parser.HTML;
 import com.sighs.apricityui.render.GeometryQueryScope;
+import com.sighs.apricityui.style.Animation;
+import com.sighs.apricityui.style.Background;
+import com.sighs.apricityui.style.Style;
 import net.minecraft.locale.Language;
 import net.minecraft.network.chat.FormattedText;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.phys.Vec3;
 import org.jspecify.annotations.NonNull;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.UncheckedIOException;
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Locale;
-import java.util.NoSuchElementException;
+import java.util.Optional;
 
 public final class AuiGeometryVerifyProbes {
     private AuiGeometryVerifyProbes() {
@@ -46,7 +55,169 @@ public final class AuiGeometryVerifyProbes {
 
     public static List<Probe> probes() {
         return List.of(Probe.of("verify/aui/rift_geometry", AuiGeometryVerifyProbes::riftGeometry),
-                Probe.of("verify/aui/slot_geometry", AuiGeometryVerifyProbes::slotGeometry));
+                Probe.of("verify/aui/slot_geometry", AuiGeometryVerifyProbes::slotGeometry),
+                Probe.of("verify/aui/theme_details", AuiGeometryVerifyProbes::themeDetails),
+                Probe.of("verify/aui/aura_icons", AuiGeometryVerifyProbes::auraIcons));
+    }
+
+    private static void auraIcons(ProbeContext context) {
+        Element.register("item", (document, _) -> new Item(document));
+        Element.register("texture", (document, _) -> new Texture(document));
+        String css = resource("apricityui/apricity/mxt/common/theme.css") + "\n"
+                + resource("apricityui/apricity/mxt/spirit_crafting/spirit_crafting.css");
+        String html = resource("apricityui/apricity/mxt/spirit_crafting/spirit_crafting.html")
+                .replaceAll("<link[^>]*>", "").replace("</head>", "<style>" + css + "</style></head>");
+        String path = "mxt_test/aui_aura_icons.html";
+        HTML.putTemple(path, html);
+        Component name = Component.literal("Aura name");
+        AuraDisplay plain = new AuraDisplay(name, Optional.empty(), 0x66CCFF, List.of());
+        AuraDisplay texture = new AuraDisplay(name, Optional.of(IconReference.texture(Identifier.parse("mxt_test:textures/item/aura.png"))),
+                0x66CCFF, List.of());
+        AuraDisplay item = new AuraDisplay(name, IconReference.of(new ItemStack(Items.DIAMOND)), 0x66CCFF, List.of());
+        int documents = Document.getAll().size();
+        try {
+            for (int[] viewport : List.of(new int[]{320, 240}, new int[]{640, 360}, new int[]{960, 540})) {
+                Size.setViewportOverride(viewport[0], viewport[1]);
+                Document document = Document.create(path);
+                if (!context.check("aura icon document created", document != null && document.body != null)) return;
+                assert document != null;
+                try (Document.ContextScope _ = Document.withContext(document)) {
+                    document.registerUaStylesheet(resource("apricityui/apricity/global.css"), "mxt_test/actual-global.css");
+                    Element root = document.getElementById("aura_row");
+                    SpiritCraftingAuraRow row = new SpiritCraftingAuraRow(root);
+                    for (AuraDisplay display : List.of(plain, texture, item, texture, plain, item)) {
+                        row.show(10, display, 25, 50);
+                        document.flushPendingStyleUpdates();
+                        document.commitRenderState();
+                        boolean hasIcon = display.icon().isPresent();
+                        context.expect("name is the fallback only", root.querySelector(".name").getComputedStyle().display, hasIcon ? "none" : "flex");
+                        context.expect("tooltip identifies the aura", row.tooltip().getFirst().getString(), name.getString());
+                        context.check("tooltip preserves progress", row.tooltip().get(1).getString().contains("25"));
+                        Item icon = (Item) root.querySelector(".aura-item");
+                        context.check("item image cannot replace aura tooltip", !icon.canShowItemTooltip());
+                        context.expect("item state follows icon kind", icon.resolveDisplayStack().isEmpty(), display != item);
+                        context.expect("texture state follows icon kind", root.querySelector(".aura-texture").hasAttribute("src"), display == texture);
+                        try (GeometryQueryScope _ = GeometryQueryScope.open()) {
+                            Element.DOMRect outer = root.getBoundingClientRect();
+                            Element.DOMRect track = root.querySelector(".bar").getBoundingClientRect();
+                            Element.DOMRect fill = root.querySelector(".fill").getBoundingClientRect();
+                            close(context, "icon reserves space beside progress", track.left - outer.left, hasIcon ? 20 : 0);
+                            close(context, "track fits the available width", track.width, hasIcon ? 85 : 105);
+                            close(context, "half progress uses the correct interior", fill.width, hasIcon ? 41 : 51);
+                            close(context, "progress stays inside row", track.right, outer.right);
+                            close(context, "icon keeps compact row height", outer.height, 18);
+                        }
+                    }
+                    Element clone = root.cloneNode(true);
+                    clone.removeAttribute("id");
+                    clone = root.parentElement.appendChild(clone);
+                    SpiritCraftingAuraRow copied = new SpiritCraftingAuraRow(clone);
+                    copied.show(136, plain, 50, 50);
+                    document.flushPendingStyleUpdates();
+                    context.check("cloned icon row resets to a name", !clone.getClassList().contains("has-icon"));
+                    context.expect("cloned row has no stale item", ((Item) clone.querySelector(".aura-item")).resolveDisplayStack().isEmpty(), true);
+                    row.hide();
+                    context.check("hidden row leaves no tooltip", row.tooltip().isEmpty());
+                    row.show(10, item, 40, 50);
+                    context.check("reused row refreshes tooltip", row.tooltip().get(1).getString().contains("40"));
+                } finally {
+                    document.remove();
+                }
+            }
+        } finally {
+            Size.clearViewportOverride();
+        }
+        context.expect("aura icon documents are released", Document.getAll().size(), documents);
+    }
+
+    private static void themeDetails(ProbeContext context) {
+        Element.register("container", (document, _) -> new Container(document));
+        Element.register("slot", (document, _) -> new Slot(document));
+        int documents = Document.getAll().size();
+        try {
+            for (String page : List.of("information/information", "spirit_crafting/spirit_crafting")) {
+                String css = resource("apricityui/apricity/mxt/common/theme.css") + "\n"
+                        + resource("apricityui/apricity/mxt/" + page + ".css");
+                String html = resource("apricityui/apricity/mxt/" + page + ".html")
+                        .replaceAll("<link[^>]*>", "").replace("</head>", "<style>" + css + "</style></head>");
+                String path = "mxt_test/aui_theme_" + page.replace('/', '_') + ".html";
+                HTML.putTemple(path, html);
+                for (int[] viewport : List.of(new int[]{320, 240}, new int[]{640, 360}, new int[]{960, 540})) {
+                    Size.setViewportOverride(viewport[0], viewport[1]);
+                    Document document = Document.create(path);
+                    if (!context.check("theme page created: " + page, document != null && document.body != null)) return;
+                    assert document != null;
+                    try (Document.ContextScope _ = Document.withContext(document)) {
+                        document.registerUaStylesheet(resource("apricityui/apricity/global.css"), "mxt_test/actual-global.css");
+                        ContainerExpander.expand(document);
+                        SlotContentRules.normalizeTemplate(document);
+                        document.flushPendingStyleUpdates();
+                        if (page.startsWith("information")) {
+                            for (int index = 0; index < 4; index++) {
+                                Element frame = document.getElementById("equip-" + index).parentElement;
+                                document.commitRenderState();
+                                Element.DOMRect empty = frame.getBoundingClientRect();
+                                context.check("empty armor slot has a silhouette " + index,
+                                        Background.of(frame).getLayers().stream().anyMatch(layer -> layer.imagePath != null
+                                                && layer.imagePath.startsWith("mxt/information/ornaments/")));
+                                AuiElements.setClass(frame, "empty", false);
+                                document.flushPendingStyleUpdates();
+                                document.commitRenderState();
+                                Element.DOMRect equipped = frame.getBoundingClientRect();
+                                close(context, "equipping keeps slot x", equipped.x, empty.x);
+                                close(context, "equipping keeps slot y", equipped.y, empty.y);
+                                close(context, "equipping keeps slot width", equipped.width, 24);
+                                close(context, "equipping keeps slot height", equipped.height, 24);
+                                context.check("equipped slot has no placeholder " + index,
+                                        Background.of(frame).getLayers().stream().noneMatch(layer -> layer.imagePath != null
+                                                && layer.imagePath.startsWith("mxt/information/ornaments/")));
+                            }
+                            AuiElements.setClass(document.getElementById("panel"), "page-technique", true);
+                        }
+                        Element track = page.startsWith("information") ? document.getElementById("tech_bar-0")
+                                : document.body.querySelector(".bar");
+                        Element fill = track.getFirstElementChild();
+                        AuiElements.style(track, "width", "105px");
+                        AuiElements.style(fill, "width", AuiStyles.progressWidth(105, 1) + "px");
+                        document.flushPendingStyleUpdates();
+                        document.commitRenderState();
+                        try (GeometryQueryScope _ = GeometryQueryScope.open()) {
+                            Element.DOMRect outer = track.getBoundingClientRect(), inner = fill.getBoundingClientRect();
+                            close(context, page + " track height", outer.height, 7);
+                            close(context, page + " fill height", inner.height, 3);
+                            close(context, page + " left cap", inner.left - outer.left, 2);
+                            close(context, page + " right cap", outer.right - inner.right, 2);
+                            close(context, page + " top cap", inner.top - outer.top, 2);
+                            close(context, page + " bottom cap", outer.bottom - inner.bottom, 2);
+                        }
+                        if (!page.startsWith("spirit_crafting")) continue;
+                        Element ornament = document.getElementById("crafting_array"), panel = document.getElementById("panel");
+                        context.expect("decoration cannot intercept slots", ornament.getComputedStyle().pointerEvents, "none");
+                        close(context, "idle decoration opacity", Double.parseDouble(ornament.getComputedStyle().opacity), 0.45);
+                        context.check("title leaves room above crafting grid", document.getElementById("title").getBoundingClientRect().bottom
+                                <= document.getElementById("crafting").getBoundingClientRect().top);
+                        AuiElements.setClass(ornament, "active", true);
+                        document.flushPendingStyleUpdates();
+                        Style animated = ornament.getComputedStyle();
+                        context.check("recipe activates the breath", animated.animation.contains("mxt-aura-breathe"));
+                        Animation.updateStyle(ornament, animated);
+                        context.check("AUI runs the decoration animation", Animation.isActive(ornament));
+                        close(context, "animation does not fade the panel", Double.parseDouble(panel.getComputedStyle().opacity), 1);
+                        close(context, "animation does not fade the title", Double.parseDouble(document.getElementById("title").getComputedStyle().opacity), 1);
+                        AuiElements.setClass(ornament, "active", false);
+                        document.flushPendingStyleUpdates();
+                        Animation.updateStyle(ornament, ornament.getComputedStyle());
+                        context.check("removing the recipe stops the breath", !Animation.isActive(ornament));
+                        close(context, "idle opacity restores", Double.parseDouble(ornament.getComputedStyle().opacity), 0.45);
+                    } finally {
+                        document.remove();
+                    }
+                }
+            }
+        } finally {
+            Size.clearViewportOverride();
+        }
+        context.expect("theme checks release their documents", Document.getAll().size(), documents);
     }
 
     private record SlotGrid(String id, int columns, int rows, int left, int top, boolean playerInventory) {
@@ -95,7 +266,7 @@ public final class AuiGeometryVerifyProbes {
                     if (!context.check("slot page created: " + page.path(), document != null && document.body != null)) return;
                     assert document != null;
                     try (Document.ContextScope _ = Document.withContext(document)) {
-                        document.registerUaStylesheet("mxt_test/actual-global.css", resource("apricityui/apricity/global.css"));
+                        document.registerUaStylesheet(resource("apricityui/apricity/global.css"), "mxt_test/actual-global.css");
                         ContainerExpander.expand(document);
                         SlotContentRules.normalizeTemplate(document);
                         document.flushPendingStyleUpdates();
@@ -158,12 +329,7 @@ public final class AuiGeometryVerifyProbes {
     }
 
     private static String resource(String path) {
-        try (InputStream input = MiXianTu.class.getResourceAsStream("/assets/" + path)) {
-            if (input == null) throw new NoSuchElementException(path);
-            return new String(input.readAllBytes(), StandardCharsets.UTF_8);
-        } catch (IOException failure) {
-            throw new UncheckedIOException(failure);
-        }
+        return AuiTestResources.read(path);
     }
 
     private static void riftGeometry(ProbeContext context) {
