@@ -27,6 +27,7 @@ public final class MxtEntityActions {
     public static final DeferredHolder<MapCodec<? extends EntityAction>, MapCodec<SpawnSwordAuraAction>> SPAWN_SWORD_AURA = REGISTRY.register("spawn_sword_aura", () -> SpawnSwordAuraAction.CODEC);
     public static final DeferredHolder<MapCodec<? extends EntityAction>, MapCodec<ExplodeAction>> EXPLODE = REGISTRY.register("explode", () -> ExplodeAction.CODEC);
     public static final DeferredHolder<MapCodec<? extends EntityAction>, MapCodec<SpawnLightningAction>> SPAWN_LIGHTNING = REGISTRY.register("spawn_lightning", () -> SpawnLightningAction.CODEC);
+    public static final DeferredHolder<MapCodec<? extends EntityAction>, MapCodec<SpawnStormCloudAction>> SPAWN_STORM_CLOUD = REGISTRY.register("spawn_storm_cloud", () -> SpawnStormCloudAction.CODEC);
     public static final DeferredHolder<MapCodec<? extends EntityAction>, MapCodec<ModifyPillToxicityAction>> MODIFY_PILL_TOXICITY = REGISTRY.register("modify_pill_toxicity", () -> ModifyPillToxicityAction.CODEC);
     // The data pack's own way in and out of cultivation: the only other entry point is the player's key.
     public static final DeferredHolder<MapCodec<? extends EntityAction>, MapCodec<StartCultivatingAction>> CULTIVATE = REGISTRY.register("cultivate", () -> StartCultivatingAction.CODEC);

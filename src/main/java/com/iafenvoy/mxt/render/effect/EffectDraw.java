@@ -6,7 +6,15 @@ import org.jspecify.annotations.Nullable;
 
 // prepare runs outside a pass; render may only bind resources and submit geometry/composites.
 public interface EffectDraw {
-    enum Stage {OPAQUE_SURFACE, TRANSLUCENT_OVERLAY}
+    enum Stage {
+        OPAQUE_SURFACE,
+        TRANSLUCENT_OVERLAY,
+        SKY_VOLUME;
+
+        public boolean drawsAfterClouds(boolean separateTranslucency) {
+            return this == SKY_VOLUME && !separateTranslucency;
+        }
+    }
 
     default Stage stage() {
         return Stage.TRANSLUCENT_OVERLAY;

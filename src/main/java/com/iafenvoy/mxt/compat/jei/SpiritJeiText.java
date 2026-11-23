@@ -1,5 +1,6 @@
 package com.iafenvoy.mxt.compat.jei;
 
+import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.cost.builtin.AuraCost;
 import com.iafenvoy.mxt.screen.AuraDisplay;
 import com.iafenvoy.saturn.data.cost.Cost;
@@ -7,6 +8,7 @@ import com.iafenvoy.saturn.util.formula.NumberProvider;
 import com.iafenvoy.saturn.util.formula.number.Constant;
 import com.iafenvoy.saturn.util.formula.number.Expression;
 import net.minecraft.client.gui.Font;
+import net.minecraft.core.Holder;
 import net.minecraft.network.chat.Component;
 
 import java.util.ArrayList;
@@ -27,7 +29,7 @@ public final class SpiritJeiText {
         List<AuraEntry> entries = new ArrayList<>();
         for (Cost cost : costs)
             if (cost instanceof AuraCost(
-                    net.minecraft.core.Holder<com.iafenvoy.mxt.data.aura.Aura> aura, NumberProvider amount
+                    Holder<Aura> aura, NumberProvider amount
             ))
                 entries.add(new AuraEntry(AuraDisplay.of(aura), providerName(amount)));
         return List.copyOf(entries);

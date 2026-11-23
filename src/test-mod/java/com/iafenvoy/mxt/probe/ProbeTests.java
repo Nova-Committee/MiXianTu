@@ -87,6 +87,7 @@ public final class ProbeTests {
             AuiThemeVerifyProbes::probes,
             BlockAuraRefreshVerifyProbes::probes,
             LightBeamParticleVerifyProbes::probes,
+            StormCloudVerifyProbes::probes,
             WorldEffectsVerifyProbes::probes,
             ClosureVerifyProbes::probes,
             CostVerifyProbes::probes,

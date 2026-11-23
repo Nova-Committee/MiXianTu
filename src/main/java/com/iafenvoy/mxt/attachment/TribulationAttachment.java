@@ -7,12 +7,14 @@ import com.iafenvoy.saturn.util.AbstractChangeTrackable;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import net.minecraft.core.UUIDUtil;
 import net.minecraft.core.Holder;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.UUID;
 
 /**
  * The running tribulation: which definition accepted the attempt, the wind-up left, the beats of the run and the
@@ -25,28 +27,42 @@ public final class TribulationAttachment extends AbstractChangeTrackable {
             TimelineEntry.CODEC.listOf().lenientOptionalFieldOf("timeline", List.of()).forGetter(TribulationAttachment::beats),
             Codec.INT.lenientOptionalFieldOf("cursor", 0).forGetter(TribulationAttachment::cursor),
             DataStorage.CODEC.lenientOptionalFieldOf("state").forGetter(TribulationAttachment::state),
-            Codec.LONG.lenientOptionalFieldOf("windup", 0L).forGetter(TribulationAttachment::windup)
+            Codec.LONG.lenientOptionalFieldOf("windup", 0L).forGetter(TribulationAttachment::windup),
+            UUIDUtil.CODEC.optionalFieldOf("storm_cloud").forGetter(TribulationAttachment::stormCloud)
     ).apply(i, TribulationAttachment::new));
     private Optional<Holder<Tribulation>> tribulation;
     private final List<TimelineEntry> timeline;
     private int cursor;
     private Optional<DataStorage> state;
     private long windup;
+    private Optional<UUID> stormCloud;
 
     public TribulationAttachment() {
-        this(Optional.empty(), List.of(), 0, Optional.empty(), 0L);
+        this(Optional.empty(), List.of(), 0, Optional.empty(), 0L, Optional.empty());
     }
 
-    private TribulationAttachment(Optional<Holder<Tribulation>> tribulation, List<TimelineEntry> timeline, int cursor, Optional<DataStorage> state, long windup) {
+    private TribulationAttachment(Optional<Holder<Tribulation>> tribulation, List<TimelineEntry> timeline, int cursor,
+                                  Optional<DataStorage> state, long windup, Optional<UUID> stormCloud) {
         this.tribulation = tribulation;
         this.timeline = new ArrayList<>(timeline);
         this.cursor = cursor;
         this.state = state;
         this.windup = windup;
+        this.stormCloud = stormCloud;
     }
 
     public Optional<Holder<Tribulation>> tribulation() {
         return this.tribulation;
+    }
+
+    public Optional<UUID> stormCloud() {
+        return this.stormCloud;
+    }
+
+    public void setStormCloud(Optional<UUID> stormCloud) {
+        if (this.stormCloud.equals(stormCloud)) return;
+        this.stormCloud = stormCloud;
+        this.markDirty();
     }
 
     // Resolved when the run starts and only ever counting down, so it is what the run will really wait out.
@@ -110,6 +126,7 @@ public final class TribulationAttachment extends AbstractChangeTrackable {
         this.cursor = 0;
         this.state = Optional.empty();
         this.windup = Math.max(0L, windup);
+        this.stormCloud = Optional.empty();
         this.markDirty();
     }
 
@@ -119,6 +136,7 @@ public final class TribulationAttachment extends AbstractChangeTrackable {
         this.cursor = 0;
         this.state = Optional.empty();
         this.windup = 0L;
+        this.stormCloud = Optional.empty();
         this.markDirty();
     }
 

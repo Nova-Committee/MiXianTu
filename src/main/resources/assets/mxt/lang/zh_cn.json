@@ -548,6 +548,7 @@
   "curios.identifier.belt_item": "腰部物品",
   "death.attack.mxt.lifespan": "%1$s 寿元耗尽，坐化而去。",
   "entity.mxt.meteor": "流星",
+  "entity.mxt.storm_cloud": "雷云",
   "entity.mxt.soul": "灵魂体",
   "entity.mxt.sword_aura": "剑气",
   "failure.mxt.artifact.cannot_mount": "现在骑不上去",

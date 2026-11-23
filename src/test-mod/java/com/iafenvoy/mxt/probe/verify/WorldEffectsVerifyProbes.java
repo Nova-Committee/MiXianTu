@@ -3,6 +3,7 @@ package com.iafenvoy.mxt.probe.verify;
 import com.iafenvoy.mxt.particle.LightBeamParticleOptions;
 import com.iafenvoy.mxt.probe.Probe;
 import com.iafenvoy.mxt.probe.ProbeContext;
+import com.iafenvoy.mxt.render.effect.EffectDraw;
 import com.iafenvoy.mxt.render.effect.EffectFrame;
 import com.iafenvoy.mxt.render.effect.EffectTargetPool;
 import com.iafenvoy.mxt.render.particle.LightBeamParticleDraws;
@@ -24,7 +25,8 @@ public final class WorldEffectsVerifyProbes {
                 Probe.of("verify/world_effects/frame", WorldEffectsVerifyProbes::frame),
                 Probe.of("verify/world_effects/targets", WorldEffectsVerifyProbes::targets),
                 Probe.of("verify/world_effects/failures", WorldEffectsVerifyProbes::failures),
-                Probe.of("verify/world_effects/draw_order", WorldEffectsVerifyProbes::drawOrder));
+                Probe.of("verify/world_effects/draw_order", WorldEffectsVerifyProbes::drawOrder),
+                Probe.of("verify/world_effects/sky_stage", WorldEffectsVerifyProbes::skyStage));
     }
 
     private static void frame(ProbeContext context) {
@@ -239,5 +241,14 @@ public final class WorldEffectsVerifyProbes {
         context.expect("merged glow draws select the glow pipeline", draws.glow(0) && draws.glow(1), true);
         draws.build(List.of(), true);
         context.expect("an empty view clears previous draw commands", draws.size(), 0);
+    }
+
+    private static void skyStage(ProbeContext context) {
+        context.check("sky volumes on the main target wait until after vanilla clouds",
+                EffectDraw.Stage.SKY_VOLUME.drawsAfterClouds(false));
+        context.check("sky volumes in a separate particle target reach the vanilla sorter",
+                !EffectDraw.Stage.SKY_VOLUME.drawsAfterClouds(true));
+        context.check("ordinary overlays on the main target stay in the particle stage",
+                !EffectDraw.Stage.TRANSLUCENT_OVERLAY.drawsAfterClouds(false));
     }
 }

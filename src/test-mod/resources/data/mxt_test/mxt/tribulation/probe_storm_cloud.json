@@ -1,0 +1,14 @@
+{
+  "windup": 2,
+  "darken_sky": false,
+  "storm_cloud": {
+    "cloud_color": "#FF534065",
+    "lightning_color": "#FFFFAA44",
+    "thickness": 10.0,
+    "radius": 256.0,
+    "y": "124.5 + caster_health"
+  },
+  "timeline": [
+    { "type": "mxt:idle", "duration": 2 }
+  ]
+}

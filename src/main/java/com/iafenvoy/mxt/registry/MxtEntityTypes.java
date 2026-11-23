@@ -20,5 +20,8 @@ public final class MxtEntityTypes {
     public static final DeferredHolder<EntityType<?>, EntityType<ColoredLightningBolt>> COLORED_LIGHTNING = REGISTRY.registerEntityType("colored_lightning", ColoredLightningBolt::new, MobCategory.MISC, b -> b.noLootTable().noSave().sized(0.0F, 0.0F).clientTrackingRange(16).updateInterval(Integer.MAX_VALUE));
     public static final DeferredHolder<EntityType<?>, EntityType<SwordAuraEntity>> SWORD_AURA = REGISTRY.registerEntityType("sword_aura", SwordAuraEntity::new, MobCategory.MISC, b -> b.noLootTable().sized(0.2F, 0.2F).clientTrackingRange(32).updateInterval(1));
     public static final DeferredHolder<EntityType<?>, EntityType<MeteorEntity>> METEOR = REGISTRY.registerEntityType("meteor", MeteorEntity::new, MobCategory.MISC, b -> b.noLootTable().fireImmune().sized(0.2F, 0.2F).clientTrackingRange(32).updateInterval(1));
+    public static final DeferredHolder<EntityType<?>, EntityType<StormCloudEntity>> STORM_CLOUD = REGISTRY.registerEntityType(
+            "storm_cloud", StormCloudEntity::new, MobCategory.MISC, b -> b.noLootTable().fireImmune()
+                    .sized(0.0F, 0.0F).clientTrackingRange(StormCloudEntity.TRACKING_CHUNKS).updateInterval(2));
     public static final DeferredHolder<EntityType<?>, EntityType<TalismanProjectileEntity>> TALISMAN_PROJECTILE = REGISTRY.registerEntityType("talisman_projectile", TalismanProjectileEntity::new, MobCategory.MISC, b -> b.noLootTable().sized(0.25F, 0.25F).clientTrackingRange(8).updateInterval(1));
 }

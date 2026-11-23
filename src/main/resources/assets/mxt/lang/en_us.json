@@ -548,6 +548,7 @@
   "curios.identifier.belt_item": "Belt Item",
   "death.attack.mxt.lifespan": "%1$s's lifespan ran out and they passed away.",
   "entity.mxt.meteor": "Meteor",
+  "entity.mxt.storm_cloud": "Storm Cloud",
   "entity.mxt.soul": "Soul",
   "entity.mxt.sword_aura": "Sword Aura",
   "failure.mxt.artifact.cannot_mount": "it cannot be ridden right now",

@@ -1,0 +1,11 @@
+{
+  "storm_cloud": {},
+  "timeline": [
+    {
+      "type": "mxt:wait_for",
+      "condition": { "type": "mxt:chance", "chance": 0 },
+      "timeout": 2,
+      "on_timeout": "fail"
+    }
+  ]
+}

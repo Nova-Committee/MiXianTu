@@ -1,7 +1,9 @@
 package com.iafenvoy.mxt.runtime.tribulation;
 
 import com.iafenvoy.mxt.attachment.TribulationAttachment;
+import com.iafenvoy.mxt.data.StormCloudOptions;
 import com.iafenvoy.mxt.data.Tribulation;
+import com.iafenvoy.mxt.entity.StormCloudEntity;
 import com.iafenvoy.mxt.event.TribulationEvent.*;
 import com.iafenvoy.mxt.runtime.MxtProfilerSources;
 import com.iafenvoy.mxt.runtime.resulting.failures.TribulationFailure;
@@ -22,10 +24,14 @@ import com.iafenvoy.saturn.util.HolderHelper;
 import com.iafenvoy.saturn.util.formula.FormulaContext;
 import com.mojang.logging.LogUtils;
 import net.minecraft.core.Holder;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.common.NeoForge;
 
 import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 
 /**
  * Consumer for a persisted tribulation timeline: a run is installed by copying the definition's timeline into the
@@ -80,6 +86,7 @@ public final class TribulationService {
             // Nothing is consumed here: the timeline is copied into the attachment, its wind-up runs down first, and
             // its first entry begins on the tick after that.
             data.start(tribulation, timeline, windup);
+            updateStormCloud(entity, data, definition, runContext);
             NeoForge.EVENT_BUS.post(new StartPost(data, tribulation));
             return Result.success();
         }
@@ -103,14 +110,17 @@ public final class TribulationService {
                 if (data.tribulation().isPresent()) data.clear();
                 return Result.success(State.IDLE);
             }
+            Tribulation definition = tribulation.value();
+            boolean windingUp = data.windup() > 0L;
+            FormulaContext runContext = windingUp && definition.stormCloud().isEmpty()
+                    ? context : tribulationContext(entity, context);
+            updateStormCloud(entity, data, definition, runContext);
             // The wind-up is the run counting itself in: the timeline has not started, so nothing is consumed, no
             // beat begins and no state is written while it lasts.
-            if (data.windup() > 0L) {
+            if (windingUp) {
                 data.tickWindup();
                 return Result.success(State.RUNNING);
             }
-            Tribulation definition = tribulation.value();
-            FormulaContext runContext = tribulationContext(entity, context);
             double scale = effectiveScale(definition, runContext);
             // The head of the cursor is the beat being consumed. A beat that finishes moves on by one; a branch beat
             // leaves a target behind, which is the only thing that can send the run backwards.
@@ -157,6 +167,26 @@ public final class TribulationService {
         }
     }
 
+    private static void updateStormCloud(LivingEntity entity, TribulationAttachment data, Tribulation definition, FormulaContext context) {
+        Tribulation.StormCloud settings = definition.stormCloud().orElse(null);
+        if (settings == null || !entity.isAlive() || !(entity.level() instanceof ServerLevel level)) return;
+        if (data.stormCloud().map(level::getEntity).orElse(null) instanceof StormCloudEntity existing
+                && existing.isActiveTribulationCloudFor(entity)) {
+            double y = settings.resolveY(context, existing.getY());
+            if (y != existing.getY()) existing.setPos(existing.getX(), y, existing.getZ());
+            return;
+        }
+
+        StormCloudOptions options = settings.appearance().options(settings.radius(), StormCloudOptions.DEFAULT.lifetime());
+        double y = settings.resolveY(context, Tribulation.StormCloud.DEFAULT_Y);
+        StormCloudEntity cloud = StormCloudEntity.create(level, new Vec3(entity.getX(), y, entity.getZ()), options, entity);
+        if (cloud == null) return;
+        cloud.bindToTribulation();
+        Optional<UUID> previous = data.stormCloud();
+        Optional<UUID> id = Optional.of(cloud.getUUID());
+        data.setStormCloud(id);
+        if (!level.addFreshEntity(cloud) && data.stormCloud().equals(id)) data.setStormCloud(previous);
+    }
 
     public enum State {IDLE, RUNNING, COMPLETED, FAILED}
 }

@@ -41,6 +41,7 @@ public final class MxtRenderers {
         event.registerEntityRenderer(MxtEntityTypes.COLORED_LIGHTNING.get(), ColoredLightningBoltRenderer::new);
         event.registerEntityRenderer(MxtEntityTypes.SWORD_AURA.get(), SwordAuraRenderer::new);
         event.registerEntityRenderer(MxtEntityTypes.METEOR.get(), MeteorRenderer::new);
+        event.registerEntityRenderer(MxtEntityTypes.STORM_CLOUD.get(), NoopRenderer::new);
         // The mount's own renderer never draws a mount by itself: it asks this registry, so the default look and the
         // optional GeckoLib one are two registrations rather than two code paths.
         MountRenderers.registerBuiltins();

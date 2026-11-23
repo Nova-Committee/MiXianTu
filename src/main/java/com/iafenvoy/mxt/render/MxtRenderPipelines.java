@@ -67,6 +67,24 @@ public final class MxtRenderPipelines {
             .withCull(true).build();
     public static final RenderPipeline LIGHT_BEAM_DEPTH = lightBeamDepth("light_beam_depth", CompareOp.LESS_THAN_OR_EQUAL).build();
     public static final RenderPipeline LIGHT_BEAM_GLOW_DEPTH = lightBeamDepth("light_beam_glow_depth", CompareOp.ALWAYS_PASS).build();
+    public static final RenderPipeline STORM_CLOUD = stormCloud("storm_cloud", false, false);
+    public static final RenderPipeline STORM_CLOUD_DEPTH = stormCloud("storm_cloud_depth", false, true);
+    public static final RenderPipeline STORM_CLOUD_SORTED = stormCloud("storm_cloud_sorted", true, false);
+    public static final RenderPipeline STORM_CLOUD_SORTED_DEPTH = stormCloud("storm_cloud_sorted_depth", true, true);
+
+    private static RenderPipeline stormCloud(String name, boolean writeDepth, boolean sampleDepth) {
+        RenderPipeline.Builder builder = RenderPipeline.builder(RenderPipelines.MATRICES_FOG_SNIPPET)
+                .withLocation(id("pipeline/" + name))
+                .withVertexShader(id("core/storm_cloud"))
+                .withFragmentShader(id("core/storm_cloud"))
+                .withUniform("StormCloudInstances", UniformType.UNIFORM_BUFFER)
+                .withVertexFormat(DefaultVertexFormat.POSITION, VertexFormat.Mode.TRIANGLES)
+                .withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT_PREMULTIPLIED_ALPHA))
+                .withDepthStencilState(new DepthStencilState(CompareOp.LESS_THAN_OR_EQUAL, writeDepth))
+                .withCull(true);
+        if (sampleDepth) builder.withShaderDefine("MXT_SCENE_DEPTH").withSampler("SceneDepth");
+        return builder.build();
+    }
 
     private static RenderPipeline riftPipeline(String shader) {
         return RenderPipeline.builder(RenderPipelines.MATRICES_PROJECTION_SNIPPET, RenderPipelines.GLOBALS_SNIPPET)
@@ -130,5 +148,9 @@ public final class MxtRenderPipelines {
         event.registerPipeline(LIGHT_BEAM);
         event.registerPipeline(LIGHT_BEAM_DEPTH);
         event.registerPipeline(LIGHT_BEAM_GLOW_DEPTH);
+        event.registerPipeline(STORM_CLOUD);
+        event.registerPipeline(STORM_CLOUD_DEPTH);
+        event.registerPipeline(STORM_CLOUD_SORTED);
+        event.registerPipeline(STORM_CLOUD_SORTED_DEPTH);
     }
 }

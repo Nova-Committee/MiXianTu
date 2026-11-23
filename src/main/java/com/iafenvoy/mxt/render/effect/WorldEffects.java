@@ -76,27 +76,31 @@ public final class WorldEffects implements AutoCloseable {
         frame.opaqueReached = true;
         RenderTarget main = Minecraft.getInstance().getMainRenderTarget();
         if (frame.opaqueSurface() && EffectTargets.valid(main)) frame.opaque.drain(draw -> frame.render(draw, main));
-        frame.state.capture(() -> {
-            if (!MxtClientConfig.INSTANCE.effects.sceneDepth.getValue() || frame.panoramic) return null;
-            try {
-                SceneDepth depth = SceneDepth.capture(frame.owner.targets, Minecraft.getInstance().getMainRenderTarget());
-                if (depth != null) frame.owner.captureFailureLogged = false;
-                return depth;
-            } catch (RuntimeException failure) {
-                if (!frame.owner.captureFailureLogged)
-                    MiXianTu.LOGGER.warn("World effect scene depth is unavailable; using basic rendering", failure);
-                frame.owner.captureFailureLogged = true;
-                return null;
-            }
-        });
+        frame.state.capture(() -> frame.captureDepth(main));
     }
 
     @SubscribeEvent
     public static void translucent(RenderLevelStageEvent.AfterTranslucentParticles event) {
-        try (Frame frame = event.getLevelRenderState().getRenderData(FRAME)) {
-            if (frame == null || frame.renderer != event.getLevelRenderer() || !frame.active()) return;
-            RenderTarget target = EffectTargets.particles(event.getLevelRenderer());
-            if (target != null) frame.state.drain(draw -> frame.render(draw, target));
+        Frame frame = event.getLevelRenderState().getRenderData(FRAME);
+        if (frame == null || frame.renderer != event.getLevelRenderer() || !frame.active()) return;
+        RenderTarget main = Minecraft.getInstance().getMainRenderTarget();
+        RenderTarget particles = frame.renderer.getParticlesTarget();
+        RenderTarget target = particles == null ? main : particles;
+        boolean deferSky = frame.sky != null && EffectDraw.Stage.SKY_VOLUME.drawsAfterClouds(target != main);
+        try (Frame _ = deferSky ? null : frame) {
+            if (!EffectTargets.valid(target)) return;
+            frame.state.drain(draw -> frame.render(draw, target));
+            if (!deferSky) frame.renderSky(target);
+        }
+    }
+
+    @SubscribeEvent
+    public static void afterClouds(RenderLevelStageEvent.AfterWeather event) {
+        Frame frame = event.getLevelRenderState().getRenderData(FRAME);
+        if (frame == null || frame.renderer != event.getLevelRenderer() || !frame.active() || frame.sky == null) return;
+        try (frame) {
+            RenderTarget main = Minecraft.getInstance().getMainRenderTarget();
+            if (EffectTargets.valid(main)) frame.renderSky(main);
         }
     }
 
@@ -128,6 +132,7 @@ public final class WorldEffects implements AutoCloseable {
         private final Vec3 camera;
         private final boolean panoramic;
         private boolean opaqueSubmitted, opaqueReached;
+        private @Nullable EffectFrame<EffectDraw, SceneDepth> sky;
         private @Nullable ExtractLevelRenderStateEvent extraction;
 
         private Frame(ExtractLevelRenderStateEvent event) {
@@ -161,12 +166,19 @@ public final class WorldEffects implements AutoCloseable {
         }
 
         public boolean submit(EffectDraw draw) {
+            if (!this.active()) return false;
             if (draw.stage() == EffectDraw.Stage.OPAQUE_SURFACE) {
-                boolean accepted = this.active() && this.opaqueSurface() && !draw.needsDepth() && this.opaque.submit(draw);
+                boolean accepted = this.opaqueSurface() && !draw.needsDepth() && this.opaque.submit(draw);
                 this.opaqueSubmitted |= accepted;
                 return accepted;
             }
-            return this.active() && (!draw.needsDepth() || this.state.requestDepth()) && this.state.submit(draw);
+            EffectFrame<EffectDraw, SceneDepth> queue = this.state;
+            if (draw.stage() == EffectDraw.Stage.SKY_VOLUME) {
+                if (this.sky == null)
+                    this.sky = new EffectFrame<>(this.view, this.owner.generation, e -> MiXianTu.LOGGER.error("Failed to finish a sky effect view", e));
+                queue = this.sky;
+            }
+            return (!draw.needsDepth() || queue.requestDepth()) && queue.submit(draw);
         }
 
         public @Nullable EffectTargets targets() {
@@ -179,6 +191,32 @@ public final class WorldEffects implements AutoCloseable {
             if (target != main && target != this.renderer.getParticlesTarget()) return null;
             SceneDepth depth = this.state.resource();
             return depth != null && depth.matches(main, target) ? depth : null;
+        }
+
+        public @Nullable SceneDepth skyDepth(RenderTarget target) {
+            if (!this.active() || this.sky == null) return null;
+            SceneDepth depth = this.sky.resource();
+            return depth != null && depth.matches(target, target) ? depth : null;
+        }
+
+        private @Nullable SceneDepth captureDepth(RenderTarget source) {
+            if (!MxtClientConfig.INSTANCE.effects.sceneDepth.getValue() || this.panoramic) return null;
+            try {
+                SceneDepth depth = SceneDepth.capture(this.owner.targets, source);
+                if (depth != null) this.owner.captureFailureLogged = false;
+                return depth;
+            } catch (RuntimeException failure) {
+                if (!this.owner.captureFailureLogged)
+                    MiXianTu.LOGGER.warn("World effect scene depth is unavailable; using basic rendering", failure);
+                this.owner.captureFailureLogged = true;
+                return null;
+            }
+        }
+
+        private void renderSky(RenderTarget target) {
+            if (!this.active() || this.sky == null) return;
+            this.sky.capture(() -> this.captureDepth(target));
+            this.sky.drain(draw -> this.render(draw, target));
         }
 
         private void render(EffectDraw draw, RenderTarget target) {
@@ -203,6 +241,7 @@ public final class WorldEffects implements AutoCloseable {
             this.extraction = null;
             this.opaque.close();
             this.state.close();
+            if (this.sky != null) this.sky.close();
             this.owner.frames.remove(this);
         }
     }

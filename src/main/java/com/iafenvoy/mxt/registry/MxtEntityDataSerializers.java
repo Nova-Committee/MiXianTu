@@ -1,5 +1,6 @@
 package com.iafenvoy.mxt.registry;
 
+import com.iafenvoy.mxt.data.StormCloudOptions;
 import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.talisman.Talisman;
@@ -27,4 +28,6 @@ public final class MxtEntityDataSerializers {
     public static final DeferredHolder<EntityDataSerializer<?>, EntityDataSerializer<Optional<Holder<Aura>>>> AURA = REGISTRY.register("aura", () -> EntityDataSerializer.forValueType(ByteBufCodecs.optional(Aura.STREAM_CODEC)));
     public static final DeferredHolder<EntityDataSerializer<?>, EntityDataSerializer<Optional<Holder<Talisman>>>> TALISMAN = REGISTRY.register("talisman", () -> EntityDataSerializer.forValueType(ByteBufCodecs.optional(Talisman.STREAM_CODEC)));
     public static final DeferredHolder<EntityDataSerializer<?>, EntityDataSerializer<Optional<SoulAppearance>>> SOUL_APPEARANCE = REGISTRY.register("soul_appearance", () -> EntityDataSerializer.forValueType(ByteBufCodecs.optional(SoulAppearance.STREAM_CODEC)));
+    public static final DeferredHolder<EntityDataSerializer<?>, EntityDataSerializer<StormCloudOptions>> STORM_CLOUD_OPTIONS =
+            REGISTRY.register("storm_cloud_options", () -> EntityDataSerializer.forValueType(StormCloudOptions.STREAM_CODEC));
 }
