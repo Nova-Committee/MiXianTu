@@ -103,6 +103,7 @@ public final class ProbeTests {
             CultivationDistributionVerifyProbes::probes,
             TickDispatcherVerifyProbes::probes,
             EconomyVerifyProbes::probes,
+            SecurityBoundaryProbes::probes,
             MinorStageVerifyProbes::probes,
             ServerProfilingVerifyProbes::probes,
             ProfilerGuiVerifyProbes::probes,

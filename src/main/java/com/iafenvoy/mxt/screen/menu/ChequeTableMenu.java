@@ -35,6 +35,7 @@ import java.util.OptionalLong;
 public final class ChequeTableMenu extends ApricityContainerMenu {
     private final Setup setup;
     private final ContainerLevelAccess access;
+    private final Player owner;
 
     public ChequeTableMenu(int containerId, Inventory inventory) {
         this(containerId, inventory, ContainerLevelAccess.NULL);
@@ -47,6 +48,7 @@ public final class ChequeTableMenu extends ApricityContainerMenu {
     private ChequeTableMenu(int containerId, Inventory inventory, ContainerLevelAccess access, Setup setup) {
         super(containerId, inventory, setup.page().layout(), setup.page().sources(), Map.of(), null);
         this.access = access;
+        this.owner = inventory.player;
         this.setup = setup;
     }
 
@@ -60,6 +62,7 @@ public final class ChequeTableMenu extends ApricityContainerMenu {
     }
 
     public boolean checkIn(@NotNull Player player) {
+        if (!this.maySubmit(player)) return false;
         try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.ECONOMY)) {
             ItemStack blank = this.setup.chequeInput().getItem(0);
             if (!blank.is(MxtItems.CHEQUE.get()) || blank.getOrDefault(MxtDataComponents.CHEQUE, ChequeComponent.EMPTY).value() != 0L)
@@ -76,6 +79,7 @@ public final class ChequeTableMenu extends ApricityContainerMenu {
     }
 
     public boolean checkOut(@NotNull Player player) {
+        if (!this.maySubmit(player)) return false;
         try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.ECONOMY)) {
             ItemStack cheque = this.setup.chequeInput().getItem(0);
             ChequeComponent data = cheque.getOrDefault(MxtDataComponents.CHEQUE, ChequeComponent.EMPTY);
@@ -106,9 +110,15 @@ public final class ChequeTableMenu extends ApricityContainerMenu {
         return original;
     }
 
+    private boolean maySubmit(Player player) {
+        return !player.level().isClientSide() && player.containerMenu == this && this.stillValid(player);
+    }
+
     @Override
     public boolean stillValid(@NonNull Player player) {
-        return stillValid(this.access, player, MxtBlocks.CHEQUE_TABLE.get());
+        return player == this.owner && (player.level().isClientSide() || player.isAlive() && !player.isSpectator()
+                && this.access.evaluate((level, pos) -> player.level() == level, false)
+                && stillValid(this.access, player, MxtBlocks.CHEQUE_TABLE.get()));
     }
 
     @Override

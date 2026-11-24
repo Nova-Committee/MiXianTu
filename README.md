@@ -38,7 +38,7 @@ the changelog.**
 - **Items**: materials such as Lesser to Supreme Spirit Stones, Spirit Iron, Spirit Wood and Cinnabar; generic items
   such as Spirit Ring, Spirit Stone Bag, Spirit Vessel, Identification Mirror, Technique Book, Jade Slip, Blank Talisman
   Paper, Talisman Brush, Talisman, Contract Scroll, Beast Taming Bell, Spirit Beast Bag, Formation Plate, Wooden and
-  Stone Tokens, Secret Realm Token and Recall Talisman.
+  Stone Tokens, and Secret Realm Token.
 - **Talismans**: inscribed carriers store aura and invoke their abilities when charged or used. Definitions control
   targeting, costs, consumption and durability; shared brushes, pigments and blank paper are included.
 - **Display Stand**: displays items and activates charged talismans from the stand's own position.

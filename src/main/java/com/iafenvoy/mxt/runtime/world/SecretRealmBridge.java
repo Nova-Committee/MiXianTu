@@ -28,6 +28,7 @@ public final class SecretRealmBridge {
     @SubscribeEvent
     public static void onServerStopped(ServerStoppedEvent event) {
         SecretRealmRegistry.clear();
+        RuntimeDimensionService.clear();
     }
 
     @SubscribeEvent

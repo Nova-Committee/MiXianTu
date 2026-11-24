@@ -11,9 +11,10 @@ import org.jspecify.annotations.NonNull;
 /**
  * A cheque table request: true signs deposited currency, false redeems a cheque.
  */
-public record ChequeActionC2SPayload(boolean checkIn) implements CustomPacketPayload {
+public record ChequeActionC2SPayload(int containerId, boolean checkIn) implements CustomPacketPayload {
     public static final Type<ChequeActionC2SPayload> TYPE = new Type<>(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "cheque_action_c2s"));
     public static final StreamCodec<RegistryFriendlyByteBuf, ChequeActionC2SPayload> STREAM_CODEC = StreamCodec.composite(
+            ByteBufCodecs.VAR_INT, ChequeActionC2SPayload::containerId,
             ByteBufCodecs.BOOL, ChequeActionC2SPayload::checkIn,
             ChequeActionC2SPayload::new);
 

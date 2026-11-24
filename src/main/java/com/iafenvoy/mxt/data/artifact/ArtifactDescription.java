@@ -198,8 +198,12 @@ public final class ArtifactDescription {
         int slots = ArtifactService.storageSlots(stack, ability, formula);
         // A slot count that evaluates to nothing declares no inventory, so there is nothing to announce.
         if (slots <= 0) return;
+        if (ability.value().type() instanceof StorageAbilityType storage && storage.shared()) {
+            lines.add(Component.translatable("tooltip.mxt.artifact.shared_storage", slots).withStyle(ChatFormatting.GOLD));
+            return;
+        }
         ContainerDataStorage contents = ItemStorageService.get(stack, ability, ContainerDataStorage.class).orElse(null);
-        int used = contents == null ? 0 : (int) contents.contents().stream().filter(value -> !value.isEmpty()).count();
+        int used = contents == null ? 0 : (int) contents.contents().stream().limit(slots).filter(value -> !value.isEmpty()).count();
         lines.add(Component.translatable("tooltip.mxt.artifact.storage", used, slots).withStyle(ChatFormatting.GOLD));
     }
 

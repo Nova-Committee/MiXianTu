@@ -21,6 +21,10 @@ import org.slf4j.Logger;
 
 import java.io.IOException;
 import java.util.Map;
+import java.util.HashMap;
+import java.util.Collections;
+import java.util.IdentityHashMap;
+import java.util.Set;
 import java.util.Optional;
 
 /**
@@ -29,6 +33,17 @@ import java.util.Optional;
  */
 public final class RuntimeDimensionService {
     private static final Logger LOGGER = LogUtils.getLogger();
+    private static final Set<ServerLevel> OWNED = Collections.newSetFromMap(new IdentityHashMap<>());
+    private static final Map<ResourceKey<Level>, ServerLevel> CLOSING = new HashMap<>();
+
+    static boolean owns(ServerLevel level) {
+        return OWNED.contains(level);
+    }
+
+    static void clear() {
+        OWNED.clear();
+        CLOSING.clear();
+    }
 
     private RuntimeDimensionService() {
     }
@@ -39,7 +54,8 @@ public final class RuntimeDimensionService {
             Map<ResourceKey<Level>, ServerLevel> worlds = server.forgeGetWorldMap();
             synchronized (worlds) {
                 ServerLevel existing = worlds.get(key);
-                if (existing != null) return Optional.of(existing);
+                if (existing != null) return owns(existing) ? Optional.of(existing) : Optional.empty();
+                if (CLOSING.containsKey(key) || !SecretRealmGenerationService.managed(server, key)) return Optional.empty();
                 try {
                     WorldData worldData = server.getWorldData();
                     ServerLevelData properties = new DerivedLevelData(worldData, worldData.overworldData());
@@ -51,6 +67,7 @@ public final class RuntimeDimensionService {
                             properties, key, stem, worldData.isDebugWorld(), biomeSeed,
                             ImmutableList.of(), false);
                     worlds.put(key, level);
+                    OWNED.add(level);
                     server.markWorldsDirty();
                     return Optional.of(level);
                 } catch (Exception exception) {
@@ -61,43 +78,51 @@ public final class RuntimeDimensionService {
         }
     }
 
-    // The overworld and dimensions with players are deliberately never removed.
     @SuppressWarnings("deprecation")
     public static boolean unload(MinecraftServer server, ResourceKey<Level> key) {
+        return unload(server, key, false);
+    }
+
+    private static boolean unload(MinecraftServer server, ResourceKey<Level> key, boolean discard) {
         try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.SECRET_REALM)) {
-            if (Level.OVERWORLD.equals(key)) return false;
+            if (!SecretRealmGenerationService.managed(server, key)) return false;
             Map<ResourceKey<Level>, ServerLevel> worlds = server.forgeGetWorldMap();
             synchronized (worlds) {
-                ServerLevel level = worlds.get(key);
-                if (level == null || !level.players().isEmpty()) return false;
-                worlds.remove(key);
-                server.markWorldsDirty();
-                // Closing directly skips MinecraftServer's own shutdown, which announces each level before closing
-                // it; listeners that only follow the event would otherwise keep this level alive.
-                NeoForge.EVENT_BUS.post(new LevelEvent.Unload(level));
-                try {
-                    level.close();
-                } catch (IOException exception) {
-                    LOGGER.warn("Failed to close runtime dimension {}", key.identifier(), exception);
+                ServerLevel pending = CLOSING.get(key);
+                ServerLevel live = worlds.get(key);
+                if (live != null) {
+                    if (pending != null || !owns(live) || !live.players().isEmpty()) return false;
+                    if (!discard) {
+                        try {
+                            live.save(null, true, live.noSave);
+                        } catch (RuntimeException exception) {
+                            LOGGER.warn("Failed to save runtime dimension {}", key.identifier(), exception);
+                            return false;
+                        }
+                    }
+                    if (discard) live.noSave = true;
+                    CLOSING.put(key, live);
+                    worlds.remove(key);
+                    server.markWorldsDirty();
+                    pending = live;
                 }
+                if (pending == null) return true;
+                if (discard) pending.noSave = true;
+                try {
+                    if (live != null) NeoForge.EVENT_BUS.post(new LevelEvent.Unload(live));
+                    pending.close();
+                } catch (IOException | RuntimeException exception) {
+                    LOGGER.warn("Failed to close runtime dimension {}", key.identifier(), exception);
+                    return false;
+                }
+                CLOSING.remove(key);
+                OWNED.remove(pending);
                 return true;
             }
         }
     }
 
-    // The level is silenced before it closes, otherwise closing it would write the very region files that are
-    // about to be removed.
     public static boolean delete(MinecraftServer server, ResourceKey<Level> key) {
-        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.SECRET_REALM)) {
-            if (Level.OVERWORLD.equals(key)) return false;
-            ServerLevel level = server.getLevel(key);
-            if (level != null) {
-                if (!level.players().isEmpty()) return false;
-                level.noSave = true;
-                unload(server, key);
-            }
-            SecretRealmGenerationService.clearData(server, key);
-            return true;
-        }
+        return unload(server, key, true) && SecretRealmGenerationService.clearData(server, key);
     }
 }

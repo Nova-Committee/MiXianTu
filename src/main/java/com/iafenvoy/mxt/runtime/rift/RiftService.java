@@ -164,7 +164,7 @@ public final class RiftService {
         try (trial) {
             for (RiftTemplate source : templates) {
                 if (!keys.add(source.key())) return false;
-                UUID id = UUID.nameUUIDFromBytes((identity + "/" + source.key()).getBytes(StandardCharsets.UTF_8));
+                UUID id = layoutId(identity, source);
                 if (world(level).location(id) != null) continue;
                 RiftPlacement p = source.placement();
                 RiftTemplate resolved = new RiftTemplate(source.key(), new RiftPlacement(
@@ -187,6 +187,14 @@ public final class RiftService {
             }
             return true;
         }
+    }
+
+    public static void removeLayout(ServerLevel level, String identity, List<RiftTemplate> templates) {
+        for (RiftTemplate template : templates) remove(level, layoutId(identity, template));
+    }
+
+    private static UUID layoutId(String identity, RiftTemplate template) {
+        return UUID.nameUUIDFromBytes((identity + "/" + template.key()).getBytes(StandardCharsets.UTF_8));
     }
 
     private static long deadline(long now, long duration) {

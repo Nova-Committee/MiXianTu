@@ -26,8 +26,8 @@ public final class ChequeTableScreen extends AuiContainerScreen<ChequeTableMenu>
         // bottom one checks currency in.
         Element checkOut = this.getOrThrow("check_out");
         Element checkIn = this.getOrThrow("check_in");
-        this.click(checkOut, () -> ClientPacketDistributor.sendToServer(new ChequeActionC2SPayload(false)));
-        this.click(checkIn, () -> ClientPacketDistributor.sendToServer(new ChequeActionC2SPayload(true)));
+        this.click(checkOut, () -> ClientPacketDistributor.sendToServer(new ChequeActionC2SPayload(this.menu.containerId, false)));
+        this.click(checkIn, () -> ClientPacketDistributor.sendToServer(new ChequeActionC2SPayload(this.menu.containerId, true)));
         this.text(this.getOrThrow("title"), this.getTitle());
     }
 }

@@ -6,7 +6,8 @@
     "mxt_test:soul_power": 25
   },
   "abilities": [
-    "mxt_test:jade_storage"
+    "mxt_test:jade_storage",
+    "mxt_test:jade_shared_storage"
   ],
   "curios_equipable": true,
   "element": ["#mxt_test:basic"],

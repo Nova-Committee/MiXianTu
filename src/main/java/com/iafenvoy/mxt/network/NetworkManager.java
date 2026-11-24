@@ -21,7 +21,7 @@ import net.neoforged.neoforge.network.registration.PayloadRegistrar;
 public final class NetworkManager {
     @SubscribeEvent
     public static void registerPayloads(RegisterPayloadHandlersEvent event) {
-        PayloadRegistrar registrar = event.registrar("1")
+        PayloadRegistrar registrar = event.registrar("3")
                 .playToServer(RiftEditC2SPayload.TYPE, RiftEditC2SPayload.STREAM_CODEC, new MainThreadPayloadHandler<>(RiftEditorService::handle))
                 .playToServer(ProfilerSubscriptionC2SPayload.TYPE, ProfilerSubscriptionC2SPayload.STREAM_CODEC, new MainThreadPayloadHandler<>(ServerNetworkHandler::onProfilerSubscription))
                 .playToServer(ChequeActionC2SPayload.TYPE, ChequeActionC2SPayload.STREAM_CODEC, new MainThreadPayloadHandler<>(ServerNetworkHandler::onChequeAction))

@@ -17,12 +17,17 @@ import java.util.Optional;
  * component means whatever the item says (pristine stone is full, untouched carrier is empty); an empty map is a
  * third thing, a store that was drained.
  */
-public record SpiritStorageComponent(Object2DoubleMap<Holder<Aura>> amounts) {
+public record SpiritStorageComponent(Object2DoubleMap<Holder<Aura>> amounts, boolean perItem) {
     public static final SpiritStorageComponent EMPTY = new SpiritStorageComponent(Object2DoubleMaps.emptyMap());
     public static final Codec<SpiritStorageComponent> CODEC = RecordCodecBuilder.create(i -> i.group(
             CollectionCodecs.doubleMap(Aura.CODEC).optionalFieldOf("amounts", Object2DoubleMaps.emptyMap())
-                    .forGetter(SpiritStorageComponent::amounts)
+                    .forGetter(SpiritStorageComponent::amounts),
+            Codec.BOOL.optionalFieldOf("per_item", false).forGetter(SpiritStorageComponent::perItem)
     ).apply(i, SpiritStorageComponent::new));
+
+    public SpiritStorageComponent(Object2DoubleMap<Holder<Aura>> amounts) {
+        this(amounts, false);
+    }
 
     public SpiritStorageComponent {
         Object2DoubleMap<Holder<Aura>> kept = new Object2DoubleOpenHashMap<>();
@@ -34,7 +39,7 @@ public record SpiritStorageComponent(Object2DoubleMap<Holder<Aura>> amounts) {
             // never written to are told apart by the component's presence rather than by a zero inside it.
             if (amount > 0.0D) kept.put(aura, amount);
         });
-        amounts = kept;
+        amounts = Object2DoubleMaps.unmodifiable(kept);
     }
 
     public double get(Holder<Aura> aura) {
@@ -51,7 +56,14 @@ public record SpiritStorageComponent(Object2DoubleMap<Holder<Aura>> amounts) {
         Object2DoubleMap<Holder<Aura>> next = new Object2DoubleOpenHashMap<>(this.amounts);
         if (amount == 0.0D) next.removeDouble(aura);
         else next.put(aura, amount);
-        return new SpiritStorageComponent(next);
+        return new SpiritStorageComponent(next, this.perItem);
+    }
+
+    public SpiritStorageComponent normalize(int count) {
+        if (this.perItem) return this;
+        Object2DoubleMap<Holder<Aura>> next = new Object2DoubleOpenHashMap<>();
+        this.amounts.forEach((aura, amount) -> next.put(aura, amount / Math.max(1, count)));
+        return new SpiritStorageComponent(next, true);
     }
 
     // Empty when the store holds nothing or names several auras; an item that stores several answers for itself.

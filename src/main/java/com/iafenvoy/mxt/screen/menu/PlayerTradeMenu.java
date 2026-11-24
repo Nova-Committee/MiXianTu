@@ -30,6 +30,9 @@ public final class PlayerTradeMenu extends ApricityContainerMenu {
      */
     private static final int OFFER_SLOTS = PlayerTradeService.OFFER_SLOTS;
     private final Component partnerName;
+    private final Setup setup;
+    private final boolean serverSide;
+    private final OfferRevision offer = new OfferRevision();
     private final DataSlot partnerAccepted = DataSlot.standalone();
     // Both sides are read back from here rather than kept as screen state: a change to either offer has to be able
     // to clear a confirmation that was already given.
@@ -51,7 +54,33 @@ public final class PlayerTradeMenu extends ApricityContainerMenu {
         this.partnerName = partnerName;
         this.addDataSlot(this.partnerAccepted);
         this.addDataSlot(this.ownAccepted);
+        this.setup = setup;
+        this.serverSide = !inventory.player.level().isClientSide();
+        this.offer.segments.forEach(this::addDataSlot);
+        this.refreshOffer();
     }
+
+    private void refreshOffer() {
+        if (this.serverSide) this.offer.refresh(this.setup.ownOffer(), this.setup.partnerOffer());
+    }
+
+    @Override
+    public void broadcastChanges() {
+        this.refreshOffer();
+        super.broadcastChanges();
+    }
+
+    @Override
+    public void sendAllDataToRemote() {
+        this.refreshOffer();
+        super.sendAllDataToRemote();
+    }
+
+    public long offerRevision() {
+        this.refreshOffer();
+        return this.offer.value();
+    }
+
 
     /**
      * The menu type ApricityUI's base menu would report is its own; the open packet carries whatever this answers,

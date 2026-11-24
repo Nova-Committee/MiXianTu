@@ -10,7 +10,10 @@ import net.minecraft.core.UUIDUtil;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.Level;
+import net.minecraft.util.StringRepresentable;
+import java.util.Locale;
 import net.minecraft.world.phys.Vec3;
+import org.jspecify.annotations.NonNull;
 
 import java.util.List;
 import java.util.Optional;
@@ -25,7 +28,7 @@ import java.util.UUID;
  */
 public record SecretRealmRecord(Holder<SecretRealm> definition, int index, ResourceKey<Level> dimension,
                                 OptionalLong seed, Optional<UUID> owner, long startedAt, long expiresAt,
-                                Optional<Vec3> anchor, boolean prepared, List<UUID> members, UUID instanceId) {
+                                Optional<Vec3> anchor, boolean prepared, List<UUID> members, UUID instanceId, Cleanup cleanup) {
     public static final Codec<UUID> UUID_CODEC = Codec.STRING.xmap(UUID::fromString, UUID::toString);
     public static final Codec<SecretRealmRecord> CODEC = RecordCodecBuilder.create(i -> i.group(
             SecretRealm.CODEC.fieldOf("definition").forGetter(SecretRealmRecord::definition),
@@ -38,10 +41,31 @@ public record SecretRealmRecord(Holder<SecretRealm> definition, int index, Resou
             Vec3.CODEC.lenientOptionalFieldOf("anchor").forGetter(SecretRealmRecord::anchor),
             Codec.BOOL.lenientOptionalFieldOf("prepared", false).forGetter(SecretRealmRecord::prepared),
             UUID_CODEC.listOf().lenientOptionalFieldOf("members", List.of()).forGetter(SecretRealmRecord::members),
-            UUIDUtil.CODEC.optionalFieldOf("instance_id").forGetter(record -> Optional.of(record.instanceId()))
-    ).apply(i, (definition, index, dimension, seed, owner, started, expires, anchor, prepared, members, identity) ->
+            UUIDUtil.CODEC.optionalFieldOf("instance_id").forGetter(record -> Optional.of(record.instanceId())),
+            StringRepresentable.fromEnum(Cleanup::values).optionalFieldOf("cleanup", Cleanup.NONE).forGetter(SecretRealmRecord::cleanup)
+    ).apply(i, (definition, index, dimension, seed, owner, started, expires, anchor, prepared, members, identity, cleanup) ->
             new SecretRealmRecord(definition, index, dimension, seed, owner, started, expires, anchor, prepared, members,
-                    identity.orElseGet(UUID::randomUUID))));
+                    identity.orElseGet(UUID::randomUUID), cleanup)));
+
+    public enum Cleanup implements StringRepresentable {
+        NONE, IDLE, DESTROY, ABORT;
+
+        @Override
+        public @NonNull String getSerializedName() {
+            return this.name().toLowerCase(Locale.ROOT);
+        }
+    }
+
+    public SecretRealmRecord(Holder<SecretRealm> definition, int index, ResourceKey<Level> dimension,
+                             OptionalLong seed, Optional<UUID> owner, long startedAt, long expiresAt,
+                             Optional<Vec3> anchor, boolean prepared, List<UUID> members, UUID identity) {
+        this(definition, index, dimension, seed, owner, startedAt, expiresAt, anchor, prepared, members, identity, Cleanup.NONE);
+    }
+
+    public SecretRealmRecord withCleanup(Cleanup value) {
+        return new SecretRealmRecord(this.definition, this.index, this.dimension, this.seed, this.owner, this.startedAt,
+                this.expiresAt, this.anchor, this.prepared, this.members, this.instanceId, value);
+    }
 
     public SecretRealmRecord(Holder<SecretRealm> definition, int index, ResourceKey<Level> dimension,
                              OptionalLong seed, Optional<UUID> owner, long startedAt, long expiresAt,
@@ -87,7 +111,7 @@ public record SecretRealmRecord(Holder<SecretRealm> definition, int index, Resou
 
     public SecretRealmRecord with(List<UUID> value) {
         return new SecretRealmRecord(this.definition, this.index, this.dimension, this.seed, this.owner, this.startedAt,
-                this.expiresAt, this.anchor, this.prepared, List.copyOf(value), this.instanceId);
+                this.expiresAt, this.anchor, this.prepared, List.copyOf(value), this.instanceId, this.cleanup);
     }
 
     public SecretRealmRecord withOwner(UUID id) {
@@ -114,6 +138,6 @@ public record SecretRealmRecord(Holder<SecretRealm> definition, int index, Resou
 
     public SecretRealmRecord dormant() {
         return new SecretRealmRecord(this.definition, this.index, this.dimension, this.seed, this.owner, this.startedAt,
-                this.expiresAt, this.anchor, this.prepared, List.of(), this.instanceId);
+                this.expiresAt, this.anchor, this.prepared, List.of(), this.instanceId, this.cleanup);
     }
 }

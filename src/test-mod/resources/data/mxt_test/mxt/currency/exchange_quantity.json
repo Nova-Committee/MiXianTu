@@ -1,0 +1,6 @@
+{
+  "item": "minecraft:clay_ball",
+  "value": 3,
+  "unavailable_when": [{ "type": "saturn:amount", "comparison": ">=", "compare_to": 3 }],
+  "exchanges": [{ "cost": 2, "result": { "id": "minecraft:brick" } }]
+}

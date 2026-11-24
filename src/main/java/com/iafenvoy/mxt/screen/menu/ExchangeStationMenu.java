@@ -20,7 +20,6 @@ import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.inventory.DataSlot;
 import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.inventory.Slot;
-import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import org.jspecify.annotations.NonNull;
 
@@ -42,7 +41,6 @@ public final class ExchangeStationMenu extends ApricityContainerMenu {
     private final DataSlot selectedExchange = DataSlot.standalone();
     private final Slot inputSlot;
     private final Slot resultSlot;
-    private ItemStack previousInput = ItemStack.EMPTY;
     private List<Exchange> offers = List.of();
     private Runnable updateListener = () -> {
     };
@@ -102,7 +100,7 @@ public final class ExchangeStationMenu extends ApricityContainerMenu {
     @Override
     public boolean clickMenuButton(@NonNull Player player, int buttonId) {
         try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.ECONOMY)) {
-            if (this.selectedExchange.get() == buttonId) return false;
+            if (!this.refreshOffers() || this.selectedExchange.get() == buttonId) return false;
             if (!this.isValidExchange(buttonId)) return false;
             this.selectedExchange.set(buttonId);
             this.setupResultSlot(buttonId);
@@ -113,13 +111,8 @@ public final class ExchangeStationMenu extends ApricityContainerMenu {
     @Override
     public void slotsChanged(@NonNull Container changed) {
         try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.ECONOMY)) {
-            ItemStack current = this.inputSlot.getItem();
-            if (!ItemStack.isSameItemSameComponents(current, this.previousInput)) {
-                this.previousInput = current.copy();
-                this.setupOfferList(current);
-            } else {
-                this.setupResultSlot(this.selectedExchange.get());
-            }
+            this.refreshOffers();
+            this.setupResultSlot(this.selectedExchange.get());
         }
     }
 
@@ -130,9 +123,8 @@ public final class ExchangeStationMenu extends ApricityContainerMenu {
         ItemStack stack = slot.getItem();
         ItemStack original = stack.copy();
         if (slotIndex == RESULT_SLOT) {
-            Item item = stack.getItem();
+            if (!this.canTakeResult(player)) return ItemStack.EMPTY;
             if (!this.moveItemStackTo(stack, INVENTORY_START, INVENTORY_END, true)) return ItemStack.EMPTY;
-            item.onCraftedBy(stack, player);
             slot.onQuickCraft(stack, original);
         } else if (slotIndex == INPUT_SLOT) {
             if (!this.moveItemStackTo(stack, INVENTORY_START, INVENTORY_END, false)) return ItemStack.EMPTY;
@@ -164,11 +156,27 @@ public final class ExchangeStationMenu extends ApricityContainerMenu {
         this.access.execute((_, _) -> this.clearContainer(player, this.setup.input()));
     }
 
-    private void setupOfferList(ItemStack stack) {
+    private boolean refreshOffers() {
+        List<Exchange> current = CurrencyValueService.exchangeOffers(this.registryAccess, this.owner, this.inputSlot.getItem());
+        if (this.offers.equals(current)) return true;
+        this.offers = current;
         this.selectedExchange.set(-1);
         this.resultSlot.set(ItemStack.EMPTY);
-        this.offers = stack.isEmpty() ? List.of() : CurrencyValueService.exchangeOffers(this.registryAccess, this.owner, stack);
+        this.updateListener.run();
         this.broadcastChanges();
+        return false;
+    }
+
+    private boolean canTakeResult(Player player) {
+        if (player.level().isClientSide()) return true;
+        if (player != this.owner || player.isSpectator() || !this.stillValid(player) || !this.refreshOffers()) return false;
+        Exchange selected = this.selectedOffer();
+        return selected != null && this.inputSlot.getItem().getCount() >= selected.cost();
+    }
+
+    @Override
+    public boolean canTakeItemForPickAll(@NonNull ItemStack carried, @NonNull Slot slot) {
+        return slot != this.resultSlot && super.canTakeItemForPickAll(carried, slot);
     }
 
     private void setupResultSlot(int index) {
@@ -204,9 +212,8 @@ public final class ExchangeStationMenu extends ApricityContainerMenu {
         try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.ECONOMY)) {
             Exchange offer = this.selectedOffer();
             if (offer == null || this.inputSlot.getItem().getCount() < offer.cost()) return;
-            stack.onCraftedBy(player, stack.getCount());
             this.inputSlot.remove(offer.cost());
-            this.setupResultSlot(this.selectedExchange.get());
+            stack.onCraftedBy(player, stack.getCount());
             this.playTakeSound();
         }
     }
@@ -251,6 +258,11 @@ public final class ExchangeStationMenu extends ApricityContainerMenu {
                             @Override
                             public boolean mayPlace(@NonNull ItemStack stack) {
                                 return false;
+                            }
+
+                            @Override
+                            public boolean mayPickup(@NonNull Player player) {
+                                return Setup.this.menu.canTakeResult(player);
                             }
 
                             @Override

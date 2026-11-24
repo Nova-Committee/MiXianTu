@@ -12,6 +12,7 @@ import com.iafenvoy.mxt.runtime.MxtProfilerSources;
 import com.iafenvoy.mxt.runtime.item.QualityService;
 import com.iafenvoy.mxt.runtime.world.AuraService;
 import com.iafenvoy.saturn.data.cost.CostPayment;
+import com.iafenvoy.saturn.runtime.resulting.Result;
 import com.iafenvoy.saturn.profiling.ProfilerScope;
 import com.iafenvoy.saturn.profiling.ServerProfiling;
 import com.iafenvoy.saturn.util.MiscUtil;
@@ -202,7 +203,8 @@ public final class SpiritHerbGrowthService {
         FormulaContext formula = FormulaContext.of(level).with(SpiritHerbService.HERB_AGE, age);
         if (!growth.condition().test(level, pos, formula)) return age;
         double amount = SpiritHerbService.appliedGrowth(growth.growthRate(), formula, bonus);
-        CostPayment.pay(growth.costs(), AuraCostContexts.pool(null, level, pos, formula, CostSources.HERB_GROWTH));
+        if (amount <= 0.0D || CostPayment.pay(growth.costs(), AuraCostContexts.pool(null, level, pos, formula,
+                CostSources.HERB_GROWTH)) instanceof Result.FailureResult<?>) return age;
         return Math.min(growth.maxAge(), age + amount);
     }
 

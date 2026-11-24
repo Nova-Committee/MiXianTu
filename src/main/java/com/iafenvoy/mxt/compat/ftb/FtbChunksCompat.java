@@ -3,9 +3,11 @@ package com.iafenvoy.mxt.compat.ftb;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.neoforged.fml.ModList;
+import org.jspecify.annotations.Nullable;
 
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Predicate;
 
 /**
  * FTB Chunks' protection state, kept behind a mod-list check. This class declares nothing from FTB and is
@@ -34,6 +36,17 @@ public final class FtbChunksCompat {
 
     public static Optional<UUID> claimOwner(ServerLevel level, BlockPos pos) {
         return loaded() ? FtbChunksState.claimOwner(level, pos) : Optional.empty();
+    }
+
+    public record Claim(boolean claimed, boolean canEdit, Optional<UUID> playerOwner) {
+        public boolean allowsWard(Predicate<UUID> ownerAllows) {
+            return !this.claimed || this.canEdit || this.playerOwner.filter(ownerAllows).isPresent();
+        }
+    }
+
+    public static Claim claim(ServerLevel level, BlockPos pos, @Nullable UUID actor) {
+        if (!chunkClaimed(level, pos)) return new Claim(false, false, Optional.empty());
+        return new Claim(true, actor != null && mayEdit(level, pos, actor), claimOwner(level, pos));
     }
 
     public static boolean mayEdit(ServerLevel level, BlockPos pos, UUID actorId) {

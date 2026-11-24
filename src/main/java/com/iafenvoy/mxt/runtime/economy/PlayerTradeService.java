@@ -66,7 +66,7 @@ public final class PlayerTradeService {
 
     public static RequestResult request(ServerPlayer requester, ServerPlayer target) {
         try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.ECONOMY)) {
-            if (requester.distanceToSqr(target) > 25.0D) return RequestResult.TOO_FAR;
+            if (!canTrade(requester, target)) return RequestResult.TOO_FAR;
             if (requester == target) {
                 if (!allowsSelfTrade()) return RequestResult.SELF;
                 if (SESSIONS.containsKey(requester.getUUID())) return RequestResult.BUSY;
@@ -90,13 +90,21 @@ public final class PlayerTradeService {
         }
     }
 
-    public static void handleAction(ServerPlayer player, PlayerTradeAction action) {
+    private static boolean canTrade(ServerPlayer first, ServerPlayer second) {
+        return first.isAlive() && second.isAlive() && !first.isSpectator() && !second.isSpectator()
+                && first.level() == second.level() && first.distanceToSqr(second) <= 25.0D;
+    }
+
+    public static void handleAction(ServerPlayer player, PlayerTradeAction action, long confirmedRevision) {
         try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.ECONOMY)) {
             Session session = SESSIONS.get(player.getUUID());
             if (session == null) return;
             Side side = session.side(player);
-            if (side == null || (action != PlayerTradeAction.CLOSE && player.containerMenu != side.menu))
+            if (side == null || !session.isLive()) return;
+            if (confirmedRevision == 0 || confirmedRevision != side.menu.offerRevision()) {
+                side.menu.sendAllDataToRemote();
                 return;
+            }
             switch (action) {
                 case ACCEPT -> session.setAccepted(side, true);
                 case CANCEL_ACCEPT -> session.setAccepted(side, false);
@@ -161,7 +169,7 @@ public final class PlayerTradeService {
         Session session = SESSIONS.get(player.getUUID());
         if (session == null || session.closed) return false;
         Side side = session.side(player);
-        return side != null && side.menu == menu;
+        return side != null && side.menu == menu && session.isLive();
     }
 
     // Either offer container changed. Both sides' confirmations cover both offers, so a change on one side has to be
@@ -304,8 +312,11 @@ public final class PlayerTradeService {
         }
 
         private void complete() {
-            if (this.closed) return;
-            if (this.offerChanged()) return;
+            if (this.closed || !this.isLive()) return;
+            if (this.offerChanged()) {
+                this.notifyAcceptance();
+                return;
+            }
             // Each side hands its own grid to the other; reading and writing are always different sides, so no
             // hand-over can clear the grid it is about to deliver.
             this.handOver(this.first, this.second);
@@ -398,11 +409,14 @@ public final class PlayerTradeService {
 
         // A session stays usable only while both sides are connected.
         private boolean isLive() {
-            return this.isOnline(this.first.player) && this.isOnline(this.second.player);
+            return this.isOnline(this.first.player) && this.isOnline(this.second.player)
+                    && this.first.menu != null && this.first.player.containerMenu == this.first.menu
+                    && (this.isSelf() || this.second.menu != null && this.second.player.containerMenu == this.second.menu)
+                    && canTrade(this.first.player, this.second.player);
         }
 
         private boolean isOnline(ServerPlayer player) {
-            return player.level().getServer().getPlayerList().getPlayer(player.getUUID()) != null;
+            return player.level().getServer().getPlayerList().getPlayer(player.getUUID()) == player;
         }
 
         private Side partner(Side side) {

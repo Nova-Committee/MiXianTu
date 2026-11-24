@@ -1,6 +1,8 @@
 package com.iafenvoy.mxt.runtime.rift;
 
+import com.iafenvoy.mxt.compat.ftb.FtbChunksCompat;
 import com.iafenvoy.mxt.data.rift.RiftPlacement;
+import com.iafenvoy.mxt.runtime.formation.FormationProtection;
 import com.iafenvoy.mxt.runtime.resulting.FailureSources;
 import com.iafenvoy.saturn.profiling.LoggerDispatcher;
 import com.iafenvoy.saturn.runtime.resulting.Failure;
@@ -61,7 +63,7 @@ public final class RiftLanding {
                 || foundFailure == Reason.LANDING_ENTITY_SIZE || foundFailure == Reason.LANDING_OUT_OF_BOUNDS)
             return found;
         Result<Inspection> built = candidates(target, nearby, pos -> platform(level, entity, pos, allowed));
-        return built instanceof Result.SuccessResult<Inspection> ? built : found;
+        return built instanceof Result.SuccessResult<Inspection> || built.getFailure().orElse(null) == Reason.LANDING_PROTECTED ? built : found;
     }
 
     private static Result<Inspection> candidates(Vec3 target, boolean nearby, Function<Vec3, Result<Inspection>> attempt) {
@@ -99,6 +101,7 @@ public final class RiftLanding {
             if (!level.hasChunkAt(p)) return check;
             BlockState state = level.getBlockState(p);
             if (!state.isAir() || !level.getFluidState(p).isEmpty()) return check;
+            if (!mayBuildPlatform(level, p, entity)) return Result.failure(Reason.LANDING_PROTECTED);
             previous.put(p.immutable(), state);
         }
         boolean ready = false;
@@ -119,6 +122,13 @@ public final class RiftLanding {
             if (!ready) for (BlockPos p : placed)
                 if (level.getBlockState(p).is(Blocks.DIRT)) level.setBlock(p, previous.get(p), Block.UPDATE_ALL);
         }
+    }
+
+    private static boolean mayBuildPlatform(ServerLevel level, BlockPos pos, Entity traveller) {
+        if (FormationProtection.preventsPlacement(level, pos, traveller)) return false;
+        if (traveller instanceof ServerPlayer player && (!player.mayBuild() || !level.mayInteract(player, pos))) return false;
+        return !FtbChunksCompat.claimsProtect() || !FtbChunksCompat.chunkClaimed(level, pos)
+                || traveller instanceof ServerPlayer player && FtbChunksCompat.mayEdit(level, pos, player.getUUID());
     }
 
     public static AABB area(Entity entity, Vec3 target, boolean nearby) {
@@ -169,7 +179,7 @@ public final class RiftLanding {
 
     public enum Reason implements Failure {
         LANDING_NON_FINITE, LANDING_OUT_OF_BOUNDS, LANDING_ENTITY_SIZE, LANDING_CHUNK_UNLOADED,
-        LANDING_FLUID, LANDING_HAZARD, LANDING_BLOCKED, LANDING_NO_SUPPORT, LANDING_PORTAL_CONTACT;
+        LANDING_FLUID, LANDING_HAZARD, LANDING_BLOCKED, LANDING_NO_SUPPORT, LANDING_PORTAL_CONTACT, LANDING_PROTECTED;
 
         @Override
         public FailureSource source() {

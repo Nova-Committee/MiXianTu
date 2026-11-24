@@ -35,8 +35,6 @@ import net.minecraft.core.Holder.Reference;
 import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.common.NeoForge;
 
@@ -205,7 +203,7 @@ public final class ArtifactService {
     // number serve as both the capacity and the screen's size: a declaration of ten slots would otherwise show
     // eighteen cells of which eight silently refuse to hold anything.
     private static int slotsOf(StorageAbilityType storage, FormulaContext context) {
-        int declared = (int) Math.clamp(Math.floor(evaluate(storage.slots(), context)), 0.0D, Integer.MAX_VALUE);
+        int declared = (int) Math.clamp(Math.floor(evaluate(storage.slots(), context)), 0.0D, MAX_STORAGE_ROWS * STORAGE_COLUMNS);
         if (declared <= 0) return 0;
         int rows = Math.clamp((declared + STORAGE_COLUMNS - 1) / STORAGE_COLUMNS, 0, MAX_STORAGE_ROWS);
         return rows * STORAGE_COLUMNS;
@@ -213,28 +211,6 @@ public final class ArtifactService {
 
     public static boolean curiosEquipable(Provider access, ItemStack stack) {
         return definition(access, stack).map(holder -> holder.value().curiosEquipable()).orElse(false);
-    }
-
-    // Wherever the holder keeps it: both hands and the Curios slots for anything living, plus the whole inventory
-    // when the holder is a player. Deliberately wider than what a wheel page reads - an open screen has to keep
-    // working while the artifact is moved around the inventory, and has to stop the moment it leaves the holder,
-    // because what it writes into would otherwise be a stack nobody carries, which is how items disappear.
-    public static Optional<ItemStack> carried(Provider access, LivingEntity holder, Holder<Ability> ability) {
-        for (ItemStack stack : ArtifactUpkeepService.carried(holder))
-            if (holds(access, stack, ability)) return Optional.of(stack);
-        if (holder instanceof Player player)
-            for (int slot = 0; slot < player.getInventory().getContainerSize(); slot++) {
-                ItemStack stack = player.getInventory().getItem(slot);
-                if (holds(access, stack, ability)) return Optional.of(stack);
-            }
-        return Optional.empty();
-    }
-
-    // Whether this stack offers that ability; the same reading the grant ledger uses, so an item and its
-    // abilities cannot disagree about what it holds.
-    private static boolean holds(Provider access, ItemStack stack, Holder<Ability> abilityId) {
-        if (stack == null || stack.isEmpty()) return false;
-        return abilities(access, stack).stream().anyMatch(abilityId::equals);
     }
 
     // What the definition declares plus the bonus earned by being fed. A stack claiming no definition, or one

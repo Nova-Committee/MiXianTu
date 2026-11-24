@@ -11,14 +11,33 @@ import net.minecraft.world.Container;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.event.OnDatapackSyncEvent;
+import net.neoforged.neoforge.event.server.ServerStoppedEvent;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 
+@EventBusSubscriber
 public final class CurrencyPaymentService {
     // Limits the normalized load-time diagnostic, never an actual payout.
     public static final long MAX_CHECKED_VALUE = 4_000_000L;
+
+    private static final int MAX_SEARCH_STATES = 16_384;
+    private static final int MAX_SEARCH_STEPS = 131_072;
+    private static final Map<HolderLookup.Provider, List<Denomination>> DENOMINATIONS = new WeakHashMap<>();
+
+    @SubscribeEvent
+    public static synchronized void onDatapackSync(OnDatapackSyncEvent event) {
+        if (event.getPlayer() == null) DENOMINATIONS.clear();
+    }
+
+    @SubscribeEvent
+    public static synchronized void onServerStopped(ServerStoppedEvent event) {
+        DENOMINATIONS.clear();
+    }
 
     private CurrencyPaymentService() {
     }
@@ -74,12 +93,14 @@ public final class CurrencyPaymentService {
                     saturatedMultiply(denomination.value(), denomination.item().getDefaultMaxStackSize()));
         }
         if (!canCover(value, capacity, divisors[0], stackValues[0])) return null;
+        int remainingSteps = MAX_SEARCH_STEPS;
         Map<Long, Plan> reachable = Map.of(value, new Plan(0, -1, 0L, null));
         for (int index = 0; index < size; index++) {
             Denomination denomination = denominations.get(index);
             int perStack = denomination.item().getDefaultMaxStackSize();
             Map<Long, Plan> next = new HashMap<>();
             for (Map.Entry<Long, Plan> entry : reachable.entrySet()) {
+                if (--remainingSteps < 0) return null;
                 long left = entry.getKey();
                 Plan previous = entry.getValue();
                 int available = capacity - previous.stacks();
@@ -90,12 +111,14 @@ public final class CurrencyPaymentService {
                     continue;
                 }
                 for (long count = max; count >= 0L; count--) {
+                    if (--remainingSteps < 0) return null;
                     long remaining = left - count * denomination.value();
                     int stacks = previous.stacks() + (int) Math.ceilDiv(count, perStack);
                     if (remaining == 0L) return counts(new Plan(stacks, index, count, previous), size);
                     if (!canCover(remaining, capacity - stacks, divisors[index + 1], stackValues[index + 1])) continue;
                     Plan known = next.get(remaining);
                     // At the same layer and remainder, fewer occupied slots leave every future choice available.
+                    if (known == null && next.size() == MAX_SEARCH_STATES) return null;
                     if (known == null || stacks < known.stacks())
                         next.put(remaining, count == 0L ? previous : new Plan(stacks, index, count, previous));
                 }
@@ -162,7 +185,11 @@ public final class CurrencyPaymentService {
     // One entry per item: an item two definitions both claim is worth what the winner says, exactly as
     // value() reads it. Listing a losing definition would let this table mint a value the same stack is not
     // valued at.
-    public static List<Denomination> denominations(@NotNull HolderLookup.Provider provider) {
+    public static synchronized List<Denomination> denominations(@NotNull HolderLookup.Provider provider) {
+        return DENOMINATIONS.computeIfAbsent(provider, CurrencyPaymentService::readDenominations);
+    }
+
+    private static List<Denomination> readDenominations(HolderLookup.Provider provider) {
         return BuiltInRegistries.ITEM.stream()
                 .map(item -> new Denomination(item, CurrencyValueService.unitValue(provider, item).orElse(0L)))
                 .filter(denomination -> denomination.value() > 0L)

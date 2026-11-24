@@ -21,4 +21,5 @@ public final class MxtAbilityTypes {
     public static final DeferredHolder<MapCodec<? extends AbilityType>, MapCodec<MountAbilityType>> MOUNT = REGISTRY.register("mount", () -> MountAbilityType.CODEC);
     public static final DeferredHolder<MapCodec<? extends AbilityType>, MapCodec<FlightControlAbilityType>> FLIGHT_CONTROL = REGISTRY.register("flight_control", () -> FlightControlAbilityType.CODEC);
     public static final DeferredHolder<MapCodec<? extends AbilityType>, MapCodec<StorageAbilityType>> STORAGE = REGISTRY.register("storage", () -> StorageAbilityType.CODEC);
+    public static final DeferredHolder<MapCodec<? extends AbilityType>, MapCodec<StorageAbilityType>> SHARED_STORAGE = REGISTRY.register("shared_storage", () -> StorageAbilityType.SHARED_CODEC);
 }

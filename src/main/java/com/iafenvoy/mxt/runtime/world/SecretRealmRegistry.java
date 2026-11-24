@@ -3,8 +3,10 @@ package com.iafenvoy.mxt.runtime.world;
 import com.iafenvoy.mxt.data.secretrealm.SecretRealm;
 import com.iafenvoy.mxt.data.secretrealm.SecretRealmGeneration;
 import com.iafenvoy.mxt.data.secretrealm.builtin.StemGeneration;
+import com.iafenvoy.mxt.data.secretrealm.builtin.ExistingGeneration;
 import com.iafenvoy.mxt.data.secretrealm.builtin.TemplateGeneration;
 import com.iafenvoy.mxt.registry.MxtAttachments;
+import com.iafenvoy.mxt.runtime.world.SecretRealmRecord.Cleanup;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import net.minecraft.core.Holder;
@@ -40,16 +42,22 @@ public final class SecretRealmRegistry {
         INSTANCES.clear();
         SecretRealmWorldAttachment attachment = value.overworld().getData(MxtAttachments.SECRET_REALM_WORLD);
         for (SecretRealmRecord record : attachment.records()) {
-            Optional<ResourceKey<SecretRealm>> key = record.definition().unwrapKey();
-            if (key.isEmpty() || MxtDatapackRegistries.holder(value.registryAccess(), MxtResourceKeys.SECRET_REALM, key.get().identifier()).isEmpty()) {
-                SecretRealmGenerationService.clearData(value, record.dimension());
+            if (record.cleanup() != Cleanup.NONE) {
+                INSTANCES.put(record.dimension(), record.dormant());
                 continue;
             }
-            if (!record.instance().owned()) continue;
-            INSTANCES.put(record.dimension(), record.dormant());
+            Optional<ResourceKey<SecretRealm>> key = record.definition().unwrapKey();
+            boolean existing = record.instance().generation() instanceof ExistingGeneration;
+            if (!existing && !SecretRealmGenerationService.managed(value, record.dimension())) continue;
+            boolean available = key.isPresent() && MxtDatapackRegistries.holder(value.registryAccess(), MxtResourceKeys.SECRET_REALM,
+                    key.get().identifier()).isPresent();
+            SecretRealmRecord dormant = record.dormant();
+            INSTANCES.put(record.dimension(), available && record.instance().owned() && record.prepared()
+                    ? dormant : dormant.withCleanup(Cleanup.ABORT));
         }
         sync();
-        SecretRealmGenerationService.clearOrphans(value, INSTANCES.keySet());
+        for (SecretRealmRecord record : all())
+            if (record.cleanup() != Cleanup.NONE) SecretRealmService.expire(value, record, value.overworld().getGameTime());
     }
 
     public static void clear() {
@@ -78,12 +86,14 @@ public final class SecretRealmRegistry {
     public static Optional<SecretRealmRecord> joinable(Holder<SecretRealm> definition, UUID member) {
         return INSTANCES.values().stream()
                 .filter(record -> record.definition().equals(definition))
+                .filter(record -> record.cleanup() == Cleanup.NONE && (server == null || !record.expired(server.overworld().getGameTime())))
                 .filter(record -> record.holds(member) || !record.full())
                 .min(Comparator.comparingInt(SecretRealmRecord::index));
     }
 
     public static Optional<SecretRealmRecord> replace(SecretRealmRecord record) {
-        if (!INSTANCES.containsKey(record.dimension())) return Optional.empty();
+        SecretRealmRecord previous = INSTANCES.get(record.dimension());
+        if (previous == null || !previous.instanceId().equals(record.instanceId())) return Optional.empty();
         INSTANCES.put(record.dimension(), record);
         sync();
         return Optional.of(record);

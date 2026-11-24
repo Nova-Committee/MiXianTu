@@ -13,7 +13,10 @@ import com.iafenvoy.mxt.runtime.economy.PlayerTradeService;
 import com.iafenvoy.mxt.runtime.economy.PlayerTradeService.RequestResult;
 import com.iafenvoy.mxt.screen.menu.PlayerTradeMenu;
 import com.iafenvoy.mxt.screen.menu.StationMenu;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.RegistryAccess;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.core.UUIDUtil;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerPlayer;
@@ -46,7 +49,9 @@ public final class EconomyVerifyProbes {
                 Probe.of("verify/economy/trade_offer_change", EconomyVerifyProbes::tradeOfferChange),
                 Probe.of("verify/economy/trade_full_cancel", EconomyVerifyProbes::tradeFullCancel),
                 Probe.of("verify/economy/trade_complete", EconomyVerifyProbes::tradeComplete),
-                Probe.of("verify/economy/station_owner", EconomyVerifyProbes::stationOwner)
+                Probe.of("verify/economy/station_owner", EconomyVerifyProbes::stationOwner),
+                Probe.of("verify/economy/station_removal", EconomyVerifyProbes::stationRemoval),
+                Probe.of("verify/economy/station_quote", EconomyVerifyProbes::stationQuote)
         );
     }
 
@@ -68,6 +73,52 @@ public final class EconomyVerifyProbes {
                         .filter(player.getUUID()::equals).isPresent());
         station.loadWithComponents(TagValueInput.create(ProblemReporter.DISCARDING, context.registries(), new CompoundTag()));
         context.check("loading ownerless station data clears stale ownership", station.owner() == null);
+    }
+
+    private static void stationRemoval(ProbeContext context) {
+        ServerLevel level = context.level();
+        BlockPos pos = context.at(5, 1, 5);
+        level.setBlockAndUpdate(pos, MxtBlocks.TRADE_STATION.get().defaultBlockState());
+        if (!(level.getBlockEntity(pos) instanceof TradeStationBlockEntity station)) {
+            context.fail("trade station did not create a block entity");
+            return;
+        }
+        station.stock().setItem(0, new ItemStack(Items.DIAMOND, 5));
+        station.rewards().setItem(0, new ItemStack(Items.DIAMOND, 2));
+        station.display().setItem(0, new ItemStack(Items.DIAMOND, 1));
+        level.removeBlock(pos, false);
+        long diamonds = level.getEntitiesOfClass(ItemEntity.class, new AABB(pos).inflate(2.0D)).stream()
+                .map(ItemEntity::getItem).filter(stack -> stack.is(Items.DIAMOND)).mapToLong(ItemStack::getCount).sum();
+        context.expect("only the real stock is dropped on replacement", diamonds, 5L);
+        context.check("removed station no longer holds stock", station.stock().isEmpty());
+    }
+
+    private static void stationQuote(ProbeContext context) {
+        ServerLevel level = context.level();
+        BlockPos pos = context.at(5, 1, 5);
+        ServerPlayer player = context.player();
+        player.snapTo(pos.getX() + 0.5D, pos.getY() + 1, pos.getZ() + 0.5D, 0, 0);
+        level.setBlockAndUpdate(pos, MxtBlocks.TRADE_STATION.get().defaultBlockState());
+        if (!(level.getBlockEntity(pos) instanceof TradeStationBlockEntity station)) {
+            context.fail("trade station did not create a block entity");
+            return;
+        }
+        station.costs().setItem(0, new ItemStack(Items.EMERALD, 1));
+        station.rewards().setItem(0, new ItemStack(Items.DIAMOND, 2));
+        station.stock().setItem(0, new ItemStack(Items.DIAMOND, 5));
+        player.getInventory().setItem(0, new ItemStack(Items.EMERALD, 3));
+        player.openMenu(station);
+        if (!(player.containerMenu instanceof StationMenu menu)) {
+            context.fail("trade station did not open a customer menu");
+            return;
+        }
+        long shown = menu.offerRevision();
+        station.costs().setItem(0, new ItemStack(Items.EMERALD, 2));
+        context.check("old displayed offer is refused without settling", !menu.trade(player, shown));
+        context.expect("stock remains untouched after refusal", station.stock().getItem(0).getCount(), 5);
+        context.check("current offer settles", menu.trade(player, menu.offerRevision()));
+        context.expect("stock reflects the one authorized purchase", station.stock().getItem(0).getCount(), 3);
+        player.closeContainer();
     }
 
     // A set the greedy answer cannot solve is still paid: 4 and 3 cannot make 6 by taking 4 first, while 3 + 3 can, so
@@ -180,14 +231,17 @@ public final class EconomyVerifyProbes {
         }
         // The first side confirms an empty pair of offers, then the second side adds what it is giving. That addition
         // is a new trade, so the first side's press no longer counts and the second side's own press cannot settle it.
-        PlayerTradeService.handleAction(first, PlayerTradeAction.ACCEPT);
+        long firstRevision = firstMenu.offerRevision();
+        PlayerTradeService.handleAction(first, PlayerTradeAction.ACCEPT, firstRevision);
         secondMenu.getSlot(0).set(new ItemStack(Items.DIAMOND, 3));
         context.check("a partner's offer change clears the confirmation this side already gave",
                 !firstMenu.ownAccepted());
-        PlayerTradeService.handleAction(second, PlayerTradeAction.ACCEPT);
+        PlayerTradeService.handleAction(first, PlayerTradeAction.ACCEPT, firstRevision);
+        context.check("confirmation for a previous displayed quote is refused", !firstMenu.ownAccepted());
+        PlayerTradeService.handleAction(second, PlayerTradeAction.ACCEPT, secondMenu.offerRevision());
         context.check("the second side's press alone does not settle a trade whose other confirmation was cleared",
                 first.containerMenu == firstMenu && second.containerMenu == secondMenu);
-        PlayerTradeService.handleAction(first, PlayerTradeAction.CLOSE);
+        first.closeContainer();
     }
 
     // A cancel with a full inventory keeps every offered item: it either returns to the inventory or is dropped next
@@ -208,7 +262,7 @@ public final class EconomyVerifyProbes {
         }
         ItemStack offered = new ItemStack(MxtItems.CHEQUE.get(), 1);
         menu.getSlot(0).set(offered);
-        PlayerTradeService.handleAction(first, PlayerTradeAction.CLOSE);
+        first.closeContainer();
         // The offer grid is gone with the session, so the item has to be somewhere a player can reach: the inventory
         // is full, which leaves the drop. Either way it must not be inside the grid any more.
         context.check("a cancelled offer no longer sits in the grid", menu.getSlot(0).getItem().isEmpty());
@@ -243,8 +297,8 @@ public final class EconomyVerifyProbes {
         }
         firstMenu.getSlot(0).set(new ItemStack(Items.EMERALD, 2));
         secondMenu.getSlot(0).set(new ItemStack(Items.DIAMOND, 3));
-        PlayerTradeService.handleAction(first, PlayerTradeAction.ACCEPT);
-        PlayerTradeService.handleAction(second, PlayerTradeAction.ACCEPT);
+        PlayerTradeService.handleAction(first, PlayerTradeAction.ACCEPT, firstMenu.offerRevision());
+        PlayerTradeService.handleAction(second, PlayerTradeAction.ACCEPT, secondMenu.offerRevision());
         context.check("a completed trade leaves both grids empty",
                 firstMenu.getSlot(0).getItem().isEmpty() && secondMenu.getSlot(0).getItem().isEmpty());
         context.expect("the first side keeps what it offered", kept(first, Items.EMERALD), 0L);

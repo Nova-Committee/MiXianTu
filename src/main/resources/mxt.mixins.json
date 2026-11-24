@@ -5,6 +5,8 @@
   "mixins": [
     "EntityMountRemovalMixin",
     "EntityPerchMixin",
+    "ItemStackAuraMigrationMixin",
+    "ItemStackTemplateAuraMigrationMixin",
     "MinecraftServerRuntimeAccessor"
   ],
   "client": [

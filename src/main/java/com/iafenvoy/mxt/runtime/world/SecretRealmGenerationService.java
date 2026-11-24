@@ -31,9 +31,11 @@ import org.slf4j.Logger;
 
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.stream.Stream;
+import java.io.UncheckedIOException;
 
 /**
  * Creates, opens and discards secret realm dimensions.
@@ -73,8 +75,10 @@ public final class SecretRealmGenerationService {
                 SecretRealmBorderService.apply(level, definition, false);
                 return Optional.of(level);
             }
+            if (!managed(server, record.dimension())) return Optional.empty();
             ServerLevel loaded = server.getLevel(record.dimension());
             if (loaded != null) {
+                if (!RuntimeDimensionService.owns(loaded)) return Optional.empty();
                 SecretRealmBorderService.apply(loaded, definition, true);
                 return Optional.of(loaded);
             }
@@ -123,58 +127,47 @@ public final class SecretRealmGenerationService {
 
     // A dimension a data pack declared through the level stem registry is never touched: the secret_realm/ folder
     // convention must not be able to delete a real dimension that happens to sit under it.
-    public static void clearData(MinecraftServer server, ResourceKey<Level> dimension) {
+    public static boolean clearData(MinecraftServer server, ResourceKey<Level> dimension) {
         try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.SECRET_REALM)) {
-            if (declared(server, dimension)) return;
-            discard(server, dimension.identifier());
+            return managed(server, dimension) && discard(server, dimension.identifier());
         }
+    }
+
+    static boolean managed(MinecraftServer server, ResourceKey<Level> dimension) {
+        String path = dimension.identifier().getPath();
+        return path.startsWith(DIMENSION_PREFIX + "/")
+                && Arrays.stream(path.split("/", -1)).noneMatch(segment -> segment.isEmpty() || segment.equals(".") || segment.equals(".."))
+                && !declared(server, dimension);
     }
 
     // The whole folder goes rather than only the chunk directories, because a dimension also stores its level data
     // and attachments under data/: reusing the key must not resurrect the previous occupant's aura areas.
-    private static void discard(MinecraftServer server, Identifier dimension) {
-        Path folder = server.getWorldPath(dimensionFolder(dimension));
-        if (!Files.isDirectory(folder)) return;
+    private static boolean discard(MinecraftServer server, Identifier dimension) {
+        Path folder = server.getWorldPath(dimensionFolder(dimension)).toAbsolutePath().normalize();
         try {
-            FileUtils.deleteDirectory(folder.toFile());
-        } catch (IOException exception) {
-            LOGGER.warn("Failed to remove secret realm folder {}, clearing its data instead", folder, exception);
-            for (String name : DATA_FOLDERS) clearDirectory(folder.resolve(name));
+            if (Files.notExists(folder, LinkOption.NOFOLLOW_LINKS)) return true;
+            Path world = server.getWorldPath(new LevelResource("")).toAbsolutePath().normalize();
+            if (!folder.startsWith(world) || !folder.toRealPath().equals(world.toRealPath().resolve(world.relativize(folder))))
+                return false;
+            List<Path> paths;
+            try (Stream<Path> files = Files.walk(folder)) {
+                paths = files.sorted(Comparator.reverseOrder()).toList();
+            }
+            Path realFolder = folder.toRealPath();
+            for (Path path : paths)
+                if (!Files.isSymbolicLink(path) && !path.toRealPath().equals(realFolder.resolve(folder.relativize(path))))
+                    return false;
+            for (Path path : paths) Files.deleteIfExists(path);
+            return true;
+        } catch (IOException | UncheckedIOException | SecurityException exception) {
+            LOGGER.warn("Failed to remove secret realm folder {}", folder, exception);
+            return false;
         }
     }
 
     private static boolean declared(MinecraftServer server, ResourceKey<Level> dimension) {
         return server.registryAccess().lookupOrThrow(Registries.LEVEL_STEM)
                 .get(ResourceKey.create(Registries.LEVEL_STEM, dimension.identifier())).isPresent();
-    }
-
-    // What a secret realm destroyed by a crash, or by a definition that has since been deleted, leaves behind.
-    public static void clearOrphans(MinecraftServer server, Set<ResourceKey<Level>> claimed) {
-        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.SECRET_REALM)) {
-            Path root = server.getWorldPath(dimensionsRoot());
-            if (!Files.isDirectory(root)) return;
-            List<Path> candidates = new ArrayList<>();
-            try (Stream<Path> namespaces = Files.list(root)) {
-                for (Path namespace : namespaces.toList()) {
-                    Path secretRealmRoot = namespace.resolve(DIMENSION_PREFIX);
-                    if (!Files.isDirectory(secretRealmRoot)) continue;
-                    try (Stream<Path> walked = Files.walk(secretRealmRoot)) {
-                        walked.filter(Files::isDirectory).filter(SecretRealmGenerationService::holdsData).forEach(candidates::add);
-                    }
-                }
-            } catch (IOException exception) {
-                LOGGER.warn("Failed to scan secret realm folders", exception);
-                return;
-            }
-            for (Path candidate : candidates) {
-                Identifier id = identifierOf(root.relativize(candidate));
-                if (id == null) continue;
-                ResourceKey<Level> dimension = ResourceKey.create(Registries.DIMENSION, id);
-                if (claimed.contains(dimension) || declared(server, dimension)) continue;
-                discard(server, id);
-                LOGGER.info("Removed leftover secret realm data {}", id);
-            }
-        }
     }
 
     private static boolean copyTemplate(MinecraftServer server, ResourceKey<Level> target, String template) {
@@ -188,7 +181,7 @@ public final class SecretRealmGenerationService {
             LOGGER.error("Missing secret realm template {}", source);
             return false;
         }
-        clearData(server, target);
+        if (!clearData(server, target)) return false;
         Path destination = server.getWorldPath(dimensionFolder(target.identifier()));
         try {
             for (String name : DATA_FOLDERS) {
@@ -277,30 +270,6 @@ public final class SecretRealmGenerationService {
                 .map(Reference::value)
                 .map(block -> new FlatLayerInfo(layerHeight, block))
                 .orElse(null);
-    }
-
-    // Instance folders live under secret_realm/, so any folder there holding level data or chunk data is one. It is
-    // checked rather than assumed from the depth, because a definition path with slashes nests deeper.
-    private static boolean holdsData(Path path) {
-        if (Files.isRegularFile(path.resolve("level.dat"))) return true;
-        for (String name : DATA_FOLDERS) if (Files.isDirectory(path.resolve(name))) return true;
-        return false;
-    }
-
-    @Nullable
-    private static Identifier identifierOf(Path relative) {
-        String value = relative.toString().replace('\\', '/');
-        int separator = value.indexOf('/');
-        return separator < 0 ? null : Identifier.tryParse(value.substring(0, separator) + ":" + value.substring(separator + 1));
-    }
-
-    private static void clearDirectory(Path path) {
-        if (!Files.isDirectory(path)) return;
-        try {
-            FileUtils.cleanDirectory(path.toFile());
-        } catch (IOException exception) {
-            LOGGER.warn("Failed to clear secret realm folder {}", path, exception);
-        }
     }
 
     private record FlatPreset(List<FlatLayerInfo> layers, Optional<ResourceKey<Biome>> biome) {

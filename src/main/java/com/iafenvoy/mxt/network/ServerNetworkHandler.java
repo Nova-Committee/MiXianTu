@@ -39,9 +39,8 @@ public final class ServerNetworkHandler {
 
 
     static void onChequeAction(ChequeActionC2SPayload payload, IPayloadContext context) {
-        Player player = context.player();
-        if (!(player.containerMenu instanceof ChequeTableMenu menu))
-            return;
+        if (!(context.player() instanceof ServerPlayer player) || !(player.containerMenu instanceof ChequeTableMenu menu)
+                || menu.containerId != payload.containerId()) return;
         if (payload.checkIn()) menu.checkIn(player);
         else menu.checkOut(player);
     }
@@ -49,11 +48,11 @@ public final class ServerNetworkHandler {
     static void onStationTrade(StationTradeC2SPayload payload, IPayloadContext context) {
         Player player = context.player();
         if (player.containerMenu instanceof StationMenu menu && menu.isCustomer())
-            menu.trade(player);
+            menu.trade(player, payload.revision());
     }
 
     static void onPlayerTradeAction(PlayerTradeActionC2SPayload payload, IPayloadContext context) {
-        if (context.player() instanceof ServerPlayer player) PlayerTradeService.handleAction(player, payload.action());
+        if (context.player() instanceof ServerPlayer player) PlayerTradeService.handleAction(player, payload.action(), payload.revision());
     }
 
     static void onBackSlotSwap(BackSlotSwapC2SPayload payload, IPayloadContext context) {

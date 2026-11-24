@@ -41,7 +41,7 @@ public final class MxtAttachments {
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<CurseHolderAttachment>> CURSE_HOLDER = entity("curse_holder", CurseHolderAttachment::new, CurseHolderAttachment.CODEC);
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<TribulationAttachment>> TRIBULATION = entity("tribulation", TribulationAttachment::new, TribulationAttachment.CODEC);
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<ContractAttachment>> CONTRACT = entity("contract", ContractAttachment::new, ContractAttachment.CODEC);
-    public static final DeferredHolder<AttachmentType<?>, AttachmentType<SecretRealmTravelAttachment>> SECRET_REALM_TRAVEL = entity("secret_realm_travel", SecretRealmTravelAttachment::new, SecretRealmTravelAttachment.CODEC);
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<SecretRealmTravelAttachment>> SECRET_REALM_TRAVEL = entityServerOnly("secret_realm_travel", SecretRealmTravelAttachment::new, SecretRealmTravelAttachment.CODEC);
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<SoulAttachment>> SOUL = entity("soul", SoulAttachment::new, SoulAttachment.CODEC);
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<CreatureSpiritAttachment>> CREATURE_SPIRIT = entity("creature_spirit", CreatureSpiritAttachment::new, CreatureSpiritAttachment.CODEC);
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<PillToxicityAttachment>> PILL_TOXICITY = entity("pill_toxicity", PillToxicityAttachment::new, PillToxicityAttachment.CODEC);
@@ -49,6 +49,7 @@ public final class MxtAttachments {
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<FlightAttachment>> FLIGHT = entityWithoutDeathCopy("flight", FlightAttachment::new, FlightAttachment.CODEC);
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<PerchAttachment>> PERCH = entityWithoutDeathCopy("perch", PerchAttachment::new, PerchAttachment.CODEC);
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<FriendAttachment>> FRIEND = entityServerOnly("friend", FriendAttachment::new, FriendAttachment.CODEC);
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<SharedStorageAttachment>> SHARED_STORAGE = entityServerOnly("shared_storage", SharedStorageAttachment::new, SharedStorageAttachment.CODEC);
     // Level
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<RiftWorldAttachment>> RIFT_WORLD = REGISTRY.register("rift_world", () -> AttachmentType.builder(RiftWorldAttachment::new).serialize(RiftWorldAttachment.CODEC).build());
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<RiftChunkAttachment>> RIFT_CHUNK = REGISTRY.register("rift_chunk", () -> AttachmentType.builder(RiftChunkAttachment::new).serialize(RiftChunkAttachment.CODEC).build());

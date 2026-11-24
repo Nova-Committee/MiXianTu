@@ -1,6 +1,6 @@
 package com.iafenvoy.mxt.screen.menu;
 
-import com.iafenvoy.mxt.registry.MxtBlocks;
+import com.iafenvoy.mxt.item.block.entity.StationBlockEntity;
 import com.iafenvoy.mxt.registry.MxtMenus;
 import com.iafenvoy.mxt.runtime.MxtProfilerSources;
 import com.iafenvoy.mxt.screen.EconomySlots.Display;
@@ -54,33 +54,64 @@ public final class StationMenu extends ApricityContainerMenu {
     private final Container rewards;
     private final @Nullable Container stock;
     private final ContainerLevelAccess access;
+    private final @Nullable StationBlockEntity station;
+    private final Player owner;
+    private final boolean serverSide;
+    private final OfferRevision offer = new OfferRevision();
 
     public StationMenu(Mode mode, int containerId, Inventory inventory) {
-        this(mode, containerId, inventory, new SimpleContainer(12), new SimpleContainer(12), mode == Mode.TRADE_OWNER ? new SimpleContainer(21) : null, new SimpleContainer(1), ContainerLevelAccess.NULL);
+        this(mode, containerId, inventory, new SimpleContainer(12), new SimpleContainer(12), mode == Mode.TRADE_OWNER ? new SimpleContainer(21) : null, new SimpleContainer(1), ContainerLevelAccess.NULL, null);
     }
 
-    public StationMenu(Mode mode, int containerId, Inventory inventory, Container costs, Container rewards, @Nullable Container stock, ContainerLevelAccess access) {
-        this(mode, containerId, inventory, costs, rewards, stock, new SimpleContainer(1), access);
-    }
-
-    public StationMenu(Mode mode, int containerId, Inventory inventory, Container costs, Container rewards,
-                       @Nullable Container stock, Container display, ContainerLevelAccess access) {
-        this(mode, containerId, inventory, costs, rewards, stock, display, access, new Setup(mode, costs, rewards, stock, display));
+    public StationMenu(Mode mode, int containerId, Inventory inventory, StationBlockEntity station) {
+        this(mode, containerId, inventory, station.costs(), station.rewards(), station.stock(), station.display(),
+                ContainerLevelAccess.create(inventory.player.level(), station.getBlockPos()), station);
     }
 
     private StationMenu(Mode mode, int containerId, Inventory inventory, Container costs, Container rewards,
-                        @Nullable Container stock, Container display, ContainerLevelAccess access, Setup setup) {
+                        @Nullable Container stock, Container display, ContainerLevelAccess access, @Nullable StationBlockEntity station) {
+        this(mode, containerId, inventory, costs, rewards, stock, access, station, new Setup(mode, costs, rewards, stock, display));
+    }
+
+    private StationMenu(Mode mode, int containerId, Inventory inventory, Container costs, Container rewards,
+                        @Nullable Container stock, ContainerLevelAccess access, @Nullable StationBlockEntity station, Setup setup) {
         super(containerId, inventory, setup.page().layout(), setup.page().sources(), Map.of(), null);
         checkContainerSize(costs, 12);
         checkContainerSize(rewards, 12);
-        checkContainerSize(display, 1);
         if (stock != null) checkContainerSize(stock, 21);
         this.mode = mode;
         this.costs = costs;
         this.rewards = rewards;
         this.stock = stock;
         this.access = access;
+        this.station = station;
+        this.owner = inventory.player;
+        this.serverSide = !inventory.player.level().isClientSide();
+        this.offer.segments.forEach(this::addDataSlot);
+        this.refreshOffer();
     }
+
+    private void refreshOffer() {
+        if (this.serverSide) this.offer.refresh(this.costs, this.rewards);
+    }
+
+    @Override
+    public void broadcastChanges() {
+        this.refreshOffer();
+        super.broadcastChanges();
+    }
+
+    @Override
+    public void sendAllDataToRemote() {
+        this.refreshOffer();
+        super.sendAllDataToRemote();
+    }
+
+    public long offerRevision() {
+        this.refreshOffer();
+        return this.offer.value();
+    }
+
 
     /**
      * The menu type ApricityUI's base menu would report is its own; the open packet carries whatever this answers,
@@ -102,11 +133,22 @@ public final class StationMenu extends ApricityContainerMenu {
     /**
      * Performs one offer after proving each inventory mutation can complete.
      */
-    public boolean trade(Player player) {
+    public boolean trade(Player player, long confirmedRevision) {
+        if (!this.serverSide || player.containerMenu != this || !this.stillValid(player)) return false;
+        if (confirmedRevision == 0 || confirmedRevision != this.offerRevision()) {
+            this.sendAllDataToRemote();
+            return false;
+        }
+        return this.trade(player);
+    }
+
+    private boolean trade(Player player) {
         try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.ECONOMY)) {
             if (!this.isCustomer()) return false;
             Inventory playerInventory = player.getInventory();
-            Container playerPreview = InventoryUtil.copy(playerInventory);
+            Container playerPreview = new SimpleContainer(Inventory.INVENTORY_SIZE);
+            for (int slot = 0; slot < Inventory.INVENTORY_SIZE; slot++)
+                playerPreview.setItem(slot, playerInventory.getItem(slot).copy());
             if (!InventoryUtil.removeItems(playerPreview, this.costs)) {
                 player.sendSystemMessage(Component.translatable("screen.mxt.failure.no_enough_money"));
                 return false;
@@ -127,20 +169,25 @@ public final class StationMenu extends ApricityContainerMenu {
                     player.sendSystemMessage(Component.translatable("screen.mxt.failure.no_enough_space"));
                     return false;
                 }
-                InventoryUtil.removeItems(this.stock, this.rewards);
-                InventoryUtil.insertItems(this.stock, this.costs);
+                applyPlan(stockPreview, this.stock);
             }
 
-            InventoryUtil.removeItems(playerInventory, this.costs);
-            InventoryUtil.insertItems(playerInventory, this.rewards);
+            applyPlan(playerPreview, playerInventory);
             this.broadcastChanges();
             return true;
         }
     }
 
+    private static void applyPlan(Container plan, Container target) {
+        for (int slot = 0; slot < plan.getContainerSize(); slot++)
+            if (!ItemStack.matches(plan.getItem(slot), target.getItem(slot)))
+                target.setItem(slot, plan.getItem(slot));
+        target.setChanged();
+    }
+
     @Override
     public @NonNull ItemStack quickMoveStack(@NonNull Player player, int index) {
-        if (this.mode != Mode.TRADE_OWNER || index < STOCK_START || index >= this.slots.size()) return ItemStack.EMPTY;
+        if ((this.serverSide && !this.stillValid(player)) || this.mode != Mode.TRADE_OWNER || index < STOCK_START || index >= this.slots.size()) return ItemStack.EMPTY;
         Slot slot = this.slots.get(index);
         if (!slot.hasItem()) return ItemStack.EMPTY;
         ItemStack original = slot.getItem().copy();
@@ -156,7 +203,12 @@ public final class StationMenu extends ApricityContainerMenu {
 
     @Override
     public boolean stillValid(@NonNull Player player) {
-        return stillValid(this.access, player, this.mode.isSystem() ? MxtBlocks.SYSTEM_STATION.get() : MxtBlocks.TRADE_STATION.get());
+        if (!this.serverSide) return true;
+        StationBlockEntity station = this.station;
+        return player == this.owner && player.isAlive() && !player.isSpectator() && station != null
+                && this.access.evaluate((level, pos) -> player.level() == level && level.getBlockEntity(pos) == station
+                        && player.isWithinBlockInteractionRange(pos, 4.0D)
+                        && station.mayUseMenu(player, this.mode), false);
     }
 
     /**

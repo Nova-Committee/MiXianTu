@@ -52,8 +52,18 @@ public final class FormationProtection {
     // can still be refused by the actor's own position, and a null actor means an explosion or a mob.
     public static boolean prevented(ServerLevel level, Action action, @Nullable BlockPos target, @Nullable UUID actorId) {
         Entity actor = actorId == null ? null : level.getEntities().get(actorId);
-        BlockPos actorPosition = actor == null ? null : actor.blockPosition();
-        for (Entry<BlockPos, FormationInstance> entry : level.getData(MxtAttachments.FORMATION_WORLD).formations().entrySet()) {
+        return preventedBy(level, action, target, actor);
+    }
+
+    public static boolean preventsPlacement(ServerLevel level, BlockPos target, Entity actor) {
+        return preventedBy(level, Action.PLACE, target, actor);
+    }
+
+    private static boolean preventedBy(ServerLevel level, Action action, @Nullable BlockPos target, @Nullable Entity actor) {
+        BlockPos actorPosition = actor == null || actor.level() != level ? null : actor.blockPosition();
+        FormationWorldAttachment formations = level.getExistingData(MxtAttachments.FORMATION_WORLD).orElse(null);
+        if (formations == null) return false;
+        for (Entry<BlockPos, FormationInstance> entry : formations.formations().entrySet()) {
             FormationInstance instance = entry.getValue();
             double radius = instance.radius();
             if (!inside(entry.getKey(), radius, target) && !inside(entry.getKey(), radius, actorPosition)) continue;
@@ -117,15 +127,12 @@ public final class FormationProtection {
     public static boolean foreignClaimRefuses(ServerLevel level, BlockPos controller, @Nullable UUID actorId) {
         if (!MxtServerConfig.INSTANCE.compat.wardsNeedClaimPermission.getValue() || !FtbChunksCompat.loaded())
             return false;
-        // Nobody to judge and no permission of anybody's to check: an activation with no player behind it.
-        if (actorId == null) return false;
-        if (FtbChunksCompat.mayEdit(level, controller, actorId)) return false;
-        Optional<UUID> owner = FtbChunksCompat.claimOwner(level, controller);
-        // Unclaimed, or claimed by a team with no player whose friend list could speak for it.
-        if (owner.isEmpty()) return false;
-        Entity actor = level.getEntities().get(actorId);
-        if (actor == null) return true;
-        return FriendService.identify(owner.get(), level.getEntities().get(owner.get()), actor) != TriState.TRUE;
+        return !FtbChunksCompat.claim(level, controller, actorId).allowsWard(owner -> {
+            if (actorId == null) return false;
+            Entity actor = level.getServer().getPlayerList().getPlayer(actorId);
+            if (actor == null) actor = level.getEntities().get(actorId);
+            return actor != null && FriendService.identify(owner, level.getEntities().get(owner), actor) == TriState.TRUE;
+        });
     }
 
     private static void warnClaimsOnlyWithoutClaims() {

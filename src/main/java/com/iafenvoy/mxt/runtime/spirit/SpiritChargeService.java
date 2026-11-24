@@ -8,6 +8,7 @@ import com.iafenvoy.mxt.data.aura.SpiritStorageComponent;
 import com.iafenvoy.mxt.data.item.HoldBinding;
 import com.iafenvoy.mxt.event.CollectHoldBindingsEvent;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
+import com.iafenvoy.mxt.item.SpiritStoneItem;
 import com.iafenvoy.mxt.runtime.MxtProfilerSources;
 import com.iafenvoy.mxt.runtime.cultivation.ItemAuraService;
 import com.iafenvoy.mxt.runtime.hold.HoldLookup;
@@ -175,7 +176,9 @@ public final class SpiritChargeService {
         SpiritStorageComponent component = stack.get(MxtDataComponents.SPIRIT_STORAGE);
         Holder<Aura> aura = (component == null ? Optional.<Holder<Aura>>empty() : component.soleAura())
                 .orElse(definition.value().type());
-        double stored = component == null ? capacity : component.get(aura);
+        double stored = stack.getItem() instanceof SpiritStoneItem
+                ? AuraTransfers.multiply(SpiritStoneItem.storedPerItem(stack, aura, capacity / count), count)
+                : component == null ? capacity : component.get(aura);
         // What one unit costs: the ratio of the two speeds, the same for one item and for a stack.
         double unitCost = MiscUtil.positive(costSpeed) <= 0.0D ? 0.0D : costSpeed / intakeSpeed;
         return new Charge(aura, stored, capacity,

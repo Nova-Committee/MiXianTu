@@ -21,6 +21,7 @@ import com.iafenvoy.mxt.runtime.spirit.SpiritSource;
 import com.iafenvoy.mxt.runtime.talisman.TalismanService;
 import net.minecraft.core.Holder;
 import net.minecraft.core.component.DataComponents;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
 
@@ -37,11 +38,20 @@ public final class TalismanVerifyProbes {
 
     public static List<Probe> probes() {
         return List.of(
+                Probe.of("verify/talisman_registry", TalismanVerifyProbes::talismanRegistry),
                 Probe.of("verify/talisman_wear", TalismanVerifyProbes::talismanWear),
                 Probe.of("verify/talisman_ledger", TalismanVerifyProbes::talismanLedger),
                 Probe.of("verify/talisman_gate", TalismanVerifyProbes::talismanGate),
                 Probe.of("verify/talisman_buffer", TalismanVerifyProbes::talismanBuffer),
                 Probe.of("verify/talisman_refund", TalismanVerifyProbes::talismanRefund));
+    }
+
+    private static void talismanRegistry(ProbeContext context) {
+        boolean removed = BuiltInRegistries.ITEM.getOptional(mxt("recall_talisman")).isEmpty();
+        context.note("talisman registry: recall placeholder removed" + (removed ? " OK" : " MISMATCH"));
+        context.check("recall talisman is absent from the item registry", removed);
+        context.check("shared talisman items remain registered",
+                MxtItems.TALISMAN.isBound() && MxtItems.BLANK_TALISMAN.isBound() && MxtItems.TALISMAN_BRUSH.isBound());
     }
 
     private static void talismanWear(ProbeContext context) {

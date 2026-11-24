@@ -35,63 +35,50 @@ public class SpiritStoneItem extends Item implements UseItemAuraAccess {
     @Override
     public Object2DoubleMap<Holder<Aura>> getCapacity(@Nullable LivingEntity entity, @NotNull HolderLookup.Provider registries, ItemStack stack) {
         Object2DoubleMap<Holder<Aura>> result = new Object2DoubleOpenHashMap<>();
-        Holder<Aura> aura = this.contentType(stack);
+        Holder<Aura> aura = this.contentType(registries, stack);
         if (aura != null) result.put(aura, ItemAuraService.capacity(registries, stack));
         return result;
     }
 
     @Override
     public double insert(@Nullable LivingEntity entity, @NotNull HolderLookup.Provider registries, ItemStack stack, Holder<Aura> aura, double amount, boolean exact, boolean simulate) {
-        double capacity = this.getCapacity(entity, registries, stack, aura);
-        AuraAccess.requireNonNegative(capacity);
         AuraAccess.requireNonNegative(amount);
-        if (stack.getItem() != this || !aura.equals(this.contentType(stack))) return amount;
-
-        double stored = this.normalizeStored(stack, capacity, aura);
-        AuraTransfers.Transfer transfer = AuraTransfers.insert(stored, capacity, amount, exact);
-        double accepted = amount - transfer.remainder();
-        if (!simulate && accepted > 0) {
-            stack.set(MxtDataComponents.SPIRIT_STORAGE, this.store(stack).with(aura, transfer.stored()));
-            ItemAuraComponent fuel = stack.get(MxtDataComponents.ITEM_AURA);
-            if (fuel != null && fuel.remain() <= 0.0D) stack.remove(MxtDataComponents.ITEM_AURA);
-        }
-        return transfer.remainder();
+        if (stack.isEmpty() || stack.getItem() != this || !aura.equals(this.contentType(registries, stack))) return amount;
+        int count = stack.getCount();
+        double capacity = ItemAuraService.capacity(registries, stack) / count;
+        double stored = storedPerItem(stack, aura, capacity);
+        AuraTransfers.Transfer transfer = AuraTransfers.insert(stored, capacity, amount / count, exact);
+        if (!simulate && transfer.stored() > stored) setStoredPerItem(stack, aura, transfer.stored());
+        return transfer.stored() == stored ? amount : Math.min(amount, transfer.remainder() * count);
     }
 
     @Override
     public double extract(@Nullable LivingEntity entity, @NotNull HolderLookup.Provider registries, ItemStack stack, Holder<Aura> aura, double amount, boolean exact, boolean simulate) {
-        double capacity = this.getCapacity(entity, registries, stack, aura);
-        AuraAccess.requireNonNegative(capacity);
         AuraAccess.requireNonNegative(amount);
-        if (stack.getItem() != this || !aura.equals(this.contentType(stack))) return amount;
-
-        double stored = this.normalizeStored(stack, capacity, aura);
-        AuraTransfers.Transfer transfer = AuraTransfers.extract(stored, amount, exact);
-        double extracted = amount - transfer.remainder();
-        // Emptying the store takes its key with it, so a drained stone is an empty store rather than one holding
-        // zero of the aura it used to carry.
-        if (!simulate && extracted > 0)
-            stack.set(MxtDataComponents.SPIRIT_STORAGE, this.store(stack).with(aura, transfer.stored()));
-        return transfer.remainder();
+        if (stack.isEmpty() || stack.getItem() != this || !aura.equals(this.contentType(registries, stack))) return amount;
+        int count = stack.getCount();
+        double stored = storedPerItem(stack, aura, ItemAuraService.capacity(registries, stack) / count);
+        AuraTransfers.Transfer transfer = AuraTransfers.extract(stored, amount / count, exact);
+        if (!simulate && transfer.stored() < stored) setStoredPerItem(stack, aura, transfer.stored());
+        return transfer.stored() == stored ? amount : Math.min(amount, transfer.remainder() * count);
     }
 
-    // The store is asked before the definition because a store cannot be reinterpreted: its amounts are filed under
-    // the aura they count, so a definition re-typed by a data pack can only stop matching what is already in the world.
-    private Holder<Aura> contentType(ItemStack stack) {
+    private Holder<Aura> contentType(HolderLookup.Provider registries, ItemStack stack) {
         SpiritStorageComponent component = stack.get(MxtDataComponents.SPIRIT_STORAGE);
         return (component == null ? Optional.<Holder<Aura>>empty() : component.soleAura())
-                .orElseGet(() -> ItemAuraService.type(stack).orElse(null));
+                .orElseGet(() -> ItemAuraService.type(registries, stack).orElse(null));
     }
 
-    private SpiritStorageComponent store(ItemStack stack) {
-        return stack.getOrDefault(MxtDataComponents.SPIRIT_STORAGE, SpiritStorageComponent.EMPTY);
+    public static double storedPerItem(ItemStack stack, Holder<Aura> aura, double freshCapacity) {
+        SpiritStorageComponent storage = stack.get(MxtDataComponents.SPIRIT_STORAGE);
+        double stored = storage == null ? freshCapacity : storage.normalize(stack.getCount()).get(aura);
+        ItemAuraComponent legacyFuel = stack.get(MxtDataComponents.ITEM_AURA);
+        return legacyFuel == null ? stored : Math.min(stored, legacyFuel.normalize(stack.getCount()).remain());
     }
 
-    // A missing component means a pristine, fully charged spirit stone.
-    private double normalizeStored(ItemStack stack, double capacity, Holder<Aura> aura) {
-        SpiritStorageComponent component = stack.get(MxtDataComponents.SPIRIT_STORAGE);
-        if (component == null) return capacity;
-
-        return component.get(aura);
+    public static void setStoredPerItem(ItemStack stack, Holder<Aura> aura, double stored) {
+        SpiritStorageComponent storage = stack.getOrDefault(MxtDataComponents.SPIRIT_STORAGE, SpiritStorageComponent.EMPTY);
+        stack.set(MxtDataComponents.SPIRIT_STORAGE, storage.normalize(stack.getCount()).with(aura, stored));
+        stack.remove(MxtDataComponents.ITEM_AURA);
     }
 }

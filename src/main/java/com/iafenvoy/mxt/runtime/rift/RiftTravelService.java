@@ -97,6 +97,10 @@ public final class RiftTravelService {
         }
         RiftDestination.Position position = (RiftDestination.Position) destination;
         ResourceKey<Level> key = ResourceKey.create(Registries.DIMENSION, position.dimension().orElseThrow());
+        if (SecretRealmRegistry.at(key).filter(instance -> instance.cleanup() != SecretRealmRecord.Cleanup.NONE).isPresent()) {
+            fail(entity, "missing_dimension");
+            return;
+        }
         ServerLevel target = level.getServer().getLevel(key);
         if (target == null) {
             SecretRealmRegistry.at(key).ifPresent(instance -> SecretRealmService.open(level.getServer(), instance));

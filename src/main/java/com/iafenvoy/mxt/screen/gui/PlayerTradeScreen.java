@@ -70,14 +70,8 @@ public final class PlayerTradeScreen extends AuiContainerScreen<PlayerTradeMenu>
     // through the menu's data slot.
     private void toggleAccept() {
         ClientPacketDistributor.sendToServer(new PlayerTradeActionC2SPayload(this.menu.ownAccepted()
-                ? PlayerTradeAction.CANCEL_ACCEPT : PlayerTradeAction.ACCEPT));
+                ? PlayerTradeAction.CANCEL_ACCEPT : PlayerTradeAction.ACCEPT, this.menu.offerRevision()));
         this.refresh();
     }
 
-    // Leaving is the one action the server cannot infer: the session ends when a side closes its menu.
-    @Override
-    public void onClose() {
-        ClientPacketDistributor.sendToServer(new PlayerTradeActionC2SPayload(PlayerTradeAction.CLOSE));
-        super.onClose();
-    }
 }

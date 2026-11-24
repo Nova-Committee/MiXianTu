@@ -60,12 +60,11 @@ public final class MxtItems {
     public static final DeferredItem<SpiritVesselItem> SPIRIT_VESSEL = register("spirit_vessel", properties -> new SpiritVesselItem(properties.stacksTo(1).component(MxtDataComponents.RESOURCE_CONTAINER, ResourceContainerComponent.EMPTY)));
     public static final DeferredItem<IdentificationMirrorItem> IDENTIFICATION_MIRROR = register("identification_mirror", properties -> new IdentificationMirrorItem(properties.stacksTo(1)));
     public static final DeferredItem<Item> UNIDENTIFIED_ITEM = register("unidentified_item", Item::new);
-    // The talisman chain in the order a carrier is made: paper, brush, pigment, carrier, recall
+    // Talisman tools and carriers
     public static final DeferredItem<TalismanBrushItem> TALISMAN_BRUSH = register("talisman_brush", properties -> new TalismanBrushItem(properties.stacksTo(1)));
     public static final DeferredItem<Item> CINNABAR = register("cinnabar", Item::new);
     public static final DeferredItem<Item> BLANK_TALISMAN = register("blank_talisman", Item::new);
     public static final DeferredItem<TalismanItem> TALISMAN = register("talisman", properties -> new TalismanItem(properties.component(MxtDataComponents.TALISMAN, TalismanComponent.EMPTY)));
-    public static final DeferredItem<Item> RECALL_TALISMAN = register("recall_talisman", Item::new);
     // Alchemy
     public static final DeferredItem<PillItem> PILL = register("pill", PillItem::new);
     public static final DeferredItem<Item> ALCHEMY_DREGS = register("alchemy_dregs", Item::new);
