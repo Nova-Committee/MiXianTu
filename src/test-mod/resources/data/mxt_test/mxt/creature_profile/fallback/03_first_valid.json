@@ -1,0 +1,6 @@
+{
+  "entities": ["minecraft:silverfish"],
+  "intelligence": 12.5,
+  "inner_core": {"id": "minecraft:amethyst_shard", "count": 2},
+  "spawn_action": {"type": "mxt:add_resource", "resource": "mxt_test:trigger_probe", "amount": 3}
+}

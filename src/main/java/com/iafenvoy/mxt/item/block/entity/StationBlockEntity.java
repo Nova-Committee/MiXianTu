@@ -4,7 +4,6 @@ import com.iafenvoy.mxt.screen.menu.StationMenu;
 import com.iafenvoy.mxt.screen.menu.StationMenu.Mode;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup.Provider;
-import net.minecraft.core.UUIDUtil;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.Packet;
@@ -13,6 +12,7 @@ import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.SimpleContainer;
+import net.minecraft.world.entity.EntityReference;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
@@ -24,6 +24,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
 import java.util.List;
 import java.util.UUID;
@@ -36,7 +37,7 @@ public abstract class StationBlockEntity extends BlockEntity implements MenuProv
     private final SimpleContainer rewards = this.tracked(12);
     private final SimpleContainer display = this.tracked(1);
     private final SimpleContainer stock;
-    private UUID owner;
+    private @Nullable EntityReference<Player> owner;
 
     protected StationBlockEntity(BlockEntityType<?> type, BlockPos pos, BlockState state, boolean keepsStock) {
         super(type, pos, state);
@@ -72,12 +73,12 @@ public abstract class StationBlockEntity extends BlockEntity implements MenuProv
         return this.isSystemStation() ? this.rewards.getItem(0) : this.display.getItem(0);
     }
 
-    public final UUID owner() {
-        return this.owner;
+    public final @Nullable UUID owner() {
+        return this.owner == null ? null : this.owner.getUUID();
     }
 
-    public final void setOwner(UUID owner) {
-        this.owner = owner;
+    public final void setOwner(@Nullable UUID owner) {
+        this.owner = owner == null ? null : EntityReference.of(owner);
         this.markChangedAndSync();
     }
 
@@ -95,7 +96,7 @@ public abstract class StationBlockEntity extends BlockEntity implements MenuProv
                 && serverPlayer.level().getServer().getPlayerList().isOp(serverPlayer.nameAndId())
                 && player.isCreative() && player.isShiftKeyDown()
                 ? Mode.SYSTEM_OWNER : Mode.SYSTEM_CUSTOMER;
-        else mode = player.getUUID().equals(this.owner) ? Mode.TRADE_OWNER : Mode.TRADE_CUSTOMER;
+        else mode = this.owner != null && this.owner.matches(player) ? Mode.TRADE_OWNER : Mode.TRADE_CUSTOMER;
         return new StationMenu(mode, containerId, inventory, this.costs, this.rewards, this.stock, this.display,
                 ContainerLevelAccess.create(player.level(), this.worldPosition));
     }
@@ -103,7 +104,7 @@ public abstract class StationBlockEntity extends BlockEntity implements MenuProv
     @Override
     protected void loadAdditional(@NonNull ValueInput input) {
         super.loadAdditional(input);
-        input.read("owner", UUIDUtil.CODEC).ifPresent(value -> this.owner = value);
+        this.owner = EntityReference.read(input, "owner");
         load(this.costs, input.read("costs", ItemStack.OPTIONAL_CODEC.listOf()).orElse(List.of()));
         load(this.rewards, input.read("rewards", ItemStack.OPTIONAL_CODEC.listOf()).orElse(List.of()));
         load(this.display, input.read("display", ItemStack.OPTIONAL_CODEC.listOf()).orElse(List.of()));
@@ -114,7 +115,7 @@ public abstract class StationBlockEntity extends BlockEntity implements MenuProv
     @Override
     protected void saveAdditional(@NonNull ValueOutput output) {
         super.saveAdditional(output);
-        if (this.owner != null) output.store("owner", UUIDUtil.CODEC, this.owner);
+        EntityReference.store(this.owner, output, "owner");
         output.store("costs", ItemStack.OPTIONAL_CODEC.listOf(), this.costs.getItems());
         output.store("rewards", ItemStack.OPTIONAL_CODEC.listOf(), this.rewards.getItems());
         output.store("display", ItemStack.OPTIONAL_CODEC.listOf(), this.display.getItems());

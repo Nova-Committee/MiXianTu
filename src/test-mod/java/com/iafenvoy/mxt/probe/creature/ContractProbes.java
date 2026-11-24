@@ -485,7 +485,7 @@ public final class ContractProbes {
                     && stored.entityType().filter(second.getType()::equals).isPresent()
                     && stored.name().isPresent()
                     && stored.contractType().map(HolderHelper::id).filter(ProbeDefinitions.OPEN_CONTRACT::equals).isPresent()
-                    && stored.owner().filter(player.getUUID()::equals).isPresent()
+                    && stored.owner().filter(reference -> reference.matches(player)).isPresent()
                     && !stored.ownerName().isBlank();
             player.setItemInHand(InteractionHand.MAIN_HAND, bagStack);
             BlockPos releaseAt = player.blockPosition();

@@ -1,6 +1,7 @@
 package com.iafenvoy.mxt.probe.item;
 
 import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.iafenvoy.mxt.compat.kubejs.MxtKubeJsApi;
 import com.iafenvoy.saturn.compat.kubejs.codec.SaturnKubeJsDataCodec;
@@ -31,6 +32,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -53,6 +55,7 @@ public final class QualityProbes {
                 Probe.of("item/quality/tier_source_layers", QualityProbes::tierSourceLayers),
                 Probe.of("item/quality/empty_requirement", QualityProbes::emptyRequirement),
                 Probe.of("item/quality/default_quality_priority", QualityProbes::defaultQualityPriority),
+                Probe.of("item/quality/tooltip_order", QualityProbes::tooltipOrder),
                 Probe.of("item/quality/kubejs_requirement", QualityProbes::kubejsRequirement));
     }
 
@@ -288,6 +291,45 @@ public final class QualityProbes {
                         + " poor_at_least=" + MxtKubeJsApi.qualityAtLeast(context.player(), cobble, normalId)
                         + " cross_ladder=" + MxtKubeJsApi.qualityAtLeast(context.player(), kiln, normalId),
                 "decoded=true normal=true poor=false at_least_normal=true poor_at_least=false cross_ladder=false");
+    }
+
+    private static void tooltipOrder(ProbeContext context) {
+        RegistryOps<JsonElement> ops = ops(context);
+        ItemQuality quality = context.require(MxtResourceKeys.ITEM_QUALITY, Identifier.parse("mxt_test:tooltip_order")).value();
+        List<String> actual = modifierDescriptions(quality);
+        List<String> expected = List.of("Alchemy", "Value", "Forging");
+        leg(context, "tooltip_order configured", actual.equals(expected), actual.toString(), expected.toString());
+
+        JsonElement encoded = ItemQuality.DIRECT_CODEC.encodeStart(ops, quality).getOrThrow();
+        ItemQuality roundTrip = ItemQuality.DIRECT_CODEC.parse(ops, encoded).getOrThrow();
+        List<String> recovered = modifierDescriptions(roundTrip);
+        leg(context, "tooltip_order round-trip", recovered.equals(expected), recovered.toString(), expected.toString());
+
+        JsonObject legacyJson = encoded.getAsJsonObject().deepCopy();
+        legacyJson.remove("tooltip_order");
+        List<String> defaultOrder = modifierDescriptions(ItemQuality.DIRECT_CODEC.parse(ops, legacyJson).getOrThrow());
+        List<String> expectedDefault = List.of("Value", "Forging", "Alchemy");
+        leg(context, "tooltip_order legacy", defaultOrder.equals(expectedDefault), defaultOrder.toString(), expectedDefault.toString());
+
+        JsonObject blankJson = encoded.getAsJsonObject().deepCopy();
+        blankJson.remove("alchemy_modifier");
+        List<String> withoutDescription = modifierDescriptions(ItemQuality.DIRECT_CODEC.parse(ops, blankJson).getOrThrow());
+        List<String> expectedWithoutDescription = List.of("Value", "Forging");
+        leg(context, "tooltip_order blank", withoutDescription.equals(expectedWithoutDescription),
+                withoutDescription.toString(), expectedWithoutDescription.toString());
+
+        for (String invalid : List.of("[\"alchemy_modifier\", \"alchemy_modifier\"]", "[\"unknown_modifier\"]")) {
+            JsonObject input = legacyJson.deepCopy();
+            input.add("tooltip_order", JsonParser.parseString(invalid));
+            boolean rejected = ItemQuality.DIRECT_CODEC.parse(ops, input).error().isPresent();
+            leg(context, "tooltip_order invalid " + invalid, rejected, Boolean.toString(rejected), "true");
+        }
+    }
+
+    private static List<String> modifierDescriptions(ItemQuality quality) {
+        List<String> descriptions = new ArrayList<>();
+        quality.appendModifierDescriptions(description -> descriptions.add(description.getString()));
+        return descriptions;
     }
 
     private static RegistryOps<JsonElement> ops(ProbeContext context) {

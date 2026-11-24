@@ -5,6 +5,9 @@ import com.iafenvoy.mxt.attachment.FloatHoldingItemAttachment;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.aura.ItemAura;
 import com.iafenvoy.mxt.data.aura.ItemAuraComponent;
+import com.iafenvoy.mxt.data.aura.SpiritStorageComponent;
+import com.iafenvoy.mxt.item.SpiritStoneBagItem;
+import com.iafenvoy.mxt.item.SpiritStoneItem;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
@@ -21,17 +24,24 @@ import com.iafenvoy.saturn.util.matcher.ItemMatcher;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.HolderLookup.Provider;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ItemStackTemplate;
+import net.minecraft.world.item.component.BundleContents;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerLoggedOutEvent;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
+import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -44,7 +54,7 @@ public final class ItemAuraService {
     }
 
     public static Optional<Holder<ItemAura>> find(Provider access, ItemStack stack) {
-        if (stack.isEmpty()) return Optional.empty();
+        if (stack.isEmpty() || stack.getItem() instanceof SpiritStoneBagItem) return Optional.empty();
         return ItemMatcher.find(MxtDatapackRegistries.holders(access, MxtResourceKeys.ITEM_AURA),
                 Holder::value, stack);
     }
@@ -78,8 +88,6 @@ public final class ItemAuraService {
         return total;
     }
 
-    // Advances by one server tick. A missing fuel first resumes the smallest partially consumed matching
-    // stack, then takes a fresh matching item from the hands or the inventory.
     public static TickResult tick(LivingEntity entity, ResourceHolderAttachment resources, FormulaContext context) {
         try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.CULTIVATION)) {
             FloatHoldingItemAttachment holding = entity.getData(MxtAttachments.FLOAT_HOLDING_ITEM);
@@ -87,9 +95,10 @@ public final class ItemAuraService {
             Holder<ItemAura> active = activeDefinition(entity, item);
             if (active == null) {
                 if (!item.isEmpty()) return TickResult.EMPTY;
-                item = loadNextItem(entity, context);
-                active = activeDefinition(entity, item);
-                if (active == null) return TickResult.EMPTY;
+                Fuel fuel = loadNextItem(entity, holding, context);
+                if (fuel == null) return TickResult.EMPTY;
+                item = fuel.stack();
+                active = fuel.definition();
             }
 
             ItemAuraComponent state = item.get(MxtDataComponents.ITEM_AURA);
@@ -137,44 +146,71 @@ public final class ItemAuraService {
         return find(entity, item).orElse(null);
     }
 
-    private static ItemStack loadNextItem(LivingEntity entity, FormulaContext context) {
+    private static @Nullable Fuel loadNextItem(LivingEntity entity, FloatHoldingItemAttachment holding, FormulaContext context) {
+        Fuel bagFuel = takeBagFuel(entity, InteractionHand.MAIN_HAND, context);
+        if (bagFuel == null) bagFuel = takeBagFuel(entity, InteractionHand.OFF_HAND, context);
+        if (bagFuel != null) {
+            holding.set(bagFuel.stack());
+            return bagFuel;
+        }
+
         ItemStack item = takeSmallestPartialHeldItem(entity);
         if (item.isEmpty()) item = takeSmallestPartialItem(entity);
         if (item.isEmpty()) item = takeFreshHeldItem(entity);
         if (item.isEmpty()) item = takeFreshInventoryItem(entity);
-        if (item.isEmpty()) return ItemStack.EMPTY;
+        if (item.isEmpty()) return null;
 
         Holder<ItemAura> definition = find(entity, item).orElse(null);
         if (definition == null) {
             giveItem(entity, item);
-            return ItemStack.EMPTY;
+            return null;
         }
-        // Reserve the stack before assigning service-owned consumption state.
-        FloatHoldingItemAttachment holding = entity.getData(MxtAttachments.FLOAT_HOLDING_ITEM);
         holding.set(item);
-        if (item.get(MxtDataComponents.ITEM_AURA) == null) {
-            double total = definition.value().aura().evaluate(context);
-            if (MiscUtil.positive(total) <= 0.0D) {
-                holding.clear();
-                giveItem(entity, item);
-                return ItemStack.EMPTY;
-            }
-            if (item.getItem() instanceof ItemAuraAccess access) {
-                Provider registries = entity.registryAccess();
-                double capacity = access.getCapacity(entity, registries, item, definition.value().type());
-                double unavailable = access.extract(entity, registries, item, definition.value().type(), capacity, false, true);
-                double available = Math.max(0.0D, capacity - unavailable);
-                if (available == 0) {
-                    holding.clear();
-                    giveItem(entity, item);
-                    return ItemStack.EMPTY;
-                }
-                item.set(MxtDataComponents.ITEM_AURA, new ItemAuraComponent(available));
-            } else {
-                item.set(MxtDataComponents.ITEM_AURA, new ItemAuraComponent(scale(total, item.getCount())));
-            }
+        if (prepareFuel(entity, item, definition.value(), context)) return new Fuel(item, definition);
+        holding.clear();
+        giveItem(entity, item);
+        return null;
+    }
+
+    private static @Nullable Fuel takeBagFuel(LivingEntity entity, InteractionHand hand, FormulaContext context) {
+        ItemStack bag = entity.getItemInHand(hand);
+        if (!(bag.getItem() instanceof SpiritStoneBagItem) || bag.getCount() != 1) return null;
+        BundleContents contents = bag.getOrDefault(DataComponents.BUNDLE_CONTENTS, BundleContents.EMPTY);
+        for (int index = 0; index < contents.size(); index++) {
+            ItemStackTemplate stone = contents.items().get(index);
+            if (!(stone.item().value() instanceof SpiritStoneItem)) continue;
+            ItemAuraComponent state = stone.get(MxtDataComponents.ITEM_AURA);
+            SpiritStorageComponent storage = stone.get(MxtDataComponents.SPIRIT_STORAGE);
+            if (state != null ? state.remain() <= 0.0D : storage != null && storage.isEmpty()) continue;
+            ItemStack item = stone.create();
+            Holder<ItemAura> definition = find(entity, item).orElse(null);
+            if (definition == null || !prepareFuel(entity, item, definition.value(), context)) continue;
+            // A number provider may run a script that changes the held stack or its contents.
+            if (entity.getItemInHand(hand) != bag || bag.get(DataComponents.BUNDLE_CONTENTS) != contents) return null;
+            List<ItemStackTemplate> remaining = new ArrayList<>(contents.items());
+            remaining.remove(index);
+            bag.set(DataComponents.BUNDLE_CONTENTS, remaining.isEmpty() ? BundleContents.EMPTY : new BundleContents(List.copyOf(remaining)));
+            if (entity instanceof Player player) player.getInventory().setChanged();
+            return new Fuel(item, definition);
         }
-        return item;
+        return null;
+    }
+
+    private static boolean prepareFuel(LivingEntity entity, ItemStack item, ItemAura definition, FormulaContext context) {
+        ItemAuraComponent state = item.get(MxtDataComponents.ITEM_AURA);
+        if (state != null) return state.remain() > 0.0D;
+
+        double total = MiscUtil.positive(definition.aura().evaluate(context));
+        if (total <= 0.0D) return false;
+        double available = scale(total, item.getCount());
+        if (item.getItem() instanceof ItemAuraAccess access) {
+            Provider registries = entity.registryAccess();
+            double capacity = access.getCapacity(entity, registries, item, definition.type());
+            available = capacity - access.extract(entity, registries, item, definition.type(), capacity, false, true);
+            if (available <= 0.0D) return false;
+        }
+        item.set(MxtDataComponents.ITEM_AURA, new ItemAuraComponent(available));
+        return true;
     }
 
     private static ItemStack takeSmallestPartialItem(LivingEntity entity) {
@@ -288,6 +324,9 @@ public final class ItemAuraService {
         } else if (entity.level() instanceof ServerLevel level) {
             entity.spawnAtLocation(level, item);
         }
+    }
+
+    private record Fuel(ItemStack stack, Holder<ItemAura> definition) {
     }
 
     public record TickResult(double consumed, double released, boolean exhausted, boolean active) {

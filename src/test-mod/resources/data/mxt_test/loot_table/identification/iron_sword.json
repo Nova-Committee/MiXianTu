@@ -1,0 +1,34 @@
+{
+  "type": "minecraft:gift",
+  "pools": [
+    {
+      "rolls": 1,
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "mxt:unidentified_item",
+          "functions": [
+            {
+              "function": "minecraft:set_count",
+              "count": 2
+            },
+            {
+              "function": "minecraft:set_components",
+              "components": {
+                "minecraft:custom_name": "Wrapped Loot",
+                "mxt:identification": {
+                  "result": "minecraft:iron_sword",
+                  "result_components": {
+                    "minecraft:damage": 12,
+                    "minecraft:custom_name": "Recovered Sword",
+                    "mxt:quality": "mxt_test:normal"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

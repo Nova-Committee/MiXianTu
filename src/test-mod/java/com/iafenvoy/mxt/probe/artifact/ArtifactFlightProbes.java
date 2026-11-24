@@ -16,6 +16,7 @@ import com.iafenvoy.mxt.probe.ProbeContext;
 import com.iafenvoy.mxt.probe.ProbeDefinitions;
 import com.iafenvoy.mxt.probe.ProbeKit;
 import com.iafenvoy.mxt.registry.MxtAttachments;
+import com.iafenvoy.mxt.registry.MxtEntityTypes;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.saturn.runtime.ability.AbilityActivationService;
 import com.iafenvoy.saturn.runtime.ability.AbilityGrantService;
@@ -37,8 +38,11 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup.Provider;
+import net.minecraft.core.UUIDUtil;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.util.ProblemReporter;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.*;
 import net.minecraft.world.entity.animal.pig.Pig;
@@ -46,11 +50,14 @@ import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.storage.TagValueInput;
+import net.minecraft.world.level.storage.TagValueOutput;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 /**
  * The flight itself: taking off through the skill with the artifact in hand, custody of the stack, the seats, the fuel
@@ -122,6 +129,7 @@ public final class ArtifactFlightProbes {
             boolean riding = pressedOk && created && active && custody && shape && paid;
             context.check("artifact roster flight: the press was accepted, failure=" + (pressed.getFailure().isEmpty() ? "none" : pressed.getFailure().orElse(null)), pressedOk);
             context.check("artifact roster flight: a mount entity was created", created);
+            if (sword != null) ownerStorage(context, sword, pilot);
             context.check("artifact roster flight: the flight state names the mount and the skill", active);
             context.check("artifact roster flight: the artifact is in the mount's custody", custody);
             context.check("artifact roster flight: the definition decides the box and the driver", shape);
@@ -170,6 +178,21 @@ public final class ArtifactFlightProbes {
         }
         if (pilot != null) pilot.discard();
         context.check("artifact roster flight", flight);
+    }
+
+    private static void ownerStorage(ProbeContext context, FlyingSwordEntity sword, LivingEntity pilot) {
+        TagValueOutput output = TagValueOutput.createWithContext(ProblemReporter.DISCARDING, context.registries());
+        sword.saveWithoutId(output);
+        CompoundTag saved = output.buildResult();
+        Optional<UUID> owner = TagValueInput.create(ProblemReporter.DISCARDING, context.registries(), saved).read("owner", UUIDUtil.CODEC);
+        context.check("flying sword writes the vanilla owner format", owner.filter(pilot.getUUID()::equals).isPresent());
+        FlyingSwordEntity restored = new FlyingSwordEntity(MxtEntityTypes.FLYING_SWORD.get(), context.level());
+        restored.load(TagValueInput.create(ProblemReporter.DISCARDING, context.registries(), saved));
+        context.expect("flying sword resolves the saved owner", restored.getOwner(), pilot);
+
+        saved.putString("owner", pilot.getStringUUID());
+        restored.load(TagValueInput.create(ProblemReporter.DISCARDING, context.registries(), saved));
+        context.expect("flying sword resolves a legacy string owner", restored.getOwner(), pilot);
     }
 
     // The same flight with a player, asked the directed way: the merged payload names the state it wants, and a

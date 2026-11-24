@@ -1,0 +1,5 @@
+{
+  "entities": ["minecraft:silverfish", "minecraft:endermite"],
+  "intelligence": -1,
+  "spawn_action": {"type": "mxt:add_resource", "resource": "mxt_test:trigger_probe", "amount": 100}
+}

@@ -1,5 +1,6 @@
 package com.iafenvoy.mxt.probe.verify;
 
+import com.google.gson.JsonElement;
 import com.iafenvoy.mxt.data.cost.context.CostSources;
 import com.iafenvoy.saturn.registry.SaturnResourceKeys;
 import com.iafenvoy.saturn.registry.SaturnAttachments;
@@ -28,6 +29,7 @@ import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactService;
 import com.iafenvoy.mxt.runtime.formation.FormationInstance;
+import com.iafenvoy.mxt.runtime.formation.FormationOwners;
 import com.iafenvoy.mxt.runtime.formation.FormationService;
 import com.iafenvoy.saturn.runtime.resulting.Result;
 import com.iafenvoy.mxt.runtime.tribulation.TribulationService;
@@ -42,6 +44,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.storage.ServerLevelData;
 
 import java.nio.charset.StandardCharsets;
@@ -89,6 +92,11 @@ public final class ClosureVerifyProbes {
     private static void ownerSet(ProbeContext context) {
         String failure = verifyOwnerSet();
         if (failure != null) context.fail(failure);
+        FormationOwners owners = FormationOwners.of(context.player().getUUID());
+        context.expect("a formation resolves an owner in its level", owners.primaryEntity(context.level()), context.player());
+        ServerLevel other = context.server().getLevel(Level.NETHER);
+        context.check("a formation cannot resolve a cached owner in another level",
+                other != null && owners.primaryEntity(other) == null);
     }
 
     // A rule's chance and cooldown, driven through the real dispatcher on two fixtures on the block-break signal:
@@ -245,6 +253,10 @@ public final class ClosureVerifyProbes {
             return "an instance saved with one owner did not read that owner back";
         if (!instance.addOwner(second) || instance.owners().ids().size() != 2)
             return "adding a second owner did not change the set";
+        JsonElement encoded = FormationInstance.CODEC.encodeStart(JsonOps.INSTANCE, instance).getOrThrow();
+        JsonElement expected = UUIDUtil.CODEC.listOf().encodeStart(JsonOps.INSTANCE, List.of(first, second)).getOrThrow();
+        if (!expected.equals(encoded.getAsJsonObject().get("owners")))
+            return "a shared formation changed the on-disk shape or order of its owners";
         if (instance.addOwner(second)) return "adding the same owner twice changed the set again";
         if (!instance.removeOwner(first) || instance.owners().ids().size() != 1)
             return "removing an owner did not change the set";

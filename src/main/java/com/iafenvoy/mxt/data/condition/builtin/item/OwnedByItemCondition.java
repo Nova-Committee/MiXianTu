@@ -12,7 +12,7 @@ public enum OwnedByItemCondition implements ItemCondition {
 
     @Override
     public boolean test(@NonNull ItemConditionContext ctx) {
-        return ArtifactService.state(ctx.stack()).ownerUuid().filter(value -> value.equals(ctx.holder().getUUID().toString())).isPresent();
+        return ArtifactService.isOwner(ctx.stack(), ctx.holder().getUUID());
     }
 
     @Override

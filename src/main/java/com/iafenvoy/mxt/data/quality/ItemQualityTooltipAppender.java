@@ -1,7 +1,6 @@
 package com.iafenvoy.mxt.data.quality;
 
 import com.iafenvoy.mxt.config.MxtClientConfig;
-import com.iafenvoy.mxt.data.quality.ItemQuality.Modifier;
 import com.iafenvoy.mxt.runtime.item.QualityService;
 import com.iafenvoy.saturn.util.DefinitionText;
 import net.minecraft.ChatFormatting;
@@ -64,12 +63,6 @@ public final class ItemQualityTooltipAppender {
         // rather than printed as its own key text.
         DefinitionText.resolved(DefinitionText.description(quality))
                 .ifPresent(text -> builder.accept(text.withStyle(ChatFormatting.GRAY)));
-        appendModifier(builder, value.valueMultiplier());
-        appendModifier(builder, value.forgingModifier());
-        appendModifier(builder, value.alchemyModifier());
-    }
-
-    private static void appendModifier(Consumer<Component> builder, Modifier modifier) {
-        if (!modifier.description().getString().isBlank()) builder.accept(modifier.description());
+        value.appendModifierDescriptions(builder);
     }
 }

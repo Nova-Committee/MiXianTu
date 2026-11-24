@@ -4,27 +4,23 @@ import com.iafenvoy.mxt.data.StormCloudOptions;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtEntityDataSerializers;
 import com.iafenvoy.mxt.registry.MxtEntityTypes;
+import com.iafenvoy.mxt.util.EntityReferences;
+import com.iafenvoy.mxt.util.MxtCodecs;
+import com.mojang.serialization.Codec;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.UUIDUtil;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.Mth;
 import net.minecraft.world.damagesource.DamageSource;
-import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.entity.EntitySpawnReason;
-import net.minecraft.world.entity.InterpolationHandler;
-import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.*;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.Vec3;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
-
-import java.util.UUID;
 
 public final class StormCloudEntity extends Entity {
     public static final int TRACKING_CHUNKS = 24;
@@ -34,6 +30,7 @@ public final class StormCloudEntity extends Entity {
     private static final double ARRIVAL_DISTANCE = 0.01;
     private static final long TIMED = -2L, TRIBULATION_ACTIVE = -1L;
     private static final int DISSOLVE_TICKS = 23;
+    private static final Codec<EntityReference<Entity>> OWNER_CODEC = MxtCodecs.entityReferenceWithLegacyString();
 
     private static final EntityDataAccessor<StormCloudOptions> OPTIONS =
             SynchedEntityData.defineId(StormCloudEntity.class, MxtEntityDataSerializers.STORM_CLOUD_OPTIONS.get());
@@ -43,7 +40,7 @@ public final class StormCloudEntity extends Entity {
             SynchedEntityData.defineId(StormCloudEntity.class, EntityDataSerializers.LONG);
 
     private final InterpolationHandler interpolation = new InterpolationHandler(this);
-    private @Nullable UUID owner;
+    private @Nullable EntityReference<Entity> owner;
 
     public StormCloudEntity(EntityType<? extends StormCloudEntity> type, Level level) {
         super(type, level);
@@ -79,7 +76,7 @@ public final class StormCloudEntity extends Entity {
     }
 
     public void setOwner(@Nullable Entity owner) {
-        this.owner = owner == null ? null : owner.getUUID();
+        this.owner = owner == null ? null : EntityReference.of(owner.getUUID());
     }
 
     public long ageTicks() {
@@ -98,7 +95,7 @@ public final class StormCloudEntity extends Entity {
     }
 
     public boolean isActiveTribulationCloudFor(Entity owner) {
-        return this.entityData.get(DISSOLVE_AT) == TRIBULATION_ACTIVE && owner.getUUID().equals(this.owner);
+        return this.entityData.get(DISSOLVE_AT) == TRIBULATION_ACTIVE && this.owner != null && this.owner.matches(owner);
     }
 
     public void dissolve() {
@@ -142,7 +139,7 @@ public final class StormCloudEntity extends Entity {
         }
         long dissolveAt = this.entityData.get(DISSOLVE_AT);
         if (dissolveAt >= 0) return;
-        Entity target = this.owner == null ? null : this.level().getEntity(this.owner);
+        Entity target = EntityReferences.inLevel(this.owner, this.level());
         if (dissolveAt == TRIBULATION_ACTIVE && (!(target instanceof LivingEntity living) || !living.isAlive()
                 || living.getExistingData(MxtAttachments.TRIBULATION)
                 .filter(run -> run.tribulation().isPresent() && run.stormCloud().filter(this.getUUID()::equals).isPresent()).isEmpty())) {
@@ -182,7 +179,7 @@ public final class StormCloudEntity extends Entity {
     @Override
     protected void readAdditionalSaveData(@NonNull ValueInput input) {
         this.setOptions(input.read("cloud", StormCloudOptions.CODEC).orElse(StormCloudOptions.DEFAULT));
-        this.owner = input.read("owner", UUIDUtil.LENIENT_CODEC).orElse(null);
+        this.owner = input.read("owner", OWNER_CODEC).orElse(null);
         long now = this.level().getGameTime();
         this.entityData.set(CREATED_AT, Math.clamp(input.getLongOr("cloud_created_at", now), 0, now));
         this.entityData.set(DISSOLVE_AT, Math.clamp(input.getLongOr("cloud_dissolve_at", TIMED), TIMED, now));
@@ -192,7 +189,7 @@ public final class StormCloudEntity extends Entity {
     @Override
     protected void addAdditionalSaveData(@NonNull ValueOutput output) {
         output.store("cloud", StormCloudOptions.CODEC, this.options());
-        if (this.owner != null) output.store("owner", UUIDUtil.CODEC, this.owner);
+        EntityReference.store(this.owner, output, "owner");
         output.putLong("cloud_created_at", this.entityData.get(CREATED_AT));
         if (this.isTribulationCloud()) output.putLong("cloud_dissolve_at", this.entityData.get(DISSOLVE_AT));
     }

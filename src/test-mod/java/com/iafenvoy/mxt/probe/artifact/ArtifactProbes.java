@@ -2,15 +2,19 @@ package com.iafenvoy.mxt.probe.artifact;
 
 import com.iafenvoy.mxt.data.ability.type.StorageAbilityType;
 import com.iafenvoy.mxt.data.artifact.Artifact;
+import com.iafenvoy.mxt.data.artifact.ArtifactStateComponent;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.probe.Probe;
 import com.iafenvoy.mxt.probe.ProbeContext;
 import com.iafenvoy.mxt.probe.ProbeDefinitions;
+import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactService;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactService.RefineResult;
 import com.iafenvoy.saturn.util.HolderHelper;
 import com.iafenvoy.saturn.util.formula.FormulaContext;
+import com.google.gson.JsonObject;
+import com.mojang.serialization.JsonOps;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
 import net.minecraft.core.HolderLookup.Provider;
@@ -132,6 +136,16 @@ public final class ArtifactProbes {
                 && !ArtifactService.mayUse(jadeStack, jadeHolder, stranger)
                 && !ArtifactService.hasOwner(plainJade) && ArtifactService.hasOwner(jadeStack);
         context.check("artifact roster ownership gate require_owner=true refuses, =false binds", ownershipGate);
+
+        JsonObject saved = new JsonObject();
+        saved.addProperty("owner_uuid", stranger.toString());
+        saved.addProperty("owner_name", "Offline Owner");
+        ArtifactStateComponent decoded = ArtifactStateComponent.CODEC.parse(JsonOps.INSTANCE, saved).getOrThrow();
+        jadeStack.set(MxtDataComponents.ARTIFACT_STATE, decoded);
+        context.check("artifact owner can be checked without a loaded entity",
+                ArtifactService.isOwner(jadeStack, stranger) && !ArtifactService.isOwner(jadeStack, context.player().getUUID()));
+        context.expect("artifact owner keeps its original string format",
+                ArtifactStateComponent.CODEC.encodeStart(JsonOps.INSTANCE, decoded).getOrThrow(), saved);
     }
 
     // The container a stack declares, as the roster rows state it: the slots of the first storage ability it offers.

@@ -1,9 +1,10 @@
 package com.iafenvoy.mxt.runtime.creature;
 
+import com.iafenvoy.mxt.attachment.CreatureSpiritAttachment;
+import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.creature.CreatureProfile;
 import com.iafenvoy.mxt.registry.MxtAttachments;
-import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
-import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.registry.cache.RegistryCaches;
 import com.iafenvoy.mxt.runtime.MxtProfilerSources;
 import com.iafenvoy.mxt.runtime.world.AuraResult;
 import com.iafenvoy.mxt.runtime.world.AuraService;
@@ -12,75 +13,68 @@ import com.iafenvoy.saturn.profiling.ServerProfiling;
 import com.iafenvoy.saturn.runtime.ability.AbilityGrantService;
 import com.iafenvoy.saturn.util.codec.RegistryCodecs;
 import com.iafenvoy.saturn.util.formula.FormulaContext;
-import net.minecraft.core.HolderLookup.Provider;
+import com.iafenvoy.saturn.util.formula.NumberProvider;
+import net.minecraft.core.Holder;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.ItemStackTemplate;
 
-import java.util.Comparator;
-import java.util.Optional;
+import java.util.Map;
 
 /**
- * Selects and persists a tagged creature profile after evaluating its entity condition, runs the profile's spawn
- * action once, and reads the persisted profile back for other modules that need it, such as contract eligibility.
+ * Applies the first eligible creature profile in registry ID order.
  */
 public final class CreatureProfileService {
     private CreatureProfileService() {
     }
 
-    public static Optional<Identifier> select(Mob creature) {
-        Provider access = creature.level().registryAccess();
-        return MxtDatapackRegistries.holders(access, MxtResourceKeys.CREATURE_PROFILE).map(holder -> holder.key().identifier())
-                .filter(id -> MxtDatapackRegistries.get(access, MxtResourceKeys.CREATURE_PROFILE, id).filter(value -> matchesType(creature, value)).isPresent())
-                .min(Comparator.naturalOrder());
-    }
-
-    public static boolean apply(Mob creature, Identifier id, CreatureProfile definition, FormulaContext context) {
+    public static boolean applySelected(Mob creature) {
         try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.CREATURE)) {
-            if (!definition.condition().test(creature, context))
+            if (creature.getExistingData(MxtAttachments.CREATURE_SPIRIT).flatMap(CreatureSpiritAttachment::profile).isPresent())
                 return false;
-            AuraResult aura = AuraService.getPositionAura(creature.level(), creature.blockPosition());
-            if (!definition.minimumAura().entrySet().stream().allMatch(entry -> {
-                double minimum = entry.getValue().evaluate(context);
-                return Double.isFinite(minimum) && minimum >= 0.0D && aura.pool(entry.getKey()).amount() >= minimum;
-            })
-                    || (!definition.preferredAuraElements().isEmpty() && aura.aura().entrySet().stream().noneMatch(element -> element.getValue().amount() > 0.0D
-                    && element.getKey().value().auraType()
-                    .filter(type -> RegistryCodecs.matches(definition.preferredAuraElements(), type)).isPresent())))
-                return false;
-            final double intelligence;
-            try {
-                intelligence = definition.intelligence().evaluate(context);
-            } catch (RuntimeException exception) {
-                return false;
+
+            FormulaContext context = null;
+            AuraResult aura = null;
+            for (Holder<CreatureProfile> candidate : RegistryCaches.CREATURE_PROFILE_ORDER.get()) {
+                CreatureProfile profile = candidate.value();
+                if (!RegistryCodecs.matches(profile.entities(), BuiltInRegistries.ENTITY_TYPE, creature.getType()))
+                    continue;
+                if (context == null) context = FormulaContext.of(creature);
+                if (!profile.condition().test(creature, context)) continue;
+                if (!profile.minimumAura().isEmpty() || !profile.preferredAuraElements().isEmpty()) {
+                    if (aura == null) aura = AuraService.getPositionAura(creature.level(), creature.blockPosition());
+                    if (!matchesAura(profile, aura, context)) continue;
+                }
+
+                double intelligence = evaluate(profile.intelligence(), context);
+                if (!Double.isFinite(intelligence) || intelligence < 0.0D) continue;
+                creature.getData(MxtAttachments.CREATURE_SPIRIT)
+                        .apply(candidate, intelligence, profile.innerCore().map(ItemStackTemplate::create).orElse(ItemStack.EMPTY));
+                AbilityGrantService.recalculate(creature);
+                profile.spawnAction().execute(creature, context);
+                return true;
             }
-            if (!Double.isFinite(intelligence) || intelligence < 0.0D) return false;
-            MxtDatapackRegistries.holder(creature.level().registryAccess(), MxtResourceKeys.CREATURE_PROFILE, id)
-                    .ifPresent(profile -> {
-                        creature.getData(MxtAttachments.CREATURE_SPIRIT)
-                                .apply(profile, intelligence, definition.innerCore().map(ItemStackTemplate::create).orElse(ItemStack.EMPTY));
-                        // A profile that owns a chain hands this creature that chain, so the level it stands on is
-                        // granted together with the write.
-                        AbilityGrantService.recalculate(creature);
-                        // The profile is written once per creature, so its spawn action runs once: after the write, so
-                        // the action can already read the profile it belongs to.
-                        definition.spawnAction().execute(creature, context);
-                    });
-            return true;
+            return false;
         }
     }
 
-    public static boolean matchesType(Mob creature, CreatureProfile definition) {
-        return RegistryCodecs.matches(definition.entities(), BuiltInRegistries.ENTITY_TYPE, creature.getType());
+    private static boolean matchesAura(CreatureProfile profile, AuraResult aura, FormulaContext context) {
+        for (Map.Entry<Holder<Aura>, NumberProvider> entry : profile.minimumAura().entrySet()) {
+            double minimum = evaluate(entry.getValue(), context);
+            if (!Double.isFinite(minimum) || minimum < 0.0D || aura.pool(entry.getKey()).amount() < minimum)
+                return false;
+        }
+        return profile.preferredAuraElements().isEmpty() || aura.aura().entrySet().stream()
+                .anyMatch(entry -> entry.getValue().amount() > 0.0D && entry.getKey().value().auraType()
+                        .filter(type -> RegistryCodecs.matches(profile.preferredAuraElements(), type)).isPresent());
     }
 
-    public static boolean applySelected(Mob creature) {
-        try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.CREATURE)) {
-            if (creature.getData(MxtAttachments.CREATURE_SPIRIT).profile().isPresent()) return false;
-            Identifier id = select(creature).orElse(null);
-            return id != null && MxtDatapackRegistries.get(creature.level().registryAccess(), MxtResourceKeys.CREATURE_PROFILE, id).map(definition -> apply(creature, id, definition, FormulaContext.of(creature))).orElse(false);
+    private static double evaluate(NumberProvider provider, FormulaContext context) {
+        try {
+            return provider.evaluate(context);
+        } catch (RuntimeException exception) {
+            return Double.NaN;
         }
     }
 }

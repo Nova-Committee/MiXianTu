@@ -4,6 +4,7 @@ import com.iafenvoy.mxt.MiXianTu;
 import com.iafenvoy.mxt.data.item.*;
 import com.iafenvoy.mxt.item.*;
 import net.minecraft.ChatFormatting;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
@@ -12,6 +13,7 @@ import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Item.Properties;
 import net.minecraft.world.item.ToolMaterial;
+import net.minecraft.world.item.component.BundleContents;
 import net.minecraft.world.level.block.Block;
 import net.neoforged.neoforge.registries.DeferredItem;
 import net.neoforged.neoforge.registries.DeferredRegister;
@@ -53,9 +55,11 @@ public final class MxtItems {
     public static final DeferredItem<Item> JADE_SLIP = register("jade_slip", JadeSlipItem::new);
     // Containers and tools
     public static final DeferredItem<Item> SPIRIT_RING = register("spirit_ring", Item::new);
-    public static final DeferredItem<Item> SPIRIT_STONE_BAG = register("spirit_stone_bag", Item::new);
+    public static final DeferredItem<SpiritStoneBagItem> SPIRIT_STONE_BAG = register("spirit_stone_bag",
+            properties -> new SpiritStoneBagItem(properties.stacksTo(1).component(DataComponents.BUNDLE_CONTENTS, BundleContents.EMPTY)));
     public static final DeferredItem<SpiritVesselItem> SPIRIT_VESSEL = register("spirit_vessel", properties -> new SpiritVesselItem(properties.stacksTo(1).component(MxtDataComponents.RESOURCE_CONTAINER, ResourceContainerComponent.EMPTY)));
     public static final DeferredItem<IdentificationMirrorItem> IDENTIFICATION_MIRROR = register("identification_mirror", properties -> new IdentificationMirrorItem(properties.stacksTo(1)));
+    public static final DeferredItem<Item> UNIDENTIFIED_ITEM = register("unidentified_item", Item::new);
     // The talisman chain in the order a carrier is made: paper, brush, pigment, carrier, recall
     public static final DeferredItem<TalismanBrushItem> TALISMAN_BRUSH = register("talisman_brush", properties -> new TalismanBrushItem(properties.stacksTo(1)));
     public static final DeferredItem<Item> CINNABAR = register("cinnabar", Item::new);

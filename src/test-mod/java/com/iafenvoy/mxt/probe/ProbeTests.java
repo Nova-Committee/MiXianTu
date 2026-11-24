@@ -6,12 +6,16 @@ import com.iafenvoy.mxt.probe.artifact.ArtifactProbes;
 import com.iafenvoy.mxt.probe.combat.DamageProbes;
 import com.iafenvoy.mxt.probe.combat.ElementProbes;
 import com.iafenvoy.mxt.probe.creature.ContractProbes;
+import com.iafenvoy.mxt.probe.creature.CreatureProfileProbes;
 import com.iafenvoy.mxt.probe.creature.PerchProbes;
 import com.iafenvoy.mxt.probe.creature.ProgressionProbes;
 import com.iafenvoy.mxt.probe.cultivation.CultivationProbes;
 import com.iafenvoy.mxt.probe.cultivation.IdentityProbes;
+import com.iafenvoy.mxt.probe.cultivation.SpiritStoneBagProbes;
+import com.iafenvoy.mxt.probe.cultivation.SpiritStoneBagTooltipProbes;
 import com.iafenvoy.mxt.probe.formation.FormationProbes;
 import com.iafenvoy.mxt.probe.herb.HerbProbes;
+import com.iafenvoy.mxt.probe.item.IdentificationProbes;
 import com.iafenvoy.mxt.probe.item.JadeSlipProbes;
 import com.iafenvoy.mxt.probe.item.QualityProbes;
 import com.iafenvoy.mxt.probe.item.WeaponBindingProbes;
@@ -63,12 +67,15 @@ public final class ProbeTests {
             DamageProbes::probes,
             ElementProbes::probes,
             ContractProbes::probes,
+            CreatureProfileProbes::probes,
             PerchProbes::probes,
             ProgressionProbes::probes,
             CultivationProbes::probes,
+            SpiritStoneBagProbes::probes,
             IdentityProbes::probes,
             HerbProbes::probes,
             JadeSlipProbes::probes,
+            IdentificationProbes::probes,
             ItemUseCycleVerifyProbes::probes,
             QualityProbes::probes,
             WorkstationBoundaryProbes::probes,
@@ -124,6 +131,7 @@ public final class ProbeTests {
             probes.addAll(PonderRenderVerifyProbes.probes());
             probes.addAll(PonderSceneVerifyProbes.probes());
             probes.addAll(SecretRealmClientProbes.probes());
+            probes.addAll(SpiritStoneBagTooltipProbes.probes());
         }
         if (ModList.get().isLoaded("reincarnation")) probes.addAll(LifespanProbes.probes());
         return List.copyOf(probes);

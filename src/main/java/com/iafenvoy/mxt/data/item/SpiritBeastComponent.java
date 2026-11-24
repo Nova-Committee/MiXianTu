@@ -7,7 +7,6 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.Holder;
-import net.minecraft.core.UUIDUtil;
 import net.minecraft.core.component.DataComponentGetter;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
@@ -15,8 +14,10 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.ComponentSerialization;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.ProblemReporter;
+import net.minecraft.world.entity.EntityReference;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item.TooltipContext;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.component.TooltipProvider;
@@ -29,7 +30,6 @@ import net.neoforged.neoforge.event.RegisterTooltipAppendersEvent;
 import org.jspecify.annotations.NonNull;
 
 import java.util.Optional;
-import java.util.UUID;
 import java.util.function.Consumer;
 
 /**
@@ -43,14 +43,15 @@ import java.util.function.Consumer;
 @EventBusSubscriber(Dist.CLIENT)
 public record SpiritBeastComponent(Optional<EntityType<?>> entityType, Optional<CompoundTag> entity,
                                    Optional<Component> name, Optional<Holder<ContractType>> contractType,
-                                   Optional<UUID> owner, String ownerName) implements TooltipProvider {
+                                   Optional<EntityReference<Player>> owner,
+                                   String ownerName) implements TooltipProvider {
     public static final SpiritBeastComponent EMPTY = new SpiritBeastComponent(Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), "");
     public static final Codec<SpiritBeastComponent> CODEC = RecordCodecBuilder.create(i -> i.group(
             BuiltInRegistries.ENTITY_TYPE.byNameCodec().optionalFieldOf("entity_type").forGetter(SpiritBeastComponent::entityType),
             CompoundTag.CODEC.optionalFieldOf("entity").forGetter(SpiritBeastComponent::entity),
             ComponentSerialization.CODEC.optionalFieldOf("name").forGetter(SpiritBeastComponent::name),
             ContractType.CODEC.optionalFieldOf("contract_type").forGetter(SpiritBeastComponent::contractType),
-            UUIDUtil.CODEC.optionalFieldOf("owner").forGetter(SpiritBeastComponent::owner),
+            EntityReference.<Player>codec().optionalFieldOf("owner").forGetter(SpiritBeastComponent::owner),
             Codec.STRING.optionalFieldOf("owner_name", "").forGetter(SpiritBeastComponent::ownerName)
     ).apply(i, SpiritBeastComponent::new));
 
@@ -64,7 +65,9 @@ public record SpiritBeastComponent(Optional<EntityType<?>> entityType, Optional<
     public static SpiritBeastComponent capture(Mob beast, Holder<ContractType> type, ServerPlayer owner) {
         TagValueOutput output = TagValueOutput.createWithContext(ProblemReporter.DISCARDING, beast.level().registryAccess());
         beast.saveWithoutId(output);
-        return new SpiritBeastComponent(Optional.of(beast.getType()), Optional.of(output.buildResult()), Optional.of(beast.getDisplayName()), Optional.of(type), Optional.of(owner.getUUID()), owner.getGameProfile().name());
+        return new SpiritBeastComponent(Optional.of(beast.getType()), Optional.of(output.buildResult()),
+                Optional.of(beast.getDisplayName()), Optional.of(type), Optional.of(EntityReference.of(owner.getUUID())),
+                owner.getGameProfile().name());
     }
 
     @SubscribeEvent

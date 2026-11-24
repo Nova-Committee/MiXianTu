@@ -7,6 +7,7 @@ import com.iafenvoy.mxt.data.ability.type.MountAbilityType;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.MxtProfilerSources;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactService;
+import com.iafenvoy.mxt.util.MxtCodecs;
 import com.iafenvoy.saturn.profiling.ProfilerScope;
 import com.iafenvoy.saturn.profiling.ServerProfiling;
 import com.mojang.serialization.Codec;
@@ -30,7 +31,6 @@ import net.minecraft.world.phys.Vec3;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
-import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -49,11 +49,12 @@ public final class FlyingSwordEntity extends Entity implements MountVehicle {
     private static final float PITCH_RATIO = 0.5F;
     // The box is a thin slab under the rider's feet, so boarding would otherwise be a pixel hunt.
     private static final float PICK_RADIUS = 0.35F;
+    private static final Codec<EntityReference<LivingEntity>> OWNER_CODEC = MxtCodecs.entityReferenceWithLegacyString();
     // The server moves this in whole ticks and a client draws twenty of those a second, so a mount carrying the player
     // would visibly step. Smoothing between the packets is what the vanilla vehicles do for the same reason.
     private final InterpolationHandler interpolation = new InterpolationHandler(this);
     private double speed = 0.05D;
-    private EntityReference<LivingEntity> owner;
+    private @Nullable EntityReference<LivingEntity> owner;
     // Null until the carried stack has been read once; the stack is compared again on every use, so both the sync of
     // a new visual and a /reload re-read the definition without a second field being kept in step.
     private ItemStack resolvedVisual;
@@ -105,7 +106,7 @@ public final class FlyingSwordEntity extends Entity implements MountVehicle {
             // The flight belongs to the player who started it: seat 0 is the driver, so a driver who left (logged out,
             // died, was ejected) must not hand that seat - and the fuel bill - to whoever is still sitting behind them.
             if (this.owner == null || !(this.getFirstPassenger() instanceof ServerPlayer rider)
-                    || !Objects.equals(this.owner.getUUID(), rider.getUUID()) || !rider.isAlive()) {
+                    || !this.owner.matches(rider) || !rider.isAlive()) {
                 this.discard();
                 return;
             }
@@ -272,23 +273,14 @@ public final class FlyingSwordEntity extends Entity implements MountVehicle {
     @Override
     protected void readAdditionalSaveData(@NonNull ValueInput input) {
         this.setVisual(input.read("visual", ItemStack.OPTIONAL_CODEC).orElse(ItemStack.EMPTY));
-        this.owner = input.read("owner", Codec.STRING).map(FlyingSwordEntity::ownerOf).orElse(null);
+        this.owner = input.read("owner", OWNER_CODEC).orElse(null);
     }
 
     @Override
     protected void addAdditionalSaveData(@NonNull ValueOutput output) {
         ItemStack visual = this.visual();
         if (!visual.isEmpty()) output.store("visual", ItemStack.OPTIONAL_CODEC, visual);
-        if (this.owner != null) output.store("owner", Codec.STRING, this.owner.getUUID().toString());
-    }
-
-    // The owner stays on disk as the plain UUID string it has always been, and is only wrapped for the contract.
-    private static EntityReference<LivingEntity> ownerOf(String raw) {
-        try {
-            return EntityReference.of(UUID.fromString(raw));
-        } catch (IllegalArgumentException exception) {
-            return null;
-        }
+        EntityReference.store(this.owner, output, "owner");
     }
 
     @Override

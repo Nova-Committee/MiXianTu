@@ -1,0 +1,4 @@
+{
+  "parent": "minecraft:item/template_bundle_open_front",
+  "textures": {"layer0": "mxt:item/spirit_stone_bag_open_front"}
+}

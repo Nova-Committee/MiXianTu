@@ -3,6 +3,9 @@ package com.iafenvoy.mxt.util;
 import com.iafenvoy.saturn.util.codec.MiscCodecs;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
+import net.minecraft.core.UUIDUtil;
+import net.minecraft.world.entity.EntityReference;
+import net.minecraft.world.level.entity.UniquelyIdentifyable;
 import net.minecraft.world.phys.Vec2;
 
 import java.util.List;
@@ -19,5 +22,9 @@ public final class MxtCodecs {
             value -> List.of((double) value.x, (double) value.y));
 
     private MxtCodecs() {
+    }
+
+    public static <T extends UniquelyIdentifyable> Codec<EntityReference<T>> entityReferenceWithLegacyString() {
+        return UUIDUtil.LENIENT_CODEC.xmap(EntityReference::of, EntityReference::getUUID);
     }
 }

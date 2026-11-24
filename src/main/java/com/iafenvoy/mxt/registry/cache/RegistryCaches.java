@@ -2,6 +2,7 @@ package com.iafenvoy.mxt.registry.cache;
 
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.aura.BlockAura;
+import com.iafenvoy.mxt.data.creature.CreatureProfile;
 import com.iafenvoy.mxt.data.cultivation.Element;
 import com.iafenvoy.mxt.data.cultivation.ElementReaction;
 import com.iafenvoy.mxt.data.cultivation.RealmStage;
@@ -47,6 +48,7 @@ public final class RegistryCaches {
     public static final FormulaNameCache<Element> ELEMENT_NAMES = new FormulaNameCache<>(MxtResourceKeys.ELEMENT, "element");
     public static final FormulaNameCache<Attribute> ATTRIBUTE_NAMES = new FormulaNameCache<>(Registries.ATTRIBUTE, "attribute");
     public static final OrderCache<ElementReaction> ELEMENT_REACTION_ORDER = new OrderCache<>(MxtResourceKeys.ELEMENT_REACTION, Comparator.<Holder.Reference<ElementReaction>>comparingInt(h -> h.value().priority()).reversed().thenComparing(h -> h.key().identifier()));
+    public static final OrderCache<CreatureProfile> CREATURE_PROFILE_ORDER = new OrderCache<>(MxtResourceKeys.CREATURE_PROFILE, Comparator.comparing(h -> h.key().identifier()));
     public static final HeatSourceCache HEAT_SOURCE = new HeatSourceCache();
     public static final DamageElementsCache DAMAGE_ELEMENTS = new DamageElementsCache();
     public static final AbilityAffinityCache ABILITY_AFFINITY = AbilityAffinityCache.of();

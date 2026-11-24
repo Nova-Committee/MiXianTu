@@ -1,7 +1,9 @@
 package com.iafenvoy.mxt.probe.verify;
 
+import com.iafenvoy.mxt.item.block.entity.TradeStationBlockEntity;
 import com.iafenvoy.mxt.probe.Probe;
 import com.iafenvoy.mxt.probe.ProbeContext;
+import com.iafenvoy.mxt.registry.MxtBlocks;
 import com.iafenvoy.mxt.registry.MxtItems;
 import com.iafenvoy.mxt.runtime.economy.CurrencyPaymentService;
 import com.iafenvoy.mxt.runtime.economy.CurrencyPaymentService.Denomination;
@@ -10,12 +12,17 @@ import com.iafenvoy.mxt.runtime.economy.PlayerTradeAction;
 import com.iafenvoy.mxt.runtime.economy.PlayerTradeService;
 import com.iafenvoy.mxt.runtime.economy.PlayerTradeService.RequestResult;
 import com.iafenvoy.mxt.screen.menu.PlayerTradeMenu;
+import com.iafenvoy.mxt.screen.menu.StationMenu;
 import net.minecraft.core.RegistryAccess;
+import net.minecraft.core.UUIDUtil;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.util.ProblemReporter;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.level.storage.TagValueInput;
 
 import java.util.List;
 import java.util.Optional;
@@ -38,8 +45,29 @@ public final class EconomyVerifyProbes {
                 Probe.of("verify/economy/change_combination", EconomyVerifyProbes::changeCombination),
                 Probe.of("verify/economy/trade_offer_change", EconomyVerifyProbes::tradeOfferChange),
                 Probe.of("verify/economy/trade_full_cancel", EconomyVerifyProbes::tradeFullCancel),
-                Probe.of("verify/economy/trade_complete", EconomyVerifyProbes::tradeComplete)
+                Probe.of("verify/economy/trade_complete", EconomyVerifyProbes::tradeComplete),
+                Probe.of("verify/economy/station_owner", EconomyVerifyProbes::stationOwner)
         );
+    }
+
+    private static void stationOwner(ProbeContext context) {
+        ServerPlayer player = context.player();
+        ServerPlayer customer = context.joinBeside(player, 2.0D, 0.0D);
+        TradeStationBlockEntity station = new TradeStationBlockEntity(context.at(5, 1, 5),
+                MxtBlocks.TRADE_STATION.get().defaultBlockState());
+        CompoundTag saved = new CompoundTag();
+        saved.putIntArray("owner", UUIDUtil.uuidToIntArray(player.getUUID()));
+        station.loadWithComponents(TagValueInput.create(ProblemReporter.DISCARDING, context.registries(), saved));
+        context.expect("a legacy station owner has management access",
+                ((StationMenu) station.createMenu(1, player.getInventory(), player)).mode(), StationMenu.Mode.TRADE_OWNER);
+        context.expect("another player has customer access",
+                ((StationMenu) station.createMenu(2, customer.getInventory(), customer)).mode(), StationMenu.Mode.TRADE_CUSTOMER);
+        CompoundTag roundTrip = station.saveWithoutMetadata(context.registries());
+        context.check("station writes its owner as the same UUID",
+                TagValueInput.create(ProblemReporter.DISCARDING, context.registries(), roundTrip).read("owner", UUIDUtil.CODEC)
+                        .filter(player.getUUID()::equals).isPresent());
+        station.loadWithComponents(TagValueInput.create(ProblemReporter.DISCARDING, context.registries(), new CompoundTag()));
+        context.check("loading ownerless station data clears stale ownership", station.owner() == null);
     }
 
     // A set the greedy answer cannot solve is still paid: 4 and 3 cannot make 6 by taking 4 first, while 3 + 3 can, so

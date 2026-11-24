@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.registry;
 
-import com.iafenvoy.mxt.data.StormCloudOptions;
 import com.iafenvoy.mxt.MiXianTu;
+import com.iafenvoy.mxt.data.StormCloudOptions;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.talisman.Talisman;
 import com.iafenvoy.mxt.runtime.world.SoulAppearance;

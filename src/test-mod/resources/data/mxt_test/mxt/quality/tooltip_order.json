@@ -1,0 +1,6 @@
+{
+  "tooltip_order": ["alchemy_modifier"],
+  "value_multiplier": { "description": { "text": "Value" } },
+  "forging_modifier": { "description": { "text": "Forging" } },
+  "alchemy_modifier": { "description": { "text": "Alchemy" } }
+}

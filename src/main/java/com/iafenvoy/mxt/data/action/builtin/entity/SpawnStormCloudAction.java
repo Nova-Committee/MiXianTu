@@ -12,7 +12,7 @@ import net.minecraft.server.level.ServerLevel;
 import org.jspecify.annotations.NonNull;
 
 public record SpawnStormCloudAction(StormCloudOptions.Appearance appearance, float radius, int lifetime,
-                                   double offsetY, boolean follow) implements EntityAction {
+                                    double offsetY, boolean follow) implements EntityAction {
     public static final MapCodec<SpawnStormCloudAction> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             StormCloudOptions.Appearance.CODEC.forGetter(SpawnStormCloudAction::appearance),
             StormCloudOptions.RADIUS_CODEC.optionalFieldOf("radius", StormCloudOptions.DEFAULT.radius()).forGetter(SpawnStormCloudAction::radius),

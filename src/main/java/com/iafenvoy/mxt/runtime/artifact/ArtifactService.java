@@ -79,10 +79,9 @@ public final class ArtifactService {
             if (NeoForge.EVENT_BUS.post(new Pre(owner, stack)).isCanceled())
                 return RefineResult.CANCELLED;
             ArtifactStateComponent current = state(stack);
-            String requestedOwner = ownerUuid.toString();
-            if (current.ownerUuid().isPresent() && !current.ownerUuid().get().equals(requestedOwner))
+            if (current.owner().filter(reference -> !reference.getUUID().equals(ownerUuid)).isPresent())
                 return RefineResult.OWNED_BY_OTHER;
-            stack.set(MxtDataComponents.ARTIFACT_STATE, current.withOwner(requestedOwner, PlayerNames.displayName(owner)));
+            stack.set(MxtDataComponents.ARTIFACT_STATE, current.withOwner(ownerUuid, PlayerNames.displayName(owner)));
             NeoForge.EVENT_BUS.post(new Post(owner, stack));
             // Runs only for a binding that was really written, and deliberately not checked against the holder first:
             // refusing a claim the price would kill is not this method's business, and every writer of a binding pays
@@ -94,11 +93,11 @@ public final class ArtifactService {
     }
 
     public static boolean isOwner(ItemStack stack, UUID owner) {
-        return state(stack).ownerUuid().filter(owner.toString()::equals).isPresent();
+        return state(stack).owner().filter(reference -> reference.getUUID().equals(owner)).isPresent();
     }
 
     public static boolean hasOwner(ItemStack stack) {
-        return state(stack).ownerUuid().isPresent();
+        return state(stack).owner().isPresent();
     }
 
     // Refuses until refined only when require_owner; otherwise open to anybody until refined, and answering to its

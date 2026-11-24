@@ -87,7 +87,7 @@ public final class ArtifactDescription {
     // A fresh artifact that merely has not been refined says nothing; a name is preferred over the raw uuid.
     private static void appendOwnership(List<Component> lines, Artifact artifact, ArtifactStateComponent state,
                                         boolean advanced) {
-        String owner = state.ownerUuid().orElse(null);
+        String owner = state.owner().map(reference -> reference.getUUID().toString()).orElse(null);
         if (owner == null && !artifact.requireOwner()) return;
         MutableComponent mark = Component.literal(owner == null ? "✖ " : "✔ ")
                 .withStyle(owner == null ? ChatFormatting.RED : ChatFormatting.GREEN);

@@ -2,8 +2,11 @@ package com.iafenvoy.mxt.data.artifact;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityReference;
 
 import java.util.Optional;
+import java.util.UUID;
 
 /**
  * Persistent ItemStack state for an artifact: whom it belongs to, what that owner is called, and how well it has
@@ -11,9 +14,10 @@ import java.util.Optional;
  * shared {@code mxt:spirit_storage} component; neither is repeated here. The UUID is the identity every ownership
  * question is asked of, while the name is display only, written once by whoever claimed the stack.
  */
-public record ArtifactStateComponent(Optional<String> ownerUuid, Optional<String> ownerName, double nourishment) {
+public record ArtifactStateComponent(Optional<EntityReference<Entity>> owner, Optional<String> ownerName,
+                                     double nourishment) {
     public static final Codec<ArtifactStateComponent> CODEC = RecordCodecBuilder.create(i -> i.group(
-            Codec.STRING.optionalFieldOf("owner_uuid").forGetter(ArtifactStateComponent::ownerUuid),
+            EntityReference.<Entity>codec().optionalFieldOf("owner_uuid").forGetter(ArtifactStateComponent::owner),
             Codec.STRING.optionalFieldOf("owner_name").forGetter(ArtifactStateComponent::ownerName),
             Codec.DOUBLE.optionalFieldOf("nourishment", 0.0D).forGetter(ArtifactStateComponent::nourishment)
     ).apply(i, ArtifactStateComponent::new));
@@ -29,11 +33,11 @@ public record ArtifactStateComponent(Optional<String> ownerUuid, Optional<String
     }
 
     // ownerName never replaces the UUID as the answer to "whose is this".
-    public ArtifactStateComponent withOwner(String ownerUuid, Optional<String> ownerName) {
-        return new ArtifactStateComponent(Optional.of(ownerUuid), ownerName, this.nourishment);
+    public ArtifactStateComponent withOwner(UUID owner, Optional<String> ownerName) {
+        return new ArtifactStateComponent(Optional.of(EntityReference.of(owner)), ownerName, this.nourishment);
     }
 
     public ArtifactStateComponent withNourishment(double value) {
-        return new ArtifactStateComponent(this.ownerUuid, this.ownerName, value);
+        return new ArtifactStateComponent(this.owner, this.ownerName, value);
     }
 }

@@ -1,15 +1,13 @@
 package com.iafenvoy.mxt.item;
 
-import com.iafenvoy.mxt.data.item.IdentificationComponent;
-import com.iafenvoy.mxt.registry.MxtDataComponents;
-import net.minecraft.core.registries.BuiltInRegistries;
+import com.iafenvoy.mxt.runtime.item.IdentificationService;
+import com.iafenvoy.saturn.runtime.resulting.Result;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
-import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.NotNull;
 
@@ -23,21 +21,15 @@ public final class IdentificationMirrorItem extends Item {
 
     @Override
     public @NotNull InteractionResult use(@NotNull Level level, @NotNull Player player, @NotNull InteractionHand hand) {
-        ItemStack mirror = player.getItemInHand(hand);
-        if (level.isClientSide()) return InteractionResult.SUCCESS;
-        for (int slot = 0; slot < player.getInventory().getContainerSize(); slot++) {
-            ItemStack target = player.getInventory().getItem(slot);
-            IdentificationComponent data = target.get(MxtDataComponents.IDENTIFICATION);
-            if (data == null) continue;
-            ItemStack resolved = BuiltInRegistries.ITEM.getOptional(data.result()).map(item -> new ItemStack(item, target.getCount())).orElse(ItemStack.EMPTY);
-            if (resolved.isEmpty()) continue;
-            player.getInventory().setItem(slot, resolved);
-            Component message = Component.translatable("item.mxt.identification_mirror.identified");
-            if (player instanceof ServerPlayer serverPlayer) serverPlayer.sendSystemMessage(message, true);
-            return InteractionResult.SUCCESS_SERVER;
+        if (hand != InteractionHand.MAIN_HAND) return InteractionResult.PASS;
+        if (!(player instanceof ServerPlayer serverPlayer)) return InteractionResult.SUCCESS_SERVER;
+        Result<Component> result = IdentificationService.identifyOffHand(serverPlayer);
+        Component name = result.getData().orElse(null);
+        if (name == null) {
+            result.getFailure().ifPresent(failure -> serverPlayer.sendSystemMessage(failure.message(), true));
+            return InteractionResult.FAIL;
         }
-        Component message = Component.translatable("item.mxt.identification_mirror.none");
-        if (player instanceof ServerPlayer serverPlayer) serverPlayer.sendSystemMessage(message, true);
-        return InteractionResult.FAIL;
+        serverPlayer.sendSystemMessage(Component.translatable("item.mxt.identification_mirror.identified", name), true);
+        return InteractionResult.SUCCESS_SERVER;
     }
 }
