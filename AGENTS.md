@@ -91,7 +91,7 @@ research/            设计稿与审计（大改才写）
 - 行为变化补一条 GameTest 探针；改了 `src/test-mod/resources` 就跑 `processTestModResources`。
 - 改了面向玩家的文案（界面、命令、提示、tooltip、配置项）就补两份 lang 并跑一次键比对。
 - 改了数据包字段就同步 `docs/docs/datapack/json/<定义>.md`（中英各一份）与测试包示例。
-- 大改（新模块、换形状的改版、跨模块重构）在 `research/` 写设计稿，编号接 `NN_` 往下排；审计放 `research/audit/`。
+- 大改（新模块、换形状的改版、跨模块重构）在 `research/` 写设计稿，编号接 `NNN_` 往下排；审计放 `research/audit/`。
 - 汇报按「做了什么 / 验证结果 / 没跑的 / 遗留与开放项」四段写，数字优先。
 
 ### ⚠️ Ask first（先问再动）

@@ -99,7 +99,7 @@
     `Badge.sprite`（"全仓零渲染器"）都不再需要跟踪——`title`、`badge` 两个数据包注册表、`badge_type` 固有注册表、`Title`/
     `TitleService`/`Badge` 及其五个实现、附件里的 `titles` 字段、测试夹具与相关纹理全部移除，`BadgeCodecs` 里仍在使用的
     `TRANSLATABLE_COMPONENT` 迁到 `util/codec/MiscCodecs.java`（杂项 Codec 的归处）。原条目保留在下方作为留档，见
-    `research/02_动态注册表清单.md` 的追加记录。
+    `research/002_动态注册表清单.md` 的追加记录。
 > - 2026-09-17：**删掉 `HoldPoseDiagnostic`**（用户："`HoldPoseDiagnostic` 去掉，不要再污染日志"）。它原来是客户端
     `@EventBusSubscriber`，每 tick 检查一次 `isUsingItem`，在状态变化时打 INFO/WARN（`[mxt] hold pose started` /
     `resumed` / `ended after the full hold` / `lost with N of the hold left`）。§22 的 `LivingEntityMixin`
@@ -116,7 +116,7 @@
     条：客户端拿不到服务端注册表，只能用它自己那份）。功法侧一行未改。同时补上一个反方向的同类坑：`arm` 会覆盖物品自带的
     `minecraft:consumable`（食物等），现在用 `ours(...)` 识别"是不是自己写的组件"——不是自己的不写、`Start` 也不摘。
 
-> - 2026-09-22：**功法载体改为物品组件（用户点名；设计稿 `research/34_功法载体物品组件设计.md`）**。起因：创造模式拿出来的
+> - 2026-09-22：**功法载体改为物品组件（用户点名；设计稿 `research/034_功法载体物品组件设计.md`）**。起因：创造模式拿出来的
     `mxt:cultivation_jade_slip` 显示「功法：青霄吐纳诀 / 品质：粗劣」——旧口径把"哪件物品是哪本手册"写在物品 id 上（
     `technique_binding.items`），于是那个通用玉简的任何一叠都会成为某条功法的手册。现在载体是数据组件 **`mxt:technique`**
     （值 = 功法定义 id，落盘 + 同步）：**带它的那一叠才是手册**，同一物品不带组件就什么都不做、tooltip 也不显示功法。`items`
@@ -294,7 +294,7 @@
   `advanceCondition` 与条目里的 `condition` 同一实例）。熟练度相关的夹具与端到端断言见 §8.0.1。
 - **2026-09-28 修正（用户要求：不要两个字段）**：`skill_stage` 的 `skill`（链身份，必填 `Identifier`）字段已删除。
   **链不再有身份字段，链就是 `next_stage` 链接本身**：入口仍是"没有任何一级指向它"的那一级，rank 仍沿链编号，多个功法依旧可以共用一条链、也可以从链中间入链。随之删除两条校验（`next_stage` 指向别的 `skill`、同一个 `skill` 出现多个第一级——后者现在只是两条独立的链）与零引用的 `ServerCache.skillForStage`；`SkillStageService.nextStage` 也不再需要功法参数，`ServerCache` 的索引由"级 → 链名"改为"级 → 链首"。比较先后仍只在同一条链内成立。包与夹具不再写 `skill`；`docs/数据包格式.md` 与文档站中英已同步。
-- **2026-09-28 改名与通用化（用户要求）**：`skill_stage` 整体改名 `progression`（目录 `data/<ns>/mxt/progression/`、`MxtResourceKeys.PROGRESSION`、条件 `mxt:skill_stage` → `mxt:progression`），字段 `next_stage` → `next_level`、功法的 `default_stage` → `default_level`、条件字段 `stage` → `level`、`technique` → `owner`（可写单个 id 或数组，不限到某一门功法）；等级状态从 `spirit_identity.technique_stages` 迁到新附件 `mxt:progression`（`{所有者 id → 已达等级}`，**旧字段不迁移**）。通用层是 `data/progression/{Progression, ProgressionConfig, ProgressionOwner}` + `attachment/ProgressionAttachment` + `runtime/progression/{ProgressionService, ProgressionSources}`；功法侧只剩 `runtime/cultivation/TechniqueProgression`（伤害倍率）与 `TechniqueMasteryService`（晋升驱动）。设计稿见 [`../60_通用进度（progression）设计.md`](../60_通用进度（progression）设计.md)。**T11 的状态据此改变**：`ProgressionService.nextLevel` 不再比较链身份（本来就没有身份字段），包改链后留下"别条链的等级"时晋升会沿**那个等级自己的链**继续走，而不再"永久卡住"。**同日补上归属校验（用户要求"做一下但不要频繁"）**：`ProgressionService.pruneForeignLevels` 沿该所有者自己的入口等级走一遍链接、清掉走不到的记录，调用点只有两个——登录（`PlayerLoggedInEvent`）与数据包重载（`ServerDataLoad`，排在 `ServerCache` 重建之后，因为清完要重算授予），**每次读取都不校验**；重载时只扫在线玩家，非玩家所有者落地时再扩。信号同日一并改名：`mxt:technique_stage` → `mxt:progression_level`，上下文 `stage` / `technique` → `level` / `owner`。
+- **2026-09-28 改名与通用化（用户要求）**：`skill_stage` 整体改名 `progression`（目录 `data/<ns>/mxt/progression/`、`MxtResourceKeys.PROGRESSION`、条件 `mxt:skill_stage` → `mxt:progression`），字段 `next_stage` → `next_level`、功法的 `default_stage` → `default_level`、条件字段 `stage` → `level`、`technique` → `owner`（可写单个 id 或数组，不限到某一门功法）；等级状态从 `spirit_identity.technique_stages` 迁到新附件 `mxt:progression`（`{所有者 id → 已达等级}`，**旧字段不迁移**）。通用层是 `data/progression/{Progression, ProgressionConfig, ProgressionOwner}` + `attachment/ProgressionAttachment` + `runtime/progression/{ProgressionService, ProgressionSources}`；功法侧只剩 `runtime/cultivation/TechniqueProgression`（伤害倍率）与 `TechniqueMasteryService`（晋升驱动）。设计稿见 [`../060_通用进度（progression）设计.md`](../060_通用进度（progression）设计.md)。**T11 的状态据此改变**：`ProgressionService.nextLevel` 不再比较链身份（本来就没有身份字段），包改链后留下"别条链的等级"时晋升会沿**那个等级自己的链**继续走，而不再"永久卡住"。**同日补上归属校验（用户要求"做一下但不要频繁"）**：`ProgressionService.pruneForeignLevels` 沿该所有者自己的入口等级走一遍链接、清掉走不到的记录，调用点只有两个——登录（`PlayerLoggedInEvent`）与数据包重载（`ServerDataLoad`，排在 `ServerCache` 重建之后，因为清完要重算授予），**每次读取都不校验**；重载时只扫在线玩家，非玩家所有者落地时再扩。信号同日一并改名：`mxt:technique_stage` → `mxt:progression_level`，上下文 `stage` / `technique` → `level` / `owner`。
 - 负路径实验（2026-09-12）：临时删掉 `sword_art_2` 的条目后启动服务端，缓存重建抛
   `Technique mxt_test:sword_manual does not configure the skill stage mxt_test:sword_art_2`，服务器不启动、审计不执行；夹具随后还原并重新同步
   build 产物。

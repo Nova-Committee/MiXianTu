@@ -332,7 +332,7 @@ if (definition.unwrapKey().flatMap(server.overworld().registryAccess()::get).isE
 | [x] | `WheelConfigurationScreen`（`slot.kind() == WheelEntryKinds.AURA`） | 同上 | 同上 |
 | [x] | `PillUsageAttachment#record` | `key != pill && key.is(id)` 混用 | 见批 1（整段删） |
 | [x] | `AGENTS.md` §4（"walker 用 `IdentityHashMap` 比引用"） | 文档把身份比较写成既定口径 | 随 `ChainWalker` 一起改 |
-| [x] | `research/85_进度记录按所有者分类设计.md`（若描述到身份比较） | 核对是否依赖身份语义 | 已核对，无依赖 |
+| [x] | `research/085_进度记录按所有者分类设计.md`（若描述到身份比较） | 核对是否依赖身份语义 | 已核对，无依赖 |
 
 ---
 

@@ -16,7 +16,7 @@
 
 ## 2. 为什么
 
-1. **它是约定，不是机制**：条目进得进注册表、被别人指向、被存档持有全都照旧，只有"读到之后要不要认它"由一堆散在各服务里的 `isDisabled` 决定。少写一处就是一个静默的不一致（`research/21_元素系统设计补完.md` §D1 记录的正是元素侧漏过滤那次）。
+1. **它是约定，不是机制**：条目进得进注册表、被别人指向、被存档持有全都照旧，只有"读到之后要不要认它"由一堆散在各服务里的 `isDisabled` 决定。少写一处就是一个静默的不一致（`research/021_元素系统设计补完.md` §D1 记录的正是元素侧漏过滤那次）。
 2. **它让"存在"有两种意思**：`mxt:disabled` 里的条目在注册表里、能补全、能被别人安全指向，但玩法上等于不存在。调用方要同时记住"在不在"和"算不算"，`Element` / `Technique` / `ItemQuality` / `QualityChain` / `SpiritRoot` / `ContractType` 六个模块各写了一遍这套判断。
 3. **NeoForge 已经提供了同一条语义，而且更强**：`RegistryLoadTask.read` 被 NeoForge 改成 `ConditionalOps.createConditionalCodec(...)` 解每个条目，条件不成立时记一个 `SKIPPED_ELEMENT_MARKER` 把该条目跳过（只留一条 `Skipping loading registry entry … as its conditions were not met` 的 DEBUG 日志，不算加载错误），`ResourceManagerRegistryLoadTask` 的 ops 也换成 `ConditionalOps` 以便条件里能读上下文（`neoforge-26.1.2.99` 的 `patches/net/minecraft/resources/{RegistryLoadTask,ResourceManagerRegistryLoadTask}.java.patch`，逐行核过）。因为 `mxt:` 的 35 张表都是 `RegistryDataLoader.RegistryData`，这套对它们一视同仁，不需要任何运行时判据。
 
