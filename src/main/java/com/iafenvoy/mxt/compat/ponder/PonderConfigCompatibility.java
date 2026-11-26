@@ -63,16 +63,15 @@ public final class PonderConfigCompatibility {
         for (CatnipConfig.Nested nested : config.nested().values()) initializeDefaults(nested);
     }
 
+    @SuppressWarnings("UnstableApiUsage")
     private static final class Access {
         private static final VarHandle VALUE;
         private static final MethodHandle OPEN_CONFIG;
 
         static {
             try {
-                VALUE = MethodHandles.privateLookupIn(ConfigValue.class, MethodHandles.lookup())
-                        .findVarHandle(ConfigValue.class, "value", Object.class);
-                OPEN_CONFIG = MethodHandles.privateLookupIn(ConfigTracker.class, MethodHandles.lookup())
-                        .findStatic(ConfigTracker.class, "openConfig", MethodType.methodType(void.class, ModConfig.class, Path.class, Path.class));
+                VALUE = MethodHandles.privateLookupIn(ConfigValue.class, MethodHandles.lookup()).findVarHandle(ConfigValue.class, "value", Object.class);
+                OPEN_CONFIG = MethodHandles.privateLookupIn(ConfigTracker.class, MethodHandles.lookup()).findStatic(ConfigTracker.class, "openConfig", MethodType.methodType(void.class, ModConfig.class, Path.class, Path.class));
             } catch (ReflectiveOperationException failure) {
                 throw new ExceptionInInitializerError(failure);
             }

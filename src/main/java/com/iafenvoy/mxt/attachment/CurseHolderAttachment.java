@@ -36,6 +36,10 @@ public final class CurseHolderAttachment extends AbstractChangeTrackable {
         this.sources = sources.copy();
     }
 
+    public CurseHolderAttachment copy() {
+        return new CurseHolderAttachment(this.instances, this.sources);
+    }
+
     public Map<Holder<Curse>, State> instances() {
         return this.instances;
     }

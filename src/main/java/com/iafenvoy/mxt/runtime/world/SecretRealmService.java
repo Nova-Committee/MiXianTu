@@ -1,6 +1,5 @@
 package com.iafenvoy.mxt.runtime.world;
 
-import com.iafenvoy.mxt.runtime.world.SecretRealmRecord.Cleanup;
 import com.iafenvoy.mxt.attachment.SecretRealmTravelAttachment;
 import com.iafenvoy.mxt.data.secretrealm.SecretRealm;
 import com.iafenvoy.mxt.data.secretrealm.builtin.ExistingGeneration;
@@ -13,6 +12,7 @@ import com.iafenvoy.mxt.runtime.rift.RiftLanding;
 import com.iafenvoy.mxt.runtime.rift.RiftService;
 import com.iafenvoy.mxt.runtime.world.SecretRealmEntryLocator.Arrival;
 import com.iafenvoy.mxt.runtime.world.SecretRealmEntryLocator.Landing;
+import com.iafenvoy.mxt.runtime.world.SecretRealmRecord.Cleanup;
 import com.iafenvoy.saturn.profiling.ProfilerScope;
 import com.iafenvoy.saturn.profiling.ServerProfiling;
 import com.iafenvoy.saturn.runtime.resulting.Failure;
@@ -50,6 +50,7 @@ import java.util.*;
 public final class SecretRealmService {
     private static final Logger LOGGER = LogUtils.getLogger();
     private static final ThreadLocal<Set<UUID>> CLEANING = ThreadLocal.withInitial(HashSet::new);
+
     private SecretRealmService() {
     }
 
@@ -203,7 +204,8 @@ public final class SecretRealmService {
             // The state goes on the body that landed, which is not the one that left when the platform had to rebuild it.
             arrived.getData(MxtAttachments.SECRET_REALM_TRAVEL)
                     .begin(definition, originDimension, originX, originY, originZ, originYaw, originPitch);
-            if (created) NeoForge.EVENT_BUS.post(new Create(server, definition, record.dimension(), record.index(), record.owner()));
+            if (created)
+                NeoForge.EVENT_BUS.post(new Create(server, definition, record.dimension(), record.index(), record.owner()));
             NeoForge.EVENT_BUS.post(new EnterPost(server, definition, record.dimension(), record.index(), record.owner(), member));
             value.enterAction().execute(arrived, FormulaContext.of(arrived));
             return Result.success(arrived);
@@ -456,7 +458,8 @@ public final class SecretRealmService {
     private static boolean cleanInstance(MinecraftServer server, SecretRealmRecord record, Cleanup cleanup) {
         SecretRealmRecord current = current(record);
         if (current == null) return false;
-        if (current.cleanup() != cleanup && SecretRealmRegistry.replace(current.withCleanup(cleanup)).isEmpty()) return false;
+        if (current.cleanup() != cleanup && SecretRealmRegistry.replace(current.withCleanup(cleanup)).isEmpty())
+            return false;
         if (!evacuate(server, current)) return false;
         current = current(record);
         if (current == null) return false;

@@ -123,8 +123,10 @@ public final class CultivationService {
         if (refusal.isPresent()) return Result.failure(refusal.get(), null);
         Pre event = new Pre(spirit, resources, stage, context, minimum, plan.resources());
         if (NeoForge.EVENT_BUS.post(event).isCanceled()) return Result.failure(Failures.CANCELLED);
-        Optional<Failure> edited = plan.replaceResourceAmounts(event.getCosts());
-        if (edited.isPresent()) return Result.failure(edited.get(), null);
+        if (!event.getCosts().equals(event.getOriginalCosts())) {
+            Optional<Failure> edited = plan.replaceResourceAmounts(event.getCosts());
+            if (edited.isPresent()) return Result.failure(edited.get(), null);
+        }
         Result<List<Debit>> payment = plan.pay();
         if (payment instanceof Result.FailureResult<List<Debit>>(Failure refused)) {
             // The payment already located its refusal, so re-wrap only the reason to avoid a second layer.

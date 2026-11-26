@@ -1,0 +1,5 @@
+{
+  "entities": ["minecraft:cave_spider"],
+  "priority": 10,
+  "intelligence": 8.5
+}

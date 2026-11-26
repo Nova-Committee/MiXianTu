@@ -18,6 +18,7 @@ import com.mojang.serialization.JsonOps;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
 import net.minecraft.core.HolderLookup.Provider;
+import net.minecraft.core.UUIDUtil;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -146,6 +147,11 @@ public final class ArtifactProbes {
                 ArtifactService.isOwner(jadeStack, stranger) && !ArtifactService.isOwner(jadeStack, context.player().getUUID()));
         context.expect("artifact owner keeps its original string format",
                 ArtifactStateComponent.CODEC.encodeStart(JsonOps.INSTANCE, decoded).getOrThrow(), saved);
+        JsonObject arrayOwner = saved.deepCopy();
+        arrayOwner.add("owner_uuid", UUIDUtil.CODEC.encodeStart(JsonOps.INSTANCE, stranger).getOrThrow());
+        ArtifactStateComponent arrayDecoded = ArtifactStateComponent.CODEC.parse(JsonOps.INSTANCE, arrayOwner).getOrThrow();
+        context.expect("artifact owner also reads the UUID array form",
+                ArtifactStateComponent.CODEC.encodeStart(JsonOps.INSTANCE, arrayDecoded).getOrThrow(), saved);
     }
 
     // The container a stack declares, as the roster rows state it: the slots of the first storage ability it offers.

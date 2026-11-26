@@ -11,6 +11,7 @@ import net.neoforged.bus.api.ICancellableEvent;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Objects;
+import java.util.Optional;
 
 /**
  * Server-side curse application transaction events.
@@ -22,14 +23,15 @@ public abstract class CurseApplyEvent extends Event {
     private final FormulaContext context;
 
     protected CurseApplyEvent(@NotNull CurseHolderAttachment holder, @NotNull Holder<Curse> curse, long gameTime, @NotNull FormulaContext context) {
-        this.holder = holder;
+        this.holder = holder.copy();
         this.curse = curse;
         this.gameTime = gameTime;
         this.context = context;
     }
 
+    /** Returns a detached snapshot of the state at publication. */
     public CurseHolderAttachment getHolder() {
-        return this.holder;
+        return this.holder.copy();
     }
 
     public Holder<Curse> getCurse() {
@@ -75,14 +77,25 @@ public abstract class CurseApplyEvent extends Event {
 
     public static final class Post extends CurseApplyEvent {
         private final CurseInstance instance;
+        private final Optional<Identifier> source;
 
         public Post(CurseHolderAttachment holder, Holder<Curse> curse, long gameTime, FormulaContext context, @NotNull CurseInstance instance) {
+            this(holder, curse, gameTime, context, instance, null);
+        }
+
+        public Post(CurseHolderAttachment holder, Holder<Curse> curse, long gameTime, FormulaContext context,
+                    @NotNull CurseInstance instance, Identifier source) {
             super(holder, curse, gameTime, context);
             this.instance = instance;
+            this.source = Optional.ofNullable(source);
         }
 
         public CurseInstance getInstance() {
             return this.instance;
+        }
+
+        public Optional<Identifier> getSource() {
+            return this.source;
         }
     }
 }

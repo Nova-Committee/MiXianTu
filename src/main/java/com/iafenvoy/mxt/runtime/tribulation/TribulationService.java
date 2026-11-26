@@ -53,9 +53,9 @@ public final class TribulationService {
     }
 
     // Adds the local aura influence, so every wait is scaled by the environment the run stands in.
-    private static FormulaContext tribulationContext(LivingEntity entity, FormulaContext context) {
+    private static FormulaContext tribulationContext(ServerLevel level, LivingEntity entity, FormulaContext context) {
         return context.with("aura_tribulation_modifier",
-                AuraService.getPositionAura(entity.level(), entity.blockPosition()).rules().tribulationModify());
+                AuraService.getPositionAura(level, entity.blockPosition()).rules().tribulationModify());
     }
 
     public static double effectiveScale(Tribulation definition, FormulaContext context) {
@@ -64,6 +64,7 @@ public final class TribulationService {
     }
 
     public static Result<Void> start(LivingEntity entity, TribulationAttachment data, Holder<Tribulation> tribulation, long gameTime, FormulaContext context) {
+        if (!(entity.level() instanceof ServerLevel level)) return Result.failure(Failures.SERVER_ONLY);
         try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.TRIBULATION)) {
             Tribulation definition = tribulation.value();
             if (data.tribulation().isPresent()) return Result.failure(Failures.ALREADY_ACTIVE);
@@ -72,7 +73,7 @@ public final class TribulationService {
             if (!definition.condition().test(entity, context)) return Result.failure(Failures.CONDITIONS);
             // Every entry is asked whether it can run before the run begins: this is the only moment a content error
             // can be reported as a refusal instead of a failure halfway through a committed timeline.
-            FormulaContext runContext = tribulationContext(entity, context);
+            FormulaContext runContext = tribulationContext(level, entity, context);
             TimelineContext probe = new TimelineContext(entity, runContext, gameTime,
                     effectiveScale(definition, runContext), timeline.size(), new TimelineState(), new TimelineJump());
             for (TimelineEntry entry : timeline) {
@@ -103,6 +104,7 @@ public final class TribulationService {
     }
 
     public static Result<State> tick(LivingEntity entity, TribulationAttachment data, Holder<Tribulation> tribulation, long gameTime, FormulaContext context) {
+        if (!(entity.level() instanceof ServerLevel level)) return Result.failure(Failures.SERVER_ONLY);
         try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.TRIBULATION)) {
             // A run with nothing left to consume cannot progress - a save whose timeline the codec reduced to nothing,
             // or a cursor that outlived its beats. Dropping it keeps a dead run from blocking the next breakthrough.
@@ -113,7 +115,7 @@ public final class TribulationService {
             Tribulation definition = tribulation.value();
             boolean windingUp = data.windup() > 0L;
             FormulaContext runContext = windingUp && definition.stormCloud().isEmpty()
-                    ? context : tribulationContext(entity, context);
+                    ? context : tribulationContext(level, entity, context);
             updateStormCloud(entity, data, definition, runContext);
             // The wind-up is the run counting itself in: the timeline has not started, so nothing is consumed, no
             // beat begins and no state is written while it lasts.

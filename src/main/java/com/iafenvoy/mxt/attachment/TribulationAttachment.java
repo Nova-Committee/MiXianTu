@@ -47,6 +47,11 @@ public final class TribulationAttachment extends AbstractChangeTrackable {
         this.stormCloud = stormCloud;
     }
 
+    public TribulationAttachment copy() {
+        return new TribulationAttachment(this.tribulation, this.timeline, this.cursor,
+                this.state.map(DataStorage::copy), this.windup, this.stormCloud);
+    }
+
     public Optional<Holder<Tribulation>> tribulation() {
         return this.tribulation;
     }

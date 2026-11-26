@@ -52,6 +52,11 @@ public final class CultivationAttachment extends AbstractChangeTrackable {
         this.cultivateCooldowns = new Object2LongOpenHashMap<>(cultivateCooldowns);
     }
 
+    public CultivationAttachment copy() {
+        return new CultivationAttachment(this.cultivationProgresses, this.realmStages, this.cultivation,
+                this.cultivating, this.cultivateStartedAt, this.nextCultivateTick, this.cultivateCooldowns);
+    }
+
     public Object2DoubleMap<Holder<Aura>> cultivationProgresses() {
         return this.cultivationProgresses;
     }

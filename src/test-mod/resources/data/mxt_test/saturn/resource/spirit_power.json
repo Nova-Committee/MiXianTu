@@ -32,7 +32,7 @@
       "context": "mxt:actual_concentration",
       "anchor": "right",
       "order": 1,
-      "maximum": 1000.0,
+      "value_display": "current_and_maximum",
       "visibility": { "type": "mxt:always" },
       "renderer": { "type": "mxt:boss_bar", "bar_index": 2 }
     }

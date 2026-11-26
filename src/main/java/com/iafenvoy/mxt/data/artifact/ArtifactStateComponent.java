@@ -2,6 +2,7 @@ package com.iafenvoy.mxt.data.artifact;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import net.minecraft.core.UUIDUtil;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityReference;
 
@@ -16,8 +17,11 @@ import java.util.UUID;
  */
 public record ArtifactStateComponent(Optional<EntityReference<Entity>> owner, Optional<String> ownerName,
                                      double nourishment) {
+    // Keep the saved string format and also read arrays written by the original EntityReference codec.
+    private static final Codec<EntityReference<Entity>> OWNER_CODEC = Codec.withAlternative(UUIDUtil.STRING_CODEC, UUIDUtil.CODEC)
+            .xmap(EntityReference::of, EntityReference::getUUID);
     public static final Codec<ArtifactStateComponent> CODEC = RecordCodecBuilder.create(i -> i.group(
-            EntityReference.<Entity>codec().optionalFieldOf("owner_uuid").forGetter(ArtifactStateComponent::owner),
+            OWNER_CODEC.optionalFieldOf("owner_uuid").forGetter(ArtifactStateComponent::owner),
             Codec.STRING.optionalFieldOf("owner_name").forGetter(ArtifactStateComponent::ownerName),
             Codec.DOUBLE.optionalFieldOf("nourishment", 0.0D).forGetter(ArtifactStateComponent::nourishment)
     ).apply(i, ArtifactStateComponent::new));

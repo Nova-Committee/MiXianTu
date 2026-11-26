@@ -8,6 +8,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.neoforged.bus.api.Event;
 import net.neoforged.bus.api.ICancellableEvent;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Server-side lifecycle events for resolved aura environments.
@@ -35,6 +36,10 @@ public abstract class AuraZoneEvent extends Event {
         return this.result;
     }
 
+    public @Nullable Entity getEntity() {
+        return null;
+    }
+
     public static final class Enter extends AuraZoneEvent {
         private final Entity entity;
 
@@ -43,6 +48,7 @@ public abstract class AuraZoneEvent extends Event {
             this.entity = e;
         }
 
+        @java.lang.Override
         public Entity getEntity() {
             return this.entity;
         }
@@ -56,6 +62,7 @@ public abstract class AuraZoneEvent extends Event {
             this.entity = e;
         }
 
+        @java.lang.Override
         public Entity getEntity() {
             return this.entity;
         }

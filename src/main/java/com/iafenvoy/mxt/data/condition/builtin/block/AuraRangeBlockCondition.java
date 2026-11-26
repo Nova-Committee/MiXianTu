@@ -9,6 +9,7 @@ import com.iafenvoy.saturn.data.context.condition.BlockConditionContext;
 import com.iafenvoy.saturn.util.codec.CollectionCodecs;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.Holder;
+import net.minecraft.server.level.ServerLevel;
 import org.jspecify.annotations.NonNull;
 
 import java.util.Map;
@@ -19,7 +20,8 @@ public record AuraRangeBlockCondition(Map<Holder<Aura>, AuraRequirement> aura) i
 
     @Override
     public boolean test(@NonNull BlockConditionContext ctx) {
-        AuraResult resolved = AuraService.getPositionAura(ctx.level(), ctx.pos());
+        if (!(ctx.level() instanceof ServerLevel level)) return false;
+        AuraResult resolved = AuraService.getPositionAura(level, ctx.pos());
         return this.aura.entrySet().stream().allMatch(entry -> entry.getValue().test(resolved.pool(entry.getKey()).amount(), ctx.formula()));
     }
 

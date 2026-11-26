@@ -36,6 +36,10 @@ public final class SoulAttachment extends AbstractChangeTrackable {
         this.manifestation = manifestation;
     }
 
+    public SoulAttachment copy() {
+        return new SoulAttachment(this.active, this.origin, this.createdAt, this.source, this.manifestation);
+    }
+
     public boolean active() {
         return this.active;
     }

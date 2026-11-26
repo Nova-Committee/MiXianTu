@@ -14,6 +14,7 @@ import com.iafenvoy.mxt.data.item.WeaponBinding;
 import com.iafenvoy.mxt.data.progression.Progression;
 import com.iafenvoy.mxt.data.quality.ItemQuality;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.registry.RegistryPrecedence;
 import com.iafenvoy.saturn.data.resource.Resource;
 import com.iafenvoy.saturn.data.trigger.TriggerRule;
 import com.iafenvoy.saturn.registry.SaturnResourceKeys;
@@ -24,13 +25,16 @@ import com.iafenvoy.saturn.util.codec.RegistryCodecs;
 import net.minecraft.core.Holder;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.level.block.Block;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.event.server.ServerAboutToStartEvent;
 
 import java.util.*;
 
+@EventBusSubscriber
 public final class RegistryCaches {
     public static final RealmChainCache REALM_CHAIN = new RealmChainCache().validateOrder(RealmStage::aura, Objects::equals)
             .validateChain(ladder -> ladder.nodes().stream().map(node -> node.value().aura()).distinct().count() == 1);
@@ -42,13 +46,15 @@ public final class RegistryCaches {
             .validateOrder(ItemQuality::quality, RegistryCaches::inheritsName)
             .validateChain(RegistryCaches::oneLadderName);
     public static final ReverseMappingListCache<Identifier, TriggerRule> TRIGGER_RULES_BY_SIGNAL = new ReverseMappingListCache<>(SaturnResourceKeys.TRIGGER, rule -> List.of(rule.value().trigger().signalType()));
-    public static final ReverseMappingListCache<Block, BlockAura> BLOCK_AURA = new ReverseMappingListCache<>(MxtResourceKeys.BLOCK_AURA, (aura) -> RegistryCodecs.resolve(aura.value().blocks(), BuiltInRegistries.BLOCK).map(Holder::value).toList());
+    private static final BlockAuraCache BLOCK_AURA_CACHE = new BlockAuraCache();
+    public static final ReverseMappingListCache<Block, BlockAura> BLOCK_AURA = BLOCK_AURA_CACHE;
     public static final ReverseMappingCache<Holder<Resource>, Aura> RESOURCE_AURA = new ReverseMappingCache<>(MxtResourceKeys.AURA, aura -> aura.value().resource());
-    public static final FormulaNameCache<Resource> RESOURCE_NAMES = new FormulaNameCache<>(SaturnResourceKeys.RESOURCE, "resource");
+    public static final FormulaNameCache<Resource> RESOURCE_NAMES = com.iafenvoy.saturn.registry.cache.RegistryCaches.RESOURCE_NAMES;
     public static final FormulaNameCache<Element> ELEMENT_NAMES = new FormulaNameCache<>(MxtResourceKeys.ELEMENT, "element");
-    public static final FormulaNameCache<Attribute> ATTRIBUTE_NAMES = new FormulaNameCache<>(Registries.ATTRIBUTE, "attribute");
+    public static final FormulaNameCache<Attribute> ATTRIBUTE_NAMES = com.iafenvoy.saturn.registry.cache.RegistryCaches.ATTRIBUTE_NAMES;
     public static final OrderCache<ElementReaction> ELEMENT_REACTION_ORDER = new OrderCache<>(MxtResourceKeys.ELEMENT_REACTION, Comparator.<Holder.Reference<ElementReaction>>comparingInt(h -> h.value().priority()).reversed().thenComparing(h -> h.key().identifier()));
-    public static final OrderCache<CreatureProfile> CREATURE_PROFILE_ORDER = new OrderCache<>(MxtResourceKeys.CREATURE_PROFILE, Comparator.comparing(h -> h.key().identifier()));
+    public static final OrderCache<CreatureProfile> CREATURE_PROFILE_ORDER = new OrderCache<>(MxtResourceKeys.CREATURE_PROFILE,
+            RegistryPrecedence.order(CreatureProfile::priority));
     public static final HeatSourceCache HEAT_SOURCE = new HeatSourceCache();
     public static final DamageElementsCache DAMAGE_ELEMENTS = new DamageElementsCache();
     public static final AbilityAffinityCache ABILITY_AFFINITY = AbilityAffinityCache.of();
@@ -64,6 +70,23 @@ public final class RegistryCaches {
     // registered there, and nothing else touches this class before a world loads, so a run without this call leaves
     // all of them empty for the whole session.
     public static void init() {
+    }
+
+    @SubscribeEvent
+    public static void onIntegratedServerAboutToStart(ServerAboutToStartEvent event) {
+        // Opening a singleplayer world fires a client logout after the initial tag load.
+        if (!event.getServer().isDedicatedServer()) BLOCK_AURA_CACHE.restore(event.getServer().registryAccess());
+    }
+
+    private static final class BlockAuraCache extends ReverseMappingListCache<Block, BlockAura> {
+        private BlockAuraCache() {
+            super(MxtResourceKeys.BLOCK_AURA,
+                    aura -> RegistryCodecs.resolve(aura.value().blocks(), BuiltInRegistries.BLOCK).map(Holder::value).toList());
+        }
+
+        private void restore(RegistryAccess access) {
+            this.rebuild(access);
+        }
     }
 
     // One link of a ladder may leave the name out and inherit it from the tier below, so the rule only refuses a

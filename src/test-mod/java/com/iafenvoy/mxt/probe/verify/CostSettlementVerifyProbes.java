@@ -1,5 +1,7 @@
 package com.iafenvoy.mxt.probe.verify;
 import com.iafenvoy.mxt.runtime.resulting.failures.AuraFailure;
+import com.iafenvoy.mxt.compat.kubejs.MxtKubeJsApi;
+import com.iafenvoy.saturn.registry.SaturnAttachments;
 import com.iafenvoy.saturn.registry.SaturnResourceKeys;
 import com.iafenvoy.saturn.data.cost.Cost;
 import com.iafenvoy.saturn.data.cost.CostPayment;
@@ -19,14 +21,22 @@ import com.iafenvoy.mxt.probe.Probe;
 import com.iafenvoy.mxt.probe.ProbeContext;
 import com.iafenvoy.mxt.probe.ProbeDefinitions;
 import com.iafenvoy.saturn.runtime.resulting.Result;
+import com.iafenvoy.saturn.runtime.resulting.Failure;
+import com.iafenvoy.saturn.runtime.resulting.Failures;
 import com.iafenvoy.saturn.runtime.resulting.failures.CostFailure;
 import com.iafenvoy.saturn.util.formula.FormulaContext;
+import com.iafenvoy.saturn.util.formula.FormulaVariables;
 import com.iafenvoy.saturn.util.formula.number.Constant;
+import com.iafenvoy.saturn.util.formula.number.Expression;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.Holder;
+import net.minecraft.resources.Identifier;
 
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.HexFormat;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.function.Function;
 
@@ -38,6 +48,9 @@ public final class CostSettlementVerifyProbes {
         return List.of(
                 Probe.of("verify/cost_duplicate_order", CostSettlementVerifyProbes::duplicateOrder),
                 Probe.of("verify/cost_entry_order", CostSettlementVerifyProbes::entryOrder),
+                Probe.of("verify/external_api/cost_event_reprice", CostSettlementVerifyProbes::eventReprice),
+                Probe.of("verify/external_api/cost_script_result", CostSettlementVerifyProbes::scriptResult),
+                Probe.of("verify/external_api/formula_exact_ids", CostSettlementVerifyProbes::formulaExactIds),
                 Probe.of("verify/cost_real_failure", CostSettlementVerifyProbes::realFailure),
                 Probe.of("verify/cost_real_exception", CostSettlementVerifyProbes::realException),
                 Probe.of("verify/cost_transaction_guard", CostSettlementVerifyProbes::transactionGuard),
@@ -187,6 +200,75 @@ public final class CostSettlementVerifyProbes {
         context.expect("the exceptional bill has a terminal result", bill.pay() == paid, true);
         context.expect("the throwing fee is attempted once", attempts[0], 1);
         context.expect("repeating pay cannot write again", account.get(resource), 7.0D);
+    }
+
+    private static void eventReprice(ProbeContext context) {
+        Holder<Resource> resource = resource(context);
+        Identifier id = resource.unwrapKey().orElseThrow().identifier();
+        ResourceHolderAttachment account = new ResourceHolderAttachment();
+        List<Double> observedBalances = new ArrayList<>();
+        Cost observed = new FixtureCost(new CostTarget.Script("probe:between", 0, context.player().getUUID()),
+                1.0D, simulate -> {
+            if (!simulate) observedBalances.add(account.get(resource));
+            return Result.success(List.of());
+        });
+        List<Cost> costs = List.of(new ResourceCost(resource, new Constant(2.0D)), observed,
+                new ResourceCost(resource, new Constant(6.0D)));
+
+        account.set(resource, 20.0D);
+        CostPayment unchanged = CostPayment.of(costs(context, account));
+        context.check("quote kept", unchanged.price(costs).isEmpty() && unchanged.replaceResourceAmounts(unchanged.resources()).isEmpty());
+        List<Double> original = unchanged.pay().orThrow().stream().map(Debit::amount).toList();
+        context.expect("same totals keep original charges", original, List.of(2.0D, 6.0D));
+
+        account.set(resource, 20.0D);
+        CostPayment edited = CostPayment.of(costs(context, account));
+        context.check("quote edited", edited.price(costs).isEmpty() && edited.replaceResourceAmounts(Map.of(id, 4.0D)).isEmpty());
+        List<Double> repriced = edited.pay().orThrow().stream().map(Debit::amount).toList();
+        context.expect("edited totals split over existing entries", repriced, List.of(1.0D, 3.0D));
+        context.expect("script stays between both account entries", observedBalances, List.of(18.0D, 19.0D));
+    }
+
+    private static void scriptResult(ProbeContext context) {
+        Holder<Resource> resource = resource(context);
+        Identifier id = resource.unwrapKey().orElseThrow().identifier();
+        ResourceHolderAttachment account = context.player().getData(SaturnAttachments.RESOURCE_HOLDER);
+        account.set(resource, 2.0D);
+        FormulaContext formula = FormulaContext.of(context.player());
+        Result<Map<Identifier, Double>> refused = MxtKubeJsApi.tryConsumeResources(context.player(),
+                List.of(new ResourceCost(resource, new Constant(3.0D))), formula);
+        context.expect("script retained the failure reason", refused.getFailure().map(Failure::getSerializedName).orElse(""),
+                Failures.INSUFFICIENT_RESOURCE.getSerializedName());
+        context.expect("script retained the failed resource", refused.getFailure().flatMap(Failure::resource).orElse(null), id);
+        context.expect("simulation refusal made no deduction", account.get(resource), 2.0D);
+        Cost repeated = new ResourceCost(resource, new Constant(2.0D));
+        Map<Identifier, Double> paid = MxtKubeJsApi.tryConsumeResources(context.player(), List.of(repeated, repeated), formula).orThrow();
+        context.expect("script reports known deduction when the second charge fails", paid.get(id), 2.0D);
+        context.expect("real refusal leaves the first deduction in place", account.get(resource), 0.0D);
+    }
+
+    private static void formulaExactIds(ProbeContext context) {
+        Holder<Resource> dashed = context.require(SaturnResourceKeys.RESOURCE, "audit-fire");
+        Holder<Resource> underscored = context.require(SaturnResourceKeys.RESOURCE, "audit_fire");
+        ResourceHolderAttachment account = context.player().getData(SaturnAttachments.RESOURCE_HOLDER);
+        account.set(dashed, 2.5D);
+        account.set(underscored, 7.0D);
+        account.set(resource(context), 3.0D);
+        FormulaContext formula = FormulaContext.of(context.player());
+        String dashedName = exactResource(dashed);
+        String underscoredName = exactResource(underscored);
+        context.expect("dashed ID is reachable", formula.value(dashedName), 2.5D);
+        context.expect("underscored ID is reachable", formula.value(underscoredName), 7.0D);
+        context.expect("both exact names compile in one expression",
+                Expression.decode(dashedName + " + " + underscoredName).getOrThrow().evaluate(formula), 9.5D);
+        context.check("ambiguous legacy name grants no value",
+                Double.isNaN(FormulaVariables.peek("caster_mxt_test_audit_fire", formula)));
+        context.expect("unique legacy name still works", formula.value("caster_mxt_test_trigger_probe"), 3.0D);
+    }
+
+    private static String exactResource(Holder<Resource> resource) {
+        String id = resource.unwrapKey().orElseThrow().identifier().toString();
+        return "caster_ID_resource_" + HexFormat.of().formatHex(id.getBytes(StandardCharsets.UTF_8));
     }
 
     private static FixtureCost observed(CostTarget target, String name, List<String> calls) {

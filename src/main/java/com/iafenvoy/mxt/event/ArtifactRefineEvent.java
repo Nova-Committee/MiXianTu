@@ -10,11 +10,12 @@ public abstract class ArtifactRefineEvent extends EntityEvent {
 
     protected ArtifactRefineEvent(Entity owner, ItemStack stack) {
         super(owner);
-        this.stack = stack;
+        this.stack = stack.copy();
     }
 
+    /** Returns a detached snapshot of the state at publication. */
     public ItemStack getStack() {
-        return this.stack;
+        return this.stack.copy();
     }
 
     public static final class Pre extends ArtifactRefineEvent implements ICancellableEvent {

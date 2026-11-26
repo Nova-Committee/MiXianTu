@@ -20,14 +20,15 @@ public abstract class SpiritContractEvent extends Event {
     private final Action action;
 
     protected SpiritContractEvent(@NotNull ContractAttachment contract, @NotNull Optional<Holder<ContractType>> contractType, @NotNull UUID requester, @NotNull Action action) {
-        this.contract = contract;
+        this.contract = contract.copy();
         this.contractType = contractType;
         this.requester = requester;
         this.action = action;
     }
 
+    /** Returns a detached snapshot of the state at publication. */
     public ContractAttachment getContract() {
-        return this.contract;
+        return this.contract.copy();
     }
 
     public Optional<Holder<ContractType>> getContractType() {

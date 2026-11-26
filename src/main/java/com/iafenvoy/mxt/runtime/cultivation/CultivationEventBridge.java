@@ -44,9 +44,9 @@ public final class CultivationEventBridge {
 
     @SubscribeEvent
     public static void onEntityTick(EntityTickEvent.Post event) {
-        if (!(event.getEntity() instanceof LivingEntity entity) || entity.level().isClientSide() || entity instanceof ServerPlayer)
+        if (!(event.getEntity() instanceof LivingEntity entity) || !(entity.level() instanceof ServerLevel level) || entity instanceof ServerPlayer)
             return;
-        tick(entity);
+        tick(level, entity);
     }
 
     @SubscribeEvent
@@ -54,7 +54,7 @@ public final class CultivationEventBridge {
         try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.CULTIVATION)) {
             if (!(event.getLevel() instanceof ServerLevel level)) return;
             AuraDistributionService.prepare(level);
-            for (ServerPlayer player : level.players()) tick(player);
+            for (ServerPlayer player : level.players()) tick(level, player);
         }
     }
 
@@ -72,7 +72,7 @@ public final class CultivationEventBridge {
         }
     }
 
-    private static void tick(LivingEntity entity) {
+    private static void tick(ServerLevel level, LivingEntity entity) {
         try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.CULTIVATION)) {
             CultivationAttachment spirit = entity.getData(MxtAttachments.CULTIVATION);
             if (!spirit.cultivating()) return;
@@ -84,7 +84,7 @@ public final class CultivationEventBridge {
             Cultivation definition = action.value();
             FormulaContext context = FormulaContexts.forEntity(entity);
             boolean mayContinue = definition.tickCondition().test(entity, context);
-            AuraResult aura = AuraService.getPositionAura(entity.level(), entity.blockPosition());
+            AuraResult aura = AuraService.getPositionAura(level, entity.blockPosition());
             Result<CultivationMethodService.CultivationStep> result = CultivationMethodService.tick(entity, spirit, entity.getData(SaturnAttachments.RESOURCE_HOLDER), aura, action, definition,
                     entity.level().getGameTime(), context, () -> mayContinue);
             if (entity instanceof ServerPlayer player) {

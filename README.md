@@ -14,10 +14,6 @@ and gameplay definitions, while MiXianTu's data tables and item bindings connect
 - **Content and mod authors**: define your own cultivation rules, aura distribution, abilities, formations, crafts and
   item bindings with datapacks, KubeJS or the Java API, without changing the mod itself.
 
-**The project is still in development. Datapack formats and other interfaces are not final, and updates may no longer be
-compatible with old saves or old datapacks. Changes that can cause crashes or data loss will be called out explicitly in
-the changelog.**
-
 ## Links
 
 - **[Documentation](https://docs.iafenvoy.com/docs/mod/mxt)**: player, datapack, KubeJS and Java development guides.
@@ -29,10 +25,7 @@ the changelog.**
 ### For Players
 
 - **Keybinds**: `C` toggles cultivation mode, `Z` opens the character information panel, `R` opens the wheel and `V`
-  activates the selected entry. Arrow keys switch wheel pages. "Swap Main Hand with Back Weapon Slot" is unbound by
-  default. All keys can be changed in the controls settings.
-- **Interface**: a configurable twelve-slot main wheel, additional ability pages based on held items, artifacts and
-  contracted creatures, resource bars, and an aura HUD.
+  activates the selected entry. Arrow keys switch wheel pages. You can change all keybinds in the Controls settings.
 - **Blocks**: Spirit Crafting Table, Exchange Station, Trade Station, Cheque Table, Display Stands, Spirit Stone Ore and
   Spirit Stone Block. Spirit herb definitions add growth and harvesting rules to existing blocks.
 - **Items**: materials such as Lesser to Supreme Spirit Stones, Spirit Iron, Spirit Wood and Cinnabar; generic items
@@ -56,8 +49,8 @@ datapacks or content packs; installing the mod alone does not give you a complet
 - **Item integration**: bind existing items to abilities, pills, resources and aura fuel. Item components carry
   per-stack quality, elements, pill data and technique reading progress; spirit stones can receive aura from their
   holder.
-- **KubeJS**: extension points such as action, condition, cost, number provider, target selector, trigger matcher and
-  loot callbacks, the `MxtEvents` server lifecycle events, and the `MxtTriggers` custom trigger signals a script can
+- **KubeJS**: extension points for actions, conditions, costs, number providers, target selectors and trigger matchers,
+  the `MxtEvents` server lifecycle events, and the `MxtTriggers` custom trigger signals a script can
   publish and subscribe to; register items from a script first and let the binding tables handle them.
 - **Java API**: interfaces for data table registration, attachments, networking, screens and client rendering.
 
@@ -65,40 +58,35 @@ See the [Documentation](https://docs.iafenvoy.com/docs/mod/mxt/tutorial/) for mo
 
 ## Core Mod Content
 
-- **✅ Done**: everything is implemented and passed basic tests; minor changes may still happen later.
-- **🚧 In Progress**: only part of the feature set is done, the rest is still being developed.
-- **🔲 Planned**: only data structures or assets exist, or there is only a development plan.
+| Module                         | Description                                                                                                                                                                      |
+|--------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Character UI                   | Browse equipment and contract ability pages and view character information, resources and aura.                                                                                  |
+| Resources                      | Define numeric resources such as cultivation progress and spirit power, with regeneration, consumption rules and HUD bars.                                                       |
+| Aura                           | Configure aura concentration by dimension, biome and block, with changes over time, formation interactions, queries and visual feedback.                                         |
+| Cultivation and Realms         | Accumulate cultivation progress through meditation and advance through realms according to datapack requirements; optionally integrate lifespan changes with Reincarnation.      |
+| Elements                       | Define elements and their overcoming and adaptation relations for spirit roots, aura and other systems.                                                                          |
+| Spirit Roots and Physiques     | Grant cultivation modifiers, ability effects and passive attributes, with configurable acquisition requirements, exclusions and activation.                                      |
+| Techniques                     | Learn active abilities and passive bonuses from technique books, with exclusion rules controlling which techniques can be studied together.                                      |
+| Abilities and Curses           | Configure ability costs, cooldowns, duration, targeting and event triggers, plus visual effects and curses that trigger periodically or can be purified.                         |
+| Formations                     | Build and activate formations that consume resources, apply area effects and temporarily grant buffs or debuffs.                                                                 |
+| Tribulations                   | Run sequences of actions, delays and condition checks during breakthroughs, with scaling difficulty and separate success and failure outcomes.                                   |
+| Souls                          | Preserve entity snapshots as translucent apparitions, with configurable death generation, command creation, reclaiming and expiry.                                               |
+| Creature Profiles & Contracts  | Define creature attributes, inner cores and mastery progression; contract creatures and command them to follow, wander, hold position or return.                                 |
+| Secret Realms                  | Create instance dimensions with configurable generation, structures, landing positions, limits and entry rules; edit planar portals, summon them with tokens and export layouts. |
+| Spirit Crafting Table          | Craft with recipes that consume both materials and aura, charging aura when the result is taken.                                                                                 |
+| Pills and Medicinal Properties | Define pills, medicinal properties, usage limits, cooldowns and toxicity, alongside shared heat sources.                                                                         |
+| Spirit Herbs                   | Add growth, age and harvesting rules to existing blocks, with fruit quality determined by herb age.                                                                              |
+| Item Binding                   | Attach passive behavior, attribute modifiers and abilities triggered by use or attack to existing items.                                                                         |
+| Talismans                      | Provide carriers, aura infusion, invocation rules and shared tools, with configurable targeting, costs, consumption and durability.                                              |
+| Quality                        | Define quality tiers and resolve an item's quality from its component, its definition or a registry default.                                                                     |
+| Artifacts                      | Give existing items aura storage and abilities, and configure flying artifacts with speed, seats, fuel and appearance.                                                           |
+| Economy                        | Define item currencies and denominations, exchange money with change, and settle player trades through stations and cheques.                                                     |
+| Curios Slots                   | Equip back weapons, belt items, techniques and artifacts, with character rendering and keybinds for main-hand swapping.                                                          |
+| Friend and Foe Identification  | Maintain temporary or persistent friend lists and let mods or scripts provide relationship checks.                                                                               |
 
-| Module                         | Status | Description                                                                                                                                                                      |
-|--------------------------------|:------:|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Datapack Core                  |   ✅    | Define gameplay through composable conditions, actions, number providers, item matchers and triggers, with load-time validation and conditional entries.                         |
-| Wheel and Character UI         |   ✅    | Configure a twelve-slot main wheel, browse equipment and contract ability pages, and view character information, resources and aura.                                             |
-| Resources                      |   ✅    | Define numeric resources such as cultivation progress and spirit power, with regeneration, consumption rules and HUD bars.                                                       |
-| Aura                           |   ✅    | Configure aura concentration by dimension, biome and block, with changes over time, formation interactions, queries and visual feedback.                                         |
-| Cultivation and Realms         |   ✅    | Accumulate cultivation progress through meditation and advance through realms according to datapack requirements; optionally integrate lifespan changes with Reincarnation.      |
-| Elements                       |   ✅    | Define elements and their overcoming and adaptation relations for spirit roots, aura and other systems.                                                                          |
-| Spirit Roots and Physiques     |   ✅    | Grant cultivation modifiers, ability effects and passive attributes, with configurable acquisition requirements, exclusions and activation.                                      |
-| Techniques                     |   ✅    | Learn active abilities and passive bonuses from technique books, with exclusion rules controlling which techniques can be studied together.                                      |
-| Abilities and Curses           |   ✅    | Configure ability costs, cooldowns, duration, targeting and event triggers, plus visual effects and curses that trigger periodically or can be purified.                         |
-| Formations                     |   ✅    | Build and activate formations that consume resources, apply area effects and temporarily grant buffs or debuffs.                                                                 |
-| Tribulations                   |   ✅    | Run sequences of actions, delays and condition checks during breakthroughs, with scaling difficulty and separate success and failure outcomes.                                   |
-| Souls                          |   🚧   | Preserve entity snapshots as translucent apparitions, with configurable death generation, command creation, reclaiming and expiry.                                               |
-| Creature Profiles & Contracts  |   🚧   | Define creature attributes, inner cores and mastery progression; contract creatures and command them to follow, wander, hold position or return.                                 |
-| Secret Realms                  |   🚧   | Create instance dimensions with configurable generation, structures, landing positions, limits and entry rules; edit planar portals, summon them with tokens and export layouts. |
-| Spirit Crafting Table          |   ✅    | Craft with recipes that consume both materials and aura, charging aura when the result is taken.                                                                                 |
-| Pills and Medicinal Properties |   🚧   | Define pills, medicinal properties, usage limits, cooldowns and toxicity, alongside shared heat sources.                                                                         |
-| Spirit Herbs                   |   ✅    | Add growth, age and harvesting rules to existing blocks, with fruit quality determined by herb age.                                                                              |
-| Item Binding                   |   ✅    | Attach passive behavior, attribute modifiers and abilities triggered by use or attack to existing items.                                                                         |
-| Talismans                      |   ✅    | Provide carriers, aura infusion, invocation rules and shared tools, with configurable targeting, costs, consumption and durability.                                              |
-| Quality                        |   ✅    | Define quality tiers and resolve an item's quality from its component, its definition or a registry default.                                                                     |
-| Artifacts                      |   ✅    | Give existing items aura storage and abilities, and configure flying artifacts with speed, seats, fuel and appearance.                                                           |
-| Economy                        |   ✅    | Define item currencies and denominations, exchange money with change, and settle player trades through stations and cheques.                                                     |
-| Curios Slots                   |   ✅    | Equip back weapons, belt items, techniques and artifacts, with character rendering and keybinds for main-hand swapping.                                                          |
-| Friend and Foe Identification  |   ✅    | Maintain temporary or persistent friend lists and let mods or scripts provide relationship checks.                                                                               |
-
-Reincarnation is optional. When installed, it provides lifespan, aging, reincarnation and past-life queries, and data
-packs can configure lifespan changes through breakthrough success actions. Cultivation works without it. Reincarnation
-controls attachment retention through its tag; data clears by default.
+Reincarnation is optional and provides lifespan, aging, reincarnation and past-life queries. Datapacks can adjust
+lifespan through breakthrough success actions. Reincarnation's attachment tags determine which data survives
+reincarnation. By default, that data is cleared.
 
 ## Addons
 
@@ -106,11 +94,11 @@ The following optional addons provide workstation blocks and production workflow
 installed independently of the others. Shared tools, materials, carriers and outputs remain in the core mod, and addon
 items appear in the MiXianTu creative tab. Datapacks or content packs define the production recipes and parameters.
 
-| Addon                                                                               | Features                                                                                                                   |
-|-------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------|
-| [Alchemy Workstations](https://docs.iafenvoy.com/en/docs/mod/mxt/addons/alchemy/)   | Modular furnaces, walls and input/output bins, with furnace and wall definitions, temperature control and alchemy recipes. |
-| [Forging Workstations](https://docs.iafenvoy.com/en/docs/mod/mxt/addons/forging/)   | Forge tables, forging workflows, blueprints, methods and tool/blueprint bindings.                                          |
-| [Talisman Workstations](https://docs.iafenvoy.com/en/docs/mod/mxt/addons/talisman/) | Drawing workstations, guided talisman tracing, stroke scoring, quality grading and drawing recipes.                        |
+| Addon                                                                              | Features                                                                                                                   |
+|------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------|
+| [Alchemy Workstations](https://docs.iafenvoy.com/docs/mod/mxt/addons/alchemy/)     | Modular furnaces, walls and input/output bins, with furnace and wall definitions, temperature control and alchemy recipes. |
+| [Forging Workstations](https://www.curseforge.com/minecraft/mc-mods/mxt-forging)   | Forge tables, forging workflows, blueprints, methods and tool/blueprint bindings.                                          |
+| [Talisman Workstations](https://www.curseforge.com/minecraft/mc-mods/mxt-talisman) | Drawing workstations, guided talisman tracing, stroke scoring, quality grading and drawing recipes.                        |
 
 ## FAQ
 

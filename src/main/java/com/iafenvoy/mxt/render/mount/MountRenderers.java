@@ -1,12 +1,17 @@
 package com.iafenvoy.mxt.render.mount;
 
 import com.iafenvoy.mxt.api.MountRenderer;
+import com.iafenvoy.mxt.api.MountRenderContext;
+import com.iafenvoy.mxt.api.MountRenderState;
 import com.iafenvoy.mxt.data.ability.render.MountRender;
 import com.iafenvoy.mxt.data.ability.render.builtin.GeckoLibMountRender;
 import com.iafenvoy.mxt.data.ability.render.builtin.ItemMountRender;
 import com.iafenvoy.mxt.registry.MxtRegistries;
 import com.mojang.logging.LogUtils;
+import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.serialization.MapCodec;
+import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.client.renderer.state.level.CameraRenderState;
 import org.slf4j.Logger;
 
 import java.util.HashMap;
@@ -37,15 +42,27 @@ public final class MountRenderers {
         RENDERERS.putIfAbsent(codec, renderer);
     }
 
-    // Never returns null: a renderer this client lacks falls back to the item renderer, which is always registered.
     @SuppressWarnings("unchecked")
-    public static <T extends MountRender> MountRenderer<T> resolve(T definition) {
+    public static <T extends MountRender> Resolved<?> resolve(T definition) {
         MountRenderer<?> renderer = RENDERERS.get(definition.codec());
-        if (renderer != null) return (MountRenderer<T>) renderer;
+        if (renderer != null) return new Resolved<>(definition, (MountRenderer<T>) renderer);
         warnOnce(definition);
-        MountRenderer<?> fallback = RENDERERS.get(ItemMountRender.CODEC);
-        if (fallback == null) throw new IllegalStateException("MountRenderers.registerBuiltins() has not run");
-        return (MountRenderer<T>) fallback;
+        MountRenderer<?> item = RENDERERS.get(ItemMountRender.CODEC);
+        if (item == null) throw new IllegalStateException("MountRenderers.registerBuiltins() has not run");
+        return new Resolved<>(ItemMountRender.INSTANCE, (MountRenderer<ItemMountRender>) item);
+    }
+
+    public record Resolved<T extends MountRender>(T definition, MountRenderer<T> renderer) {
+        public MountRenderState extract(MountRenderContext context) {
+            MountRenderState state = this.renderer.createState();
+            this.renderer.extract(this.definition, context, state);
+            return state;
+        }
+
+        public void submit(MountRenderContext context, MountRenderState state, PoseStack poseStack,
+                           SubmitNodeCollector collector, CameraRenderState camera) {
+            this.renderer.submit(this.definition, context, state, poseStack, collector, camera);
+        }
     }
 
     private static void warnOnce(MountRender definition) {

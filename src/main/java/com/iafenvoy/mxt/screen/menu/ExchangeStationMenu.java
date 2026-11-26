@@ -169,7 +169,8 @@ public final class ExchangeStationMenu extends ApricityContainerMenu {
 
     private boolean canTakeResult(Player player) {
         if (player.level().isClientSide()) return true;
-        if (player != this.owner || player.isSpectator() || !this.stillValid(player) || !this.refreshOffers()) return false;
+        if (player != this.owner || player.isSpectator() || !this.stillValid(player) || !this.refreshOffers())
+            return false;
         Exchange selected = this.selectedOffer();
         return selected != null && this.inputSlot.getItem().getCount() >= selected.cost();
     }

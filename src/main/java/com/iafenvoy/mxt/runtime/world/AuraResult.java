@@ -7,6 +7,8 @@ import com.iafenvoy.mxt.data.aura.AuraZone.Rules;
 import com.iafenvoy.saturn.data.condition.EntityCondition;
 import net.minecraft.core.Holder;
 
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
@@ -17,6 +19,17 @@ import java.util.Map;
 public record AuraResult(Map<Holder<Aura>, AuraPool> aura, Rules rules, double elementFitBonus,
                          double elementConflictPenalty, EntityCondition cultivateCondition, Distribution distribution,
                          Holder<AuraZone> source, SourceKind sourceKind) {
+    private static final AuraPool EMPTY_POOL = AuraPool.empty().snapshot();
+
+    public AuraResult {
+        if (aura.isEmpty()) aura = Map.of();
+        else {
+            Map<Holder<Aura>, AuraPool> snapshot = new LinkedHashMap<>();
+            aura.forEach((holder, pool) -> snapshot.put(holder, pool.snapshot()));
+            aura = Collections.unmodifiableMap(snapshot);
+        }
+    }
+
     public AuraResult(Map<Holder<Aura>, AuraPool> aura, AuraService.Resolved resolved) {
         this(aura, resolved.zone().value(), resolved);
     }
@@ -48,7 +61,7 @@ public record AuraResult(Map<Holder<Aura>, AuraPool> aura, Rules rules, double e
     }
 
     public AuraPool pool(Holder<Aura> aura) {
-        return this.aura.getOrDefault(aura, AuraPool.empty());
+        return this.aura.getOrDefault(aura, EMPTY_POOL);
     }
 
     public boolean suppressCultivate() {

@@ -34,6 +34,10 @@ public final class TechniqueAttachment extends AbstractChangeTrackable {
         this.techniqueLevels = new ProgressionHolder<>(techniqueLevels);
     }
 
+    public TechniqueAttachment copy() {
+        return new TechniqueAttachment(this.learnedTechniques, this.techniqueLevels);
+    }
+
     @Override
     public boolean checkDirty() {
         if (this.techniqueLevels.checkDirty()) this.markDirty();

@@ -52,6 +52,10 @@ public final class ContractAttachment extends AbstractChangeTrackable {
         this.behavior = behavior;
     }
 
+    public ContractAttachment copy() {
+        return new ContractAttachment(this.contractType, this.boundAt, this.recalled, this.recallAt, this.behavior);
+    }
+
     public Optional<Holder<ContractType>> contractType() {
         return this.contractType;
     }

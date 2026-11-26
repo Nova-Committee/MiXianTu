@@ -23,7 +23,7 @@ public abstract class CurseRemoveEvent extends Event {
     private final long gameTime;
 
     protected CurseRemoveEvent(@NotNull CurseHolderAttachment holder, @NotNull Holder<Curse> curse, @NotNull State state, @NotNull Set<Identifier> sources, @NotNull Reason reason, long gameTime) {
-        this.holder = holder;
+        this.holder = holder.copy();
         this.curse = curse;
         this.state = state;
         this.sources = Set.copyOf(sources);
@@ -31,8 +31,9 @@ public abstract class CurseRemoveEvent extends Event {
         this.gameTime = gameTime;
     }
 
+    /** Returns a detached snapshot of the state at publication. */
     public CurseHolderAttachment getHolder() {
-        return this.holder;
+        return this.holder.copy();
     }
 
     public Holder<Curse> getCurse() {

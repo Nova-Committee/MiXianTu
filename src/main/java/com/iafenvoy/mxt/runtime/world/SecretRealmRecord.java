@@ -9,16 +9,12 @@ import net.minecraft.core.Holder;
 import net.minecraft.core.UUIDUtil;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.world.level.Level;
 import net.minecraft.util.StringRepresentable;
-import java.util.Locale;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 import org.jspecify.annotations.NonNull;
 
-import java.util.List;
-import java.util.Optional;
-import java.util.OptionalLong;
-import java.util.UUID;
+import java.util.*;
 
 /**
  * One secret realm: the definition it was opened from, where it lives, who claimed it and who is inside.
@@ -28,7 +24,8 @@ import java.util.UUID;
  */
 public record SecretRealmRecord(Holder<SecretRealm> definition, int index, ResourceKey<Level> dimension,
                                 OptionalLong seed, Optional<UUID> owner, long startedAt, long expiresAt,
-                                Optional<Vec3> anchor, boolean prepared, List<UUID> members, UUID instanceId, Cleanup cleanup) {
+                                Optional<Vec3> anchor, boolean prepared, List<UUID> members, UUID instanceId,
+                                Cleanup cleanup) {
     public static final Codec<UUID> UUID_CODEC = Codec.STRING.xmap(UUID::fromString, UUID::toString);
     public static final Codec<SecretRealmRecord> CODEC = RecordCodecBuilder.create(i -> i.group(
             SecretRealm.CODEC.fieldOf("definition").forGetter(SecretRealmRecord::definition),

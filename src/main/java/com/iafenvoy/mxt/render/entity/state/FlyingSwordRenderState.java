@@ -2,8 +2,7 @@ package com.iafenvoy.mxt.render.entity.state;
 
 import com.iafenvoy.mxt.api.MountRenderContext;
 import com.iafenvoy.mxt.api.MountRenderState;
-import com.iafenvoy.mxt.api.MountRenderer;
-import com.iafenvoy.mxt.data.ability.render.MountRender;
+import com.iafenvoy.mxt.render.mount.MountRenderers.Resolved;
 import net.minecraft.client.renderer.entity.state.EntityRenderState;
 import org.jspecify.annotations.Nullable;
 
@@ -14,8 +13,7 @@ import org.jspecify.annotations.Nullable;
 public class FlyingSwordRenderState extends EntityRenderState {
     public float yRot;
     public float xRot;
-    public @Nullable MountRender definition;
-    public @Nullable MountRenderer<?> renderer;
+    public @Nullable Resolved<?> renderer;
     public @Nullable MountRenderState rendererState;
     public @Nullable MountRenderContext context;
 }

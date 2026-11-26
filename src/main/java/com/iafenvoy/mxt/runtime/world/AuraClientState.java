@@ -2,8 +2,10 @@ package com.iafenvoy.mxt.runtime.world;
 
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.aura.AuraZone;
+import com.iafenvoy.saturn.data.resource.Resource;
 import com.iafenvoy.saturn.util.MiscUtil;
 import net.minecraft.core.Holder;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 
@@ -13,24 +15,40 @@ import java.util.*;
  * against the synced aura registry, so nothing here has to guess which aura a value belonged to.
  */
 public final class AuraClientState {
-    private static volatile Snapshot current = new Snapshot(Optional.empty(), Map.of(), Map.of());
-    private static volatile Snapshot target = current;
+    private static final AuraPool EMPTY_POOL = AuraPool.empty().snapshot();
+    private static final Snapshot EMPTY = new Snapshot(Optional.empty(), Map.of(), Map.of());
+    private static Snapshot current = EMPTY;
+    private static volatile @Nullable Snapshot target;
     private static long lastNanos = System.nanoTime();
 
     private AuraClientState() {
     }
 
     public static synchronized Snapshot current() {
+        Snapshot sample = target;
+        if (sample == null) return EMPTY;
         long now = System.nanoTime();
         double elapsed = Math.max(0.0D, (now - lastNanos) / 1_000_000_000.0D);
         lastNanos = now;
         double factor = 1.0D - Math.exp(-elapsed / 0.25D);
-        if (factor > 0.0D) current = Snapshot.interpolate(current, target, Math.min(1.0D, factor));
+        if (factor > 0.0D) current = Snapshot.interpolate(current, sample, Math.min(1.0D, factor));
         return current;
     }
 
+    /** Returns the last server sample for the local player, or empty before a sample arrives. */
+    public static Optional<Snapshot> latest() {
+        return Optional.ofNullable(target);
+    }
+
+    public static synchronized void clear() {
+        target = null;
+        current = EMPTY;
+        lastNanos = System.nanoTime();
+    }
+
     // An absent source is a real answer: no zone covers the player, so the previous one has to stop being drawn.
-    public static void update(Optional<Holder<AuraZone>> source, Map<Holder<Aura>, AuraPool> actual, Map<Holder<Aura>, AuraPool> environment) {
+    public static synchronized void update(Optional<Holder<AuraZone>> source, Map<Holder<Aura>, AuraPool> actual, Map<Holder<Aura>, AuraPool> environment) {
+        if (target == null) lastNanos = System.nanoTime();
         target = new Snapshot(source, sanitize(actual), sanitize(environment));
     }
 
@@ -43,7 +61,7 @@ public final class AuraClientState {
                     ? Math.max(0.0D, pool.maximum()) : 0.0D;
             double regen = Double.isFinite(pool.regenPerTick()) ? pool.regenPerTick() : 0.0D;
             double supplied = MiscUtil.positive(pool.supplied());
-            sanitized.put(holder, new AuraPool(amount, maximum, regen, supplied));
+            sanitized.put(holder, AuraPool.readOnly(amount, maximum, regen, supplied));
         });
         return Map.copyOf(sanitized);
     }
@@ -67,11 +85,26 @@ public final class AuraClientState {
         }
 
         public AuraPool environmentPool(Holder<Aura> aura) {
-            return this.environment.getOrDefault(aura, AuraPool.empty());
+            return this.environment.getOrDefault(aura, EMPTY_POOL);
         }
 
         public AuraPool actualPool(Holder<Aura> aura) {
-            return this.actual.getOrDefault(aura, AuraPool.empty());
+            return this.actual.getOrDefault(aura, EMPTY_POOL);
+        }
+
+        public AuraPool environmentPoolForResource(Holder<Resource> resource) {
+            return poolForResource(this.environment, resource);
+        }
+
+        public AuraPool actualPoolForResource(Holder<Resource> resource) {
+            return poolForResource(this.actual, resource);
+        }
+
+        // Resolve from the packet's holders because the shared registry cache may be cleared while joining a world.
+        private static AuraPool poolForResource(Map<Holder<Aura>, AuraPool> pools, Holder<Resource> resource) {
+            for (Map.Entry<Holder<Aura>, AuraPool> entry : pools.entrySet())
+                if (entry.getKey().value().resource().equals(resource)) return entry.getValue();
+            return EMPTY_POOL;
         }
 
         private static Snapshot interpolate(Snapshot from, Snapshot to, double factor) {
@@ -85,15 +118,15 @@ public final class AuraClientState {
             Set<Holder<Aura>> holders = new HashSet<>(from.keySet());
             holders.addAll(to.keySet());
             holders.forEach(holder -> {
-                AuraPool start = from.getOrDefault(holder, AuraPool.empty());
-                AuraPool end = to.getOrDefault(holder, AuraPool.empty());
+                AuraPool start = from.getOrDefault(holder, EMPTY_POOL);
+                AuraPool end = to.getOrDefault(holder, EMPTY_POOL);
                 double amount = lerp(start.amount(), end.amount(), factor);
                 double maximum = end.maximum() == Double.POSITIVE_INFINITY ? Double.POSITIVE_INFINITY
                         : lerp(start.maximum() == Double.POSITIVE_INFINITY ? end.maximum() : start.maximum(), end.maximum(), factor);
                 double regen = lerp(start.regenPerTick(), end.regenPerTick(), factor);
                 double supplied = lerp(start.supplied(), end.supplied(), factor);
                 if (amount > 0.0D || maximum > 0.0D || regen != 0.0D)
-                    values.put(holder, new AuraPool(amount, maximum, regen, supplied));
+                    values.put(holder, AuraPool.readOnly(amount, maximum, regen, supplied));
             });
             return Map.copyOf(values);
         }

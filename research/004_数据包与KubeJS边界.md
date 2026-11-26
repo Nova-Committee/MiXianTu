@@ -10,7 +10,7 @@
 
 ## KubeJS API 形状
 
-> 本节在设计阶段写成过一个统一的 `Mxt.api()` 门面。**实际落地的是 12 个独立全局对象 + 一个事件组**（
+> 本节在设计阶段写成过一个统一的 `Mxt.api()` 门面。**实际落地的是独立全局对象与一个事件组**（
 `MxtKubeJsPlugin.registerBindings` / `registerEvents`），**没有 `Mxt` 根对象，也没有 `Mxt.registries().registerJson`**
 > ：脚本只能通过 `mxt:js` 类型注册**行为**，不能注入或覆盖 JSON 定义。下面的代码块是已实现的形状。
 
@@ -46,11 +46,12 @@ MxtEvents.resourceConsume(event => { /* pre event: event.setAmount('example:spir
 })
 ```
 
-12 个全局对象是 `MxtActions`、`MxtConditions`、`MxtValues`、`MxtCosts`、`MxtAbilities`、`MxtCultivation`、`MxtCurses`、
-`MxtResources`、`MxtAura`、`MxtSouls`、`MxtTriggers`、`MxtLoot`，事件组是 `MxtEvents`（`EventGroup.of("MxtEvents")`
-）。分组的理由与设计一致：**能力/修炼/诅咒/魂魄/灵气/触发器各自成域**，比一个什么都挂的门面更容易做客户端守卫（
+全局对象按领域组织，包括 `MxtActions`、`MxtConditions`、`MxtValues`、`MxtCosts`、`MxtAbilities`、`MxtCultivation`、
+`MxtCurses`、`MxtResources`、`MxtAura`、`MxtSouls` 和 `MxtTriggers`。事件组为 `MxtEvents`。分组便于各领域约束执行端（
 `MxtAura.addBox` 只接受 `ServerLevel`，其余破坏性方法在客户端直接返回失败结果或打一次警告），也避免脚本把 `Mxt.api()` 当成"
 什么都能干"的入口。
+
+战利品表使用原版和模组注册的条件与函数。运行时调整生物或方块掉落可使用 KubeJS 的 `EntityEvents.drops` 和 `BlockEvents.drops`。
 
 对外 API 必须保持稳定，内部附件类不能直接暴露。所有受校验的操作返回明确结果对象（`failure()`、`committed()`、`advanced()`、
 `applied()`、`amounts()`、`failedResource()`），避免脚本自行猜测状态。所有资源成本均为 `costs` 数组，数组项只允许 `id` 和正数

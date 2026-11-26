@@ -1,9 +1,10 @@
 package com.iafenvoy.mxt.event;
 
 import com.iafenvoy.mxt.attachment.CultivationAttachment;
+import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.cultivation.RealmStage;
 import com.iafenvoy.saturn.attachment.ResourceHolderAttachment;
-import com.iafenvoy.saturn.util.MiscUtil;
+import com.iafenvoy.saturn.data.resource.Resource;
 import com.iafenvoy.saturn.util.formula.FormulaContext;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
@@ -12,6 +13,7 @@ import net.neoforged.bus.api.ICancellableEvent;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.LinkedHashMap;
+import java.util.Collections;
 import java.util.Map;
 
 /**
@@ -25,19 +27,33 @@ public abstract class CultivationBreakEvent extends Event {
     private final double threshold;
 
     protected CultivationBreakEvent(@NotNull CultivationAttachment spirit, @NotNull ResourceHolderAttachment resources, @NotNull Holder<RealmStage> target, @NotNull FormulaContext context, double threshold) {
-        this.spirit = spirit;
-        this.resources = resources;
+        this.spirit = spirit.copy();
+        this.resources = resources.copy();
         this.target = target;
         this.context = context;
         this.threshold = threshold;
     }
 
+    /** Returns a detached snapshot of the cultivation state. */
     public CultivationAttachment getSpirit() {
-        return this.spirit;
+        return this.spirit.copy();
     }
 
+    /** Returns a detached snapshot of the resource account. */
     public ResourceHolderAttachment getResource() {
-        return this.resources;
+        return this.resources.copy();
+    }
+
+    public Map<Holder<Aura>, Double> getProgress() {
+        return Map.copyOf(this.spirit.cultivationProgresses());
+    }
+
+    public Map<Holder<Aura>, Holder<RealmStage>> getRealms() {
+        return Map.copyOf(this.spirit.realmStages());
+    }
+
+    public Map<Holder<Resource>, Double> getResources() {
+        return Map.copyOf(this.resources.values());
     }
 
     public Holder<RealmStage> getTarget() {
@@ -58,7 +74,7 @@ public abstract class CultivationBreakEvent extends Event {
 
         public Pre(CultivationAttachment spirit, ResourceHolderAttachment resources, Holder<RealmStage> target, FormulaContext context, double threshold, Map<Identifier, Double> costs) {
             super(spirit, resources, target, context, threshold);
-            this.originalCosts = new LinkedHashMap<>(costs);
+            this.originalCosts = Collections.unmodifiableMap(new LinkedHashMap<>(costs));
             this.costs = new LinkedHashMap<>(costs);
         }
 
@@ -67,13 +83,14 @@ public abstract class CultivationBreakEvent extends Event {
         }
 
         public Map<Identifier, Double> getCosts() {
-            return this.costs;
+            return Collections.unmodifiableMap(this.costs);
         }
 
         public void setCost(Identifier resource, double amount) {
-            if (resource == null || MiscUtil.positive(amount) <= 0.0D)
-                throw new IllegalArgumentException("Breakthrough costs must be finite and positive");
-            this.costs.put(resource, amount);
+            if (resource == null || !Double.isFinite(amount) || amount < 0.0D)
+                throw new IllegalArgumentException("Breakthrough costs must be finite and non-negative");
+            if (amount == 0.0D) this.costs.remove(resource);
+            else this.costs.put(resource, amount);
         }
     }
 

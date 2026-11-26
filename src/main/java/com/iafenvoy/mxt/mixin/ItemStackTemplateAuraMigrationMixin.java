@@ -13,7 +13,10 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(ItemStackTemplate.class)
 public abstract class ItemStackTemplateAuraMigrationMixin {
-    @Shadow @Final @Mutable private DataComponentPatch components;
+    @Shadow
+    @Final
+    @Mutable
+    private DataComponentPatch components;
 
     @Inject(method = "<init>(Lnet/minecraft/core/Holder;ILnet/minecraft/core/component/DataComponentPatch;)V", at = @At("RETURN"))
     private void mxt$normalizeAuraOnLoad(CallbackInfo ci) {

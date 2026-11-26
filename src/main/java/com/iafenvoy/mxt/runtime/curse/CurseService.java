@@ -80,7 +80,7 @@ public final class CurseService {
             data.markKnown(curse);
             if (displaced != null)
                 eventBus.post(new Post(data, curse, displaced, displacedFrom, Reason.REPLACED, gameTime));
-            eventBus.post(new CurseApplyEvent.Post(data, curse, gameTime, context, result));
+            eventBus.post(new CurseApplyEvent.Post(data, curse, gameTime, context, result, event.getSource()));
             return Result.success(result);
         }
     }

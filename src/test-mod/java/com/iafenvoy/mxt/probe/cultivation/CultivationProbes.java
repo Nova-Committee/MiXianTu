@@ -491,7 +491,7 @@ public final class CultivationProbes {
     private static Result<CultivationStep> tickCultivation(LivingEntity entity, CultivationAttachment spirit, Holder<Cultivation> action, long gameTime) {
         Cultivation definition = action.value();
         FormulaContext context = contextOf(entity);
-        AuraResult aura = AuraService.getPositionAura(entity.level(), entity.blockPosition());
+        AuraResult aura = AuraService.getPositionAura((ServerLevel) entity.level(), entity.blockPosition());
         return CultivationMethodService.tick(entity, spirit, entity.getData(SaturnAttachments.RESOURCE_HOLDER), aura, action, definition, gameTime, context, () -> definition.tickCondition().test(entity, context));
     }
 

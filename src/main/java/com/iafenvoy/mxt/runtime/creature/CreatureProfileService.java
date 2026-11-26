@@ -16,47 +16,81 @@ import com.iafenvoy.saturn.util.formula.FormulaContext;
 import com.iafenvoy.saturn.util.formula.NumberProvider;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.ItemStackTemplate;
+import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 
 /**
- * Applies the first eligible creature profile in registry ID order.
+ * Applies the first eligible creature profile in descending priority and then registry ID order.
  */
 public final class CreatureProfileService {
     private CreatureProfileService() {
     }
 
     public static boolean applySelected(Mob creature) {
+        if (!(creature.level() instanceof ServerLevel level)) return false;
         try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.CREATURE)) {
             if (creature.getExistingData(MxtAttachments.CREATURE_SPIRIT).flatMap(CreatureSpiritAttachment::profile).isPresent())
                 return false;
 
-            FormulaContext context = null;
-            AuraResult aura = null;
-            for (Holder<CreatureProfile> candidate : RegistryCaches.CREATURE_PROFILE_ORDER.get()) {
-                CreatureProfile profile = candidate.value();
-                if (!RegistryCodecs.matches(profile.entities(), BuiltInRegistries.ENTITY_TYPE, creature.getType()))
-                    continue;
-                if (context == null) context = FormulaContext.of(creature);
-                if (!profile.condition().test(creature, context)) continue;
-                if (!profile.minimumAura().isEmpty() || !profile.preferredAuraElements().isEmpty()) {
-                    if (aura == null) aura = AuraService.getPositionAura(creature.level(), creature.blockPosition());
-                    if (!matchesAura(profile, aura, context)) continue;
-                }
-
-                double intelligence = evaluate(profile.intelligence(), context);
-                if (!Double.isFinite(intelligence) || intelligence < 0.0D) continue;
-                creature.getData(MxtAttachments.CREATURE_SPIRIT)
-                        .apply(candidate, intelligence, profile.innerCore().map(ItemStackTemplate::create).orElse(ItemStack.EMPTY));
-                AbilityGrantService.recalculate(creature);
-                profile.spawnAction().execute(creature, context);
-                return true;
-            }
-            return false;
+            Selection selection = select(level, creature, null);
+            if (selection == null) return false;
+            CreatureProfile profile = selection.profile().value();
+            creature.getData(MxtAttachments.CREATURE_SPIRIT).apply(selection.profile(), selection.intelligence(),
+                    profile.innerCore().map(ItemStackTemplate::create).orElse(ItemStack.EMPTY));
+            AbilityGrantService.recalculate(creature);
+            profile.spawnAction().execute(creature, selection.context());
+            return true;
         }
+    }
+
+    public static Inspection inspect(ServerLevel level, Mob creature) {
+        List<Rejection> rejected = new ArrayList<>();
+        Selection selection = select(level, creature, rejected::add);
+        return new Inspection(selection == null ? null : selection.profile(), List.copyOf(rejected));
+    }
+
+    private static @Nullable Selection select(ServerLevel level, Mob creature, @Nullable Consumer<Rejection> rejected) {
+        FormulaContext context = null;
+        AuraResult aura = null;
+        for (Holder<CreatureProfile> candidate : RegistryCaches.CREATURE_PROFILE_ORDER.get()) {
+            CreatureProfile profile = candidate.value();
+            if (!RegistryCodecs.matches(profile.entities(), BuiltInRegistries.ENTITY_TYPE, creature.getType())) continue;
+            if (context == null) context = FormulaContext.of(creature);
+            if (!profile.condition().test(creature, context)) {
+                if (rejected != null) rejected.accept(new Rejection(candidate, Reason.CONDITION));
+                continue;
+            }
+            if (!profile.minimumAura().isEmpty() || !profile.preferredAuraElements().isEmpty()) {
+                if (aura == null) aura = AuraService.getPositionAura(level, creature.blockPosition());
+                if (!matchesAura(profile, aura, context)) {
+                    if (rejected != null) rejected.accept(new Rejection(candidate, Reason.AURA));
+                    continue;
+                }
+            }
+            double intelligence = evaluate(profile.intelligence(), context);
+            if (Double.isFinite(intelligence) && intelligence >= 0.0D) return new Selection(candidate, intelligence, context);
+            if (rejected != null) rejected.accept(new Rejection(candidate, Reason.INTELLIGENCE));
+        }
+        return null;
+    }
+
+    public record Inspection(@Nullable Holder<CreatureProfile> winner, List<Rejection> rejected) {
+    }
+
+    public record Rejection(Holder<CreatureProfile> profile, Reason reason) {
+    }
+
+    public enum Reason {CONDITION, AURA, INTELLIGENCE}
+
+    private record Selection(Holder<CreatureProfile> profile, double intelligence, FormulaContext context) {
     }
 
     private static boolean matchesAura(CreatureProfile profile, AuraResult aura, FormulaContext context) {

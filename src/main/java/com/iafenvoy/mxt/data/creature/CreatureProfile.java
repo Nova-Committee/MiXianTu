@@ -41,7 +41,7 @@ public record CreatureProfile(List<Either<Holder<EntityType<?>>, TagKey<EntityTy
                               List<Either<Holder<Element>, TagKey<Element>>> preferredAuraElements,
                               Map<Holder<Aura>, NumberProvider> minimumAura, Optional<Holder<Progression>> defaultLevel,
                               Optional<Holder<Resource>> masteryResource,
-                              Map<Holder<Progression>, ProgressionConfig> configuration) implements ProgressionOwner {
+                              Map<Holder<Progression>, ProgressionConfig> configuration, int priority) implements ProgressionOwner {
     public static final Codec<Holder<CreatureProfile>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.CREATURE_PROFILE);
     public static final Codec<CreatureProfile> DIRECT_CODEC = RecordCodecBuilder.<CreatureProfile>create(i -> i.group(
             RegistryCodecs.holderOrTagList(Registries.ENTITY_TYPE).optionalFieldOf("entities", List.of()).forGetter(CreatureProfile::entities),
@@ -53,7 +53,8 @@ public record CreatureProfile(List<Either<Holder<EntityType<?>>, TagKey<EntityTy
             CollectionCodecs.map(Aura.CODEC, NumberProvider.CODEC).optionalFieldOf("minimum_aura", Map.of()).forGetter(CreatureProfile::minimumAura),
             Progression.CODEC.optionalFieldOf("default_level").forGetter(CreatureProfile::defaultLevel),
             Resource.CODEC.optionalFieldOf("mastery_resource").forGetter(CreatureProfile::masteryResource),
-            Codec.unboundedMap(Progression.CODEC, ProgressionConfig.CODEC).optionalFieldOf("configuration", Map.of()).forGetter(CreatureProfile::configuration)
+            Codec.unboundedMap(Progression.CODEC, ProgressionConfig.CODEC).optionalFieldOf("configuration", Map.of()).forGetter(CreatureProfile::configuration),
+            Codec.INT.optionalFieldOf("priority", 0).forGetter(CreatureProfile::priority)
     ).apply(i, CreatureProfile::new)).validate(CreatureProfile::validate);
 
     private static DataResult<CreatureProfile> validate(CreatureProfile profile) {

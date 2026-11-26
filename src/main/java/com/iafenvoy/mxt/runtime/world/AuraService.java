@@ -13,6 +13,7 @@ import com.iafenvoy.mxt.event.AuraZoneEvent;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.registry.RegistryPrecedence;
 import com.iafenvoy.mxt.runtime.MxtProfilerSources;
 import com.iafenvoy.mxt.runtime.world.AuraQueryCache.AuraLocation;
 import com.iafenvoy.mxt.runtime.world.AuraQueryCache.AvailabilityKey;
@@ -48,19 +49,18 @@ public final class AuraService {
     private AuraService() {
     }
 
-    public static AuraResult getPositionAura(Level level, BlockPos pos) {
+    public static AuraResult getPositionAura(ServerLevel level, BlockPos pos) {
         try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.AURA_QUERY)) {
             // The two nanoTime calls are only paid when the diagnostic timer is on; the query counter itself
             // is unconditional because it costs a single increment.
             boolean timing = MxtServerConfig.INSTANCE.aura.queryStats.getValue();
             long startedAt = timing ? System.nanoTime() : 0L;
             try {
-                if (!(level instanceof ServerLevel server)) return resolveAura(level, pos);
-                AuraLocation location = AuraQueryCache.location(server, pos);
-                Optional<AuraResult> cached = AuraQueryCache.result(server, location);
+                AuraLocation location = AuraQueryCache.location(level, pos);
+                Optional<AuraResult> cached = AuraQueryCache.result(level, location);
                 if (cached.isPresent()) return cached.get();
                 AuraResult result = resolveAura(level, pos);
-                AuraQueryCache.cacheResult(server, location, result);
+                AuraQueryCache.cacheResult(level, location, result);
                 return result;
             } finally {
                 if (timing) AuraQueryCache.count(System.nanoTime() - startedAt);
@@ -69,20 +69,20 @@ public final class AuraService {
         }
     }
 
-    private static AuraResult resolveAura(Level level, BlockPos pos) {
+    private static AuraResult resolveAura(ServerLevel level, BlockPos pos) {
         long gameTime = level.getGameTime();
         int sectionY = SectionPos.blockToSectionCoord(pos.getY());
         Resolved staticResolved = staticZone(level, pos);
         // A query never loads a chunk: outside the loaded ones there is no stock to read, so the environment is
         // the whole answer - the same trade the neighbour scan makes when it skips unloaded chunks.
         LevelChunk chunk = loadedChunk(level, pos);
-        AuraChunkAttachment attachment = chunk == null ? null : ensureInitialized(chunk, pos, staticResolved);
+        AuraChunkAttachment attachment = chunk == null ? null : ensureInitialized(level, chunk, pos, staticResolved);
         Resolved resolved = customZone(level, pos).orElse(staticResolved);
         // A formation's override is announced before it is applied, so a listener can refuse it; and it is only
         // announced when there is a zone holder to name, so a nameless one falls through silently.
         Optional<Resolved> formation = formationZone(level, pos);
-        if (formation.isPresent() && level instanceof ServerLevel server
-                && !NeoForge.EVENT_BUS.post(new AuraZoneEvent.Override(server, pos, preview(staticResolved, level, pos),
+        if (formation.isPresent()
+                && !NeoForge.EVENT_BUS.post(new AuraZoneEvent.Override(level, pos, preview(staticResolved, level, pos),
                 formation.get().zone)).isCanceled()) resolved = formation.get();
         // Copied, because this map is written below and the stored pools are the stock itself.
         Map<Holder<Aura>, AuraPool> pools = attachment == null ? new LinkedHashMap<>() : AuraPool.copyAll(attachment.pools(sectionY));
@@ -116,35 +116,35 @@ public final class AuraService {
 
     // Seeding needs the static template and local stock, never formation overrides or neighbouring sources.
     public static void ensureInitialized(LevelChunk chunk, BlockPos pos) {
-        ensureInitialized(chunk, pos, staticZone(chunk.getLevel(), pos));
+        if (chunk.getLevel() instanceof ServerLevel level)
+            ensureInitialized(level, chunk, pos, staticZone(level, pos));
     }
 
-    private static AuraChunkAttachment ensureInitialized(LevelChunk chunk, BlockPos pos, @Nullable Resolved resolved) {
+    private static AuraChunkAttachment ensureInitialized(ServerLevel level, LevelChunk chunk, BlockPos pos, @Nullable Resolved resolved) {
         AuraChunkAttachment attachment = chunk.getData(MxtAttachments.AURA_CHUNK);
         Holder<AuraZone> template = resolved == null ? null : resolved.zone;
         if (!attachment.ready(SectionPos.blockToSectionCoord(pos.getY())) || !Objects.equals(attachment.template(), template)) {
-            initialize(chunk.getLevel(), attachment, resolved, pos);
+            initialize(level, attachment, resolved, pos);
             chunk.markUnsaved();
-            if (chunk.getLevel() instanceof ServerLevel server) AuraQueryCache.invalidateResults(server);
+            AuraQueryCache.invalidateResults(level);
         }
         return attachment;
     }
 
     // Environmental concentration only: the mutable chunk stock is deliberately excluded, so stored aura
     // cannot appear to fluctuate with the environment.
-    public static AuraResult getSensedAura(Level level, BlockPos pos) {
+    public static AuraResult getSensedAura(ServerLevel level, BlockPos pos) {
         try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.AURA_QUERY)) {
             AuraResult resolved = getPositionAura(level, pos);
             Holder<AuraZone> zone = resolved.source();
             if (zone == null) return resolved.copy(Map.of());
-            // Copied: the zone pools are the per-tick cache, and a caller may treat what it is handed as its own.
-            return resolved.copy(AuraPool.copyAll(pools(level, zone, pos, level.getGameTime())));
+            return resolved.copy(pools(level, zone, pos, level.getGameTime()));
         }
     }
 
     private static AuraResult preview(@Nullable Resolved resolved, Level level, BlockPos pos) {
         return resolved == null ? zoneless(Map.of())
-                : new AuraResult(AuraPool.copyAll(pools(level, resolved.zone, pos, level.getGameTime())), resolved);
+                : new AuraResult(pools(level, resolved.zone, pos, level.getGameTime()), resolved);
     }
 
     // The answer for a position no zone covers: the default rules, no source holder to name, and only the pools
@@ -193,28 +193,26 @@ public final class AuraService {
     // tier the highest priority wins. Null means no zone covers this position, which is a real state rather
     // than a failure: a pack that describes no zone for a biome leaves those chunks with only their own stock.
     @Nullable
-    private static Resolved staticZone(Level level, BlockPos pos) {
-        ServerLevel server = level instanceof ServerLevel value ? value : null;
-        AuraLocation location = server == null ? null : AuraQueryCache.location(server, pos);
-        Optional<Resolved> cached = location == null ? Optional.empty() : AuraQueryCache.staticZone(server, location);
+    private static Resolved staticZone(ServerLevel level, BlockPos pos) {
+        AuraLocation location = AuraQueryCache.location(level, pos);
+        Optional<Resolved> cached = AuraQueryCache.staticZone(level, location);
         if (cached.isPresent()) return cached.get();
         long started = AuraQueryCache.timing() ? System.nanoTime() : 0L;
         Identifier dimension = level.dimension().identifier();
         Optional<Resolved> result = best(level, holder -> matchesDimension(level, holder.value(), dimension))
                 .map(holder -> new Resolved(holder, SourceKind.DIMENSION, Map.of()));
         if (result.isEmpty()) {
-            Holder<Biome> memoised = location == null ? null : AuraQueryCache.biome(server, location);
+            Holder<Biome> memoised = AuraQueryCache.biome(level, location);
             if (memoised == null) {
                 memoised = biome(level, pos);
                 if (started != 0L) AuraQueryCache.countBiome(System.nanoTime() - started);
-                if (location != null) AuraQueryCache.cacheBiome(server, location, memoised);
+                AuraQueryCache.cacheBiome(level, location, memoised);
             }
             Holder<Biome> biome = memoised;
             result = best(level, holder -> RegistryCodecs.matches(holder.value().biomes(), biome))
                     .map(holder -> new Resolved(holder, SourceKind.BIOME, Map.of()));
         }
-        if (location != null && result.isPresent())
-            AuraQueryCache.cacheStaticZone(server, location, result.get());
+        result.ifPresent(resolved -> AuraQueryCache.cacheStaticZone(level, location, resolved));
         if (started != 0L) AuraQueryCache.countStatic(System.nanoTime() - started);
         return result.orElse(null);
     }
@@ -235,40 +233,35 @@ public final class AuraService {
     // Highest priority wins, then registry ID ascending, so two zones cannot resolve differently
     // between reloads.
     static Optional<Reference<AuraZone>> pickHighestPriority(Stream<Reference<AuraZone>> candidates) {
-        return candidates.max(Comparator.<Reference<AuraZone>>comparingInt(holder -> holder.value().priority())
-                .thenComparing(holder -> holder.key().identifier(), Comparator.reverseOrder()));
+        return candidates.min(RegistryPrecedence.order(AuraZone::priority));
     }
 
     // Dimension stems are a writable registry that is not synced to clients, so only the server may expand a
     // dimension tag through LEVEL_STEM; a secret realm has no level stem of its own, so it also matches aliases.
     // The zone names its dimensions by id, so the registry is only asked here and never while a pack loads.
-    private static boolean matchesDimension(Level level, AuraZone zone, Identifier dimension) {
-        if (!(level instanceof ServerLevel server))
-            return RegistryCodecs.matchesKeys(zone.dimensions(), level.registryAccess().lookupOrThrow(Registries.LEVEL_STEM), dimension);
-        Registry<LevelStem> registry = server.registryAccess().lookupOrThrow(Registries.LEVEL_STEM);
+    private static boolean matchesDimension(ServerLevel level, AuraZone zone, Identifier dimension) {
+        Registry<LevelStem> registry = level.registryAccess().lookupOrThrow(Registries.LEVEL_STEM);
         if (RegistryCodecs.matchesKeys(zone.dimensions(), registry, dimension)) return true;
         return SecretRealmRegistry.aliases(dimension).anyMatch(alias -> RegistryCodecs.matchesKeys(zone.dimensions(), registry, alias));
     }
 
-    private static Optional<Resolved> customZone(Level level, BlockPos pos) {
-        if (!(level instanceof ServerLevel server)) return Optional.empty();
-        return server.getData(MxtAttachments.AURA_WORLD).bestAt(pos)
-                .flatMap(entry -> MxtDatapackRegistries.holder(server.registryAccess(), MxtResourceKeys.AURA_ZONE, entry.getValue().zone())
+    private static Optional<Resolved> customZone(ServerLevel level, BlockPos pos) {
+        return level.getData(MxtAttachments.AURA_WORLD).bestAt(pos)
+                .flatMap(entry -> MxtDatapackRegistries.holder(level.registryAccess(), MxtResourceKeys.AURA_ZONE, entry.getValue().zone())
                         .map(zone -> new Resolved(zone, SourceKind.CUSTOM, Map.of())));
     }
 
-    private static Optional<Resolved> formationZone(Level level, BlockPos pos) {
-        if (!(level instanceof ServerLevel server)) return Optional.empty();
-        AuraLocation location = AuraQueryCache.location(server, pos);
+    private static Optional<Resolved> formationZone(ServerLevel level, BlockPos pos) {
+        AuraLocation location = AuraQueryCache.location(level, pos);
         // The read-through lives in the cache so its two-layer result stays internal; the caller states only
         // what to compute on a miss.
-        return AuraQueryCache.computeFormationZone(server, location, () -> server.getData(MxtAttachments.FORMATION_WORLD)
+        return AuraQueryCache.computeFormationZone(level, location, () -> level.getData(MxtAttachments.FORMATION_WORLD)
                 .formations().entrySet().stream()
                 .filter(entry -> entry.getKey().distSqr(pos) <= entry.getValue().radius() * entry.getValue().radius())
                 // Nearest first, then resolved in that order until one answers: asking only the nearest array
                 // would let a terrain ward inside a cultivating array hide the zone it stands in.
                 .sorted(Comparator.comparingDouble(entry -> entry.getKey().distSqr(pos)))
-                .map(entry -> MxtDatapackRegistries.get(server.registryAccess(), MxtResourceKeys.FORMATION, entry.getValue().formation())
+                .map(entry -> MxtDatapackRegistries.get(level.registryAccess(), MxtResourceKeys.FORMATION, entry.getValue().formation())
                         .flatMap(formation -> auraZone(formation).map(zone -> new Resolved(zone, SourceKind.FORMATION, maximumBonus(formation, FormulaContext.of(level))))))
                 .flatMap(Optional::stream)
                 .findFirst());
@@ -305,7 +298,7 @@ public final class AuraService {
 
     // A 7x7x7 cube of sections around the query point: the inner 3x3x3 uses real source positions, the rest their
     // centre with inverse-square falloff, and a source section is only read when its chunk is already loaded.
-    private static void applyBlockDistance(Level level, Map<Holder<Aura>, AuraPool> pools, AuraChunkAttachment currentChunk,
+    private static void applyBlockDistance(ServerLevel level, Map<Holder<Aura>, AuraPool> pools, AuraChunkAttachment currentChunk,
                                            int currentSectionY, Holder<AuraZone> zone, BlockPos query, long gameTime) {
         SectionPos querySection = SectionPos.of(query);
         Map<Holder<Aura>, double[]> weighted = new LinkedHashMap<>();
@@ -355,12 +348,14 @@ public final class AuraService {
         auras.addAll(weighted.keySet());
         if (auras.isEmpty()) return;
         Map<Holder<Aura>, AuraPool> environment = pools(level, zone, query, gameTime);
+        int sections = level.getSectionsCount();
         for (Holder<Aura> aura : auras) {
             AuraPool shared = pools.get(aura);
             AuraValue aggregate = currentBlock.getOrDefault(aura, AuraValue.ZERO);
             double aggregateAmount = aggregate.amount();
             double aggregateMaximum = aggregate.max().resolve(aggregate.amount());
             AuraPool fallback = shared == null ? environment.get(aura) : null;
+            if (fallback != null) fallback = fallback.share(sections);
             double baseAmount = shared == null ? fallbackAmount(fallback) : Math.max(0.0D, shared.amount() - aggregateAmount);
             double baseMaximum = shared == null ? fallbackMaximum(fallback) : subtractMaximum(shared.maximum(), aggregateMaximum);
             double baseRegen = shared == null ? fallbackRegen(fallback) : Math.max(0.0D, shared.regenPerTick() - aggregate.regenPerTick());
@@ -427,16 +422,14 @@ public final class AuraService {
 
     // One section's availability per aura. The environment behind it is memoised per section because that is the
     // expensive half; the shared stock it is compared against stays a live read.
-    private static Map<Holder<Aura>, Double> sectionAvailability(Level level, AuraChunkAttachment attachment,
+    private static Map<Holder<Aura>, Double> sectionAvailability(ServerLevel level, AuraChunkAttachment attachment,
                                                                  SectionPos section, BlockPos center, long gameTime) {
         Map<Holder<Aura>, AuraValue> aggregate = attachment.sectionAura(section.y());
         if (aggregate.isEmpty()) return Map.of();
-        ServerLevel server = level instanceof ServerLevel value ? value : null;
         Map<Holder<Aura>, Double> result = new LinkedHashMap<>();
         List<Holder<Aura>> missing = new ArrayList<>();
         for (Holder<Aura> aura : aggregate.keySet()) {
-            OptionalDouble cached = server == null ? OptionalDouble.empty()
-                    : AuraQueryCache.availability(server, new AvailabilityKey(attachment, section.y(), aura));
+            OptionalDouble cached = AuraQueryCache.availability(level, new AvailabilityKey(attachment, section.y(), aura));
             if (cached.isEmpty()) {
                 missing.add(aura);
                 continue;
@@ -451,9 +444,8 @@ public final class AuraService {
             Map<Holder<Aura>, AuraPool> environment = zone == null ? Map.of() : pools(level, zone.zone, center, gameTime);
             for (Holder<Aura> aura : missing) {
                 AuraPool pool = environment.get(aura);
-                double environmental = pool == null ? 0.0D : pool.amount();
-                if (server != null)
-                    AuraQueryCache.cacheAvailability(server, new AvailabilityKey(attachment, section.y(), aura), environmental);
+                double environmental = pool == null ? 0.0D : pool.amount() / level.getSectionsCount();
+                AuraQueryCache.cacheAvailability(level, new AvailabilityKey(attachment, section.y(), aura), environmental);
                 double value = availability(attachment, section, aura, environmental);
                 if (value > 0.0D) result.put(aura, value);
             }

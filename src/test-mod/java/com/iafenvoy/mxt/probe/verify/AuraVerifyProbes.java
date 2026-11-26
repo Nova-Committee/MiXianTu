@@ -1,16 +1,19 @@
 package com.iafenvoy.mxt.probe.verify;
 
+import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.aura.AuraZone;
 import com.iafenvoy.mxt.probe.Probe;
 import com.iafenvoy.mxt.probe.ProbeContext;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.world.AuraResult;
+import com.iafenvoy.mxt.runtime.world.AuraPool;
 import com.iafenvoy.mxt.runtime.world.AuraResult.SourceKind;
 import com.iafenvoy.mxt.runtime.world.AuraService;
 import com.iafenvoy.mxt.runtime.world.AuraZonePriorityProbe;
 import com.iafenvoy.saturn.util.HolderHelper;
 import com.iafenvoy.saturn.util.codec.RegistryCodecs;
+import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
@@ -18,6 +21,7 @@ import net.minecraft.resources.Identifier;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Re-checks the aura zone priority selection, the behaviour with no other observable entry point.
@@ -30,7 +34,31 @@ public final class AuraVerifyProbes {
     }
 
     public static List<Probe> probes() {
-        return List.of(Probe.of("verify/aura_priority", AuraVerifyProbes::auraPriority));
+        return List.of(Probe.of("verify/aura_priority", AuraVerifyProbes::auraPriority),
+                Probe.of("verify/external_api/aura_query_snapshot", AuraVerifyProbes::snapshot));
+    }
+
+    private static void snapshot(ProbeContext context) {
+        AuraResult resolved = AuraService.getPositionAura(context.level(), context.playerSpot());
+        Holder<Aura> aura = MxtDatapackRegistries.holders(context.registries(), MxtResourceKeys.AURA).findFirst().orElseThrow();
+        AuraPool original = AuraPool.natural(3.0D, 10.0D, 0.5D);
+        AuraResult snapshot = resolved.copy(Map.of(aura, original));
+        original.change(2.0D);
+        context.expect("snapshot does not read source mutations", snapshot.pool(aura).amount(), 3.0D);
+        try {
+            snapshot.aura().clear();
+            context.fail("snapshot map allowed mutation");
+        } catch (UnsupportedOperationException expected) {
+            context.expect("snapshot still contains the aura", snapshot.aura().size(), 1);
+        }
+        try {
+            snapshot.pool(aura).change(2.0D);
+            context.fail("snapshot pool allowed mutation");
+        } catch (UnsupportedOperationException expected) {
+            context.expect("shared pool keeps its value", snapshot.pool(aura).amount(), 3.0D);
+        }
+        snapshot.pool(aura).copy().change(2.0D);
+        context.expect("pool copy does not modify the snapshot", snapshot.pool(aura).amount(), 3.0D);
     }
 
     private static void auraPriority(ProbeContext context) {

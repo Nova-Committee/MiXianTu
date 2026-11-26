@@ -24,7 +24,8 @@ public final class StackAuraMigration {
     }
 
     public static DataComponentPatch normalizedPatch(ItemInstance item, DataComponentPatch original) {
-        if (original.isEmpty() || !MxtDataComponents.ITEM_AURA.isBound() || !MxtDataComponents.SPIRIT_STORAGE.isBound()) return original;
+        if (original.isEmpty() || !MxtDataComponents.ITEM_AURA.isBound() || !MxtDataComponents.SPIRIT_STORAGE.isBound())
+            return original;
         DataComponentType<ItemAuraComponent> fuelType = MxtDataComponents.ITEM_AURA.get();
         DataComponentType<SpiritStorageComponent> storageType = MxtDataComponents.SPIRIT_STORAGE.get();
         ItemAuraComponent fuel = original.get(DataComponentMap.EMPTY, fuelType);
@@ -35,7 +36,8 @@ public final class StackAuraMigration {
         if (!oldFuel && !oldStorage) return original;
         // Template patches can be decoded before the item's default components are bound.
         DataComponentPatch.Builder components = DataComponentPatch.builder();
-        for (Map.Entry<DataComponentType<?>, Optional<?>> entry : original.entrySet()) copy(components, entry.getKey(), entry.getValue());
+        for (Map.Entry<DataComponentType<?>, Optional<?>> entry : original.entrySet())
+            copy(components, entry.getKey(), entry.getValue());
         if (oldFuel) components.set(fuelType, fuel.normalize(item.count()));
         if (oldStorage) components.set(storageType, storage.normalize(item.count()));
         return components.build();

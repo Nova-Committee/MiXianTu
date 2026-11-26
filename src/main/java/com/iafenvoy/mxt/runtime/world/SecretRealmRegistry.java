@@ -2,13 +2,13 @@ package com.iafenvoy.mxt.runtime.world;
 
 import com.iafenvoy.mxt.data.secretrealm.SecretRealm;
 import com.iafenvoy.mxt.data.secretrealm.SecretRealmGeneration;
-import com.iafenvoy.mxt.data.secretrealm.builtin.StemGeneration;
 import com.iafenvoy.mxt.data.secretrealm.builtin.ExistingGeneration;
+import com.iafenvoy.mxt.data.secretrealm.builtin.StemGeneration;
 import com.iafenvoy.mxt.data.secretrealm.builtin.TemplateGeneration;
 import com.iafenvoy.mxt.registry.MxtAttachments;
-import com.iafenvoy.mxt.runtime.world.SecretRealmRecord.Cleanup;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.runtime.world.SecretRealmRecord.Cleanup;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
@@ -57,7 +57,8 @@ public final class SecretRealmRegistry {
         }
         sync();
         for (SecretRealmRecord record : all())
-            if (record.cleanup() != Cleanup.NONE) SecretRealmService.expire(value, record, value.overworld().getGameTime());
+            if (record.cleanup() != Cleanup.NONE)
+                SecretRealmService.expire(value, record, value.overworld().getGameTime());
     }
 
     public static void clear() {

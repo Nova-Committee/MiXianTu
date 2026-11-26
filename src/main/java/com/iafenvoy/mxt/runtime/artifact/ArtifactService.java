@@ -11,6 +11,7 @@ import com.iafenvoy.mxt.event.ArtifactRefineEvent.Post;
 import com.iafenvoy.mxt.event.ArtifactRefineEvent.Pre;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
+import com.iafenvoy.mxt.registry.RegistryPrecedence;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.MxtProfilerSources;
 import com.iafenvoy.mxt.runtime.spirit.AuraTransfers;
@@ -60,12 +61,13 @@ public final class ArtifactService {
     private ArtifactService() {
     }
 
-    // Highest priority wins, registry order breaks ties. Two definitions claiming one item on the same priority is
-    // reported by DatapackCache while the pack loads.
+    private static final Comparator<Reference<Artifact>> ORDER = RegistryPrecedence.order(Artifact::priority);
+
     public static Optional<Reference<Artifact>> definition(Provider access, ItemStack stack) {
         if (stack.isEmpty()) return Optional.empty();
-        return ItemMatcher.find(MxtDatapackRegistries.holders(access, MxtResourceKeys.ARTIFACT),
-                Holder::value, stack);
+        return MxtDatapackRegistries.holders(access, MxtResourceKeys.ARTIFACT)
+                .filter(holder -> ItemMatcher.matches(holder.value(), stack))
+                .min(ORDER);
     }
 
     // The owner's name is written here because this is the only moment the owner is in hand: a tooltip is drawn

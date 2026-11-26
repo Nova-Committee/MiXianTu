@@ -187,7 +187,8 @@ public final class StationMenu extends ApricityContainerMenu {
 
     @Override
     public @NonNull ItemStack quickMoveStack(@NonNull Player player, int index) {
-        if ((this.serverSide && !this.stillValid(player)) || this.mode != Mode.TRADE_OWNER || index < STOCK_START || index >= this.slots.size()) return ItemStack.EMPTY;
+        if ((this.serverSide && !this.stillValid(player)) || this.mode != Mode.TRADE_OWNER || index < STOCK_START || index >= this.slots.size())
+            return ItemStack.EMPTY;
         Slot slot = this.slots.get(index);
         if (!slot.hasItem()) return ItemStack.EMPTY;
         ItemStack original = slot.getItem().copy();
@@ -207,8 +208,8 @@ public final class StationMenu extends ApricityContainerMenu {
         StationBlockEntity station = this.station;
         return player == this.owner && player.isAlive() && !player.isSpectator() && station != null
                 && this.access.evaluate((level, pos) -> player.level() == level && level.getBlockEntity(pos) == station
-                        && player.isWithinBlockInteractionRange(pos, 4.0D)
-                        && station.mayUseMenu(player, this.mode), false);
+                && player.isWithinBlockInteractionRange(pos, 4.0D)
+                && station.mayUseMenu(player, this.mode), false);
     }
 
     /**

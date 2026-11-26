@@ -88,6 +88,10 @@ public final class FormationInstance {
         this.stored = new LinkedHashMap<>(stored);
     }
 
+    public FormationInstance copy() {
+        return new FormationInstance(this.formation, this.radius, this.owners, this.maintenanceCount, this.activatedAt, this.stored);
+    }
+
     public Identifier formation() {
         return this.formation;
     }

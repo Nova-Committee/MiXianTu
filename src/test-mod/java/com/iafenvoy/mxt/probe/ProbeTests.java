@@ -3,6 +3,7 @@ package com.iafenvoy.mxt.probe;
 import com.iafenvoy.mxt.probe.ability.MessageProbes;
 import com.iafenvoy.mxt.probe.alchemy.PillProbes;
 import com.iafenvoy.mxt.probe.artifact.ArtifactProbes;
+import com.iafenvoy.mxt.probe.artifact.ArtifactMountClientProbes;
 import com.iafenvoy.mxt.probe.combat.DamageProbes;
 import com.iafenvoy.mxt.probe.combat.ElementProbes;
 import com.iafenvoy.mxt.probe.creature.ContractProbes;
@@ -110,6 +111,8 @@ public final class ProbeTests {
             ProfilerChartVerifyProbes::probes,
             TalismanVerifyProbes::probes,
             ScopeVerifyProbes::probes,
+            LootTypeVerifyProbes::probes,
+            RegistryMatchVerifyProbes::probes,
             FriendVerifyProbes::probes,
             StoreVerifyProbes::probes,
             DevModeVerifyProbes::probes,
@@ -129,6 +132,7 @@ public final class ProbeTests {
         List<Probe> probes = new ArrayList<>();
         DOMAINS.forEach(domain -> probes.addAll(domain.get()));
         if (FMLEnvironment.getDist().isClient()) {
+            probes.addAll(ArtifactMountClientProbes.probes());
             probes.addAll(PonderRenderVerifyProbes.probes());
             probes.addAll(PonderSceneVerifyProbes.probes());
             probes.addAll(SecretRealmClientProbes.probes());

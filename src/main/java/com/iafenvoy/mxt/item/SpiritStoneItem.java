@@ -43,7 +43,8 @@ public class SpiritStoneItem extends Item implements UseItemAuraAccess {
     @Override
     public double insert(@Nullable LivingEntity entity, @NotNull HolderLookup.Provider registries, ItemStack stack, Holder<Aura> aura, double amount, boolean exact, boolean simulate) {
         AuraAccess.requireNonNegative(amount);
-        if (stack.isEmpty() || stack.getItem() != this || !aura.equals(this.contentType(registries, stack))) return amount;
+        if (stack.isEmpty() || stack.getItem() != this || !aura.equals(this.contentType(registries, stack)))
+            return amount;
         int count = stack.getCount();
         double capacity = ItemAuraService.capacity(registries, stack) / count;
         double stored = storedPerItem(stack, aura, capacity);
@@ -55,7 +56,8 @@ public class SpiritStoneItem extends Item implements UseItemAuraAccess {
     @Override
     public double extract(@Nullable LivingEntity entity, @NotNull HolderLookup.Provider registries, ItemStack stack, Holder<Aura> aura, double amount, boolean exact, boolean simulate) {
         AuraAccess.requireNonNegative(amount);
-        if (stack.isEmpty() || stack.getItem() != this || !aura.equals(this.contentType(registries, stack))) return amount;
+        if (stack.isEmpty() || stack.getItem() != this || !aura.equals(this.contentType(registries, stack)))
+            return amount;
         int count = stack.getCount();
         double stored = storedPerItem(stack, aura, ItemAuraService.capacity(registries, stack) / count);
         AuraTransfers.Transfer transfer = AuraTransfers.extract(stored, amount / count, exact);

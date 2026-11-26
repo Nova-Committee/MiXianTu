@@ -11,12 +11,13 @@ public abstract class TechniqueLearnEvent extends Event {
     private final Holder<Technique> technique;
 
     protected TechniqueLearnEvent(TechniqueAttachment spirit, Holder<Technique> technique) {
-        this.spirit = spirit;
+        this.spirit = spirit.copy();
         this.technique = technique;
     }
 
+    /** Returns a detached snapshot of the state at publication. */
     public TechniqueAttachment getSpirit() {
-        return this.spirit;
+        return this.spirit.copy();
     }
 
     public Holder<Technique> getTechnique() {

@@ -22,7 +22,7 @@ public abstract class FormationEvent extends Event {
     protected FormationEvent(ServerLevel level, BlockPos controller, FormationInstance instance) {
         this.level = level;
         this.controller = controller;
-        this.instance = instance;
+        this.instance = instance.copy();
     }
 
     public ServerLevel getLevel() {
@@ -33,8 +33,9 @@ public abstract class FormationEvent extends Event {
         return this.controller;
     }
 
+    /** Returns a detached snapshot of the state at publication. */
     public FormationInstance getInstance() {
-        return this.instance;
+        return this.instance.copy();
     }
 
     public static final class Activate extends FormationEvent implements ICancellableEvent {

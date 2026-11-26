@@ -41,7 +41,10 @@ public final class AuraChunkAttachment {
     private AuraChunkAttachment(Optional<Holder<AuraZone>> template, Int2ObjectMap<BlockAuraSectionCache> blockAuraSections, Int2ObjectMap<Map<Holder<Aura>, AuraPool>> auras) {
         this.template = template;
         this.blockAuraSections = new Int2ObjectOpenHashMap<>(blockAuraSections);
-        this.auras = new Int2ObjectOpenHashMap<>(auras);
+        this.auras = new Int2ObjectOpenHashMap<>(auras.size());
+        // Codec maps are immutable, but block cache rebuilds can add new pool entries.
+        for (Int2ObjectMap.Entry<Map<Holder<Aura>, AuraPool>> entry : auras.int2ObjectEntrySet())
+            this.auras.put(entry.getIntKey(), new LinkedHashMap<>(entry.getValue()));
     }
 
     // Seeding writes a map for every section, empty or not, so a section without one is one that was never

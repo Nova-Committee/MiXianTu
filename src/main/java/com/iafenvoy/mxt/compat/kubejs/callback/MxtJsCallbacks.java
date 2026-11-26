@@ -18,7 +18,6 @@ public final class MxtJsCallbacks {
         SaturnJsTriggerMatchers.clear();
         SaturnJsCostCallbacks.clear();
         SaturnJsSelectorCallbacks.clear();
-        MxtJsLootCallbacks.clear();
         SaturnJsWarnings.clear();
     }
 }

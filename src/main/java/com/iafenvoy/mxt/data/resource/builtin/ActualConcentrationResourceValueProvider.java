@@ -10,7 +10,9 @@ import com.iafenvoy.saturn.data.resource.ResourceValueProvider;
 import com.iafenvoy.saturn.util.formula.FormulaContext;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.Holder;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
 
 // The complete resolved concentration, including stored and block/formation contributions.
 public enum ActualConcentrationResourceValueProvider implements ResourceValueProvider {
@@ -25,12 +27,12 @@ public enum ActualConcentrationResourceValueProvider implements ResourceValuePro
 
     @Override
     public double resolve(LivingEntity entity, Holder<Resource> resource, FormulaContext context) {
-        Holder<Aura> aura = RegistryCaches.RESOURCE_AURA.get(resource).orElse(null);
-        if (aura == null) return 0.0D;
-        if (entity.level().isClientSide()) {
-            return AuraClientState.current().actualPool(aura).amount();
+        if (entity.level() instanceof ServerLevel level) {
+            Holder<Aura> aura = RegistryCaches.RESOURCE_AURA.get(resource).orElse(null);
+            return aura == null ? 0.0D : AuraService.getPositionAura(level, entity.blockPosition()).pool(aura).amount();
         }
-        return AuraService.getPositionAura(entity.level(), entity.blockPosition()).pool(aura).amount();
+        return entity instanceof Player player && player.isLocalPlayer()
+                ? AuraClientState.current().actualPoolForResource(resource).amount() : 0.0D;
     }
 
     @Override

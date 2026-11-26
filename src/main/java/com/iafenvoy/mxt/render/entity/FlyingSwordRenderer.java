@@ -2,7 +2,6 @@ package com.iafenvoy.mxt.render.entity;
 
 import com.iafenvoy.mxt.api.MountRenderContext;
 import com.iafenvoy.mxt.api.MountRenderState;
-import com.iafenvoy.mxt.api.MountRenderer;
 import com.iafenvoy.mxt.data.ability.render.MountPose;
 import com.iafenvoy.mxt.data.ability.render.MountRender;
 import com.iafenvoy.mxt.data.ability.render.builtin.ItemMountRender;
@@ -12,6 +11,7 @@ import com.iafenvoy.mxt.entity.FlyingSwordEntity;
 import com.iafenvoy.mxt.render.entity.state.FlyingSwordRenderState;
 import com.iafenvoy.mxt.render.mount.MountContext;
 import com.iafenvoy.mxt.render.mount.MountRenderers;
+import com.iafenvoy.mxt.render.mount.MountRenderers.Resolved;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
 import net.minecraft.client.renderer.SubmitNodeCollector;
@@ -49,7 +49,12 @@ public class FlyingSwordRenderer extends EntityRenderer<FlyingSwordEntity, Flyin
         state.yRot = entity.getYRot(partialTicks);
         state.xRot = entity.getXRot(partialTicks);
         ItemStack visual = entity.visual();
-        if (visual.isEmpty()) return;
+        if (visual.isEmpty()) {
+            state.renderer = null;
+            state.context = null;
+            state.rendererState = null;
+            return;
+        }
         // The definition is cached on the entity by the stack it carries, and light comes from the renderer: the
         // render state's own field is only filled in after this method returns.
         MountAbilityType mount = entity.mountDefinition().orElse(null);
@@ -62,36 +67,26 @@ public class FlyingSwordRenderer extends EntityRenderer<FlyingSwordEntity, Flyin
         state.context = new MountContext(visual, entity, display, state.yRot, state.xRot, state.partialTick,
                 this.getPackedLightCoords(entity, partialTicks),
                 MountPose.motion(moved.horizontalDistance(), moved.y), MountPose.crew(riders), riders);
-        MountRenderer<MountRender> renderer = MountRenderers.resolve(definition);
-        state.definition = definition;
+        Resolved<?> renderer = MountRenderers.resolve(definition);
         state.renderer = renderer;
-        state.rendererState = renderer.createState();
-        renderer.extract(definition, state.context, state.rendererState);
+        state.rendererState = renderer.extract(state.context);
     }
 
     @Override
     public void submit(FlyingSwordRenderState state, @NonNull PoseStack poseStack, @NonNull SubmitNodeCollector collector,
                        @NonNull CameraRenderState camera) {
-        MountRenderer<?> renderer = state.renderer;
+        Resolved<?> renderer = state.renderer;
         MountRenderContext context = state.context;
         MountRenderState scratch = state.rendererState;
-        MountRender definition = state.definition;
-        if (renderer != null && context != null && scratch != null && definition != null) {
+        if (renderer != null && context != null && scratch != null) {
             poseStack.pushPose();
             // Only the yaw: a declared display is authored in the yaw-turned frame, so the pitch belongs to the
             // renderer together with everything inside it.
             poseStack.mulPose(Axis.YP.rotationDegrees(-state.yRot));
-            submit(renderer, definition, context, scratch, poseStack, collector, camera);
+            renderer.submit(context, scratch, poseStack, collector, camera);
             poseStack.popPose();
         }
         super.submit(state, poseStack, collector, camera);
-    }
-
-    @SuppressWarnings("unchecked")
-    private static <T extends MountRender> void submit(MountRenderer<T> renderer, MountRender definition,
-                                                       MountRenderContext context, MountRenderState state,
-                                                       PoseStack poseStack, SubmitNodeCollector collector, CameraRenderState camera) {
-        renderer.submit((T) definition, context, state, poseStack, collector, camera);
     }
 
     // A carried item model can be several blocks wide while the collision box is a fraction of that, so culling on the

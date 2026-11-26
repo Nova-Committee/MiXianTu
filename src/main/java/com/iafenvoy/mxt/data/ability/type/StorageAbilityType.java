@@ -32,7 +32,8 @@ import java.util.Optional;
  * A one-shot inventory ability with item-local or player-local contents, selected by its registered type.
  */
 public record StorageAbilityType(NumberProvider slots,
-                                 NumberProvider cooldown, boolean shared) implements AbilityType, Togglable, CooldownSource {
+                                 NumberProvider cooldown,
+                                 boolean shared) implements AbilityType, Togglable, CooldownSource {
     public static final MapCodec<StorageAbilityType> CODEC = codecFor(false);
     public static final MapCodec<StorageAbilityType> SHARED_CODEC = codecFor(true);
 
@@ -60,7 +61,8 @@ public record StorageAbilityType(NumberProvider slots,
     public Optional<Failure> canActivate(ToggleContext context) {
         if (!(context.holder() instanceof ServerPlayer player)) return Optional.of(AbilityFailure.UNAVAILABLE);
         ItemStack carrier = context.carrier();
-        if (carrier == null || !ArtifactStorageContainer.isCarried(player, carrier)) return Optional.of(AbilityFailure.NO_CARRIER);
+        if (carrier == null || !ArtifactStorageContainer.isCarried(player, carrier))
+            return Optional.of(AbilityFailure.NO_CARRIER);
         // No slot is the slots formula's own answer, not a state the press cannot describe.
         if (ArtifactService.storageSlots(carrier, context.ability(), context.formula()) <= 0)
             return Optional.of(Failures.INVALID_FORMULA);
@@ -80,23 +82,23 @@ public record StorageAbilityType(NumberProvider slots,
         ArtifactStorageContainer contents = new ArtifactStorageContainer(player, carrier, context.ability(), capacity);
         int rows = capacity / ArtifactService.STORAGE_COLUMNS;
         player.openMenu(new SimpleMenuProvider((id, inventory, _) -> new ChestMenu(MxtMenus.ARTIFACT_STORAGE.get(), id, inventory, contents, rows) {
-            @Override
-            public @NonNull ItemStack quickMoveStack(@NonNull Player player, int index) {
-                if (this.getSlot(index).getItem() == carrier) return ItemStack.EMPTY;
-                return super.quickMoveStack(player, index);
-            }
-
-            @Override
-            protected @NonNull Slot addSlot(@NonNull Slot slot) {
-                if (slot.container == contents) slot = new Slot(contents, slot.getSlotIndex(), slot.x, slot.y) {
                     @Override
-                    public boolean mayPlace(@NonNull ItemStack stack) {
-                        return stack != carrier;
+                    public @NonNull ItemStack quickMoveStack(@NonNull Player player, int index) {
+                        if (this.getSlot(index).getItem() == carrier) return ItemStack.EMPTY;
+                        return super.quickMoveStack(player, index);
                     }
-                };
-                return super.addSlot(slot);
-            }
-        }, title),
+
+                    @Override
+                    protected @NonNull Slot addSlot(@NonNull Slot slot) {
+                        if (slot.container == contents) slot = new Slot(contents, slot.getSlotIndex(), slot.x, slot.y) {
+                            @Override
+                            public boolean mayPlace(@NonNull ItemStack stack) {
+                                return stack != carrier;
+                            }
+                        };
+                        return super.addSlot(slot);
+                    }
+                }, title),
                 // The client rebuilds the same menu shape from the row count, which is all it needs: the slots
                 // themselves arrive through the menu sync.
                 buffer -> buffer.writeVarInt(rows));

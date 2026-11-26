@@ -15,12 +15,14 @@ import dev.latvian.mods.kubejs.event.EventHandler;
 import dev.latvian.mods.kubejs.event.EventResult;
 import dev.latvian.mods.kubejs.event.KubeEvent;
 import net.minecraft.resources.Identifier;
+import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.TriState;
 import net.minecraft.world.entity.Entity;
 import net.neoforged.bus.api.Event;
 import net.neoforged.bus.api.ICancellableEvent;
+import org.jetbrains.annotations.Nullable;
 
-import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.stream.Collectors;
@@ -79,7 +81,7 @@ final class MxtKubeJsEventDispatcher implements Dispatcher {
     }
 
     @Override
-    public void post(String type, Event event) {
+    public void post(String type, String phase, Event event) {
         EventHandler handler = switch (type) {
             case "abilityTriggered" -> ABILITY_TRIGGERED;
             case "curseRemove" -> CURSE_REMOVE;
@@ -93,8 +95,8 @@ final class MxtKubeJsEventDispatcher implements Dispatcher {
             case "tribulation" -> TRIBULATION;
             default -> null;
         };
-        if (handler == null) return;
-        EventResult result = handler.post(new GenericKubeEvent(type, event));
+        if (handler == null || !handler.hasListeners()) return;
+        EventResult result = handler.post(new GenericKubeEvent(type, phase, event));
         if (event instanceof ICancellableEvent cancellable) result.applyCancel(cancellable);
     }
 
@@ -145,7 +147,7 @@ final class MxtKubeJsEventDispatcher implements Dispatcher {
         }
 
         public int getStacks() {
-            return this.pre().getStacks();
+            return this.event instanceof CurseApplyEvent.Post post ? post.getInstance().stacks() : this.pre().getStacks();
         }
 
         public void setStacks(int stacks) {
@@ -154,7 +156,8 @@ final class MxtKubeJsEventDispatcher implements Dispatcher {
 
         // A string so a script can compare and replace it directly.
         public String getSource() {
-            return this.pre().getSource().toString();
+            return this.event instanceof CurseApplyEvent.Post post ? post.getSource().map(Identifier::toString).orElse("")
+                    : this.pre().getSource().toString();
         }
 
         public void setSource(String source) {
@@ -210,7 +213,25 @@ final class MxtKubeJsEventDispatcher implements Dispatcher {
         }
 
         public String getKind() {
-            return this.event.getClass().getSimpleName().toLowerCase(Locale.ROOT);
+            return switch (this.event) {
+                case AuraZoneEvent.Enter _ -> "enter";
+                case AuraZoneEvent.Leave _ -> "leave";
+                case AuraZoneEvent.Tick _ -> "tick";
+                case AuraZoneEvent.Override _ -> "override";
+                default -> throw new IllegalStateException("Unknown aura-zone event");
+            };
+        }
+
+        public ServerLevel getLevel() {
+            return this.event.getLevel();
+        }
+
+        public BlockPos getPos() {
+            return this.event.getPos();
+        }
+
+        public @Nullable Entity getEntity() {
+            return this.event.getEntity();
         }
 
         // A holder's own toString is a debug string, so the id is what a script can compare against; a position
@@ -289,10 +310,12 @@ final class MxtKubeJsEventDispatcher implements Dispatcher {
      */
     public static final class GenericKubeEvent implements KubeEvent {
         private final String type;
+        private final String phase;
         private final Event event;
 
-        GenericKubeEvent(String type, Event event) {
+        GenericKubeEvent(String type, String phase, Event event) {
             this.type = type;
+            this.phase = phase;
             this.event = event;
         }
 
@@ -301,7 +324,7 @@ final class MxtKubeJsEventDispatcher implements Dispatcher {
         }
 
         public String getPhase() {
-            return this.event.getClass().getSimpleName();
+            return this.phase;
         }
 
         public boolean isCancellable() {

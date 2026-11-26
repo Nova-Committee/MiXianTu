@@ -126,7 +126,8 @@ public final class RiftLanding {
 
     private static boolean mayBuildPlatform(ServerLevel level, BlockPos pos, Entity traveller) {
         if (FormationProtection.preventsPlacement(level, pos, traveller)) return false;
-        if (traveller instanceof ServerPlayer player && (!player.mayBuild() || !level.mayInteract(player, pos))) return false;
+        if (traveller instanceof ServerPlayer player && (!player.mayBuild() || !level.mayInteract(player, pos)))
+            return false;
         return !FtbChunksCompat.claimsProtect() || !FtbChunksCompat.chunkClaimed(level, pos)
                 || traveller instanceof ServerPlayer player && FtbChunksCompat.mayEdit(level, pos, player.getUUID());
     }

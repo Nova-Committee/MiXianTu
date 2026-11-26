@@ -10,7 +10,9 @@ import com.iafenvoy.saturn.data.resource.ResourceValueProvider;
 import com.iafenvoy.saturn.util.formula.FormulaContext;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.Holder;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
 
 // Only the environmental template contribution, excluding chunk storage and emitters.
 public enum EnvironmentConcentrationResourceValueProvider implements ResourceValueProvider {
@@ -25,13 +27,12 @@ public enum EnvironmentConcentrationResourceValueProvider implements ResourceVal
 
     @Override
     public double resolve(LivingEntity entity, Holder<Resource> resource, FormulaContext context) {
-        // The value names the aura it carries; the environment is pooled per aura.
-        Holder<Aura> aura = RegistryCaches.RESOURCE_AURA.get(resource).orElse(null);
-        if (aura == null) return 0.0D;
-        if (entity.level().isClientSide()) {
-            return AuraClientState.current().environmentPool(aura).amount();
+        if (entity.level() instanceof ServerLevel level) {
+            Holder<Aura> aura = RegistryCaches.RESOURCE_AURA.get(resource).orElse(null);
+            return aura == null ? 0.0D : AuraService.getSensedAura(level, entity.blockPosition()).pool(aura).amount();
         }
-        return AuraService.getSensedAura(entity.level(), entity.blockPosition()).pool(aura).amount();
+        return entity instanceof Player player && player.isLocalPlayer()
+                ? AuraClientState.current().environmentPoolForResource(resource).amount() : 0.0D;
     }
 
     @Override

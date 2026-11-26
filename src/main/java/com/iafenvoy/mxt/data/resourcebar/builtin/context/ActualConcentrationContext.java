@@ -1,12 +1,9 @@
 package com.iafenvoy.mxt.data.resourcebar.builtin.context;
 
-import com.iafenvoy.mxt.data.aura.Aura;
-import com.iafenvoy.mxt.registry.cache.RegistryCaches;
 import com.iafenvoy.mxt.runtime.world.AuraClientState;
 import com.iafenvoy.mxt.runtime.world.AuraPool;
 import com.iafenvoy.saturn.data.resource.Resource;
 import com.iafenvoy.saturn.data.resourcebar.ResourceBarContext;
-import com.iafenvoy.saturn.util.DefinitionText;
 import net.minecraft.core.Holder;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.LivingEntity;
@@ -22,18 +19,14 @@ public enum ActualConcentrationContext implements ResourceBarContext {
     @Override
     public Optional<Values> extract(LivingEntity entity, Holder<Resource> resource) {
         if (!entity.level().isClientSide()) return Optional.empty();
-        // The bar is declared on a value; what it shows is the concentration of the aura that value carries.
-        Holder<Aura> aura = RegistryCaches.RESOURCE_AURA.get(resource).orElse(null);
-        if (aura == null) return Optional.empty();
-        AuraPool pool = AuraClientState.current().actualPool(aura);
+        AuraPool pool = AuraClientState.current().actualPoolForResource(resource);
         if (pool.maximum() <= 0.0D && pool.amount() <= 0.0D) return Optional.empty();
         return Optional.of(new Values(pool.amount(), 0.0D, pool.maximum(), -1L));
     }
 
     @Override
     public Component name(Holder<Resource> resource) {
-        return Component.translatable("hud.mxt.resource_bar.actual_concentration",
-                DefinitionText.nameOrId(resource));
+        return Component.translatable("hud.mxt.resource_bar.actual_concentration");
     }
 
     @Override

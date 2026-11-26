@@ -7,7 +7,6 @@ import com.iafenvoy.mxt.data.ability.type.MountAbilityType;
 import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.runtime.MxtProfilerSources;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactService;
-import com.iafenvoy.mxt.util.MxtCodecs;
 import com.iafenvoy.saturn.profiling.ProfilerScope;
 import com.iafenvoy.saturn.profiling.ServerProfiling;
 import com.mojang.serialization.Codec;
@@ -49,7 +48,7 @@ public final class FlyingSwordEntity extends Entity implements MountVehicle {
     private static final float PITCH_RATIO = 0.5F;
     // The box is a thin slab under the rider's feet, so boarding would otherwise be a pixel hunt.
     private static final float PICK_RADIUS = 0.35F;
-    private static final Codec<EntityReference<LivingEntity>> OWNER_CODEC = MxtCodecs.entityReferenceWithLegacyString();
+    private static final Codec<EntityReference<LivingEntity>> OWNER_CODEC = EntityReference.codec();
     // The server moves this in whole ticks and a client draws twenty of those a second, so a mount carrying the player
     // would visibly step. Smoothing between the packets is what the vanilla vehicles do for the same reason.
     private final InterpolationHandler interpolation = new InterpolationHandler(this);

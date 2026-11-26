@@ -3,13 +3,13 @@ package com.iafenvoy.mxt.data.artifact;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.cultivation.Element;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.util.MxtCodecs;
 import com.iafenvoy.saturn.data.ability.Ability;
 import com.iafenvoy.saturn.data.action.ItemAction;
 import com.iafenvoy.saturn.data.action.builtin.item.ConsumeHealthItemAction;
 import com.iafenvoy.saturn.data.condition.EntityCondition;
 import com.iafenvoy.saturn.registry.SaturnResourceKeys;
 import com.iafenvoy.saturn.util.codec.CollectionCodecs;
+import com.iafenvoy.saturn.util.codec.MiscCodecs;
 import com.iafenvoy.saturn.util.codec.RegistryCodecs;
 import com.iafenvoy.saturn.util.formula.NumberProvider;
 import com.iafenvoy.saturn.util.formula.number.Constant;
@@ -55,7 +55,7 @@ public record Artifact(List<Entry> items, Map<Holder<Aura>, NumberProvider> spir
             ItemAction.optionalCodec("use_action").forGetter(Artifact::useAction),
             NumberProvider.CODEC.optionalFieldOf("hold_ticks", new Constant(DEFAULT_HOLD_TICKS)).forGetter(Artifact::holdTicks),
             RegistryCodecs.holderOrTagList(MxtResourceKeys.ELEMENT).optionalFieldOf("element", List.of()).forGetter(Artifact::element),
-            MxtCodecs.NON_NEGATIVE_FINITE.optionalFieldOf("attachment_multiplier", 1.0D).forGetter(Artifact::attachmentMultiplier),
+            MiscCodecs.NON_NEGATIVE_DOUBLE.optionalFieldOf("attachment_multiplier", 1.0D).forGetter(Artifact::attachmentMultiplier),
             Codec.INT.optionalFieldOf("priority", DEFAULT_PRIORITY).forGetter(Artifact::priority)
     ).apply(i, Artifact::new));
 

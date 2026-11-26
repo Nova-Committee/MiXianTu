@@ -9,6 +9,7 @@ import com.iafenvoy.saturn.data.context.condition.EntityConditionContext;
 import com.iafenvoy.saturn.util.codec.CollectionCodecs;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.Holder;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import org.jspecify.annotations.NonNull;
 
@@ -24,7 +25,8 @@ public record AuraRangeEntityCondition(Map<Holder<Aura>, AuraRequirement> aura) 
     @Override
     public boolean test(@NonNull EntityConditionContext ctx) {
         Entity entity = ctx.entity();
-        AuraResult resolved = AuraService.getPositionAura(entity.level(), entity.blockPosition());
+        if (!(entity.level() instanceof ServerLevel level)) return false;
+        AuraResult resolved = AuraService.getPositionAura(level, entity.blockPosition());
         return this.aura.entrySet().stream().allMatch(entry -> entry.getValue().test(resolved.pool(entry.getKey()).amount(), ctx.formula()));
     }
 

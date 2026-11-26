@@ -25,7 +25,8 @@ public final class CreatureProfileProbes {
     }
 
     public static List<Probe> probes() {
-        return List.of(Probe.of("creature/profile/fallback", CreatureProfileProbes::fallback));
+        return List.of(Probe.of("creature/profile/fallback", CreatureProfileProbes::fallback),
+                Probe.of("verify/external_api/creature_profile_priority", CreatureProfileProbes::priority));
     }
 
     private static void fallback(ProbeContext context) {
@@ -59,6 +60,19 @@ public final class CreatureProfileProbes {
         creature.setNoAi(true);
         creature.setPos(context.player().position().add(offset, 0, 0));
         return creature;
+    }
+
+    private static void priority(ProbeContext context) {
+        Holder<CreatureProfile> expected = context.require(MxtResourceKeys.CREATURE_PROFILE, "priority/02_winner");
+        Mob creature = create(context, EntityType.CAVE_SPIDER, 3);
+        try {
+            context.check("mob joined", context.level().addFreshEntity(creature));
+            CreatureSpiritAttachment data = creature.getData(MxtAttachments.CREATURE_SPIRIT);
+            context.expect("valid higher priority wins over earlier default", data.profile().orElse(null), expected);
+            context.check("higher ineligible profile falls through", close(data.intelligence(), 8.5D));
+        } finally {
+            creature.discard();
+        }
     }
 
     private static boolean close(double actual, double expected) {

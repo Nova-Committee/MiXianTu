@@ -69,9 +69,9 @@ public final class MxtKubeJsEvents {
     }
 
     // Forwards a published MXT lifecycle event that has no specialised Java listener API.
-    public static void post(String type, Event event) {
+    static void post(String type, String phase, Event event) {
         Dispatcher current = dispatcher;
-        if (current != null) current.post(type, event);
+        if (current != null) current.post(type, phase, event);
     }
 
     // A friend judgement is asked far more often than a lifecycle event, so it has its own entry point: the
@@ -92,6 +92,6 @@ public final class MxtKubeJsEvents {
 
         void postFriendRelation(Relation event);
 
-        void post(String type, Event event);
+        void post(String type, String phase, Event event);
     }
 }

@@ -20,12 +20,7 @@ import net.neoforged.neoforge.event.level.LevelEvent;
 import org.slf4j.Logger;
 
 import java.io.IOException;
-import java.util.Map;
-import java.util.HashMap;
-import java.util.Collections;
-import java.util.IdentityHashMap;
-import java.util.Set;
-import java.util.Optional;
+import java.util.*;
 
 /**
  * Optional runtime dimension loader operating on already decoded LevelStem values. It never mutates the dynamic
@@ -55,7 +50,8 @@ public final class RuntimeDimensionService {
             synchronized (worlds) {
                 ServerLevel existing = worlds.get(key);
                 if (existing != null) return owns(existing) ? Optional.of(existing) : Optional.empty();
-                if (CLOSING.containsKey(key) || !SecretRealmGenerationService.managed(server, key)) return Optional.empty();
+                if (CLOSING.containsKey(key) || !SecretRealmGenerationService.managed(server, key))
+                    return Optional.empty();
                 try {
                     WorldData worldData = server.getWorldData();
                     ServerLevelData properties = new DerivedLevelData(worldData, worldData.overworldData());

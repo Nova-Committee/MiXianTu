@@ -66,6 +66,7 @@ public final class SoulProbes {
                 Probe.of("world/soul/appearance", SoulProbes::appearance),
                 Probe.of("world/soul/persistence", SoulProbes::persistence),
                 Probe.of("world/soul/lifecycle", SoulProbes::lifecycle),
+                Probe.of("verify/external_api/soul_event_snapshot", SoulProbes::eventSnapshot),
                 Probe.of("world/soul/commands", SoulProbes::commands),
                 Probe.of("world/soul/death_generation", SoulProbes::deathGeneration),
                 Probe.of("world/soul/timeout", SoulProbes::timeout));
@@ -76,6 +77,25 @@ public final class SoulProbes {
         if (source == null) throw new IllegalStateException("Missing source " + type);
         source.setPos(c.at(8, 1, 8).getCenter());
         return source;
+    }
+
+    private static void eventSnapshot(ProbeContext context) {
+        ServerPlayer player = context.player();
+        List<SoulEvent.State> states = new ArrayList<>();
+        Consumer<SoulEvent.TransferPost> listener = event -> {
+            if (event.getEntity() != player) return;
+            event.getSoul().clear();
+            states.add(event.getState());
+        };
+        NeoForge.EVENT_BUS.addListener(listener);
+        try {
+            context.check("soul transfer succeeds", SoulService.transfer(player, "probe_snapshot"));
+            context.check("listener receives committed state", states.size() == 1 && states.getFirst().active());
+            context.check("listener cannot clear live state through snapshot", player.getData(MxtAttachments.SOUL).active());
+        } finally {
+            NeoForge.EVENT_BUS.unregister(listener);
+            SoulService.reclaim(player);
+        }
     }
 
     private static SoulEntity manifestation(ProbeContext c, Entity source) {

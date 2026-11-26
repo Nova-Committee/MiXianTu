@@ -5,7 +5,6 @@ import com.iafenvoy.mxt.registry.MxtAttachments;
 import com.iafenvoy.mxt.registry.MxtEntityDataSerializers;
 import com.iafenvoy.mxt.registry.MxtEntityTypes;
 import com.iafenvoy.mxt.util.EntityReferences;
-import com.iafenvoy.mxt.util.MxtCodecs;
 import com.mojang.serialization.Codec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.syncher.EntityDataAccessor;
@@ -30,7 +29,7 @@ public final class StormCloudEntity extends Entity {
     private static final double ARRIVAL_DISTANCE = 0.01;
     private static final long TIMED = -2L, TRIBULATION_ACTIVE = -1L;
     private static final int DISSOLVE_TICKS = 23;
-    private static final Codec<EntityReference<Entity>> OWNER_CODEC = MxtCodecs.entityReferenceWithLegacyString();
+    private static final Codec<EntityReference<Entity>> OWNER_CODEC = EntityReference.codec();
 
     private static final EntityDataAccessor<StormCloudOptions> OPTIONS =
             SynchedEntityData.defineId(StormCloudEntity.class, MxtEntityDataSerializers.STORM_CLOUD_OPTIONS.get());

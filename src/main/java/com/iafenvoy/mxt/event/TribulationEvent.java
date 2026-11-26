@@ -16,12 +16,13 @@ public abstract class TribulationEvent extends Event {
     private final Holder<Tribulation> tribulation;
 
     protected TribulationEvent(@NotNull TribulationAttachment data, @NotNull Holder<Tribulation> tribulation) {
-        this.data = data;
+        this.data = data.copy();
         this.tribulation = tribulation;
     }
 
+    /** Returns a detached snapshot of the state at publication. */
     public TribulationAttachment getData() {
-        return this.data;
+        return this.data.copy();
     }
 
     public Holder<Tribulation> getTribulation() {

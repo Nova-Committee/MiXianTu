@@ -41,10 +41,15 @@ public final class AuraPool {
     private double maximum;
     private double regenPerTick;
     private double supplied;
+    private final boolean readOnly;
 
     // Decoding rejects a bad value rather than clamping it; every mutation below clamps, so a pool that exists is
     // always usable.
     public AuraPool(double amount, double maximum, double regenPerTick, double supplied) {
+        this(amount, maximum, regenPerTick, supplied, false);
+    }
+
+    private AuraPool(double amount, double maximum, double regenPerTick, double supplied, boolean readOnly) {
         if (!Double.isFinite(amount) || amount < 0.0D || (!Double.isFinite(maximum) && maximum != Double.POSITIVE_INFINITY)
                 || maximum < 0.0D || !Double.isFinite(regenPerTick) || !Double.isFinite(supplied) || supplied < 0.0D) {
             throw new IllegalArgumentException("Aura pool values must be finite and non-negative, except an unlimited maximum");
@@ -53,6 +58,7 @@ public final class AuraPool {
         this.maximum = maximum;
         this.regenPerTick = regenPerTick;
         this.supplied = supplied;
+        this.readOnly = readOnly;
     }
 
     // A pool nothing but the environment feeds, which is every pool that is stored rather than resolved.
@@ -90,7 +96,20 @@ public final class AuraPool {
         return new AuraPool(this.amount, this.maximum, this.regenPerTick, this.supplied);
     }
 
+    AuraPool snapshot() {
+        return this.readOnly ? this : readOnly(this.amount, this.maximum, this.regenPerTick, this.supplied);
+    }
+
+    static AuraPool readOnly(double amount, double maximum, double regenPerTick, double supplied) {
+        return new AuraPool(amount, maximum, regenPerTick, supplied, true);
+    }
+
+    private void requireMutable() {
+        if (this.readOnly) throw new UnsupportedOperationException("Aura query pools are read-only");
+    }
+
     public void set(double amount, double maximum, double regenPerTick, double supplied) {
+        this.requireMutable();
         this.maximum = Math.max(0.0D, maximum);
         this.amount = clamp(amount, this.maximum);
         this.regenPerTick = Math.max(0.0D, regenPerTick);
@@ -98,24 +117,29 @@ public final class AuraPool {
     }
 
     public void change(double delta) {
+        this.requireMutable();
         this.amount = clamp(this.amount + delta, this.maximum);
     }
 
     public void setMaximum(double maximum) {
+        this.requireMutable();
         this.maximum = Math.max(0.0D, maximum);
         this.amount = clamp(this.amount, this.maximum);
     }
 
     // A ceiling handed in as a delta, which is how a zone's bonus and a block contribution's maximum both arrive.
     public void addMaximum(double delta) {
+        this.requireMutable();
         if (this.maximum != Double.POSITIVE_INFINITY) this.setMaximum(this.maximum + delta);
     }
 
     public void setRegenPerTick(double regenPerTick) {
+        this.requireMutable();
         this.regenPerTick = Math.max(0.0D, regenPerTick);
     }
 
     public void supply(double supplied) {
+        this.requireMutable();
         this.supplied = Math.max(0.0D, supplied);
     }
 

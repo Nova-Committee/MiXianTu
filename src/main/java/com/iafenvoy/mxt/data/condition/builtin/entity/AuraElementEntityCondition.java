@@ -12,6 +12,7 @@ import com.iafenvoy.saturn.util.codec.CollectionCodecs;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.Holder;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import org.jspecify.annotations.NonNull;
 
@@ -37,7 +38,8 @@ public record AuraElementEntityCondition(Map<Holder<Element>, AuraRequirement> e
     @Override
     public boolean test(@NonNull EntityConditionContext ctx) {
         Entity entity = ctx.entity();
-        AuraResult resolved = AuraService.getPositionAura(entity.level(), entity.blockPosition());
+        if (!(entity.level() instanceof ServerLevel level)) return false;
+        AuraResult resolved = AuraService.getPositionAura(level, entity.blockPosition());
         return this.elements.entrySet().stream().allMatch(entry -> entry.getValue().test(concentration(resolved, entry.getKey()), ctx.formula()));
     }
 

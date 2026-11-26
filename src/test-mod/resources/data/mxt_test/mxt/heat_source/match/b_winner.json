@@ -1,0 +1,1 @@
+{ "blocks": "minecraft:obsidian", "priority": 31, "max_temperature": 75, "heating_per_tick": 2 }

@@ -39,17 +39,13 @@ import com.iafenvoy.mxt.runtime.world.SoulService;
 import com.iafenvoy.saturn.attachment.AbilityAttachment;
 import com.iafenvoy.saturn.data.ability.Ability;
 import com.iafenvoy.saturn.data.cost.Cost;
-import com.iafenvoy.saturn.data.cost.CostPayment;
-import com.iafenvoy.saturn.data.cost.Debit;
-import com.iafenvoy.saturn.data.cost.context.CostContext;
-import com.iafenvoy.saturn.data.cost.context.CostOrigins;
+import com.iafenvoy.saturn.compat.kubejs.SaturnKubeJsApi;
 import com.iafenvoy.saturn.data.trigger.TriggerContext;
 import com.iafenvoy.saturn.registry.SaturnAttachments;
 import com.iafenvoy.saturn.registry.SaturnResourceKeys;
 import com.iafenvoy.saturn.runtime.ability.AbilityActivationService;
 import com.iafenvoy.saturn.runtime.ability.AbilityEventBridge;
 import com.iafenvoy.saturn.runtime.ability.AbilityService;
-import com.iafenvoy.saturn.runtime.resulting.Failure;
 import com.iafenvoy.saturn.runtime.resulting.Failures;
 import com.iafenvoy.saturn.runtime.resulting.Result;
 import com.iafenvoy.saturn.runtime.resulting.failures.AbilityFailure;
@@ -547,14 +543,7 @@ public final class MxtKubeJsApi {
      * The shared two-pass cost payment; real deduction failures warn and do not cancel the payment.
      */
     public static Result<Map<Identifier, Double>> tryConsumeResources(Entity entity, List<Cost> costs, FormulaContext context) {
-        if (!(entity instanceof LivingEntity payer) || entity.level().isClientSide())
-            return Result.failure(Failures.UNKNOWN);
-        Result<List<Debit>> payment = CostPayment.pay(costs, CostContext.of(payer, context, CostOrigins.SCRIPT));
-        if (payment instanceof Result.FailureResult<List<Debit>>(
-                Failure failure1
-        ))
-            return Result.failure(Failures.UNKNOWN, failure1.resource().orElse(null));
-        return Result.success(CostPayment.resources(payment.getData().orElse(List.of())));
+        return SaturnKubeJsApi.tryConsumeResources(entity, costs, context);
     }
 
     /**
@@ -647,8 +636,9 @@ public final class MxtKubeJsApi {
                 new QualityRequirement(List.of(), Optional.of(minimum)));
     }
 
-    public static AuraResult aura(Level level, BlockPos position) {
-        return AuraService.getPositionAura(level, position);
+    /** Resolves aura at a server position. A client world returns {@code null}. */
+    public static @Nullable AuraResult aura(Level level, BlockPos position) {
+        return level instanceof ServerLevel server ? AuraService.getPositionAura(server, position) : null;
     }
 
     /**

@@ -21,7 +21,7 @@ public final class MxtKubeJsAbilityBindings {
         return MxtKubeJsApi.useAbility(entity, id(ability), FormulaContext.of(entity));
     }
 
-    @Info("Registers a script ability target selector. Datapack type: mxt:js; the callback returns an array of entities.")
+    @Info("Registers a script ability target selector. Datapack type: saturn:js. The callback returns an array of entities.")
     public void selector(String id, TriFunction<Entity, FormulaContext, JsonObject, List<Entity>> callback) {
         SaturnJsSelectorCallbacks.register(id, callback);
     }

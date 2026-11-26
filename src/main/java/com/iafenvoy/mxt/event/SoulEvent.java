@@ -5,16 +5,28 @@ import net.minecraft.world.entity.Entity;
 import net.neoforged.bus.api.ICancellableEvent;
 import net.neoforged.neoforge.event.entity.EntityEvent;
 
+import java.util.Optional;
+import java.util.UUID;
+
 public abstract class SoulEvent extends EntityEvent {
     private final SoulAttachment soul;
 
     protected SoulEvent(Entity entity, SoulAttachment soul) {
         super(entity);
-        this.soul = soul;
+        this.soul = soul.copy();
     }
 
+    /** Returns a detached snapshot of the state at publication. */
     public SoulAttachment getSoul() {
-        return this.soul;
+        return this.soul.copy();
+    }
+
+    public State getState() {
+        return new State(this.soul.active(), this.soul.origin(), this.soul.createdAt(), this.soul.source(),
+                this.soul.manifestation());
+    }
+
+    public record State(boolean active, String origin, long createdAt, String source, Optional<UUID> manifestation) {
     }
 
     public static final class TransferPre extends SoulEvent implements ICancellableEvent {

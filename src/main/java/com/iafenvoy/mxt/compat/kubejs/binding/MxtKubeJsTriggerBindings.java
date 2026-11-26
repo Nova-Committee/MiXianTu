@@ -19,7 +19,7 @@ import java.util.function.Consumer;
  * script subscribes without owning a definition, and both enter the same runtime {@code TriggerDispatcher}.
  */
 public final class MxtKubeJsTriggerBindings {
-    @Info("Registers a script trigger matcher. Datapack type: mxt:js")
+    @Info("Registers a script trigger matcher. Datapack type: saturn:js")
     public void matcher(String id, TriPredicate<TriggerSignal, JsonObject, FormulaContext> callback) {
         SaturnJsTriggerMatchers.register(id, callback);
     }

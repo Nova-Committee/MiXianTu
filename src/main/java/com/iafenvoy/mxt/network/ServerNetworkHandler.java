@@ -52,7 +52,8 @@ public final class ServerNetworkHandler {
     }
 
     static void onPlayerTradeAction(PlayerTradeActionC2SPayload payload, IPayloadContext context) {
-        if (context.player() instanceof ServerPlayer player) PlayerTradeService.handleAction(player, payload.action(), payload.revision());
+        if (context.player() instanceof ServerPlayer player)
+            PlayerTradeService.handleAction(player, payload.action(), payload.revision());
     }
 
     static void onBackSlotSwap(BackSlotSwapC2SPayload payload, IPayloadContext context) {
