@@ -12,8 +12,8 @@ import net.neoforged.bus.api.Event;
 import net.neoforged.bus.api.ICancellableEvent;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.LinkedHashMap;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
@@ -34,12 +34,16 @@ public abstract class CultivationBreakEvent extends Event {
         this.threshold = threshold;
     }
 
-    /** Returns a detached snapshot of the cultivation state. */
+    /**
+     * Returns a detached snapshot of the cultivation state.
+     */
     public CultivationAttachment getSpirit() {
         return this.spirit.copy();
     }
 
-    /** Returns a detached snapshot of the resource account. */
+    /**
+     * Returns a detached snapshot of the resource account.
+     */
     public ResourceHolderAttachment getResource() {
         return this.resources.copy();
     }

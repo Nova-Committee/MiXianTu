@@ -9,18 +9,17 @@ import com.iafenvoy.mxt.registry.cache.RegistryCaches;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactService;
 import com.iafenvoy.mxt.runtime.creature.ContractBells;
 import com.iafenvoy.mxt.runtime.item.QualityService;
-import com.iafenvoy.mxt.runtime.resource.ResourceUseService;
+import com.iafenvoy.mxt.runtime.spirit.SpiritBurstService;
 import com.iafenvoy.mxt.runtime.wheel.MxtWheelSources;
 import com.iafenvoy.saturn.api.wheel.WheelMenuEntry;
 import com.iafenvoy.saturn.runtime.Sources;
-import com.iafenvoy.saturn.runtime.resource.ResourceService;
 import com.iafenvoy.saturn.runtime.wheel.WheelSources;
 import com.iafenvoy.saturn.screen.wheel.WheelMenuContent;
 import com.iafenvoy.saturn.screen.wheel.content.AbilityWheelTooltips;
 import com.iafenvoy.saturn.screen.wheel.content.WheelContent;
 import com.iafenvoy.saturn.util.DefinitionText;
 import com.iafenvoy.saturn.util.HolderHelper;
-import com.iafenvoy.saturn.util.formula.FormulaContext;
+import com.iafenvoy.saturn.util.formula.number.Constant;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.Holder;
 import net.minecraft.core.RegistryAccess;
@@ -58,15 +57,14 @@ public final class MxtWheelContent {
 
     public static List<WheelMenuEntry> auras(Player player) {
         return MxtDatapackRegistries.holders(player.registryAccess(), MxtResourceKeys.AURA)
-                .filter(aura -> canBurst(player, aura))
+                .filter(aura -> supportsBurst(aura.value()))
                 .sorted(Comparator.comparing(aura -> HolderHelper.id(aura).toString()))
                 .<WheelMenuEntry>map(aura -> new AuraWheelEntry(HolderHelper.id(aura), aura)).toList();
     }
 
-    private static boolean canBurst(Player player, Holder<Aura> aura) {
-        Aura profile = aura.value();
-        if (!ResourceUseService.canUse(player, aura)) return false;
-        double amount = profile.burstAmount().evaluate(ResourceService.formulaContext(player, profile.resource(), FormulaContext.of(player)));
-        return Double.isFinite(amount) && amount >= 1;
+    private static boolean supportsBurst(Aura aura) {
+        if (aura.auraType().isEmpty()) return false;
+        // A formula can become positive after the player or their surroundings change.
+        return !(aura.burstAmount() instanceof Constant(double value)) || SpiritBurstService.validBurstAmount(value);
     }
 }

@@ -1,6 +1,6 @@
 package com.iafenvoy.mxt.runtime.spirit;
 
-import com.iafenvoy.mxt.api.AuraAccess;
+import static com.iafenvoy.mxt.runtime.spirit.AuraHandlerUtil.requireNonNegative;
 
 public final class AuraTransfers {
     private AuraTransfers() {
@@ -13,9 +13,9 @@ public final class AuraTransfers {
     }
 
     public static Transfer insert(double stored, double capacity, double amount, boolean exact) {
-        AuraAccess.requireNonNegative(stored);
-        AuraAccess.requireNonNegative(capacity);
-        AuraAccess.requireNonNegative(amount);
+        requireNonNegative(stored);
+        requireNonNegative(capacity);
+        requireNonNegative(amount);
         double room = Math.max(0.0D, capacity - stored);
         if (exact && !covers(room, amount)) return new Transfer(stored, amount);
         double accepted = Math.min(room, amount);
@@ -26,19 +26,19 @@ public final class AuraTransfers {
     }
 
     public static Transfer extract(double stored, double amount, boolean exact) {
-        AuraAccess.requireNonNegative(stored);
-        AuraAccess.requireNonNegative(amount);
+        requireNonNegative(stored);
+        requireNonNegative(amount);
         if (exact && !covers(stored, amount)) return new Transfer(stored, amount);
         double taken = Math.min(stored, amount);
-        // Drain rounding residue at the boundary, so repeated decimal withdrawals can reach empty.
-        double next = covers(amount, stored) ? 0.0D : stored - taken;
+        // Exact legacy withdrawals can drain rounding residue. Partial withdrawals only take the requested stock.
+        double next = exact && covers(amount, stored) ? 0.0D : stored - taken;
         if (next >= stored) return new Transfer(stored, amount);
         return new Transfer(next, covers(taken, amount) ? 0.0D : amount - taken);
     }
 
     public static double multiply(double value, double multiplier) {
-        AuraAccess.requireNonNegative(value);
-        AuraAccess.requireNonNegative(multiplier);
+        requireNonNegative(value);
+        requireNonNegative(multiplier);
         double result = value * multiplier;
         return Double.isFinite(result) ? result : Double.MAX_VALUE;
     }

@@ -15,7 +15,6 @@ import com.iafenvoy.mxt.runtime.artifact.ArtifactHoldService.ClaimResult;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactService;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactService.RefineResult;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactUpkeepService;
-import com.iafenvoy.mxt.runtime.cultivation.CultivationIdentityService;
 import com.iafenvoy.mxt.runtime.hold.HoldLookup;
 import com.iafenvoy.saturn.runtime.resource.ResourceService;
 import com.iafenvoy.saturn.util.formula.FormulaContext;
@@ -23,7 +22,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Holder.Reference;
 import net.minecraft.core.HolderLookup.Provider;
-import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
@@ -31,7 +29,6 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.animal.pig.Pig;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 
@@ -84,7 +81,7 @@ public final class ArtifactHoldProbes {
             ArtifactService.addEnergy(access, fullJade, waterPower, 1000.0D, 0.0D, formula);
             ArtifactService.addEnergy(access, fullJade, soulPower, 1000.0D, 0.0D, formula);
         }
-        LivingEntity holdBystander = spawnProbe(context, context.playerSpot().above(2), null);
+        LivingEntity holdBystander = spawnProbe(context, context.playerSpot().above(2));
         boolean takeover = HoldLookup.hold(flightStack) instanceof ArtifactHold unownedHold
                 // Unclaimed: the claim is on offer to anybody, so both the player and a probe entity take it over.
                 && unownedHold.claims(player, access, flightStack)
@@ -131,7 +128,7 @@ public final class ArtifactHoldProbes {
                 && close(player.getHealth(), 4.0D);
         // No health pre-check any more: a price the holder cannot survive is charged anyway and the binding still
         // stands. Driven on a disposable probe, since the alternative is killing the player mid-run.
-        LivingEntity poorClaimant = spawnProbe(context, context.playerSpot().above(3), null);
+        LivingEntity poorClaimant = spawnProbe(context, context.playerSpot().above(3));
         boolean unguarded = false;
         if (poorClaimant != null) {
             poorClaimant.setHealth(2.0F);
@@ -262,7 +259,7 @@ public final class ArtifactHoldProbes {
         ResourceService.change(upkeepPools, waterPower.value().resource(),
                 -upkeepPools.get(waterPower.value().resource()), upkeepContext);
         boolean upkeepFailed = !ArtifactUpkeepService.upkeep(player, upkeepStack, 15L) && upkeepStack.getDamageValue() == 1;
-        LivingEntity upkeepBystander = spawnProbe(context, context.playerSpot().above(4), null);
+        LivingEntity upkeepBystander = spawnProbe(context, context.playerSpot().above(4));
         boolean upkeepOwnerOnly = upkeepBystander != null
                 && !ArtifactUpkeepService.upkeep(upkeepBystander, upkeepStack, 20L) && upkeepStack.getDamageValue() == 1;
         if (upkeepBystander != null) upkeepBystander.discard();
@@ -272,14 +269,12 @@ public final class ArtifactHoldProbes {
 
     // One disposable probe entity carrying exactly one spirit root, so the element it strikes or is struck with is
     // never a question. These legs pass a null root, which leaves it carrying none.
-    private static LivingEntity spawnProbe(ProbeContext context, BlockPos pos, @Nullable Identifier root) {
+    private static LivingEntity spawnProbe(ProbeContext context, BlockPos pos) {
         Pig pig = EntityType.PIG.create(context.level(), EntitySpawnReason.COMMAND);
         if (pig == null) return null;
         pig.setNoAi(true);
         pig.setPos(pos.getX() + 0.5D, pos.getY(), pos.getZ() + 0.5D);
         context.level().addFreshEntity(pig);
-        if (root != null)
-            CultivationIdentityService.grantSpiritRoot(pig, context.require(MxtResourceKeys.SPIRIT_ROOT, root));
         return pig;
     }
 

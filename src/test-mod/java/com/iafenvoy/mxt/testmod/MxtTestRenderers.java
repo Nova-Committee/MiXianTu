@@ -11,7 +11,7 @@ import net.neoforged.neoforge.client.event.EntityRenderersEvent.RegisterRenderer
  * output, and a no-op renderer cannot fail on a variant, a model or a texture that the test mod does not ship. A
  * renderer per entity type is also what an addon has to register for the vehicle type it names in a definition.
  */
-@EventBusSubscriber(modid = MxtTestMod.MOD_ID, value = Dist.CLIENT)
+@EventBusSubscriber(Dist.CLIENT)
 public final class MxtTestRenderers {
     @SubscribeEvent
     public static void registerRenderers(RegisterRenderers event) {

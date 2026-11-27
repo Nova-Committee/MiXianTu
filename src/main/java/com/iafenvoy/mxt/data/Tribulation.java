@@ -29,26 +29,19 @@ public record Tribulation(EntityCondition condition, List<TimelineEntry> timelin
                           NumberProvider windup, boolean darkenSky, EntityAction successAction,
                           EntityAction failAction, Optional<StormCloud> stormCloud) {
     public static final Codec<Holder<Tribulation>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.TRIBULATION);
-    public static final Codec<Tribulation> DIRECT_CODEC = RecordCodecBuilder.<Tribulation>create(i -> i.group(
+    public static final Codec<Tribulation> DIRECT_CODEC = RecordCodecBuilder.create(i -> i.group(
             EntityCondition.optionalCodec("condition").forGetter(Tribulation::condition),
-            TimelineEntry.CODEC.listOf().fieldOf("timeline").forGetter(Tribulation::timeline),
+            TimelineEntry.CODEC.listOf(1, Integer.MAX_VALUE).fieldOf("timeline").forGetter(Tribulation::timeline),
             NumberProvider.CODEC.optionalFieldOf("difficulty_scale", new Constant(1.0D)).forGetter(Tribulation::difficultyScale),
             NumberProvider.CODEC.optionalFieldOf("windup", new Constant(0.0D)).forGetter(Tribulation::windup),
             Codec.BOOL.optionalFieldOf("darken_sky", true).forGetter(Tribulation::darkenSky),
             EntityAction.optionalCodec("success_action").forGetter(Tribulation::successAction),
             EntityAction.optionalCodec("fail_action").forGetter(Tribulation::failAction),
             StormCloud.CODEC.codec().optionalFieldOf("storm_cloud").forGetter(Tribulation::stormCloud)
-    ).apply(i, Tribulation::new)).validate(Tribulation::validate);
+    ).apply(i, Tribulation::new));
 
-    public Tribulation(EntityCondition condition, List<TimelineEntry> timeline, NumberProvider difficultyScale,
-                       NumberProvider windup, boolean darkenSky, EntityAction successAction, EntityAction failAction) {
+    public Tribulation(EntityCondition condition, List<TimelineEntry> timeline, NumberProvider difficultyScale, NumberProvider windup, boolean darkenSky, EntityAction successAction, EntityAction failAction) {
         this(condition, timeline, difficultyScale, windup, darkenSky, successAction, failAction, Optional.empty());
-    }
-
-    private static DataResult<Tribulation> validate(Tribulation value) {
-        if (value.timeline.isEmpty())
-            return DataResult.error(() -> "Tribulation requires at least one timeline entry");
-        return DataResult.success(value);
     }
 
     public record StormCloud(StormCloudOptions.Appearance appearance, float radius, NumberProvider y) {

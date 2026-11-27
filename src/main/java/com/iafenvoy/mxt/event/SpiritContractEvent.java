@@ -26,7 +26,9 @@ public abstract class SpiritContractEvent extends Event {
         this.action = action;
     }
 
-    /** Returns a detached snapshot of the state at publication. */
+    /**
+     * Returns a detached snapshot of the state at publication.
+     */
     public ContractAttachment getContract() {
         return this.contract.copy();
     }

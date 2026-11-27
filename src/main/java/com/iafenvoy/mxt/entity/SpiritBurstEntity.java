@@ -1,20 +1,24 @@
 package com.iafenvoy.mxt.entity;
 
-import com.iafenvoy.mxt.api.AuraAccess;
+import com.iafenvoy.mxt.api.AuraHandler;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.particle.SpiritWispParticleOptions;
+import com.iafenvoy.mxt.registry.MxtCapabilities;
 import com.iafenvoy.mxt.registry.MxtEntityDataSerializers;
 import com.iafenvoy.mxt.registry.MxtEntityTypes;
 import com.iafenvoy.mxt.runtime.MxtProfilerSources;
-import com.iafenvoy.saturn.data.resource.Resource;
+import com.iafenvoy.mxt.runtime.spirit.AuraHandlerUtil;
 import com.iafenvoy.saturn.profiling.ProfilerScope;
 import com.iafenvoy.saturn.profiling.ServerProfiling;
+import com.iafenvoy.saturn.util.DefinitionText;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
+import net.minecraft.network.chat.Component;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
@@ -24,21 +28,19 @@ import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.ClipContext.Block;
 import net.minecraft.world.level.ClipContext.Fluid;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.jspecify.annotations.NonNull;
 
 import java.util.Optional;
 
 /**
- * Server-authoritative spirit-power projectile. It carries a {@link Resource} - the aura kind. The element a
- * value is attuned to is the cultivation profile's {@code aura_type} and is not named here, so the two are
- * different fields and must not share a name.
+ * Server-authoritative projectile carrying a specific aura and amount.
  */
 public final class SpiritBurstEntity extends ThrowableProjectile {
     private static final int MAX_LIFETIME_TICKS = 100;
@@ -72,7 +74,7 @@ public final class SpiritBurstEntity extends ThrowableProjectile {
     @Override
     public void tick() {
         try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.ENTITY)) {
-            if (!this.level().isClientSide() && this.tryHitAuraAccess()) return;
+            if (!this.level().isClientSide() && this.tryHitAuraHandler()) return;
             super.tick();
             if (this.level().isClientSide()) this.spawnTrailParticles();
             else if (this.tickCount >= MAX_LIFETIME_TICKS) this.discard();
@@ -86,11 +88,8 @@ public final class SpiritBurstEntity extends ThrowableProjectile {
 
     @Override
     protected void onHitBlock(@NonNull BlockHitResult hit) {
-        if (!this.level().isClientSide()) {
-            BlockPos pos = hit.getBlockPos();
-            BlockEntity blockEntity = this.level().getBlockEntity(pos);
-            if (blockEntity instanceof AuraAccess accessor)
-                this.getAura().ifPresent(type -> accessor.insert(this.ownerLivingEntity(), this.registryAccess(), type, this.getAmount(), false, false));
+        if (this.level() instanceof ServerLevel level) {
+            this.fill(MxtCapabilities.findBlock(level, hit.getBlockPos(), hit.getDirection(), this.ownerLivingEntity()));
             this.discard();
         }
     }
@@ -124,7 +123,7 @@ public final class SpiritBurstEntity extends ThrowableProjectile {
     }
 
     public void setAmount(double amount) {
-        this.getEntityData().set(AMOUNT, AuraAccess.requireNonNegative(amount));
+        this.getEntityData().set(AMOUNT, AuraHandlerUtil.requireNonNegative(amount));
     }
 
     public int getParticleColor() {
@@ -178,43 +177,54 @@ public final class SpiritBurstEntity extends ThrowableProjectile {
 
     // Vanilla ray casts only test the block cell currently crossed, and a container is reached as a place
     // rather than as its collision shape; a regular block hit still wins when it is closer.
-    private boolean tryHitAuraAccess() {
+    private boolean tryHitAuraHandler() {
+        if (!(this.level() instanceof ServerLevel level)) return false;
         Vec3 start = this.position();
         Vec3 end = start.add(this.getDeltaMovement());
         double closestDistance = Double.POSITIVE_INFINITY;
-        BlockPos closestPos = null;
+        AuraHandler closestHandler = null;
+        LivingEntity owner = this.ownerLivingEntity();
 
         BlockPos min = BlockPos.containing(Math.min(start.x, end.x) - 1.0D, Math.min(start.y, end.y) - 1.0D, Math.min(start.z, end.z) - 1.0D);
         BlockPos max = BlockPos.containing(Math.max(start.x, end.x) + 1.0D, Math.max(start.y, end.y) + 1.0D, Math.max(start.z, end.z) + 1.0D);
         for (BlockPos pos : BlockPos.betweenClosed(min, max)) {
-            BlockEntity blockEntity = this.level().getBlockEntity(pos);
-            if (!(blockEntity instanceof AuraAccess)) continue;
-
             AABB reach = new AABB(pos).expandTowards(0.0D, SPIRIT_REACH_HEIGHT - 1.0D, 0.0D);
-            Optional<Vec3> reached = reach.clip(start, end);
-            if (reached.isEmpty()) continue;
+            // AABB.clip only detects entry, so a burst starting within reach is already there.
+            Vec3 reached = reach.contains(start) ? start : reach.clip(start, end).orElse(null);
+            if (reached == null) continue;
 
-            double distance = start.distanceToSqr(reached.get());
+            double distance = start.distanceToSqr(reached);
             if (distance < closestDistance) {
+                AuraHandler handler = MxtCapabilities.findBlock(level, pos, null, owner);
+                if (handler == null) continue;
                 closestDistance = distance;
-                closestPos = pos.immutable();
+                closestHandler = handler;
             }
         }
 
-        if (closestPos == null) return false;
+        if (closestHandler == null) return false;
 
         BlockHitResult blockHit = this.level().clip(new ClipContext(start, end, Block.COLLIDER, Fluid.NONE, this));
-        if (blockHit.getType() != BlockHitResult.Type.MISS && start.distanceToSqr(blockHit.getLocation()) <= closestDistance)
+        if (blockHit.getType() != BlockHitResult.Type.MISS
+                && (blockHit.isInside() || start.distanceToSqr(blockHit.getLocation()) <= closestDistance))
             return false;
 
-        BlockEntity blockEntity = this.level().getBlockEntity(closestPos);
-        if (!(blockEntity instanceof AuraAccess accessor)) return false;
-        this.getAura().ifPresent(type -> accessor.insert(this.ownerLivingEntity(), this.registryAccess(), type, this.getAmount(), false, false));
+        this.fill(closestHandler);
         this.discard();
         return true;
     }
 
-    private LivingEntity ownerLivingEntity() {
+    private void fill(@Nullable AuraHandler handler) {
+        if (handler == null || this.getAmount() <= 0.0D) return;
+        this.getAura().ifPresent(aura -> {
+            double inserted = AuraHandlerUtil.insert(handler, aura, this.getAmount(), false, false, null);
+            if (inserted == 0.0D && this.getOwner() instanceof ServerPlayer player)
+                player.sendSystemMessage(Component.translatable("actionbar.mxt.spirit_burst.target_refused",
+                        DefinitionText.nameOrId(aura.value().resource())), true);
+        });
+    }
+
+    private @Nullable LivingEntity ownerLivingEntity() {
         return this.getOwner() instanceof LivingEntity living ? living : null;
     }
 }

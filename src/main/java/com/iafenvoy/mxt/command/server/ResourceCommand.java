@@ -50,20 +50,20 @@ public final class ResourceCommand {
         return literal("resource")
                 .executes(ctx -> listBars(ctx.getSource(), null, null))
                 .then(argument("id", ResourceArgument.resource(context, SaturnResourceKeys.RESOURCE))
-                        .executes(ctx -> query(ctx.getSource(), resource(ctx, "id")))
+                        .executes(ctx -> query(ctx.getSource(), resource(ctx)))
                         .then(literal("set").requires(ServerCommandManager::mayChange)
                                 .then(argument("value", DoubleArgumentType.doubleArg())
-                                        .executes(ctx -> set(ctx.getSource(), resource(ctx, "id"),
+                                        .executes(ctx -> set(ctx.getSource(), resource(ctx),
                                                 DoubleArgumentType.getDouble(ctx, "value")))))
                         .then(literal("bar")
-                                .executes(ctx -> listBars(ctx.getSource(), resource(ctx, "id"), null))
+                                .executes(ctx -> listBars(ctx.getSource(), resource(ctx), null))
                                 .then(argument("index", IntegerArgumentType.integer(0, 255))
-                                        .executes(ctx -> listBars(ctx.getSource(), resource(ctx, "id"),
+                                        .executes(ctx -> listBars(ctx.getSource(), resource(ctx),
                                                 IntegerArgumentType.getInteger(ctx, "index"))))));
     }
 
-    private static Reference<Resource> resource(CommandContext<CommandSourceStack> ctx, String name) throws CommandSyntaxException {
-        return ResourceArgument.getResource(ctx, name, SaturnResourceKeys.RESOURCE);
+    private static Reference<Resource> resource(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        return ResourceArgument.getResource(ctx, "id", SaturnResourceKeys.RESOURCE);
     }
 
     private static int query(CommandSourceStack source, Reference<Resource> resource) {

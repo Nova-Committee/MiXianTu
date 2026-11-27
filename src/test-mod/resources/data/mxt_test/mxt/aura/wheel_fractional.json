@@ -1,0 +1,5 @@
+{
+  "resource": "mxt_test:wheel_fractional",
+  "aura_type": "mxt_test:fire",
+  "burst_amount": 0.25
+}

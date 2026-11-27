@@ -1,7 +1,6 @@
 package com.iafenvoy.mxt.network.payload;
 
 import com.iafenvoy.mxt.MiXianTu;
-import com.iafenvoy.mxt.api.AuraAccess;
 import com.iafenvoy.mxt.data.aura.Aura;
 import net.minecraft.core.Holder;
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -13,6 +12,8 @@ import org.jspecify.annotations.NonNull;
 
 import java.util.ArrayList;
 import java.util.List;
+
+import static com.iafenvoy.mxt.runtime.spirit.AuraHandlerUtil.requireNonNegative;
 
 public record SpiritCraftingStateS2CPayload(int containerId, List<Row> rows) implements CustomPacketPayload {
     public static final int MAX_ROWS = 8;
@@ -34,8 +35,8 @@ public record SpiritCraftingStateS2CPayload(int containerId, List<Row> rows) imp
                 Row::new);
 
         public Row {
-            AuraAccess.requireNonNegative(stored);
-            AuraAccess.requireNonNegative(required);
+            requireNonNegative(stored);
+            requireNonNegative(required);
         }
     }
 

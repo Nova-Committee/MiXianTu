@@ -13,7 +13,9 @@ public abstract class ArtifactRefineEvent extends EntityEvent {
         this.stack = stack.copy();
     }
 
-    /** Returns a detached snapshot of the state at publication. */
+    /**
+     * Returns a detached snapshot of the state at publication.
+     */
     public ItemStack getStack() {
         return this.stack.copy();
     }

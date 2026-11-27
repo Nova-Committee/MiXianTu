@@ -19,7 +19,7 @@ import java.util.Map;
 public class HeatSourceCache extends RegistryCache<Map<Block, HeatSource>> {
     private static final Comparator<Reference<HeatSource>> ORDER = RegistryPrecedence.order(HeatSource::priority);
     private final Map<Block, Reference<HeatSource>> data = new LinkedHashMap<>();
-    private final Map<Block, HeatSource> values = Maps.transformValues(this.data, Reference::value);
+    private final Map<Block, HeatSource> values = Maps.transformValues(this.data, x -> x == null ? null : x.value());
 
     @Override
     protected void build(RegistryAccess access) {

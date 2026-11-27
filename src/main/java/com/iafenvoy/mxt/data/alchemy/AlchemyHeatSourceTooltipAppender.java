@@ -28,7 +28,7 @@ import java.util.Comparator;
 import java.util.function.Consumer;
 
 // Dynamic heat is server-only; showing a static entry for such a block would report values it never uses.
-@EventBusSubscriber(modid = "mxt", value = Dist.CLIENT)
+@EventBusSubscriber(Dist.CLIENT)
 public final class AlchemyHeatSourceTooltipAppender {
     private AlchemyHeatSourceTooltipAppender() {
     }

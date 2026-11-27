@@ -1,7 +1,7 @@
 package com.iafenvoy.mxt.data.cost.context;
 
-import com.iafenvoy.mxt.api.AuraAccess;
 import com.iafenvoy.mxt.api.AuraCostSource;
+import com.iafenvoy.mxt.api.AuraHandler;
 import com.iafenvoy.saturn.data.cost.context.CostContext;
 import com.iafenvoy.saturn.util.formula.FormulaContext;
 import net.minecraft.core.BlockPos;
@@ -35,8 +35,8 @@ public final class AuraCostContexts {
     /**
      * A store that is not a world pool - a block entity holding its own aura, such as the spirit crafting table.
      */
-    public static CostContext bank(AuraAccess bank, @Nullable LivingEntity payer, FormulaContext formula, String origin) {
-        return withAuraSource(CostContext.of(payer, formula, origin), AuraCostSources.bank(bank));
+    public static CostContext bank(AuraHandler bank, @Nullable LivingEntity payer, FormulaContext formula, String origin) {
+        return withAuraSource(CostContext.of(payer, formula, origin), AuraCostSources.handler(bank));
     }
 
     public static AuraCostSource source(CostContext context) {

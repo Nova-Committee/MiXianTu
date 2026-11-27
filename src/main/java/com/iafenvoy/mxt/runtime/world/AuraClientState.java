@@ -35,7 +35,9 @@ public final class AuraClientState {
         return current;
     }
 
-    /** Returns the last server sample for the local player, or empty before a sample arrives. */
+    /**
+     * Returns the last server sample for the local player, or empty before a sample arrives.
+     */
     public static Optional<Snapshot> latest() {
         return Optional.ofNullable(target);
     }

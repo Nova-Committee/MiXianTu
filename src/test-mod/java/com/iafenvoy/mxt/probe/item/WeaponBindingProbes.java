@@ -15,6 +15,7 @@ import net.minecraft.world.item.component.ItemAttributeModifiers;
 import net.neoforged.neoforge.event.tick.EntityTickEvent;
 
 import java.util.List;
+import java.util.Locale;
 
 /**
  * The dynamic half of a weapon binding, asserted on what the service writes rather than on a live attribute: the
@@ -217,8 +218,7 @@ public final class WeaponBindingProbes {
 
     // One leg of the old command: the value is asserted, and the line it printed is kept, on the branch it printed it.
     private static boolean leg(ProbeContext context, String name, boolean ok, String actual, String expected) {
-        String line = "weapon binding probe: " + name + " actual=" + actual + " expected=" + expected
-                + (ok ? " OK" : " MISMATCH");
+        String line = String.format(Locale.ROOT, "weapon binding probe: %s actual=%s expected=%s %s", name, actual, expected, ok ? "OK" : "MISMATCH");
         if (ok) context.note(line);
         else context.fail(line);
         return ok;

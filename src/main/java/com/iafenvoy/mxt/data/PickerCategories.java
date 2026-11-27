@@ -48,9 +48,6 @@ import java.util.function.Function;
  * picker's own built-ins, so they are not registered here.
  */
 public final class PickerCategories {
-    private PickerCategories() {
-    }
-
     public static void register() {
         // Item-shaped definitions: the row is the matched item, named by the definition's own language key.
         registerMatcher(MxtResourceKeys.ITEM_AURA);
@@ -65,7 +62,7 @@ public final class PickerCategories {
         registerBlocks(MxtResourceKeys.BLOCK_AURA, BlockAura::blocks);
         registerBlocks(MxtResourceKeys.HEAT_SOURCE, HeatSource::blocks);
         // A herb is item-shaped in effect: what a player reads it on is its fruit, not the block it grows as.
-        registerHerbs(MxtResourceKeys.SPIRIT_HERB);
+        registerHerbs();
 
         // One generic carrier per pill definition: the component names the pill, which is how a built-in dose is
         // handed out. Bindings stay item-shaped rows, because a binding is only about which items those are.
@@ -128,9 +125,9 @@ public final class PickerCategories {
      * stack a tooltip and a furnace actually ask about. A herb with no growth bears no fruit, so it falls back to
      * the item form of every block it claims, which is the same fallback {@code SpiritHerbService.find} uses.
      */
-    private static void registerHerbs(ResourceKey<Registry<SpiritHerb>> key) {
-        PickerCatalogue.register(key, (holder, access) -> {
-            Identifier id = HolderHelper.idOrNull(holder);
+    private static void registerHerbs() {
+        PickerCatalogue.register(MxtResourceKeys.SPIRIT_HERB, (holder, access) -> {
+            Identifier id = HolderHelper.id(holder);
             Component definition = searchName(holder);
             SpiritHerb herb = holder.value();
             List<PickerRow> rows = new ArrayList<>();
@@ -140,14 +137,14 @@ public final class PickerCategories {
                 for (Holder<Item> item : RegistryCodecs.resolve(growth.get().drops(), access, Registries.ITEM).toList()) {
                     ItemStack stack = item.value().getDefaultInstance();
                     if (stack.isEmpty()) continue;
-                    rows.add(new PickerRow(stack, names(stack.getHoverName(), definition, idName(id))));
+                    rows.add(new PickerRow(stack, names(stack.getHoverName(), definition, Component.literal(id.toString()))));
                 }
                 return List.copyOf(rows);
             }
             for (Holder<Block> block : RegistryCodecs.resolve(herb.blocks(), access, Registries.BLOCK).toList()) {
                 ItemStack stack = block.value().asItem().getDefaultInstance();
                 if (stack.isEmpty()) continue;
-                rows.add(new PickerRow(stack, names(stack.getHoverName(), definition, idName(id))));
+                rows.add(new PickerRow(stack, names(stack.getHoverName(), definition, Component.literal(id.toString()))));
             }
             return List.copyOf(rows);
         });
@@ -157,13 +154,13 @@ public final class PickerCategories {
     // claims is one row, named by the definition, so a tag entry shows the whole family it covers.
     public static <T> void registerBlocks(ResourceKey<Registry<T>> key, Function<T, List<Either<Holder<Block>, TagKey<Block>>>> blocks) {
         PickerCatalogue.register(key, (holder, access) -> {
-            Identifier id = HolderHelper.idOrNull(holder);
+            Identifier id = HolderHelper.id(holder);
             Component definition = searchName(holder);
             List<PickerRow> rows = new ArrayList<>();
             for (Holder<Block> block : RegistryCodecs.resolve(blocks.apply(holder.value()), access, Registries.BLOCK).toList()) {
                 ItemStack stack = block.value().asItem().getDefaultInstance();
                 if (stack.isEmpty()) continue;
-                rows.add(new PickerRow(stack, names(stack.getHoverName(), definition, idName(id))));
+                rows.add(new PickerRow(stack, names(stack.getHoverName(), definition, Component.literal(id.toString()))));
             }
             return List.copyOf(rows);
         });
@@ -175,11 +172,11 @@ public final class PickerCategories {
 
     public static <T> void registerMatcher(ResourceKey<Registry<T>> key, Function<T, List<Entry>> entries) {
         PickerCatalogue.register(key, holder -> {
-            Identifier id = HolderHelper.idOrNull(holder);
+            Identifier id = HolderHelper.id(holder);
             Component definition = searchName(holder);
             List<PickerRow> rows = new ArrayList<>();
             for (ItemStack stack : stackItems(entries.apply(holder.value())))
-                rows.add(new PickerRow(stack, names(stack.getHoverName(), definition, idName(id))));
+                rows.add(new PickerRow(stack, names(stack.getHoverName(), definition, Component.literal(id.toString()))));
             return rows;
         });
     }
@@ -195,7 +192,7 @@ public final class PickerCategories {
     }
 
     public static PickerRow described(ItemStack stack, Holder<?> holder, Component name) {
-        return new PickerRow(stack, names(name, idName(HolderHelper.idOrNull(holder))));
+        return new PickerRow(stack, names(name, Component.literal(HolderHelper.id(holder).toString())));
     }
 
     // A null or blank name is dropped rather than left to match every search term, which is also what a missing id contributes.
@@ -203,10 +200,6 @@ public final class PickerCategories {
         List<Component> kept = new ArrayList<>(names.length);
         for (Component name : names) if (name != null && !name.getString().isBlank()) kept.add(name.copy());
         return kept.isEmpty() ? List.of() : List.copyOf(kept);
-    }
-
-    public static @Nullable Component idName(@Nullable Identifier id) {
-        return id == null ? null : Component.literal(id.toString());
     }
 
     public static <T> ItemStack componentStack(ItemStack stack, DeferredHolder<DataComponentType<?>, DataComponentType<T>> type, T value) {

@@ -1,5 +1,6 @@
 package com.iafenvoy.mxt.runtime.spirit;
 
+import com.iafenvoy.mxt.api.AuraHandler;
 import com.iafenvoy.mxt.api.ItemAuraAccess;
 import com.iafenvoy.mxt.api.UseItemAuraAccess;
 import com.iafenvoy.mxt.data.aura.Aura;
@@ -8,6 +9,7 @@ import com.iafenvoy.mxt.data.aura.SpiritStorageComponent;
 import com.iafenvoy.mxt.data.item.HoldBinding;
 import com.iafenvoy.mxt.event.CollectHoldBindingsEvent;
 import com.iafenvoy.mxt.item.SpiritStoneItem;
+import com.iafenvoy.mxt.registry.MxtCapabilities;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.runtime.MxtProfilerSources;
 import com.iafenvoy.mxt.runtime.cultivation.ItemAuraService;
@@ -30,7 +32,9 @@ import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.Mth;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -44,8 +48,8 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Charges items implementing {@link UseItemAuraAccess} by pouring the holder's own aura into them through the
- * item's {@link ItemAuraAccess#insert}. The rates are the {@code item_aura} pair read the other way round, so a
+ * Charges items implementing {@link UseItemAuraAccess} by pouring the holder's own aura into their inventory.
+ * The rates are the {@code item_aura} pair read the other way round, so a
  * pour-then-burn round trip returns exactly what it cost: pouring can only store aura, never manufacture it.
  */
 @EventBusSubscriber
@@ -108,9 +112,16 @@ public final class SpiritChargeService {
 
             double want = charge.intake();
             if (want <= 0) return;
+            InteractionHand hand = entity.getUsedItemHand();
+            if (entity.getItemInHand(hand) != stack) return;
+            // Mob equipment wrappers reject ordinary items in the offhand. These items only change components.
+            MxtCapabilities.ItemContext itemContext = entity instanceof Player player
+                    ? MxtCapabilities.ItemContext.forHand(player, hand) : MxtCapabilities.ItemContext.forStack(stack, entity);
+            AuraHandler handler = MxtCapabilities.findItem(stack, itemContext);
             // What the item will really take, asked before anything is paid for: a full item, or one storing
             // another aura, answers zero.
-            double units = want - access.insert(entity, registries, stack, aura, want, false, true);
+            double units = handler == null ? want - access.insert(entity, registries, stack, aura, want, false, true)
+                    : AuraHandlerUtil.insert(handler, aura, want, false, true, null);
             if (units <= 0) {
                 show(entity, Component.translatable("actionbar.mxt.charge.full"), "full");
                 return;
@@ -121,8 +132,14 @@ public final class SpiritChargeService {
                 ResourceHolderAttachment resources = entity.getData(SaturnAttachments.RESOURCE_HOLDER);
                 // Decided before anything moves: a payment that bought no transfer would be aura taken
                 // for nothing.
-                units = Math.min(units, resources.get(resource) / unitCost);
-                if (units <= 0) {
+                double affordable = Math.min(units, resources.get(resource) / unitCost);
+                if (affordable > 0.0D && affordable < units) {
+                    affordable = handler == null
+                            ? affordable - access.insert(entity, registries, stack, aura, affordable, false, true)
+                            : AuraHandlerUtil.insert(handler, aura, affordable, false, true, null);
+                }
+                units = affordable;
+                if (units <= 0.0D || entity.getItemInHand(hand) != stack) {
                     show(entity, Component.translatable("actionbar.mxt.charge.insufficient"), "insufficient");
                     return;
                 }
@@ -140,10 +157,14 @@ public final class SpiritChargeService {
                     return;
                 }
             }
-            access.insert(entity, registries, stack, aura, units, false, false);
-            showProgress(entity, resolve(registries, stack, context));
+            if (entity.getItemInHand(hand) != stack) return;
+            double inserted = handler == null ? units - access.insert(entity, registries, stack, aura, units, false, false)
+                    : AuraHandlerUtil.insert(handler, aura, units, false, false, null);
+            if (inserted <= 0.0D) return;
+            ItemStack current = entity.getItemInHand(hand);
+            showProgress(entity, resolve(registries, current, context));
             // The item decides whether that was the moment it filled, so a talisman carrier can spend itself here.
-            access.onCharged(SpiritSource.of(entity), stack);
+            access.onCharged(SpiritSource.of(entity), current);
         }
     }
 
@@ -174,9 +195,11 @@ public final class SpiritChargeService {
         // A written store files its amounts under the auras they count, so a re-typed definition simply stops
         // matching them; a store holding nothing leaves the declaration to say which aura this is.
         SpiritStorageComponent component = stack.get(MxtDataComponents.SPIRIT_STORAGE);
-        Holder<Aura> aura = (component == null ? Optional.<Holder<Aura>>empty() : component.soleAura())
-                .orElse(definition.value().type());
-        double stored = stack.getItem() instanceof SpiritStoneItem
+        boolean stone = stack.getItem() instanceof SpiritStoneItem;
+        Optional<Holder<Aura>> storedType = stone ? SpiritStoneItem.storedAuraType(stack)
+                : component == null ? Optional.empty() : component.soleAura();
+        Holder<Aura> aura = storedType.orElse(definition.value().type());
+        double stored = stone
                 ? AuraTransfers.multiply(SpiritStoneItem.storedPerItem(stack, aura, capacity / count), count)
                 : component == null ? capacity : component.get(aura);
         // What one unit costs: the ratio of the two speeds, the same for one item and for a stack.

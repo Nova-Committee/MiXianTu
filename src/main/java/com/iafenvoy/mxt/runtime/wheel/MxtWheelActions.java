@@ -18,9 +18,12 @@ public final class MxtWheelActions {
     }
 
     public static boolean burst(ServerPlayer player, Identifier id) {
-        if (SpiritBurstService.fireOnce(player, id)) return true;
-        player.sendSystemMessage(Component.translatable("actionbar.mxt.wheel.burst_failed"), true);
-        return false;
+        Result<Void> result = SpiritBurstService.fireOnceResult(player, id);
+        if (result instanceof Result.FailureResult<Void>(Failure failure)) {
+            player.sendSystemMessage(Component.translatable("actionbar.mxt.wheel.burst_failed", failure.message()), true);
+            return false;
+        }
+        return true;
     }
 
     public static boolean order(ServerPlayer player, Identifier id) {

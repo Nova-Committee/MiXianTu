@@ -1,5 +1,6 @@
 package com.iafenvoy.mxt.runtime.cultivation;
 
+import com.iafenvoy.mxt.api.AuraHandler;
 import com.iafenvoy.mxt.api.ItemAuraAccess;
 import com.iafenvoy.mxt.attachment.FloatHoldingItemAttachment;
 import com.iafenvoy.mxt.data.aura.Aura;
@@ -8,11 +9,9 @@ import com.iafenvoy.mxt.data.aura.ItemAuraComponent;
 import com.iafenvoy.mxt.data.aura.SpiritStorageComponent;
 import com.iafenvoy.mxt.item.SpiritStoneBagItem;
 import com.iafenvoy.mxt.item.SpiritStoneItem;
-import com.iafenvoy.mxt.registry.MxtAttachments;
-import com.iafenvoy.mxt.registry.MxtDataComponents;
-import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
-import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.registry.*;
 import com.iafenvoy.mxt.runtime.MxtProfilerSources;
+import com.iafenvoy.mxt.runtime.spirit.AuraHandlerUtil;
 import com.iafenvoy.saturn.attachment.ResourceHolderAttachment;
 import com.iafenvoy.saturn.data.resource.Resource;
 import com.iafenvoy.saturn.profiling.ProfilerScope;
@@ -130,7 +129,7 @@ public final class ItemAuraService {
         if (item.getItem() instanceof SpiritStoneItem)
             return SpiritStoneItem.storedPerItem(item, definition.type(), capacity(definition, context));
         ItemAuraComponent fuel = item.get(MxtDataComponents.ITEM_AURA);
-        return fuel == null ? 0.0D : fuel.normalize(item.getCount()).remain();
+        return fuel == null ? 0.0D : fuel.remain();
     }
 
     public static void returnFloatingItem(LivingEntity entity) {
@@ -150,8 +149,10 @@ public final class ItemAuraService {
     }
 
     private static Holder<ItemAura> activeDefinition(LivingEntity entity, ItemStack item) {
-        if (item.isEmpty() || (!item.has(MxtDataComponents.ITEM_AURA) && !(item.getItem() instanceof SpiritStoneItem
-                && item.has(MxtDataComponents.SPIRIT_STORAGE)))) return null;
+        if (item.isEmpty()) return null;
+        boolean hasState = item.getItem() instanceof SpiritStoneItem
+                ? item.has(MxtDataComponents.SPIRIT_STORAGE) : item.has(MxtDataComponents.ITEM_AURA);
+        if (!hasState) return null;
         return find(entity, item).orElse(null);
     }
 
@@ -188,9 +189,9 @@ public final class ItemAuraService {
         for (int index = 0; index < contents.size(); index++) {
             ItemStackTemplate stone = contents.items().get(index);
             if (!(stone.item().value() instanceof SpiritStoneItem)) continue;
-            ItemAuraComponent state = stone.get(MxtDataComponents.ITEM_AURA);
             SpiritStorageComponent storage = stone.get(MxtDataComponents.SPIRIT_STORAGE);
-            if (state == null && storage != null && storage.isEmpty()) continue;
+            if (storage == null ? stone.has(MxtDataComponents.ITEM_AURA.get()) : !storage.perItem() || storage.isEmpty())
+                continue;
             ItemStack item = stone.create();
             Holder<ItemAura> definition = find(entity, item).orElse(null);
             if (definition == null || !prepareFuel(entity, item, definition.value(), context)) continue;
@@ -206,22 +207,21 @@ public final class ItemAuraService {
     }
 
     private static boolean prepareFuel(LivingEntity entity, ItemStack item, ItemAura definition, FormulaContext context) {
-        ItemAuraComponent state = item.get(MxtDataComponents.ITEM_AURA);
         if (item.getItem() instanceof SpiritStoneItem) {
             double available = remainingPerItem(item, definition, context);
             if (available <= 0.0D) return false;
             SpiritStoneItem.setStoredPerItem(item, definition.type(), available);
             return true;
         }
+        ItemAuraComponent state = item.get(MxtDataComponents.ITEM_AURA);
         if (state != null) return state.remain() > 0.0D;
 
         double total = MiscUtil.positive(definition.aura().evaluate(context));
         if (total <= 0.0D) return false;
         double available = scale(total, item.getCount());
-        if (item.getItem() instanceof ItemAuraAccess access) {
-            Provider registries = entity.registryAccess();
-            double capacity = access.getCapacity(entity, registries, item, definition.type());
-            available = capacity - access.extract(entity, registries, item, definition.type(), capacity, false, true);
+        AuraHandler handler = MxtCapabilities.findItem(item, MxtCapabilities.ItemContext.forStack(item, entity));
+        if (handler != null || item.getItem() instanceof ItemAuraAccess) {
+            available = fuelAura(entity, item, definition.type(), handler, true);
             if (available <= 0.0D) return false;
         }
         item.set(MxtDataComponents.ITEM_AURA, new ItemAuraComponent(available / item.getCount()));
@@ -234,7 +234,7 @@ public final class ItemAuraService {
         double smallestRemainder = Double.POSITIVE_INFINITY;
         for (int slot = 0; slot < player.getInventory().getContainerSize(); slot++) {
             ItemStack stack = player.getInventory().getItem(slot);
-            ItemAuraComponent state = stack.get(MxtDataComponents.ITEM_AURA);
+            ItemAuraComponent state = ordinaryFuelState(stack);
             if (state == null || state.remain() <= 0.0D || fuelTotal(stack, state) >= smallestRemainder || find(entity, stack).isEmpty())
                 continue;
             selectedSlot = slot;
@@ -266,7 +266,7 @@ public final class ItemAuraService {
     }
 
     private static boolean isPartialFuel(LivingEntity entity, ItemStack stack) {
-        ItemAuraComponent state = stack.get(MxtDataComponents.ITEM_AURA);
+        ItemAuraComponent state = ordinaryFuelState(stack);
         return state != null && state.remain() > 0.0D && find(entity, stack).isPresent();
     }
 
@@ -291,14 +291,17 @@ public final class ItemAuraService {
     }
 
     private static boolean isFreshFuel(ItemStack stack) {
-        ItemAuraComponent state = stack.get(MxtDataComponents.ITEM_AURA);
-        if (state != null) return false;
+        if (!(stack.getItem() instanceof SpiritStoneItem)) return !stack.has(MxtDataComponents.ITEM_AURA);
         SpiritStorageComponent storage = stack.get(MxtDataComponents.SPIRIT_STORAGE);
-        return !(stack.getItem() instanceof SpiritStoneItem) || storage == null || !storage.isEmpty();
+        return storage == null ? !stack.has(MxtDataComponents.ITEM_AURA) : storage.perItem() && !storage.isEmpty();
+    }
+
+    private static @Nullable ItemAuraComponent ordinaryFuelState(ItemStack stack) {
+        return stack.getItem() instanceof SpiritStoneItem ? null : stack.get(MxtDataComponents.ITEM_AURA);
     }
 
     private static double fuelTotal(ItemStack stack, ItemAuraComponent state) {
-        return scale(state.normalize(stack.getCount()).remain(), stack.getCount());
+        return scale(state.remain(), stack.getCount());
     }
 
     private static double scale(double value, int count) {
@@ -311,14 +314,13 @@ public final class ItemAuraService {
         entity.getData(MxtAttachments.FLOAT_HOLDING_ITEM).clear();
         if (item.getItem() instanceof SpiritStoneItem) {
             giveItem(entity, item);
-        } else if (item.getItem() instanceof ItemAuraAccess access) {
-            double capacity = access.getCapacity(entity, entity.registryAccess(), item, active.value().type());
-            double available = capacity - access.extract(entity, entity.registryAccess(), item, active.value().type(), capacity, false, true);
-            access.extract(entity, entity.registryAccess(), item, active.value().type(), available, true, false);
-            item.remove(MxtDataComponents.ITEM_AURA);
-            giveItem(entity, item);
         } else {
-            active.value().resultStack().ifPresent(template -> {
+            AuraHandler handler = MxtCapabilities.findItem(item, MxtCapabilities.ItemContext.forStack(item, entity));
+            if (handler != null || item.getItem() instanceof ItemAuraAccess) {
+                fuelAura(entity, item, active.value().type(), handler, false);
+                item.remove(MxtDataComponents.ITEM_AURA);
+                giveItem(entity, item);
+            } else active.value().resultStack().ifPresent(template -> {
                 ItemStack result = template.create();
                 long count = (long) result.getCount() * Math.max(1, item.getCount());
                 result.setCount((int) Math.min(Integer.MAX_VALUE, count));
@@ -326,6 +328,18 @@ public final class ItemAuraService {
             });
         }
         active.value().exhaustedAction().execute(entity, context);
+    }
+
+    private static double fuelAura(LivingEntity entity, ItemStack item, Holder<Aura> aura,
+                                   @Nullable AuraHandler handler, boolean simulate) {
+        if (handler != null)
+            return AuraHandlerUtil.extract(handler, aura, handler.getAmount(aura), false, simulate, null);
+        ItemAuraAccess access = (ItemAuraAccess) item.getItem();
+        Provider registries = entity.registryAccess();
+        double capacity = access.getCapacity(entity, registries, item, aura);
+        double available = capacity - access.extract(entity, registries, item, aura, capacity, false, true);
+        if (!simulate) access.extract(entity, registries, item, aura, available, true, false);
+        return available;
     }
 
     private static double release(LivingEntity entity, ResourceHolderAttachment resources, Holder<Aura> aura,

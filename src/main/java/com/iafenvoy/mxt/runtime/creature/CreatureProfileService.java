@@ -62,7 +62,8 @@ public final class CreatureProfileService {
         AuraResult aura = null;
         for (Holder<CreatureProfile> candidate : RegistryCaches.CREATURE_PROFILE_ORDER.get()) {
             CreatureProfile profile = candidate.value();
-            if (!RegistryCodecs.matches(profile.entities(), BuiltInRegistries.ENTITY_TYPE, creature.getType())) continue;
+            if (!RegistryCodecs.matches(profile.entities(), BuiltInRegistries.ENTITY_TYPE, creature.getType()))
+                continue;
             if (context == null) context = FormulaContext.of(creature);
             if (!profile.condition().test(creature, context)) {
                 if (rejected != null) rejected.accept(new Rejection(candidate, Reason.CONDITION));
@@ -76,7 +77,8 @@ public final class CreatureProfileService {
                 }
             }
             double intelligence = evaluate(profile.intelligence(), context);
-            if (Double.isFinite(intelligence) && intelligence >= 0.0D) return new Selection(candidate, intelligence, context);
+            if (Double.isFinite(intelligence) && intelligence >= 0.0D)
+                return new Selection(candidate, intelligence, context);
             if (rejected != null) rejected.accept(new Rejection(candidate, Reason.INTELLIGENCE));
         }
         return null;

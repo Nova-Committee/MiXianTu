@@ -1,9 +1,7 @@
 package com.iafenvoy.mxt.item;
 
-import com.iafenvoy.mxt.api.AuraAccess;
 import com.iafenvoy.mxt.api.UseItemAuraAccess;
 import com.iafenvoy.mxt.data.aura.Aura;
-import com.iafenvoy.mxt.data.aura.ItemAuraComponent;
 import com.iafenvoy.mxt.data.aura.SpiritStorageComponent;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.runtime.cultivation.ItemAuraService;
@@ -19,6 +17,8 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Optional;
+
+import static com.iafenvoy.mxt.runtime.spirit.AuraHandlerUtil.requireNonNegative;
 
 /**
  * A chargeable spirit stone whose capacity comes from its {@code item_aura} definition and whose content is what
@@ -42,7 +42,7 @@ public class SpiritStoneItem extends Item implements UseItemAuraAccess {
 
     @Override
     public double insert(@Nullable LivingEntity entity, @NotNull HolderLookup.Provider registries, ItemStack stack, Holder<Aura> aura, double amount, boolean exact, boolean simulate) {
-        AuraAccess.requireNonNegative(amount);
+        requireNonNegative(amount);
         if (stack.isEmpty() || stack.getItem() != this || !aura.equals(this.contentType(registries, stack)))
             return amount;
         int count = stack.getCount();
@@ -55,7 +55,7 @@ public class SpiritStoneItem extends Item implements UseItemAuraAccess {
 
     @Override
     public double extract(@Nullable LivingEntity entity, @NotNull HolderLookup.Provider registries, ItemStack stack, Holder<Aura> aura, double amount, boolean exact, boolean simulate) {
-        AuraAccess.requireNonNegative(amount);
+        requireNonNegative(amount);
         if (stack.isEmpty() || stack.getItem() != this || !aura.equals(this.contentType(registries, stack)))
             return amount;
         int count = stack.getCount();
@@ -66,21 +66,30 @@ public class SpiritStoneItem extends Item implements UseItemAuraAccess {
     }
 
     private Holder<Aura> contentType(HolderLookup.Provider registries, ItemStack stack) {
-        SpiritStorageComponent component = stack.get(MxtDataComponents.SPIRIT_STORAGE);
-        return (component == null ? Optional.<Holder<Aura>>empty() : component.soleAura())
-                .orElseGet(() -> ItemAuraService.type(registries, stack).orElse(null));
+        return storedAuraType(stack).orElseGet(() -> ItemAuraService.type(registries, stack).orElse(null));
+    }
+
+    public double storedAura(HolderLookup.Provider registries, ItemStack stack, Holder<Aura> aura) {
+        if (stack.isEmpty() || !aura.equals(this.contentType(registries, stack))) return 0.0D;
+        int count = stack.getCount();
+        return AuraTransfers.multiply(storedPerItem(stack, aura, ItemAuraService.capacity(registries, stack) / count), count);
+    }
+
+    public static Optional<Holder<Aura>> storedAuraType(ItemStack stack) {
+        SpiritStorageComponent storage = stack.get(MxtDataComponents.SPIRIT_STORAGE);
+        return storage != null && storage.perItem() ? storage.soleAura() : Optional.empty();
     }
 
     public static double storedPerItem(ItemStack stack, Holder<Aura> aura, double freshCapacity) {
         SpiritStorageComponent storage = stack.get(MxtDataComponents.SPIRIT_STORAGE);
-        double stored = storage == null ? freshCapacity : storage.normalize(stack.getCount()).get(aura);
-        ItemAuraComponent legacyFuel = stack.get(MxtDataComponents.ITEM_AURA);
-        return legacyFuel == null ? stored : Math.min(stored, legacyFuel.normalize(stack.getCount()).remain());
+        if (storage == null) return stack.has(MxtDataComponents.ITEM_AURA) ? 0.0D : freshCapacity;
+        // Only per-item values can safely be scaled by the stack count.
+        return storage.perItem() ? storage.get(aura) : 0.0D;
     }
 
     public static void setStoredPerItem(ItemStack stack, Holder<Aura> aura, double stored) {
-        SpiritStorageComponent storage = stack.getOrDefault(MxtDataComponents.SPIRIT_STORAGE, SpiritStorageComponent.EMPTY);
-        stack.set(MxtDataComponents.SPIRIT_STORAGE, storage.normalize(stack.getCount()).with(aura, stored));
-        stack.remove(MxtDataComponents.ITEM_AURA);
+        SpiritStorageComponent storage = stored == 0.0D ? SpiritStorageComponent.EMPTY_PER_ITEM
+                : SpiritStorageComponent.EMPTY_PER_ITEM.with(aura, stored);
+        stack.set(MxtDataComponents.SPIRIT_STORAGE, storage);
     }
 }

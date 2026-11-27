@@ -37,9 +37,9 @@ import com.iafenvoy.mxt.runtime.world.AuraWorldAttachment.Area;
 import com.iafenvoy.mxt.runtime.world.AuraWorldAttachment.Shape;
 import com.iafenvoy.mxt.runtime.world.SoulService;
 import com.iafenvoy.saturn.attachment.AbilityAttachment;
+import com.iafenvoy.saturn.compat.kubejs.SaturnKubeJsApi;
 import com.iafenvoy.saturn.data.ability.Ability;
 import com.iafenvoy.saturn.data.cost.Cost;
-import com.iafenvoy.saturn.compat.kubejs.SaturnKubeJsApi;
 import com.iafenvoy.saturn.data.trigger.TriggerContext;
 import com.iafenvoy.saturn.registry.SaturnAttachments;
 import com.iafenvoy.saturn.registry.SaturnResourceKeys;
@@ -636,7 +636,9 @@ public final class MxtKubeJsApi {
                 new QualityRequirement(List.of(), Optional.of(minimum)));
     }
 
-    /** Resolves aura at a server position. A client world returns {@code null}. */
+    /**
+     * Resolves aura at a server position. A client world returns {@code null}.
+     */
     public static @Nullable AuraResult aura(Level level, BlockPos position) {
         return level instanceof ServerLevel server ? AuraService.getPositionAura(server, position) : null;
     }

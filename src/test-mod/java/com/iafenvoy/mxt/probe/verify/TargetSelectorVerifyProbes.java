@@ -7,12 +7,9 @@ import com.iafenvoy.saturn.data.ability.target.RayTargetSelector;
 import com.iafenvoy.saturn.data.ability.target.TargetOrder;
 import com.iafenvoy.mxt.probe.Probe;
 import com.iafenvoy.mxt.probe.ProbeContext;
-import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.runtime.cultivation.CultivationIdentityService;
 import com.iafenvoy.saturn.util.formula.FormulaContext;
 import com.iafenvoy.saturn.util.formula.number.Constant;
 import net.minecraft.core.BlockPos;
-import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntitySpawnReason;
@@ -20,7 +17,6 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.animal.pig.Pig;
 import net.minecraft.world.level.block.Blocks;
-import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 import java.util.Set;
@@ -50,10 +46,10 @@ public final class TargetSelectorVerifyProbes {
         // The old leg laid this patch 30 blocks out and 20 up, which is outside the arena; the offsets below only
         // need the beings clear of the probe's own player, so the patch sits at arena relative (12, 0, 12).
         BlockPos base = context.player().blockPosition().offset(8, 0, 8);
-        LivingEntity actor = spawnProbe(context, base, null);
-        LivingEntity closest = spawnProbe(context, base.offset(2, 0, 0), null);
-        LivingEntity middle = spawnProbe(context, base.offset(4, 0, 0), null);
-        LivingEntity outside = spawnProbe(context, base.offset(8, 0, 0), null);
+        LivingEntity actor = spawnProbe(context, base);
+        LivingEntity closest = spawnProbe(context, base.offset(2, 0, 0));
+        LivingEntity middle = spawnProbe(context, base.offset(4, 0, 0));
+        LivingEntity outside = spawnProbe(context, base.offset(8, 0, 0));
         if (actor == null || closest == null || middle == null || outside == null)
             return "the selector probe could not spawn its beings";
         // Yaw 0 faces +Z, which is the direction every ray and cone leg below is measured along.
@@ -70,10 +66,10 @@ public final class TargetSelectorVerifyProbes {
             if (selected(new AreaTargetSelector(new Constant(5.0D), false, 0, TargetOrder.NEAREST), actor).size() != 2)
                 return "an uncapped area did not hold both beings inside it";
             // The cone: an angle either side of the look, and nothing outside it.
-            ahead = spawnProbe(context, base.offset(0, 0, 2), null);
-            beside = spawnProbe(context, base.offset(2, 0, 0), null);
-            inCone = spawnProbe(context, base.offset(1, 0, 4), null);
-            beyondWall = spawnProbe(context, base.offset(0, 0, 6), null);
+            ahead = spawnProbe(context, base.offset(0, 0, 2));
+            beside = spawnProbe(context, base.offset(2, 0, 0));
+            inCone = spawnProbe(context, base.offset(1, 0, 4));
+            beyondWall = spawnProbe(context, base.offset(0, 0, 6));
             if (ahead == null || beside == null || inCone == null || beyondWall == null)
                 return "the selector probe could not spawn the beings its ray and cone legs need";
             Set<UUID> cone = selected(new ConeTargetSelector(new Constant(8.0D), new Constant(30.0D), false, 0, TargetOrder.NEAREST), actor);
@@ -100,15 +96,13 @@ public final class TargetSelectorVerifyProbes {
 
     // One disposable probe entity carrying exactly one spirit root, so the element it strikes or is struck with is
     // never a question. A pig has no armour and no innate resistance; a null root leaves it carrying none.
-    private static LivingEntity spawnProbe(ProbeContext context, BlockPos pos, @Nullable Identifier root) {
+    private static LivingEntity spawnProbe(ProbeContext context, BlockPos pos) {
         ServerLevel level = context.level();
         Pig pig = EntityType.PIG.create(level, EntitySpawnReason.COMMAND);
         if (pig == null) return null;
         pig.setNoAi(true);
         pig.setPos(pos.getX() + 0.5D, pos.getY(), pos.getZ() + 0.5D);
         level.addFreshEntity(pig);
-        if (root != null)
-            CultivationIdentityService.grantSpiritRoot(pig, context.require(MxtResourceKeys.SPIRIT_ROOT, root));
         return pig;
     }
 }

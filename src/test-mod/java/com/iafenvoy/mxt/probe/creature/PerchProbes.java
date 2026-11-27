@@ -3,15 +3,12 @@ package com.iafenvoy.mxt.probe.creature;
 import com.iafenvoy.mxt.config.MxtServerConfig;
 import com.iafenvoy.mxt.probe.Probe;
 import com.iafenvoy.mxt.probe.ProbeContext;
-import com.iafenvoy.mxt.registry.MxtResourceKeys;
-import com.iafenvoy.mxt.runtime.cultivation.CultivationIdentityService;
 import com.iafenvoy.mxt.runtime.perch.PerchEventBridge;
 import com.iafenvoy.mxt.runtime.perch.PerchService;
 import com.iafenvoy.mxt.runtime.resulting.failures.PerchFailure;
 import com.iafenvoy.mxt.testmod.MxtTestEntities;
 import com.iafenvoy.mxt.testmod.ProbeBeast;
 import net.minecraft.core.BlockPos;
-import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntitySpawnReason;
@@ -21,7 +18,6 @@ import net.minecraft.world.entity.animal.chicken.Chicken;
 import net.minecraft.world.entity.animal.pig.Pig;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.event.tick.EntityTickEvent;
-import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -294,7 +290,7 @@ public final class PerchProbes {
         try {
             ProbeBeast host = spawnProbeBeast(level, context.at(10, 1, 8));
             ProbeBeast answerer = spawnProbeBeast(level, context.at(12, 1, 8));
-            LivingEntity plain = spawnProbe(level, context.at(14, 1, 8), null);
+            LivingEntity plain = spawnProbe(level, context.at(14, 1, 8));
             spawned.add(host);
             spawned.add(answerer);
             if (plain != null) spawned.add(plain);
@@ -329,15 +325,12 @@ public final class PerchProbes {
 
     // One disposable probe entity carrying exactly one spirit root, so the element it strikes or is struck with is
     // never a question; the perch leg spawns the rootless form, which is a body nothing else speaks for.
-    private static LivingEntity spawnProbe(ServerLevel level, BlockPos pos, @Nullable Identifier root) {
+    private static LivingEntity spawnProbe(ServerLevel level, BlockPos pos) {
         Pig pig = EntityType.PIG.create(level, EntitySpawnReason.COMMAND);
         if (pig == null) return null;
         pig.setNoAi(true);
         pig.setPos(pos.getX() + 0.5D, pos.getY(), pos.getZ() + 0.5D);
         level.addFreshEntity(pig);
-        if (root != null) CultivationIdentityService.grantSpiritRoot(pig,
-                level.registryAccess().lookupOrThrow(MxtResourceKeys.SPIRIT_ROOT).get(root)
-                        .orElseThrow(() -> new IllegalStateException("the test pack is missing " + root)));
         return pig;
     }
 

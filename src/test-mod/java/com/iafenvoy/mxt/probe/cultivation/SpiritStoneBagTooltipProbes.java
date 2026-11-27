@@ -3,10 +3,13 @@ package com.iafenvoy.mxt.probe.cultivation;
 import com.iafenvoy.mxt.probe.Probe;
 import com.iafenvoy.mxt.probe.ProbeContext;
 import com.iafenvoy.mxt.registry.MxtItems;
+import com.iafenvoy.mxt.screen.item.SpiritStoneBagMouseActions;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.BundleMouseActions;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.ItemSlotMouseAction;
+import net.minecraft.client.gui.screens.inventory.ContainerScreen;
 import net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipComponent;
 import net.minecraft.client.renderer.item.BundleSelectedItemSpecialRenderer;
 import net.minecraft.client.renderer.item.TrackingItemStackRenderState;
@@ -16,6 +19,8 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.contents.TranslatableContents;
 import net.minecraft.tags.ItemTags;
 import net.minecraft.world.SimpleContainer;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.inventory.ChestMenu;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.BundleItem;
 import net.minecraft.world.item.Item;
@@ -69,11 +74,30 @@ public final class SpiritStoneBagTooltipProbes {
         bag.set(DataComponents.BUNDLE_CONTENTS, new BundleContents(List.of(new ItemStackTemplate(MxtItems.SPIRIT_STONE, 4))));
         Slot slot = new Slot(new SimpleContainer(1), 0, 0, 0);
         slot.set(bag);
-        BundleMouseActions actions = new BundleMouseActions(minecraft);
-        check(context, "bag uses vanilla scroll selection and stays outside the dye recipe tag",
-                actions.matches(slot) && !bag.is(ItemTags.BUNDLES));
+        List<ItemSlotMouseAction> registered = new ArrayList<>();
+        Inventory inventory = context.player().getInventory();
+        ContainerScreen screen = new ContainerScreen(ChestMenu.oneRow(0, inventory), inventory, Component.empty()) {
+            @Override
+            public void addItemSlotMouseAction(@NonNull ItemSlotMouseAction action) {
+                super.addItemSlotMouseAction(action);
+                registered.add(action);
+            }
+        };
+        screen.init(320, 240);
+        check(context, "the screen registers one spirit stone bag action",
+                registered.stream().filter(SpiritStoneBagMouseActions.class::isInstance).count() == 1);
+        ItemSlotMouseAction actions = registered.stream().filter(SpiritStoneBagMouseActions.class::isInstance).findFirst().orElseThrow();
+        BundleMouseActions vanilla = new BundleMouseActions(minecraft);
+        check(context, "the bag action matches the bag outside the dye recipe tag",
+                actions.matches(slot) && !vanilla.matches(slot) && !bag.is(ItemTags.BUNDLES));
+        slot.set(Items.BUNDLE.getDefaultInstance());
+        check(context, "vanilla bundles keep their own scroll action", vanilla.matches(slot) && !actions.matches(slot));
         slot.set(Items.STONE.getDefaultInstance());
-        check(context, "other items retain vanilla scroll matching", !actions.matches(slot));
+        check(context, "other items do not match the bag action", !actions.matches(slot));
+        registered.clear();
+        screen.resize(360, 240);
+        check(context, "the resize reinstalls the bag action",
+                registered.stream().filter(SpiritStoneBagMouseActions.class::isInstance).count() == 1);
 
         check(context, "the bag starts closed in the inventory", !hasSelectedItemLayer(minecraft, bag, ItemDisplayContext.GUI));
         BundleItem.toggleSelectedItem(bag, 0);

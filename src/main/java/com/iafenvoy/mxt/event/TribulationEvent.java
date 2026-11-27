@@ -20,7 +20,9 @@ public abstract class TribulationEvent extends Event {
         this.tribulation = tribulation;
     }
 
-    /** Returns a detached snapshot of the state at publication. */
+    /**
+     * Returns a detached snapshot of the state at publication.
+     */
     public TribulationAttachment getData() {
         return this.data.copy();
     }

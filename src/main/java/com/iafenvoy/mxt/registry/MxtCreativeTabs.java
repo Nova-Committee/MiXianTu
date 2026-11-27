@@ -21,7 +21,7 @@ public final class MxtCreativeTabs {
                     ItemStack empty = item.toStack();
                     // An empty map is a stone that was drained, which is what the creative entry offers: with no
                     // component at all it would read as a pristine, full one.
-                    empty.set(MxtDataComponents.SPIRIT_STORAGE, SpiritStorageComponent.EMPTY);
+                    empty.set(MxtDataComponents.SPIRIT_STORAGE, SpiritStorageComponent.EMPTY_PER_ITEM);
                     output.accept(empty);
                 });
             }).build());

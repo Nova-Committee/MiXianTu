@@ -37,3 +37,4 @@ repo/
 !**/src/**/repo/
 
 docs
+logs

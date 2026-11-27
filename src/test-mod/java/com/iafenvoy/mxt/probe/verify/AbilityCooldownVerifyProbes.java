@@ -13,9 +13,7 @@ import com.mojang.serialization.JsonOps;
 import com.iafenvoy.mxt.probe.Probe;
 import com.iafenvoy.mxt.probe.ProbeContext;
 import com.iafenvoy.mxt.probe.ProbeDefinitions;
-import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.saturn.runtime.ability.AbilityStorage;
-import com.iafenvoy.mxt.runtime.cultivation.CultivationIdentityService;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
@@ -25,7 +23,6 @@ import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.animal.pig.Pig;
-import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 
@@ -53,7 +50,7 @@ public final class AbilityCooldownVerifyProbes {
         // The old leg read a heightmap position out in the open world; the actor only needs a spot clear of the
         // probe's own player, so it stands at arena relative (10, 0, 10).
         BlockPos base = context.player().blockPosition().offset(6, 0, 6);
-        LivingEntity actor = spawnProbe(context, base, null);
+        LivingEntity actor = spawnProbe(context, base);
         if (actor == null) return "could not create the probe being";
         try {
             AbilityAttachment abilities = actor.getData(SaturnAttachments.ABILITY_HOLDER);
@@ -94,15 +91,13 @@ public final class AbilityCooldownVerifyProbes {
 
     // One disposable probe entity carrying exactly one spirit root, so the element it strikes or is struck with is
     // never a question. A pig has no armour and no innate resistance; a null root leaves it carrying none.
-    private static LivingEntity spawnProbe(ProbeContext context, BlockPos pos, @Nullable Identifier root) {
+    private static LivingEntity spawnProbe(ProbeContext context, BlockPos pos) {
         ServerLevel level = context.level();
         Pig pig = EntityType.PIG.create(level, EntitySpawnReason.COMMAND);
         if (pig == null) return null;
         pig.setNoAi(true);
         pig.setPos(pos.getX() + 0.5D, pos.getY(), pos.getZ() + 0.5D);
         level.addFreshEntity(pig);
-        if (root != null)
-            CultivationIdentityService.grantSpiritRoot(pig, context.require(MxtResourceKeys.SPIRIT_ROOT, root));
         return pig;
     }
 }

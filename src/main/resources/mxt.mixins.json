@@ -5,13 +5,10 @@
   "mixins": [
     "EntityMountRemovalMixin",
     "EntityPerchMixin",
-    "ItemStackAuraMigrationMixin",
-    "ItemStackTemplateAuraMigrationMixin",
     "MinecraftServerRuntimeAccessor"
   ],
   "client": [
     "BossHealthOverlayMixin",
-    "BundleMouseActionsMixin",
     "ClientInputAccessor"
   ],
   "injectors": {

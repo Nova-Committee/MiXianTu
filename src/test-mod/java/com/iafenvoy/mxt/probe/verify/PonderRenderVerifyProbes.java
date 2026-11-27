@@ -2,7 +2,6 @@ package com.iafenvoy.mxt.probe.verify;
 
 import com.iafenvoy.mxt.probe.Probe;
 import com.iafenvoy.mxt.probe.ProbeContext;
-import com.iafenvoy.mxt.testmod.MxtTestMod;
 import net.createmod.catnip.api.client.gui.render.pip.GuiBlockEntityRenderState;
 import net.createmod.catnip.api.client.gui.render.pip.GuiBlockModelRenderState;
 import net.createmod.catnip.api.client.gui.render.pip.GuiFluidStateRenderState;
@@ -17,7 +16,7 @@ import net.neoforged.neoforge.client.event.RegisterPictureInPictureRenderersEven
 import java.util.List;
 import java.util.Set;
 
-@EventBusSubscriber(modid = MxtTestMod.MOD_ID, value = Dist.CLIENT)
+@EventBusSubscriber(Dist.CLIENT)
 public final class PonderRenderVerifyProbes {
     private static volatile Set<Class<?>> factoriesAtCollection;
     private static boolean clientSetupSeen;

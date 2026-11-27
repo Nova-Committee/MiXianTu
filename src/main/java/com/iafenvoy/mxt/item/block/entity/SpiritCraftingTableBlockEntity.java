@@ -1,6 +1,6 @@
 package com.iafenvoy.mxt.item.block.entity;
 
-import com.iafenvoy.mxt.api.AuraAccess;
+import com.iafenvoy.mxt.api.AuraHandler;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.cost.Costs;
 import com.iafenvoy.mxt.data.cost.context.AuraCostContexts;
@@ -10,6 +10,7 @@ import com.iafenvoy.mxt.recipe.SpiritRecipe;
 import com.iafenvoy.mxt.registry.MxtBlockEntities;
 import com.iafenvoy.mxt.registry.MxtRecipeTypes;
 import com.iafenvoy.mxt.runtime.MxtProfilerSources;
+import com.iafenvoy.mxt.runtime.spirit.AuraHandlerUtil;
 import com.iafenvoy.mxt.runtime.spirit.AuraTransfers;
 import com.iafenvoy.mxt.screen.menu.SpiritCraftingMenu;
 import com.iafenvoy.saturn.data.cost.Cost;
@@ -19,17 +20,13 @@ import com.iafenvoy.saturn.profiling.ProfilerScope;
 import com.iafenvoy.saturn.profiling.ServerProfiling;
 import com.iafenvoy.saturn.runtime.resulting.Result;
 import com.iafenvoy.saturn.util.formula.FormulaContext;
-import it.unimi.dsi.fastutil.objects.Object2DoubleMap;
-import it.unimi.dsi.fastutil.objects.Object2DoubleOpenHashMap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Holder;
-import net.minecraft.core.HolderLookup;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.WorldlyContainer;
-import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
@@ -42,20 +39,18 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
-import org.jetbrains.annotations.NotNull;
+import net.neoforged.neoforge.transfer.transaction.SnapshotJournal;
+import net.neoforged.neoforge.transfer.transaction.TransactionContext;
 import org.jetbrains.annotations.Nullable;
 import org.jspecify.annotations.NonNull;
 
-import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.IntStream;
 
 /**
  * Stores the crafting grid and independently buffered aura inside the placed block.
  */
-public final class SpiritCraftingTableBlockEntity extends BlockEntity implements MenuProvider, AuraAccess, WorldlyContainer {
+public final class SpiritCraftingTableBlockEntity extends BlockEntity implements MenuProvider, AuraHandler, WorldlyContainer {
     private final SimpleContainer grid = new SimpleContainer(9) {
         @Override
         public void setChanged() {
@@ -64,6 +59,24 @@ public final class SpiritCraftingTableBlockEntity extends BlockEntity implements
         }
     };
     private final Map<Holder<Aura>, Double> aura = new LinkedHashMap<>();
+    private final SnapshotJournal<Map<Holder<Aura>, Double>> auraJournal = new SnapshotJournal<>() {
+        @Override
+        protected Map<Holder<Aura>, Double> createSnapshot() {
+            return new LinkedHashMap<>(SpiritCraftingTableBlockEntity.this.aura);
+        }
+
+        @Override
+        protected void revertToSnapshot(Map<Holder<Aura>, Double> snapshot) {
+            SpiritCraftingTableBlockEntity.this.aura.clear();
+            SpiritCraftingTableBlockEntity.this.aura.putAll(snapshot);
+        }
+
+        @Override
+        protected void onRootCommit(Map<Holder<Aura>, Double> original) {
+            if (!SpiritCraftingTableBlockEntity.this.isRemoved() && !original.equals(SpiritCraftingTableBlockEntity.this.aura))
+                SpiritCraftingTableBlockEntity.this.markChangedAndSync();
+        }
+    };
     private final SimpleContainer result = new SimpleContainer(1) {
         @Override
         public void setChanged() {
@@ -137,11 +150,52 @@ public final class SpiritCraftingTableBlockEntity extends BlockEntity implements
     }
 
     @Override
-    public Object2DoubleMap<Holder<Aura>> getCapacity(@Nullable LivingEntity entity, @NotNull HolderLookup.Provider registries) {
-        Object2DoubleMap<Holder<Aura>> result = new Object2DoubleOpenHashMap<>();
-        this.requiredAura.forEach((aura, amount) -> result.put(aura,
-                AuraTransfers.multiply(amount, 99.0D)));
-        return result;
+    public Set<Holder<Aura>> getAuras() {
+        Set<Holder<Aura>> types = new LinkedHashSet<>(this.requiredAura.keySet());
+        types.addAll(this.aura.keySet());
+        return Set.copyOf(types);
+    }
+
+    @Override
+    public double getAmount(Holder<Aura> aura) {
+        return this.aura(aura);
+    }
+
+    @Override
+    public double getCapacity(Holder<Aura> aura) {
+        return AuraTransfers.multiply(this.requiredAura.getOrDefault(aura, 0.0D), 99.0D);
+    }
+
+    @Override
+    public Object storageIdentity(Holder<Aura> aura) {
+        return this;
+    }
+
+    @Override
+    public double insert(Holder<Aura> aura, double amount, TransactionContext transaction) {
+        AuraHandlerUtil.requireNonNegative(amount);
+        if (this.isRemoved() || this.level != null && this.level.isClientSide()) return 0.0D;
+        double before = this.aura(aura);
+        double after = AuraTransfers.insert(before, this.getCapacity(aura), amount, false).stored();
+        this.updateAura(aura, before, after, transaction);
+        return after - before;
+    }
+
+    @Override
+    public double extract(Holder<Aura> aura, double amount, TransactionContext transaction) {
+        AuraHandlerUtil.requireNonNegative(amount);
+        if (this.isRemoved() || this.level != null && this.level.isClientSide()) return 0.0D;
+        double before = this.aura(aura);
+        double after = AuraTransfers.extract(before, amount, false).stored();
+        this.updateAura(aura, before, after, transaction);
+        return before - after;
+    }
+
+    private void updateAura(Holder<Aura> type, double before, double after, TransactionContext transaction) {
+        if (before == after) return;
+        this.auraJournal.updateSnapshots(transaction);
+        if (after == 0.0D) this.aura.remove(type);
+        else this.aura.put(type, after);
     }
 
     // Changing the grid or recipe invalidates any partially supplied aura rather than keeping it as general storage.
@@ -216,28 +270,6 @@ public final class SpiritCraftingTableBlockEntity extends BlockEntity implements
     @Override
     public boolean canTakeItemThroughFace(int slot, @NonNull ItemStack stack, @NonNull Direction side) {
         return slot == 9 && side == Direction.DOWN;
-    }
-
-    @Override
-    public double insert(@Nullable LivingEntity entity, @NotNull HolderLookup.Provider registries, Holder<Aura> aura, double amount, boolean exact, boolean simulate) {
-        double capacity = AuraTransfers.multiply(this.requiredAura.getOrDefault(aura, 0.0D), 99.0D);
-        AuraTransfers.Transfer transfer = AuraTransfers.insert(this.aura(aura), capacity, amount, exact);
-        if (!simulate && transfer.remainder() != amount) {
-            this.aura.put(aura, transfer.stored());
-            this.markChangedAndSync();
-        }
-        return transfer.remainder();
-    }
-
-    @Override
-    public double extract(@Nullable LivingEntity entity, @NotNull HolderLookup.Provider registries, Holder<Aura> aura, double amount, boolean exact, boolean simulate) {
-        AuraTransfers.Transfer transfer = AuraTransfers.extract(this.aura(aura), amount, exact);
-        if (!simulate && transfer.remainder() != amount) {
-            if (transfer.stored() == 0.0D) this.aura.remove(aura);
-            else this.aura.put(aura, transfer.stored());
-            this.markChangedAndSync();
-        }
-        return transfer.remainder();
     }
 
     @Override

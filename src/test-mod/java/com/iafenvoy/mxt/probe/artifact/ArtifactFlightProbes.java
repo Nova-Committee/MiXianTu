@@ -22,7 +22,6 @@ import com.iafenvoy.saturn.runtime.ability.AbilityActivationService;
 import com.iafenvoy.saturn.runtime.ability.AbilityGrantService;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactService;
 import com.iafenvoy.mxt.runtime.artifact.FlightService;
-import com.iafenvoy.mxt.runtime.cultivation.CultivationIdentityService;
 import com.iafenvoy.mxt.runtime.cultivation.CultivationService;
 import com.iafenvoy.saturn.runtime.resulting.Result;
 import com.iafenvoy.saturn.runtime.resulting.failures.AbilityFailure;
@@ -53,7 +52,6 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.storage.TagValueInput;
 import net.minecraft.world.level.storage.TagValueOutput;
 import net.minecraft.world.phys.Vec3;
-import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 import java.util.Optional;
@@ -85,7 +83,7 @@ public final class ArtifactFlightProbes {
         Holder<Ability> mountAbility = context.require(SaturnResourceKeys.ABILITY, "azure_sword_mount");
         MountAbilityType mountEntry = ArtifactService.mount(access, flightStack).orElse(null);
 
-        LivingEntity pilot = spawnProbe(context, context.playerSpot().above(5), null);
+        LivingEntity pilot = spawnProbe(context, context.playerSpot().above(5));
         boolean flight = false;
         if (pilot != null) {
             ResourceHolderAttachment pilotResources = pilot.getData(SaturnAttachments.RESOURCE_HOLDER);
@@ -134,8 +132,8 @@ public final class ArtifactFlightProbes {
             context.check("artifact roster flight: the artifact is in the mount's custody", custody);
             context.check("artifact roster flight: the definition decides the box and the driver", shape);
             context.check("artifact roster flight: take-off charged the skill's own price", paid);
-            LivingEntity passenger = spawnProbe(context, context.playerSpot().above(6), null);
-            LivingEntity third = spawnProbe(context, context.playerSpot().above(7), null);
+            LivingEntity passenger = spawnProbe(context, context.playerSpot().above(6));
+            LivingEntity third = spawnProbe(context, context.playerSpot().above(7));
             boolean seats = sword != null && passenger != null && third != null
                     && passenger.startRiding(sword) && sword.getPassengers().size() == 2
                     && !third.startRiding(sword) && sword.getPassengers().size() == 2;
@@ -249,7 +247,7 @@ public final class ArtifactFlightProbes {
         Holder<Resource> qiResource = context.require(SaturnResourceKeys.RESOURCE, ProbeDefinitions.QI);
         Holder<Ability> controlAbility = context.require(SaturnResourceKeys.ABILITY, "sword_control");
         Holder<Ability> mountAbility = context.require(SaturnResourceKeys.ABILITY, "azure_sword_mount");
-        LivingEntity crasher = spawnProbe(context, context.playerSpot().above(9), null);
+        LivingEntity crasher = spawnProbe(context, context.playerSpot().above(9));
         boolean collision = false;
         if (crasher != null) {
             // The pilot has to be able to pay, and a qi ceiling is a formula over the body's own realm: a body that
@@ -300,14 +298,12 @@ public final class ArtifactFlightProbes {
 
     // One disposable probe entity carrying exactly one spirit root, so the element it strikes or is struck with is
     // never a question. The artifact legs pass a null root, which leaves it carrying none.
-    private static LivingEntity spawnProbe(ProbeContext context, BlockPos pos, @Nullable Identifier root) {
+    private static LivingEntity spawnProbe(ProbeContext context, BlockPos pos) {
         Pig pig = EntityType.PIG.create(context.level(), EntitySpawnReason.COMMAND);
         if (pig == null) return null;
         pig.setNoAi(true);
         pig.setPos(pos.getX() + 0.5D, pos.getY(), pos.getZ() + 0.5D);
         context.level().addFreshEntity(pig);
-        if (root != null)
-            CultivationIdentityService.grantSpiritRoot(pig, context.require(MxtResourceKeys.SPIRIT_ROOT, root));
         return pig;
     }
 

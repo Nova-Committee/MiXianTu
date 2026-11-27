@@ -29,7 +29,9 @@ public abstract class CurseApplyEvent extends Event {
         this.context = context;
     }
 
-    /** Returns a detached snapshot of the state at publication. */
+    /**
+     * Returns a detached snapshot of the state at publication.
+     */
     public CurseHolderAttachment getHolder() {
         return this.holder.copy();
     }

@@ -33,7 +33,9 @@ public abstract class FormationEvent extends Event {
         return this.controller;
     }
 
-    /** Returns a detached snapshot of the state at publication. */
+    /**
+     * Returns a detached snapshot of the state at publication.
+     */
     public FormationInstance getInstance() {
         return this.instance.copy();
     }

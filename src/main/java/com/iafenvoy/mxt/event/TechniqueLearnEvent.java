@@ -15,7 +15,9 @@ public abstract class TechniqueLearnEvent extends Event {
         this.technique = technique;
     }
 
-    /** Returns a detached snapshot of the state at publication. */
+    /**
+     * Returns a detached snapshot of the state at publication.
+     */
     public TechniqueAttachment getSpirit() {
         return this.spirit.copy();
     }

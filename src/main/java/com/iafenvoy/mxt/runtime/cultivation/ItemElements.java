@@ -3,6 +3,7 @@ package com.iafenvoy.mxt.runtime.cultivation;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.aura.SpiritStorageComponent;
 import com.iafenvoy.mxt.data.cultivation.Element;
+import com.iafenvoy.mxt.item.SpiritStoneItem;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.artifact.ArtifactService;
@@ -60,7 +61,8 @@ public final class ItemElements {
 
     private static Set<Holder<Element>> fromAura(RegistryAccess access, ItemStack stack) {
         SpiritStorageComponent storage = stack.get(MxtDataComponents.SPIRIT_STORAGE);
-        Optional<Holder<Aura>> aura = storage == null ? Optional.empty() : storage.soleAura();
+        Optional<Holder<Aura>> aura = stack.getItem() instanceof SpiritStoneItem ? SpiritStoneItem.storedAuraType(stack)
+                : storage == null ? Optional.empty() : storage.soleAura();
         if (aura.isEmpty()) aura = ItemAuraService.type(access, stack);
         Optional<Holder<Element>> element = aura.flatMap(holder -> holder.value().auraType());
         return element.map(Set::of).orElseGet(Set::of);

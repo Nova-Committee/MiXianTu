@@ -31,7 +31,9 @@ public abstract class CurseRemoveEvent extends Event {
         this.gameTime = gameTime;
     }
 
-    /** Returns a detached snapshot of the state at publication. */
+    /**
+     * Returns a detached snapshot of the state at publication.
+     */
     public CurseHolderAttachment getHolder() {
         return this.holder.copy();
     }

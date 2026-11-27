@@ -10,6 +10,10 @@ import net.minecraft.core.Holder;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.world.level.chunk.LevelChunk;
+import net.neoforged.neoforge.transfer.transaction.SnapshotJournal;
+import net.neoforged.neoforge.transfer.transaction.TransactionContext;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -42,6 +46,7 @@ public final class AuraPool {
     private double regenPerTick;
     private double supplied;
     private final boolean readOnly;
+    private @Nullable SnapshotJournal<Double> amountJournal;
 
     // Decoding rejects a bad value rather than clamping it; every mutation below clamps, so a pool that exists is
     // always usable.
@@ -119,6 +124,29 @@ public final class AuraPool {
     public void change(double delta) {
         this.requireMutable();
         this.amount = clamp(this.amount + delta, this.maximum);
+    }
+
+    void setAmount(double next, LevelChunk chunk, TransactionContext transaction) {
+        this.requireMutable();
+        if (this.amount == next) return;
+        if (this.amountJournal == null) this.amountJournal = new SnapshotJournal<>() {
+            @Override
+            protected Double createSnapshot() {
+                return AuraPool.this.amount;
+            }
+
+            @Override
+            protected void revertToSnapshot(Double original) {
+                AuraPool.this.amount = original;
+            }
+
+            @Override
+            protected void onRootCommit(Double original) {
+                if (AuraPool.this.amount != original) chunk.markUnsaved();
+            }
+        };
+        this.amountJournal.updateSnapshots(transaction);
+        this.amount = next;
     }
 
     public void setMaximum(double maximum) {

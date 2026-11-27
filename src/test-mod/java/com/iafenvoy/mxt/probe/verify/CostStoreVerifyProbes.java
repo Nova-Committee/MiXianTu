@@ -8,7 +8,6 @@ import com.iafenvoy.saturn.registry.SaturnResourceKeys;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
-import com.iafenvoy.mxt.api.AuraAccess;
 import com.iafenvoy.saturn.attachment.ResourceHolderAttachment;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.saturn.data.cost.Cost;
@@ -20,24 +19,21 @@ import com.iafenvoy.saturn.data.resource.Resource;
 import com.iafenvoy.mxt.probe.Probe;
 import com.iafenvoy.mxt.probe.ProbeContext;
 import com.iafenvoy.mxt.probe.ProbeDefinitions;
+import com.iafenvoy.mxt.probe.verify.AuraHandlerVerifyProbes.Handler;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.runtime.resulting.failures.AuraFailure;
 import com.iafenvoy.saturn.runtime.resulting.Failure;
 import com.iafenvoy.saturn.runtime.resulting.Result;
 import com.iafenvoy.saturn.runtime.resulting.failures.CostFailure;
 import com.iafenvoy.saturn.util.formula.FormulaContext;
 import com.mojang.serialization.JsonOps;
-import it.unimi.dsi.fastutil.objects.Object2DoubleMap;
-import it.unimi.dsi.fastutil.objects.Object2DoubleMaps;
 import net.minecraft.core.*;
 import net.minecraft.resources.RegistryOps;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.SimpleContainer;
-import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -132,32 +128,34 @@ public final class CostStoreVerifyProbes {
         context.expect("the receipt keeps the count that left", items.getFirst().getCount(), 2);
     }
 
-    // A short real transfer warns without cancelling the bill; a failure no longer carries the part it did take.
-    // Large fractional amounts remain expressible by a bank.
+    // Simulation sees both fees as affordable. The second real fee must roll back its partial extraction.
     private static void bankExact(ProbeContext context) {
         RegistryAccess registries = context.registries();
         Holder<Aura> qi = context.require(MxtResourceKeys.AURA, ProbeDefinitions.QI);
-        // Answers "all of it" when asked, then hands over 3 of the 5 it was asked for.
-        ShortBank bank = new ShortBank(3);
+        Handler bank = new Handler(qi, 8.0D, 8.0D);
         CostContext costs = AuraCostContexts.bank(bank, context.player(), FormulaContext.of(context.player()),
                 CostOrigins.SCRIPT);
-        Result<List<Debit>> paid = CostPayment.pay(decodeCosts(registries,
-                "[{\"type\": \"mxt:aura\", \"aura\": \"mxt_test:qi\", \"amount\": 5}]"), costs);
-        if (paid.getFailure().isPresent()) {
-            context.fail("a short real bank transfer cancelled the bill: " + paid.getFailure().orElse(null));
-            return;
-        }
-        // The partial debit the store wrote before refusing has no place in the new result, so nothing is reported.
-        context.expect("a partial refusal reports no receipt", Costs.auras(paid).getOrDefault(qi, 0.0D), 0.0D);
-        context.expect("the bank really lost the part it handed over", bank.removed, 3.0D);
+        CostPayment bill = CostPayment.of(costs);
+        List<Cost> charges = decodeCosts(registries, """
+                [{"type": "mxt:aura", "aura": "mxt_test:qi", "amount": 5},
+                 {"type": "mxt:aura", "aura": "mxt_test:qi", "amount": 5},
+                 {"type": "mxt:aura", "aura": "mxt_test:qi", "amount": 1}]
+                """);
+        context.expect("all three fees are priced", bill.price(charges), Optional.empty());
+        CostPayment.Settlement settlement = bill.settle().getData().orElseThrow();
+        context.expect("the short real transfer is reported once", settlement.issues().size(), 1);
+        context.expect("the reported failure is insufficient aura", settlement.issues().getFirst().failure(), AuraFailure.INSUFFICIENT_AURA);
+        context.expect("only the first and last fee produce receipts", settlement.debits().size(), 2);
+        context.expect("the partial deduction rolls back and the last fee still runs", bank.getAmount(qi), 2.0D);
 
-        ShortBank whole = new ShortBank(3_000_000_000.25D);
+        Handler whole = new Handler(qi, 3_000_000_000.25D, 3_000_000_000.25D);
         CostContext huge = AuraCostContexts.bank(whole, context.player(), FormulaContext.of(context.player()),
                 CostOrigins.SCRIPT);
         Result<List<Debit>> large = CostPayment.pay(decodeCosts(registries,
                 "[{\"type\": \"mxt:aura\", \"aura\": \"mxt_test:qi\", \"amount\": 3000000000.25}]"), huge);
         if (large.getFailure().isPresent()) context.fail("a double bank amount was refused: " + large.getFailure().orElse(null));
-        context.expect("a bank preserves a large fractional amount", whole.removed, 3_000_000_000.25D);
+        context.expect("the bank records the full fractional debit", Costs.auras(large).getOrDefault(qi, 0.0D), 3_000_000_000.25D);
+        context.expect("the fractional debit leaves the bank empty", whole.getAmount(qi), 0.0D);
 
         // An item demand past the integer range is the same refusal, and takes nothing either.
         SimpleContainer container = new SimpleContainer(1);
@@ -232,8 +230,7 @@ public final class CostStoreVerifyProbes {
         RegistryAccess registries = context.registries();
         Holder<Aura> qi = context.require(MxtResourceKeys.AURA, ProbeDefinitions.QI);
         Holder<Aura> spirit = context.require(MxtResourceKeys.AURA, ProbeDefinitions.SPIRIT_POWER);
-        // The bank hands over whatever is asked, so the receipts are the scaled charges themselves.
-        ShortBank bank = new ShortBank(Double.MAX_VALUE);
+        Handler bank = new Handler(qi, 10.0D, 10.0D);
         CostContext here = AuraCostContexts.bank(bank, context.player(), FormulaContext.of(context.player()),
                 CostOrigins.SCRIPT);
         CostPayment bill = CostPayment.of(here);
@@ -267,37 +264,5 @@ public final class CostStoreVerifyProbes {
         RegistryOps<JsonElement> ops = RegistryOps.create(JsonOps.INSTANCE, registries);
         return Cost.LIST_CODEC.parse(ops, JsonParser.parseString(json))
                 .getOrThrow(error -> new IllegalArgumentException("Invalid cost fixture: " + error));
-    }
-
-    // A store that says it can pay and then parts with less: the one shape a bank's answer cannot rule out.
-    private static final class ShortBank implements AuraAccess {
-        private final double willing;
-        private double removed;
-
-        private ShortBank(double willing) {
-            this.willing = willing;
-        }
-
-        @Override
-        public Object2DoubleMap<Holder<Aura>> getCapacity(@Nullable LivingEntity entity,
-                                                          @NotNull HolderLookup.Provider registries) {
-            return Object2DoubleMaps.emptyMap();
-        }
-
-        @Override
-        public double insert(@Nullable LivingEntity entity,
-                             @NotNull HolderLookup.Provider registries, Holder<Aura> aura, double amount, boolean exact, boolean simulate) {
-            return amount;
-        }
-
-        @Override
-        public double extract(@Nullable LivingEntity entity,
-                              @NotNull HolderLookup.Provider registries, Holder<Aura> aura, double amount, boolean exact, boolean simulate) {
-            // Asked exactly, it promises the whole amount: this is the store that empties between the two passes.
-            if (simulate) return 0;
-            double taken = Math.min(this.willing, amount);
-            this.removed += taken;
-            return amount - taken;
-        }
     }
 }

@@ -93,9 +93,8 @@ public final class SpiritStoneBagItem extends BundleItem {
     }
 
     private static boolean hasStoredAura(ItemInstance stack) {
-        // Both components store an amount for the entire stack.
-        return stack.has(MxtDataComponents.ITEM_AURA.get())
-                || !stack.getOrDefault(MxtDataComponents.SPIRIT_STORAGE.get(), SpiritStorageComponent.EMPTY).isEmpty();
+        SpiritStorageComponent storage = stack.get(MxtDataComponents.SPIRIT_STORAGE.get());
+        return storage != null && storage.perItem() && !storage.isEmpty();
     }
 
     private static void insert(ItemStack bag, BundleContents contents, ItemStack input, Player player) {

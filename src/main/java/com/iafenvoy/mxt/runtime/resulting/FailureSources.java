@@ -18,6 +18,7 @@ public final class FailureSources {
     public static final FailureSource COMMON = new FailureSource(Identifier.fromNamespaceAndPath(MiXianTu.MOD_ID, "common"));
     public static final FailureSource ABILITY = FailureSource.of(SaturnResourceKeys.ABILITY);
     public static final FailureSource ARTIFACT = FailureSource.of(MxtResourceKeys.ARTIFACT);
+    public static final FailureSource AURA = FailureSource.of(MxtResourceKeys.AURA);
     public static final FailureSource CONTRACT_TYPE = FailureSource.of(MxtResourceKeys.CONTRACT_TYPE);
     public static final FailureSource CULTIVATION = FailureSource.of(MxtResourceKeys.CULTIVATION);
     public static final FailureSource CURSE = FailureSource.of(MxtResourceKeys.CURSE);

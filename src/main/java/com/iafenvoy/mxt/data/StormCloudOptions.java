@@ -19,7 +19,6 @@ public record StormCloudOptions(int cloudColor, int lightningColor, float radius
             RADIUS_CODEC.optionalFieldOf("radius", DEFAULT.radius).forGetter(StormCloudOptions::radius),
             LIFETIME_CODEC.optionalFieldOf("lifetime", DEFAULT.lifetime).forGetter(StormCloudOptions::lifetime)
     ).apply(i, Appearance::options));
-
     public static final StreamCodec<RegistryFriendlyByteBuf, StormCloudOptions> STREAM_CODEC = StreamCodec.composite(
             ByteBufCodecs.INT, StormCloudOptions::cloudColor,
             ByteBufCodecs.INT, StormCloudOptions::lightningColor,
@@ -37,8 +36,7 @@ public record StormCloudOptions(int cloudColor, int lightningColor, float radius
     public AABB bounds(double x, double y, double z) {
         double halfHeight = this.thickness * 0.5;
         double below = halfHeight + ((this.lightningColor >>> 24) == 0 ? 0.0 : this.radius * 0.5);
-        return new AABB(x - this.radius, y - below, z - this.radius,
-                x + this.radius, y + halfHeight, z + this.radius);
+        return new AABB(x - this.radius, y - below, z - this.radius, x + this.radius, y + halfHeight, z + this.radius);
     }
 
     public record Appearance(int cloudColor, int lightningColor, float thickness) {

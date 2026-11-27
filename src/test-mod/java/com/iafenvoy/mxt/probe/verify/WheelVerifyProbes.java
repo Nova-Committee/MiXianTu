@@ -2,14 +2,18 @@ package com.iafenvoy.mxt.probe.verify;
 
 import com.google.gson.JsonElement;
 import com.iafenvoy.saturn.api.wheel.WheelEntryKind;
+import com.iafenvoy.saturn.api.wheel.WheelMenuEntry;
 import com.iafenvoy.saturn.api.wheel.WheelSource;
 import com.iafenvoy.saturn.api.AbilityHooks;
 import com.iafenvoy.saturn.attachment.AbilityAttachment;
+import com.iafenvoy.saturn.attachment.ResourceHolderAttachment;
 import com.iafenvoy.saturn.attachment.WheelLayoutAttachment;
 import com.iafenvoy.saturn.data.ability.Ability;
+import com.iafenvoy.saturn.data.resource.Resource;
 import com.iafenvoy.saturn.registry.SaturnAttachments;
 import com.iafenvoy.saturn.registry.SaturnResourceKeys;
 import com.iafenvoy.saturn.runtime.Sources;
+import com.iafenvoy.saturn.runtime.resulting.Failure;
 import com.iafenvoy.saturn.runtime.wheel.WheelService;
 import com.iafenvoy.saturn.runtime.wheel.WheelLayout;
 import com.iafenvoy.saturn.runtime.wheel.WheelSlot;
@@ -26,9 +30,13 @@ import net.neoforged.neoforge.network.connection.ConnectionType;
 import com.iafenvoy.mxt.probe.Probe;
 import com.iafenvoy.mxt.probe.ProbeContext;
 import com.iafenvoy.mxt.probe.ProbeDefinitions;
+import com.iafenvoy.mxt.runtime.spirit.SpiritBurstService;
+import com.iafenvoy.mxt.runtime.wheel.MxtWheelSources;
+import com.iafenvoy.mxt.screen.wheel.content.MxtWheelContent;
 import com.iafenvoy.saturn.runtime.wheel.WheelEntryKinds;
 import com.iafenvoy.saturn.runtime.wheel.WheelSourceTypes;
 import com.iafenvoy.saturn.runtime.wheel.WheelSources;
+import com.iafenvoy.saturn.util.DefinitionText;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
@@ -55,7 +63,74 @@ public final class WheelVerifyProbes {
                 Probe.of("verify/wheel/dispatch", WheelVerifyProbes::dispatch),
                 Probe.of("verify/wheel/equipment", WheelVerifyProbes::equipment),
                 Probe.of("verify/wheel/protocol", WheelVerifyProbes::protocol),
+                Probe.of("verify/wheel/aura_configuration", WheelVerifyProbes::auraConfiguration),
+                Probe.of("verify/wheel/burst_feedback", WheelVerifyProbes::burstFeedback),
                 Probe.of("verify/wheel/configuration_layout", WheelVerifyProbes::configurationLayout));
+    }
+
+    private static void auraConfiguration(ProbeContext context) {
+        ServerPlayer player = context.player();
+        player.setExperienceLevels(0);
+        Identifier fractional = ProbeDefinitions.id("wheel_fractional");
+        Identifier dynamic = ProbeDefinitions.id("wheel_dynamic");
+        Identifier locked = ProbeDefinitions.SPIRIT_POWER;
+        List<WheelMenuEntry> entries = MxtWheelContent.auras(player);
+        List<Identifier> ids = entries.stream().map(WheelMenuEntry::id).toList();
+        context.check("the configuration includes fractional and normal bursts",
+                ids.contains(fractional) && ids.contains(ProbeDefinitions.id("fire_power")));
+        context.check("an aura without a burst stays out of the configuration", !ids.contains(Identifier.parse("mxt:common")));
+        context.check("a formula can be configured while its result is zero", ids.contains(dynamic));
+        context.check("a locked aura can be configured", ids.contains(locked));
+
+        player.getData(SaturnAttachments.WHEEL_LAYOUT).setLayout(WheelLayout.EMPTY
+                .with(0, WheelSlot.of(MxtWheelSources.AURA, fractional))
+                .with(1, WheelSlot.of(MxtWheelSources.AURA, locked))
+                .with(2, WheelSlot.of(MxtWheelSources.AURA, dynamic)));
+        context.check("triggering a locked slot still requires its realm",
+                !WheelService.trigger(player, WheelSourceTypes.CONFIGURED, MxtWheelSources.AURA, locked));
+        context.check("a configured slot cannot fire a zero-valued formula",
+                !WheelService.trigger(player, WheelSourceTypes.CONFIGURED, MxtWheelSources.AURA, dynamic));
+        player.setExperienceLevels(1);
+        context.check("the same configured slot works once the formula is positive",
+                WheelService.trigger(player, WheelSourceTypes.CONFIGURED, MxtWheelSources.AURA, dynamic));
+        context.check("the fractional slot fires",
+                WheelService.trigger(player, WheelSourceTypes.CONFIGURED, MxtWheelSources.AURA, fractional));
+        Holder<Resource> resource = context.require(SaturnResourceKeys.RESOURCE, fractional);
+        context.expect("the fractional burst spends exactly 0.25",
+                player.getData(SaturnAttachments.RESOURCE_HOLDER).get(resource), 0.75D);
+    }
+
+    private static void burstFeedback(ProbeContext context) {
+        ServerPlayer player = context.player();
+        ResourceHolderAttachment account = player.getData(SaturnAttachments.RESOURCE_HOLDER);
+        Holder<Resource> spirit = context.require(SaturnResourceKeys.RESOURCE, ProbeDefinitions.SPIRIT_POWER);
+        account.set(spirit, 100.0D);
+        context.expect("a funded but locked burst names its required realm chain",
+                burstRefusal(player, ProbeDefinitions.SPIRIT_POWER),
+                Component.translatable("failure.mxt.aura.realm_required", DefinitionText.nameOrId(spirit)));
+        context.expect("a denied burst does not spend aura", account.get(spirit), 100.0D);
+
+        Identifier fireId = ProbeDefinitions.id("fire_power");
+        Holder<Resource> fire = context.require(SaturnResourceKeys.RESOURCE, fireId);
+        account.set(fire, 2.25D);
+        context.expect("a short balance reports the current amount and the cost per burst",
+                burstRefusal(player, fireId),
+                Component.translatable("failure.mxt.aura.insufficient_balance", DefinitionText.nameOrId(fire), "2.25", "10.00"));
+
+        player.setExperienceLevels(0);
+        context.expect("a zero-valued formula reports its current amount as invalid",
+                burstRefusal(player, ProbeDefinitions.id("wheel_dynamic")),
+                Component.translatable("failure.mxt.aura.invalid_amount"));
+
+        account.set(fire, 20.0D);
+        context.check("funding the burst lets it fire", SpiritBurstService.fireOnce(player, fireId));
+        context.expect("a second burst reports cooldown", burstRefusal(player, fireId),
+                Component.translatable("failure.saturn.common.cooldown"));
+        context.expect("the second burst does not spend the remaining aura", account.get(fire), 10.0D);
+    }
+
+    private static Component burstRefusal(ServerPlayer player, Identifier aura) {
+        return SpiritBurstService.fireOnceResult(player, aura).getFailure().map(Failure::message).orElseGet(Component::empty);
     }
 
     private static void wheelExtension(ProbeContext context) {

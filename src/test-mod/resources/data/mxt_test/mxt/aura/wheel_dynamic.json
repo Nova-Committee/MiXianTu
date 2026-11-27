@@ -1,0 +1,5 @@
+{
+  "resource": "mxt_test:wheel_dynamic",
+  "aura_type": "mxt_test:water",
+  "burst_amount": "caster_level * 0.25"
+}

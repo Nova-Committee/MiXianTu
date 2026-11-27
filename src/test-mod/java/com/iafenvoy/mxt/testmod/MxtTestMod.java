@@ -2,11 +2,16 @@ package com.iafenvoy.mxt.testmod;
 
 import com.iafenvoy.mxt.event.CurseRemoveEvent.Post;
 import com.iafenvoy.mxt.probe.ProbeTests;
+import com.iafenvoy.mxt.registry.MxtCapabilities;
 import com.iafenvoy.saturn.util.HolderHelper;
 import com.mojang.logging.LogUtils;
 import net.minecraft.resources.Identifier;
+import net.minecraft.core.Direction;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.block.Blocks;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.common.Mod;
+import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.RegisterGameTestsEvent;
 import net.neoforged.neoforge.event.entity.EntityAttributeCreationEvent;
@@ -32,6 +37,7 @@ public final class MxtTestMod {
         FormationProbeActions.REGISTRY.register(modBus);
         ProbeMountRenders.REGISTRY.register(modBus);
         modBus.addListener(MxtTestMod::registerAttributes);
+        modBus.addListener(MxtTestMod::registerCapabilities);
         modBus.addListener(RegisterEvent.class, ProbeTests::registerFunctions);
         modBus.addListener(RegisterGameTestsEvent.class, ProbeTests::registerTests);
         NeoForge.EVENT_BUS.addListener(MxtTestMod::logCurseRemovals);
@@ -40,6 +46,13 @@ public final class MxtTestMod {
 
     private static void registerAttributes(EntityAttributeCreationEvent event) {
         event.put(MxtTestEntities.PROBE_BEAST.get(), ProbeBeast.createAttributes().build());
+    }
+
+    private static void registerCapabilities(RegisterCapabilitiesEvent event) {
+        event.registerBlock(MxtCapabilities.BLOCK_AURA, (level, pos, state, entity, context) ->
+                        level instanceof ServerLevel server && context != null && context.side() == Direction.WEST
+                                ? MxtCapabilities.findBlock(server, pos.below(), null, context.actor()) : null,
+                Blocks.TARGET);
     }
 
     // Nothing in the mod logs a removal by itself, and the reason is the one part no data pack can observe.

@@ -28,6 +28,7 @@ public final class MxtKubeJsAuraBindings {
     public @Nullable AuraClientState.Snapshot getLocal() {
         return this.clientScript ? AuraClientState.latest().orElse(null) : null;
     }
+
     @Info("Adds a persistent server-side rectangular aura area and returns its generated ID.")
     public String addBox(Level level, String zone, int minX, int minY, int minZ, int maxX, int maxY, int maxZ, int priority) {
         return MxtKubeJsApi.addAuraBox(level, id(zone), minX, minY, minZ, maxX, maxY, maxZ, priority);

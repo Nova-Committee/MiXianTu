@@ -1,5 +1,6 @@
 package com.iafenvoy.mxt.probe.world;
 
+import com.google.gson.JsonElement;
 import com.iafenvoy.saturn.runtime.resulting.Result;
 
 import com.google.gson.JsonObject;
@@ -17,9 +18,12 @@ import com.iafenvoy.mxt.runtime.rift.*;
 import com.mojang.serialization.JsonOps;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.common.ClientboundCustomPayloadPacket;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.Identifier;
+import net.minecraft.resources.RegistryOps;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.CommonListenerCookie;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
@@ -42,8 +46,28 @@ public final class RiftAnchorProbes {
     }
 
     public static List<Probe> probes() {
-        return List.of(Probe.of("world/rift/anchor_placement", RiftAnchorProbes::placement),
+        return List.of(Probe.of("world/rift/anchor_item", RiftAnchorProbes::item),
+                Probe.of("world/rift/anchor_placement", RiftAnchorProbes::placement),
                 Probe.of("world/rift/item_parameters", RiftAnchorProbes::parameters));
+    }
+
+    private static void item(ProbeContext c) {
+        Identifier oldId = Identifier.parse("mxt:rift");
+        c.check("the old item is not registered separately", !BuiltInRegistries.ITEM.keySet().contains(oldId));
+        ItemStack anchor = MxtItems.RIFT_ANCHOR.toStack();
+        c.expect("a new anchor carries the tooltip component", anchor.get(MxtDataComponents.RIFT), RiftComponent.EMPTY);
+        RiftTemplate data = template(c);
+        RiftComponent settings = new RiftComponent(Optional.of(data), Optional.of(data.destination()));
+        anchor.set(MxtDataComponents.RIFT, settings);
+        RegistryOps<JsonElement> ops = c.registries().createSerializationContext(JsonOps.INSTANCE);
+        JsonObject saved = ItemStack.CODEC.encodeStart(ops, anchor).getOrThrow().getAsJsonObject();
+        saved.addProperty("id", oldId.toString());
+        ItemStack loaded = ItemStack.CODEC.parse(ops, saved).getOrThrow();
+        c.check("the old ID resolves to the anchor", loaded.is(MxtItems.RIFT_ANCHOR.get()));
+        c.expect("the alias preserves the blueprint and recorded destination", loaded.get(MxtDataComponents.RIFT), settings);
+        JsonObject rewritten = ItemStack.CODEC.encodeStart(ops, loaded).getOrThrow().getAsJsonObject();
+        c.expect("the saved item uses the anchor ID", rewritten.get("id").getAsString(), MxtItems.RIFT_ANCHOR.getId().toString());
+        c.note("rift anchor: single registration and saved item alias OK");
     }
 
     private static RiftTemplate template(ProbeContext c) {

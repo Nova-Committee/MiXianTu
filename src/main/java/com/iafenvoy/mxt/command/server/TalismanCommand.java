@@ -1,14 +1,16 @@
 package com.iafenvoy.mxt.command.server;
 
-import com.iafenvoy.mxt.api.ItemAuraAccess;
+import com.iafenvoy.mxt.api.AuraHandler;
 import com.iafenvoy.mxt.command.ServerCommandManager;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.item.TalismanComponent;
 import com.iafenvoy.mxt.data.item.TalismanComponent.TriggerMode;
 import com.iafenvoy.mxt.data.talisman.Talisman;
+import com.iafenvoy.mxt.registry.MxtCapabilities;
 import com.iafenvoy.mxt.registry.MxtDataComponents;
 import com.iafenvoy.mxt.registry.MxtItems;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
+import com.iafenvoy.mxt.runtime.spirit.AuraHandlerUtil;
 import com.iafenvoy.mxt.runtime.talisman.TalismanService;
 import com.iafenvoy.saturn.util.DefinitionText;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
@@ -113,10 +115,11 @@ public final class TalismanCommand {
     // The capacity comes from the inscriptions themselves, so the carrier is filled to exactly what it was
     // written to hold and nothing has to be configured twice.
     private static void charge(ServerPlayer player, ItemStack stack) {
-        if (!(stack.getItem() instanceof ItemAuraAccess access)) return;
+        AuraHandler handler = MxtCapabilities.findItem(stack, MxtCapabilities.ItemContext.forStack(stack, player));
+        if (handler == null) return;
         for (Entry<Holder<Aura>, Double> entry : TalismanService.capacity(stack).entrySet()) {
             double units = entry.getValue();
-            if (units > 0) access.insert(player, player.registryAccess(), stack, entry.getKey(), units, false, false);
+            if (units > 0) AuraHandlerUtil.insert(handler, entry.getKey(), units, false, false, null);
         }
     }
 

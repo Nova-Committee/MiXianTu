@@ -2,31 +2,45 @@ package com.iafenvoy.mxt.runtime.spirit;
 
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.SetMultimap;
+import com.iafenvoy.mxt.api.AuraHandler;
 import com.iafenvoy.mxt.attachment.SpiritBurstCooldownAttachment;
 import com.iafenvoy.mxt.data.aura.Aura;
+import com.iafenvoy.mxt.data.condition.builtin.entity.HasRealmEntityCondition;
 import com.iafenvoy.mxt.entity.SpiritBurstEntity;
 import com.iafenvoy.mxt.item.SpiritVesselItem;
 import com.iafenvoy.mxt.registry.MxtAttachments;
+import com.iafenvoy.mxt.registry.MxtCapabilities;
 import com.iafenvoy.mxt.registry.MxtDatapackRegistries;
 import com.iafenvoy.mxt.registry.MxtResourceKeys;
 import com.iafenvoy.mxt.runtime.MxtProfilerSources;
 import com.iafenvoy.mxt.runtime.resource.ResourceUseService;
+import com.iafenvoy.mxt.runtime.resulting.FailureSources;
+import com.iafenvoy.mxt.runtime.resulting.MessageFailure;
 import com.iafenvoy.saturn.attachment.ResourceHolderAttachment;
 import com.iafenvoy.saturn.data.resource.Resource;
 import com.iafenvoy.saturn.profiling.ProfilerScope;
 import com.iafenvoy.saturn.profiling.ServerProfiling;
 import com.iafenvoy.saturn.registry.SaturnAttachments;
 import com.iafenvoy.saturn.runtime.resource.ResourceService;
+import com.iafenvoy.saturn.runtime.resulting.Failure;
+import com.iafenvoy.saturn.runtime.resulting.FailureSource;
+import com.iafenvoy.saturn.runtime.resulting.Failures;
+import com.iafenvoy.saturn.runtime.resulting.Result;
+import com.iafenvoy.saturn.util.DefinitionText;
+import com.iafenvoy.saturn.util.TooltipText;
 import com.iafenvoy.saturn.util.formula.FormulaContext;
 import net.minecraft.core.Holder;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerLoggedOutEvent;
 import net.neoforged.neoforge.event.tick.EntityTickEvent.Post;
-import org.jetbrains.annotations.Nullable;
+import net.neoforged.neoforge.transfer.transaction.Transaction;
 
 import java.util.Optional;
 import java.util.Set;
@@ -87,15 +101,16 @@ public final class SpiritBurstService {
         ACTIVE_AURAS.removeAll(event.getEntity().getUUID());
     }
 
-    // Same gate, cooldown and payment as the held path, so the wheel cannot fire a burst in a situation where
-    // a held key would have refused it. Returns whether a burst was actually fired.
     public static boolean fireOnce(LivingEntity holder, Identifier auraId) {
+        return fireOnceResult(holder, auraId) instanceof Result.SuccessResult<?>;
+    }
+
+    public static Result<Void> fireOnceResult(LivingEntity holder, Identifier auraId) {
         try (ProfilerScope _ = ServerProfiling.scope(MxtProfilerSources.SPIRIT)) {
-            if (auraId == null) return false;
-            Holder<Aura> aura = MxtDatapackRegistries.holder(holder.level().registryAccess(), MxtResourceKeys.AURA, auraId)
-                    .filter(value -> value.value().auraType().isPresent() && ResourceUseService.canUse(holder, value))
-                    .orElse(null);
-            return aura != null && attempt(holder, aura);
+            if (holder.level().isClientSide()) return Result.failure(Failures.SERVER_ONLY);
+            if (auraId == null) return Result.failure(Refusal.UNKNOWN_AURA);
+            Holder<Aura> aura = MxtDatapackRegistries.holder(holder.level().registryAccess(), MxtResourceKeys.AURA, auraId).orElse(null);
+            return aura == null ? Result.failure(Refusal.UNKNOWN_AURA) : attempt(holder, aura);
         }
     }
 
@@ -107,45 +122,82 @@ public final class SpiritBurstService {
     }
 
     // The checks and the payment every firing shares, whether it was asked for once or held down.
-    private static boolean attempt(LivingEntity holder, Holder<Aura> aura) {
-        ResourceHolderAttachment resources = holder.getData(SaturnAttachments.RESOURCE_HOLDER);
+    private static Result<Void> attempt(LivingEntity holder, Holder<Aura> aura) {
+        if (holder.level().isClientSide()) return Result.failure(Failures.SERVER_ONLY);
+        Aura definition = aura.value();
+        if (definition.auraType().isEmpty()) return Result.failure(Refusal.MISSING_ELEMENT);
+        if (!ResourceUseService.canUse(holder, aura)) {
+            if (definition.useCondition() instanceof HasRealmEntityCondition(Holder<Aura> aura1)) {
+                Component name = DefinitionText.nameOrId(aura1.value().resource());
+                return Result.failure(new MessageFailure(Refusal.REALM_REQUIRED,
+                        Component.translatable(Refusal.REALM_REQUIRED.key(), name)));
+            }
+            return Result.failure(Refusal.USE_CONDITION);
+        }
         SpiritBurstCooldownAttachment cooldowns = holder.getData(MxtAttachments.SPIRIT_BURST_COOLDOWNS);
-        if (cooldowns.isOnCooldown(aura, holder.level().getGameTime())) return false;
-        if (!tryFire(holder, resources, aura)) return false;
-        cooldowns.setCooldownUntil(aura, Math.addExact(holder.level().getGameTime(), FIRE_INTERVAL_TICKS));
-        return true;
+        long gameTime = holder.level().getGameTime();
+        if (cooldowns.isOnCooldown(aura, gameTime)) return Result.failure(Failures.COOLDOWN);
+        Result<Void> result = tryFire(holder, aura);
+        if (result instanceof Result.SuccessResult<?>)
+            cooldowns.setCooldownUntil(aura, Math.addExact(gameTime, FIRE_INTERVAL_TICKS));
+        return result;
     }
 
-    // A positive burst_amount marks an aura that can be fired by the shortcut.
-    private static boolean tryFire(LivingEntity holder, ResourceHolderAttachment resources, Holder<Aura> aura) {
+    public static boolean validBurstAmount(double amount) {
+        return Double.isFinite(amount) && amount > 0.0D;
+    }
+
+    private static Result<Void> tryFire(LivingEntity holder, Holder<Aura> aura) {
         Aura definition = aura.value();
-        if (definition.auraType().isEmpty() || !ResourceUseService.canUse(holder, aura)) return false;
         Holder<Resource> resource = definition.resource();
         FormulaContext context = ResourceService.formulaContext(holder, resource, FormulaContext.of(holder));
         double amount = definition.burstAmount().evaluate(context);
-        if (!Double.isFinite(amount)) return false;
-        if (amount <= 0) return false;
-        if (!ResourceService.initialize(resources, resource, context).valid() || resources.get(resource) < amount)
-            return false;
-        // A vessel in hand is a store rather than a target: the same payment, poured into it instead of fired. Asked
-        // before anything is paid, so a vessel with no room refuses the burst rather than drinking the cost.
-        SpiritVesselItem vessel = heldVessel(holder, aura, amount);
-        if (!ResourceService.change(resources, resource, -amount, context).valid()) return false;
-        if (vessel != null) {
-            ItemStack stack = holder.getMainHandItem();
-            vessel.insert(holder, holder.registryAccess(), stack, aura, amount, false, false);
-            SpiritVesselItem.showCharge(holder, stack, resource);
-            return true;
-        }
+        if (!validBurstAmount(amount)) return Result.failure(Refusal.INVALID_AMOUNT);
+        ResourceHolderAttachment resources = holder.getData(SaturnAttachments.RESOURCE_HOLDER);
+        if (!ResourceService.initialize(resources, resource, context).valid())
+            return Result.failure(Refusal.RESOURCE_UNAVAILABLE);
+        double available = resources.get(resource);
+        if (available < amount) return Result.failure(new MessageFailure(Refusal.INSUFFICIENT_BALANCE,
+                Component.translatable(Refusal.INSUFFICIENT_BALANCE.key(), DefinitionText.nameOrId(resource),
+                        TooltipText.number(available), TooltipText.number(amount))));
+        ItemStack stack = holder.getMainHandItem();
+        if (stack.getItem() instanceof SpiritVesselItem)
+            return chargeVessel(holder, stack, aura, amount, resources, context);
+        if (!ResourceService.change(resources, resource, -amount, context).valid())
+            return Result.failure(Refusal.RESOURCE_UNAVAILABLE);
         holder.level().addFreshEntity(new SpiritBurstEntity(holder.level(), holder, aura, amount, resource.value().particleColor()));
-        return true;
+        return Result.success();
     }
 
-    // The vessel this burst charges instead of firing, or null when it is a burst after all: a vessel in the main
-    // hand that would really take some of what is being fired.
-    private static @Nullable SpiritVesselItem heldVessel(LivingEntity holder, Holder<Aura> aura, double amount) {
-        ItemStack stack = holder.getMainHandItem();
-        if (!(stack.getItem() instanceof SpiritVesselItem vessel)) return null;
-        return vessel.insert(holder, holder.registryAccess(), stack, aura, amount, false, true) < amount ? vessel : null;
+    private static Result<Void> chargeVessel(LivingEntity holder, ItemStack stack, Holder<Aura> aura, double amount,
+                                             ResourceHolderAttachment resources, FormulaContext context) {
+        MxtCapabilities.ItemContext slot = holder instanceof Player player
+                ? MxtCapabilities.ItemContext.forHand(player, InteractionHand.MAIN_HAND)
+                : MxtCapabilities.ItemContext.forStack(stack, holder);
+        AuraHandler vessel = MxtCapabilities.findItem(stack, slot);
+        if (vessel == null) return Result.failure(Refusal.VESSEL_REFUSED);
+        double capacity = vessel.getCapacity(aura);
+        if (capacity <= 0.0D) return Result.failure(Refusal.VESSEL_REFUSED);
+        if (vessel.getAmount(aura) >= capacity) return Result.failure(Refusal.VESSEL_FULL);
+        Holder<Resource> resource = aura.value().resource();
+        try (Transaction transaction = Transaction.openRoot()) {
+            if (AuraHandlerUtil.insert(vessel, aura, amount, false, false, transaction) <= 0.0D)
+                return Result.failure(Refusal.VESSEL_REFUSED);
+            if (!ResourceService.change(resources, resource, -amount, context).valid())
+                return Result.failure(Refusal.RESOURCE_UNAVAILABLE);
+            transaction.commit();
+        }
+        SpiritVesselItem.showCharge(holder, holder.getMainHandItem(), resource);
+        return Result.success();
+    }
+
+    private enum Refusal implements Failure {
+        UNKNOWN_AURA, MISSING_ELEMENT, REALM_REQUIRED, USE_CONDITION, INVALID_AMOUNT, INSUFFICIENT_BALANCE,
+        RESOURCE_UNAVAILABLE, VESSEL_REFUSED, VESSEL_FULL;
+
+        @Override
+        public FailureSource source() {
+            return FailureSources.AURA;
+        }
     }
 }

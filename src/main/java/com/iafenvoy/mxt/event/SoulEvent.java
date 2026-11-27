@@ -16,7 +16,9 @@ public abstract class SoulEvent extends EntityEvent {
         this.soul = soul.copy();
     }
 
-    /** Returns a detached snapshot of the state at publication. */
+    /**
+     * Returns a detached snapshot of the state at publication.
+     */
     public SoulAttachment getSoul() {
         return this.soul.copy();
     }

@@ -173,8 +173,7 @@ public final class AuraChunkTicker {
             LevelChunk chunk = AuraService.loadedChunk(level, event.getPos());
             if (chunk == null) return;
             // Announced before the block is gone, so the state it leaves behind comes from the state itself.
-            BlockAuraService.updateBlock(level, chunk, event.getPos(), event.getState(),
-                    event.getState().getFluidState().createLegacyBlock());
+            BlockAuraService.updateBlock(level, chunk, event.getPos(), event.getState(), event.getState().getFluidState().createLegacyBlock());
         }
     }
 

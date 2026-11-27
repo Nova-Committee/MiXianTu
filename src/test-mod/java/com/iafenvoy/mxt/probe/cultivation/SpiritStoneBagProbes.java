@@ -5,6 +5,7 @@ import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.aura.ItemAuraComponent;
 import com.iafenvoy.mxt.data.aura.SpiritStorageComponent;
 import com.iafenvoy.mxt.item.SpiritStoneBagItem;
+import com.iafenvoy.mxt.item.SpiritStoneItem;
 import com.iafenvoy.mxt.probe.Probe;
 import com.iafenvoy.mxt.probe.ProbeContext;
 import com.iafenvoy.mxt.registry.MxtAttachments;
@@ -17,8 +18,7 @@ import com.iafenvoy.saturn.util.formula.FormulaContext;
 import io.netty.buffer.Unpooled;
 import net.minecraft.core.Holder;
 import net.minecraft.core.component.DataComponents;
-import net.minecraft.core.component.DataComponentPatch;
-import com.iafenvoy.mxt.item.SpiritStoneItem;
+import net.minecraft.nbt.DoubleTag;
 import net.minecraft.nbt.NbtOps;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -50,13 +50,13 @@ public final class SpiritStoneBagProbes {
     private static void auraConservation(ProbeContext context) {
         ItemStack original = MxtItems.SPIRIT_STONE.toStack(4);
         Holder<Aura> aura = ItemAuraService.type(context.registries(), original).orElseThrow();
-        DataComponentPatch legacy = DataComponentPatch.builder()
-                .set(MxtDataComponents.SPIRIT_STORAGE.get(), SpiritStorageComponent.EMPTY.with(aura, 12.0D))
-                .set(MxtDataComponents.ITEM_AURA.get(), new ItemAuraComponent(8.0D, false)).build();
-        ItemStackTemplate loaded = new ItemStackTemplate(original.typeHolder(), original.getCount(), legacy);
+        SpiritStoneItem.setStoredPerItem(original, aura, 2.0D);
+        RegistryOps<Tag> ops = context.registries().createSerializationContext(NbtOps.INSTANCE);
+        ItemStackTemplate template = ItemStackTemplate.fromNonEmptyStack(original);
+        ItemStackTemplate loaded = ItemStackTemplate.CODEC.parse(ops, ItemStackTemplate.CODEC.encodeStart(ops, template).getOrThrow()).getOrThrow();
         ItemStack stack = loaded.create();
         ItemStack part = stack.split(1);
-        check(context, "legacy total is normalized before splitting and never counted twice",
+        check(context, "saved per-item aura is conserved when splitting a stack",
                 close(SpiritStoneItem.storedPerItem(stack, aura, 0.0D) * stack.getCount()
                         + SpiritStoneItem.storedPerItem(part, aura, 0.0D) * part.getCount(), 8.0D));
         SpiritStoneItem stone = MxtItems.SPIRIT_STONE.get();
@@ -65,9 +65,18 @@ public final class SpiritStoneBagProbes {
                 close(remainder, 0.0D) && !stack.has(MxtDataComponents.ITEM_AURA)
                         && close(SpiritStoneItem.storedPerItem(stack, aura, 0.0D) * stack.getCount(), 4.0D));
 
-        DataComponentPatch oldFuel = DataComponentPatch.builder().set(MxtDataComponents.ITEM_AURA.get(), new ItemAuraComponent(9.0D, false)).build();
-        ItemStack fuel = new ItemStack(Items.COAL.builtInRegistryHolder(), 3, oldFuel);
-        RegistryOps<Tag> ops = RegistryOps.create(NbtOps.INSTANCE, context.registries());
+        ItemStack oldStone = MxtItems.SPIRIT_STONE.toStack(4);
+        oldStone.set(MxtDataComponents.SPIRIT_STORAGE, SpiritStorageComponent.EMPTY.with(aura, 12.0D));
+        check(context, "a stack-wide amount cannot be spent as per-stone aura",
+                close(stone.extract(null, context.registries(), oldStone, aura, 1.0D, true, false), 1.0D));
+        oldStone.remove(MxtDataComponents.SPIRIT_STORAGE);
+        oldStone.set(MxtDataComponents.ITEM_AURA, new ItemAuraComponent(2.0D));
+        check(context, "ordinary fuel data does not restore a stone to full",
+                close(SpiritStoneItem.storedPerItem(oldStone, aura, 100.0D), 0.0D));
+        check(context, "ordinary fuel rejects a stack-wide scalar",
+                ItemAuraComponent.CODEC.parse(NbtOps.INSTANCE, DoubleTag.valueOf(9.0D)).result().isEmpty());
+        ItemStack fuel = new ItemStack(Items.COAL, 3);
+        fuel.set(MxtDataComponents.ITEM_AURA, new ItemAuraComponent(3.0D));
         ItemStack restored = ItemStack.CODEC.parse(ops, ItemStack.CODEC.encodeStart(ops, fuel).getOrThrow()).getOrThrow();
         ItemStack split = restored.split(2);
         check(context, "ordinary fuel preserves per-item amount on a save round trip",
@@ -106,11 +115,11 @@ public final class SpiritStoneBagProbes {
         slot.set(MxtItems.SPIRIT_STONE.toStack(63));
         bagItem.overrideStackedOnOther(bag, slot, ClickAction.PRIMARY, player);
         ItemStack medium = MxtItems.MEDIUM_SPIRIT_STONE.toStack(2);
-        medium.set(MxtDataComponents.ITEM_AURA, new ItemAuraComponent(2.0D));
+        Holder<Aura> aura = ItemAuraService.type(context.registries(), medium).orElseThrow();
+        SpiritStoneItem.setStoredPerItem(medium, aura, 2.0D);
         bagItem.overrideOtherStackedOnMe(bag, medium, slot, ClickAction.PRIMARY, player, cursor);
         check(context, "one remaining space does not split a stack with stored aura", medium.getCount() == 2 && stoneCount(bag) == 1023);
-        medium.remove(MxtDataComponents.ITEM_AURA);
-        medium.set(MxtDataComponents.SPIRIT_STORAGE, SpiritStorageComponent.EMPTY);
+        SpiritStoneItem.setStoredPerItem(medium, aura, 0.0D);
         bagItem.overrideOtherStackedOnMe(bag, medium, slot, ClickAction.PRIMARY, player, cursor);
         check(context, "capacity is 1024 mixed stones", slot.getItem().isEmpty() && medium.getCount() == 1
                 && stoneCount(bag) == 1024 && bagItem.getBarWidth(bag) == 13 && bagItem.getBarColor(bag) != partialBarColor
@@ -153,9 +162,10 @@ public final class SpiritStoneBagProbes {
         ServerPlayer player = context.player();
         ItemStack main = MxtItems.SPIRIT_STONE.toStack();
         ItemStack drained = MxtItems.HIGH_SPIRIT_STONE.toStack();
-        drained.set(MxtDataComponents.SPIRIT_STORAGE, SpiritStorageComponent.EMPTY);
+        Holder<Aura> aura = ItemAuraService.type(context.registries(), drained).orElseThrow();
+        SpiritStoneItem.setStoredPerItem(drained, aura, 0.0D);
         ItemStack partial = MxtItems.MEDIUM_SPIRIT_STONE.toStack();
-        partial.set(MxtDataComponents.ITEM_AURA, new ItemAuraComponent(2.0D));
+        SpiritStoneItem.setStoredPerItem(partial, aura, 2.0D);
         ItemStack bag = MxtItems.SPIRIT_STONE_BAG.toStack();
         bag.set(DataComponents.BUNDLE_CONTENTS, new BundleContents(List.of(
                 ItemStackTemplate.fromNonEmptyStack(drained), ItemStackTemplate.fromNonEmptyStack(partial))));

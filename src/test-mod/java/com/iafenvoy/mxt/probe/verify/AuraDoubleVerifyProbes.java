@@ -29,6 +29,7 @@ import com.iafenvoy.saturn.runtime.hold.ItemUseCycles;
 import com.iafenvoy.saturn.runtime.resulting.Result;
 import com.iafenvoy.saturn.runtime.resulting.failures.CostFailure;
 import com.iafenvoy.mxt.runtime.spirit.AuraTransfers;
+import com.iafenvoy.mxt.runtime.spirit.AuraHandlerUtil;
 import com.iafenvoy.mxt.runtime.spirit.SpiritChargeService;
 import com.iafenvoy.mxt.runtime.talisman.TalismanService;
 import com.iafenvoy.saturn.util.TooltipText;
@@ -120,16 +121,16 @@ public final class AuraDoubleVerifyProbes {
     private static void payment(ProbeContext context) {
         Holder<Aura> aura = context.require(MxtResourceKeys.AURA, ProbeDefinitions.QI);
         SpiritCraftingTableBlockEntity bank = bank(context, aura);
-        close(context, "a fractional recipe grants a fractional buffer", bank.getCapacity(null, context.registries(), aura), 24.75D);
-        bank.insert(null, context.registries(), aura, 1.75D, true, false);
+        close(context, "a fractional recipe grants a fractional buffer", bank.getCapacity(aura), 24.75D);
+        AuraHandlerUtil.insert(bank, aura, 1.75D, true, false, null);
         CostContext costs = AuraCostContexts.bank(bank, context.player(), FormulaContext.of(context.player()), CostOrigins.SCRIPT);
         Result<List<Debit>> paid = CostPayment.pay(List.of(new AuraCost(aura, new Constant(0.25D))), costs);
         context.check("fractional bank payment succeeds", paid instanceof Result.SuccessResult<List<Debit>>);
         close(context, "receipt retains the original fractional price", Costs.auras(paid).getOrDefault(aura, 0.0D), 0.25D);
         close(context, "bank loses precisely the quoted amount", bank.aura(aura), 1.5D);
-        bank.extract(null, context.registries(), aura, 1.5D, true, false);
-        bank.insert(null, context.registries(), aura, 24.5D, true, false);
-        close(context, "partial fill accepts the last quarter", bank.insert(null, context.registries(), aura, 1.0D, false, false), 0.75D);
+        AuraHandlerUtil.extract(bank, aura, 1.5D, true, false, null);
+        AuraHandlerUtil.insert(bank, aura, 24.5D, true, false, null);
+        close(context, "partial fill accepts the last quarter", AuraHandlerUtil.insert(bank, aura, 1.0D, false, false, null), 0.25D);
         close(context, "partial fill reaches the fractional maximum", bank.aura(aura), 24.75D);
 
         Holder<Aura> spirit = context.require(MxtResourceKeys.AURA, ProbeDefinitions.SPIRIT_POWER);

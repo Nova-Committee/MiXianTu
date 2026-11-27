@@ -1,6 +1,5 @@
 package com.iafenvoy.mxt.item;
 
-import com.iafenvoy.mxt.api.AuraAccess;
 import com.iafenvoy.mxt.api.ItemAuraAccess;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.item.ResourceCapacityComponent;
@@ -33,6 +32,8 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+
+import static com.iafenvoy.mxt.runtime.spirit.AuraHandlerUtil.requireNonNegative;
 
 /**
  * A reusable container that pours arbitrary registered resources into its holder while it is held down, one unit of
@@ -146,7 +147,7 @@ public final class SpiritVesselItem extends Item implements ItemAuraAccess {
 
     @Override
     public double insert(@Nullable LivingEntity entity, @NotNull HolderLookup.Provider registries, ItemStack stack, Holder<Aura> aura, double amount, boolean exact, boolean simulate) {
-        AuraAccess.requireNonNegative(amount);
+        requireNonNegative(amount);
         Holder<Resource> resource = aura.value().resource();
         ResourceContainerComponent container = stack.getOrDefault(MxtDataComponents.RESOURCE_CONTAINER, ResourceContainerComponent.EMPTY);
         double capacity = stack.getOrDefault(MxtDataComponents.RESOURCE_CAPACITY, ResourceCapacityComponent.EMPTY).capacityOf(resource);
@@ -161,11 +162,19 @@ public final class SpiritVesselItem extends Item implements ItemAuraAccess {
         // A vessel is poured into, never drained through the store protocol: what leaves it leaves through the hold,
         // where the holder's own account is on the other side. Nothing can be taken at all, which is the same answer
         // under either mode.
-        AuraAccess.requireNonNegative(amount);
+        requireNonNegative(amount);
         return amount;
     }
 
     // Intake is bounded by the resource capacity written on the stack.
+    public static double auraCapacity(ItemStack stack, Holder<Aura> aura) {
+        return stack.getOrDefault(MxtDataComponents.RESOURCE_CAPACITY, ResourceCapacityComponent.EMPTY).capacityOf(aura.value().resource());
+    }
+
+    public static double storedAura(ItemStack stack, Holder<Aura> aura) {
+        return stack.getOrDefault(MxtDataComponents.RESOURCE_CONTAINER, ResourceContainerComponent.EMPTY).stored(aura.value().resource());
+    }
+
     private static double room(ItemStack stack, Holder<Resource> resource) {
         double room = stack.getOrDefault(MxtDataComponents.RESOURCE_CAPACITY, ResourceCapacityComponent.EMPTY).capacityOf(resource)
                 - stack.getOrDefault(MxtDataComponents.RESOURCE_CONTAINER, ResourceContainerComponent.EMPTY).stored(resource);

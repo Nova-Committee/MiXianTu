@@ -1,10 +1,11 @@
 package com.iafenvoy.mxt.data.cost.context;
 
-import com.iafenvoy.mxt.api.AuraAccess;
 import com.iafenvoy.mxt.api.AuraCostSource;
+import com.iafenvoy.mxt.api.AuraHandler;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.cost.AuraCostTarget;
 import com.iafenvoy.mxt.runtime.resulting.failures.AuraFailure;
+import com.iafenvoy.mxt.runtime.spirit.AuraHandlerUtil;
 import com.iafenvoy.mxt.runtime.world.WorldAuraAccess;
 import com.iafenvoy.saturn.data.cost.CostTransaction;
 import com.iafenvoy.saturn.data.cost.Debit;
@@ -13,8 +14,6 @@ import com.iafenvoy.saturn.runtime.resulting.Result;
 import com.iafenvoy.saturn.runtime.resulting.failures.CostFailure;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
-import net.minecraft.core.HolderLookup.Provider;
-import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.Nullable;
 
@@ -24,62 +23,47 @@ public final class AuraCostSources {
     // Read the payer at bind time: withPayer must not leave a source pointing at the previous account.
     public static final AuraCostSource ACCOUNT = (context, aura, amount) -> Result.success(ResourceChannel.transaction(context, aura.value().resource(), amount));
     // Quotes carry an amount but deliberately have no inventory to execute against.
-    public static final AuraCostSource QUOTE = store(null, null);
+    public static final AuraCostSource QUOTE = (context, aura, amount) -> Result.success(new StoreTransaction(null, aura, amount));
 
     private AuraCostSources() {
     }
 
     public static AuraCostSource pool(Level level, BlockPos pos) {
-        // Different positions in one section still spend the same stock.
-        return store(new WorldAuraAccess(level, pos), AuraSection.of(level.dimension(), pos));
+        return handler(new WorldAuraAccess(level, pos));
     }
 
-    public static AuraCostSource bank(AuraAccess access) {
-        return store(access, access);
-    }
-
-    private static AuraCostSource store(@Nullable AuraAccess access, @Nullable Object identity) {
-        // access performs transfers; identity names the stock for duplicate checks and re-entrancy guards.
-        // A bank uses its original object, a pool uses section coordinates, and a quote has no identity.
-        return (context, aura, amount) -> Result.success(new StoreTransaction(access, identity, context.payer(), context.registries(), aura, amount));
+    public static AuraCostSource handler(AuraHandler handler) {
+        return (context, aura, amount) -> Result.success(new StoreTransaction(handler, aura, amount));
     }
 
     private static final class StoreTransaction extends CostTransaction {
-        private final @Nullable AuraAccess access;
-        private final @Nullable LivingEntity payer;
-        private final Provider registries;
+        private final @Nullable AuraHandler handler;
         private final Holder<Aura> aura;
 
-        private StoreTransaction(@Nullable AuraAccess access, @Nullable Object identity, @Nullable LivingEntity payer, Provider registries, Holder<Aura> aura, double amount) {
-            super(new AuraCostTarget(identity, aura), amount);
-            this.access = access;
-            this.payer = payer;
-            this.registries = registries;
-            this.aura = aura;
+        private StoreTransaction(@Nullable AuraHandler handler, Holder<Aura> aura, double amount) {
+            this(handler, new AuraCostTarget(handler == null ? null : handler.storageIdentity(aura), aura), amount);
+        }
+
+        private StoreTransaction(@Nullable AuraHandler handler, AuraCostTarget target, double amount) {
+            super(target, amount);
+            this.handler = handler;
+            this.aura = target.aura();
         }
 
         @Override
         protected Result<List<Debit>> perform(boolean simulate) {
-            if (this.access == null) return refused(CostFailure.NO_CHANNEL);
+            if (this.handler == null) return refused(CostFailure.NO_CHANNEL);
             double amount = this.amount();
             if (!Double.isFinite(amount) || amount < 0.0D) return refused(CostFailure.INVALID_AMOUNT);
             if (amount == 0.0D) return took(List.of());
-            // Recheck even on the real pass: earlier fees may have spent the same stock since simulation.
-            double remainder = this.access.extract(this.payer, this.registries, this.aura, amount, true, true);
-            if (remainder != 0.0D) return refused(AuraFailure.INSUFFICIENT_AURA);
-            if (simulate) return took(List.of());
-            remainder = this.access.extract(this.payer, this.registries, this.aura, amount, true, false);
-            if (!Double.isFinite(remainder) || remainder < 0.0D || remainder > amount)
-                return refused(CostFailure.INVALID_AMOUNT);
-            // A faulty external store may violate exact; preserve its known partial debit for the payment's WARN.
-            double taken = amount - remainder;
-            List<Debit> debits = taken > 0.0D ? List.of(Debit.of(this.target(), taken)) : List.of();
-            return remainder == 0.0D ? took(debits) : refused(AuraFailure.INSUFFICIENT_AURA);
+            double taken = AuraHandlerUtil.extract(this.handler, this.aura, amount, true, simulate, null);
+            if (taken == 0.0D) return refused(AuraFailure.INSUFFICIENT_AURA);
+            return took(simulate ? List.of() : List.of(Debit.of(this.target(), taken)));
         }
 
         @Override
         protected CostTransaction replacing(double amount) {
-            return new StoreTransaction(this.access, ((AuraCostTarget) this.target()).store(), this.payer, this.registries, this.aura, amount);
+            return new StoreTransaction(this.handler, (AuraCostTarget) this.target(), amount);
         }
     }
 }

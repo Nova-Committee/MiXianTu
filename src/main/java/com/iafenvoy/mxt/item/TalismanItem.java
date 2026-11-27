@@ -1,6 +1,5 @@
 package com.iafenvoy.mxt.item;
 
-import com.iafenvoy.mxt.api.AuraAccess;
 import com.iafenvoy.mxt.api.UseItemAuraAccess;
 import com.iafenvoy.mxt.data.aura.Aura;
 import com.iafenvoy.mxt.data.aura.SpiritStorageComponent;
@@ -33,6 +32,8 @@ import org.jspecify.annotations.NonNull;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+
+import static com.iafenvoy.mxt.runtime.spirit.AuraHandlerUtil.requireNonNegative;
 
 /**
  * The carrier a talisman is written on. One item carries every talisman a data pack defines, because what is
@@ -77,7 +78,7 @@ public class TalismanItem extends Item implements UseItemAuraAccess {
 
     @Override
     public double insert(@Nullable LivingEntity entity, @NotNull Provider registries, ItemStack stack, Holder<Aura> aura, double amount, boolean exact, boolean simulate) {
-        AuraAccess.requireNonNegative(amount);
+        requireNonNegative(amount);
         double capacity = this.getCapacity(entity, registries, stack, aura);
         if (capacity <= 0) return amount;
         SpiritStorageComponent charge = this.store(stack);
@@ -91,7 +92,7 @@ public class TalismanItem extends Item implements UseItemAuraAccess {
 
     @Override
     public double extract(@Nullable LivingEntity entity, @NotNull Provider registries, ItemStack stack, Holder<Aura> aura, double amount, boolean exact, boolean simulate) {
-        AuraAccess.requireNonNegative(amount);
+        requireNonNegative(amount);
         double capacity = this.getCapacity(entity, registries, stack, aura);
         if (capacity <= 0) return amount;
         SpiritStorageComponent charge = this.store(stack);

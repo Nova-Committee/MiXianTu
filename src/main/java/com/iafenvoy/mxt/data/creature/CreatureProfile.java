@@ -41,7 +41,8 @@ public record CreatureProfile(List<Either<Holder<EntityType<?>>, TagKey<EntityTy
                               List<Either<Holder<Element>, TagKey<Element>>> preferredAuraElements,
                               Map<Holder<Aura>, NumberProvider> minimumAura, Optional<Holder<Progression>> defaultLevel,
                               Optional<Holder<Resource>> masteryResource,
-                              Map<Holder<Progression>, ProgressionConfig> configuration, int priority) implements ProgressionOwner {
+                              Map<Holder<Progression>, ProgressionConfig> configuration,
+                              int priority) implements ProgressionOwner {
     public static final Codec<Holder<CreatureProfile>> CODEC = RegistryFixedCodec.create(MxtResourceKeys.CREATURE_PROFILE);
     public static final Codec<CreatureProfile> DIRECT_CODEC = RecordCodecBuilder.<CreatureProfile>create(i -> i.group(
             RegistryCodecs.holderOrTagList(Registries.ENTITY_TYPE).optionalFieldOf("entities", List.of()).forGetter(CreatureProfile::entities),

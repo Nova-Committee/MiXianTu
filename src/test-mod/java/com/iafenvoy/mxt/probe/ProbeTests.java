@@ -90,6 +90,7 @@ public final class ProbeTests {
             ResourceBarVerifyProbes::probes,
             HoldAnimationVerifyProbes::probes,
             AuraDoubleVerifyProbes::probes,
+            AuraHandlerVerifyProbes::probes,
             AuiBindingVerifyProbes::probes,
             AuiGeometryVerifyProbes::probes,
             AuiThemeVerifyProbes::probes,
